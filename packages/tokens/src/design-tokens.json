@@ -1,0 +1,143 @@
+{
+  "$description": "Pagehall design tokens. Source of truth for the web client theme.",
+  "color": {
+    "light": {
+      "bg": "#FFFFFF",
+      "sidebar": "#F7F7F8",
+      "surface": "#FFFFFF",
+      "surfaceSunken": "#F6F7F8",
+      "hover": "#EEEFF1",
+      "border": "#E4E5E7",
+      "text": "#17181A",
+      "textMuted": "#5F6368",
+      "accent": "#0B6F78",
+      "accentHover": "#095C63",
+      "onAccent": "#FFFFFF",
+      "accentSoft": "#EDF4F5",
+      "selected": "#E6F0F1",
+      "selectedText": "#095C63",
+      "success": "#1D6B45",
+      "successSoft": "#E6F3EB",
+      "warning": "#8A4B00",
+      "warningSoft": "#FBF0E1",
+      "danger": "#B3423A",
+      "dangerSoft": "#FBE9E7",
+      "info": "#234A94",
+      "infoSoft": "#E6EEFB",
+      "badge": "#C2410C",
+      "presence": "#1F9D5B",
+      "overlay": "rgba(15, 17, 20, 0.36)"
+    },
+    "dark": {
+      "bg": "#151617",
+      "sidebar": "#18191B",
+      "surface": "#1C1D1F",
+      "surfaceSunken": "#101112",
+      "hover": "#222325",
+      "border": "#2B2D30",
+      "text": "#E6E7E9",
+      "textMuted": "#9EA2A8",
+      "accent": "#5DB9C2",
+      "accentHover": "#7CCAD1",
+      "onAccent": "#0E1415",
+      "accentSoft": "#1D2224",
+      "selected": "#24292B",
+      "selectedText": "#E6E7E9",
+      "success": "#7CC79A",
+      "successSoft": "#1B2A22",
+      "warning": "#E0A052",
+      "warningSoft": "#2D2416",
+      "danger": "#E88B82",
+      "dangerSoft": "#2E1C1A",
+      "info": "#8AA8E6",
+      "infoSoft": "#1B2333",
+      "badge": "#F08A4B",
+      "presence": "#3DBE78",
+      "overlay": "rgba(0, 0, 0, 0.55)"
+    },
+    "palette": {
+      "light": {
+        "petrol": "#0B6F78",
+        "blue": "#2F5DB8",
+        "violet": "#6B4FB3",
+        "amber": "#A15C00",
+        "red": "#B3423A",
+        "green": "#2E7D4F",
+        "gray": "#5F6368"
+      },
+      "dark": {
+        "petrol": "#5DB9C2",
+        "blue": "#8AA8E6",
+        "violet": "#B3A1E6",
+        "amber": "#E0A052",
+        "red": "#E88B82",
+        "green": "#7CC79A",
+        "gray": "#A2A6AC"
+      }
+    },
+    "status": {
+      "light": {
+        "todo": { "bg": "#F0F1F2", "text": "#4A4F55" },
+        "inProgress": { "bg": "#E6EEFB", "text": "#234A94" },
+        "inReview": { "bg": "#FBF0E1", "text": "#8A4B00" },
+        "done": { "bg": "#E6F3EB", "text": "#1D6B45" }
+      },
+      "dark": {
+        "todo": { "bg": "#26282B", "text": "#C4C8CE" },
+        "inProgress": { "bg": "#1B2333", "text": "#8AA8E6" },
+        "inReview": { "bg": "#2D2416", "text": "#E0A052" },
+        "done": { "bg": "#1B2A22", "text": "#7CC79A" }
+      }
+    }
+  },
+  "font": {
+    "family": {
+      "sans": "'Geist', system-ui, sans-serif",
+      "mono": "'Geist Mono', ui-monospace, monospace",
+      "readable": "'Atkinson Hyperlegible Next', system-ui, sans-serif"
+    },
+    "weight": { "regular": 400, "medium": 500, "semibold": 600, "bold": 700 },
+    "size": {
+      "xs": "0.75rem",
+      "sm": "0.8125rem",
+      "base": "0.875rem",
+      "content": "1rem",
+      "lg": "1.25rem",
+      "xl": "1.625rem",
+      "2xl": "2rem"
+    },
+    "lineHeight": { "tight": 1.2, "ui": 1.45, "content": 1.65 },
+    "letterSpacing": { "heading": "-0.015em", "label": "0.05em" }
+  },
+  "textScale": { "min": 0.875, "default": 1, "max": 1.25, "steps": [0.875, 0.9375, 1, 1.125, 1.25] },
+  "space": {
+    "0": "0",
+    "1": "0.25rem",
+    "2": "0.5rem",
+    "3": "0.75rem",
+    "4": "1rem",
+    "5": "1.25rem",
+    "6": "1.5rem",
+    "8": "2rem",
+    "10": "2.5rem",
+    "12": "3rem"
+  },
+  "radius": { "sm": "0.375rem", "md": "0.5rem", "lg": "0.75rem", "full": "9999px" },
+  "shadow": {
+    "card": "0 1px 2px rgba(0, 0, 0, 0.04)",
+    "popover": "0 10px 30px rgba(0, 0, 0, 0.12)",
+    "dialog": "0 20px 50px rgba(0, 0, 0, 0.20)"
+  },
+  "layout": {
+    "railWidth": "3.75rem",
+    "sidebarWidth": "16.5rem",
+    "toolbarHeight": "3.25rem",
+    "contentWidth": "47.5rem",
+    "rowHeight": { "default": "1.875rem", "compact": "1.625rem" }
+  },
+  "icon": {
+    "library": "lucide",
+    "strokeWidth": 1.75,
+    "size": { "sm": "0.875rem", "md": "1rem", "lg": "1.25rem" }
+  }
+}

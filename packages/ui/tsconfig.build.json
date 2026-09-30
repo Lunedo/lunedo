@@ -1,0 +1,10 @@
+{
+  "extends": "@pagehall/config/tsconfig/react.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "customConditions": []
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.tsx", "src/**/*.test.ts"]
+}
