@@ -1,8 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG NODE_IMAGE=node:24-bookworm-slim
-
-FROM ${NODE_IMAGE} AS base
+FROM node:24-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
@@ -27,7 +25,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
       pnpm --filter="@pagehall/$app" deploy --prod "/out/$app" || exit 1; \
     done
 
-FROM ${NODE_IMAGE} AS runtime
+FROM node:24-bookworm-slim AS runtime
 ARG VERSION=dev
 LABEL org.opencontainers.image.title="Pagehall" \
       org.opencontainers.image.description="Self-hosted wiki, knowledge base and project planning tool" \

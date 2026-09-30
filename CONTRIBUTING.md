@@ -42,7 +42,7 @@ Every commit must be signed off to certify that you wrote the change or have the
 git commit -s
 ```
 
-This adds a `Signed-off-by` line with your name and e-mail address. It must match the commit author. CI checks every commit of a pull request. There is no Contributor License Agreement.
+This adds a `Signed-off-by` line with your name and e-mail address. It must match the commit author. CI checks every commit of a pull request; pull requests opened by Dependabot are exempt. There is no Contributor License Agreement.
 
 ## Code style
 
