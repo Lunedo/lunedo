@@ -47,7 +47,7 @@ This adds a `Signed-off-by` line with your name and e-mail address. It must matc
 ## Code style
 
 - TypeScript in strict mode everywhere. Avoid `any`; where it cannot be avoided, the reason is visible in the same line.
-- Biome formats and lints the whole repository. Run `pnpm lint:fix` before committing.
+- Biome formats and lints the whole repository. ESLint runs only the type-aware rules `no-floating-promises` and `no-misused-promises`, which Biome cannot check reliably. `pnpm lint` runs both; `pnpm lint:fix` applies Biome fixes.
 - Code, identifiers, comments and documentation are in English. Use the terms of the product consistently and do not invent words.
 - Comments are rare. They explain what the code cannot express, briefly and factually. No step markers, no restating what the next line does, no commented-out code.
 - The web client uses the design tokens from `packages/tokens` through the generated Tailwind theme. Components never use raw colors, sizes or shadows.

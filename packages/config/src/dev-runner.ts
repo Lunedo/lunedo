@@ -42,20 +42,29 @@ let last = snapshot(values.watch);
 let busy = false;
 await rebuild();
 
-setInterval(async () => {
-  if (busy) return;
+async function poll(): Promise<void> {
   const current = snapshot(values.watch);
   if (current === last) return;
-  busy = true;
   last = current;
   await rebuild();
   last = snapshot(values.watch);
-  busy = false;
+}
+
+setInterval(() => {
+  if (busy) return;
+  busy = true;
+  poll()
+    .catch((error: unknown) => console.error("[dev] Rebuild failed:", error))
+    .finally(() => {
+      busy = false;
+    });
 }, POLL_INTERVAL_MS);
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
-  process.once(signal, async () => {
-    await stop();
-    process.exit(0);
+  process.once(signal, () => {
+    stop().then(
+      () => process.exit(0),
+      () => process.exit(1),
+    );
   });
 }

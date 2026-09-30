@@ -13,7 +13,7 @@
     "dev:down": "docker compose -f docker/compose.dev.yml down",
     "dev:apps": "turbo run dev --concurrency=20",
     "build": "turbo run build",
-    "lint": "biome ci .",
+    "lint": "biome ci . && eslint",
     "format": "biome format --write .",
     "typecheck": "tsc -p tsconfig.json && turbo run typecheck",
     "test": "node --test \"scripts/*.test.ts\" && turbo run test",
@@ -25,7 +25,10 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
     "@types/node": "^24.19.0",
+    "@typescript/native": "npm:typescript@7.0.2",
+    "eslint": "^10.11.0",
     "turbo": "^2.11.5",
-    "typescript": "^7.0.2"
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "typescript-eslint": "^8.71.0"
   }
 }

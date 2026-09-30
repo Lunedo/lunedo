@@ -9,10 +9,13 @@ let server: Server | undefined;
 
 async function start(ready: Record<string, HealthCheck>): Promise<string> {
   const logger = createLogger({ service: "test", level: "silent" });
-  server = createServer(async (request, response) => {
-    if (!(await handleHealthRequest(request, response, { ready, logger }))) {
-      response.writeHead(404).end();
-    }
+  server = createServer((request, response) => {
+    handleHealthRequest(request, response, { ready, logger }).then(
+      (handled) => {
+        if (!handled) response.writeHead(404).end();
+      },
+      () => response.writeHead(500).end(),
+    );
   });
   await new Promise<void>((resolve) => server?.listen(0, "127.0.0.1", resolve));
   return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
