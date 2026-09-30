@@ -41,6 +41,7 @@ describe("App", () => {
     render(<App />);
     expect(screen.getByRole("navigation", { name: "Hauptnavigation" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Einstellungen" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Favoriten" })).toBeDefined();
   });
 
   it("applies the system color mode", async () => {
