@@ -1,0 +1,82 @@
+# Development environment: PostgreSQL and all Pagehall processes with hot reload.
+# Start with `pnpm dev` from the repository root.
+name: pagehall-dev
+
+x-node-modules: &node-modules
+  - ..:/repo
+  - pnpm-store:/pnpm/store
+  - node-modules-root:/repo/node_modules
+  - node-modules-web:/repo/apps/web/node_modules
+  - node-modules-api:/repo/apps/api/node_modules
+  - node-modules-collab:/repo/apps/collab/node_modules
+  - node-modules-worker:/repo/apps/worker/node_modules
+  - node-modules-editor-schema:/repo/packages/editor-schema/node_modules
+  - node-modules-shared:/repo/packages/shared/node_modules
+  - node-modules-ui:/repo/packages/ui/node_modules
+  - node-modules-tokens:/repo/packages/tokens/node_modules
+  - node-modules-config:/repo/packages/config/node_modules
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pagehall
+      POSTGRES_PASSWORD: pagehall
+      POSTGRES_DB: pagehall
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pagehall -d pagehall"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: dev
+    command: >-
+      sh -c "pnpm install --frozen-lockfile --config.confirm-modules-purge=false
+      && pnpm dev:apps"
+    working_dir: /repo
+    init: true
+    environment:
+      PAGEHALL_DATABASE_URL: postgres://pagehall:pagehall@postgres:5432/pagehall
+      PAGEHALL_LOG_LEVEL: debug
+      PAGEHALL_DEV_HOST: 0.0.0.0
+      PAGEHALL_DEV_POLLING: "true"
+      PAGEHALL_DEV_API_URL: http://localhost:3000
+      TURBO_TELEMETRY_DISABLED: "1"
+      DO_NOT_TRACK: "1"
+    ports:
+      - "127.0.0.1:5173:5173"
+      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:3001:3001"
+      - "127.0.0.1:3002:3002"
+    volumes: *node-modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "docker/dev-healthcheck.ts"]
+      interval: 10s
+      timeout: 10s
+      start_period: 180s
+      retries: 3
+
+volumes:
+  postgres-data:
+  pnpm-store:
+  node-modules-root:
+  node-modules-web:
+  node-modules-api:
+  node-modules-collab:
+  node-modules-worker:
+  node-modules-editor-schema:
+  node-modules-shared:
+  node-modules-ui:
+  node-modules-tokens:
+  node-modules-config:

@@ -1,0 +1,14 @@
+**/node_modules
+**/dist
+**/generated
+**/.turbo
+**/coverage
+**/test-results
+**/playwright-report
+.git
+.github
+.vscode
+.idea
+docs
+*.md
+!README.md
