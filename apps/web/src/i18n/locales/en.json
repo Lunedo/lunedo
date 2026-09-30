@@ -1,0 +1,16 @@
+{
+  "rail": {
+    "label": "Main navigation",
+    "home": "Pagehall home",
+    "create": "Create",
+    "forYou": "For you",
+    "search": "Search",
+    "starred": "Starred",
+    "spaces": "Spaces",
+    "projects": "Projects",
+    "notifications": "Notifications",
+    "help": "Help",
+    "settings": "Settings",
+    "account": "Account"
+  }
+}
