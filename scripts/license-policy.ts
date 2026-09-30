@@ -87,3 +87,55 @@ export function isApprovedLicense(expression: string): boolean {
     return false;
   }
 }
+
+export interface PackageLicense {
+  name: string;
+  versions: string[];
+  license: string;
+}
+
+export interface AllowlistEntry {
+  license: string;
+  reason: string;
+}
+
+export type Allowlist = Record<string, AllowlistEntry>;
+
+/**
+ * Production dependencies ship in the image or the web client and must use an approved license.
+ * Build and test dependencies may use other open licenses when the allowlist names the package,
+ * its license and a reason. Unused entries are reported so that the list stays accurate.
+ */
+export function findLicenseViolations(options: {
+  all: readonly PackageLicense[];
+  production: readonly PackageLicense[];
+  allowlist: Allowlist;
+}): string[] {
+  const violations: string[] = [];
+  const productionNames = new Set(options.production.map((pkg) => pkg.name));
+  const usedEntries = new Set<string>();
+  const label = (pkg: PackageLicense) => `${pkg.name}@${pkg.versions.join(", ")} (${pkg.license})`;
+
+  for (const pkg of options.all) {
+    if (isApprovedLicense(pkg.license)) continue;
+    if (productionNames.has(pkg.name)) {
+      violations.push(`${label(pkg)} ships in the image or web client and needs an OSI-approved license`);
+      continue;
+    }
+    const entry = options.allowlist[pkg.name];
+    if (!entry) {
+      violations.push(`${label(pkg)} is not OSI-approved and not in the allowlist`);
+    } else if (entry.license !== pkg.license) {
+      violations.push(`${label(pkg)} does not match the allowlisted license ${entry.license}`);
+    } else if (entry.reason.trim() === "") {
+      violations.push(`${label(pkg)} has an allowlist entry without a reason`);
+    } else {
+      usedEntries.add(pkg.name);
+    }
+  }
+
+  for (const name of Object.keys(options.allowlist)) {
+    if (!usedEntries.has(name)) violations.push(`Allowlist entry ${name} is not needed and must be removed`);
+  }
+  return violations;
+}

@@ -20,7 +20,8 @@ The development environment runs in Docker and watches files by polling, so it w
 - `main` is protected. Work happens on short-lived branches such as `feat/page-history` or `fix/search-excerpts`.
 - Pull requests are merged with squash merge after review and green CI.
 - Keep pull requests focused on one change. Large changes are discussed in an issue or discussion first.
-- A pull request that adds a dependency explains why it is needed, names its license and confirms that it is actively maintained. Only dependencies under OSI-approved licenses are accepted; CI checks this.
+- A pull request that adds a dependency explains why it is needed, names its license and confirms that it is actively maintained.
+- Everything that ships in the container image or the web client must use an OSI-approved license. Data packages and dependencies used only for building or testing may use open data licenses such as CC0-1.0 or CC-BY-4.0 when they are listed in `license-allowlist.json` with their license and a reason. `pnpm licenses:check` enforces this in CI.
 
 ## Commits
 

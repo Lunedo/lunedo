@@ -1,0 +1,4 @@
+{
+  "$comment": "Build and test dependencies under open licenses that are not OSI-approved, such as CC0-1.0 or CC-BY-4.0. Each entry names the exact license expression and why the package is needed. Packages that ship in the image or the web client cannot be listed here.",
+  "packages": {}
+}

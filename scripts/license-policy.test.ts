@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { isApprovedLicense } from "./license-policy.ts";
+import { findLicenseViolations, isApprovedLicense, type PackageLicense } from "./license-policy.ts";
 
 describe("isApprovedLicense", () => {
   it("accepts approved licenses", () => {
@@ -35,5 +35,63 @@ describe("isApprovedLicense", () => {
     assert.equal(isApprovedLicense("(MIT OR"), false);
     assert.equal(isApprovedLicense("MIT Apache-2.0"), false);
     assert.equal(isApprovedLicense("OR MIT"), false);
+  });
+});
+
+describe("findLicenseViolations", () => {
+  const pkg = (name: string, license: string): PackageLicense => ({ name, versions: ["1.0.0"], license });
+  const data = pkg("mdn-data", "CC0-1.0");
+  const entry = { license: "CC0-1.0", reason: "CSS data for the test DOM" };
+
+  it("accepts approved licenses everywhere", () => {
+    const react = pkg("react", "MIT");
+    assert.deepEqual(findLicenseViolations({ all: [react], production: [react], allowlist: {} }), []);
+  });
+
+  it("accepts an allowlisted build or test dependency", () => {
+    const violations = findLicenseViolations({
+      all: [data],
+      production: [],
+      allowlist: { "mdn-data": entry },
+    });
+    assert.deepEqual(violations, []);
+  });
+
+  it("rejects a non-approved build dependency without an allowlist entry", () => {
+    const violations = findLicenseViolations({ all: [data], production: [], allowlist: {} });
+    assert.match(violations[0] ?? "", /not in the allowlist/);
+  });
+
+  it("rejects a non-approved production dependency even when allowlisted", () => {
+    const violations = findLicenseViolations({
+      all: [data],
+      production: [data],
+      allowlist: { "mdn-data": entry },
+    });
+    assert.match(violations.join("\n"), /ships in the image or web client/);
+  });
+
+  it("rejects an entry whose license no longer matches", () => {
+    const changed = pkg("mdn-data", "CC-BY-4.0");
+    const violations = findLicenseViolations({
+      all: [changed],
+      production: [],
+      allowlist: { "mdn-data": entry },
+    });
+    assert.match(violations.join("\n"), /does not match the allowlisted license CC0-1.0/);
+  });
+
+  it("rejects an entry without a reason", () => {
+    const violations = findLicenseViolations({
+      all: [data],
+      production: [],
+      allowlist: { "mdn-data": { license: "CC0-1.0", reason: " " } },
+    });
+    assert.match(violations.join("\n"), /without a reason/);
+  });
+
+  it("reports entries that are no longer needed", () => {
+    const violations = findLicenseViolations({ all: [], production: [], allowlist: { "mdn-data": entry } });
+    assert.deepEqual(violations, ["Allowlist entry mdn-data is not needed and must be removed"]);
   });
 });
