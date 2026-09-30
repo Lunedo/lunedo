@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Feature request or idea
+    url: https://github.com/pagehall/pagehall/discussions/categories/ideas
+    about: Feature requests are discussed in the Ideas category of GitHub Discussions, not as issues.
+  - name: Question
+    url: https://github.com/pagehall/pagehall/discussions/categories/q-a
+    about: Ask questions in the Q&A category of GitHub Discussions.
+  - name: Security vulnerability
+    url: https://github.com/pagehall/pagehall/security/advisories/new
+    about: Report vulnerabilities privately as described in SECURITY.md.

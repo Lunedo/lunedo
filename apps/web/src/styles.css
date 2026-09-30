@@ -1,0 +1,21 @@
+@import "tailwindcss";
+@import "@pagehall/tokens/theme.css";
+
+@source "../../../packages/ui/src";
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-ui);
+    -webkit-font-smoothing: antialiased;
+  }
+}

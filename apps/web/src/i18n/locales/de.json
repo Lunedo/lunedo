@@ -1,0 +1,16 @@
+{
+  "rail": {
+    "label": "Hauptnavigation",
+    "home": "Pagehall-Startseite",
+    "create": "Erstellen",
+    "forYou": "Für dich",
+    "search": "Suche",
+    "starred": "Favoriten",
+    "spaces": "Spaces",
+    "projects": "Projekte",
+    "notifications": "Benachrichtigungen",
+    "help": "Hilfe",
+    "settings": "Einstellungen",
+    "account": "Konto"
+  }
+}

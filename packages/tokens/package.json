@@ -1,0 +1,33 @@
+{
+  "name": "@pagehall/tokens",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": {
+      "@pagehall/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./theme.css": "./generated/theme.css",
+    "./design-tokens.json": "./src/design-tokens.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node dist/generate-cli.js",
+    "dev": "pagehall-dev --build \"tsc -p tsconfig.build.json && node dist/generate-cli.js\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@pagehall/config": "workspace:*",
+    "@types/node": "^24.19.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
+  },
+  "files": [
+    "dist",
+    "generated",
+    "src/design-tokens.json"
+  ]
+}

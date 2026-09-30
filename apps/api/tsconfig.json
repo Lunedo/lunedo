@@ -1,0 +1,9 @@
+{
+  "extends": "@pagehall/config/tsconfig/node.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "include": ["src", "vitest.config.ts"]
+}
