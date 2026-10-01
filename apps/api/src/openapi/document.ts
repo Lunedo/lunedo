@@ -135,8 +135,9 @@ function acceptsTokens(access: RouteAccess | undefined): boolean {
 function security(access: RouteAccess | undefined): Record<string, string[]>[] {
   if (!access || access.kind === "public" || access.kind === "setupCode" || access.kind === "setupSession")
     return [];
-  if (acceptsTokens(access)) return [{ bearerAuth: [] }, { sessionCookie: [] }];
-  return [{ sessionCookie: [] }];
+  const open = access.kind === "permission" && access.publicForSoleOrganization ? [{}] : [];
+  if (acceptsTokens(access)) return [{ bearerAuth: [] }, { sessionCookie: [] }, ...open];
+  return [{ sessionCookie: [] }, ...open];
 }
 
 function accessText(access: RouteAccess | undefined): string | null {
@@ -151,11 +152,14 @@ function accessText(access: RouteAccess | undefined): string | null {
         access.sessionOnly || access.recentAuthentication
           ? " Needs a signed-in session; API tokens are refused."
           : "";
+      const open = access.publicForSoleOrganization
+        ? " Open to everyone while the instance has exactly one organization."
+        : "";
       if (access.alternatives.length > 0) {
         const all = [access.action, ...access.alternatives].map((action) => `\`${action}\``).join(", ");
-        return `Requires one of the permissions ${all} on ${on}; the request decides which.${via}`;
+        return `Requires one of the permissions ${all} on ${on}; the request decides which.${via}${open}`;
       }
-      return `Requires the permission \`${access.action}\` on ${on}.${via}`;
+      return `Requires the permission \`${access.action}\` on ${on}.${via}${open}`;
     }
     case "session":
       return "Needs a signed-in session.";

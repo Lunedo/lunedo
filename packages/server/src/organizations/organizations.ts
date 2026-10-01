@@ -395,6 +395,11 @@ export class OrganizationService {
     return this.#withSettings(updated);
   }
 
+  async soleOrganizationId(): Promise<string | null> {
+    const rows = await this.#database.select({ id: organizations.id }).from(organizations).limit(2);
+    return rows.length === 1 ? (rows[0]?.id ?? null) : null;
+  }
+
   async logo(id: string): Promise<{ contentType: string; data: Buffer; ref: string } | null> {
     const [row] = await this.#database
       .select({

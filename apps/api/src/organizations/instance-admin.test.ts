@@ -237,4 +237,28 @@ describe.skipIf(!databaseBaseUrl)("instance administration for the interface", (
       { level: "organization", value: "violet", locked: false, effective: true },
     ]);
   });
+  it("shows the logo only to members once the instance has several organizations", async () => {
+    const url = `/api/v1/organizations/${organizationId}/logo`;
+    expect(
+      (await owner.put(url, { contentType: "image/png", data: PNG.toString("base64") })).statusCode,
+    ).toBe(200);
+    const other = (await owner.post("/api/v1/organizations", { name: "Second organization" })).json().id;
+    expect((await new TestClient(test.app).get("/api/v1/instance/info")).json().organization).toBeNull();
+
+    expect((await new TestClient(test.app).get(url)).json()).toMatchObject({ code: "notSignedIn" });
+
+    const member = await createAccount(test, "logo.reader@example.org", undefined, organizationId);
+    const memberClient = await signedInClient(test, member.email, member.password);
+    const served = await memberClient.get(url);
+    expect(served.statusCode).toBe(200);
+    expect(served.headers["cache-control"]).toBe("private, max-age=300");
+    expect(served.rawPayload.equals(PNG)).toBe(true);
+
+    const outsider = await createAccount(test, "logo.outsider@example.org", undefined, other);
+    const outsiderClient = await signedInClient(test, outsider.email, outsider.password);
+    expect((await outsiderClient.get(url)).json()).toMatchObject({ code: "notFound" });
+    expect((await outsiderClient.get(`/api/v1/organizations/${other}/logo`)).json()).toMatchObject({
+      code: "notFound",
+    });
+  });
 });

@@ -29,7 +29,7 @@ import {
 } from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
-import { InternalRoute, Permission, PublicRoute, SessionRoute } from "../access/route-access.js";
+import { InternalRoute, Permission, SessionRoute } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
@@ -402,10 +402,12 @@ export class OrganizationsController {
   }
 
   @Get(":organizationId/logo")
-  @PublicRoute()
+  @Permission("organization.view", organization, { publicForSoleOrganization: true })
   @InternalRoute()
   @ApiRoute({
     summary: "Get the logo",
+    description:
+      "Returns the logo with its stored image type. It is sent with `X-Content-Type-Options: nosniff` and a content security policy that blocks scripts.",
     tags: [TAG],
     params: organizationIdParams,
     raw: { contentTypes: ["image/png", "image/jpeg", "image/webp"], description: "The logo.", example: "" },
@@ -420,7 +422,7 @@ export class OrganizationsController {
       .header("content-type", logo.contentType)
       .header("x-content-type-options", "nosniff")
       .header("content-security-policy", "default-src 'none'; sandbox")
-      .header("cache-control", "public, max-age=300")
+      .header("cache-control", "private, max-age=300")
       .header("etag", `"${logo.ref}"`);
     return logo.data;
   }

@@ -121,6 +121,16 @@ describe("the OpenAPI description", () => {
     });
   });
 
+  it("documents routes that are public while the instance has one organization", () => {
+    const logo = generateOpenApi({ includeInternal: true }).paths[
+      "/api/v1/organizations/{organizationId}/logo"
+    ]?.get;
+    expect(logo?.security).toEqual([{ bearerAuth: [] }, { sessionCookie: [] }, {}]);
+    expect(logo?.description).toContain(
+      "Requires the permission `organization.view` on the organization in `organizationId`. Open to everyone while the instance has exactly one organization.",
+    );
+  });
+
   it("has examples that match their schemas", () => {
     const validator = new OpenApiValidator(document);
     for (const [path, methods] of Object.entries(document.paths)) {

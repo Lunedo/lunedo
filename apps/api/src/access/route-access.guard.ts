@@ -131,6 +131,11 @@ export class RouteAccessGuard implements CanActivate {
     services: AccountServices,
     access: Extract<RouteAccess, { kind: "permission" }>,
   ): Promise<boolean> {
+    const params = (request.params ?? {}) as Record<string, string | undefined>;
+    if (access.publicForSoleOrganization && "param" in access.resource) {
+      const soleId = await services.organizations.soleOrganizationId();
+      if (soleId !== null && soleId === params[access.resource.param]) return true;
+    }
     const token = bearerToken(request);
     let principal: AccountPrincipal;
     if (token !== undefined) {
@@ -145,7 +150,6 @@ export class RouteAccessGuard implements CanActivate {
         recentAuthentication: access.recentAuthentication,
       });
     }
-    const params = (request.params ?? {}) as Record<string, string | undefined>;
     const resource: Resource =
       "param" in access.resource
         ? { type: access.resource.type, id: params[access.resource.param] ?? "" }

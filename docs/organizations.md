@@ -6,7 +6,7 @@ An instance contains one or more organizations. Each has its own members, groups
 
 An organization has a name, a slug that is unique regardless of case, a language, a time zone and an optional logo. Language and time zone are organization-level settings, so members inherit them unless they choose their own.
 
-The logo is a PNG, JPEG or WebP image of at most 256 KiB. Pagehall checks the file signature, stores the image in the database, so that backups contain it, and serves it to everyone, because the sign-in page shows it, with `nosniff` and a content security policy that forbids any active content. The logo reference changes with every upload. The accent color is the setting `branding.accentColor`, one of the seven palette colors, at instance and organization level.
+The logo is a PNG, JPEG or WebP image of at most 256 KiB. Pagehall checks that the file content matches the declared type and stores the image in the database, so that backups contain it. Logos are served with their stored type, `nosniff` and a content security policy that forbids any active content. While the instance has exactly one organization, its logo is public, because the sign-in page shows it; otherwise only members of the organization can read it, so the logo cannot be used to find out which organizations exist. The logo reference changes with every upload. The accent color is the setting `branding.accentColor`, one of the seven palette colors, at instance and organization level.
 
 Instance administrators assign e-mail domains to organizations. A domain belongs to at most one organization. When an account is created with a verified address in an assigned domain, through an invitation or self-registration, that organization becomes its home organization. Changes of the home organization of existing accounts follow with identity providers.
 
@@ -98,7 +98,7 @@ Each endpoint declares the action it requires. Endpoints marked internal serve t
 | `POST /api/v1/organizations` | `instance.organizations.create` |
 | `GET, PATCH /api/v1/organizations/{id}` | `organization.view`, `organization.update` |
 | `PUT, DELETE /api/v1/organizations/{id}/logo` | `organization.update` |
-| `GET /api/v1/organizations/{id}/logo` | public; internal |
+| `GET /api/v1/organizations/{id}/logo` | `organization.view`, public while the instance has one organization; internal |
 | `GET /api/v1/organizations/{id}/domains` | `organization.signIn.view` |
 | `POST, DELETE /api/v1/organizations/{id}/domains` | `instance.organizations.manage` |
 | `GET /api/v1/organizations/{id}/members` | `organization.members.view` |
