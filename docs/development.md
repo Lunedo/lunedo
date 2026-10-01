@@ -9,7 +9,8 @@
 | `apps/collab` | Real-time collaboration server: Hocuspocus |
 | `apps/worker` | Background jobs |
 | `packages/editor-schema` | Document schema shared by client, server, importers and exporters |
-| `packages/shared` | Types, validation and utilities; `@pagehall/shared/node` contains server-only code |
+| `packages/shared` | Types, validation and utilities for client and server |
+| `packages/server` | Server foundation: configuration, database, encryption, settings, jobs, observability, backups |
 | `packages/ui` | Interface components |
 | `packages/tokens` | Design tokens and the generated theme |
 | `packages/config` | Shared TypeScript and Vitest configuration, development runner |
@@ -31,19 +32,13 @@ The `app` service reports healthy when web, api, collab and worker answer; see `
 
 To run everything on the host instead, start PostgreSQL, set `PAGEHALL_DATABASE_URL` and run `pnpm dev:apps`.
 
-## Configuration
+## Operations
 
-| Variable | Default | Used by |
-|---|---|---|
-| `PAGEHALL_DATABASE_URL` | required | api, collab, worker |
-| `PAGEHALL_HOST` | `0.0.0.0` | api, collab, worker |
-| `PAGEHALL_API_PORT` | `3000` | api |
-| `PAGEHALL_COLLAB_PORT` | `3001` | collab |
-| `PAGEHALL_WORKER_PORT` | `3002` | worker |
-| `PAGEHALL_LOG_LEVEL` | `info` | api, collab, worker |
-| `PAGEHALL_WEB_ROOT` | unset | api serves the built web client from this directory |
+All settings are described in [configuration.md](configuration.md). The database conventions are in [database.md](database.md), encryption and key rotation in [encryption.md](encryption.md), backups in [backup.md](backup.md).
 
-Every process exposes `GET /health/live` and `GET /health/ready`. Readiness includes a database check. Logs are JSON lines on stdout.
+Every process exposes `GET /health/live`, `GET /health/ready` and `GET /metrics`. Readiness covers the database, the migration state and the master key; metrics require the metrics token. Logs are JSON lines on stdout and carry the request ID, also in jobs enqueued by a request.
+
+Every API route declares how it may be accessed (`@PublicRoute()`, `@MetricsTokenRoute()`); a global guard rejects routes without a declaration and a test checks that every route has one.
 
 ## Container image
 
@@ -64,7 +59,7 @@ Roles are `api`, `collab`, `worker` and `all` (default), which runs all three pr
 
 | Workflow | Trigger | Checks |
 |---|---|---|
-| `ci.yml` | pull requests, pushes to `main` | lint, typecheck, unit tests against PostgreSQL, Playwright, license check, dependency audit, DCO sign-off |
+| `ci.yml` | pull requests, pushes to `main` | lint, typecheck, unit tests against PostgreSQL, Playwright, backup round trip with the image, license check, dependency audit, DCO sign-off |
 | `image.yml` | pushes to `main`, pull requests that change `docker/` | image build for amd64 and arm64, not published |
 | `audit.yml` | Mondays 05:00 UTC, manual | `pnpm audit` on `main`; fails on any known vulnerability and lists the findings in the job summary |
 
