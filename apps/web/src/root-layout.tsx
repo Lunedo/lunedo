@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Outlet, useRouter } from "@tanstack/react-router";
+import { Outlet, useLocation, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { setSignedOutHandler } from "./api/request.js";
 import { PreferencesProvider } from "./preferences/preferences-provider.js";
@@ -19,6 +19,7 @@ const PUBLIC_PATHS = [
 export function RootLayout() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const location = useLocation();
 
   useEffect(() => {
     setSignedOutHandler(() => {
@@ -30,6 +31,8 @@ export function RootLayout() {
     });
     return () => setSignedOutHandler(null);
   }, [router, queryClient]);
+
+  if (location.pathname.startsWith("/dev/")) return <Outlet />;
 
   return (
     <PreferencesProvider>

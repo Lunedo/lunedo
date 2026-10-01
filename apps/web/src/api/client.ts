@@ -18,7 +18,7 @@ export function createApiClient(fetchImplementation?: typeof fetch) {
   const client = createClient<paths>({
     baseUrl: globalThis.location?.origin ?? "http://localhost",
     credentials: "same-origin",
-    ...(fetchImplementation ? { fetch: fetchImplementation } : {}),
+    fetch: fetchImplementation ?? ((input: Request) => globalThis.fetch(input)),
   });
   client.use(csrfMiddleware);
   return client;
