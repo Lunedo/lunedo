@@ -1,35 +1,26 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import {
-  type DatabasePool,
-  handleHealthRequest,
-  type Logger,
-  pingDatabase,
-  type ServiceConfig,
-} from "@pagehall/shared/node";
+import { handleOperationsRequest, type OperationsEndpoints } from "@pagehall/server";
 
-export interface Worker {
+export interface OperationsServer {
   start(): Promise<AddressInfo>;
   stop(): Promise<void>;
 }
 
-/** The background job process. It exposes health endpoints for orchestration. */
-export function createWorker(options: {
-  config: ServiceConfig;
-  logger: Logger;
-  pool: Pick<DatabasePool, "query">;
-}): Worker {
-  const { config, logger, pool } = options;
+/** HTTP server of the worker role: health endpoints and metrics for orchestration and monitoring. */
+export function createOperationsServer(options: {
+  host: string;
+  port: number;
+  endpoints: OperationsEndpoints;
+}): OperationsServer {
+  const { endpoints } = options;
   const server = createServer((request, response) => {
-    handleHealthRequest(request, response, {
-      ready: { database: () => pingDatabase(pool as DatabasePool) },
-      logger,
-    }).then(
+    handleOperationsRequest(request, response, endpoints).then(
       (handled) => {
         if (!handled) response.writeHead(404).end();
       },
       (error: unknown) => {
-        logger.error({ err: error }, "Health request failed");
+        endpoints.logger.error({ err: error }, "Operations request failed");
         response.writeHead(500).end();
       },
     );
@@ -39,7 +30,7 @@ export function createWorker(options: {
     start: () =>
       new Promise((resolve, reject) => {
         server.once("error", reject);
-        server.listen(config.port, config.host, () => resolve(server.address() as AddressInfo));
+        server.listen(options.port, options.host, () => resolve(server.address() as AddressInfo));
       }),
     stop: () =>
       new Promise((resolve, reject) => {

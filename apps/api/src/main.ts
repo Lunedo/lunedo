@@ -1,23 +1,26 @@
 import "reflect-metadata";
-import { ConfigError, createLogger, registerShutdown } from "@pagehall/shared/node";
+import { ConfigError, createLogger, createServerRuntime, registerShutdown } from "@pagehall/server";
 import { createApp } from "./app.js";
-import { readApiConfig } from "./config.js";
+import { apiContextOf } from "./context.js";
 
 async function main() {
-  let config: ReturnType<typeof readApiConfig>;
+  let runtime: Awaited<ReturnType<typeof createServerRuntime>>;
   try {
-    config = readApiConfig(process.env);
+    runtime = await createServerRuntime({ role: "api", env: process.env });
   } catch (error) {
     if (!(error instanceof ConfigError)) throw error;
     createLogger({ service: "api", level: "info" }).fatal(error.message);
-    process.exit(1);
+    process.exit(78);
   }
 
-  const logger = createLogger({ service: "api", level: config.logLevel });
-  const app = await createApp(config, logger);
-  await app.listen({ port: config.port, host: config.host });
-  logger.info({ port: config.port }, "API listening");
-  registerShutdown(logger, () => app.close());
+  const { config, logger } = runtime;
+  const app = await createApp(apiContextOf(runtime));
+  await app.listen({ port: config.ports.api, host: config.host });
+  logger.info({ port: config.ports.api }, "API listening");
+  registerShutdown(logger, async () => {
+    await app.close();
+    await runtime.close();
+  });
 }
 
 await main();

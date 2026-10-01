@@ -1,30 +1,27 @@
 import { Controller, Get, Header, Inject, Res } from "@nestjs/common";
 import { type HealthReport, runHealthChecks } from "@pagehall/shared";
-import { type DatabasePool, type Logger, pingDatabase } from "@pagehall/shared/node";
 import type { FastifyReply } from "fastify";
-import { DATABASE_POOL } from "../database/database.module.js";
-import { APP_LOGGER } from "../logger.js";
+import { PublicRoute } from "../access/route-access.js";
+import { API_CONTEXT, type ApiContext } from "../context.js";
 
 @Controller("health")
 export class HealthController {
-  constructor(
-    @Inject(DATABASE_POOL) private readonly pool: DatabasePool,
-    @Inject(APP_LOGGER) private readonly logger: Logger,
-  ) {}
+  constructor(@Inject(API_CONTEXT) private readonly context: ApiContext) {}
 
   @Get("live")
+  @PublicRoute()
   @Header("Cache-Control", "no-store")
   live(): HealthReport {
     return { status: "ok", checks: {} };
   }
 
   @Get("ready")
+  @PublicRoute()
   @Header("Cache-Control", "no-store")
   async ready(@Res({ passthrough: true }) reply: FastifyReply): Promise<HealthReport> {
-    const report = await runHealthChecks(
-      { database: () => pingDatabase(this.pool) },
-      { onFailure: (check, error) => this.logger.warn({ check, err: error }, "Health check failed") },
-    );
+    const report = await runHealthChecks(this.context.readiness, {
+      onFailure: (check, error) => this.context.logger.warn({ check, err: error }, "Health check failed"),
+    });
     reply.status(report.status === "ok" ? 200 : 503);
     return report;
   }

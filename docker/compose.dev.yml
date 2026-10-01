@@ -15,6 +15,8 @@ x-node-modules: &node-modules
   - node-modules-ui:/repo/packages/ui/node_modules
   - node-modules-tokens:/repo/packages/tokens/node_modules
   - node-modules-config:/repo/packages/config/node_modules
+  - node-modules-server:/repo/packages/server/node_modules
+  - pagehall-data:/var/lib/pagehall
 
 services:
   postgres:
@@ -80,3 +82,5 @@ volumes:
   node-modules-ui:
   node-modules-tokens:
   node-modules-config:
+  node-modules-server:
+  pagehall-data:

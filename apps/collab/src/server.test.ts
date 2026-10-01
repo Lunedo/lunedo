@@ -1,7 +1,7 @@
 import { HocuspocusProvider, HocuspocusProviderWebsocket } from "@hocuspocus/provider";
 import type { Server } from "@hocuspocus/server";
-import { createLogger } from "@pagehall/shared/node";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { createLogger, Metrics } from "@pagehall/server";
+import { afterEach, describe, expect, it } from "vitest";
 import * as Y from "yjs";
 import { createCollabServer } from "./server.js";
 
@@ -12,11 +12,16 @@ afterEach(async () => {
   server = undefined;
 });
 
-async function start(query: () => Promise<unknown>) {
+async function start(database: () => Promise<unknown>) {
   server = createCollabServer({
-    config: { host: "127.0.0.1", port: 0, logLevel: "silent", databaseUrl: "" },
-    logger: createLogger({ service: "collab", level: "silent" }),
-    pool: { query: vi.fn(query) } as never,
+    host: "127.0.0.1",
+    port: 0,
+    endpoints: {
+      ready: { database: async () => void (await database()) },
+      logger: createLogger({ service: "collab", level: "silent" }),
+      metrics: new Metrics("collab"),
+      metricsToken: "collab-token",
+    },
   });
   await server.listen();
   return { http: `http://127.0.0.1:${server.address.port}`, ws: `ws://127.0.0.1:${server.address.port}` };
@@ -36,6 +41,13 @@ describe("collaboration server", () => {
       throw new Error("down");
     });
     expect((await fetch(`${http}/health/ready`)).status).toBe(503);
+  });
+
+  it("serves metrics only with the token", async () => {
+    const { http } = await start(async () => ({}));
+    expect((await fetch(`${http}/metrics`)).status).toBe(401);
+    const response = await fetch(`${http}/metrics`, { headers: { authorization: "Bearer collab-token" } });
+    expect(response.status).toBe(200);
   });
 
   it("answers other HTTP requests with 404", async () => {

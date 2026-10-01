@@ -1,49 +1,66 @@
-import { createLogger } from "@pagehall/shared/node";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { createWorker, type Worker } from "./worker.js";
+import { createLogger, Metrics } from "@pagehall/server";
+import type { HealthCheck } from "@pagehall/shared";
+import { afterEach, describe, expect, it } from "vitest";
+import { createOperationsServer, type OperationsServer } from "./worker.js";
 
-let worker: Worker | undefined;
+let server: OperationsServer | undefined;
+const token = "worker-metrics-token";
 
 afterEach(async () => {
-  await worker?.stop();
-  worker = undefined;
+  await server?.stop();
+  server = undefined;
 });
 
-function create(port: number, query: () => Promise<unknown>): Worker {
-  return createWorker({
-    config: { host: "127.0.0.1", port, logLevel: "silent", databaseUrl: "" },
-    logger: createLogger({ service: "worker", level: "silent" }),
-    pool: { query: vi.fn(query) } as never,
+function create(port: number, ready: Record<string, HealthCheck> = {}): OperationsServer {
+  return createOperationsServer({
+    host: "127.0.0.1",
+    port,
+    endpoints: {
+      ready,
+      logger: createLogger({ service: "worker", level: "silent" }),
+      metrics: new Metrics("worker"),
+      metricsToken: token,
+    },
   });
 }
 
-async function start(query: () => Promise<unknown>): Promise<string> {
-  worker = create(0, query);
-  const address = await worker.start();
+async function start(ready: Record<string, HealthCheck> = {}): Promise<string> {
+  server = create(0, ready);
+  const address = await server.start();
   return `http://127.0.0.1:${address.port}`;
 }
 
-describe("worker", () => {
+describe("worker operations server", () => {
   it("reports liveness and readiness", async () => {
-    const base = await start(async () => ({}));
+    const base = await start({ database: async () => {} });
     expect((await fetch(`${base}/health/live`)).status).toBe(200);
     expect((await fetch(`${base}/health/ready`)).status).toBe(200);
   });
 
-  it("reports not ready when the database fails", async () => {
-    const base = await start(async () => {
-      throw new Error("down");
+  it("reports not ready when a check fails", async () => {
+    const base = await start({
+      masterKey: async () => {
+        throw new Error("missing");
+      },
     });
     expect((await fetch(`${base}/health/ready`)).status).toBe(503);
   });
 
+  it("serves metrics only with the token", async () => {
+    const base = await start();
+    expect((await fetch(`${base}/metrics`)).status).toBe(401);
+    expect((await fetch(`${base}/metrics`, { headers: { authorization: `Bearer ${token}` } })).status).toBe(
+      200,
+    );
+  });
+
   it("answers other paths with 404", async () => {
-    const base = await start(async () => ({}));
+    const base = await start();
     expect((await fetch(`${base}/`)).status).toBe(404);
   });
 
   it("fails to start when the port is taken", async () => {
-    const base = await start(async () => ({}));
-    await expect(create(Number(new URL(base).port), async () => ({})).start()).rejects.toThrow();
+    const base = await start();
+    await expect(create(Number(new URL(base).port)).start()).rejects.toThrow();
   });
 });

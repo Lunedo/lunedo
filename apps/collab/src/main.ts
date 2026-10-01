@@ -1,30 +1,31 @@
-import {
-  ConfigError,
-  createDatabasePool,
-  createLogger,
-  readServiceConfig,
-  registerShutdown,
-  type ServiceConfig,
-} from "@pagehall/shared/node";
+import { ConfigError, createLogger, createServerRuntime, registerShutdown } from "@pagehall/server";
 import { createCollabServer } from "./server.js";
 
-let config: ServiceConfig;
+let runtime: Awaited<ReturnType<typeof createServerRuntime>>;
 try {
-  config = readServiceConfig(process.env, "PAGEHALL_COLLAB_PORT", 3001);
+  runtime = await createServerRuntime({ role: "collab", env: process.env });
 } catch (error) {
   if (!(error instanceof ConfigError)) throw error;
   createLogger({ service: "collab", level: "info" }).fatal(error.message);
-  process.exit(1);
+  process.exit(78);
 }
 
-const logger = createLogger({ service: "collab", level: config.logLevel });
-const pool = createDatabasePool({ connectionString: config.databaseUrl, applicationName: "pagehall-collab" });
-const server = createCollabServer({ config, logger, pool });
+const { config, logger } = runtime;
+const server = createCollabServer({
+  host: config.host,
+  port: config.ports.collab,
+  endpoints: {
+    ready: runtime.readiness,
+    logger,
+    metrics: runtime.metrics,
+    metricsToken: runtime.metricsToken.reveal(),
+  },
+});
 
 await server.listen();
 logger.info({ port: server.address.port }, "Collaboration server listening");
 
 registerShutdown(logger, async () => {
   await server.destroy();
-  await pool.end();
+  await runtime.close();
 });
