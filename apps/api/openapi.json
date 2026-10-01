@@ -9801,6 +9801,19 @@
                             "type": "string",
                             "description": "Default IANA time zone, for example `Europe/Vienna`."
                           },
+                          "accentColor": {
+                            "type": "string",
+                            "enum": [
+                              "petrol",
+                              "blue",
+                              "violet",
+                              "amber",
+                              "red",
+                              "green",
+                              "gray"
+                            ],
+                            "description": "Accent color from the palette, from the setting `branding.accentColor`."
+                          },
                           "createdAt": {
                             "type": "string",
                             "format": "date-time",
@@ -9814,6 +9827,7 @@
                           "logoRef",
                           "language",
                           "timeZone",
+                          "accentColor",
                           "createdAt"
                         ],
                         "additionalProperties": false,
@@ -9845,6 +9859,7 @@
                       "logoRef": null,
                       "language": "en",
                       "timeZone": "Europe/Vienna",
+                      "accentColor": "petrol",
                       "createdAt": "2026-10-01T08:00:00.000Z"
                     }
                   ],
@@ -12814,6 +12829,19 @@
                             "type": "string",
                             "description": "Default IANA time zone, for example `Europe/Vienna`."
                           },
+                          "accentColor": {
+                            "type": "string",
+                            "enum": [
+                              "petrol",
+                              "blue",
+                              "violet",
+                              "amber",
+                              "red",
+                              "green",
+                              "gray"
+                            ],
+                            "description": "Accent color from the palette, from the setting `branding.accentColor`."
+                          },
                           "createdAt": {
                             "type": "string",
                             "format": "date-time",
@@ -12831,6 +12859,7 @@
                           "logoRef",
                           "language",
                           "timeZone",
+                          "accentColor",
                           "createdAt",
                           "membershipKind"
                         ],
@@ -13028,6 +13057,19 @@
                       "type": "string",
                       "description": "Default IANA time zone, for example `Europe/Vienna`."
                     },
+                    "accentColor": {
+                      "type": "string",
+                      "enum": [
+                        "petrol",
+                        "blue",
+                        "violet",
+                        "amber",
+                        "red",
+                        "green",
+                        "gray"
+                      ],
+                      "description": "Accent color from the palette, from the setting `branding.accentColor`."
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -13041,6 +13083,7 @@
                     "logoRef",
                     "language",
                     "timeZone",
+                    "accentColor",
                     "createdAt"
                   ],
                   "additionalProperties": false,
@@ -13053,6 +13096,7 @@
                   "logoRef": null,
                   "language": "en",
                   "timeZone": "Europe/Vienna",
+                  "accentColor": "petrol",
                   "createdAt": "2026-10-01T08:00:00.000Z"
                 }
               }
@@ -13258,6 +13302,19 @@
                       "type": "string",
                       "description": "Default IANA time zone, for example `Europe/Vienna`."
                     },
+                    "accentColor": {
+                      "type": "string",
+                      "enum": [
+                        "petrol",
+                        "blue",
+                        "violet",
+                        "amber",
+                        "red",
+                        "green",
+                        "gray"
+                      ],
+                      "description": "Accent color from the palette, from the setting `branding.accentColor`."
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -13271,6 +13328,7 @@
                     "logoRef",
                     "language",
                     "timeZone",
+                    "accentColor",
                     "createdAt"
                   ],
                   "additionalProperties": false,
@@ -13283,6 +13341,7 @@
                   "logoRef": null,
                   "language": "en",
                   "timeZone": "Europe/Vienna",
+                  "accentColor": "petrol",
                   "createdAt": "2026-10-01T08:00:00.000Z"
                 }
               }
@@ -13531,6 +13590,19 @@
                       "type": "string",
                       "description": "Default IANA time zone, for example `Europe/Vienna`."
                     },
+                    "accentColor": {
+                      "type": "string",
+                      "enum": [
+                        "petrol",
+                        "blue",
+                        "violet",
+                        "amber",
+                        "red",
+                        "green",
+                        "gray"
+                      ],
+                      "description": "Accent color from the palette, from the setting `branding.accentColor`."
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -13544,6 +13616,7 @@
                     "logoRef",
                     "language",
                     "timeZone",
+                    "accentColor",
                     "createdAt"
                   ],
                   "additionalProperties": false,
@@ -13556,6 +13629,7 @@
                   "logoRef": null,
                   "language": "en",
                   "timeZone": "Europe/Vienna",
+                  "accentColor": "petrol",
                   "createdAt": "2026-10-01T08:00:00.000Z"
                 }
               }
@@ -17587,6 +17661,19 @@
                       "type": "string",
                       "description": "Default IANA time zone, for example `Europe/Vienna`."
                     },
+                    "accentColor": {
+                      "type": "string",
+                      "enum": [
+                        "petrol",
+                        "blue",
+                        "violet",
+                        "amber",
+                        "red",
+                        "green",
+                        "gray"
+                      ],
+                      "description": "Accent color from the palette, from the setting `branding.accentColor`."
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -17600,6 +17687,7 @@
                     "logoRef",
                     "language",
                     "timeZone",
+                    "accentColor",
                     "createdAt"
                   ],
                   "additionalProperties": false,
@@ -17612,6 +17700,7 @@
                   "logoRef": "5f2b8c1d9a0e4b7c",
                   "language": "en",
                   "timeZone": "Europe/Vienna",
+                  "accentColor": "petrol",
                   "createdAt": "2026-10-01T08:00:00.000Z"
                 }
               }

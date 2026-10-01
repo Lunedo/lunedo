@@ -1,4 +1,5 @@
 import { accessLevels, instanceAreas, organizationAreas, supportedLanguages } from "@pagehall/server";
+import { accentColors } from "@pagehall/shared";
 import { z } from "zod";
 
 export const uuid = (description: string) => z.uuid().describe(description);
@@ -46,6 +47,9 @@ export const organizationSchema = z
     logoRef: z.string().nullable().describe("Reference to the uploaded logo, or null."),
     language: z.enum(supportedLanguages).describe("Default language of the organization."),
     timeZone: z.string().describe("Default IANA time zone, for example `Europe/Vienna`."),
+    accentColor: z
+      .enum(accentColors)
+      .describe("Accent color from the palette, from the setting `branding.accentColor`."),
     createdAt: timestamp("When the organization was created."),
   })
   .describe("An organization.");
@@ -57,6 +61,7 @@ export const exampleOrganization = {
   logoRef: null,
   language: "en",
   timeZone: "Europe/Vienna",
+  accentColor: "petrol",
   createdAt: "2026-10-01T08:00:00.000Z",
 };
 

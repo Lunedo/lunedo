@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { AccentColor } from "@pagehall/shared";
 import { domainSchema, organizationNameSchema, slugSchema, timeZoneSchema } from "@pagehall/shared";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -8,6 +9,7 @@ import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
 import { languageSetting, supportedLanguages, timeZoneSetting } from "../settings/builtin.js";
+import { accentColorSetting } from "../settings/preferences.js";
 import type { SettingsService } from "../settings/service.js";
 import { memberships, roleAssignments } from "./access-schema.js";
 import { organizationDomains, organizationLogos, organizations } from "./schema.js";
@@ -41,6 +43,7 @@ export interface Organization {
   logoRef: string | null;
   language: (typeof supportedLanguages)[number];
   timeZone: string;
+  accentColor: AccentColor;
   createdAt: Date;
 }
 
@@ -101,6 +104,7 @@ export class OrganizationService {
       logoRef: row.logoRef,
       language: await this.#settings.get(languageSetting, chain),
       timeZone: await this.#settings.get(timeZoneSetting, chain),
+      accentColor: await this.#settings.get(accentColorSetting, chain),
       createdAt: row.createdAt,
     };
   }
@@ -272,6 +276,7 @@ export class OrganizationService {
         .enum(supportedLanguages)
         .parse(input.language ?? (await this.#settings.get(languageSetting, {}))),
       timeZone: input.timeZone ?? (await this.#settings.get(timeZoneSetting, {})),
+      accentColor: await this.#settings.get(accentColorSetting, {}),
       createdAt: row.createdAt,
     };
   }
