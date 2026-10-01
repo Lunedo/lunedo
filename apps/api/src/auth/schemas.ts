@@ -1,4 +1,12 @@
-import { emailSchema, PASSWORD_MAX_LENGTH } from "@pagehall/server";
+import {
+  emailSchema,
+  linkTokenSchema,
+  passkeyNameSchema,
+  passwordSchema,
+  recoveryCodeSchema,
+  signInEmailSchema,
+  totpCodeSchema,
+} from "@pagehall/shared";
 import { z } from "zod";
 
 const base64url = (max: number) =>
@@ -51,12 +59,12 @@ export const registrationResponseSchema = z
   })
   .strict();
 
-const password = z.string().min(1).max(PASSWORD_MAX_LENGTH);
-const totpCode = z.string().trim().max(16);
-const recoveryCode = z.string().trim().max(64);
-const token = z.string().max(128);
+const password = passwordSchema;
+const totpCode = totpCodeSchema;
+const recoveryCode = recoveryCodeSchema;
+const token = linkTokenSchema;
 
-export const signInSchema = z.object({ email: z.string().trim().min(1).max(254), password }).strict();
+export const signInSchema = z.object({ email: signInEmailSchema, password }).strict();
 
 export const secondFactorSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("totp"), code: totpCode }).strict(),
@@ -72,14 +80,14 @@ export const reauthenticationSchema = z.discriminatedUnion("method", [
   z.object({ method: z.literal("passkey"), response: authenticationResponseSchema }).strict(),
 ]);
 
-export const passwordResetRequestSchema = z.object({ email: z.string().trim().min(1).max(254) }).strict();
+export const passwordResetRequestSchema = z.object({ email: signInEmailSchema }).strict();
 export const passwordResetSchema = z.object({ token, password }).strict();
 export const tokenSchema = z.object({ token }).strict();
 export const newPasswordSchema = z.object({ password }).strict();
 export const newEmailSchema = z.object({ email: emailSchema }).strict();
 export const totpConfirmationSchema = z.object({ code: totpCode }).strict();
 export const passkeyRegistrationSchema = z
-  .object({ response: registrationResponseSchema, name: z.string().trim().min(1).max(100) })
+  .object({ response: registrationResponseSchema, name: passkeyNameSchema })
   .strict();
 export const idSchema = z.uuid();
 export const emptySchema = z.object({}).strict().optional();

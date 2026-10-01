@@ -1,4 +1,5 @@
 import { Body, Controller, Inject, Param, Post, Req } from "@nestjs/common";
+import { accountNameSchema, linkTokenSchema, passwordSchema, signInEmailSchema } from "@pagehall/shared";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission, PublicRoute } from "../access/route-access.js";
@@ -9,17 +10,17 @@ import { actorOf } from "../http/request.js";
 
 const acceptSchema = z
   .object({
-    token: z.string().max(128),
-    name: z.string().trim().min(1).max(200).optional(),
-    password: z.string().min(1).max(256).optional(),
+    token: linkTokenSchema,
+    name: accountNameSchema.optional(),
+    password: passwordSchema.optional(),
   })
   .strict();
-const registrationSchema = z.object({ email: z.string().trim().min(1).max(254) }).strict();
+const registrationSchema = z.object({ email: signInEmailSchema }).strict();
 const completeSchema = z
   .object({
-    token: z.string().max(128),
-    name: z.string().trim().min(1).max(200),
-    password: z.string().min(1).max(256),
+    token: linkTokenSchema,
+    name: accountNameSchema,
+    password: passwordSchema,
   })
   .strict();
 const joinedSchema = z.object({ accountId: z.uuid(), organizationId: z.uuid() });

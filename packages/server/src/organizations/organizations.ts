@@ -1,3 +1,4 @@
+import { domainSchema, organizationNameSchema, slugSchema, timeZoneSchema } from "@pagehall/shared";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Principal } from "../accounts/principal.js";
@@ -11,19 +12,7 @@ import { memberships, roleAssignments } from "./access-schema.js";
 import { organizationDomains, organizations } from "./schema.js";
 import { organizationSettingsChain } from "./settings.js";
 
-export const organizationNameSchema = z.string().trim().min(1).max(100);
-export const slugSchema = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .regex(/^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/, "must be lowercase letters, digits and hyphens");
-export const domainSchema = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .max(253)
-  .regex(/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/, "must be a domain name");
-export const timeZoneSchema = z.string().refine((value) => timeZoneSetting.schema.safeParse(value).success);
+export { domainSchema, organizationNameSchema, slugSchema, timeZoneSchema };
 
 export interface Organization {
   id: string;

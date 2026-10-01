@@ -1,3 +1,4 @@
+import { smtpSecurityModes } from "@pagehall/shared";
 import { createTransport } from "nodemailer";
 
 export interface MailMessage {
@@ -11,7 +12,7 @@ export interface MailTransport {
   send(message: MailMessage): Promise<void>;
 }
 
-export const smtpSecurityModes = ["tls", "starttls", "none"] as const;
+export { smtpSecurityModes };
 export type SmtpSecurity = (typeof smtpSecurityModes)[number];
 
 export interface SmtpOptions {

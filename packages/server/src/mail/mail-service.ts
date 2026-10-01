@@ -1,4 +1,4 @@
-import { uuidv7 } from "@pagehall/shared";
+import { smtpConfigurationSchema, uuidv7 } from "@pagehall/shared";
 import { and, eq, lt } from "drizzle-orm";
 import { z } from "zod";
 import { instanceNameSetting } from "../accounts/instance-settings.js";
@@ -19,18 +19,9 @@ import {
   type MailTransport,
   type SmtpOptions,
   SmtpTransport,
-  smtpSecurityModes,
 } from "./transport.js";
 
-export const smtpConfigurationSchema = z
-  .object({
-    host: z.string().trim().min(1).max(253),
-    port: z.number().int().min(1).max(65_535),
-    security: z.enum(smtpSecurityModes),
-    username: z.string().min(1).max(256).nullable(),
-    from: z.email().max(254),
-  })
-  .strict();
+export { smtpConfigurationSchema };
 
 export type SmtpConfiguration = z.infer<typeof smtpConfigurationSchema>;
 
@@ -197,6 +188,10 @@ export class MailService {
 
   async smtpConfiguration(): Promise<SmtpConfiguration | null> {
     return this.#settings.get(smtpSetting, {});
+  }
+
+  async hasSmtpPassword(): Promise<boolean> {
+    return (await this.#smtpPassword()) !== null;
   }
 
   async #transportOrThrow(): Promise<MailTransport> {

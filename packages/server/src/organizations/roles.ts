@@ -1,5 +1,5 @@
+import { roleNameSchema } from "@pagehall/shared";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
-import { z } from "zod";
 import type { Principal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditEvents, AuditLog } from "../audit/audit-log.js";
@@ -26,7 +26,7 @@ import {
 import { lockOrganization, ownerCount } from "./memberships.js";
 import { OrganizationError } from "./organizations.js";
 
-export const roleNameSchema = z.string().trim().min(1).max(100);
+export { roleNameSchema };
 
 const ASSIGNABLE: Record<RoleScope, readonly BuiltInRoleKey[]> = {
   instance: ["administrator", "securityAuditor"],

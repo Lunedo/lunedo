@@ -1,40 +1,29 @@
-import { z } from "zod";
+import {
+  type AccessLevel,
+  type Area,
+  type Areas,
+  accessLevels,
+  areasOf,
+  areasSchema,
+  type InstanceArea,
+  instanceAreas,
+  type OrganizationArea,
+  organizationAreas,
+} from "@pagehall/shared";
 import type { BuiltInRoleKey, RoleScope } from "../organizations/access-schema.js";
 
-export const accessLevels = ["view", "manage"] as const;
-export type AccessLevel = (typeof accessLevels)[number];
-
-export const instanceAreas = [
-  "organizations",
-  "accounts",
-  "signInAndSecurity",
-  "settings",
-  "operations",
-  "auditLog",
-] as const;
-
-export const organizationAreas = [
-  "membersAndGroups",
-  "spaces",
-  "settings",
-  "signInAndSecurity",
-  "integrationsAndApi",
-  "auditLog",
-] as const;
-
-export type InstanceArea = (typeof instanceAreas)[number];
-export type OrganizationArea = (typeof organizationAreas)[number];
-export type Area = InstanceArea | OrganizationArea;
-export type Areas = Partial<Record<Area, AccessLevel>>;
-
-export function areasOf(scope: RoleScope): readonly Area[] {
-  return scope === "instance" ? instanceAreas : organizationAreas;
-}
-
-export function areasSchema(scope: RoleScope) {
-  const shape = Object.fromEntries(areasOf(scope).map((area) => [area, z.enum(accessLevels).optional()]));
-  return z.object(shape).strict() as unknown as z.ZodType<Areas>;
-}
+export {
+  type AccessLevel,
+  type Area,
+  type Areas,
+  accessLevels,
+  areasOf,
+  areasSchema,
+  type InstanceArea,
+  instanceAreas,
+  type OrganizationArea,
+  organizationAreas,
+};
 
 function rank(level: AccessLevel | undefined): number {
   return level === "manage" ? 2 : level === "view" ? 1 : 0;

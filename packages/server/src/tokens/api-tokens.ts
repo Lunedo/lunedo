@@ -7,7 +7,7 @@ import type { AuditLog } from "../audit/audit-log.js";
 import { RateLimitedError } from "../auth/errors.js";
 import { clientSubject, type RateLimiter } from "../auth/throttle.js";
 import { hashToken } from "../auth/tokens.js";
-import { areasSchema, intersectAreas } from "../authorization/areas.js";
+import { intersectAreas } from "../authorization/areas.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Executor } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
@@ -38,18 +38,9 @@ const DEFAULT_LIFETIME_DAYS = 90;
 const TOUCH_INTERVAL_MS = 60_000;
 const REJECTION_EVENTS_PER_CLIENT_PER_MINUTE = 10;
 
-export const tokenNameSchema = z.string().trim().min(1).max(100);
+import { tokenNameSchema, tokenScopesSchema } from "@pagehall/shared";
 
-export const tokenScopesSchema = z
-  .object({
-    instance: areasSchema("instance").optional(),
-    organization: areasSchema("organization").optional(),
-  })
-  .strict()
-  .refine(
-    (scopes) => Object.keys(scopes.instance ?? {}).length + Object.keys(scopes.organization ?? {}).length > 0,
-    "A token needs at least one scope",
-  );
+export { tokenNameSchema, tokenScopesSchema };
 
 export interface ApiToken {
   id: string;

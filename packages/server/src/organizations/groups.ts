@@ -1,5 +1,5 @@
+import { groupDescriptionSchema, groupNameSchema } from "@pagehall/shared";
 import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
-import { z } from "zod";
 import type { Principal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
@@ -10,8 +10,7 @@ import { groupManagers, groupMembers, groups, memberships, roleAssignments } fro
 import { lockOrganization } from "./memberships.js";
 import { OrganizationError } from "./organizations.js";
 
-export const groupNameSchema = z.string().trim().min(1).max(100);
-export const groupDescriptionSchema = z.string().trim().max(1000);
+export { groupDescriptionSchema, groupNameSchema };
 
 export interface Group {
   id: string;

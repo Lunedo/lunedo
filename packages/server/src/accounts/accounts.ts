@@ -1,5 +1,5 @@
+import { accountNameSchema, emailSchema } from "@pagehall/shared";
 import { eq, sql } from "drizzle-orm";
-import { z } from "zod";
 import type { AuditEvents, AuditLog } from "../audit/audit-log.js";
 import type { PasswordHasher, PasswordProblem } from "../auth/passwords.js";
 import { passwordProblem } from "../auth/passwords.js";
@@ -11,8 +11,7 @@ import type { SettingsService } from "../settings/service.js";
 import { type AccountState, type AccountType, accounts, instance } from "./schema.js";
 import { accountScopeChain } from "./scope.js";
 
-export const emailSchema = z.email().max(254);
-export const accountNameSchema = z.string().trim().min(1).max(200);
+export { accountNameSchema, emailSchema };
 
 export interface Account {
   id: string;

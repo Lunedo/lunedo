@@ -1,20 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { statfs, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { setupStepSchemas } from "@pagehall/shared";
 import { eq } from "drizzle-orm";
-import { z } from "zod";
-import {
-  type AccountService,
-  accountNameSchema,
-  emailSchema,
-  withUniqueEmail,
-} from "../accounts/accounts.js";
-import {
-  instanceNameSchema,
-  instanceNameSetting,
-  instanceUrlSchema,
-  instanceUrlSetting,
-} from "../accounts/instance-settings.js";
+import { type AccountService, withUniqueEmail } from "../accounts/accounts.js";
+import { instanceNameSetting, instanceUrlSetting } from "../accounts/instance-settings.js";
 import { ANONYMOUS, accountPrincipal } from "../accounts/principal.js";
 import { accounts, instance } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
@@ -26,16 +16,11 @@ import type { KeyRingHolder } from "../crypto/key-ring-holder.js";
 import type { Database } from "../database/database.js";
 import { migrationStatus } from "../database/migrate.js";
 import type { DatabasePool } from "../database/pool.js";
-import { type MailService, smtpConfigurationSchema } from "../mail/mail-service.js";
-import {
-  type OrganizationService,
-  organizationNameSchema,
-  slugSchema,
-  timeZoneSchema,
-} from "../organizations/organizations.js";
+import { type MailService } from "../mail/mail-service.js";
+import { type OrganizationService } from "../organizations/organizations.js";
 import { organizations } from "../organizations/schema.js";
 import { organizationSettingsChain } from "../organizations/settings.js";
-import { languageSetting, supportedLanguages, timeZoneSetting } from "../settings/builtin.js";
+import { languageSetting, timeZoneSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import { defineSetupAction, type SetupActionContext, type SetupStep } from "./framework.js";
 import { SetupStepError } from "./setup-service.js";
@@ -117,7 +102,7 @@ export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
     },
     actions: {
       acknowledge: defineSetupAction({
-        input: z.object({}).strict(),
+        input: setupStepSchemas.systemCheck.actions.acknowledge.input,
         async run(context) {
           await context.complete();
           return {};
@@ -141,7 +126,7 @@ export function instanceStep(deps: SetupStepDependencies): SetupStep {
     },
     actions: {
       save: defineSetupAction({
-        input: z.object({ url: instanceUrlSchema, name: instanceNameSchema }).strict(),
+        input: setupStepSchemas.instance.actions.save.input,
         async run(context, input) {
           await deps.settings.set(instanceUrlSetting, {}, "instance", input.url, { tx: context.tx });
           await deps.settings.set(instanceNameSetting, {}, "instance", input.name, { tx: context.tx });
@@ -180,14 +165,7 @@ export function ownerStep(deps: SetupStepDependencies): SetupStep {
     },
     actions: {
       createAccount: defineSetupAction({
-        input: z
-          .object({
-            email: emailSchema,
-            name: accountNameSchema,
-            password: z.string().min(1).max(PASSWORD_MAX_LENGTH),
-            language: z.enum(supportedLanguages).optional(),
-          })
-          .strict(),
+        input: setupStepSchemas.owner.actions.createAccount.input,
         async run(context, input) {
           const existing = await ownerOf(context);
           let accountId: string;
@@ -224,7 +202,7 @@ export function ownerStep(deps: SetupStepDependencies): SetupStep {
         },
       }),
       beginTotp: defineSetupAction({
-        input: z.object({}).strict(),
+        input: setupStepSchemas.owner.actions.beginTotp.input,
         async run(context) {
           const owner = await ownerOf(context);
           if (!owner) throw new SetupStepError("ownerMissing", "Create the owner account first");
@@ -236,7 +214,7 @@ export function ownerStep(deps: SetupStepDependencies): SetupStep {
         },
       }),
       confirmTotp: defineSetupAction({
-        input: z.object({ code: z.string().max(16) }).strict(),
+        input: setupStepSchemas.owner.actions.confirmTotp.input,
         async run(context, input) {
           const owner = await ownerOf(context);
           if (!owner) throw new SetupStepError("ownerMissing", "Create the owner account first");
@@ -278,7 +256,7 @@ export function keyBackupStep(deps: SetupStepDependencies): SetupStep {
     },
     actions: {
       download: defineSetupAction({
-        input: z.object({}).strict(),
+        input: setupStepSchemas.keyBackup.actions.download.input,
         async run(context) {
           if (typeof context.state.downloadedAt === "string") {
             throw new SetupStepError("keysAlreadyDownloaded", "The keys can be downloaded once only");
@@ -304,7 +282,7 @@ export function keyBackupStep(deps: SetupStepDependencies): SetupStep {
         },
       }),
       confirm: defineSetupAction({
-        input: z.object({}).strict(),
+        input: setupStepSchemas.keyBackup.actions.confirm.input,
         async run(context) {
           if (typeof context.state.downloadedAt !== "string") {
             throw new SetupStepError("keysNotDownloaded", "Download the keys first");
@@ -317,21 +295,17 @@ export function keyBackupStep(deps: SetupStepDependencies): SetupStep {
   };
 }
 
-const smtpInput = smtpConfigurationSchema
-  .extend({ password: z.string().max(1024).nullable().optional() })
-  .strict();
-
 export function mailStep(deps: SetupStepDependencies): SetupStep {
   return {
     id: "mail",
     order: 60,
     required: false,
     async describe() {
-      return { smtp: await deps.mail.smtpConfiguration() };
+      return { smtp: await deps.mail.smtpConfiguration(), passwordSet: await deps.mail.hasSmtpPassword() };
     },
     actions: {
       save: defineSetupAction({
-        input: smtpInput,
+        input: setupStepSchemas.mail.actions.save.input,
         async run(context, input) {
           const { password, ...configuration } = input;
           await deps.mail.configureSmtp(configuration, password, { tx: context.tx });
@@ -340,7 +314,7 @@ export function mailStep(deps: SetupStepDependencies): SetupStep {
         },
       }),
       test: defineSetupAction({
-        input: smtpInput.extend({ to: emailSchema, language: z.enum(supportedLanguages).default("en") }),
+        input: setupStepSchemas.mail.actions.test.input,
         async run(_context, input) {
           const { to, language, password, ...configuration } = input;
           const result = await deps.mail.sendTest(to, language, {
@@ -365,14 +339,7 @@ export function organizationStep(deps: SetupStepDependencies): SetupStep {
     },
     actions: {
       save: defineSetupAction({
-        input: z
-          .object({
-            name: organizationNameSchema,
-            slug: slugSchema.optional(),
-            language: z.enum(supportedLanguages),
-            timeZone: timeZoneSchema,
-          })
-          .strict(),
+        input: setupStepSchemas.organization.actions.save.input,
         async run(context, input) {
           const existing =
             typeof context.state.organizationId === "string" ? context.state.organizationId : null;

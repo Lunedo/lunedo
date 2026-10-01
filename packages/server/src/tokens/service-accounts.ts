@@ -1,5 +1,9 @@
+import {
+  responsibleAccountIdsSchema,
+  serviceAccountDescriptionSchema,
+  serviceAccountNameSchema,
+} from "@pagehall/shared";
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
-import { z } from "zod";
 import { type Principal, SYSTEM } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
@@ -12,9 +16,7 @@ import { LastOwnerError, lockOrganization, ownerCount } from "../organizations/m
 import { OrganizationError } from "../organizations/organizations.js";
 import { apiTokens, serviceAccountResponsibles, serviceAccounts } from "./schema.js";
 
-export const serviceAccountNameSchema = z.string().trim().min(1).max(200);
-export const serviceAccountDescriptionSchema = z.string().trim().max(1000);
-export const responsibleAccountIdsSchema = z.array(z.uuid()).max(20);
+export { responsibleAccountIdsSchema, serviceAccountDescriptionSchema, serviceAccountNameSchema };
 
 export interface ServiceAccount {
   id: string;

@@ -1,5 +1,5 @@
+import { breakGlassReasonSchema } from "@pagehall/shared";
 import { and, eq, gt, isNull, lte, sql } from "drizzle-orm";
-import { z } from "zod";
 import type { Principal } from "../accounts/principal.js";
 import { SYSTEM } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
@@ -13,7 +13,7 @@ import { OrganizationError } from "./organizations.js";
 import { organizations } from "./schema.js";
 import { breakGlassMinutesSetting } from "./settings.js";
 
-export const breakGlassReasonSchema = z.string().trim().min(10).max(2000);
+export { breakGlassReasonSchema };
 
 export interface BreakGlassAccess {
   id: string;
