@@ -6,7 +6,7 @@ Scripts and integrations use the same HTTP API as the web client. Every instance
 
 `/api/docs` shows the API reference with [Scalar](https://github.com/scalar/scalar). The page, the renderer and the OpenAPI description (`/api/docs/openapi.json`) come from the instance itself; nothing is loaded from other hosts, telemetry is off and the page sends a strict content security policy. By default only signed-in users and requests with an API token can open it. The instance setting `apiTokens.publicDocumentation` makes it public.
 
-The description is generated from the route declarations and Zod schemas in `apps/api`. Internal routes, which serve only the web client, follow the same conventions but are left out. The generated file `apps/api/openapi.json` is committed:
+The description is generated from the route declarations and Zod schemas in `apps/api`. Internal routes, which serve only the web client, follow the same conventions but are left out of the reference. The generated file `apps/api/openapi.json` is committed and contains every route, because the web client's types are generated from it; internal routes carry `x-pagehall-internal: true` and `x-stability-level: alpha`, so changing them is not a breaking change:
 
 ```sh
 pnpm --filter @pagehall/api build

@@ -58,6 +58,14 @@ export async function listSettings(
         locked: own?.locked ?? false,
         lockable: definition.lockable,
         editable: !MANAGED_ELSEWHERE.has(definition.key),
+        levels: explanation.levels
+          .filter((state) => state.applies)
+          .map((state) => ({
+            level: state.scope.level,
+            value: state.value ?? null,
+            locked: state.locked,
+            effective: state.effective,
+          })),
       };
     }),
   );

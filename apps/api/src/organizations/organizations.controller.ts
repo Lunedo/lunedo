@@ -1,4 +1,17 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Query, Req } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Query,
+  Req,
+  Res,
+} from "@nestjs/common";
 import {
   accountPrincipal,
   breakGlassReasonSchema,
@@ -6,6 +19,7 @@ import {
   emailSchema,
   groupDescriptionSchema,
   groupNameSchema,
+  LOGO_MAX_BYTES,
   organizationNameSchema,
   organizationSettingsChain,
   roleNameSchema,
@@ -13,9 +27,9 @@ import {
   supportedLanguages,
   timeZoneSchema,
 } from "@pagehall/server";
-import type { FastifyRequest } from "fastify";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
-import { InternalRoute, Permission, SessionRoute } from "../access/route-access.js";
+import { InternalRoute, Permission, PublicRoute, SessionRoute } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
@@ -113,6 +127,17 @@ const updateSchema = z
   })
   .strict()
   .describe("Fields to change. Fields that are left out stay as they are.");
+
+const logoBody = z
+  .object({
+    contentType: z.enum(["image/png", "image/jpeg", "image/webp"]).describe("Type of the image."),
+    data: z
+      .base64()
+      .max(Math.ceil(LOGO_MAX_BYTES / 3) * 4)
+      .describe("The image, Base64-encoded."),
+  })
+  .strict()
+  .describe("A logo image.");
 
 const domainBody = z
   .object({
@@ -334,6 +359,70 @@ export class OrganizationsController {
     @Req() request: FastifyRequest,
   ) {
     return this.#services.organizations.update(actorOf(request), organizationId, body);
+  }
+
+  @Put(":organizationId/logo")
+  @Permission("organization.update", organization)
+  @ApiRoute({
+    summary: "Upload a logo",
+    description:
+      "Sets the logo shown on the sign-in page, in the navigation and in e-mails. PNG, JPEG or WebP, at most 256 KiB.",
+    tags: [TAG],
+    params: organizationIdParams,
+    body: logoBody,
+    bodyExample: { contentType: "image/png", data: "iVBORw0KGgo=" },
+    response: {
+      description: "The organization with its new logo reference.",
+      schema: organizationSchema,
+      example: { ...exampleOrganization, logoRef: "5f2b8c1d9a0e4b7c" },
+    },
+    errors: ["invalidLogo"],
+  })
+  async uploadLogo(
+    @Param("organizationId") organizationId: string,
+    @Body() body: z.output<typeof logoBody>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.organizations.setLogo(actorOf(request), organizationId, {
+      contentType: body.contentType,
+      data: Buffer.from(body.data, "base64"),
+    });
+  }
+
+  @Delete(":organizationId/logo")
+  @Permission("organization.update", organization)
+  @ApiRoute({
+    summary: "Remove the logo",
+    description: "Removes the logo. Pagehall shows its own logo again.",
+    tags: [TAG],
+    params: organizationIdParams,
+  })
+  async removeLogo(@Param("organizationId") organizationId: string, @Req() request: FastifyRequest) {
+    await this.#services.organizations.update(actorOf(request), organizationId, { logoRef: null });
+  }
+
+  @Get(":organizationId/logo")
+  @PublicRoute()
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Get the logo",
+    tags: [TAG],
+    params: organizationIdParams,
+    raw: { contentTypes: ["image/png", "image/jpeg", "image/webp"], description: "The logo.", example: "" },
+  })
+  async logo(
+    @Param("organizationId") organizationId: string,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const logo = await this.#services.organizations.logo(organizationId);
+    if (!logo) throw notFound();
+    reply
+      .header("content-type", logo.contentType)
+      .header("x-content-type-options", "nosniff")
+      .header("content-security-policy", "default-src 'none'; sandbox")
+      .header("cache-control", "public, max-age=300")
+      .header("etag", `"${logo.ref}"`);
+    return logo.data;
   }
 
   @Get(":organizationId/domains")

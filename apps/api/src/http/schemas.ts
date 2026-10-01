@@ -258,8 +258,24 @@ export const settingSchema = z
     locked: z.boolean().describe("Whether this level locks the setting for lower levels."),
     lockable: z.boolean().describe("Whether the setting can be locked."),
     editable: z.boolean().describe("Whether the setting can be changed through the settings endpoint."),
+    levels: z
+      .array(
+        z
+          .object({
+            level: z.string().describe("The level: `instance`, `organization`, `space` or `user`."),
+            value: z.json().describe("Value stored at this level, or null."),
+            locked: z.boolean().describe("Whether this level locks the setting."),
+            effective: z
+              .boolean()
+              .describe(
+                "False when a lock above or a stricter value above makes this level's value ineffective.",
+              ),
+          })
+          .describe("The state of the setting at one level."),
+      )
+      .describe("Every level the setting applies to, from the instance down to this level."),
   })
-  .describe("A setting with its effective value.");
+  .describe("A setting with its effective value and where it comes from.");
 
 export const exampleSetting = {
   key: "organizations.membersCreateGroups",
@@ -269,6 +285,10 @@ export const exampleSetting = {
   locked: false,
   lockable: true,
   editable: true,
+  levels: [
+    { level: "instance", value: null, locked: false, effective: true },
+    { level: "organization", value: null, locked: false, effective: true },
+  ],
 };
 
 export const serviceAccountSchema = z

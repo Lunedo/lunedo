@@ -4,7 +4,7 @@ Pagehall sends e-mail for password resets, e-mail address changes, recovery code
 
 ## SMTP
 
-SMTP is an instance setting, configured in the setup assistant or through configuration. The password is stored with envelope encryption.
+SMTP is an instance setting, configured in the setup assistant, in the instance administration or through configuration. The password is stored with envelope encryption and never returned; changing the configuration needs a recent sign-in. A test mail can be sent with a configuration before it is saved; without a new password it uses the stored one.
 
 | Security | Behavior |
 |---|---|

@@ -1,5 +1,5 @@
 import { breakGlassReasonSchema } from "@pagehall/shared";
-import { and, eq, gt, isNull, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lte, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import { SYSTEM } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
@@ -45,6 +45,26 @@ export class BreakGlassService {
     this.#audit = options.audit;
     this.#mail = options.mail;
     this.#settings = options.settings;
+  }
+
+  async recent(days: number): Promise<(BreakGlassAccess & { organizationName: string; accountName: string })[]> {
+    return this.#database
+      .select({
+        id: breakGlassAccesses.id,
+        organizationId: breakGlassAccesses.organizationId,
+        accountId: breakGlassAccesses.accountId,
+        reason: breakGlassAccesses.reason,
+        startedAt: breakGlassAccesses.startedAt,
+        expiresAt: breakGlassAccesses.expiresAt,
+        endedAt: breakGlassAccesses.endedAt,
+        organizationName: organizations.name,
+        accountName: accounts.name,
+      })
+      .from(breakGlassAccesses)
+      .innerJoin(organizations, eq(organizations.id, breakGlassAccesses.organizationId))
+      .innerJoin(accounts, eq(accounts.id, breakGlassAccesses.accountId))
+      .where(gt(breakGlassAccesses.startedAt, sql`now() - make_interval(days => ${days})`))
+      .orderBy(desc(breakGlassAccesses.startedAt));
   }
 
   async active(organizationId: string): Promise<BreakGlassAccess[]> {

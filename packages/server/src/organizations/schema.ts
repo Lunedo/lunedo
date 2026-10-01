@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { index, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
-import { primaryId, timestamps } from "../database/columns.js";
+import { bytes, primaryId, timestamps } from "../database/columns.js";
 
 export const organizations = pgTable(
   "organizations",
@@ -28,3 +28,13 @@ export const organizationDomains = pgTable(
   },
   (table) => [index().on(table.organizationId)],
 );
+
+export const organizationLogos = pgTable("organization_logos", {
+  organizationId: uuid()
+    .primaryKey()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+  contentType: text().notNull(),
+  data: bytes().notNull(),
+  ref: text().notNull(),
+  ...timestamps(),
+});

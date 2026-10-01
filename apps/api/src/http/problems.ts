@@ -19,6 +19,7 @@ export const problems = {
   expiryRequired: { status: 400, title: "An expiry date is required" },
   expiryTooLate: { status: 400, title: "The expiry exceeds the maximum lifetime" },
   invalidOwner: { status: 400, title: "The owner is not valid" },
+  invalidLogo: { status: 400, title: "The logo is not a supported image" },
   invalidScopes: { status: 400, title: "The scopes are not valid" },
   invalidResponsible: { status: 400, title: "The responsible person is not valid" },
   invalidInvitation: { status: 400, title: "The invitation is not valid" },

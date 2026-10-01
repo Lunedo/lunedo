@@ -4,11 +4,13 @@ An instance contains one or more organizations. Each has its own members, groups
 
 ## Organizations
 
-An organization has a name, a slug that is unique regardless of case, a language, a time zone and a logo reference. Language and time zone are organization-level settings, so members inherit them unless they choose their own.
+An organization has a name, a slug that is unique regardless of case, a language, a time zone and an optional logo. Language and time zone are organization-level settings, so members inherit them unless they choose their own.
+
+The logo is a PNG, JPEG or WebP image of at most 256 KiB. Pagehall checks the file signature, stores the image in the database, so that backups contain it, and serves it to everyone, because the sign-in page shows it, with `nosniff` and a content security policy that forbids any active content. The logo reference changes with every upload. The accent color is the setting `branding.accentColor`, one of the seven palette colors, at instance and organization level.
 
 Instance administrators assign e-mail domains to organizations. A domain belongs to at most one organization. When an account is created with a verified address in an assigned domain, through an invitation or self-registration, that organization becomes its home organization. Changes of the home organization of existing accounts follow with identity providers.
 
-Self-service creation of organizations is the instance setting `organizations.selfServiceCreation` (default off). When it is on, every active standard account may create organizations.
+Self-service creation of organizations is the instance setting `organizations.selfServiceCreation` (default off). When it is on, every active standard account may create organizations, which it then owns. Naming another account as owner needs `instance.organizations.manage`.
 
 ## Memberships
 
@@ -95,6 +97,8 @@ Each endpoint declares the action it requires. Endpoints marked internal serve t
 | `GET /api/v1/organizations` | session: organizations of the caller; internal |
 | `POST /api/v1/organizations` | `instance.organizations.create` |
 | `GET, PATCH /api/v1/organizations/{id}` | `organization.view`, `organization.update` |
+| `PUT, DELETE /api/v1/organizations/{id}/logo` | `organization.update` |
+| `GET /api/v1/organizations/{id}/logo` | public; internal |
 | `GET /api/v1/organizations/{id}/domains` | `organization.signIn.view` |
 | `POST, DELETE /api/v1/organizations/{id}/domains` | `instance.organizations.manage` |
 | `GET /api/v1/organizations/{id}/members` | `organization.members.view` |
@@ -112,8 +116,15 @@ Each endpoint declares the action it requires. Endpoints marked internal serve t
 | `GET /api/v1/instance/organizations`, `.../accounts` | `instance.organizations.view`, `instance.accounts.view` |
 | `GET, POST, PATCH, DELETE /api/v1/instance/roles`, `.../role-assignments` | `instance.roles.view`, `instance.roles.manage` |
 | `POST /api/v1/instance/ownership` | `instance.ownership.transfer`, recent authentication; internal |
+| `GET /api/v1/instance/info` | public: instance name, defaults and the only organization; internal |
+| `GET /api/v1/instance/break-glass` | `instance.organizations.view`; internal |
+| `GET /api/v1/instance/mail` | `instance.settings.view`; internal |
+| `PUT /api/v1/instance/mail` | `instance.settings.manage`, recent authentication; internal |
+| `POST /api/v1/instance/mail/test` | `instance.settings.manage`; internal |
 | `GET /api/v1/instance/settings` | `instance.settings.view` |
 | `PUT /api/v1/instance/settings/{key}` | the `manage` permission of the setting's area: settings, sign-in, audit log or organizations |
+| `GET /api/v1/account/permissions` | session: the actions the caller may perform on the instance and one organization; internal |
+| `GET, PUT /api/v1/account/preferences` | session: the caller's settings at the user level; internal |
 | `POST /api/v1/accounts/{id}/deactivate` | `account.deactivate`, recent authentication; internal |
 | `POST /api/v1/invitations/accept` | public, with the token from the mail; internal |
 | `POST /api/v1/registrations`, `.../complete` | public; internal |

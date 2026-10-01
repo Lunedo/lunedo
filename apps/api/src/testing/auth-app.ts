@@ -127,6 +127,10 @@ export class TestClient {
     return this.request("POST", url, body ?? {}, headers);
   }
 
+  put(url: string, body?: unknown, headers?: Record<string, string>) {
+    return this.request("PUT", url, body ?? {}, headers);
+  }
+
   patch(url: string, body?: unknown, headers?: Record<string, string>) {
     return this.request("PATCH", url, body ?? {}, headers);
   }

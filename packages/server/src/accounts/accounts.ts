@@ -7,7 +7,7 @@ import { passwordMinLengthSetting } from "../auth/settings.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
 import { memberships } from "../organizations/access-schema.js";
-import type { SettingsService } from "../settings/service.js";
+import type { ScopeChain, SettingsService } from "../settings/service.js";
 import { type AccountState, type AccountType, accounts, instance } from "./schema.js";
 import { accountScopeChain } from "./scope.js";
 
@@ -88,6 +88,10 @@ export class AccountService {
     this.#audit = options.audit;
     this.#hasher = options.hasher;
   }
+  async settingsChain(accountId: string): Promise<ScopeChain> {
+    return { ...(await accountScopeChain(this.#database, accountId)), user: accountId };
+  }
+
 
   async list(page: PageRequest = FIRST_PAGE): Promise<Page<Omit<Account, "passwordHash">>> {
     const { passwordHash: _passwordHash, ...columns } = accountColumns;

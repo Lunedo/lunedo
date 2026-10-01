@@ -1278,6 +1278,441 @@
         }
       }
     },
+    "/api/v1/account/permissions": {
+      "get": {
+        "operationId": "account.permissions",
+        "summary": "List own permissions",
+        "tags": [
+          "Account"
+        ],
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Allowed actions on the instance and, if asked for, on one organization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "instance": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "organization": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "instance",
+                    "organization"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/account/preferences": {
+      "get": {
+        "operationId": "account.preferences",
+        "summary": "List own preferences",
+        "tags": [
+          "Account"
+        ],
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Settings that apply to the account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "key": {
+                        "type": "string",
+                        "description": "Key of the setting."
+                      },
+                      "value": {
+                        "description": "Effective value at this level.",
+                        "$ref": "#/components/schemas/Schema113ae44d8375"
+                      },
+                      "source": {
+                        "type": "string",
+                        "description": "Level the effective value comes from, or `default`."
+                      },
+                      "lockedBy": {
+                        "description": "Higher level that locked the setting, or null.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "locked": {
+                        "type": "boolean",
+                        "description": "Whether this level locks the setting for lower levels."
+                      },
+                      "lockable": {
+                        "type": "boolean",
+                        "description": "Whether the setting can be locked."
+                      },
+                      "editable": {
+                        "type": "boolean",
+                        "description": "Whether the setting can be changed through the settings endpoint."
+                      },
+                      "levels": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "description": "The level: `instance`, `organization`, `space` or `user`."
+                            },
+                            "value": {
+                              "description": "Value stored at this level, or null.",
+                              "$ref": "#/components/schemas/Schemafbc378f59d82"
+                            },
+                            "locked": {
+                              "type": "boolean",
+                              "description": "Whether this level locks the setting."
+                            },
+                            "effective": {
+                              "type": "boolean",
+                              "description": "False when a lock above or a stricter value above makes this level's value ineffective."
+                            }
+                          },
+                          "required": [
+                            "level",
+                            "value",
+                            "locked",
+                            "effective"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The state of the setting at one level."
+                        },
+                        "description": "Every level the setting applies to, from the instance down to this level."
+                      }
+                    },
+                    "required": [
+                      "key",
+                      "value",
+                      "source",
+                      "lockedBy",
+                      "locked",
+                      "lockable",
+                      "editable",
+                      "levels"
+                    ],
+                    "additionalProperties": false,
+                    "description": "A setting with its effective value and where it comes from."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/account/preferences/{key}": {
+      "put": {
+        "operationId": "account.updatePreference",
+        "summary": "Change an own preference",
+        "tags": [
+          "Account"
+        ],
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "$ref": "#/components/schemas/Schema113ae44d8375"
+                  },
+                  "clear": {
+                    "type": "boolean",
+                    "const": true
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid. `invalidSetting`: The setting value is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidSetting": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidSetting",
+                      "title": "The setting value is not valid",
+                      "status": 400,
+                      "code": "invalidSetting"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`settingLocked`: A higher level locked the setting.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "settingLocked": {
+                    "value": {
+                      "type": "urn:pagehall:problem:settingLocked",
+                      "title": "A higher level locked the setting",
+                      "status": 409,
+                      "code": "settingLocked"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/account/recovery-codes": {
       "post": {
         "operationId": "account.generateRecoveryCodes",
@@ -8296,6 +8731,987 @@
         }
       }
     },
+    "/api/v1/instance/break-glass": {
+      "get": {
+        "operationId": "instance.breakGlass",
+        "summary": "List recent break-glass access",
+        "tags": [
+          "Instance"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.organizations.view",
+          "resource": "instance"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items in the page, from 1 to 200. Default 50.",
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Break-glass access of the last 90 days, newest first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationName": {
+                            "type": "string"
+                          },
+                          "accountId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "accountName": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "type": "string"
+                          },
+                          "startedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "expiresAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "endedAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "organizationId",
+                          "organizationName",
+                          "accountId",
+                          "accountName",
+                          "reason",
+                          "startedAt",
+                          "expiresAt",
+                          "endedAt"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Break-glass access, newest first."
+                    },
+                    "nextCursor": {
+                      "description": "Cursor for the next page, or null on the last page. Pass it as `cursor`.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextCursor"
+                  ],
+                  "additionalProperties": false,
+                  "description": "One page of results."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/info": {
+      "get": {
+        "operationId": "instance.info",
+        "summary": "Get public instance information",
+        "tags": [
+          "Instance"
+        ],
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "What the sign-in and setup pages show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "setupComplete": {
+                      "type": "boolean"
+                    },
+                    "language": {
+                      "type": "string",
+                      "enum": [
+                        "en",
+                        "de"
+                      ]
+                    },
+                    "accentColor": {
+                      "type": "string",
+                      "enum": [
+                        "petrol",
+                        "blue",
+                        "violet",
+                        "amber",
+                        "red",
+                        "green",
+                        "gray"
+                      ]
+                    },
+                    "passwordMinLength": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "organization": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "logoRef": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "accentColor": {
+                              "type": "string",
+                              "enum": [
+                                "petrol",
+                                "blue",
+                                "violet",
+                                "amber",
+                                "red",
+                                "green",
+                                "gray"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "logoRef",
+                            "accentColor"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "setupComplete",
+                    "language",
+                    "accentColor",
+                    "passwordMinLength",
+                    "organization"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/mail": {
+      "get": {
+        "operationId": "instance.mail",
+        "summary": "Get the mail server",
+        "tags": [
+          "Instance"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.settings.view",
+          "resource": "instance"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The SMTP configuration, without the password.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "smtp": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "host": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 253
+                            },
+                            "port": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 65535
+                            },
+                            "security": {
+                              "type": "string",
+                              "enum": [
+                                "tls",
+                                "starttls",
+                                "none"
+                              ]
+                            },
+                            "username": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "from": {
+                              "type": "string",
+                              "maxLength": 254,
+                              "format": "email"
+                            }
+                          },
+                          "required": [
+                            "host",
+                            "port",
+                            "security",
+                            "username",
+                            "from"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "passwordSet": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "smtp",
+                    "passwordSet"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "instance.configureMail",
+        "summary": "Configure the mail server",
+        "tags": [
+          "Instance"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.settings.manage",
+          "resource": "instance"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "host": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 253
+                  },
+                  "port": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535
+                  },
+                  "security": {
+                    "type": "string",
+                    "enum": [
+                      "tls",
+                      "starttls",
+                      "none"
+                    ]
+                  },
+                  "username": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "from": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "format": "email"
+                  },
+                  "password": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 1024
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "host",
+                  "port",
+                  "security",
+                  "username",
+                  "from"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid. `invalidSmtpConfiguration`: The mail server configuration is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidSmtpConfiguration": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidSmtpConfiguration",
+                      "title": "The mail server configuration is not valid",
+                      "status": 400,
+                      "code": "invalidSmtpConfiguration"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "reauthenticationRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:reauthenticationRequired",
+                      "title": "Confirm your identity first",
+                      "status": 403,
+                      "code": "reauthenticationRequired"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/mail/test": {
+      "post": {
+        "operationId": "instance.testMail",
+        "summary": "Send a test mail",
+        "tags": [
+          "Instance"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.settings.manage",
+          "resource": "instance"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "host": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 253
+                  },
+                  "port": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535
+                  },
+                  "security": {
+                    "type": "string",
+                    "enum": [
+                      "tls",
+                      "starttls",
+                      "none"
+                    ]
+                  },
+                  "username": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "from": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "format": "email"
+                  },
+                  "password": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 1024
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "to": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "format": "email"
+                  },
+                  "language": {
+                    "default": "en",
+                    "type": "string",
+                    "enum": [
+                      "en",
+                      "de"
+                    ]
+                  }
+                },
+                "required": [
+                  "host",
+                  "port",
+                  "security",
+                  "username",
+                  "from",
+                  "to"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Whether the mail server accepted the mail.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "delivered": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "responseCode": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "code",
+                            "responseCode"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "delivered",
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidSmtpConfiguration`: The mail server configuration is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidSmtpConfiguration": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidSmtpConfiguration",
+                      "title": "The mail server configuration is not valid",
+                      "status": 400,
+                      "code": "invalidSmtpConfiguration"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/instance/organizations": {
       "get": {
         "operationId": "instance.organizations",
@@ -10740,6 +12156,39 @@
                           "editable": {
                             "type": "boolean",
                             "description": "Whether the setting can be changed through the settings endpoint."
+                          },
+                          "levels": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "level": {
+                                  "type": "string",
+                                  "description": "The level: `instance`, `organization`, `space` or `user`."
+                                },
+                                "value": {
+                                  "description": "Value stored at this level, or null.",
+                                  "$ref": "#/components/schemas/Schemafbc378f59d82"
+                                },
+                                "locked": {
+                                  "type": "boolean",
+                                  "description": "Whether this level locks the setting."
+                                },
+                                "effective": {
+                                  "type": "boolean",
+                                  "description": "False when a lock above or a stricter value above makes this level's value ineffective."
+                                }
+                              },
+                              "required": [
+                                "level",
+                                "value",
+                                "locked",
+                                "effective"
+                              ],
+                              "additionalProperties": false,
+                              "description": "The state of the setting at one level."
+                            },
+                            "description": "Every level the setting applies to, from the instance down to this level."
                           }
                         },
                         "required": [
@@ -10749,10 +12198,11 @@
                           "lockedBy",
                           "locked",
                           "lockable",
-                          "editable"
+                          "editable",
+                          "levels"
                         ],
                         "additionalProperties": false,
-                        "description": "A setting with its effective value."
+                        "description": "A setting with its effective value and where it comes from."
                       },
                       "description": "Settings, ordered by key."
                     },
@@ -10780,7 +12230,21 @@
                       "lockedBy": null,
                       "locked": false,
                       "lockable": true,
-                      "editable": true
+                      "editable": true,
+                      "levels": [
+                        {
+                          "level": "instance",
+                          "value": null,
+                          "locked": false,
+                          "effective": true
+                        },
+                        {
+                          "level": "organization",
+                          "value": null,
+                          "locked": false,
+                          "effective": true
+                        }
+                      ]
                     }
                   ],
                   "nextCursor": null
@@ -11507,7 +12971,7 @@
                   "ownerAccountId": {
                     "type": "string",
                     "format": "uuid",
-                    "description": "Account that becomes owner. The caller when left out."
+                    "description": "Account that becomes owner. The caller when left out. Naming another account needs the permission `instance.organizations.manage`."
                   }
                 },
                 "required": [
@@ -15762,6 +17226,532 @@
         }
       }
     },
+    "/api/v1/organizations/{organizationId}/logo": {
+      "delete": {
+        "operationId": "organizations.removeLogo",
+        "summary": "Remove the logo",
+        "description": "Removes the logo. Pagehall shows its own logo again.\n\nRequires the permission `organization.update` on the organization in `organizationId`.",
+        "tags": [
+          "Organizations"
+        ],
+        "x-pagehall-permission": {
+          "action": "organization.update",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "organizations.logo",
+        "summary": "Get the logo",
+        "tags": [
+          "Organizations"
+        ],
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The logo.",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": ""
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": ""
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": ""
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "organizations.uploadLogo",
+        "summary": "Upload a logo",
+        "description": "Sets the logo shown on the sign-in page, in the navigation and in e-mails. PNG, JPEG or WebP, at most 256 KiB.\n\nRequires the permission `organization.update` on the organization in `organizationId`.",
+        "tags": [
+          "Organizations"
+        ],
+        "x-pagehall-permission": {
+          "action": "organization.update",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "contentType": {
+                    "type": "string",
+                    "enum": [
+                      "image/png",
+                      "image/jpeg",
+                      "image/webp"
+                    ],
+                    "description": "Type of the image."
+                  },
+                  "data": {
+                    "type": "string",
+                    "maxLength": 349528,
+                    "format": "base64",
+                    "contentEncoding": "base64",
+                    "pattern": "^$|^(?:[0-9a-zA-Z+/]{4})*(?:(?:[0-9a-zA-Z+/]{2}==)|(?:[0-9a-zA-Z+/]{3}=))?$",
+                    "description": "The image, Base64-encoded."
+                  }
+                },
+                "required": [
+                  "contentType",
+                  "data"
+                ],
+                "additionalProperties": false,
+                "description": "A logo image."
+              },
+              "example": {
+                "contentType": "image/png",
+                "data": "iVBORw0KGgo="
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The organization with its new logo reference.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the organization."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Display name, 1 to 100 characters."
+                    },
+                    "slug": {
+                      "type": "string",
+                      "description": "Short name used in addresses: lowercase letters, digits and hyphens."
+                    },
+                    "logoRef": {
+                      "description": "Reference to the uploaded logo, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "language": {
+                      "type": "string",
+                      "enum": [
+                        "en",
+                        "de"
+                      ],
+                      "description": "Default language of the organization."
+                    },
+                    "timeZone": {
+                      "type": "string",
+                      "description": "Default IANA time zone, for example `Europe/Vienna`."
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the organization was created. ISO 8601 timestamp in UTC."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "slug",
+                    "logoRef",
+                    "language",
+                    "timeZone",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "An organization."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a6b",
+                  "name": "Example Inc.",
+                  "slug": "example-inc",
+                  "logoRef": "5f2b8c1d9a0e4b7c",
+                  "language": "en",
+                  "timeZone": "Europe/Vienna",
+                  "createdAt": "2026-10-01T08:00:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidLogo`: The logo is not a supported image.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidLogo": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidLogo",
+                      "title": "The logo is not a supported image",
+                      "status": 400,
+                      "code": "invalidLogo"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/organizations/{organizationId}/members": {
       "get": {
         "operationId": "organizations.members",
@@ -19802,6 +21792,39 @@
                           "editable": {
                             "type": "boolean",
                             "description": "Whether the setting can be changed through the settings endpoint."
+                          },
+                          "levels": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "level": {
+                                  "type": "string",
+                                  "description": "The level: `instance`, `organization`, `space` or `user`."
+                                },
+                                "value": {
+                                  "description": "Value stored at this level, or null.",
+                                  "$ref": "#/components/schemas/Schemafbc378f59d82"
+                                },
+                                "locked": {
+                                  "type": "boolean",
+                                  "description": "Whether this level locks the setting."
+                                },
+                                "effective": {
+                                  "type": "boolean",
+                                  "description": "False when a lock above or a stricter value above makes this level's value ineffective."
+                                }
+                              },
+                              "required": [
+                                "level",
+                                "value",
+                                "locked",
+                                "effective"
+                              ],
+                              "additionalProperties": false,
+                              "description": "The state of the setting at one level."
+                            },
+                            "description": "Every level the setting applies to, from the instance down to this level."
                           }
                         },
                         "required": [
@@ -19811,10 +21834,11 @@
                           "lockedBy",
                           "locked",
                           "lockable",
-                          "editable"
+                          "editable",
+                          "levels"
                         ],
                         "additionalProperties": false,
-                        "description": "A setting with its effective value."
+                        "description": "A setting with its effective value and where it comes from."
                       },
                       "description": "Settings, ordered by key."
                     },
@@ -19842,7 +21866,21 @@
                       "lockedBy": null,
                       "locked": false,
                       "lockable": true,
-                      "editable": true
+                      "editable": true,
+                      "levels": [
+                        {
+                          "level": "instance",
+                          "value": null,
+                          "locked": false,
+                          "effective": true
+                        },
+                        {
+                          "level": "organization",
+                          "value": null,
+                          "locked": false,
+                          "effective": true
+                        }
+                      ]
                     }
                   ],
                   "nextCursor": null
@@ -23436,6 +25474,37 @@
             },
             "additionalProperties": {
               "$ref": "#/components/schemas/Schemae0c307037cb0"
+            }
+          }
+        ]
+      },
+      "Schemafbc378f59d82": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          },
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Schemafbc378f59d82"
+            }
+          },
+          {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Schemafbc378f59d82"
             }
           }
         ]

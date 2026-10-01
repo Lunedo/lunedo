@@ -250,16 +250,18 @@ export class MailService {
   async sendTest(
     to: string,
     language: Language,
-    smtp?: { configuration: SmtpConfiguration; password: string | null },
+    smtp?: { configuration: SmtpConfiguration; password: string | null | undefined },
   ): Promise<{ delivered: boolean; error: { code: string | null; responseCode: number | null } | null }> {
     const instanceName = await this.#settings.get(instanceNameSetting, {});
     const message: MailMessage = renderMail("smtpTest", language, { instanceName }, to);
     const adHoc = smtp ? smtpConfigurationSchema.parse(smtp.configuration) : undefined;
-    if (adHoc) checkSmtpCredentials(adHoc, smtp?.password != null);
+    const password =
+      adHoc?.username === null ? null : smtp?.password === undefined ? await this.#smtpPassword() : smtp.password;
+    if (adHoc) checkSmtpCredentials(adHoc, password !== null);
     let error: { code: string | null; responseCode: number | null } | null = null;
     try {
       const transport = adHoc
-        ? this.#transport({ ...adHoc, password: smtp?.password ?? null })
+        ? this.#transport({ ...adHoc, password })
         : await this.#transportOrThrow();
       await transport.send(message);
     } catch (failure) {

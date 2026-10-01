@@ -40,6 +40,7 @@ export {
   type SessionKind,
   SessionService,
 } from "./auth/sessions.js";
+export { accountScopeChain } from "./accounts/scope.js";
 export * from "./auth/settings.js";
 export type { ReauthenticationInput, SecondFactorInput, SecondFactorType } from "./auth/sign-in.js";
 export { clientSubject } from "./auth/throttle.js";
@@ -154,6 +155,8 @@ export { LastOwnerError } from "./organizations/memberships.js";
 export type { Organization } from "./organizations/organizations.js";
 export {
   domainSchema,
+  LOGO_MAX_BYTES,
+  logoContentType,
   OrganizationError,
   organizationNameSchema,
   slugSchema,
@@ -172,6 +175,7 @@ export { registerShutdown, SHUTDOWN_MARGIN_SECONDS } from "./runtime/shutdown.js
 export { StartupError } from "./runtime/startup-error.js";
 export { type AccountServices, createAccountServices } from "./services.js";
 export { builtinSettings, languageSetting, supportedLanguages, timeZoneSetting } from "./settings/builtin.js";
+export * from "./settings/preferences.js";
 export {
   defineSetting,
   type SettingDefinition,

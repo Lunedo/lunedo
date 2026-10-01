@@ -1,8 +1,23 @@
 import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Query, Req } from "@nestjs/common";
-import { roleNameSchema } from "@pagehall/server";
+import {
+  accentColorSetting,
+  instanceNameSetting,
+  languageSetting,
+  organizationSettingsChain,
+  passwordMinLengthSetting,
+  roleNameSchema,
+  supportedLanguages,
+} from "@pagehall/server";
+import {
+  accentColors,
+  setupStepSchemas,
+  smtpInputSchema,
+  smtpTestInputSchema,
+  smtpTestResultSchema,
+} from "@pagehall/shared";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
-import { InternalRoute, Permission } from "../access/route-access.js";
+import { InternalRoute, Permission, PublicRoute } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
@@ -33,6 +48,34 @@ import {
 import { definitionFor, listSettings, settingUpdateSchema, updateSetting } from "../http/settings.js";
 
 const TAG = "Instance";
+
+const instanceInfoSchema = z.object({
+  name: z.string(),
+  setupComplete: z.boolean(),
+  language: z.enum(supportedLanguages),
+  accentColor: z.enum(accentColors),
+  passwordMinLength: z.number().int(),
+  organization: z
+    .object({
+      id: z.uuid(),
+      name: z.string(),
+      logoRef: z.string().nullable(),
+      accentColor: z.enum(accentColors),
+    })
+    .nullable(),
+});
+
+const breakGlassEntrySchema = z.object({
+  id: z.uuid(),
+  organizationId: z.uuid(),
+  organizationName: z.string(),
+  accountId: z.uuid(),
+  accountName: z.string(),
+  reason: z.string(),
+  startedAt: z.iso.datetime(),
+  expiresAt: z.iso.datetime(),
+  endedAt: z.iso.datetime().nullable(),
+});
 
 const customRoleBody = z
   .object({
@@ -129,6 +172,100 @@ export class InstanceController {
 
   get #services() {
     return servicesOf(this.context);
+  }
+
+  @Get("info")
+  @PublicRoute()
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Get public instance information",
+    tags: [TAG],
+    response: { description: "What the sign-in and setup pages show.", schema: instanceInfoSchema },
+  })
+  async info() {
+    const { settings } = this.#settingsServices();
+    const services = this.#services;
+    const setupComplete = await services.setup.isComplete();
+    const first = setupComplete ? await services.organizations.list({ limit: 2 }) : { items: [] };
+    const only = first.items.length === 1 ? first.items[0] : undefined;
+    return {
+      name: await settings.get(instanceNameSetting, {}),
+      setupComplete,
+      language: await settings.get(languageSetting, {}),
+      accentColor: await settings.get(accentColorSetting, {}),
+      passwordMinLength: await settings.get(passwordMinLengthSetting, {}),
+      organization: only
+        ? {
+            id: only.id,
+            name: only.name,
+            logoRef: only.logoRef,
+            accentColor: await settings.get(accentColorSetting, organizationSettingsChain(only.id)),
+          }
+        : null,
+    };
+  }
+
+  @Get("break-glass")
+  @Permission("instance.organizations.view")
+  @InternalRoute()
+  @ApiRoute({
+    summary: "List recent break-glass access",
+    tags: [TAG],
+    query: pageQuerySchema,
+    response: {
+      description: "Break-glass access of the last 90 days, newest first.",
+      schema: pageSchema(breakGlassEntrySchema, "Break-glass access, newest first."),
+    },
+  })
+  async breakGlass(@Query() query: z.output<typeof pageQuerySchema>) {
+    const entries = await this.#services.breakGlass.recent(90);
+    return paginate(entries, (entry) => [-entry.startedAt.getTime(), entry.id], query);
+  }
+
+  @Get("mail")
+  @Permission("instance.settings.view")
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Get the mail server",
+    tags: [TAG],
+    response: {
+      description: "The SMTP configuration, without the password.",
+      schema: setupStepSchemas.mail.details,
+    },
+  })
+  async mail() {
+    const mail = this.#services.mail;
+    return { smtp: await mail.smtpConfiguration(), passwordSet: await mail.hasSmtpPassword() };
+  }
+
+  @Put("mail")
+  @Permission("instance.settings.manage", { type: "instance" }, { recentAuthentication: true })
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Configure the mail server",
+    tags: [TAG],
+    body: smtpInputSchema,
+    errors: ["invalidSmtpConfiguration"],
+  })
+  async configureMail(@Body() body: z.output<typeof smtpInputSchema>) {
+    const { password, ...configuration } = body;
+    await this.#services.mail.configureSmtp(configuration, password);
+  }
+
+  @Post("mail/test")
+  @Permission("instance.settings.manage")
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Send a test mail",
+    tags: [TAG],
+    status: 200,
+    body: smtpTestInputSchema,
+    response: { description: "Whether the mail server accepted the mail.", schema: smtpTestResultSchema },
+    errors: ["invalidSmtpConfiguration"],
+  })
+  async testMail(@Body() body: z.output<typeof smtpTestInputSchema>) {
+    const { to, language, password, ...configuration } = body;
+    return this.#services.mail.sendTest(to, language, { configuration, password });
   }
 
   @Get("organizations")

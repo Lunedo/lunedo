@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { domainSchema, organizationNameSchema, slugSchema, timeZoneSchema } from "@pagehall/shared";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -9,10 +10,29 @@ import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } 
 import { languageSetting, supportedLanguages, timeZoneSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import { memberships, roleAssignments } from "./access-schema.js";
-import { organizationDomains, organizations } from "./schema.js";
+import { organizationDomains, organizationLogos, organizations } from "./schema.js";
 import { organizationSettingsChain } from "./settings.js";
 
 export { domainSchema, organizationNameSchema, slugSchema, timeZoneSchema };
+
+export const LOGO_MAX_BYTES = 256 * 1024;
+
+const LOGO_SIGNATURES: [string, (data: Buffer) => boolean][] = [
+  [
+    "image/png",
+    (data) => data.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
+  ],
+  ["image/jpeg", (data) => data.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))],
+  [
+    "image/webp",
+    (data) =>
+      data.subarray(0, 4).toString("latin1") === "RIFF" && data.subarray(8, 12).toString("latin1") === "WEBP",
+  ],
+];
+
+export function logoContentType(data: Buffer): string | null {
+  return LOGO_SIGNATURES.find(([, matches]) => matches(data))?.[0] ?? null;
+}
 
 export interface Organization {
   id: string;
@@ -276,6 +296,12 @@ export class OrganizationService {
         slug: input.slug === undefined ? current.slug : slugSchema.parse(input.slug),
         logoRef: input.logoRef === undefined ? current.logoRef : input.logoRef,
       };
+      if (changes.logoRef !== null && changes.logoRef !== current.logoRef) {
+        throw new OrganizationError("invalidLogo", "A logo is set by uploading it");
+      }
+      if (changes.logoRef === null && current.logoRef !== null) {
+        await tx.delete(organizationLogos).where(eq(organizationLogos.organizationId, id));
+      }
       let row: typeof organizations.$inferSelect | undefined;
       try {
         [row] = await tx
@@ -321,6 +347,59 @@ export class OrganizationService {
       return row;
     });
     return this.#withSettings(updated);
+  }
+
+  async setLogo(
+    actor: Principal,
+    id: string,
+    logo: { contentType: string; data: Buffer },
+  ): Promise<Organization> {
+    const contentType = logoContentType(logo.data);
+    if (contentType === null || contentType !== logo.contentType || logo.data.length > LOGO_MAX_BYTES) {
+      throw new OrganizationError(
+        "invalidLogo",
+        "The logo must be a PNG, JPEG or WebP image of at most 256 KiB",
+      );
+    }
+    const ref = createHash("sha256").update(logo.data).digest("hex").slice(0, 16);
+    const updated = await this.#database.transaction(async (tx) => {
+      const [current] = await tx.select().from(organizations).where(eq(organizations.id, id)).for("update");
+      if (!current) throw new OrganizationError("notFound", "The organization does not exist");
+      await tx
+        .insert(organizationLogos)
+        .values({ organizationId: id, contentType, data: logo.data, ref })
+        .onConflictDoUpdate({
+          target: organizationLogos.organizationId,
+          set: { contentType, data: logo.data, ref, updatedAt: new Date() },
+        });
+      const [row] = await tx
+        .update(organizations)
+        .set({ logoRef: ref, updatedAt: new Date() })
+        .where(eq(organizations.id, id))
+        .returning();
+      if (!row) throw new Error("The organization was not updated");
+      await this.#audit.record(tx, {
+        name: "organization.updated",
+        actor,
+        targetId: id,
+        fields: { name: row.name, slug: row.slug, logoRef: ref },
+        scope: scopeOf(id),
+      });
+      return row;
+    });
+    return this.#withSettings(updated);
+  }
+
+  async logo(id: string): Promise<{ contentType: string; data: Buffer; ref: string } | null> {
+    const [row] = await this.#database
+      .select({
+        contentType: organizationLogos.contentType,
+        data: organizationLogos.data,
+        ref: organizationLogos.ref,
+      })
+      .from(organizationLogos)
+      .where(eq(organizationLogos.organizationId, id));
+    return row ?? null;
   }
 
   async domains(organizationId: string): Promise<string[]> {

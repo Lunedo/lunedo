@@ -319,7 +319,7 @@ export function mailStep(deps: SetupStepDependencies): SetupStep {
           const { to, language, password, ...configuration } = input;
           const result = await deps.mail.sendTest(to, language, {
             configuration,
-            password: password ?? null,
+            password,
           });
           return { body: result };
         },
