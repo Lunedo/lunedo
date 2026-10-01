@@ -1,6 +1,15 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useEffect } from "react";
 import { api } from "../api/client.js";
+import { instanceKeys } from "../api/instance-queries.js";
+import { organizationKeys } from "../api/organization-queries.js";
+import { queryKeys } from "../api/queries.js";
 import { request } from "../api/request.js";
 
 export const notificationKeys = {
@@ -63,6 +72,27 @@ export function useMarkAllRead() {
   });
 }
 
+export interface SettingsEvent {
+  key: string;
+  level: "instance" | "organization" | "user";
+  organizationId: string | null;
+}
+
+export function settingsChanged(queryClient: QueryClient, event: SettingsEvent): void {
+  void queryClient.invalidateQueries({ queryKey: queryKeys.preferences });
+  if (event.level === "instance") {
+    void queryClient.invalidateQueries({ queryKey: instanceKeys.settings });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.instanceInfo });
+    void queryClient.invalidateQueries({ queryKey: ["organization"] });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.organizations });
+  }
+  if (event.level === "organization" && event.organizationId) {
+    void queryClient.invalidateQueries({ queryKey: organizationKeys.settings(event.organizationId) });
+    void queryClient.invalidateQueries({ queryKey: organizationKeys.organization(event.organizationId) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.organizations });
+  }
+}
+
 export function useNotificationStream(enabled: boolean): void {
   const queryClient = useQueryClient();
   useEffect(() => {
@@ -78,9 +108,18 @@ export function useNotificationStream(enabled: boolean): void {
       }
       void queryClient.invalidateQueries({ queryKey: ["notifications", "list"] });
     };
+    const onSettings = (event: MessageEvent<string>) => {
+      try {
+        settingsChanged(queryClient, JSON.parse(event.data) as SettingsEvent);
+      } catch {
+        return;
+      }
+    };
     source.addEventListener("notifications", onChange);
+    source.addEventListener("settings", onSettings);
     return () => {
       source.removeEventListener("notifications", onChange);
+      source.removeEventListener("settings", onSettings);
       source.close();
     };
   }, [enabled, queryClient]);

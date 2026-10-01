@@ -1,21 +1,10 @@
 import { organizationNameSchema, slugSchema } from "@pagehall/shared";
-import {
-  Button,
-  ConfirmDialog,
-  Field,
-  Input,
-  Notice,
-  Section,
-  SettingRow,
-  Skeleton,
-  useToast,
-} from "@pagehall/ui";
+import { Button, ConfirmDialog, Notice, Section, SettingRow, Skeleton, useToast } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { Building2, ImageUp, LogOut, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { z } from "zod";
 import { api } from "../../api/client.js";
 import {
   organizationKeys,
@@ -24,18 +13,15 @@ import {
 } from "../../api/organization-queries.js";
 import { queryKeys } from "../../api/queries.js";
 import { request } from "../../api/request.js";
+import { AutoSaveTextField } from "../../components/auto-save.js";
 import { SettingsList } from "../../components/settings-list.js";
 import { useFailureToast } from "../../errors/failure.js";
-import { problemMessage } from "../../errors/problem-message.js";
-import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { useOrganizationSettingMutation } from "../../settings/setting-mutations.js";
 import { organizationLogoUrl } from "../../shell/brand.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 
 const route = getRouteApi("/app/settings/organizations/$organizationId/general");
-
-const profileForm = z.object({ name: organizationNameSchema, slug: slugSchema });
 
 const LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
 const LOGO_MAX_BYTES = 256 * 1024;
@@ -54,7 +40,6 @@ export function OrganizationGeneralScreen() {
   const organization = useQuery(organizationQuery(organizationId));
   const settings = useQuery(organizationSettingsQuery(organizationId));
   const mutation = useOrganizationSettingMutation(organizationId);
-  const showFailure = useFailureToast();
   const canUpdate = state.can("organization.update");
   const canManageSettings = state.can("organization.settings.manage");
   const membership = state.organizations.find((entry) => entry.id === organizationId);
@@ -83,9 +68,7 @@ export function OrganizationGeneralScreen() {
           {...(organization.data ? { organizationName: organization.data.name } : {})}
           canManage={() => canManageSettings}
           onChange={async (key, change) => {
-            await mutation.mutateAsync({ key, change }).catch((error: unknown) => {
-              showFailure(t("failures.saveSetting"), error);
-            });
+            await mutation.mutateAsync({ key, change });
           }}
         />
       </Section>
@@ -104,9 +87,7 @@ export function OrganizationGeneralScreen() {
           {...(organization.data ? { organizationName: organization.data.name } : {})}
           canManage={() => canManageSettings}
           onChange={async (key, change) => {
-            await mutation.mutateAsync({ key, change }).catch((error: unknown) => {
-              showFailure(t("failures.saveSetting"), error);
-            });
+            await mutation.mutateAsync({ key, change });
           }}
         />
       </Section>
@@ -125,63 +106,38 @@ function ProfileSection({
   editable: boolean;
 }) {
   const { t } = useTranslation();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [error, setError] = useState<string | null>(null);
-  const form = useSchemaForm(profileForm, {
-    defaultValues: { name: organization.name, slug: organization.slug },
-    messages: { slug: t("validation.slug") },
-  });
-  const submit = form.handleSubmit(async (values) => {
-    setError(null);
-    try {
-      await request(() =>
-        api.PATCH("/api/v1/organizations/{organizationId}", {
-          params: { path: { organizationId: organization.id } },
-          body: values,
-        }),
-      );
-      await queryClient.invalidateQueries({ queryKey: organizationKeys.organization(organization.id) });
-      await queryClient.invalidateQueries({ queryKey: queryKeys.organizations });
-      toast({ title: t("common.saved"), variant: "success" });
-    } catch (failure) {
-      if (!applyServerFieldErrors(form, failure, t("validation.invalid")))
-        setError(problemMessage(t, failure));
-    }
-  });
+  const save = async (patch: { name: string } | { slug: string }) => {
+    await request(() =>
+      api.PATCH("/api/v1/organizations/{organizationId}", {
+        params: { path: { organizationId: organization.id } },
+        body: patch,
+      }),
+    );
+    await queryClient.invalidateQueries({ queryKey: organizationKeys.organization(organization.id) });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.organizations });
+  };
   return (
     <Section title={t("organization.general.profile")}>
-      <form className="flex flex-col gap-4 p-4" noValidate onSubmit={submitWith(submit)}>
-        {error ? (
-          <Notice variant="danger" title={t("failures.saveOrganization")}>
-            {error}
-          </Notice>
-        ) : null}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t("organization.general.name")} error={form.formState.errors.name?.message}>
-            <Input disabled={!editable} {...form.register("name")} />
-          </Field>
-          <Field
-            label={t("organization.general.slug")}
-            hint={t("organization.general.slugHint")}
-            error={form.formState.errors.slug?.message}
-          >
-            <Input disabled={!editable} className="font-mono" {...form.register("slug")} />
-          </Field>
-        </div>
-        {editable ? (
-          <div className="flex justify-end">
-            <Button
-              type="submit"
-              variant="primary"
-              loading={form.formState.isSubmitting}
-              disabled={!form.formState.isDirty}
-            >
-              {t("common.save")}
-            </Button>
-          </div>
-        ) : null}
-      </form>
+      <div className="grid gap-4 p-4 sm:grid-cols-2">
+        <AutoSaveTextField
+          label={t("organization.general.name")}
+          value={organization.name}
+          schema={organizationNameSchema}
+          disabled={!editable}
+          onSave={(name) => save({ name })}
+        />
+        <AutoSaveTextField
+          label={t("organization.general.slug")}
+          hint={t("organization.general.slugHint")}
+          value={organization.slug}
+          schema={slugSchema}
+          invalidMessage={t("validation.slug")}
+          disabled={!editable}
+          className="font-mono"
+          onSave={(slug) => save({ slug })}
+        />
+      </div>
     </Section>
   );
 }

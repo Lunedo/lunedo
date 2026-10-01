@@ -2,6 +2,7 @@ import {
   Badge,
   Button,
   Checkbox,
+  ConfirmDialog,
   Dialog,
   DurationInput,
   formatDuration,
@@ -32,6 +33,7 @@ import {
   toMinutes,
 } from "../settings/setting-fields.js";
 import type { SettingChange } from "../settings/setting-mutations.js";
+import { SaveIndicator, useSaveState } from "./auto-save.js";
 import { disabledReason, inheritedValue, SettingSource } from "./setting-source.js";
 
 type Level = "instance" | "organization";
@@ -120,6 +122,9 @@ function SettingItem({
   const field = settingField(entry.key);
   const [explaining, setExplaining] = useState(false);
   const [overriding, setOverriding] = useState(false);
+  const [confirmingLock, setConfirmingLock] = useState(false);
+  const tracker = useSaveState();
+  const apply = (change: SettingChange) => tracker.run(() => onChange(change));
   const lockedAbove = entry.lockedBy !== null && entry.lockedBy !== level;
   const own = entry.source === level;
   const canLock = entry.lockable && entry.levelsBelow.length > 0;
@@ -138,7 +143,7 @@ function SettingItem({
           {...(writable
             ? {}
             : { disabledReason: disabledReason(t, entry, level, editable, organizationName) })}
-          onCheckedChange={(checked) => void onChange({ value: checked })}
+          onCheckedChange={(checked) => void apply({ value: checked })}
         />
       );
     }
@@ -161,8 +166,7 @@ function SettingItem({
         value={own ? entry.value : inheritedValue(entry, level)}
         disabled={!writable}
         onSave={async (value) => {
-          await onChange({ value });
-          setOverriding(false);
+          if (await apply({ value })) setOverriding(false);
         }}
       />
     );
@@ -174,7 +178,7 @@ function SettingItem({
       ? [
           {
             label: level === "organization" ? t("settings.useInstanceValue") : t("settings.useDefault"),
-            onSelect: () => void onChange({ clear: true }),
+            onSelect: () => void apply({ clear: true }),
           },
         ]
       : []),
@@ -184,13 +188,13 @@ function SettingItem({
             ? {
                 label: t("settings.unlock"),
                 icon: LockOpen,
-                onSelect: () => void onChange({ locked: false }),
+                onSelect: () => void apply({ locked: false }),
               }
             : {
                 label:
                   level === "instance" ? t("settings.lockForOrganizations") : t("settings.lockForMembers"),
                 icon: Lock,
-                onSelect: () => void onChange({ locked: true }),
+                onSelect: () => setConfirmingLock(true),
               },
         ]
       : []),
@@ -217,15 +221,40 @@ function SettingItem({
           </span>
         }
         control={
-          <div className="flex items-center gap-1">
-            {control()}
-            <Menu
-              align="end"
-              trigger={<IconButton label={t("settings.moreFor", { name: label })} icon={MoreHorizontal} />}
-              items={menuItems}
-            />
+          <div className="flex flex-col items-start gap-1">
+            <div className="flex items-center gap-1">
+              {control()}
+              <Menu
+                align="end"
+                trigger={<IconButton label={t("settings.moreFor", { name: label })} icon={MoreHorizontal} />}
+                items={menuItems}
+              />
+            </div>
+            <SaveIndicator tracker={tracker} />
           </div>
         }
+      />
+      <ConfirmDialog
+        open={confirmingLock}
+        onOpenChange={setConfirmingLock}
+        title={t("settings.lockTitle", { name: label })}
+        description={
+          level === "instance"
+            ? t("settings.lockImpactInstance", { name: label, value: formatValue(entry.value) })
+            : t("settings.lockImpactOrganization", {
+                name: label,
+                value: formatValue(entry.value),
+                organization: organizationName ?? "",
+              })
+        }
+        confirmLabel={
+          level === "instance" ? t("settings.lockForOrganizations") : t("settings.lockForMembers")
+        }
+        cancelLabel={t("common.cancel")}
+        onConfirm={async () => {
+          setConfirmingLock(false);
+          await apply({ locked: true });
+        }}
       />
       <Dialog
         open={explaining}
@@ -355,14 +384,15 @@ function ValueEditor({
             inputMode={field.type.kind === "number" ? "numeric" : undefined}
             type={field.type.kind === "text" && field.type.inputType === "url" ? "url" : "text"}
             onChange={(event) => setDraft(event.target.value)}
+            onBlur={() => void commit()}
             onKeyDown={(event) => {
-              if (event.key === "Enter") void commit();
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void commit();
+              }
             }}
           />
         </div>
-        <Button variant="outline" size="sm" disabled={disabled} onClick={() => void commit()}>
-          {t("common.save")}
-        </Button>
       </div>
       {error ? (
         <span role="alert" className="text-danger text-sm">

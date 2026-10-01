@@ -2,6 +2,7 @@ import { Button, Section, Skeleton, Switch, Table } from "@pagehall/ui";
 import { useTranslation } from "react-i18next";
 import type { SettingEntry } from "../api/organization-queries.js";
 import { translateKey } from "../i18n/translate.js";
+import { SaveIndicator, useSaveStates } from "./auto-save.js";
 import { disabledReason, type SettingLevel, SettingSource } from "./setting-source.js";
 
 interface Channels {
@@ -37,9 +38,12 @@ export function NotificationPreferences({
   level: SettingLevel;
   organizationName?: string;
   editable: boolean;
-  onChange: (key: string, value: Channels | undefined) => void;
+  onChange: (key: string, value: Channels | undefined) => Promise<unknown>;
 }) {
   const { t } = useTranslation();
+  const saveState = useSaveStates();
+  const save = (key: string, value: Channels | undefined) =>
+    void saveState(key).run(() => onChange(key, value));
   const entries = notificationEntries(settings);
   const label = (entry: SettingEntry) =>
     translateKey(t, `notifications.events.${entry.key.slice("notifications.".length)}`);
@@ -73,6 +77,7 @@ export function NotificationPreferences({
                     {...(organizationName ? { organizationName } : {})}
                     formatValue={channelsText}
                   />
+                  <SaveIndicator tracker={saveState(entry.key)} />
                 </div>
               ),
             },
@@ -89,7 +94,7 @@ export function NotificationPreferences({
                     checked={value[channel]}
                     disabled={reason !== undefined}
                     {...(reason ? { disabledReason: reason } : {})}
-                    onCheckedChange={(checked) => onChange(entry.key, { ...value, [channel]: checked })}
+                    onCheckedChange={(checked) => save(entry.key, { ...value, [channel]: checked })}
                   />
                 );
               },
@@ -100,7 +105,7 @@ export function NotificationPreferences({
               align: "end" as const,
               cell: (entry: SettingEntry) =>
                 entry.source === level && editable ? (
-                  <Button variant="secondary" size="sm" onClick={() => onChange(entry.key, undefined)}>
+                  <Button variant="secondary" size="sm" onClick={() => save(entry.key, undefined)}>
                     {level === "user" ? t("settings.useDefault") : t("settings.inherit")}
                   </Button>
                 ) : null,

@@ -4,7 +4,6 @@ import { BellRing } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { organizationQuery, organizationSettingsQuery } from "../../api/organization-queries.js";
 import { NotificationPreferences } from "../../components/notification-preferences.js";
-import { useFailureToast } from "../../errors/failure.js";
 import { useOrganizationSettingMutation } from "../../settings/setting-mutations.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
@@ -13,7 +12,6 @@ const route = getRouteApi("/app/settings/organizations/$organizationId/notificat
 
 export function OrganizationNotificationDefaultsScreen() {
   const { t } = useTranslation();
-  const showFailure = useFailureToast();
   const { organizationId } = route.useParams();
   const state = useOrganizationState();
   const organization = useQuery(organizationQuery(organizationId));
@@ -33,10 +31,7 @@ export function OrganizationNotificationDefaultsScreen() {
         {...(organization.data ? { organizationName: organization.data.name } : {})}
         editable={state.can("organization.settings.manage")}
         onChange={(key, value) =>
-          mutation.mutate(
-            { key, change: value === undefined ? { clear: true } : { value } },
-            { onError: (error) => showFailure(t("failures.saveSetting"), error) },
-          )
+          mutation.mutateAsync({ key, change: value === undefined ? { clear: true } : { value } })
         }
       />
     </SettingsPage>

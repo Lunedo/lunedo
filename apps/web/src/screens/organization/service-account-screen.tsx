@@ -1,18 +1,5 @@
 import { serviceAccountDescriptionSchema, serviceAccountNameSchema } from "@pagehall/shared";
-import {
-  Button,
-  ConfirmDialog,
-  Field,
-  Input,
-  List,
-  ListRow,
-  Notice,
-  Section,
-  Select,
-  Skeleton,
-  Textarea,
-  useToast,
-} from "@pagehall/ui";
+import { Button, ConfirmDialog, List, ListRow, Notice, Section, Select, Skeleton } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { Bot, KeyRound, Plus, PowerOff, UserRound } from "lucide-react";
@@ -30,10 +17,9 @@ import {
 } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
+import { AutoSaveTextField } from "../../components/auto-save.js";
 import { CreateTokenDialog, RevokeTokenDialog, scopeSummary } from "../../components/token-dialogs.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
-import { problemMessage } from "../../errors/problem-message.js";
-import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
@@ -292,56 +278,32 @@ function DetailsSection({
   onSaved: () => Promise<void>;
 }) {
   const { t } = useTranslation();
-  const { toast } = useToast();
-  const [error, setError] = useState<string | null>(null);
-  const form = useSchemaForm(detailsForm, {
-    defaultValues: { name: account.name, description: account.description },
-  });
-  const submit = form.handleSubmit(async (values) => {
-    setError(null);
-    try {
-      await request(() =>
-        api.PATCH("/api/v1/service-accounts/{serviceAccountId}", {
-          params: { path: { serviceAccountId: account.id } },
-          body: values,
-        }),
-      );
-      await onSaved();
-      form.reset(values);
-      toast({ title: t("common.saved"), variant: "success" });
-    } catch (failure) {
-      if (!applyServerFieldErrors(form, failure, t("validation.invalid")))
-        setError(problemMessage(t, failure));
-    }
-  });
+  const save = async (patch: { name: string } | { description: string }) => {
+    await request(() =>
+      api.PATCH("/api/v1/service-accounts/{serviceAccountId}", {
+        params: { path: { serviceAccountId: account.id } },
+        body: patch,
+      }),
+    );
+    await onSaved();
+  };
   return (
     <Section title={t("serviceAccounts.details")}>
-      <form className="flex flex-col gap-4 p-4" noValidate onSubmit={submitWith(submit)}>
-        {error ? (
-          <Notice variant="danger" title={t("failures.saveServiceAccount")}>
-            {error}
-          </Notice>
-        ) : null}
-        <Field label={t("serviceAccounts.name")} error={form.formState.errors.name?.message}>
-          <Input {...form.register("name")} />
-        </Field>
-        <Field
+      <div className="flex flex-col gap-4 p-4">
+        <AutoSaveTextField
+          label={t("serviceAccounts.name")}
+          value={account.name}
+          schema={detailsForm.shape.name}
+          onSave={(name) => save({ name })}
+        />
+        <AutoSaveTextField
           label={t("serviceAccounts.descriptionLabel")}
-          error={form.formState.errors.description?.message}
-        >
-          <Textarea rows={2} {...form.register("description")} />
-        </Field>
-        <div className="flex justify-end">
-          <Button
-            type="submit"
-            variant="primary"
-            loading={form.formState.isSubmitting}
-            disabled={!form.formState.isDirty}
-          >
-            {t("common.save")}
-          </Button>
-        </div>
-      </form>
+          value={account.description}
+          schema={detailsForm.shape.description}
+          multiline
+          onSave={(description) => save({ description })}
+        />
+      </div>
     </Section>
   );
 }

@@ -706,7 +706,10 @@
       "noPermission": "Deine Rollen erlauben dir nicht, diese Einstellung zu ändern."
     },
     "noLimit": "Keine Begrenzung",
-    "limitDuration": "Begrenzen"
+    "limitDuration": "Begrenzen",
+    "lockTitle": "{name} sperren?",
+    "lockImpactInstance": "Alle Organisationen und ihre Mitglieder verwenden dann {value} für {name} und können es nicht mehr ändern.",
+    "lockImpactOrganization": "Alle Mitglieder von {organization} verwenden dann {value} für {name} und können es nicht mehr ändern."
   },
   "security": {
     "title": "Sicherheit",

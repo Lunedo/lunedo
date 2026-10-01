@@ -61,9 +61,7 @@ export function DomainsScreen() {
     }
   });
   const onChange = async (key: string, change: Parameters<typeof mutation.mutateAsync>[0]["change"]) => {
-    await mutation.mutateAsync({ key, change }).catch((failure: unknown) => {
-      showFailure(t("failures.saveSetting"), failure);
-    });
+    await mutation.mutateAsync({ key, change });
   };
 
   return (

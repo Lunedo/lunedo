@@ -3,14 +3,12 @@ import { BellRing } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { instanceSettingsQuery } from "../../api/instance-queries.js";
 import { NotificationPreferences } from "../../components/notification-preferences.js";
-import { useFailureToast } from "../../errors/failure.js";
 import { useInstanceSettingMutation } from "../../settings/setting-mutations.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 
 export function InstanceNotificationDefaultsScreen() {
   const { t } = useTranslation();
-  const showFailure = useFailureToast();
   const state = useOrganizationState();
   const settings = useQuery(instanceSettingsQuery);
   const mutation = useInstanceSettingMutation();
@@ -26,10 +24,7 @@ export function InstanceNotificationDefaultsScreen() {
         level="instance"
         editable={state.can("instance.settings.manage")}
         onChange={(key, value) =>
-          mutation.mutate(
-            { key, change: value === undefined ? { clear: true } : { value } },
-            { onError: (error) => showFailure(t("failures.saveSetting"), error) },
-          )
+          mutation.mutateAsync({ key, change: value === undefined ? { clear: true } : { value } })
         }
       />
     </SettingsPage>

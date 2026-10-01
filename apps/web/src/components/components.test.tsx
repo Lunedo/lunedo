@@ -197,13 +197,43 @@ describe("SettingsList", () => {
     );
     await userEvent.click(screen.getByRole("switch", { name: "Self-registration" }));
     expect(onChange).toHaveBeenCalledWith("organizations.selfRegistration", { value: true });
+    expect(await screen.findByText("Saved")).toBeTruthy();
 
     await userEvent.click(screen.getByRole("button", { name: "More options for Self-registration" }));
     expect(screen.queryByRole("menuitem", { name: "Lock for members" })).toBeNull();
     await userEvent.keyboard("{Escape}");
     await userEvent.click(screen.getByRole("button", { name: "More options for Language" }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Lock for members" }));
-    expect(onChange).toHaveBeenCalledWith("locale.language", { locked: true });
+    expect(onChange).not.toHaveBeenCalledWith("locale.language", { locked: true });
+    const confirm = await screen.findByRole("dialog", { name: "Lock Language?" });
+    expect(
+      within(confirm).getByText(/All members of Platform Team will use English for Language/),
+    ).toBeTruthy();
+    await userEvent.click(within(confirm).getByRole("button", { name: "Lock for members" }));
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith("locale.language", { locked: true }));
+  });
+
+  it("saves a text setting when it loses focus and offers a retry when saving fails", async () => {
+    let fail = true;
+    const onChange = vi.fn(async (): Promise<undefined> => {
+      if (fail) throw Object.assign(new Error("busy"), { code: "busy" });
+      return undefined;
+    });
+    await renderList(
+      [entry({ key: "instance.name", value: "Docs", defaultValue: "Pagehall", source: "organization" })],
+      onChange,
+    );
+    const input = screen.getByRole("textbox", { name: "Instance name" });
+    await userEvent.clear(input);
+    await userEvent.type(input, "Handbook");
+    await userEvent.tab();
+    expect(onChange).toHaveBeenCalledWith("instance.name", { value: "Handbook" });
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toMatch(/The server gave an unexpected answer/);
+    fail = false;
+    await userEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText("Saved")).toBeTruthy();
+    expect(onChange).toHaveBeenCalledTimes(2);
   });
 
   it("explains every level of a setting", async () => {

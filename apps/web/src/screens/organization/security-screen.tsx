@@ -5,7 +5,6 @@ import { LockKeyhole } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { organizationQuery, organizationSettingsQuery } from "../../api/organization-queries.js";
 import { SettingsList } from "../../components/settings-list.js";
-import { useFailureToast } from "../../errors/failure.js";
 import { useOrganizationSettingMutation } from "../../settings/setting-mutations.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
@@ -27,14 +26,11 @@ export function OrganizationSecurityScreen() {
   const { t } = useTranslation();
   const { organizationId } = route.useParams();
   const state = useOrganizationState();
-  const showFailure = useFailureToast();
   const organization = useQuery(organizationQuery(organizationId));
   const settings = useQuery(organizationSettingsQuery(organizationId));
   const mutation = useOrganizationSettingMutation(organizationId);
   const onChange = async (key: string, change: Parameters<typeof mutation.mutateAsync>[0]["change"]) => {
-    await mutation.mutateAsync({ key, change }).catch((error: unknown) => {
-      showFailure(t("failures.saveSetting"), error);
-    });
+    await mutation.mutateAsync({ key, change });
   };
   const name = organization.data?.name ?? "";
   return (

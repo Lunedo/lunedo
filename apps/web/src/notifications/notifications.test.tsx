@@ -194,3 +194,55 @@ describe("the notification panel", () => {
     await waitFor(() => expect(screen.queryByRole("complementary", { name: "Notifications" })).toBeNull());
   });
 });
+
+describe("live settings", () => {
+  it("apply a changed setting without a reload", async () => {
+    let colorMode = "light";
+    mockApi({
+      "GET /api/v1/instance/info": () => ({
+        body: {
+          name: "Example Wiki",
+          setupComplete: true,
+          language: "en",
+          accentColor: "petrol",
+          passwordMinLength: 12,
+          selfRegistration: false,
+          organization: null,
+        },
+      }),
+      "GET /api/v1/auth/session": () => ({
+        body: { sessionKind: "full", account: ACCOUNT, methods: ["password"], recentlyAuthenticated: true },
+      }),
+      "GET /api/v1/organizations": () => ({ body: { items: [], nextCursor: null } }),
+      "GET /api/v1/account/permissions": () => ({ body: { instance: [], organization: [] } }),
+      "GET /api/v1/account/preferences": () => ({
+        body: [
+          {
+            key: "appearance.colorMode",
+            value: colorMode,
+            defaultValue: "system",
+            source: "user",
+            lockedBy: null,
+            locked: false,
+            lockable: false,
+            levelsBelow: [],
+            editable: true,
+            levels: [],
+          },
+        ],
+      }),
+      "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    });
+    window.history.replaceState(null, "", "/settings/preferences");
+    const i18n = await initI18n(["en"]);
+    render(<App i18n={i18n} queryClient={createQueryClient()} />);
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("light"));
+    colorMode = "dark";
+    FakeEventSource.last?.emit("settings", {
+      key: "appearance.colorMode",
+      level: "user",
+      organizationId: null,
+    });
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark"));
+  });
+});

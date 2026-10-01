@@ -706,7 +706,10 @@
       "noPermission": "Your roles do not allow you to change this setting."
     },
     "noLimit": "No limit",
-    "limitDuration": "Set a limit"
+    "limitDuration": "Set a limit",
+    "lockTitle": "Lock {name}?",
+    "lockImpactInstance": "Every organization and all its members will use {value} for {name} and can no longer change it.",
+    "lockImpactOrganization": "All members of {organization} will use {value} for {name} and can no longer change it."
   },
   "security": {
     "title": "Security",

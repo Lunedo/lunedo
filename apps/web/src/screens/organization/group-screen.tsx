@@ -13,7 +13,6 @@ import {
   Section,
   Select,
   Skeleton,
-  Textarea,
   useToast,
 } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -21,7 +20,6 @@ import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { Plus, ShieldCheck, Trash2, UserMinus, UsersRound } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { z } from "zod";
 import { api } from "../../api/client.js";
 import {
   assignmentsQuery,
@@ -32,17 +30,14 @@ import {
 } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
+import { AutoSaveTextField } from "../../components/auto-save.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
-import { problemMessage } from "../../errors/problem-message.js";
-import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 import { roleName } from "./roles.js";
 
 const route = getRouteApi("/app/settings/organizations/$organizationId/groups/$groupId");
-
-const detailsForm = z.object({ name: groupNameSchema, description: groupDescriptionSchema });
 
 type Pending =
   | { kind: "addMember" }
@@ -348,50 +343,29 @@ function DetailsSection({
   onSaved: () => Promise<void>;
 }) {
   const { t } = useTranslation();
-  const { toast } = useToast();
-  const [error, setError] = useState<string | null>(null);
-  const form = useSchemaForm(detailsForm, {
-    defaultValues: { name: group.name, description: group.description },
-  });
-  const submit = form.handleSubmit(async (values) => {
-    setError(null);
-    try {
-      await request(() =>
-        api.PATCH("/api/v1/groups/{groupId}", { params: { path: { groupId: group.id } }, body: values }),
-      );
-      await onSaved();
-      form.reset(values);
-      toast({ title: t("common.saved"), variant: "success" });
-    } catch (failure) {
-      if (!applyServerFieldErrors(form, failure, t("validation.invalid")))
-        setError(problemMessage(t, failure));
-    }
-  });
+  const save = async (patch: { name: string } | { description: string }) => {
+    await request(() =>
+      api.PATCH("/api/v1/groups/{groupId}", { params: { path: { groupId: group.id } }, body: patch }),
+    );
+    await onSaved();
+  };
   return (
     <Section title={t("groups.details")}>
-      <form className="flex flex-col gap-4 p-4" noValidate onSubmit={submitWith(submit)}>
-        {error ? (
-          <Notice variant="danger" title={t("failures.saveGroup")}>
-            {error}
-          </Notice>
-        ) : null}
-        <Field label={t("groups.name")} error={form.formState.errors.name?.message}>
-          <Input {...form.register("name")} />
-        </Field>
-        <Field label={t("groups.descriptionLabel")} error={form.formState.errors.description?.message}>
-          <Textarea rows={2} {...form.register("description")} />
-        </Field>
-        <div className="flex justify-end">
-          <Button
-            type="submit"
-            variant="primary"
-            loading={form.formState.isSubmitting}
-            disabled={!form.formState.isDirty}
-          >
-            {t("common.save")}
-          </Button>
-        </div>
-      </form>
+      <div className="flex flex-col gap-4 p-4">
+        <AutoSaveTextField
+          label={t("groups.name")}
+          value={group.name}
+          schema={groupNameSchema}
+          onSave={(name) => save({ name })}
+        />
+        <AutoSaveTextField
+          label={t("groups.descriptionLabel")}
+          value={group.description}
+          schema={groupDescriptionSchema}
+          multiline
+          onSave={(description) => save({ description })}
+        />
+      </div>
     </Section>
   );
 }
