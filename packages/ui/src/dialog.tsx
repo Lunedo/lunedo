@@ -4,6 +4,7 @@ import { type ReactNode, useState } from "react";
 import { Button, IconButton } from "./button.js";
 import { classNames } from "./class-names.js";
 import { useUiLabels } from "./labels.js";
+import { useReturnFocus } from "./return-focus.js";
 
 export type DialogSize = "sm" | "md" | "lg";
 
@@ -33,11 +34,13 @@ export function Dialog({
   children,
 }: DialogProps) {
   const labels = useUiLabels();
+  const returnFocus = useReturnFocus(open);
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-40 grid place-items-center overflow-y-auto bg-overlay p-4">
           <DialogPrimitive.Content
+            onCloseAutoFocus={returnFocus}
             {...(description ? {} : { "aria-describedby": undefined })}
             className={classNames(
               "flex w-full flex-col gap-4 rounded-lg bg-surface p-5 text-text shadow-dialog focus-visible:focus-ring",
@@ -142,11 +145,13 @@ export interface DrawerProps {
 
 export function Drawer({ open, onOpenChange, title, side = "left", children }: DrawerProps) {
   const labels = useUiLabels();
+  const returnFocus = useReturnFocus(open);
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-overlay" />
         <DialogPrimitive.Content
+          onCloseAutoFocus={returnFocus}
           aria-describedby={undefined}
           className={classNames(
             "fixed inset-y-0 z-50 flex w-sidebar max-w-full flex-col bg-sidebar text-text shadow-dialog focus-visible:focus-ring",

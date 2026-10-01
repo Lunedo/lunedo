@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { Kbd } from "./feedback.js";
 import { Icon } from "./icon.js";
+import { useReturnFocus } from "./return-focus.js";
 
 export interface CommandItem {
   id: string;
@@ -36,11 +37,13 @@ export function CommandPalette({
   emptyText,
   groups,
 }: CommandPaletteProps) {
+  const returnFocus = useReturnFocus(open);
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-overlay p-4 sm:pt-12">
           <DialogPrimitive.Content
+            onCloseAutoFocus={returnFocus}
             aria-describedby={undefined}
             className="w-full max-w-dialog-lg overflow-hidden rounded-lg bg-surface text-text shadow-dialog"
           >

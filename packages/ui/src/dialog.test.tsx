@@ -29,6 +29,17 @@ function DialogProbe({ onOpenChange }: { onOpenChange?: (open: boolean) => void 
 }
 
 describe("Dialog", () => {
+  it("returns the focus to the element that opened it", async () => {
+    renderUi(<DialogProbe />);
+    const trigger = screen.getByRole("button", { name: "Invite people" });
+    trigger.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByRole("dialog", { name: "Invite people" })).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
   it("opens as a labelled modal from the keyboard, keeps focus inside and closes with Escape", async () => {
     const onOpenChange = vi.fn();
     renderUi(<DialogProbe onOpenChange={onOpenChange} />);
