@@ -535,7 +535,14 @@ describe.skipIf(!baseUrl)("API tokens and service accounts", () => {
         role: { customRoleId: role.id },
         principal: { kind: "account", id: service.id },
       });
-      const { token } = await test.services.apiTokens.create(accountPrincipal(creator), {
+      await expect(
+        test.services.apiTokens.create(accountPrincipal(creator), {
+          accountId: service.id,
+          name: "Too strong",
+          scopes: { organization: { spaces: "manage", settings: "manage" } },
+        }),
+      ).rejects.toMatchObject({ decision: { denials: ["roleExceedsOwnPermissions"] } });
+      const { token } = await test.services.apiTokens.create(accountPrincipal(org.owner), {
         accountId: service.id,
         name: "CI",
         scopes: { organization: { spaces: "manage", settings: "manage" } },

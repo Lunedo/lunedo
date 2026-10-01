@@ -4,7 +4,6 @@ import { accounts, instance } from "../accounts/schema.js";
 import type { AuditEventInput, AuditEvents, AuditLog } from "../audit/audit-log.js";
 import type { AuditEventName } from "../audit/catalog.js";
 import { authChallenges, sessions } from "../auth/schema.js";
-import { coversAreas } from "../authorization/areas.js";
 import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
 import type { Database, Transaction } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
@@ -65,7 +64,7 @@ export async function ownerCount(
     join memberships m on m.account_id = a.id and m.organization_id = ra.organization_id
     where ra.organization_id = ${organizationId} and ra.scope = 'organization'
       and ra.principal_kind = 'account' and ra.built_in_role = 'owner'
-      and a.state = 'active' and m.kind = 'member'
+      and a.state = 'active' and a.type = 'standard' and m.kind = 'member'
       and (m.expires_at is null or m.expires_at > now())
       ${exclude.accountId ? sql`and ra.principal_id <> ${exclude.accountId}` : sql``}
       ${exclude.assignmentId ? sql`and ra.id <> ${exclude.assignmentId}` : sql``}`);
@@ -196,25 +195,10 @@ export class MembershipService {
     organizationId: string,
     targetId: string,
   ): Promise<void> {
-    if (actor.type !== "account") return;
-    const deny = (denial: "ownerOnly" | "roleExceedsOwnPermissions"): never => {
-      throw new ForbiddenError({
-        action: "organization.members.manage",
-        resource: { type: "organization", id: organizationId },
-        allowed: false,
-        grants: [],
-        denials: [denial],
-      });
-    };
-    if (
-      (await this.#authorization.isOrganizationOwner(targetId, organizationId, tx)) &&
-      !(await this.#authorization.isOrganizationOwner(actor.id, organizationId, tx))
-    ) {
-      deny("ownerOnly");
-    }
-    const targetAreas = await this.#authorization.heldAreas(targetId, "organization", organizationId, tx);
-    const actorAreas = await this.#authorization.heldAreas(actor.id, "organization", organizationId, tx);
-    if (!coversAreas(actorAreas, targetAreas)) deny("roleExceedsOwnPermissions");
+    await this.#authorization.checkRankOverAccount(actor, organizationId, targetId, {
+      executor: tx,
+      action: "organization.members.manage",
+    });
   }
 
   async #detach(

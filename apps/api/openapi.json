@@ -4999,12 +4999,17 @@
       "put": {
         "operationId": "instance.updateSetting",
         "summary": "Change an instance setting",
-        "description": "Sets, clears or locks an instance setting. Each setting needs the manage level of its area: sign-in, audit log, organizations or settings.\n\nRequires the permission `instance.settings.view` on the instance.",
+        "description": "Sets, clears or locks an instance setting. Each setting needs the manage level of its area: sign-in, audit log, organizations or settings.\n\nRequires one of the permissions `instance.settings.manage`, `instance.signIn.manage`, `instance.audit.manage`, `instance.organizations.manage` on the instance; the request decides which.",
         "tags": [
           "Instance"
         ],
         "x-pagehall-permission": {
-          "action": "instance.settings.view",
+          "action": "instance.settings.manage",
+          "alternatives": [
+            "instance.signIn.manage",
+            "instance.audit.manage",
+            "instance.organizations.manage"
+          ],
           "resource": "instance"
         },
         "security": [
@@ -12607,12 +12612,15 @@
       "put": {
         "operationId": "organizations.updateSettings",
         "summary": "Change a setting",
-        "description": "Sets, clears or locks a setting for the organization. Sign-in settings need the sign-in and security area, all others the settings area.\n\nRequires the permission `organization.settings.view` on the organization in `organizationId`.",
+        "description": "Sets, clears or locks a setting for the organization. Sign-in settings need the sign-in and security area, all others the settings area.\n\nRequires one of the permissions `organization.settings.manage`, `organization.signIn.manage` on the organization in `organizationId`; the request decides which.",
         "tags": [
           "Settings"
         ],
         "x-pagehall-permission": {
-          "action": "organization.settings.view",
+          "action": "organization.settings.manage",
+          "alternatives": [
+            "organization.signIn.manage"
+          ],
           "resource": "organization",
           "parameter": "organizationId"
         },

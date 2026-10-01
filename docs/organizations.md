@@ -57,9 +57,10 @@ Built-in roles use the same areas as custom roles:
 Rules:
 
 - Instance roles never grant access to organizations. An instance administrator who is not a member sees an organization only through break-glass access.
-- Only owners appoint owners. Everybody else assigns roles up to their own level: the role's areas must be covered by the areas the assigner holds.
-- Nobody extends their own permissions. Temporary roles and break-glass access do not count when an assignment would include the assigner.
-- Roles are assigned to accounts, groups, all members of an organization or all internal users of the instance. Owners are always individual accounts and never expire.
+- Every operation that gives or widens access passes one check: assigning a role, adding a member to a group that holds roles, widening a custom role, and creating a token for a service account. What the target gains must be covered by the actor's own permanent permissions; temporary roles and break-glass access never count. A refusal is `selfExtension` when the actor would gain the access, directly, through a group, through a role they hold or through a token they receive, and `roleExceedsOwnPermissions` otherwise.
+- Every operation that removes or disables a principal holding a role checks the actor's rank: removing a role or a member, deleting a group or a custom role, deactivating an account or a service account. The actor must hold the areas of what is removed, and only owners remove owners.
+- Only owners appoint owners. Owners are individual standard accounts and never expire; service accounts and guests cannot be owners, and the last owner cannot leave or be removed.
+- Roles are assigned to accounts, groups, all members of an organization or all internal users of the instance.
 
 ## Groups
 
@@ -73,7 +74,7 @@ Self-registration is the setting `organizations.selfRegistration` (default off).
 
 ## Break-glass access
 
-An instance administrator can request access to an organization with a reason. The access gives the organization administrator role, never more, for `organizations.breakGlassMinutes` (default 240) and ends early when the requester ends it. The organization's owners receive an e-mail at once. Start, every permitted action and the end are recorded in the organization's audit log.
+An instance administrator can request access to an organization with a reason. The access gives the organization administrator role, never more, for `organizations.breakGlassMinutes` (default 240) and ends early when the requester ends it or loses the instance role that allowed the request. The organization's owners receive an e-mail at once. Start, every permitted action and the end are recorded in the organization's audit log.
 
 ## Authorization service
 
@@ -105,12 +106,14 @@ Each endpoint declares the action it requires. Endpoints marked internal serve t
 | `GET, POST /api/v1/organizations/{id}/groups` | `organization.groups.view`, `organization.groups.create` |
 | `GET, PATCH, DELETE /api/v1/groups/{id}`, members and managers | `group.view`, `group.manage`, `group.delete` |
 | `GET, POST, DELETE /api/v1/organizations/{id}/invitations` | `organization.members.manage` |
-| `GET, PUT /api/v1/organizations/{id}/settings` | `organization.settings.view`; changes need `organization.settings.manage`, or `organization.signIn.manage` for `auth.*` |
+| `GET /api/v1/organizations/{id}/settings` | `organization.settings.view` |
+| `PUT /api/v1/organizations/{id}/settings/{key}` | `organization.settings.manage`, or `organization.signIn.manage` for `auth.*` |
 | `POST, DELETE /api/v1/organizations/{id}/break-glass` | `instance.breakGlass.request`, session only; internal |
 | `GET /api/v1/instance/organizations`, `.../accounts` | `instance.organizations.view`, `instance.accounts.view` |
 | `GET, POST, PATCH, DELETE /api/v1/instance/roles`, `.../role-assignments` | `instance.roles.view`, `instance.roles.manage` |
 | `POST /api/v1/instance/ownership` | `instance.ownership.transfer`, recent authentication; internal |
-| `GET, PUT /api/v1/instance/settings` | `instance.settings.view`; changes need the area of the setting |
+| `GET /api/v1/instance/settings` | `instance.settings.view` |
+| `PUT /api/v1/instance/settings/{key}` | the `manage` permission of the setting's area: settings, sign-in, audit log or organizations |
 | `POST /api/v1/accounts/{id}/deactivate` | `account.deactivate`, recent authentication; internal |
 | `POST /api/v1/invitations/accept` | public, with the token from the mail; internal |
 | `POST /api/v1/registrations`, `.../complete` | public; internal |

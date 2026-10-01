@@ -152,6 +152,9 @@ export class RouteAccessGuard implements CanActivate {
         : { type: access.resource.type };
     const decision = await services.authorization.decide(principal, access.action, resource);
     if (decision.allowed) return true;
+    for (const alternative of access.alternatives) {
+      if ((await services.authorization.decide(principal, alternative, resource)).allowed) return true;
+    }
     if (resource.type !== "instance" && (await this.#hidden(services, principal, resource))) {
       throw new ProblemException("notFound");
     }

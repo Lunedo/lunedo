@@ -326,7 +326,12 @@ export class InstanceController {
   }
 
   @Put("settings/:key")
-  @Permission("instance.settings.view")
+  @Permission([
+    "instance.settings.manage",
+    "instance.signIn.manage",
+    "instance.audit.manage",
+    "instance.organizations.manage",
+  ])
   @ApiRoute({
     summary: "Change an instance setting",
     description:

@@ -326,4 +326,47 @@ describe.skipIf(!databaseBaseUrl)("organizations through the API", () => {
     expect(invalid.statusCode).toBe(400);
     expect(invalid.json()).toMatchObject({ code: "invalidInput", fields: ["cursor"] });
   });
+
+  it("lets the manage permission of a setting's area change it, and nothing less", async () => {
+    const security = await owner.post(`/api/v1/organizations/${organizationId}/roles`, {
+      name: "Security only",
+      areas: { signInAndSecurity: "manage" },
+    });
+    const viewer = await owner.post(`/api/v1/organizations/${organizationId}/roles`, {
+      name: "Settings viewer",
+      areas: { settings: "view" },
+    });
+    const securityAccount = await createAccount(
+      test,
+      "security.officer@engineering.example",
+      undefined,
+      organizationId,
+    );
+    const viewerAccount = await createAccount(
+      test,
+      "settings.viewer@engineering.example",
+      undefined,
+      organizationId,
+    );
+    for (const [role, account] of [
+      [security.json().id, securityAccount.id],
+      [viewer.json().id, viewerAccount.id],
+    ]) {
+      await owner.post(`/api/v1/organizations/${organizationId}/role-assignments`, {
+        role: { customRoleId: role },
+        principal: { kind: "account", id: account },
+      });
+    }
+    const officer = await signedInClient(test, securityAccount.email, securityAccount.password);
+    const reader = await signedInClient(test, viewerAccount.email, viewerAccount.password);
+    const url = (key: string) => `/api/v1/organizations/${organizationId}/settings/${key}`;
+    expect((await officer.request("PUT", url("auth.passwordMinLength"), { value: 14 })).statusCode).toBe(204);
+    expect(
+      (await officer.request("PUT", url("organizations.membersCreateGroups"), { value: true })).statusCode,
+    ).toBe(403);
+    expect(
+      (await reader.request("PUT", url("organizations.membersCreateGroups"), { value: true })).statusCode,
+    ).toBe(403);
+    expect((await reader.request("PUT", url("auth.passwordMinLength"), { value: 15 })).statusCode).toBe(403);
+  });
 });

@@ -141,6 +141,10 @@ function accessText(access: RouteAccess | undefined): string | null {
         access.sessionOnly || access.recentAuthentication
           ? " Needs a signed-in session; API tokens are refused."
           : "";
+      if (access.alternatives.length > 0) {
+        const all = [access.action, ...access.alternatives].map((action) => `\`${action}\``).join(", ");
+        return `Requires one of the permissions ${all} on ${on}; the request decides which.${via}`;
+      }
       return `Requires the permission \`${access.action}\` on ${on}.${via}`;
     }
     case "session":
@@ -260,6 +264,7 @@ function operation(
       ? {
           "x-pagehall-permission": {
             action: route.access.action,
+            ...(route.access.alternatives.length > 0 ? { alternatives: route.access.alternatives } : {}),
             resource: route.access.resource.type,
             ...("param" in route.access.resource ? { parameter: route.access.resource.param } : {}),
           },

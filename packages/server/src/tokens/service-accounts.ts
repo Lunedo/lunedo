@@ -3,11 +3,12 @@ import { z } from "zod";
 import { type Principal, SYSTEM } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
+import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
 import type { MailService } from "../mail/mail-service.js";
 import { memberships } from "../organizations/access-schema.js";
-import { lockOrganization } from "../organizations/memberships.js";
+import { LastOwnerError, lockOrganization, ownerCount } from "../organizations/memberships.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import { apiTokens, serviceAccountResponsibles, serviceAccounts } from "./schema.js";
 
@@ -63,10 +64,18 @@ export class ServiceAccountService {
   readonly #audit: AuditLog;
   readonly #mail: MailService | undefined;
 
-  constructor(options: { database: Database; audit: AuditLog; mail?: MailService }) {
+  readonly #authorization: AuthorizationService | undefined;
+
+  constructor(options: {
+    database: Database;
+    audit: AuditLog;
+    mail?: MailService;
+    authorization?: AuthorizationService;
+  }) {
     this.#database = options.database;
     this.#audit = options.audit;
     this.#mail = options.mail;
+    this.#authorization = options.authorization;
   }
 
   async #withResponsibles(executor: Executor, rows: Row[]): Promise<ServiceAccount[]> {
@@ -250,6 +259,17 @@ export class ServiceAccountService {
         .from(serviceAccounts)
         .where(eq(serviceAccounts.accountId, id));
       if (!current) throw new OrganizationError("notFound", "The service account does not exist");
+      await lockOrganization(tx, current.organizationId);
+      await this.#authorization?.checkRankOverAccount(actor, current.organizationId, id, {
+        executor: tx,
+        action: "serviceAccount.manage",
+      });
+      if (
+        (await ownerCount(tx, current.organizationId)) > 0 &&
+        (await ownerCount(tx, current.organizationId, { accountId: id })) === 0
+      ) {
+        throw new LastOwnerError();
+      }
       const updated = await tx
         .update(accounts)
         .set({ state: "deactivated", updatedAt: new Date() })

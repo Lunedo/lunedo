@@ -14,6 +14,7 @@ export type RouteAccess =
   | {
       kind: "permission";
       action: string;
+      alternatives: string[];
       resource: ResourceSource;
       recentAuthentication: boolean;
       sessionOnly: boolean;
@@ -46,13 +47,14 @@ export const ApiDocumentationRoute = () =>
   SetMetadata(ROUTE_ACCESS, { kind: "apiDocumentation" } satisfies RouteAccess);
 
 export const Permission = (
-  action: string,
+  action: string | [string, ...string[]],
   resource: ResourceSource = { type: "instance" },
   options: { recentAuthentication?: boolean; sessionOnly?: boolean } = {},
 ) =>
   SetMetadata(ROUTE_ACCESS, {
     kind: "permission",
-    action,
+    action: typeof action === "string" ? action : action[0],
+    alternatives: typeof action === "string" ? [] : action.slice(1),
     resource,
     recentAuthentication: options.recentAuthentication ?? false,
     sessionOnly: options.sessionOnly ?? false,

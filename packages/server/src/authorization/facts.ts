@@ -8,7 +8,7 @@ import type {
   PrincipalKind,
   RoleScope,
 } from "../organizations/access-schema.js";
-import { type Areas, builtInRoleAreas } from "./areas.js";
+import { type Areas, builtInRoleAreas, grantsLevel } from "./areas.js";
 
 export type RoleReference = { builtIn: BuiltInRoleKey } | { customRoleId: string; name: string };
 
@@ -230,7 +230,12 @@ export async function organizationFacts(
         select id, expires_at from break_glass_accesses
         where account_id = ${accountId} and organization_id = ${organizationId}
           and ended_at is null and expires_at > now()`);
-      for (const access of breakGlass.rows) {
+      const mayUseBreakGlass =
+        breakGlass.rows.length > 0 &&
+        (await instanceFacts(executor, accountId, options)).roles.some((role) =>
+          grantsLevel(role.areas.organizations, "manage"),
+        );
+      for (const access of mayUseBreakGlass ? breakGlass.rows : []) {
         roles.push({
           role: { builtIn: "administrator" },
           areas: builtInRoleAreas("organization", "administrator"),

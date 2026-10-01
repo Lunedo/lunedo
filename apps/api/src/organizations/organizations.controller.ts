@@ -814,7 +814,7 @@ export class OrganizationsController {
   }
 
   @Put(":organizationId/settings/:key")
-  @Permission("organization.settings.view", organization)
+  @Permission(["organization.settings.manage", "organization.signIn.manage"], organization)
   @ApiRoute({
     summary: "Change a setting",
     description:

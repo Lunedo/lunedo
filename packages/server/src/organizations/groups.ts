@@ -3,18 +3,10 @@ import { z } from "zod";
 import type { Principal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
-import { type Areas, builtInRoleAreas } from "../authorization/areas.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Transaction } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
-import {
-  customRoles,
-  groupManagers,
-  groupMembers,
-  groups,
-  memberships,
-  roleAssignments,
-} from "./access-schema.js";
+import { groupManagers, groupMembers, groups, memberships, roleAssignments } from "./access-schema.js";
 import { lockOrganization } from "./memberships.js";
 import { OrganizationError } from "./organizations.js";
 
@@ -232,49 +224,19 @@ export class GroupService {
     });
   }
 
-  async #groupRoles(tx: Transaction, group: Group) {
-    const rows = await tx
-      .select({
-        builtInRole: roleAssignments.builtInRole,
-        customRoleId: roleAssignments.customRoleId,
-        areas: customRoles.areas,
-        name: customRoles.name,
-      })
-      .from(roleAssignments)
-      .leftJoin(customRoles, eq(customRoles.id, roleAssignments.customRoleId))
-      .where(
-        and(
-          eq(roleAssignments.organizationId, group.organizationId),
-          eq(roleAssignments.principalKind, "group"),
-          eq(roleAssignments.principalId, group.id),
-        ),
-      );
-    return rows.map((row) => ({
-      role: row.builtInRole
-        ? ({ builtIn: row.builtInRole } as const)
-        : { customRoleId: row.customRoleId ?? "", name: row.name ?? "" },
-      areas: row.builtInRole
-        ? builtInRoleAreas("organization", row.builtInRole)
-        : ((row.areas as Areas | null) ?? {}),
-    }));
-  }
-
   async delete(actor: Principal, id: string): Promise<void> {
     await this.#database.transaction(async (tx) => {
       const group = await this.#lockGroup(tx, id);
-      for (const role of await this.#groupRoles(tx, group)) {
-        await this.#authorization.checkRoleChange(
-          actor,
-          {
-            scope: "organization",
-            organizationId: group.organizationId,
-            role: role.role,
-            areas: role.areas,
-            principal: { kind: "group", id },
-          },
-          { executor: tx, removal: true },
-        );
-      }
+      await this.#authorization.checkRank(
+        actor,
+        {
+          scope: "organization",
+          organizationId: group.organizationId,
+          areas: await this.#authorization.groupAreas(id, tx),
+          action: "group.delete",
+        },
+        { executor: tx },
+      );
       await tx
         .delete(roleAssignments)
         .where(and(eq(roleAssignments.principalKind, "group"), eq(roleAssignments.principalId, id)));
@@ -314,19 +276,17 @@ export class GroupService {
         );
       if (!membership)
         throw new OrganizationError("notMember", "Groups contain members of their organization");
-      for (const role of await this.#groupRoles(tx, group)) {
-        await this.#authorization.checkRoleChange(
-          actor,
-          {
-            scope: "organization",
-            organizationId: group.organizationId,
-            role: role.role,
-            areas: role.areas,
-            principal: { kind: "account", id: accountId },
-          },
-          { executor: tx },
-        );
-      }
+      await this.#authorization.checkGrant(
+        actor,
+        {
+          scope: "organization",
+          organizationId: group.organizationId,
+          areas: await this.#authorization.groupAreas(id, tx),
+          principal: { kind: "account", id: accountId },
+          action: "group.manage",
+        },
+        { executor: tx },
+      );
       const inserted = await tx
         .insert(groupMembers)
         .values({ groupId: id, accountId, expiresAt, createdBy: actorId(actor) })

@@ -3,7 +3,13 @@ import { z } from "zod";
 import type { Principal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditEvents, AuditLog } from "../audit/audit-log.js";
-import { type Areas, areasSchema, builtInRoleAreas } from "../authorization/areas.js";
+import {
+  type AccessLevel,
+  type Areas,
+  areasSchema,
+  builtInRoleAreas,
+  grantsLevel,
+} from "../authorization/areas.js";
 import type { RoleReference } from "../authorization/facts.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
@@ -48,6 +54,14 @@ export interface RoleAssignment {
 }
 
 export type RoleInput = { builtIn: BuiltInRoleKey } | { customRoleId: string };
+
+function addedAreas(before: Areas, after: Areas): Areas {
+  const added: Areas = {};
+  for (const [area, level] of Object.entries(after) as [keyof Areas, AccessLevel][]) {
+    if (!grantsLevel(before[area], level)) added[area] = level;
+  }
+  return added;
+}
 
 function scopeOf(scope: RoleScope, organizationId: string | null) {
   return scope === "organization" && organizationId
@@ -118,7 +132,7 @@ export class RoleService {
     const name = roleNameSchema.parse(input.name);
     const areas = areasSchema(scope).parse(input.areas);
     return this.#database.transaction(async (tx) => {
-      await this.#authorization.checkRoleDefinition(actor, scope, organizationId, areas, { executor: tx });
+      await this.#authorization.checkGrant(actor, { scope, organizationId, areas }, { executor: tx });
       let row: typeof customRoles.$inferSelect | undefined;
       try {
         [row] = await tx.insert(customRoles).values({ scope, organizationId, name, areas }).returning();
@@ -152,10 +166,22 @@ export class RoleService {
       const current = await this.#custom(tx, id, scope, organizationId);
       const name = input.name === undefined ? current.name : roleNameSchema.parse(input.name);
       const areas = input.areas === undefined ? current.areas : areasSchema(scope).parse(input.areas);
-      await this.#authorization.checkRoleDefinition(actor, scope, organizationId, areas, { executor: tx });
-      await this.#authorization.checkRoleDefinition(actor, scope, organizationId, current.areas, {
-        executor: tx,
-      });
+      await this.#authorization.checkRank(
+        actor,
+        { scope, organizationId, areas: current.areas },
+        { executor: tx },
+      );
+      const added = addedAreas(current.areas, areas);
+      if (Object.keys(added).length > 0) {
+        const actorHolds =
+          actor.type === "account" &&
+          (await this.#authorization.holdsCustomRole(actor.id, scope, organizationId, id, tx));
+        await this.#authorization.checkGrant(
+          actor,
+          { scope, organizationId, areas: added, actorHolds },
+          { executor: tx },
+        );
+      }
       try {
         await tx
           .update(customRoles)
@@ -187,9 +213,11 @@ export class RoleService {
     await this.#database.transaction(async (tx) => {
       if (organizationId) await lockOrganization(tx, organizationId);
       const current = await this.#custom(tx, id, scope, organizationId);
-      await this.#authorization.checkRoleDefinition(actor, scope, organizationId, current.areas, {
-        executor: tx,
-      });
+      await this.#authorization.checkRank(
+        actor,
+        { scope, organizationId, areas: current.areas },
+        { executor: tx },
+      );
       await tx.delete(customRoles).where(eq(customRoles.id, id));
       await this.#audit.record(tx, {
         name: "role.deleted",
@@ -298,6 +326,7 @@ export class RoleService {
       .from(accounts)
       .where(eq(accounts.id, principal.id));
     if (account?.state !== "active") return invalid("The account is not active");
+    if (owner && account.type !== "standard") invalid("Owners are standard accounts");
     if (scope === "instance") {
       if (account.type !== "standard") invalid("Instance roles go to standard accounts");
       return;
@@ -338,13 +367,13 @@ export class RoleService {
         throw new OrganizationError("expiryInPast", "The expiry must be in the future");
       }
       await this.#checkPrincipal(tx, input.scope, input.organizationId, input.principal, owner);
-      await this.#authorization.checkRoleChange(
+      await this.#authorization.checkGrant(
         actor,
         {
           scope: input.scope,
           organizationId: input.organizationId,
-          role: role.reference,
           areas: role.areas,
+          owner,
           principal: input.principal,
         },
         { executor: tx },
@@ -390,14 +419,13 @@ export class RoleService {
     executor: Transaction,
   ): Promise<string> {
     const resolved = await this.#resolveRole(executor, "organization", organizationId, role);
-    await this.#authorization.checkRoleChange(
+    await this.#authorization.checkGrant(
       actor,
       {
         scope: "organization",
         organizationId,
-        role: resolved.reference,
         areas: resolved.areas,
-        principal: { kind: "account", id: null },
+        owner: "builtIn" in resolved.reference && resolved.reference.builtIn === "owner",
       },
       { executor },
     );
@@ -432,16 +460,10 @@ export class RoleService {
         organizationId,
         row.builtInRole ? { builtIn: row.builtInRole } : { customRoleId: row.customRoleId ?? "" },
       );
-      await this.#authorization.checkRoleChange(
+      await this.#authorization.checkRank(
         actor,
-        {
-          scope,
-          organizationId,
-          role: role.reference,
-          areas: role.areas,
-          principal: { kind: row.principalKind, id: row.principalId },
-        },
-        { executor: tx, removal: true },
+        { scope, organizationId, areas: role.areas, owner: row.builtInRole === "owner" },
+        { executor: tx },
       );
       if (
         row.builtInRole === "owner" &&

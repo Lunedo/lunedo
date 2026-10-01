@@ -7,11 +7,13 @@ import type { AuditLog } from "../audit/audit-log.js";
 import { RateLimitedError } from "../auth/errors.js";
 import { clientSubject, type RateLimiter } from "../auth/throttle.js";
 import { hashToken } from "../auth/tokens.js";
-import { areasSchema } from "../authorization/areas.js";
+import { areasSchema, intersectAreas } from "../authorization/areas.js";
+import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Executor } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
 import { defineJob } from "../jobs/job-queue.js";
 import type { MailService } from "../mail/mail-service.js";
+import { memberships } from "../organizations/access-schema.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import type { ScopeChain, SettingsService } from "../settings/service.js";
 import { apiTokenPrefix, generateApiToken, isValidApiTokenFormat } from "./format.js";
@@ -102,6 +104,7 @@ export class ApiTokenService {
   readonly #settings: SettingsService;
   readonly #rateLimiter: RateLimiter;
   readonly #mail: MailService;
+  readonly #authorization: AuthorizationService | undefined;
 
   constructor(options: {
     database: Database;
@@ -109,7 +112,9 @@ export class ApiTokenService {
     settings: SettingsService;
     rateLimiter: RateLimiter;
     mail: MailService;
+    authorization?: AuthorizationService;
   }) {
+    this.#authorization = options.authorization;
     this.#database = options.database;
     this.#audit = options.audit;
     this.#settings = options.settings;
@@ -131,14 +136,35 @@ export class ApiTokenService {
     return owner;
   }
 
-  async #chain(
+  async #chains(
     executor: Executor,
     accountId: string,
     serviceOrganization: string | null,
-  ): Promise<ScopeChain> {
-    return serviceOrganization
-      ? { organization: serviceOrganization }
-      : accountScopeChain(executor, accountId);
+    organizationId: string | null,
+  ): Promise<ScopeChain[]> {
+    if (serviceOrganization) return [{ organization: serviceOrganization }];
+    const home = await accountScopeChain(executor, accountId);
+    if (organizationId) return [home, { organization: organizationId }];
+    const memberOf = await executor
+      .select({ organizationId: memberships.organizationId })
+      .from(memberships)
+      .where(
+        and(
+          eq(memberships.accountId, accountId),
+          or(isNull(memberships.expiresAt), sql`${memberships.expiresAt} > now()`),
+        ),
+      );
+    return [home, ...memberOf.map((row) => ({ organization: row.organizationId }))];
+  }
+
+  async #lifetime(chains: ScopeChain[]): Promise<{ maxDays: number; withoutExpiry: boolean }> {
+    let maxDays = Number.POSITIVE_INFINITY;
+    let withoutExpiry = true;
+    for (const chain of chains) {
+      maxDays = Math.min(maxDays, await this.#settings.get(tokenMaxLifetimeSetting, chain));
+      withoutExpiry = withoutExpiry && (await this.#settings.get(tokensWithoutExpirySetting, chain));
+    }
+    return { maxDays, withoutExpiry };
   }
 
   async ownerOrganization(accountId: string): Promise<string | null> {
@@ -169,10 +195,29 @@ export class ApiTokenService {
     if (service && input.organizationId && input.organizationId !== service) {
       throw new OrganizationError("invalidScopes", "A service account token is limited to its organization");
     }
+    if (!service && actor.type === "account" && actor.id !== input.accountId) {
+      throw new OrganizationError("invalidOwner", "Personal tokens are created by their owner");
+    }
+    if (input.organizationId && scopes.instance) {
+      throw new OrganizationError(
+        "invalidScopes",
+        "A token limited to an organization has no instance scopes",
+      );
+    }
     const organizationId = service ?? input.organizationId ?? null;
-    const chain = await this.#chain(this.#database, input.accountId, service);
-    const maxDays = await this.#settings.get(tokenMaxLifetimeSetting, chain);
-    const withoutExpiry = await this.#settings.get(tokensWithoutExpirySetting, chain);
+    if (service && actor.type === "account" && actor.id !== input.accountId && this.#authorization) {
+      const held = await this.#authorization.heldAreas(input.accountId, "organization", service);
+      await this.#authorization.checkGrant(actor, {
+        scope: "organization",
+        organizationId: service,
+        areas: intersectAreas(scopes.organization ?? {}, held),
+        actorHolds: true,
+        action: "serviceAccount.manage",
+      });
+    }
+    const { maxDays, withoutExpiry } = await this.#lifetime(
+      await this.#chains(this.#database, input.accountId, service, organizationId),
+    );
     const now = Date.now();
     let expiresAt: Date | null;
     if (input.expiresAt === undefined)

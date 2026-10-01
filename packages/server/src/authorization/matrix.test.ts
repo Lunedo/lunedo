@@ -74,6 +74,7 @@ function assignmentValid(subject: Subject, via: PrincipalKind, role: RoleCase): 
   if (role.scope === "instance" && role.builtIn === "owner")
     return via === "account" && facts.type === "standard";
   if (role.builtIn && !ASSIGNABLE[role.scope].includes(role.builtIn)) return false;
+  if (role.builtIn === "owner" && facts.type !== "standard") return false;
   if (role.builtIn === "owner" && via !== "account") return false;
   if (role.scope === "instance" && (via === "group" || via === "organizationMembers")) return false;
   if (via !== "account") return true;
@@ -101,44 +102,119 @@ function instanceAreasOf(held: Held): Areas {
   return held.role && roleApplies(held, "instance") ? held.role.areas : {};
 }
 
+function breakGlassActive(held: Held): boolean {
+  return held.breakGlass && grantsLevel(instanceAreasOf(held).organizations, "manage");
+}
+
 function organizationAreasOf(held: Held): Areas {
   const sets: Areas[] = [];
   if (SUBJECT_FACTS[held.subject].membership === "member") sets.push(builtInRoles.organization.member ?? {});
   if (held.role && roleApplies(held, "organization")) sets.push(held.role.areas);
-  if (held.breakGlass) sets.push(builtInRoles.organization.administrator ?? {});
+  if (breakGlassActive(held)) sets.push(builtInRoles.organization.administrator ?? {});
   return mergeAreas(...sets);
 }
 
-function expectedAllowed(held: Held, action: RegisteredAction): boolean {
+type Rule =
+  | "selfService"
+  | "membersCreateGroups"
+  | "homeOrganizationAdministrator"
+  | "manager"
+  | "memberOrManager";
+
+interface Expectation {
+  scope: RoleScope;
+  area?: Area;
+  level?: AccessLevel;
+  ownerOnly?: true;
+  membership?: MembershipKind[];
+  breakGlass?: true;
+  rule?: Rule;
+}
+
+const ALL_MEMBERSHIPS: MembershipKind[] = ["member", "collaborator", "guest"];
+const instance = (area: Area, level: AccessLevel, rule?: Rule): Expectation => ({
+  scope: "instance",
+  area,
+  level,
+  ...(rule ? { rule } : {}),
+});
+const organization = (area: Area, level: AccessLevel, rule?: Rule): Expectation => ({
+  scope: "organization",
+  area,
+  level,
+  ...(rule ? { rule } : {}),
+});
+
+const EXPECTED: Record<string, Expectation> = {
+  "instance.organizations.view": instance("organizations", "view"),
+  "instance.organizations.manage": instance("organizations", "manage"),
+  "instance.organizations.create": instance("organizations", "manage", "selfService"),
+  "instance.accounts.view": instance("accounts", "view"),
+  "instance.accounts.manage": instance("accounts", "manage"),
+  "instance.roles.view": instance("accounts", "view"),
+  "instance.roles.manage": instance("accounts", "manage"),
+  "instance.ownership.transfer": { scope: "instance", ownerOnly: true },
+  "instance.signIn.view": instance("signInAndSecurity", "view"),
+  "instance.signIn.manage": instance("signInAndSecurity", "manage"),
+  "instance.settings.view": instance("settings", "view"),
+  "instance.settings.manage": instance("settings", "manage"),
+  "instance.operations.view": instance("operations", "view"),
+  "instance.operations.manage": instance("operations", "manage"),
+  "instance.audit.view": instance("auditLog", "view"),
+  "instance.audit.manage": instance("auditLog", "manage"),
+  "instance.breakGlass.request": instance("organizations", "manage"),
+  "organization.view": { scope: "organization", membership: ALL_MEMBERSHIPS, breakGlass: true },
+  "organization.leave": { scope: "organization", membership: ALL_MEMBERSHIPS },
+  "organization.update": organization("settings", "manage"),
+  "organization.settings.view": organization("settings", "view"),
+  "organization.settings.manage": organization("settings", "manage"),
+  "organization.members.view": organization("membersAndGroups", "view"),
+  "organization.members.manage": organization("membersAndGroups", "manage"),
+  "organization.roles.view": organization("membersAndGroups", "view"),
+  "organization.roles.manage": organization("membersAndGroups", "manage"),
+  "organization.groups.view": organization("membersAndGroups", "view"),
+  "organization.groups.create": organization("membersAndGroups", "manage", "membersCreateGroups"),
+  "organization.spaces.view": organization("spaces", "view"),
+  "organization.spaces.manage": organization("spaces", "manage"),
+  "organization.signIn.view": organization("signInAndSecurity", "view"),
+  "organization.signIn.manage": organization("signInAndSecurity", "manage"),
+  "organization.integrations.view": organization("integrationsAndApi", "view"),
+  "organization.integrations.manage": organization("integrationsAndApi", "manage"),
+  "organization.audit.view": organization("auditLog", "view"),
+  "group.view": organization("membersAndGroups", "view", "memberOrManager"),
+  "group.manage": organization("membersAndGroups", "manage", "manager"),
+  "group.delete": organization("membersAndGroups", "manage", "manager"),
+  "account.deactivate": instance("accounts", "manage", "homeOrganizationAdministrator"),
+  "serviceAccount.view": organization("integrationsAndApi", "view"),
+  "serviceAccount.manage": organization("integrationsAndApi", "manage"),
+};
+
+function expectedAllowed(held: Held, actionName: string): boolean {
+  const expectation = EXPECTED[actionName];
+  if (!expectation) throw new Error(`The matrix has no expectation for ${actionName}`);
   if (held.subject === "deactivated") return false;
   const facts = SUBJECT_FACTS[held.subject];
   const instanceOwner =
     held.role?.scope === "instance" && held.role.builtIn === "owner" && roleApplies(held, "instance");
-  const organization = organizationAreasOf(held);
-  const rules: Record<string, () => boolean> = {
+  const organizationAreas = organizationAreasOf(held);
+  const rules: Record<Rule, () => boolean> = {
     selfService: () => false,
     membersCreateGroups: () => false,
-    homeOrganizationAdministrator: () => grantsLevel(organization.membersAndGroups, "manage"),
+    homeOrganizationAdministrator: () => grantsLevel(organizationAreas.membersAndGroups, "manage"),
     manager: () => false,
     memberOrManager: () => facts.membership !== null && held.via === "group",
   };
-  const rule = action.rule ? rules[action.rule] : undefined;
-  if (action.rule && !rule) throw new Error(`The matrix has no model for the rule ${action.rule}`);
-  if (rule?.()) return true;
-  if (action.scope === "instance") {
-    if (action.ownerOnly) return instanceOwner;
-    const areas = instanceAreasOf(held);
-    return (
-      action.area !== undefined && action.level !== undefined && grantsLevel(areas[action.area], action.level)
-    );
+  if (expectation.rule && rules[expectation.rule]()) return true;
+  if (expectation.ownerOnly) return expectation.scope === "instance" && instanceOwner;
+  const areas = expectation.scope === "instance" ? instanceAreasOf(held) : organizationAreas;
+  if (expectation.scope === "organization") {
+    if (facts.membership && expectation.membership?.includes(facts.membership)) return true;
+    if (expectation.breakGlass && breakGlassActive(held)) return true;
   }
-  if (facts.membership && action.membership?.includes(facts.membership)) return true;
-  if (action.breakGlass && held.breakGlass) return true;
-  if (action.ownerOnly) return false;
   return (
-    action.area !== undefined &&
-    action.level !== undefined &&
-    grantsLevel(organization[action.area], action.level)
+    expectation.area !== undefined &&
+    expectation.level !== undefined &&
+    grantsLevel(areas[expectation.area], expectation.level)
   );
 }
 
@@ -249,7 +325,7 @@ describe.skipIf(!baseUrl)("permission matrix", () => {
         resourceFor(action, target),
       );
       const expected =
-        held === "system" ? true : held === "anonymous" ? false : expectedAllowed(held, action);
+        held === "system" ? true : held === "anonymous" ? false : expectedAllowed(held, action.name);
       evaluated += 1;
       if (decision.allowed !== expected) mismatches.push(`${action.name}: expected ${expected}`);
     }
@@ -334,19 +410,35 @@ describe.skipIf(!baseUrl)("permission matrix", () => {
     }
   }
 
-  it("break-glass access", async () => {
-    const target = await withServiceAccount(await fixture());
-    const accountId = await account("standard", null);
-    await test.pool.query(
-      "insert into break_glass_accesses (id, organization_id, account_id, reason, expires_at) values ($1, $2, $3, 'Matrix test reason', now() + interval '1 hour')",
-      [randomUUID(), target.organizationId, accountId],
-    );
-    await check({ type: "account", id: accountId }, target, {
-      subject: "nonMember",
-      via: null,
-      role: null,
-      breakGlass: true,
+  for (const keepsInstanceRole of [true, false]) {
+    it(`break-glass access ${keepsInstanceRole ? "while" : "after"} the requester holds the instance role`, async () => {
+      const target = await withServiceAccount(await fixture());
+      const accountId = await account("standard", null);
+      const role = ROLES.find(
+        (candidate) => candidate.scope === "instance" && candidate.name === "custom organizations",
+      );
+      if (!role) throw new Error("The matrix has no instance role for organizations");
+      const held: Held = { subject: "nonMember", via: "account", role, breakGlass: true };
+      await assign({ ...held, role, via: "account" }, target, accountId);
+      await test.pool.query(
+        "insert into break_glass_accesses (id, organization_id, account_id, reason, expires_at) values ($1, $2, $3, 'Matrix test reason', now() + interval '1 hour')",
+        [randomUUID(), target.organizationId, accountId],
+      );
+      try {
+        if (keepsInstanceRole) {
+          await check({ type: "account", id: accountId }, target, held);
+        } else {
+          await test.pool.query("delete from role_assignments where scope = 'instance'");
+          await check({ type: "account", id: accountId }, target, { ...held, via: null, role: null });
+        }
+      } finally {
+        await test.pool.query("delete from role_assignments where scope = 'instance'");
+      }
     });
+  }
+
+  it("has an expectation for every registered action and none for unknown actions", () => {
+    expect(Object.keys(EXPECTED).sort()).toEqual(actions.map((action) => action.name).sort());
   });
 
   it("anonymous", async () => {
@@ -358,7 +450,7 @@ describe.skipIf(!baseUrl)("permission matrix", () => {
   });
 
   it("evaluates the full cross product", () => {
-    const cases = subjects.length * principalKinds.length * ROLES.length + 3;
+    const cases = subjects.length * principalKinds.length * ROLES.length + 4;
     expect(evaluated).toBe(cases * actions.length);
   });
 });

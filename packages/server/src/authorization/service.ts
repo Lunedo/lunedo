@@ -2,8 +2,15 @@ import { sql } from "drizzle-orm";
 import type { Principal, TokenGrant } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Executor } from "../database/database.js";
-import type { PrincipalKind, RoleScope } from "../organizations/access-schema.js";
-import { type Areas, coversAreas, grantsLevel, intersectAreas, mergeAreas } from "./areas.js";
+import type { BuiltInRoleKey, PrincipalKind, RoleScope } from "../organizations/access-schema.js";
+import {
+  type Areas,
+  builtInRoleAreas,
+  coversAreas,
+  grantsLevel,
+  intersectAreas,
+  mergeAreas,
+} from "./areas.js";
 import {
   type HeldRole,
   type InstanceFacts,
@@ -34,12 +41,26 @@ export type Denial =
   | "selfExtension"
   | "tokenScope";
 
-export interface RoleTarget {
+export interface GrantCheck {
   scope: RoleScope;
   organizationId: string | null;
-  role: RoleReference;
   areas: Areas;
-  principal: { kind: PrincipalKind; id: string | null };
+  owner?: boolean;
+  principal?: { kind: PrincipalKind; id: string | null };
+  actorHolds?: boolean;
+  action?: string;
+}
+
+export interface RankCheck {
+  scope: RoleScope;
+  organizationId: string | null;
+  areas: Areas;
+  owner?: boolean;
+  action?: string;
+}
+
+function defaultAction(scope: RoleScope): string {
+  return scope === "instance" ? "instance.roles.manage" : "organization.roles.manage";
 }
 
 export interface Decision {
@@ -65,7 +86,7 @@ function roleGrant(role: HeldRole): Grant {
 }
 
 function tokenAreas(token: TokenGrant, scope: RoleScope, organizationId: string | null): Areas {
-  if (scope === "organization" && token.organizationId && token.organizationId !== organizationId) return {};
+  if (token.organizationId && (scope === "instance" || token.organizationId !== organizationId)) return {};
   return (scope === "instance" ? token.scopes.instance : token.scopes.organization) ?? {};
 }
 
@@ -206,7 +227,7 @@ export class AuthorizationService {
   }
 
   #covers(
-    principal: RoleTarget["principal"],
+    principal: { kind: PrincipalKind; id: string | null },
     accountId: string,
     facts: InstanceFacts | OrganizationFacts,
   ): boolean {
@@ -222,63 +243,101 @@ export class AuthorizationService {
     }
   }
 
-  async checkRoleChange(
-    actor: Principal,
-    target: RoleTarget,
-    options: { executor?: Executor; removal?: boolean } = {},
-  ): Promise<void> {
-    if (actor.type === "system") return;
-    const action = target.scope === "instance" ? "instance.roles.manage" : "organization.roles.manage";
+  #denier(action: string, scope: RoleScope, organizationId: string | null) {
     const resource: Resource =
-      target.scope === "instance"
-        ? { type: "instance" }
-        : { type: "organization", id: target.organizationId ?? "" };
-    const deny = (denial: Denial): never => {
+      scope === "instance" ? { type: "instance" } : { type: "organization", id: organizationId ?? "" };
+    return (denial: Denial): never => {
       throw new ForbiddenError({ action, resource, allowed: false, grants: [], denials: [denial] });
     };
-    if (actor.type === "anonymous") return deny("anonymous");
-    const executor = options.executor ?? this.#database;
-    const held = await this.#heldRoles(actor.id, target.scope, target.organizationId, executor);
-    const { facts } = held;
-    const roles = this.#limitRoles(held.roles, actor, target.scope, target.organizationId);
-    const isOwnerRole = "builtIn" in target.role && target.role.builtIn === "owner";
-    if (isOwnerRole) {
-      if (actor.token) deny("tokenScope");
-      if (!roles.some((role) => ownerRole(role) && role.via.type !== "breakGlass")) deny("ownerOnly");
-      return;
-    }
-    if (!coversAreas(mergeAreas(...roles.map((role) => role.areas)), target.areas))
-      deny("roleExceedsOwnPermissions");
-    if (options.removal || !this.#covers(target.principal, actor.id, facts)) return;
-    const permanent = roles.filter((role) => role.expiresAt === null && role.via.type !== "breakGlass");
-    if (!coversAreas(mergeAreas(...permanent.map((role) => role.areas)), target.areas)) deny("selfExtension");
   }
 
-  async checkRoleDefinition(
+  async checkGrant(
     actor: Principal,
-    scope: RoleScope,
-    organizationId: string | null,
-    areas: Areas,
+    grant: GrantCheck,
     options: { executor?: Executor } = {},
   ): Promise<void> {
     if (actor.type === "system") return;
-    const action = scope === "instance" ? "instance.roles.manage" : "organization.roles.manage";
-    const resource: Resource =
-      scope === "instance" ? { type: "instance" } : { type: "organization", id: organizationId ?? "" };
-    if (actor.type === "anonymous") {
-      throw new ForbiddenError({ action, resource, allowed: false, grants: [], denials: ["anonymous"] });
+    const deny = this.#denier(grant.action ?? defaultAction(grant.scope), grant.scope, grant.organizationId);
+    if (actor.type === "anonymous") return deny("anonymous");
+    const executor = options.executor ?? this.#database;
+    const held = await this.#heldRoles(actor.id, grant.scope, grant.organizationId, executor);
+    const roles = this.#limitRoles(held.roles, actor, grant.scope, grant.organizationId);
+    const permanent = roles.filter((role) => role.expiresAt === null && role.via.type !== "breakGlass");
+    if (grant.owner) {
+      if (actor.token) deny("tokenScope");
+      if (!permanent.some(ownerRole)) deny("ownerOnly");
+      return;
     }
-    const held = await this.#heldRoles(actor.id, scope, organizationId, options.executor ?? this.#database);
-    const roles = this.#limitRoles(held.roles, actor, scope, organizationId);
-    if (!coversAreas(mergeAreas(...roles.map((role) => role.areas)), areas)) {
-      throw new ForbiddenError({
-        action,
-        resource,
-        allowed: false,
-        grants: [],
-        denials: ["roleExceedsOwnPermissions"],
-      });
+    if (coversAreas(mergeAreas(...permanent.map((role) => role.areas)), grant.areas)) return;
+    if (!coversAreas(mergeAreas(...roles.map((role) => role.areas)), grant.areas))
+      deny("roleExceedsOwnPermissions");
+    const selfTargeted =
+      grant.actorHolds === true ||
+      (grant.principal ? this.#covers(grant.principal, actor.id, held.facts) : false);
+    deny(selfTargeted ? "selfExtension" : "roleExceedsOwnPermissions");
+  }
+
+  async checkRank(actor: Principal, target: RankCheck, options: { executor?: Executor } = {}): Promise<void> {
+    if (actor.type === "system") return;
+    const deny = this.#denier(
+      target.action ?? defaultAction(target.scope),
+      target.scope,
+      target.organizationId,
+    );
+    if (actor.type === "anonymous") return deny("anonymous");
+    const executor = options.executor ?? this.#database;
+    const held = await this.#heldRoles(actor.id, target.scope, target.organizationId, executor);
+    const roles = this.#limitRoles(held.roles, actor, target.scope, target.organizationId);
+    if (target.owner) {
+      if (actor.token) deny("tokenScope");
+      if (!roles.some((role) => ownerRole(role) && role.via.type !== "breakGlass")) deny("ownerOnly");
     }
+    if (!coversAreas(mergeAreas(...roles.map((role) => role.areas)), target.areas))
+      deny("roleExceedsOwnPermissions");
+  }
+
+  async checkRankOverAccount(
+    actor: Principal,
+    organizationId: string,
+    accountId: string,
+    options: { executor?: Executor; action?: string } = {},
+  ): Promise<void> {
+    const executor = options.executor ?? this.#database;
+    await this.checkRank(
+      actor,
+      {
+        scope: "organization",
+        organizationId,
+        areas: await this.heldAreas(accountId, "organization", organizationId, executor),
+        owner: await this.isOrganizationOwner(accountId, organizationId, executor),
+        ...(options.action ? { action: options.action } : {}),
+      },
+      { executor },
+    );
+  }
+
+  async groupAreas(groupId: string, executor: Executor = this.#database): Promise<Areas> {
+    const result = await executor.execute<{ built_in_role: BuiltInRoleKey | null; areas: Areas | null }>(sql`
+      select ra.built_in_role, cr.areas
+      from role_assignments ra left join custom_roles cr on cr.id = ra.custom_role_id
+      where ra.principal_kind = 'group' and ra.principal_id = ${groupId} and ra.scope = 'organization'
+        and (ra.expires_at is null or ra.expires_at > now())`);
+    return mergeAreas(
+      ...result.rows.map((row) =>
+        row.built_in_role ? builtInRoleAreas("organization", row.built_in_role) : (row.areas ?? {}),
+      ),
+    );
+  }
+
+  async holdsCustomRole(
+    accountId: string,
+    scope: RoleScope,
+    organizationId: string | null,
+    roleId: string,
+    executor: Executor = this.#database,
+  ): Promise<boolean> {
+    const { roles } = await this.#heldRoles(accountId, scope, organizationId, executor);
+    return roles.some((role) => "customRoleId" in role.role && role.role.customRoleId === roleId);
   }
 
   async isOrganizationOwner(accountId: string, organizationId: string, executor: Executor = this.#database) {

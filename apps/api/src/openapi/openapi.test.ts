@@ -69,13 +69,23 @@ describe("the OpenAPI description", () => {
     for (const methods of Object.values(document.paths)) {
       for (const operation of Object.values(methods)) {
         expect(operation["x-pagehall-permission"], operation.operationId).toBeDefined();
-        expect(operation.description, operation.operationId).toContain("Requires the permission");
+        expect(operation.description, operation.operationId).toMatch(
+          /Requires (the permission|one of the permissions) `/,
+        );
       }
     }
     expect(
       document.paths["/api/v1/organizations/{organizationId}/members"]?.get?.["x-pagehall-permission"],
     ).toEqual({
       action: "organization.members.view",
+      resource: "organization",
+      parameter: "organizationId",
+    });
+    expect(
+      document.paths["/api/v1/organizations/{organizationId}/settings/{key}"]?.put?.["x-pagehall-permission"],
+    ).toEqual({
+      action: "organization.settings.manage",
+      alternatives: ["organization.signIn.manage"],
       resource: "organization",
       parameter: "organizationId",
     });

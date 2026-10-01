@@ -137,8 +137,8 @@ export function createAccountServices(options: {
     jobs,
   });
   const auditReader = new AuditReader({ database, authorization, audit });
-  const serviceAccounts = new ServiceAccountService({ database, audit, mail });
-  const apiTokens = new ApiTokenService({ database, audit, settings, rateLimiter, mail });
+  const serviceAccounts = new ServiceAccountService({ database, audit, mail, authorization });
+  const apiTokens = new ApiTokenService({ database, audit, settings, rateLimiter, mail, authorization });
   const setupRegistry = new SetupRegistry();
   const setup = new SetupService({ database, registry: setupRegistry, audit, rateLimiter });
   const signIn = new SignInService({
