@@ -33,6 +33,18 @@ async function auditNames(test: AuthTestApp): Promise<string[]> {
   return result.rows.map((row) => row.name);
 }
 
+async function auditEvents(test: AuthTestApp, name: string, targetId: string | null) {
+  const result = await test.runtime.pool.query<{
+    actor_type: string;
+    actor_id: string | null;
+    fields: unknown;
+  }>(
+    "select actor_type, actor_id, fields from audit_events where name = $1 and target_id is not distinct from $2 order by sequence",
+    [name, targetId],
+  );
+  return result.rows;
+}
+
 async function registerPasskey(
   client: TestClient,
   authenticator = new VirtualAuthenticator(),
@@ -125,6 +137,18 @@ describe.skipIf(!databaseBaseUrl)("sign-in", () => {
         expect(unknown.statusCode).toBe(401);
         expect(unknown.json()).toEqual(wrong.json());
         expect(dummyChecks).toBe(1);
+        expect(await auditEvents(test, "auth.signInFailed", account.id)).toEqual([
+          {
+            actor_type: "anonymous",
+            actor_id: null,
+            fields: { reason: "invalidCredentials", method: "password" },
+          },
+        ]);
+        expect(await auditEvents(test, "auth.signInFailed", null)).toContainEqual({
+          actor_type: "anonymous",
+          actor_id: null,
+          fields: { reason: "invalidCredentials", method: "password" },
+        });
       } finally {
         test.runtime.services.hasher.verifyNothing = verifyNothing;
       }
@@ -213,18 +237,27 @@ describe.skipIf(!databaseBaseUrl)("sign-in", () => {
       for (let attempt = 0; attempt < 4; attempt++) {
         await attacker.post("/api/v1/auth/sign-in/second-factor", { type: "totp", code: "000000" });
       }
-      expect((await attacker.post("/api/v1/auth/sign-in", { email: account.email, password: account.password })).json()).toMatchObject({
+      expect(
+        (
+          await attacker.post("/api/v1/auth/sign-in", { email: account.email, password: account.password })
+        ).json(),
+      ).toMatchObject({
         status: "secondFactorRequired",
       });
       await attacker.post("/api/v1/auth/sign-in/second-factor", { type: "totp", code: "000000" });
 
-      const locked = await attacker.post("/api/v1/auth/sign-in", { email: account.email, password: account.password });
+      const locked = await attacker.post("/api/v1/auth/sign-in", {
+        email: account.email,
+        password: account.password,
+      });
       expect(locked.json()).toMatchObject({ code: "locked" });
       const lockouts = await test.runtime.pool.query(
         "select fields from audit_events where name = 'auth.lockedOut' and target_id = $1",
         [account.id],
       );
-      expect(lockouts.rows).toEqual([{ fields: expect.objectContaining({ subject: "account", failures: 5 }) }]);
+      expect(lockouts.rows).toEqual([
+        { fields: expect.objectContaining({ subject: "account", failures: 5 }) },
+      ]);
     });
 
     it("ends the pending sign-in after five wrong codes", async () => {
@@ -266,6 +299,13 @@ describe.skipIf(!databaseBaseUrl)("sign-in", () => {
         await signedInClient(test, account.email, account.password),
       );
       expect(body.passkey).toMatchObject({ name: "Laptop" });
+      expect(await auditEvents(test, "twoFactor.passkeyAdded", account.id)).toEqual([
+        {
+          actor_type: "account",
+          actor_id: account.id,
+          fields: { credentialId: body.passkey.id, name: "Laptop" },
+        },
+      ]);
       expect(body.recoveryCodes).toHaveLength(10);
 
       const client = new TestClient(test.app);
@@ -417,6 +457,57 @@ describe.skipIf(!databaseBaseUrl)("sign-in", () => {
         code: generated.json().recoveryCodes[0],
       });
       expect(fresh.json()).toMatchObject({ status: "signedIn" });
+    });
+  });
+
+  describe("removing second factors", () => {
+    it("removes TOTP and the last passkey when no second factor is required", async () => {
+      const account = await createAccount(test, "remove.factors@example.org");
+      const client = await signedInClient(test, account.email, account.password);
+      await addTotp(client);
+      const { body } = await registerPasskey(client);
+
+      expect((await client.delete("/api/v1/account/totp")).statusCode).toBe(204);
+      expect((await client.get("/api/v1/account/security")).json()).toMatchObject({ totp: false });
+      expect((await client.delete(`/api/v1/account/passkeys/${body.passkey.id}`)).statusCode).toBe(204);
+      expect((await client.get("/api/v1/account/security")).json()).toMatchObject({
+        totp: false,
+        passkeys: [],
+      });
+
+      expect(await auditEvents(test, "twoFactor.totpRemoved", account.id)).toEqual([
+        { actor_type: "account", actor_id: account.id, fields: {} },
+      ]);
+      expect(await auditEvents(test, "twoFactor.passkeyRemoved", account.id)).toEqual([
+        {
+          actor_type: "account",
+          actor_id: account.id,
+          fields: { credentialId: body.passkey.id, name: "Laptop" },
+        },
+      ]);
+      const signIn = await new TestClient(test.app).post("/api/v1/auth/sign-in", {
+        email: account.email,
+        password: account.password,
+      });
+      expect(signIn.json()).toMatchObject({ status: "signedIn", sessionKind: "full" });
+    });
+
+    it("removes a factor that is not the last one while a second factor is required", async () => {
+      const account = await createAccount(test, "remove.required@example.org");
+      const client = await signedInClient(test, account.email, account.password);
+      await addTotp(client);
+      const { body } = await registerPasskey(client);
+      await test.runtime.settings.set(twoFactorRequiredSetting, {}, "instance", true);
+      try {
+        expect((await client.delete(`/api/v1/account/passkeys/${body.passkey.id}`)).statusCode).toBe(204);
+        expect((await client.delete("/api/v1/account/totp")).json()).toMatchObject({
+          code: "lastSecondFactor",
+        });
+        expect(await auditEvents(test, "twoFactor.passkeyRemoved", account.id)).toHaveLength(1);
+        expect(await auditEvents(test, "twoFactor.totpRemoved", account.id)).toEqual([]);
+      } finally {
+        await test.runtime.settings.set(twoFactorRequiredSetting, {}, "instance", false);
+      }
     });
   });
 
