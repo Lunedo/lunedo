@@ -1,4 +1,4 @@
-import type { Logger } from "./logger.js";
+import type { Logger } from "../logging/logger.js";
 
 const FORCED_EXIT_AFTER_MS = 10_000;
 

@@ -1,5 +1,6 @@
 import { Writable } from "node:stream";
 import { describe, expect, it } from "vitest";
+import { runWithRequestContext } from "../observability/request-context.js";
 import { createLogger } from "./logger.js";
 
 function capture() {
@@ -40,5 +41,29 @@ describe("createLogger", () => {
     const { lines, destination } = capture();
     createLogger({ service: "api", level: "warn", destination }).info("hidden");
     expect(lines).toHaveLength(0);
+  });
+});
+
+describe("request IDs", () => {
+  it("are added to lines written inside a request context", () => {
+    const { lines, destination } = capture();
+    const logger = createLogger({ service: "worker", level: "info", destination });
+    runWithRequestContext({ requestId: "req-1" }, () => logger.info("inside"));
+    logger.info("outside");
+    expect(lines[0]).toMatchObject({ message: "inside", requestId: "req-1" });
+    expect(lines[1]).not.toHaveProperty("requestId");
+  });
+
+  it("are not duplicated when a child logger already binds one", () => {
+    const chunks: string[] = [];
+    const destination = new Writable({
+      write(chunk: Buffer, _encoding, callback) {
+        chunks.push(chunk.toString());
+        callback();
+      },
+    });
+    const logger = createLogger({ service: "api", level: "info", destination }).child({ requestId: "req-2" });
+    runWithRequestContext({ requestId: "req-2" }, () => logger.info("child"));
+    expect(chunks[0]?.match(/"requestId"/g)).toHaveLength(1);
   });
 });

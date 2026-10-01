@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { createDatabasePool, pingDatabase } from "./database.js";
+import { createDatabasePool, pingDatabase } from "./pool.js";
 
 const url = process.env.PAGEHALL_TEST_DATABASE_URL;
 

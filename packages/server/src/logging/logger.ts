@@ -1,4 +1,5 @@
 import { type DestinationStream, type Logger as PinoLogger, pino } from "pino";
+import { currentRequestContext } from "../observability/request-context.js";
 
 export const logLevels = ["fatal", "error", "warn", "info", "debug", "trace", "silent"] as const;
 
@@ -18,7 +19,10 @@ const REDACTED_PATHS = [
   "*.secret",
 ];
 
-/** Structured JSON logs on stdout. Credentials are redacted in case they reach a log call. */
+/**
+ * Structured JSON logs on stdout. Credentials are redacted in case they reach a log call.
+ * Lines written inside a request context carry its request ID.
+ */
 export function createLogger(options: {
   service: string;
   level: LogLevel;
@@ -32,6 +36,11 @@ export function createLogger(options: {
       timestamp: pino.stdTimeFunctions.isoTime,
       formatters: { level: (label) => ({ level: label }) },
       redact: { paths: REDACTED_PATHS, censor: "[redacted]" },
+      mixin: (_object, _level, logger) => {
+        const context = currentRequestContext();
+        if (!context || "requestId" in logger.bindings()) return {};
+        return { requestId: context.requestId };
+      },
     },
     options.destination,
   );

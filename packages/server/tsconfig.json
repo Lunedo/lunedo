@@ -1,0 +1,7 @@
+{
+  "extends": "@pagehall/config/tsconfig/node.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src", "vitest.config.ts", "drizzle.config.ts"]
+}
