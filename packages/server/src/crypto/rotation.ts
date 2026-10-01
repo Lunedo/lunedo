@@ -1,0 +1,173 @@
+import { and, desc, eq, sql } from "drizzle-orm";
+import { z } from "zod";
+import type { Database } from "../database/database.js";
+import type { JobContext, JobQueue } from "../jobs/job-queue.js";
+import { defineJob } from "../jobs/job-queue.js";
+import type { EncryptedColumn } from "./encrypted-column.js";
+import type { Encryption } from "./envelope.js";
+import type { KeyRingHolder } from "./key-ring-holder.js";
+import { keyRotations } from "./schema.js";
+
+export const rotateDataKeysJob = defineJob({
+  name: "encryption.rotate-data-keys",
+  payload: z.object({ rotationId: z.uuid(), targetVersion: z.int().positive() }),
+  retryLimit: 10,
+  retryDelaySeconds: 30,
+  expireInSeconds: 6 * 60 * 60,
+});
+
+const BATCH_SIZE = 200;
+
+export interface RotationStatus {
+  currentVersion: number;
+  /** Encrypted values per master key version, over all registered columns. */
+  valuesByVersion: Record<number, number>;
+  latest: { id: string; targetVersion: number; status: "running" | "completed"; rewrapped: number } | null;
+}
+
+function versionBytes(version: number): Buffer {
+  const bytes = Buffer.alloc(4);
+  bytes.writeUInt32BE(version);
+  return bytes;
+}
+
+/**
+ * Key rotation: after a new master key version is added, a background job
+ * re-wraps the data key of every encrypted value with it. The encrypted data itself is
+ * not touched. Values stay readable with their old version until they are re-wrapped.
+ */
+export class KeyRotation {
+  readonly #database: Database;
+  readonly #encryption: Encryption;
+  readonly #keyRing: KeyRingHolder;
+  readonly #jobs: JobQueue;
+  readonly #columns: () => readonly EncryptedColumn[];
+
+  constructor(options: {
+    database: Database;
+    encryption: Encryption;
+    keyRing: KeyRingHolder;
+    jobs: JobQueue;
+    columns: () => readonly EncryptedColumn[];
+  }) {
+    this.#database = options.database;
+    this.#encryption = options.encryption;
+    this.#keyRing = options.keyRing;
+    this.#jobs = options.jobs;
+    this.#columns = options.columns;
+  }
+
+  /** Starts re-wrapping for the current key version; returns the running rotation if there is one. */
+  async start(): Promise<{ id: string; targetVersion: number }> {
+    const targetVersion = (await this.#keyRing.reload()).currentVersion;
+    const [running] = await this.#database
+      .select({ id: keyRotations.id })
+      .from(keyRotations)
+      .where(and(eq(keyRotations.targetVersion, targetVersion), eq(keyRotations.status, "running")));
+    const id =
+      running?.id ??
+      (
+        await this.#database.insert(keyRotations).values({ targetVersion }).returning({ id: keyRotations.id })
+      )[0]?.id;
+    if (!id) throw new Error("Creating the key rotation failed");
+    await this.#jobs.enqueue(rotateDataKeysJob, { rotationId: id, targetVersion }, { idempotencyKey: id });
+    return { id, targetVersion };
+  }
+
+  /** Job handler; safe to run again after an interruption. */
+  readonly run = async (job: JobContext<z.infer<typeof rotateDataKeysJob.payload>>): Promise<void> => {
+    const { rotationId, targetVersion } = job.payload;
+    const ring = await this.#keyRing.reload();
+    if (ring.currentVersion !== targetVersion) {
+      throw new Error(
+        `This node's current master key version is ${ring.currentVersion}, the rotation targets ${targetVersion}`,
+      );
+    }
+    const total = await this.#countOutdated(targetVersion);
+    let done = 0;
+    await job.reportProgress(done, total);
+
+    for (const column of this.#columns()) {
+      for (;;) {
+        if (job.signal.aborted) throw new Error("Key rotation interrupted");
+        const count = await this.#rewrapBatch(column, targetVersion);
+        if (count === 0) break;
+        done += count;
+        await this.#database
+          .update(keyRotations)
+          .set({ rewrapped: sql`${keyRotations.rewrapped} + ${count}` })
+          .where(eq(keyRotations.id, rotationId));
+        await job.reportProgress(done, Math.max(total, done));
+      }
+    }
+
+    const remaining = await this.#countOutdated(targetVersion);
+    if (remaining > 0) throw new Error(`${remaining} values still use an older master key version`);
+    await this.#database
+      .update(keyRotations)
+      .set({ status: "completed", completedAt: new Date() })
+      .where(eq(keyRotations.id, rotationId));
+    job.logger.info({ targetVersion, rewrapped: done }, "Key rotation completed");
+  };
+
+  async #rewrapBatch(column: EncryptedColumn, targetVersion: number): Promise<number> {
+    const table = sql.identifier(column.table);
+    const id = sql.identifier(column.idColumn);
+    const value = sql.identifier(column.column);
+    return this.#database.transaction(async (tx) => {
+      const rows = await tx.execute<{ id: string; value: Buffer }>(
+        sql`select ${id} as id, ${value} as value from ${table}
+            where ${value} is not null and substring(${value} from 5 for 4) <> ${versionBytes(targetVersion)}
+            limit ${BATCH_SIZE} for update skip locked`,
+      );
+      for (const row of rows.rows) {
+        await tx.execute(
+          sql`update ${table} set ${value} = ${this.#encryption.rewrap(row.value)} where ${id} = ${row.id}`,
+        );
+      }
+      return rows.rows.length;
+    });
+  }
+
+  async #countOutdated(targetVersion: number): Promise<number> {
+    let count = 0;
+    for (const [version, values] of Object.entries(await this.#valuesByVersion())) {
+      if (Number(version) !== targetVersion) count += values;
+    }
+    return count;
+  }
+
+  async #valuesByVersion(): Promise<Record<number, number>> {
+    const counts: Record<number, number> = {};
+    for (const column of this.#columns()) {
+      const value = sql.identifier(column.column);
+      const result = await this.#database.execute<{ version: Buffer; count: string }>(
+        sql`select substring(${value} from 5 for 4) as version, count(*) as count
+            from ${sql.identifier(column.table)} where ${value} is not null group by 1`,
+      );
+      for (const row of result.rows) {
+        const version = row.version.readUInt32BE(0);
+        counts[version] = (counts[version] ?? 0) + Number(row.count);
+      }
+    }
+    return counts;
+  }
+
+  async status(): Promise<RotationStatus> {
+    const [latest] = await this.#database
+      .select({
+        id: keyRotations.id,
+        targetVersion: keyRotations.targetVersion,
+        status: keyRotations.status,
+        rewrapped: keyRotations.rewrapped,
+      })
+      .from(keyRotations)
+      .orderBy(desc(keyRotations.createdAt))
+      .limit(1);
+    return {
+      currentVersion: this.#keyRing.ring.currentVersion,
+      valuesByVersion: await this.#valuesByVersion(),
+      latest: latest ?? null,
+    };
+  }
+}
