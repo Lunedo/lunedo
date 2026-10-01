@@ -209,15 +209,23 @@ export class AuditLog {
     return removed;
   }
 
-  /** Checks every chain. Each result names the first entry that does not match, if any. */
+  /**
+   * Checks every chain. Each result names the first entry that does not match, if any. All reads
+   * come from one snapshot, so entries written or removed during the check do not count as gaps.
+   */
   async verify(): Promise<AuditVerification[]> {
-    const chains = await this.#database.select().from(auditChains).orderBy(auditChains.scopeType);
-    const results: AuditVerification[] = [];
-    for (const chain of chains) results.push(await this.#verifyChain(chain));
-    return results;
+    return this.#database.transaction(
+      async (tx) => {
+        const chains = await tx.select().from(auditChains).orderBy(auditChains.scopeType);
+        const results: AuditVerification[] = [];
+        for (const chain of chains) results.push(await this.#verifyChain(tx, chain));
+        return results;
+      },
+      { isolationLevel: "repeatable read", accessMode: "read only" },
+    );
   }
 
-  async #verifyChain(chain: typeof auditChains.$inferSelect): Promise<AuditVerification> {
+  async #verifyChain(tx: Transaction, chain: typeof auditChains.$inferSelect): Promise<AuditVerification> {
     const scope: AuditScope = { type: chain.scopeType, id: chain.scopeId };
     const ofScope = and(eq(auditEvents.scopeType, chain.scopeType), eq(auditEvents.scopeId, chain.scopeId));
     let expectedSequence = (chain.anchorSequence ?? 0) + 1;
@@ -229,7 +237,7 @@ export class AuditLog {
       broken: { sequence, id, problem },
     });
 
-    const [before] = await this.#database
+    const [before] = await tx
       .select({ sequence: auditEvents.sequence })
       .from(auditEvents)
       .where(and(ofScope, lt(auditEvents.sequence, expectedSequence)))
@@ -238,7 +246,7 @@ export class AuditLog {
     if (before) return broken(before.sequence, null, "an entry exists before the retention anchor");
 
     for (;;) {
-      const rows = await this.#database
+      const rows = await tx
         .select()
         .from(auditEvents)
         .where(and(ofScope, gte(auditEvents.sequence, expectedSequence)))

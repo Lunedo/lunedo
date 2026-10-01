@@ -169,6 +169,25 @@ describe.skipIf(!databaseUrl)("AuditLog", () => {
     expect(await verifyScope(audit, scope)).toMatchObject({ entries: 25, broken: null });
   });
 
+  it("reports no gap when entries are written while it runs", async () => {
+    const scope = newScope();
+    await database.transaction(async (tx) => {
+      for (let i = 0; i < 2500; i++) await audit.record(tx, signIn(scope));
+    });
+    let writing = true;
+    const writer = (async () => {
+      while (writing) await audit.recordAlone(signIn(scope));
+    })();
+    try {
+      for (let run = 0; run < 3; run++) {
+        expect((await verifyScope(audit, scope)).broken).toBeNull();
+      }
+    } finally {
+      writing = false;
+      await writer;
+    }
+  });
+
   it("rejects updates, deletes and truncation in the database", async () => {
     const scope = newScope();
     await audit.recordAlone(signIn(scope));
