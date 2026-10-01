@@ -83,6 +83,33 @@ describe("loadConfig", () => {
     expect(config.database.url.reveal()).toBe(databaseUrl);
   });
 
+  it("reads the setup code from the environment or a file", () => {
+    expect(loadConfig({ PAGEHALL_DATABASE_URL: databaseUrl }).setupCode).toBeUndefined();
+    const direct = loadConfig({ PAGEHALL_DATABASE_URL: databaseUrl, PAGEHALL_SETUP_CODE: "abcd-efgh-ijkl" });
+    expect(direct.setupCode?.reveal()).toBe("abcd-efgh-ijkl");
+    const secretFile = path.join(tempDir(), "setup-code");
+    writeFileSync(secretFile, "a long configured setup code\n");
+    const fromFile = loadConfig({ PAGEHALL_DATABASE_URL: databaseUrl, PAGEHALL_SETUP_CODE_FILE: secretFile });
+    expect(fromFile.setupCode?.reveal()).toBe("a long configured setup code");
+  });
+
+  it("stops on a setup code that is too short or too long without showing it", () => {
+    let message = "";
+    try {
+      loadConfig({ PAGEHALL_DATABASE_URL: databaseUrl, PAGEHALL_SETUP_CODE: "hidden-- -x" });
+    } catch (error) {
+      message = String(error);
+    }
+    expect(message).toContain(
+      "PAGEHALL_SETUP_CODE: must have at least 12 characters, not counting spaces and hyphens",
+    );
+    expect(message).not.toContain("hidden");
+    expectConfigError(
+      () => loadConfig({ PAGEHALL_DATABASE_URL: databaseUrl, PAGEHALL_SETUP_CODE: "x".repeat(65) }),
+      "PAGEHALL_SETUP_CODE: must have at most 64 characters",
+    );
+  });
+
   it("rejects a secret given both directly and as a file", () => {
     const secretFile = path.join(tempDir(), "token");
     writeFileSync(secretFile, "a");

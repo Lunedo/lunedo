@@ -17,7 +17,7 @@ function capturingLogger() {
     level: "info",
     destination: { write: (line: string) => lines.push(line) },
   });
-  return { lines, logger, code: () => /Setup code: ([0-9A-Z-]+)\./.exec(lines.at(-1) ?? "")?.[1] ?? "" };
+  return { lines, logger, code: () => /setup#code=([0-9A-Z-]+)\./.exec(lines.at(-1) ?? "")?.[1] ?? "" };
 }
 
 const configured = {
@@ -69,6 +69,51 @@ describe.skipIf(!baseUrl)("SetupService", () => {
     await expect(setup.exchangeCode(second, "203.0.113.1", "https://wiki.example.org")).rejects.toThrow(
       SetupStepError,
     );
+  });
+
+  it("logs a link to the setup page with the code in the fragment", async () => {
+    const {
+      services: { setup },
+    } = await services();
+    const log = capturingLogger();
+    await setup.issueCode(log.logger, { instanceUrl: "https://wiki.example.org/" });
+    expect(JSON.parse(log.lines[0] ?? "{}").message).toBe(
+      `Setup link: https://wiki.example.org/setup#code=${log.code()}. Open it in a browser to set up the instance.`,
+    );
+    await setup.issueCode(log.logger, { instanceUrl: "" });
+    expect(JSON.parse(log.lines[1] ?? "{}").message).toBe(
+      `Setup link: /setup#code=${log.code()}. Prefix it with the address of this server and open it in a browser.`,
+    );
+    expect(log.code()).toMatch(/^([0-9A-Z]{4}-){3}[0-9A-Z]{4}$/);
+  });
+
+  it("uses a configured code without logging it and accepts it once per start", async () => {
+    const {
+      services: { setup },
+    } = await services();
+    const log = capturingLogger();
+    const configuredCode = new Secret("correct-horse-battery");
+    await setup.issueCode(log.logger, { configuredCode, instanceUrl: "https://wiki.example.org" });
+    expect(log.lines).toEqual([]);
+    const token = await setup.exchangeCode(
+      "CORRECT HORSE BATTERY",
+      "203.0.113.5",
+      "https://wiki.example.org",
+    );
+    expect(await setup.validSession(token)).toBe(true);
+    await expect(
+      setup.exchangeCode("correct-horse-battery", "203.0.113.5", "https://wiki.example.org"),
+    ).rejects.toThrow(SetupStepError);
+
+    await setup.issueCode(log.logger, { configuredCode });
+    expect(log.lines).toEqual([]);
+    await setup.locked((tx) => setup.markComplete(tx, "assistant"));
+    await setup.issueCode(log.logger, { configuredCode });
+    expect(log.lines.map((line) => JSON.parse(line).message)).toEqual([
+      "Setup is complete, PAGEHALL_SETUP_CODE can be removed from the configuration",
+    ]);
+    await setup.issueCode(log.logger);
+    expect(log.lines).toHaveLength(1);
   });
 
   it("limits code exchanges per client", async () => {

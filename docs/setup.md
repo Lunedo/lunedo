@@ -4,13 +4,17 @@ A new instance is set up once, either through the setup assistant or through con
 
 ## Setup code
 
-While setup is not complete, every start of an API node prints a one-time setup code to the log:
+While setup is not complete, every start of an API node prints a link to the setup page with a one-time setup code to the log:
 
 ```
-Setup code: 7KQ2-M9XA-P4RT-HB3C. Open Pagehall in a browser and enter this code to set up the instance.
+Setup link: https://wiki.example.org/setup#code=7KQ2-M9XA-P4RT-HB3C. Open it in a browser to set up the instance.
 ```
 
-Read it with `docker compose logs pagehall | grep "Setup code"`. A new start issues a new code and the earlier one stops working, so with several API nodes use the newest code. The code works once and proves that whoever runs the assistant operates the server. It is the only secret Pagehall ever writes to its log. Exchanges are limited to 10 per client in 15 minutes; the code has 80 bits, so it cannot be guessed.
+Read it with `docker compose logs pagehall | grep "Setup link"`. The link uses the instance URL once the assistant has stored one; before that it shows only the path, `/setup#code=…`, to be prefixed with the address of the server. The code is in the URL fragment, which browsers do not send to the server, so it does not reach proxy or access logs. The setup page takes the code from the fragment, fills it in and removes the fragment from the address bar.
+
+A new start issues a new code and the earlier one stops working, so with several API nodes use the newest code. The code works once and proves that whoever runs the assistant operates the server. It is the only secret Pagehall ever writes to its log. Exchanges are limited to 10 per client in 15 minutes; the code has 80 bits, so it cannot be guessed.
+
+Instead, the code can be set with `PAGEHALL_SETUP_CODE` or `PAGEHALL_SETUP_CODE_FILE`, for example as a field in a container template. It needs at least 12 characters, not counting spaces and hyphens; a shorter value stops the start. Pagehall then uses it instead of a generated code and does not print it. Like a generated code, it works once per start. Once setup is complete it is ignored, and every start logs that the variable can be removed. Letters are compared without regard to case, and spaces and hyphens are ignored.
 
 The code is exchanged for a setup session, held in the cookie `__Host-pagehall-setup`. A setup session ends after an hour without use and a day after the code was entered.
 

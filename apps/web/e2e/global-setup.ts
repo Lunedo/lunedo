@@ -82,7 +82,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   let setupCode: string | null = null;
   const capture = (line: string) => {
     log.push(line);
-    const match = /Setup code: ([A-Z0-9-]+)\./.exec(line);
+    const match = /setup#code=([0-9A-Z-]+)\./.exec(line);
     if (match?.[1]) setupCode = match[1];
   };
   const api = start("api", env, capture);

@@ -20,7 +20,7 @@ async function issueCode(test: AuthTestApp): Promise<string> {
     destination: { write: (line: string) => lines.push(line) },
   });
   await test.runtime.services.setup.issueCode(logger);
-  const match = /Setup code: ([0-9A-Z-]+)\./.exec(lines.join(""));
+  const match = /setup#code=([0-9A-Z-]+)\./.exec(lines.join(""));
   if (!match?.[1]) throw new Error("No setup code was logged");
   return match[1];
 }

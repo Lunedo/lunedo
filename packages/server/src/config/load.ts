@@ -41,6 +41,7 @@ export interface ServerConfig {
   trustedProxies: string[];
   passwordHashConcurrency: number;
   setup: ConfiguredSetup | undefined;
+  setupCode: Secret | undefined;
 }
 
 export interface ConfiguredSmtp {
@@ -154,6 +155,7 @@ export function loadConfig(env: Env): ServerConfig {
     problems.push("PAGEHALL_MASTER_KEYS: is only used by the env key provider");
   }
   const setup = configuredSetup(values, problems);
+  checkSetupCode(values.PAGEHALL_SETUP_CODE as string | undefined, problems);
   if (problems.length > 0) {
     throw new ConfigError(`Invalid configuration:\n  ${problems.join("\n  ")}`);
   }
@@ -193,7 +195,23 @@ export function loadConfig(env: Env): ServerConfig {
     trustedProxies: values.PAGEHALL_TRUSTED_PROXIES as string[],
     passwordHashConcurrency: values.PAGEHALL_PASSWORD_HASH_CONCURRENCY as number,
     setup,
+    setupCode: secret("PAGEHALL_SETUP_CODE"),
   };
+}
+
+const SETUP_CODE_MIN_LENGTH = 12;
+const SETUP_CODE_MAX_LENGTH = 64;
+
+function checkSetupCode(code: string | undefined, problems: string[]): void {
+  if (code === undefined) return;
+  if (code.replace(/[s-]/g, "").length < SETUP_CODE_MIN_LENGTH) {
+    problems.push(
+      `PAGEHALL_SETUP_CODE: must have at least ${SETUP_CODE_MIN_LENGTH} characters, not counting spaces and hyphens`,
+    );
+  }
+  if (code.length > SETUP_CODE_MAX_LENGTH) {
+    problems.push(`PAGEHALL_SETUP_CODE: must have at most ${SETUP_CODE_MAX_LENGTH} characters`);
+  }
 }
 
 const SETUP_SETTINGS = [

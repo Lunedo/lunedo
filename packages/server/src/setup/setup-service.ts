@@ -6,6 +6,7 @@ import type { AuditLog } from "../audit/audit-log.js";
 import { RateLimitedError } from "../auth/errors.js";
 import { clientSubject, type RateLimiter } from "../auth/throttle.js";
 import { generateToken, hashToken, isWellFormedToken } from "../auth/tokens.js";
+import type { Secret } from "../config/secret.js";
 import { secretsEqual } from "../crypto/constant-time.js";
 import type { Database, Transaction } from "../database/database.js";
 import type { Logger } from "../logging/logger.js";
@@ -24,10 +25,24 @@ function hashCode(code: string): Buffer {
   return createHash("sha256").update(code.toUpperCase().replace(/[\s-]/g, ""), "utf8").digest();
 }
 
-function logTheOnlySecretEverLogged(logger: Logger, setupCode: string): void {
+function logTheOnlySecretEverLogged(logger: Logger, setupCode: string, instanceUrl: string): void {
+  const path = `/setup#code=${setupCode}`;
   logger.warn(
-    `Setup code: ${setupCode}. Open Pagehall in a browser and enter this code to set up the instance.`,
+    instanceUrl
+      ? `Setup link: ${instanceUrl.replace(/\/+$/, "")}${path}. Open it in a browser to set up the instance.`
+      : `Setup link: ${path}. Prefix it with the address of this server and open it in a browser.`,
   );
+}
+
+function generateCode(): string {
+  return Array.from({ length: CODE_LENGTH }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)])
+    .join("")
+    .replace(/(.{4})(?!$)/g, "$1-");
+}
+
+export interface IssueCodeOptions {
+  configuredCode?: Secret | undefined;
+  instanceUrl?: string | undefined;
 }
 
 export class SetupNotFoundError extends Error {
@@ -88,10 +103,8 @@ export class SetupService {
     return this.#completed;
   }
 
-  async issueCode(logger: Logger): Promise<void> {
-    const code = Array.from({ length: CODE_LENGTH }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)])
-      .join("")
-      .replace(/(.{4})(?!$)/g, "$1-");
+  async issueCode(logger: Logger, options: IssueCodeOptions = {}): Promise<void> {
+    const code = options.configuredCode?.reveal() ?? generateCode();
     const issued = await this.#database.transaction(async (tx) => {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${ISSUE_LOCK}))`);
       await tx.insert(instance).values({ id: 1 }).onConflictDoNothing();
@@ -102,7 +115,13 @@ export class SetupService {
         .returning({ id: instance.id });
       return row !== undefined;
     });
-    if (issued) logTheOnlySecretEverLogged(logger, code);
+    if (!issued) {
+      if (options.configuredCode) {
+        logger.info("Setup is complete, PAGEHALL_SETUP_CODE can be removed from the configuration");
+      }
+      return;
+    }
+    if (!options.configuredCode) logTheOnlySecretEverLogged(logger, code, options.instanceUrl ?? "");
   }
 
   async exchangeCode(code: string, clientIp: string | undefined, origin: string): Promise<string> {
