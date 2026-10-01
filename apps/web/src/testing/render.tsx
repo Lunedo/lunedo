@@ -24,6 +24,19 @@ const labels: UiLabels = {
   page: "Page",
   breadcrumbs: "Breadcrumbs",
   notifications: "Notifications",
+  decrease: "Decrease",
+  increase: "Increase",
+  resetToDefault: "Default",
+  saving: "Saving",
+  saved: "Saved",
+  retry: "Try again",
+  copy: "Copy",
+  copied: "Copied",
+  documentation: "Read the documentation",
+  durationUnit: "Unit",
+  minutes: "Minutes",
+  hours: "Hours",
+  days: "Days",
 };
 
 export async function renderWithProviders(

@@ -44,6 +44,17 @@ export {
   type DrawerProps,
 } from "./dialog.js";
 export {
+  DURATION_UNITS,
+  type DurationParts,
+  type DurationUnit,
+  formatDuration,
+  formatDurationPart,
+  joinDuration,
+  MINUTES_PER_UNIT,
+  splitDuration,
+} from "./duration.js";
+export { DurationInput, type DurationInputProps, isDurationWithin } from "./duration-input.js";
+export {
   Avatar,
   avatarColor,
   Badge,
@@ -99,6 +110,18 @@ export {
   type RailProps,
 } from "./rail.js";
 export { Sidebar, SidebarGroup, SidebarHeader, SidebarItem, type SidebarItemProps } from "./sidebar.js";
+export {
+  COPIED_VISIBLE_MS,
+  CopyButton,
+  type CopyButtonProps,
+  ErrorState,
+  type ErrorStateProps,
+  SAVED_VISIBLE_MS,
+  type SaveState,
+  SaveStatus,
+  type SaveStatusProps,
+} from "./status.js";
+export { Stepper, type StepperProps } from "./stepper.js";
 export {
   type SortDirection,
   Table,

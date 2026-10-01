@@ -42,7 +42,20 @@
     "sortAscending": "Aufsteigend sortiert",
     "sortDescending": "Absteigend sortiert",
     "breadcrumbs": "Pfadnavigation",
-    "notifications": "Benachrichtigungen"
+    "notifications": "Benachrichtigungen",
+    "decrease": "Verringern",
+    "increase": "Erhöhen",
+    "resetToDefault": "Standard",
+    "saving": "Wird gespeichert",
+    "saved": "Gespeichert",
+    "retry": "Erneut versuchen",
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "documentation": "Zur Dokumentation",
+    "durationUnit": "Einheit",
+    "minutes": "Minuten",
+    "hours": "Stunden",
+    "days": "Tage"
   },
   "shell": {
     "documentTitle": "{title} · Pagehall",

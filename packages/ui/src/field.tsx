@@ -13,6 +13,10 @@ interface FieldContextValue {
 
 const FieldContext = createContext<FieldContextValue | null>(null);
 
+export function OutsideField({ children }: { children: ReactNode }) {
+  return <FieldContext.Provider value={null}>{children}</FieldContext.Provider>;
+}
+
 export interface FieldControlProps {
   id?: string;
   "aria-describedby"?: string;

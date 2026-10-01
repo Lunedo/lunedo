@@ -101,6 +101,8 @@ function themeDeclarations(tokens: DesignTokens): Declarations {
     ...sizeDeclarations(tokens, "spacing"),
     ["--spacing-qr", tokens.layout.qrCodeSize],
     ["--spacing-field", tokens.layout.fieldWidth],
+    ["--spacing-number-field", tokens.layout.numberFieldWidth],
+    ["--spacing-unit-field", tokens.layout.unitFieldWidth],
     ...Object.entries(tokens.icon.size).map(([key, value]): [string, string] => [
       `--spacing-icon-${key}`,
       value,

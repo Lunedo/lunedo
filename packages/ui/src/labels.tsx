@@ -18,6 +18,19 @@ export interface UiLabels {
   optional: string;
   breadcrumbs: string;
   notifications: string;
+  decrease: string;
+  increase: string;
+  resetToDefault: string;
+  saving: string;
+  saved: string;
+  retry: string;
+  copy: string;
+  copied: string;
+  documentation: string;
+  durationUnit: string;
+  minutes: string;
+  hours: string;
+  days: string;
 }
 
 const LabelsContext = createContext<UiLabels | null>(null);
