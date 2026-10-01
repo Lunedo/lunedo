@@ -6,6 +6,7 @@ import { AccountController } from "../auth/account.controller.js";
 import { AuthController } from "../auth/auth.controller.js";
 import { DocsController } from "../docs/docs.controller.js";
 import { API_ROUTE, type ApiRouteDefinition } from "../http/api-route.js";
+import { NotificationsController } from "../notifications/notifications.controller.js";
 import { AccountsController } from "../organizations/accounts.controller.js";
 import { GroupsController } from "../organizations/groups.controller.js";
 import { InstanceController } from "../organizations/instance.controller.js";
@@ -25,6 +26,7 @@ export const apiControllers = (): Type[] => [
   ServiceAccountsController,
   TokensController,
   AuditController,
+  NotificationsController,
   DocsController,
 ];
 

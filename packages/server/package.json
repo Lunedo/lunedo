@@ -35,6 +35,7 @@
   ],
   "dependencies": {
     "@pagehall/shared": "workspace:*",
+    "@pagehall/tokens": "workspace:*",
     "@simplewebauthn/server": "^14.0.3",
     "drizzle-orm": "^0.45.3",
     "nodemailer": "^10.0.13",

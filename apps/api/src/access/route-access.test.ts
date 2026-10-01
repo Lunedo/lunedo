@@ -21,6 +21,7 @@ const context: ApiContext = {
   services: undefined,
   settings: undefined,
   settingsRegistry: undefined,
+  notificationHub: undefined,
 };
 
 @Controller("test")

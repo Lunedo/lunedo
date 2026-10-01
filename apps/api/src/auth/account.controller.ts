@@ -28,10 +28,10 @@ import {
 } from "./schemas.js";
 
 const preferenceParams = z.object({ key: z.string().max(200) }).strict();
-const preferenceUpdateSchema = z
-  .object({ value: z.json().optional(), clear: z.literal(true).optional() })
-  .strict()
-  .refine((body) => (body.value !== undefined) !== (body.clear === true));
+const preferenceUpdateSchema = z.union([
+  z.object({ value: z.json() }).strict(),
+  z.object({ clear: z.literal(true) }).strict(),
+]);
 const permissionsQuery = z.object({ organizationId: z.uuid().optional() }).strict();
 const permissionsSchema = z.object({
   instance: z.array(z.string()),

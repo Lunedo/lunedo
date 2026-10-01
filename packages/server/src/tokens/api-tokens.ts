@@ -12,7 +12,7 @@ import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Executor } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
 import { defineJob } from "../jobs/job-queue.js";
-import type { MailService } from "../mail/mail-service.js";
+import type { NotificationService } from "../notifications/service.js";
 import { memberships } from "../organizations/access-schema.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import type { ScopeChain, SettingsService } from "../settings/service.js";
@@ -94,7 +94,7 @@ export class ApiTokenService {
   readonly #audit: AuditLog;
   readonly #settings: SettingsService;
   readonly #rateLimiter: RateLimiter;
-  readonly #mail: MailService;
+  readonly #notifications: NotificationService;
   readonly #authorization: AuthorizationService | undefined;
 
   constructor(options: {
@@ -102,7 +102,7 @@ export class ApiTokenService {
     audit: AuditLog;
     settings: SettingsService;
     rateLimiter: RateLimiter;
-    mail: MailService;
+    notifications: NotificationService;
     authorization?: AuthorizationService;
   }) {
     this.#authorization = options.authorization;
@@ -110,7 +110,7 @@ export class ApiTokenService {
     this.#audit = options.audit;
     this.#settings = options.settings;
     this.#rateLimiter = options.rateLimiter;
-    this.#mail = options.mail;
+    this.#notifications = options.notifications;
   }
 
   async #owner(executor: Executor, accountId: string) {
@@ -460,35 +460,46 @@ export class ApiTokenService {
         and expires_at > now() and expires_at <= now() + make_interval(days => ${days})
       limit 500`);
     const mailIds: string[] = [];
+    let reminded = 0;
     for (const { id } of due.rows) {
-      const queued = await this.#database.transaction(async (tx) => {
-        const marked = await tx.execute<{ name: string; expires_at: Date | string; account_id: string }>(sql`
-          update api_tokens set expiry_reminded_at = now()
-          where id = ${id} and expiry_reminded_at is null and revoked_at is null
-          returning name, expires_at, account_id`);
+      const result = await this.#database.transaction(async (tx) => {
+        const marked = await tx.execute<{
+          name: string;
+          expires_at: Date | string;
+          account_id: string;
+          organization_id: string | null;
+          service_account_id: string | null;
+        }>(sql`
+          update api_tokens t set expiry_reminded_at = now()
+          from accounts a left join service_accounts s on s.account_id = a.id
+          where t.id = ${id} and a.id = t.account_id and t.expiry_reminded_at is null and t.revoked_at is null
+          returning t.name, t.expires_at, t.account_id,
+            coalesce(t.organization_id, s.organization_id, a.home_organization_id) as organization_id,
+            s.account_id as service_account_id`);
         const token = marked.rows[0];
-        if (!token) return [];
-        const recipients = await tx.execute<{ id: string; email: string }>(sql`
-          select a.id, a.email from accounts a
-          where a.state = 'active' and a.email is not null and (
+        if (!token) return null;
+        const recipients = await tx.execute<{ id: string }>(sql`
+          select a.id from accounts a
+          where a.state = 'active' and a.type <> 'service' and (
             a.id = ${token.account_id}
             or a.id in (select account_id from service_account_responsibles where service_account_id = ${token.account_id}))`);
-        const ids: string[] = [];
-        for (const recipient of recipients.rows) {
-          ids.push(
-            await this.#mail.queue(tx, {
-              to: recipient.email,
-              template: "tokenExpiring",
-              language: await this.#mail.languageOf(recipient.id),
-              params: { tokenName: token.name, date: new Date(token.expires_at).toISOString().slice(0, 10) },
-            }),
-          );
-        }
-        return ids;
+        return this.#notifications.notify(tx, {
+          type: "apiToken.expiring",
+          recipients: recipients.rows.map((recipient) => recipient.id),
+          organizationId: token.organization_id,
+          targetId: id,
+          params: {
+            tokenName: token.name,
+            expiresAt: new Date(token.expires_at).toISOString(),
+            serviceAccountId: token.service_account_id,
+          },
+        });
       });
-      mailIds.push(...queued);
+      if (!result) continue;
+      mailIds.push(...result.mailIds);
+      reminded += result.recipients;
     }
-    await this.#mail.dispatch(mailIds);
-    return mailIds.length;
+    await this.#notifications.dispatch(mailIds);
+    return reminded;
   }
 }

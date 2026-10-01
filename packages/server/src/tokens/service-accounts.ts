@@ -10,7 +10,7 @@ import type { AuditLog } from "../audit/audit-log.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
-import type { MailService } from "../mail/mail-service.js";
+import type { NotificationService } from "../notifications/service.js";
 import { memberships } from "../organizations/access-schema.js";
 import { LastOwnerError, lockOrganization, ownerCount } from "../organizations/memberships.js";
 import { OrganizationError } from "../organizations/organizations.js";
@@ -64,19 +64,19 @@ export async function responsiblesOf(
 export class ServiceAccountService {
   readonly #database: Database;
   readonly #audit: AuditLog;
-  readonly #mail: MailService | undefined;
+  readonly #notifications: NotificationService | undefined;
 
   readonly #authorization: AuthorizationService | undefined;
 
   constructor(options: {
     database: Database;
     audit: AuditLog;
-    mail?: MailService;
+    notifications?: NotificationService;
     authorization?: AuthorizationService;
   }) {
     this.#database = options.database;
     this.#audit = options.audit;
-    this.#mail = options.mail;
+    this.#notifications = options.notifications;
     this.#authorization = options.authorization;
   }
 
@@ -312,16 +312,17 @@ export class ServiceAccountService {
   }
 
   async notifyUnattended(): Promise<number> {
-    const mail = this.#mail;
-    if (!mail) return 0;
+    const notifications = this.#notifications;
+    if (!notifications) return 0;
     const candidates = await this.#database.execute<{ account_id: string }>(sql`
       select s.account_id from service_accounts s join accounts a on a.id = s.account_id
       where a.state = 'active' and s.unattended_notified_at is null
         and not exists (select 1 from service_account_responsibles r where r.service_account_id = s.account_id)
       limit 100`);
     const mailIds: string[] = [];
+    let notified = 0;
     for (const { account_id: id } of candidates.rows) {
-      const queued = await this.#database.transaction(async (tx) => {
+      const result = await this.#database.transaction(async (tx) => {
         const marked = await tx.execute<{
           organization_id: string;
           name: string;
@@ -334,36 +335,34 @@ export class ServiceAccountService {
             and not exists (select 1 from service_account_responsibles r where r.service_account_id = s.account_id)
           returning s.organization_id, a.name, o.name as organization_name`);
         const row = marked.rows[0];
-        if (!row) return [];
-        const owners = await tx.execute<{ id: string; email: string }>(sql`
-          select distinct a.id, a.email from role_assignments ra
+        if (!row) return null;
+        const owners = await tx.execute<{ id: string }>(sql`
+          select distinct a.id from role_assignments ra
           join accounts a on a.id = ra.principal_id
           join memberships m on m.account_id = a.id and m.organization_id = ra.organization_id
           where ra.organization_id = ${row.organization_id} and ra.principal_kind = 'account'
-            and ra.built_in_role = 'owner' and a.state = 'active' and a.email is not null and m.kind = 'member'`);
-        const ids: string[] = [];
-        for (const owner of owners.rows) {
-          ids.push(
-            await mail.queue(tx, {
-              to: owner.email,
-              template: "serviceAccountUnattended",
-              language: await mail.languageOf(owner.id),
-              params: { serviceAccountName: row.name, organizationName: row.organization_name },
-            }),
-          );
-        }
+            and ra.built_in_role = 'owner' and a.state = 'active' and m.kind = 'member'`);
+        const result = await notifications.notify(tx, {
+          type: "serviceAccount.unattended",
+          recipients: owners.rows.map((owner) => owner.id),
+          organizationId: row.organization_id,
+          targetId: id,
+          params: { serviceAccountName: row.name, organizationName: row.organization_name },
+        });
         await this.#audit.record(tx, {
           name: "serviceAccount.unattended",
           actor: SYSTEM,
           targetId: id,
-          fields: { notifiedCount: ids.length },
+          fields: { notifiedCount: result.recipients },
           scope: scopeOf(row.organization_id),
         });
-        return ids;
+        return result;
       });
-      mailIds.push(...queued);
+      if (!result) continue;
+      mailIds.push(...result.mailIds);
+      notified += result.recipients;
     }
-    await mail.dispatch(mailIds);
-    return mailIds.length;
+    await notifications.dispatch(mailIds);
+    return notified;
   }
 }

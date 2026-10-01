@@ -1,18 +1,27 @@
 import { smtpConfigurationSchema, uuidv7 } from "@pagehall/shared";
+import designTokens from "@pagehall/tokens/design-tokens.json" with { type: "json" };
 import { and, eq, lt } from "drizzle-orm";
 import { z } from "zod";
-import { instanceNameSetting } from "../accounts/instance-settings.js";
+import { instanceNameSetting, instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountScopeChain } from "../accounts/scope.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Encryption } from "../crypto/envelope.js";
-import type { Database, Transaction } from "../database/database.js";
+import type { Database, Executor, Transaction } from "../database/database.js";
 import { defineJob, type JobContext, type JobQueue } from "../jobs/job-queue.js";
 import type { Logger } from "../logging/logger.js";
-import { languageSetting } from "../settings/builtin.js";
+import { organizations } from "../organizations/schema.js";
+import { languageSetting, timeZoneSetting } from "../settings/builtin.js";
 import { defineSetting } from "../settings/definition.js";
+import { accentColorSetting } from "../settings/preferences.js";
 import type { SettingsService } from "../settings/service.js";
 import { instanceSecrets, mailOutbox } from "./schema.js";
-import { type Language, type MailTemplate, type MailTemplates, renderMail } from "./templates.js";
+import {
+  type Language,
+  type MailBranding,
+  type MailTemplate,
+  type MailTemplates,
+  renderMail,
+} from "./templates.js";
 import {
   describeMailError,
   type MailMessage,
@@ -107,21 +116,65 @@ export class MailService {
     this.#transport = options.transport ?? ((smtp) => new SmtpTransport(smtp));
   }
 
-  async languageOf(accountId: string): Promise<Language> {
-    const chain = await accountScopeChain(this.#database, accountId);
-    return this.#settings.get(languageSetting, { ...chain, user: accountId });
+  async languageOf(accountId: string, executor: Executor = this.#database): Promise<Language> {
+    const chain = await accountScopeChain(executor, accountId);
+    return this.#settings.get(languageSetting, { ...chain, user: accountId }, { executor });
+  }
+
+  async timeZoneOf(accountId: string, executor: Executor = this.#database): Promise<string> {
+    const chain = await accountScopeChain(executor, accountId);
+    return this.#settings.get(timeZoneSetting, { ...chain, user: accountId }, { executor });
+  }
+
+  async branding(
+    executor: Executor,
+    options: { organizationId?: string | null; notification?: boolean },
+  ): Promise<MailBranding> {
+    const url = await this.#settings.get(instanceUrlSetting, {}, { executor });
+    const organizationId = options.organizationId ?? null;
+    const [organization] = organizationId
+      ? await executor
+          .select({ name: organizations.name, logoRef: organizations.logoRef })
+          .from(organizations)
+          .where(eq(organizations.id, organizationId))
+      : [];
+    const accent = await this.#settings.get(
+      accentColorSetting,
+      organization && organizationId ? { organization: organizationId } : {},
+      { executor },
+    );
+    return {
+      organizationName: organization?.name ?? null,
+      logoUrl:
+        url && organization?.logoRef
+          ? `${url}/api/v1/organizations/${organizationId}/logo?v=${organization.logoRef}`
+          : null,
+      accentColor: designTokens.color.palette.light[accent],
+      preferencesUrl: options.notification && url ? `${url}/settings/notifications` : null,
+    };
   }
 
   async queue<T extends MailTemplate>(
     tx: Transaction,
-    mail: { to: string; template: T; language: Language; params: Omit<MailTemplates[T], "instanceName"> },
+    mail: {
+      to: string;
+      template: T;
+      language: Language;
+      params: Omit<MailTemplates[T], "instanceName">;
+      organizationId?: string | null;
+      notification?: boolean;
+    },
   ): Promise<string> {
-    const instanceName = await this.#settings.get(instanceNameSetting, {});
+    const instanceName = await this.#settings.get(instanceNameSetting, {}, { executor: tx });
     const message = renderMail(
       mail.template,
       mail.language,
       { ...mail.params, instanceName } as MailTemplates[T],
       mail.to,
+      await this.branding(tx, {
+        organizationId: mail.organizationId ?? null,
+        notification: mail.notification ?? false,
+      }),
     );
     const id = uuidv7();
     await tx.insert(mailOutbox).values({
@@ -186,8 +239,8 @@ export class MailService {
     await this.#database.delete(mailOutbox).where(eq(mailOutbox.id, mailId));
   };
 
-  async smtpConfiguration(): Promise<SmtpConfiguration | null> {
-    return this.#settings.get(smtpSetting, {});
+  async smtpConfiguration(executor: Executor = this.#database): Promise<SmtpConfiguration | null> {
+    return this.#settings.get(smtpSetting, {}, { executor });
   }
 
   async hasSmtpPassword(): Promise<boolean> {

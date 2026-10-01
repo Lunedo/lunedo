@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import type { Account, AccountService } from "../accounts/accounts.js";
 import { ANONYMOUS, accountPrincipal } from "../accounts/principal.js";
 import { accountScopeChain } from "../accounts/scope.js";
@@ -5,6 +6,8 @@ import type { AuditLog } from "../audit/audit-log.js";
 import type { SignInMethod } from "../audit/catalog.js";
 import type { Database, Transaction } from "../database/database.js";
 import type { MailService } from "../mail/mail-service.js";
+import { knownDevices } from "../notifications/schema.js";
+import type { NotificationService } from "../notifications/service.js";
 import type { SettingsService } from "../settings/service.js";
 import type { ChallengeStore } from "./challenges.js";
 import {
@@ -16,7 +19,13 @@ import {
   SetupIncompleteError,
 } from "./errors.js";
 import type { PasswordHasher } from "./passwords.js";
-import type { ClientInfo, Session, SessionKind, SessionService } from "./sessions.js";
+import {
+  type ClientInfo,
+  describeClient,
+  type Session,
+  type SessionKind,
+  type SessionService,
+} from "./sessions.js";
 import { twoFactorRequiredSetting } from "./settings.js";
 import {
   clientSubject,
@@ -99,6 +108,7 @@ export class SignInService {
   readonly #webauthn: WebAuthnService;
   readonly #audit: AuditLog;
   readonly #mail: MailService;
+  readonly #notifications: NotificationService;
   readonly #settings: SettingsService;
   readonly #setupComplete: () => Promise<boolean>;
 
@@ -115,6 +125,7 @@ export class SignInService {
     webauthn: WebAuthnService;
     audit: AuditLog;
     mail: MailService;
+    notifications: NotificationService;
     settings: SettingsService;
     setupComplete: () => Promise<boolean>;
   }) {
@@ -130,6 +141,7 @@ export class SignInService {
     this.#webauthn = options.webauthn;
     this.#audit = options.audit;
     this.#mail = options.mail;
+    this.#notifications = options.notifications;
     this.#settings = options.settings;
     this.#setupComplete = options.setupComplete;
   }
@@ -191,6 +203,7 @@ export class SignInService {
     methods: SignInMethod[],
     kind: SessionKind,
     client: ClientInfo,
+    mailIds: string[],
   ): Promise<SignedIn> {
     const { session, token } = await this.#sessions.create(tx, {
       accountId: account.id,
@@ -204,7 +217,47 @@ export class SignInService {
       targetId: account.id,
       fields: { sessionId: session.id, methods },
     });
+    await this.#recordDevice(tx, account.id, client, mailIds);
     return { status: "signedIn", session, token };
+  }
+
+  async #recordDevice(
+    tx: Transaction,
+    accountId: string,
+    client: ClientInfo,
+    mailIds: string[],
+  ): Promise<void> {
+    if (!client.deviceToken) return;
+    const deviceHash = hashToken(client.deviceToken);
+    const inserted = await tx
+      .insert(knownDevices)
+      .values({ accountId, deviceHash })
+      .onConflictDoNothing()
+      .returning({ accountId: knownDevices.accountId });
+    if (inserted.length === 0) return;
+    const others = await tx.execute(sql`
+      select 1 from known_devices where account_id = ${accountId} and device_hash <> ${deviceHash} limit 1`);
+    if (others.rows.length === 0) return;
+    const described = describeClient(client.userAgent);
+    const result = await this.#notifications.notify(tx, {
+      type: "signIn.newBrowser",
+      recipients: [accountId],
+      organizationId: null,
+      targetId: accountId,
+      params: {
+        browser: described.browser,
+        operatingSystem: described.operatingSystem,
+        clientIp: client.ip ?? null,
+      },
+    });
+    mailIds.push(...result.mailIds);
+  }
+
+  async #signedIn(run: (tx: Transaction, mailIds: string[]) => Promise<SignedIn>): Promise<SignedIn> {
+    const mailIds: string[] = [];
+    const result = await this.#database.transaction((tx) => run(tx, mailIds));
+    await this.#notifications.dispatch(mailIds);
+    return result;
   }
 
   async signInWithPassword(input: {
@@ -253,8 +306,8 @@ export class SignInService {
     }
     const kind = (await this.secondFactorRequired(account.id)) ? "secondFactorSetup" : "full";
     await this.#throttle.recordSuccess(account.email);
-    return this.#database.transaction((tx) =>
-      this.#createSession(tx, account, ["password"], kind, input.client),
+    return this.#signedIn((tx, mailIds) =>
+      this.#createSession(tx, account, ["password"], kind, input.client, mailIds),
     );
   }
 
@@ -324,6 +377,7 @@ export class SignInService {
           [...pending.methods, method],
           "full",
           input.client,
+          mailIds,
         );
         if (remaining !== null) {
           await this.#audit.record(tx, {
@@ -400,8 +454,8 @@ export class SignInService {
       throw new LockedError(secondsUntil(lockout.lockedUntil));
     }
     await this.#throttle.recordSuccess(account.email);
-    return this.#database.transaction((tx) =>
-      this.#createSession(tx, account, ["passkey"], "full", input.client),
+    return this.#signedIn((tx, mailIds) =>
+      this.#createSession(tx, account, ["passkey"], "full", input.client, mailIds),
     );
   }
 

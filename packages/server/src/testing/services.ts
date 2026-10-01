@@ -18,6 +18,7 @@ import { createTemporaryDatabase, type TemporaryDatabase } from "./database.js";
 import { CapturingTransport } from "./jobs.js";
 
 export interface TestServices {
+  url: string;
   pool: DatabasePool;
   database: Database;
   settings: SettingsService;
@@ -55,6 +56,7 @@ export async function createTestServices(baseUrl: string): Promise<TestServices>
     mailTransport: () => mail,
   });
   return {
+    url: temporary.url,
     pool,
     database,
     settings,

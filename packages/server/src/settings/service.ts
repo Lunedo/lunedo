@@ -1,5 +1,5 @@
 import { and, eq, or, sql } from "drizzle-orm";
-import type { Database, Transaction } from "../database/database.js";
+import type { Database, Executor, Transaction } from "../database/database.js";
 import type { NotificationListener } from "../database/notifications.js";
 import type { Logger } from "../logging/logger.js";
 import { isAtLeastAsStrict, type SettingDefinition, type SettingLevel, settingLevels } from "./definition.js";
@@ -129,7 +129,7 @@ export class SettingsService {
     this.#caching = true;
   }
 
-  async #rows(scopes: Scope[]): Promise<Map<string, ScopeRows>> {
+  async #rows(scopes: Scope[], executor?: Executor): Promise<Map<string, ScopeRows>> {
     const result = new Map<string, ScopeRows>();
     const missing: Scope[] = [];
     for (const scope of scopes) {
@@ -139,7 +139,7 @@ export class SettingsService {
     }
     if (missing.length === 0) return result;
 
-    const loading = this.#database
+    const loading = (executor ?? this.#database)
       .select({
         level: settingValues.level,
         scopeId: settingValues.scopeId,
@@ -162,7 +162,7 @@ export class SettingsService {
         }
         return byScope;
       });
-    if (this.#caching) {
+    if (this.#caching && !executor) {
       for (const scope of missing) {
         const key = scopeKey(scope);
         const entry = loading.then((byScope) => byScope.get(key) ?? new Map<string, StoredRow>());
@@ -177,9 +177,13 @@ export class SettingsService {
     return result;
   }
 
-  async explain<T>(definition: SettingDefinition<T>, chain: ScopeChain): Promise<SettingExplanation<T>> {
+  async explain<T>(
+    definition: SettingDefinition<T>,
+    chain: ScopeChain,
+    options: { executor?: Executor } = {},
+  ): Promise<SettingExplanation<T>> {
     const scopes = scopesOf(chain);
-    const rows = await this.#rows(scopes);
+    const rows = await this.#rows(scopes, options.executor);
     let value = definition.default;
     let source: Scope | "default" = "default";
     let lockedBy: Scope | null = null;
@@ -211,8 +215,12 @@ export class SettingsService {
     return { key: definition.key, value, source, lockedBy, levels };
   }
 
-  async get<T>(definition: SettingDefinition<T>, chain: ScopeChain): Promise<T> {
-    return (await this.explain(definition, chain)).value;
+  async get<T>(
+    definition: SettingDefinition<T>,
+    chain: ScopeChain,
+    options: { executor?: Executor } = {},
+  ): Promise<T> {
+    return (await this.explain(definition, chain, options)).value;
   }
 
   #target(definition: SettingDefinition<unknown>, chain: ScopeChain, level: SettingLevel): Scope {

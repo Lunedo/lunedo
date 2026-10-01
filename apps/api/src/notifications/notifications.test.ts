@@ -1,0 +1,200 @@
+import { randomUUID } from "node:crypto";
+import { get, type IncomingMessage } from "node:http";
+import type { AddressInfo } from "node:net";
+import type { NestFastifyApplication } from "@nestjs/platform-fastify";
+import {
+  accountAttemptLimitSetting,
+  clientAttemptLimitSetting,
+  createServerRuntime,
+  type NotifyInput,
+  type ServerRuntime,
+} from "@pagehall/server";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { apiContextOf } from "../context.js";
+import {
+  addTotp,
+  completeConfiguredSetup,
+  configuredSetupEnv,
+  createAccount,
+  firstOrganizationId,
+  OWNER,
+  signedInClient,
+} from "../testing/accounts.js";
+import { type AuthTestApp, createAuthTestApp, databaseBaseUrl, TestClient } from "../testing/auth-app.js";
+import { createTestApp } from "../testing/create-test-app.js";
+
+const SESSION_COOKIE = "__Host-pagehall-session";
+
+describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
+  let test: AuthTestApp;
+  let owner: TestClient;
+  let ownerId: string;
+  let organizationId: string;
+
+  beforeAll(async () => {
+    test = await createAuthTestApp(configuredSetupEnv);
+    await completeConfiguredSetup(test);
+    await test.runtime.settings.set(clientAttemptLimitSetting, {}, "instance", 10_000);
+    await test.runtime.settings.set(accountAttemptLimitSetting, {}, "instance", 1000);
+    owner = new TestClient(test.app);
+    await owner.post("/api/v1/auth/sign-in", OWNER);
+    await addTotp(owner);
+    ownerId = (await owner.get("/api/v1/auth/session")).json().account.id;
+    organizationId = await firstOrganizationId(test);
+  });
+
+  afterAll(async () => {
+    await test?.close();
+  });
+
+  function notice(recipients: string[], runtime: ServerRuntime = test.runtime, targetId = randomUUID()) {
+    const input: NotifyInput = {
+      type: "breakGlass.started",
+      recipients,
+      organizationId,
+      targetId,
+      params: {
+        organizationName: "Test organization",
+        requesterName: "Ada",
+        reason: "Investigating an outage",
+        minutes: 60,
+      },
+    };
+    return runtime.database.transaction((tx) => runtime.services.notifications.notify(tx, input));
+  }
+
+  it("refuses anonymous requests and API tokens", async () => {
+    const anonymous = new TestClient(test.app);
+    for (const url of [
+      "/api/v1/notifications",
+      "/api/v1/notifications/unread-count",
+      "/api/v1/notifications/stream",
+    ]) {
+      expect((await anonymous.get(url)).statusCode, url).toBe(401);
+    }
+    expect((await anonymous.post("/api/v1/notifications/read-all", {})).statusCode).toBe(401);
+    const token = (
+      await owner.post("/api/v1/account/tokens", {
+        name: "Reader",
+        scopes: { organization: { auditLog: "view" } },
+      })
+    ).json().token;
+    const withToken = await anonymous.get("/api/v1/notifications", { authorization: `Bearer ${token}` });
+    expect(withToken.json()).toMatchObject({ code: "sessionRequired" });
+  });
+
+  it("lists, counts and marks the caller's own notifications", async () => {
+    await notice([ownerId]);
+    await notice([ownerId]);
+    const list = (await owner.get("/api/v1/notifications")).json();
+    expect(list.items).toHaveLength(2);
+    expect(list.items[0]).toMatchObject({
+      type: "breakGlass.started",
+      organizationId,
+      target: { type: "breakGlassAccess" },
+      actor: null,
+      params: { requesterName: "Ada" },
+      count: 1,
+      readAt: null,
+    });
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({ count: 2 });
+
+    expect((await owner.post(`/api/v1/notifications/${list.items[0].id}/read`)).statusCode).toBe(204);
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({ count: 1 });
+    expect((await owner.get("/api/v1/notifications?unread=true")).json().items).toHaveLength(1);
+
+    const before = new Date(Date.now() - 60_000).toISOString();
+    expect((await owner.post("/api/v1/notifications/read-all", { before })).json()).toEqual({ marked: 0 });
+    expect((await owner.post("/api/v1/notifications/read-all", {})).json()).toEqual({ marked: 1 });
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({ count: 0 });
+  });
+
+  it("never shows one account the notifications of another", async () => {
+    const other = await createAccount(test, "other.reader@example.org");
+    const client = await signedInClient(test, other.email, other.password);
+    await notice([ownerId]);
+    expect((await client.get("/api/v1/notifications")).json().items).toEqual([]);
+    const ownerItems = (await owner.get("/api/v1/notifications")).json().items;
+    const response = await client.post(`/api/v1/notifications/${ownerItems[0].id}/read`);
+    expect(response.statusCode).toBe(404);
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({ count: 1 });
+  });
+
+  it("lets accounts choose channels per event type in their preferences", async () => {
+    const key = "notifications.breakGlassStarted";
+    const listed = (await owner.get("/api/v1/account/preferences")).json();
+    expect(listed.find((entry: { key: string }) => entry.key === key)).toMatchObject({
+      value: { inApp: true, email: true },
+      source: "default",
+    });
+    expect(
+      (await owner.put(`/api/v1/account/preferences/${key}`, { value: { inApp: false, email: true } }))
+        .statusCode,
+    ).toBe(204);
+    const before = (await owner.get("/api/v1/notifications/unread-count")).json().count;
+    await notice([ownerId]);
+    expect((await owner.get("/api/v1/notifications/unread-count")).json().count).toBe(before);
+    expect(
+      (await owner.put(`/api/v1/account/preferences/${key}`, { value: { inApp: "yes" } })).statusCode,
+    ).toBe(400);
+    expect((await owner.put(`/api/v1/account/preferences/${key}`, { clear: true })).statusCode).toBe(204);
+  });
+
+  it("pages with an opaque cursor and rejects a forged one", async () => {
+    for (let index = 0; index < 3; index += 1) await notice([ownerId]);
+    const ids: string[] = [];
+    let cursor: string | null = null;
+    do {
+      const page: { items: { id: string }[]; nextCursor: string | null } = (
+        await owner.get(`/api/v1/notifications?limit=2${cursor ? `&cursor=${cursor}` : ""}`)
+      ).json();
+      ids.push(...page.items.map((item) => item.id));
+      cursor = page.nextCursor;
+    } while (cursor);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.length).toBeGreaterThanOrEqual(3);
+    const forged = Buffer.from(
+      JSON.stringify(["now()); drop table notifications; --", randomUUID()]),
+    ).toString("base64url");
+    expect((await owner.get(`/api/v1/notifications?cursor=${forged}`)).statusCode).toBe(400);
+  });
+
+  it("streams the unread count to a client of another node", async () => {
+    const secondRuntime = await createServerRuntime({ role: "api", env: test.env });
+    let second: NestFastifyApplication | undefined;
+    let response: IncomingMessage | undefined;
+    try {
+      second = await createTestApp(apiContextOf(secondRuntime));
+      await second.listen(0, "127.0.0.1");
+      const { port } = second.getHttpServer().address() as AddressInfo;
+      const session = owner.cookies.get(SESSION_COOKIE);
+      const events: number[] = [];
+      response = await new Promise<IncomingMessage>((resolve, reject) => {
+        get(
+          `http://127.0.0.1:${port}/api/v1/notifications/stream`,
+          { headers: { cookie: `${SESSION_COOKIE}=${session}` } },
+          resolve,
+        ).on("error", reject);
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.headers["content-type"]).toBe("text/event-stream; charset=utf-8");
+      response.setEncoding("utf8");
+      response.on("data", (chunk: string) => {
+        for (const match of chunk.matchAll(/event: notifications\ndata: (\{.*\})\n\n/g)) {
+          events.push(JSON.parse(match[1] ?? "{}").unreadCount);
+        }
+      });
+      await expect.poll(() => events.length, { timeout: 5000 }).toBe(1);
+      const initial = events[0] ?? 0;
+
+      await notice([ownerId]);
+      await expect.poll(() => events.at(-1), { timeout: 5000 }).toBe(initial + 1);
+      await owner.post("/api/v1/notifications/read-all", {});
+      await expect.poll(() => events.at(-1), { timeout: 5000 }).toBe(0);
+    } finally {
+      response?.destroy();
+      await second?.close();
+      await secondRuntime.close();
+    }
+  });
+});

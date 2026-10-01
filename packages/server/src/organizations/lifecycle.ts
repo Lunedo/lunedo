@@ -2,10 +2,9 @@ import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { SYSTEM } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
-import type { Database } from "../database/database.js";
+import type { Database, Transaction } from "../database/database.js";
 import { defineJob } from "../jobs/job-queue.js";
-import type { MailService } from "../mail/mail-service.js";
-import type { MailTemplates } from "../mail/templates.js";
+import type { NotificationService, NotifyResult } from "../notifications/service.js";
 import type { SettingsService } from "../settings/service.js";
 import type { BreakGlassService } from "./break-glass.js";
 import type { MembershipService } from "./memberships.js";
@@ -32,18 +31,12 @@ export const organizationRemindersJob = defineJob({
 
 export const ORGANIZATION_REMINDERS_SCHEDULE = "23 * * * *";
 
-type MailParams<T extends keyof MailTemplates> = Omit<MailTemplates[T], "instanceName">;
-
-function day(date: Date | string): string {
-  return new Date(date).toISOString().slice(0, 10);
-}
-
 export class OrganizationLifecycle {
   readonly #database: Database;
   readonly #audit: AuditLog;
   readonly #memberships: MembershipService;
   readonly #breakGlass: BreakGlassService;
-  readonly #mail: MailService;
+  readonly #notifications: NotificationService;
   readonly #settings: SettingsService;
 
   constructor(options: {
@@ -51,14 +44,14 @@ export class OrganizationLifecycle {
     audit: AuditLog;
     memberships: MembershipService;
     breakGlass: BreakGlassService;
-    mail: MailService;
+    notifications: NotificationService;
     settings: SettingsService;
   }) {
     this.#database = options.database;
     this.#audit = options.audit;
     this.#memberships = options.memberships;
     this.#breakGlass = options.breakGlass;
-    this.#mail = options.mail;
+    this.#notifications = options.notifications;
     this.#settings = options.settings;
   }
 
@@ -131,185 +124,202 @@ export class OrganizationLifecycle {
     return processed;
   }
 
-  async #recipients(
-    organizationId: string,
-    preferred: string | null,
-  ): Promise<{ id: string; email: string }[]> {
+  async #recipients(tx: Transaction, organizationId: string, preferred: string | null): Promise<string[]> {
     if (preferred) {
-      const result = await this.#database.execute<{ id: string; email: string }>(sql`
-        select a.id, a.email from accounts a join memberships m on m.account_id = a.id
+      const result = await tx.execute<{ id: string }>(sql`
+        select a.id from accounts a join memberships m on m.account_id = a.id
         where a.id = ${preferred} and m.organization_id = ${organizationId} and m.kind = 'member'
-          and a.state = 'active' and a.email is not null`);
-      if (result.rows.length > 0) return result.rows;
+          and a.state = 'active'`);
+      if (result.rows.length > 0) return result.rows.map((row) => row.id);
     }
-    const administrators = await this.#database.execute<{ id: string; email: string }>(sql`
-      select distinct a.id, a.email from role_assignments ra join accounts a on a.id = ra.principal_id
+    const administrators = await tx.execute<{ id: string }>(sql`
+      select distinct a.id from role_assignments ra join accounts a on a.id = ra.principal_id
       where ra.organization_id = ${organizationId} and ra.principal_kind = 'account'
         and ra.built_in_role in ('owner', 'administrator')
         and (ra.expires_at is null or ra.expires_at > now())
-        and a.state = 'active' and a.email is not null`);
-    return administrators.rows;
+        and a.state = 'active'`);
+    return administrators.rows.map((row) => row.id);
   }
 
-  async #notify<T extends keyof MailTemplates>(
-    organizationId: string,
-    preferred: string | null,
-    template: T,
-    params: (organizationName: string) => MailParams<T>,
-  ): Promise<void> {
-    const organization = await this.#database.execute<{ name: string }>(
-      sql`select name from organizations where id = ${organizationId}`,
-    );
-    const name = organization.rows[0]?.name ?? "";
-    const recipients = await this.#recipients(organizationId, preferred);
-    const mailIds = await this.#database.transaction(async (tx) => {
-      const ids: string[] = [];
-      for (const recipient of recipients) {
-        ids.push(
-          await this.#mail.queue(tx, {
-            to: recipient.email,
-            template,
-            language: await this.#mail.languageOf(recipient.id),
-            params: params(name),
-          }),
-        );
-      }
-      return ids;
-    });
-    await this.#mail.dispatch(mailIds);
+  async #remind(
+    candidates: { key: string }[],
+    remind: (tx: Transaction, key: string) => Promise<NotifyResult | null>,
+  ): Promise<number> {
+    let reminded = 0;
+    for (const { key } of candidates) {
+      const result = await this.#database.transaction((tx) => remind(tx, key));
+      if (!result) continue;
+      await this.#notifications.dispatch(result.mailIds);
+      reminded += 1;
+    }
+    return reminded;
   }
 
   async sendReminders(): Promise<number> {
     let sent = 0;
-    const organizations = await this.#database.execute<{ id: string }>(sql`select id from organizations`);
-    for (const { id: organizationId } of organizations.rows) {
+    const organizations = await this.#database.execute<{ id: string; name: string }>(
+      sql`select id, name from organizations`,
+    );
+    for (const { id: organizationId, name: organizationName } of organizations.rows) {
       const chain = organizationSettingsChain(organizationId);
       const guestDays = await this.#settings.get(guestExpiryReminderDaysSetting, chain);
       const inactivityDays = await this.#settings.get(guestInactivityDaysSetting, chain);
       const accessDays = await this.#settings.get(expiryReminderDaysSetting, chain);
 
-      const guests = await this.#database.execute<{
-        id: string;
-        name: string;
-        expires_at: Date;
-        responsible_account_id: string | null;
-      }>(sql`
-        update memberships m set expiry_reminded_at = now()
-        from accounts a
-        where a.id = m.account_id and m.organization_id = ${organizationId} and m.kind = 'guest'
+      const guests = await this.#database.execute<{ key: string }>(sql`
+        select m.id as key from memberships m
+        where m.organization_id = ${organizationId} and m.kind = 'guest'
           and m.expiry_reminded_at is null and m.expires_at > now()
-          and m.expires_at <= now() + make_interval(days => ${guestDays})
-        returning m.id, a.name, m.expires_at, m.responsible_account_id`);
-      for (const guest of guests.rows) {
-        await this.#notify(
+          and m.expires_at <= now() + make_interval(days => ${guestDays})`);
+      sent += await this.#remind(guests.rows, async (tx, key) => {
+        const marked = await tx.execute<{
+          account_id: string;
+          name: string;
+          expires_at: Date | string;
+          responsible_account_id: string | null;
+        }>(sql`
+          update memberships m set expiry_reminded_at = now()
+          from accounts a
+          where m.id = ${key} and a.id = m.account_id and m.expiry_reminded_at is null and m.expires_at > now()
+          returning m.account_id, a.name, m.expires_at, m.responsible_account_id`);
+        const guest = marked.rows[0];
+        if (!guest) return null;
+        return this.#notifications.notify(tx, {
+          type: "guest.expiring",
+          recipients: await this.#recipients(tx, organizationId, guest.responsible_account_id),
           organizationId,
-          guest.responsible_account_id,
-          "guestExpiring",
-          (organizationName) => ({
+          targetId: guest.account_id,
+          params: {
             organizationName,
             guestName: guest.name,
-            date: day(guest.expires_at),
-          }),
-        );
-        sent += 1;
-      }
+            expiresAt: new Date(guest.expires_at).toISOString(),
+          },
+        });
+      });
 
-      const inactive = await this.#database.execute<{
-        id: string;
-        name: string;
-        responsible_account_id: string | null;
-      }>(sql`
-        with candidates as (
-          select a.id, a.name, m.responsible_account_id
-          from accounts a join memberships m on m.account_id = a.id
-          where m.organization_id = ${organizationId} and m.kind = 'guest' and a.state = 'active'
+      const inactive = await this.#database.execute<{ key: string }>(sql`
+        select a.id as key
+        from accounts a join memberships m on m.account_id = a.id
+        where m.organization_id = ${organizationId} and m.kind = 'guest' and a.state = 'active'
+          and coalesce(a.last_active_at, a.created_at) <= now() - make_interval(days => ${inactivityDays})
+          and (a.inactivity_notified_at is null
+            or a.inactivity_notified_at < coalesce(a.last_active_at, a.created_at))`);
+      sent += await this.#remind(inactive.rows, async (tx, key) => {
+        const marked = await tx.execute<{ name: string; responsible_account_id: string | null }>(sql`
+          update accounts a set inactivity_notified_at = now()
+          from memberships m
+          where a.id = ${key} and m.account_id = a.id and m.organization_id = ${organizationId}
+            and m.kind = 'guest' and a.state = 'active'
             and coalesce(a.last_active_at, a.created_at) <= now() - make_interval(days => ${inactivityDays})
             and (a.inactivity_notified_at is null
               or a.inactivity_notified_at < coalesce(a.last_active_at, a.created_at))
-        )
-        update accounts a set inactivity_notified_at = now()
-        from candidates c where a.id = c.id
-        returning c.id, c.name, c.responsible_account_id`);
-      for (const guest of inactive.rows) {
-        await this.#notify(
+          returning a.name, m.responsible_account_id`);
+        const guest = marked.rows[0];
+        if (!guest) return null;
+        return this.#notifications.notify(tx, {
+          type: "guest.inactive",
+          recipients: await this.#recipients(tx, organizationId, guest.responsible_account_id),
           organizationId,
-          guest.responsible_account_id,
-          "guestInactive",
-          (organizationName) => ({
+          targetId: key,
+          params: { organizationName, guestName: guest.name, days: inactivityDays },
+        });
+      });
+
+      const roles = await this.#database.execute<{ key: string }>(sql`
+        select id as key from role_assignments
+        where organization_id = ${organizationId} and expiry_reminded_at is null and expires_at > now()
+          and expires_at <= now() + make_interval(days => ${accessDays})`);
+      sent += await this.#remind(roles.rows, async (tx, key) => {
+        const marked = await tx.execute<{
+          name: string;
+          expires_at: Date | string;
+          created_by: string | null;
+        }>(sql`
+          update role_assignments ra set expiry_reminded_at = now()
+          from role_assignments original left join custom_roles cr on cr.id = original.custom_role_id
+          where ra.id = ${key} and original.id = ra.id
+            and ra.expiry_reminded_at is null and ra.expires_at > now()
+          returning coalesce(ra.built_in_role::text, cr.name) as name, ra.expires_at, ra.created_by`);
+        const role = marked.rows[0];
+        if (!role) return null;
+        return this.#notifications.notify(tx, {
+          type: "access.expiring",
+          recipients: await this.#recipients(tx, organizationId, role.created_by),
+          organizationId,
+          targetId: key,
+          params: {
             organizationName,
-            guestName: guest.name,
-            days: inactivityDays,
-          }),
-        );
-        sent += 1;
-      }
+            kind: "role",
+            name: role.name,
+            expiresAt: new Date(role.expires_at).toISOString(),
+          },
+        });
+      });
 
-      const roles = await this.#database.execute<{
-        name: string;
-        expires_at: Date;
-        created_by: string | null;
-        holder: string;
-      }>(sql`
-        update role_assignments ra set expiry_reminded_at = now()
-        from role_assignments original left join custom_roles cr on cr.id = original.custom_role_id
-        where ra.id = original.id and ra.organization_id = ${organizationId}
-          and ra.expiry_reminded_at is null and ra.expires_at > now()
-          and ra.expires_at <= now() + make_interval(days => ${accessDays})
-        returning coalesce(ra.built_in_role::text, cr.name) as name, ra.expires_at, ra.created_by`);
-      for (const role of roles.rows) {
-        await this.#notify(organizationId, role.created_by, "accessExpiring", (organizationName) => ({
-          organizationName,
-          kind: "role" as const,
-          name: role.name,
-          date: day(role.expires_at),
-        }));
-        sent += 1;
-      }
-
-      const groupMemberships = await this.#database.execute<{
-        group_id: string;
-        name: string;
-        expires_at: Date;
-      }>(sql`
-        update group_members gm set expiry_reminded_at = now()
-        from groups g
-        where g.id = gm.group_id and g.organization_id = ${organizationId}
+      const groupMemberships = await this.#database.execute<{ key: string }>(sql`
+        select gm.group_id || ':' || gm.account_id as key
+        from group_members gm join groups g on g.id = gm.group_id
+        where g.organization_id = ${organizationId}
           and gm.expiry_reminded_at is null and gm.expires_at > now()
-          and gm.expires_at <= now() + make_interval(days => ${accessDays})
-        returning gm.group_id, g.name, gm.expires_at`);
-      for (const membership of groupMemberships.rows) {
-        const managers = await this.#database.execute<{ account_id: string }>(
-          sql`select account_id from group_managers where group_id = ${membership.group_id} limit 1`,
+          and gm.expires_at <= now() + make_interval(days => ${accessDays})`);
+      sent += await this.#remind(groupMemberships.rows, async (tx, key) => {
+        const [groupId = "", accountId = ""] = key.split(":");
+        const marked = await tx.execute<{ name: string; expires_at: Date | string }>(sql`
+          update group_members gm set expiry_reminded_at = now()
+          from groups g
+          where gm.group_id = ${groupId} and gm.account_id = ${accountId} and g.id = gm.group_id
+            and gm.expiry_reminded_at is null and gm.expires_at > now()
+          returning g.name, gm.expires_at`);
+        const membership = marked.rows[0];
+        if (!membership) return null;
+        const managers = await tx.execute<{ account_id: string }>(
+          sql`select account_id from group_managers where group_id = ${groupId} limit 1`,
         );
-        await this.#notify(
+        return this.#notifications.notify(tx, {
+          type: "access.expiring",
+          recipients: await this.#recipients(tx, organizationId, managers.rows[0]?.account_id ?? null),
           organizationId,
-          managers.rows[0]?.account_id ?? null,
-          "accessExpiring",
-          (organizationName) => ({
+          targetId: groupId,
+          params: {
             organizationName,
-            kind: "group" as const,
+            kind: "group",
             name: membership.name,
-            date: day(membership.expires_at),
-          }),
-        );
-        sent += 1;
-      }
+            expiresAt: new Date(membership.expires_at).toISOString(),
+          },
+        });
+      });
 
-      const members = await this.#database.execute<{ expires_at: Date; created_by: string | null }>(sql`
-        update memberships set expiry_reminded_at = now()
+      const members = await this.#database.execute<{ key: string }>(sql`
+        select id as key from memberships
         where organization_id = ${organizationId} and kind <> 'guest'
           and expiry_reminded_at is null and expires_at > now()
-          and expires_at <= now() + make_interval(days => ${accessDays})
-        returning expires_at, created_by`);
-      for (const membership of members.rows) {
-        await this.#notify(organizationId, membership.created_by, "accessExpiring", (organizationName) => ({
-          organizationName,
-          kind: "membership" as const,
-          name: "",
-          date: day(membership.expires_at),
-        }));
-        sent += 1;
-      }
+          and expires_at <= now() + make_interval(days => ${accessDays})`);
+      sent += await this.#remind(members.rows, async (tx, key) => {
+        const marked = await tx.execute<{
+          account_id: string;
+          name: string;
+          expires_at: Date | string;
+          created_by: string | null;
+        }>(sql`
+          update memberships m set expiry_reminded_at = now()
+          from accounts a
+          where m.id = ${key} and a.id = m.account_id and m.expiry_reminded_at is null and m.expires_at > now()
+          returning m.account_id, a.name, m.expires_at, m.created_by`);
+        const membership = marked.rows[0];
+        if (!membership) return null;
+        return this.#notifications.notify(tx, {
+          type: "access.expiring",
+          recipients: await this.#recipients(tx, organizationId, membership.created_by),
+          organizationId,
+          targetId: membership.account_id,
+          params: {
+            organizationName,
+            kind: "membership",
+            name: membership.name,
+            expiresAt: new Date(membership.expires_at).toISOString(),
+          },
+        });
+      });
     }
     return sent;
   }

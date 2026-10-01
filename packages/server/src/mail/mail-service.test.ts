@@ -46,6 +46,63 @@ describe("mail templates", () => {
   });
 });
 
+describe("mail layout", () => {
+  it("shows the organization's logo, accent color and a link to the notification preferences", () => {
+    const mail = renderMail(
+      "guestInactive",
+      "en",
+      { instanceName: "Docs", organizationName: "Team", guestName: "Gina", days: 30 },
+      "a@example.org",
+      {
+        organizationName: 'Team "A"',
+        logoUrl: 'https://wiki.example.org/api/v1/organizations/x/logo?v=1&"',
+        accentColor: "#6B4FB3",
+        preferencesUrl: "https://wiki.example.org/settings/notifications",
+      },
+    );
+    expect(mail.html).toContain(
+      '<img src="https://wiki.example.org/api/v1/organizations/x/logo?v=1&amp;&quot;" alt="Team &quot;A&quot;"',
+    );
+    expect(mail.html).toContain("border-top:4px solid #6B4FB3");
+    expect(mail.html).toContain('href="https://wiki.example.org/settings/notifications"');
+    expect(mail.text).toContain(
+      "Choose which notifications you receive: https://wiki.example.org/settings/notifications",
+    );
+    expect(mail.text).toContain("Sent by Docs.");
+  });
+
+  it("keeps the action and its plain address fixed and shows the instance name without a logo", () => {
+    const mail = renderMail(
+      "passwordReset",
+      "de",
+      { instanceName: "Docs", link: "https://wiki.example.org/reset-password#token=t", minutes: 30 },
+      "a@example.org",
+    );
+    expect(mail.html).toContain(">Docs</span>");
+    expect(mail.html).not.toContain("<img");
+    expect(mail.html).toContain(">Passwort zurücksetzen</a>");
+    expect(mail.html).toContain(">https://wiki.example.org/reset-password#token=t</p>");
+    expect(mail.html).not.toContain("settings/notifications");
+    expect(mail.text).toContain("Gesendet von Docs.");
+  });
+
+  it("describes a sign-in from a new browser in both languages", () => {
+    const params = {
+      instanceName: "Docs",
+      browser: "Firefox",
+      operatingSystem: "Linux",
+      clientIp: "203.0.113.4",
+    };
+    expect(renderMail("signInNewBrowser", "en", params, "a@example.org").text).toContain(
+      "Firefox on Linux, address 203.0.113.4",
+    );
+    expect(
+      renderMail("signInNewBrowser", "de", { ...params, browser: null, clientIp: null }, "a@example.org")
+        .text,
+    ).toContain("nicht verwendet wurde: Linux.");
+  });
+});
+
 describe.skipIf(!databaseUrl)("MailService", () => {
   let pool: DatabasePool;
   let database: Database;

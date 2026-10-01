@@ -138,6 +138,28 @@ export { PgBossQueue } from "./jobs/pg-boss-queue.js";
 export { createLogger, type Logger, type LogLevel, logLevels } from "./logging/logger.js";
 export { MailNotConfiguredError, SmtpConfigurationError, smtpSetting } from "./mail/mail-service.js";
 export type { MailMessage, MailTransport, SmtpOptions } from "./mail/transport.js";
+export { NotificationHub } from "./notifications/hub.js";
+export {
+  defineNotificationType,
+  NotificationRegistry,
+  type NotificationTypeDefinition,
+  type VisibilityContext,
+} from "./notifications/registry.js";
+export {
+  COMBINE_WINDOW_MINUTES,
+  NOTIFICATIONS_CHANNEL,
+  type NotificationCursor,
+  type NotificationItem,
+  type NotificationPage,
+  NotificationService,
+  type NotifyInput,
+} from "./notifications/service.js";
+export {
+  builtinNotificationTypes,
+  notificationPreferenceSetting,
+  notificationRetentionSetting,
+  notificationSettings,
+} from "./notifications/types.js";
 export { isAuthorizedMetricsRequest, Metrics } from "./observability/metrics.js";
 export {
   currentRequestContext,

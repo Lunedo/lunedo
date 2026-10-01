@@ -1,4 +1,10 @@
-import type { AccountServices, ServerRuntime, SettingsRegistry, SettingsService } from "@pagehall/server";
+import type {
+  AccountServices,
+  NotificationHub,
+  ServerRuntime,
+  SettingsRegistry,
+  SettingsService,
+} from "@pagehall/server";
 
 export const API_CONTEXT = Symbol("API_CONTEXT");
 
@@ -9,6 +15,7 @@ export type ApiContext = Pick<ServerRuntime, "logger" | "metrics" | "metricsToke
   services: AccountServices | undefined;
   settings: SettingsService | undefined;
   settingsRegistry: SettingsRegistry | undefined;
+  notificationHub: NotificationHub | undefined;
 };
 
 export function apiContextOf(runtime: ServerRuntime): ApiContext {
@@ -22,5 +29,6 @@ export function apiContextOf(runtime: ServerRuntime): ApiContext {
     services: runtime.services,
     settings: runtime.settings,
     settingsRegistry: runtime.settingsRegistry,
+    notificationHub: runtime.notificationHub,
   };
 }

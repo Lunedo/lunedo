@@ -23,6 +23,7 @@ export {
 export { keyRotationStatus, keyRotations } from "../crypto/schema.js";
 export { jobProgress } from "../jobs/schema.js";
 export { instanceSecrets, mailOutbox, mailStatus } from "../mail/schema.js";
+export { knownDevices, notifications } from "../notifications/schema.js";
 export {
   breakGlassAccesses,
   builtInRole,

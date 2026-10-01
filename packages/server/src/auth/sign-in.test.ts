@@ -88,6 +88,47 @@ describe.skipIf(!baseUrl)("SignInService", () => {
     await expect(signIn).resolves.toMatchObject({ status: "signedIn" });
   });
 
+  it("tells the account about a sign-in from a browser it has not used before", async () => {
+    const { services, database } = test;
+    const password = "a long browser passphrase";
+    const account = await database.transaction((tx) =>
+      services.accounts.createStandard(tx, {
+        email: "browsers@example.org",
+        name: "Browsers",
+        password,
+        homeOrganizationId: null,
+      }),
+    );
+    const userAgent =
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
+    const signIn = (deviceToken: string | undefined) =>
+      services.signIn.signInWithPassword({
+        email: "browsers@example.org",
+        password,
+        client: { ip: "198.51.100.7", userAgent, ...(deviceToken ? { deviceToken } : {}) },
+      });
+    const notices = async () =>
+      (
+        await test.pool.query<{ params: unknown }>(
+          "select params from notifications where recipient_id = $1 and type = 'signIn.newBrowser'",
+          [account.id],
+        )
+      ).rows;
+
+    await signIn("first-browser-token-0000000000000000000000000");
+    await signIn("first-browser-token-0000000000000000000000000");
+    await signIn(undefined);
+    expect(await notices()).toEqual([]);
+
+    await signIn("second-browser-token-000000000000000000000000");
+    expect(await notices()).toEqual([
+      { params: { browser: "Chrome", operatingSystem: "Windows", clientIp: "198.51.100.7" } },
+    ]);
+    await signIn("second-browser-token-000000000000000000000000");
+    await signIn("first-browser-token-0000000000000000000000000");
+    expect(await notices()).toHaveLength(1);
+  });
+
   it("limits passkey sign-in options per client", async () => {
     for (let attempt = 0; attempt < 30; attempt++) {
       await test.services.signIn.passkeyOptions("203.0.113.30");

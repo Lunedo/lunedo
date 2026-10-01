@@ -32,6 +32,8 @@ import {
 import { createLogger, type Logger } from "../logging/logger.js";
 import { smtpSetting } from "../mail/mail-service.js";
 import type { MailTransport, SmtpOptions } from "../mail/transport.js";
+import { NotificationHub } from "../notifications/hub.js";
+import { notificationSettings } from "../notifications/types.js";
 import { Metrics } from "../observability/metrics.js";
 import { organizationSettings } from "../organizations/settings.js";
 import { type AccountServices, createAccountServices, workAccountJobs } from "../services.js";
@@ -56,6 +58,7 @@ export interface ServerRuntime {
   settingsRegistry: SettingsRegistry;
   audit: AuditLog;
   services: AccountServices;
+  notificationHub: NotificationHub;
   /** Undefined for the collaboration server, which does not use jobs yet. */
   jobs: JobQueue | undefined;
   keyRotation: KeyRotation | undefined;
@@ -135,6 +138,7 @@ export async function createServerRuntime(options: {
         ...organizationSettings,
         ...tokenSettings,
         ...preferenceSettings,
+        ...notificationSettings,
         auditRetentionSetting,
         smtpSetting,
       ] as SettingDefinition<never>[]),
@@ -208,6 +212,7 @@ export async function createServerRuntime(options: {
       settingsRegistry,
       audit,
       services,
+      notificationHub: new NotificationHub(listener),
       jobs,
       keyRotation,
       metrics,

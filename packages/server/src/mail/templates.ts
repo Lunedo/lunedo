@@ -1,3 +1,4 @@
+import designTokens from "@pagehall/tokens/design-tokens.json" with { type: "json" };
 import type { supportedLanguages } from "../settings/builtin.js";
 import type { MailMessage } from "./transport.js";
 
@@ -29,6 +30,12 @@ export interface MailTemplates {
   guestInactive: { instanceName: string; organizationName: string; guestName: string; days: number };
   tokenExpiring: { instanceName: string; tokenName: string; date: string };
   serviceAccountUnattended: { instanceName: string; serviceAccountName: string; organizationName: string };
+  signInNewBrowser: {
+    instanceName: string;
+    browser: string | null;
+    operatingSystem: string | null;
+    clientIp: string | null;
+  };
   accessExpiring: {
     instanceName: string;
     organizationName: string;
@@ -44,6 +51,16 @@ interface Content {
   subject: string;
   paragraphs: string[];
   action?: { label: string; url: string };
+}
+
+function describeBrowser(
+  browser: string | null,
+  operatingSystem: string | null,
+  unknown: string,
+  on: string,
+): string {
+  if (!browser) return operatingSystem ?? unknown;
+  return operatingSystem ? `${browser} ${on} ${operatingSystem}` : browser;
 }
 
 type Catalog = { [K in MailTemplate]: (params: MailTemplates[K]) => Content };
@@ -148,6 +165,13 @@ const catalogs: Record<Language, Catalog> = {
         `The API token ${tokenName} on ${instanceName} expires on ${date}. Create a new token before then, or scripts using it will stop working.`,
       ],
     }),
+    signInNewBrowser: ({ instanceName, browser, operatingSystem, clientIp }) => ({
+      subject: `New sign-in to ${instanceName}`,
+      paragraphs: [
+        `Your account on ${instanceName} was used to sign in from a browser that was not used before: ${describeBrowser(browser, operatingSystem, "an unknown browser", "on")}${clientIp ? `, address ${clientIp}` : ""}.`,
+        NOT_YOU_EN,
+      ],
+    }),
     accessExpiring: ({ instanceName, organizationName, kind, name, date }) => ({
       subject: `Access in ${organizationName} expires soon`,
       paragraphs: [
@@ -249,6 +273,13 @@ const catalogs: Record<Language, Catalog> = {
         `Das API-Token ${tokenName} auf ${instanceName} läuft am ${date} ab. Erstellen Sie vorher ein neues Token, sonst funktionieren Skripte, die es verwenden, nicht mehr.`,
       ],
     }),
+    signInNewBrowser: ({ instanceName, browser, operatingSystem, clientIp }) => ({
+      subject: `Neue Anmeldung bei ${instanceName}`,
+      paragraphs: [
+        `Mit Ihrem Konto auf ${instanceName} wurde sich in einem Browser angemeldet, der bisher nicht verwendet wurde: ${describeBrowser(browser, operatingSystem, "ein unbekannter Browser", "unter")}${clientIp ? `, Adresse ${clientIp}` : ""}.`,
+        NOT_YOU_DE,
+      ],
+    }),
     accessExpiring: ({ instanceName, organizationName, kind, name, date }) => ({
       subject: `Zugang in ${organizationName} läuft bald ab`,
       paragraphs: [
@@ -267,27 +298,96 @@ function escapeHtml(text: string): string {
     .replaceAll("'", "&#39;");
 }
 
+export interface MailBranding {
+  organizationName: string | null;
+  logoUrl: string | null;
+  accentColor: string;
+  preferencesUrl: string | null;
+}
+
+const NEUTRAL = designTokens.color.light;
+
+const FOOTER: Record<Language, { sentBy: (instanceName: string) => string; preferences: string }> = {
+  en: {
+    sentBy: (instanceName) => `Sent by ${instanceName}.`,
+    preferences: "Choose which notifications you receive",
+  },
+  de: {
+    sentBy: (instanceName) => `Gesendet von ${instanceName}.`,
+    preferences: "Wählen Sie, welche Benachrichtigungen Sie erhalten",
+  },
+};
+
+export const defaultBranding: MailBranding = {
+  organizationName: null,
+  logoUrl: null,
+  accentColor: designTokens.color.light.accent,
+  preferencesUrl: null,
+};
+
+const FONT = "font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif";
+
+function layout(language: Language, content: Content, instanceName: string, branding: MailBranding): string {
+  const accent = escapeHtml(branding.accentColor);
+  const name = escapeHtml(branding.organizationName ?? instanceName);
+  const heading = branding.logoUrl
+    ? `<img src="${escapeHtml(branding.logoUrl)}" alt="${name}" height="32" style="display:block;height:32px;max-width:200px;border:0">`
+    : `<span style="${FONT};font-size:15px;font-weight:600;color:${NEUTRAL.text}">${name}</span>`;
+  const body = content.paragraphs.map(
+    (paragraph) => `<p style="margin:0 0 16px">${escapeHtml(paragraph)}</p>`,
+  );
+  if (content.action) {
+    const url = escapeHtml(content.action.url);
+    body.splice(
+      1,
+      0,
+      `<p style="margin:8px 0 24px"><a href="${url}" style="display:inline-block;padding:10px 18px;border-radius:8px;background:${accent};color:${NEUTRAL.onAccent};font-weight:600;text-decoration:none">${escapeHtml(content.action.label)}</a></p>`,
+      `<p style="margin:0 0 16px;font-size:13px;color:${NEUTRAL.textMuted};word-break:break-all">${url}</p>`,
+    );
+  }
+  const footer = [
+    escapeHtml(FOOTER[language].sentBy(instanceName)),
+    ...(branding.preferencesUrl
+      ? [
+          `<a href="${escapeHtml(branding.preferencesUrl)}" style="color:${NEUTRAL.textMuted}">${escapeHtml(FOOTER[language].preferences)}</a>`,
+        ]
+      : []),
+  ].join(" ");
+  return [
+    `<!doctype html><html lang="${language}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(content.subject)}</title></head>`,
+    `<body style="margin:0;padding:0;background:${NEUTRAL.sidebar}">`,
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${NEUTRAL.sidebar}"><tr><td align="center" style="padding:24px 12px">`,
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:${NEUTRAL.surface};border:1px solid ${NEUTRAL.border};border-top:4px solid ${accent};border-radius:12px">`,
+    `<tr><td style="padding:24px 28px 8px">${heading}</td></tr>`,
+    `<tr><td style="padding:8px 28px;${FONT};font-size:15px;line-height:1.6;color:${NEUTRAL.text}">`,
+    `<h1 style="margin:0 0 16px;font-size:18px;line-height:1.3">${escapeHtml(content.subject)}</h1>`,
+    body.join(""),
+    "</td></tr>",
+    `<tr><td style="padding:16px 28px 24px;border-top:1px solid ${NEUTRAL.border};${FONT};font-size:13px;color:${NEUTRAL.textMuted}">${footer}</td></tr>`,
+    "</table></td></tr></table></body></html>",
+  ].join("");
+}
+
 export function renderMail<T extends MailTemplate>(
   template: T,
   language: Language,
   params: MailTemplates[T],
   to: string,
+  branding: MailBranding = defaultBranding,
 ): MailMessage {
   const content = (catalogs[language][template] as (params: MailTemplates[T]) => Content)(params);
   const text = [
     ...content.paragraphs,
     ...(content.action ? [`${content.action.label}: ${content.action.url}`] : []),
+    FOOTER[language].sentBy(params.instanceName),
+    ...(branding.preferencesUrl ? [`${FOOTER[language].preferences}: ${branding.preferencesUrl}`] : []),
   ]
     .join("\n\n")
     .concat("\n");
-  const body = content.paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`);
-  if (content.action) {
-    body.splice(
-      1,
-      0,
-      `<p><a href="${escapeHtml(content.action.url)}">${escapeHtml(content.action.label)}</a></p>`,
-    );
-  }
-  const html = `<!doctype html><html lang="${language}"><head><meta charset="utf-8"><title>${escapeHtml(content.subject)}</title></head><body>${body.join("")}</body></html>`;
-  return { to, subject: content.subject, text, html };
+  return {
+    to,
+    subject: content.subject,
+    text,
+    html: layout(language, content, params.instanceName, branding),
+  };
 }

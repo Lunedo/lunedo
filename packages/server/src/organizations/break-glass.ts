@@ -5,7 +5,7 @@ import { SYSTEM } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Database } from "../database/database.js";
-import type { MailService } from "../mail/mail-service.js";
+import type { NotificationService } from "../notifications/service.js";
 import type { SettingsService } from "../settings/service.js";
 import { breakGlassAccesses } from "./access-schema.js";
 import { lockOrganization } from "./memberships.js";
@@ -32,18 +32,18 @@ function scopeOf(organizationId: string) {
 export class BreakGlassService {
   readonly #database: Database;
   readonly #audit: AuditLog;
-  readonly #mail: MailService;
+  readonly #notifications: NotificationService;
   readonly #settings: SettingsService;
 
   constructor(options: {
     database: Database;
     audit: AuditLog;
-    mail: MailService;
+    notifications: NotificationService;
     settings: SettingsService;
   }) {
     this.#database = options.database;
     this.#audit = options.audit;
-    this.#mail = options.mail;
+    this.#notifications = options.notifications;
     this.#settings = options.settings;
   }
 
@@ -107,26 +107,23 @@ export class BreakGlassService {
         .select({ name: accounts.name })
         .from(accounts)
         .where(eq(accounts.id, actor.id));
-      const owners = await tx.execute<{ id: string; email: string }>(sql`
-        select a.id, a.email from role_assignments ra join accounts a on a.id = ra.principal_id
+      const owners = await tx.execute<{ id: string }>(sql`
+        select a.id from role_assignments ra join accounts a on a.id = ra.principal_id
         where ra.organization_id = ${organizationId} and ra.principal_kind = 'account'
-          and ra.built_in_role = 'owner' and a.state = 'active' and a.email is not null`);
-      const ids: string[] = [];
-      for (const owner of owners.rows) {
-        ids.push(
-          await this.#mail.queue(tx, {
-            to: owner.email,
-            template: "breakGlassStarted",
-            language: await this.#mail.languageOf(owner.id),
-            params: {
-              organizationName: organization?.name ?? "",
-              requesterName: requester?.name ?? "",
-              reason: justification,
-              minutes,
-            },
-          }),
-        );
-      }
+          and ra.built_in_role = 'owner' and a.state = 'active'`);
+      const { mailIds: ids } = await this.#notifications.notify(tx, {
+        type: "breakGlass.started",
+        recipients: owners.rows.map((owner) => owner.id),
+        organizationId,
+        targetId: access.id,
+        actor,
+        params: {
+          organizationName: organization?.name ?? "",
+          requesterName: requester?.name ?? "",
+          reason: justification,
+          minutes,
+        },
+      });
       await this.#audit.record(tx, {
         name: "breakGlass.started",
         actor,
@@ -136,7 +133,7 @@ export class BreakGlassService {
       });
       return { access, mailIds: ids };
     });
-    await this.#mail.dispatch(mailIds);
+    await this.#notifications.dispatch(mailIds);
     return access;
   }
 

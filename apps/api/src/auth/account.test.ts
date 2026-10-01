@@ -202,7 +202,10 @@ describe.skipIf(!databaseBaseUrl)("account security", () => {
       expect(known.statusCode).toBe(202);
       expect(unknown.body).toBe(known.body);
       await runPasswordResetJobs(test);
-      expect(test.mail.sent.slice(sentBefore).map((mail) => mail.to)).toEqual([account.email]);
+      const resets = test.mail.sent
+        .slice(sentBefore)
+        .filter((mail) => mail.subject.startsWith("Reset your password"));
+      expect(resets.map((mail) => mail.to)).toEqual([account.email]);
     });
 
     it("rejects expired tokens and keeps only the newest token", async () => {

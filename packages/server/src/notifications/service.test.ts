@@ -1,0 +1,335 @@
+import { randomUUID } from "node:crypto";
+import { notificationSettingKey } from "@pagehall/shared";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { instanceUrlSetting } from "../accounts/instance-settings.js";
+import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
+import { NotificationListener } from "../database/notifications.js";
+import { createLogger } from "../logging/logger.js";
+import { smtpSetting } from "../mail/mail-service.js";
+import { accentColorSetting } from "../settings/preferences.js";
+import { testDatabaseBaseUrl } from "../testing/database.js";
+import { deliverPendingMail } from "../testing/jobs.js";
+import { createTestServices, type TestServices } from "../testing/services.js";
+import { NotificationHub } from "./hub.js";
+import type { NotifyInput } from "./service.js";
+import { notificationPreferenceSetting, notificationRetentionSetting } from "./types.js";
+
+const baseUrl = testDatabaseBaseUrl();
+
+const PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+  "base64",
+);
+
+const SMTP = {
+  host: "smtp.example.org",
+  port: 25,
+  security: "none" as const,
+  username: null,
+  from: "w@example.org",
+};
+
+describe.skipIf(!baseUrl)("notifications", () => {
+  let test: TestServices;
+
+  beforeAll(async () => {
+    test = await createTestServices(baseUrl ?? "");
+    await test.pool.query("insert into instance (id, setup_completed_at) values (1, now())");
+    await test.settings.set(instanceUrlSetting, {}, "instance", "https://wiki.example.org");
+  });
+
+  afterAll(async () => {
+    await test?.close();
+  });
+
+  async function standard(home: string | null): Promise<{ id: string; email: string }> {
+    const email = `${randomUUID()}@example.org`;
+    const account = await test.database.transaction((tx) =>
+      test.services.accounts.createStandard(tx, {
+        email,
+        name: "Person",
+        password: "a long test passphrase",
+        homeOrganizationId: home,
+      }),
+    );
+    return { id: account.id, email };
+  }
+
+  async function organization() {
+    const owner = await standard(null);
+    const created = await test.services.organizations.createAsActor(SYSTEM, {
+      name: `Organization ${randomUUID().slice(0, 8)}`,
+      ownerAccountId: owner.id,
+    });
+    return { id: created.id, name: created.name, owner };
+  }
+
+  function guestNotice(
+    organizationId: string,
+    recipients: string[],
+    targetId: string = randomUUID(),
+  ): NotifyInput {
+    return {
+      type: "guest.expiring",
+      recipients,
+      organizationId,
+      targetId,
+      params: { organizationName: "Org", guestName: "Gina <Guest>", expiresAt: "2026-10-20T10:00:00.000Z" },
+    };
+  }
+
+  async function notify(input: NotifyInput) {
+    const result = await test.database.transaction((tx) => test.services.notifications.notify(tx, input));
+    await test.services.notifications.dispatch(result.mailIds);
+    return result;
+  }
+
+  async function rows(recipientId: string) {
+    const result = await test.pool.query<{ type: string; count: number; read_at: Date | null }>(
+      "select type, count, read_at from notifications where recipient_id = $1 order by created_at",
+      [recipientId],
+    );
+    return result.rows;
+  }
+
+  it("combines events on the same target within a short time into one notification", async () => {
+    const org = await organization();
+    const target = randomUUID();
+    await notify(guestNotice(org.id, [org.owner.id], target));
+    await notify(guestNotice(org.id, [org.owner.id], target));
+    await notify(guestNotice(org.id, [org.owner.id]));
+    expect((await rows(org.owner.id)).map((row) => row.count)).toEqual([2, 1]);
+
+    const [first] = (await test.services.notifications.list(org.owner.id, { limit: 10 })).items.slice(-1);
+    expect(await test.services.notifications.markRead(org.owner.id, first?.id ?? "")).toBe(true);
+    await notify(guestNotice(org.id, [org.owner.id], target));
+    expect((await rows(org.owner.id)).map((row) => row.count)).toEqual([2, 1, 1]);
+
+    await test.pool.query(
+      "update notifications set updated_at = now() - interval '1 hour' where recipient_id = $1",
+      [org.owner.id],
+    );
+    await notify(guestNotice(org.id, [org.owner.id], target));
+    expect(await rows(org.owner.id)).toHaveLength(4);
+  });
+
+  it("never creates two notifications when two nodes notify at the same moment", async () => {
+    const org = await organization();
+    const target = randomUUID();
+    await Promise.all(Array.from({ length: 6 }, () => notify(guestNotice(org.id, [org.owner.id], target))));
+    expect(await rows(org.owner.id)).toEqual([expect.objectContaining({ count: 6 })]);
+  });
+
+  it("hides notifications whose target the recipient can no longer see", async () => {
+    const org = await organization();
+    const administrator = await standard(org.id);
+    const assignment = await test.services.roles.assign(SYSTEM, {
+      scope: "organization",
+      organizationId: org.id,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: administrator.id },
+    });
+    await notify(guestNotice(org.id, [administrator.id]));
+    expect(await test.services.notifications.unreadCount(administrator.id)).toBe(1);
+
+    await test.services.roles.unassign(SYSTEM, "organization", org.id, assignment.id);
+    expect(await test.services.notifications.unreadCount(administrator.id)).toBe(0);
+    expect((await test.services.notifications.list(administrator.id, { limit: 10 })).items).toEqual([]);
+  });
+
+  it("shows guest notices to the guest's responsible person without administrator rights", async () => {
+    const org = await organization();
+    const responsible = await standard(org.id);
+    const guest = await standard(null);
+    await test.pool.query(
+      "insert into memberships (id, organization_id, account_id, kind, responsible_account_id) values (gen_random_uuid(), $1, $2, 'guest', $3)",
+      [org.id, guest.id, responsible.id],
+    );
+    await notify(guestNotice(org.id, [responsible.id], guest.id));
+    const page = await test.services.notifications.list(responsible.id, { limit: 10 });
+    expect(page.items).toEqual([
+      expect.objectContaining({
+        type: "guest.expiring",
+        organizationId: org.id,
+        target: { type: "account", id: guest.id },
+        count: 1,
+        readAt: null,
+      }),
+    ]);
+  });
+
+  it("pages over hidden notifications without losing visible ones", async () => {
+    const org = await organization();
+    const other = await organization();
+    for (let index = 0; index < 5; index += 1) {
+      await notify(guestNotice(org.id, [org.owner.id]));
+      await notify(guestNotice(other.id, [org.owner.id]));
+    }
+    const seen: string[] = [];
+    let after: [string, string] | undefined;
+    do {
+      const page = await test.services.notifications.list(org.owner.id, { limit: 2, after });
+      seen.push(...page.items.map((item) => item.organizationId ?? ""));
+      after = page.next ?? undefined;
+    } while (after);
+    expect(seen).toEqual([org.id, org.id, org.id, org.id, org.id]);
+  });
+
+  it("follows the preferences of instance, organization and user", async () => {
+    await test.settings.set(smtpSetting, {}, "instance", SMTP);
+    const org = await organization();
+    const setting = notificationPreferenceSetting("guest.expiring");
+    await test.settings.set(setting, { organization: org.id }, "organization", { inApp: true, email: false });
+
+    const first = await notify(guestNotice(org.id, [org.owner.id]));
+    expect(first.mailIds).toEqual([]);
+    expect(await rows(org.owner.id)).toHaveLength(1);
+
+    await test.settings.set(setting, { organization: org.id, user: org.owner.id }, "user", {
+      inApp: false,
+      email: true,
+    });
+    const second = await notify(guestNotice(org.id, [org.owner.id]));
+    expect(second.mailIds).toHaveLength(1);
+    expect(await rows(org.owner.id)).toHaveLength(1);
+    expect(setting.key).toBe(notificationSettingKey("guest.expiring"));
+    expect(setting.key).toBe("notifications.guestExpiring");
+    await test.settings.set(smtpSetting, {}, "instance", null);
+  });
+
+  it("sends e-mail only when a mail server is configured, with the organization's logo and color", async () => {
+    const org = await organization();
+    const quiet = await notify(guestNotice(org.id, [org.owner.id]));
+    expect(quiet.mailIds).toEqual([]);
+
+    await test.settings.set(smtpSetting, {}, "instance", SMTP);
+    await test.settings.set(accentColorSetting, { organization: org.id }, "organization", "violet");
+    const updated = await test.services.organizations.setLogo(SYSTEM, org.id, {
+      contentType: "image/png",
+      data: PNG,
+    });
+    const sent = await notify(guestNotice(org.id, [org.owner.id]));
+    expect(sent.mailIds).toHaveLength(1);
+    await deliverPendingMail(test.services, test.database);
+    const mail = test.mail.sent.filter((entry) => entry.to === org.owner.email).at(-1);
+    expect(mail?.subject).toContain("Gina <Guest>");
+    expect(mail?.html).toContain("Gina &lt;Guest&gt;");
+    expect(mail?.html).toContain(
+      `https://wiki.example.org/api/v1/organizations/${org.id}/logo?v=${updated.logoRef}`,
+    );
+    expect(mail?.html).toContain("#6B4FB3");
+    expect(mail?.html).toContain('href="https://wiki.example.org/settings/notifications"');
+    expect(mail?.text).toContain("https://wiki.example.org/settings/notifications");
+    expect(mail?.text).toContain("20 October 2026");
+    await test.settings.set(smtpSetting, {}, "instance", null);
+  });
+
+  it("skips deactivated recipients", async () => {
+    const org = await organization();
+    const person = await standard(org.id);
+    await test.pool.query("update accounts set state = 'deactivated' where id = $1", [person.id]);
+    const result = await notify(guestNotice(org.id, [person.id, org.owner.id]));
+    expect(result.recipients).toBe(1);
+    expect(await rows(person.id)).toEqual([]);
+  });
+
+  it("marks one or all notifications as read, only for their recipient", async () => {
+    const org = await organization();
+    const stranger = await standard(null);
+    await notify(guestNotice(org.id, [org.owner.id]));
+    await notify(guestNotice(org.id, [org.owner.id]));
+    const [newest] = (await test.services.notifications.list(org.owner.id, { limit: 10 })).items;
+    expect(await test.services.notifications.markRead(stranger.id, newest?.id ?? "")).toBe(false);
+    expect(await test.services.notifications.markRead(org.owner.id, newest?.id ?? "")).toBe(true);
+    expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(1);
+
+    const before = new Date(Date.now() - 60_000);
+    expect(await test.services.notifications.markAllRead(org.owner.id, before)).toBe(0);
+    expect(await test.services.notifications.markAllRead(org.owner.id)).toBe(1);
+    expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(0);
+    const unread = await test.services.notifications.list(org.owner.id, { limit: 10, unreadOnly: true });
+    expect(unread.items).toEqual([]);
+  });
+
+  it("removes notifications older than the retention period", async () => {
+    const org = await organization();
+    await notify(guestNotice(org.id, [org.owner.id]));
+    await notify(guestNotice(org.id, [org.owner.id]));
+    await test.settings.set(notificationRetentionSetting, {}, "instance", 30);
+    await test.pool.query(
+      "update notifications set updated_at = now() - interval '31 days' where id = (select id from notifications where recipient_id = $1 limit 1)",
+      [org.owner.id],
+    );
+    expect(await test.services.notifications.applyRetention()).toBeGreaterThanOrEqual(1);
+    expect(await rows(org.owner.id)).toHaveLength(1);
+    await test.settings.set(notificationRetentionSetting, {}, "instance", 90);
+  });
+
+  it("rejects unknown types and invalid parameters", async () => {
+    const org = await organization();
+    await expect(notify({ ...guestNotice(org.id, [org.owner.id]), type: "unknown.type" })).rejects.toThrow(
+      "Unknown notification type",
+    );
+    await expect(
+      notify({ ...guestNotice(org.id, [org.owner.id]), params: { guestName: 1 } }),
+    ).rejects.toThrow();
+  });
+
+  it("tells every node about new notifications of an account after the commit", async () => {
+    const org = await organization();
+    const logger = createLogger({ service: "test", level: "silent" });
+    const listeners = [
+      new NotificationListener({ connectionString: test.url, logger }),
+      new NotificationListener({ connectionString: test.url, logger }),
+    ];
+    try {
+      const hubs = listeners.map((listener) => new NotificationHub(listener));
+      const received = [0, 0];
+      const unsubscribe = await Promise.all(
+        hubs.map((hub, index) =>
+          hub.subscribe(org.owner.id, () => {
+            received[index] = (received[index] ?? 0) + 1;
+          }),
+        ),
+      );
+      const other = await standard(null);
+      let foreign = 0;
+      await hubs[0]?.subscribe(other.id, () => {
+        foreign += 1;
+      });
+      await test.database.transaction(async (tx) => {
+        await test.services.notifications.notify(tx, guestNotice(org.id, [org.owner.id]));
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        expect(received).toEqual([0, 0]);
+      });
+      await expect.poll(() => received, { timeout: 5000 }).toEqual([1, 1]);
+      expect(foreign).toBe(0);
+      for (const remove of unsubscribe) remove();
+      expect(hubs[1]?.subscriptions).toBe(0);
+    } finally {
+      for (const listener of listeners) await listener.close();
+    }
+  });
+
+  it("explains a notification only to those who may see its target", async () => {
+    const org = await organization();
+    const outsider = await standard(null);
+    await notify({
+      type: "breakGlass.started",
+      recipients: [org.owner.id, outsider.id],
+      organizationId: org.id,
+      targetId: randomUUID(),
+      actor: accountPrincipal(outsider.id),
+      params: {
+        organizationName: org.name,
+        requesterName: "Person",
+        reason: "A long enough reason",
+        minutes: 60,
+      },
+    });
+    expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(1);
+    expect(await test.services.notifications.unreadCount(outsider.id)).toBe(0);
+    const [item] = (await test.services.notifications.list(org.owner.id, { limit: 1 })).items;
+    expect(item?.actor).toEqual({ type: "account", id: outsider.id, name: "Person" });
+  });
+});
