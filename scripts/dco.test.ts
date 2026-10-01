@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { type Commit, commitsWithoutSignOff, parseGitLog } from "./dco.ts";
+import { type Commit, commitsWithoutSignOff, parseGitLog, parseIdent } from "./dco.ts";
 
 function commit(message: string): Commit {
   return { sha: "abc", authorName: "Ada Lovelace", authorEmail: "ada@example.org", message };
@@ -43,5 +43,18 @@ describe("parseGitLog", () => {
     assert.equal(commits[0]?.sha, "a1");
     assert.equal(commits[1]?.authorEmail, "bob@example.org");
     assert.match(commits[0]?.message ?? "", /Signed-off-by/);
+  });
+});
+
+describe("parseIdent", () => {
+  it("reads name and e-mail address of an author identity", () => {
+    assert.deepEqual(parseIdent("Ada Lovelace <ada@example.org> 1790000000 +0200\n"), {
+      authorName: "Ada Lovelace",
+      authorEmail: "ada@example.org",
+    });
+  });
+
+  it("rejects an identity without an e-mail address", () => {
+    assert.throws(() => parseIdent("Ada Lovelace"), /Unexpected Git identity/);
   });
 });

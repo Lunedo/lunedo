@@ -28,3 +28,10 @@ export function parseGitLog(output: string): Commit[] {
       return { sha, authorName, authorEmail, message };
     });
 }
+
+/** Reads name and e-mail address from a Git identity such as `git var GIT_AUTHOR_IDENT` prints it. */
+export function parseIdent(ident: string): Pick<Commit, "authorName" | "authorEmail"> {
+  const match = /^(.*?)\s*<([^>]*)>/.exec(ident.trim());
+  if (!match) throw new Error(`Unexpected Git identity: ${ident}`);
+  return { authorName: match[1] ?? "", authorEmail: match[2] ?? "" };
+}

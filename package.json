@@ -20,6 +20,7 @@
     "test:e2e": "turbo run test:e2e",
     "licenses:check": "node scripts/check-licenses.ts",
     "dco:check": "node scripts/check-dco.ts",
+    "prepare": "node scripts/install-hooks.ts",
     "lint:fix": "biome check --write ."
   },
   "devDependencies": {

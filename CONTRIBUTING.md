@@ -44,6 +44,8 @@ git commit -s
 
 This adds a `Signed-off-by` line with your name and e-mail address. It must match the commit author. CI checks every commit of a pull request; pull requests opened by Dependabot are exempt. There is no Contributor License Agreement.
 
+`pnpm install` sets `core.hooksPath` to `.githooks`, whose `commit-msg` hook rejects a commit without a sign-off by its author, so a missing sign-off is caught before it reaches a pull request.
+
 ## Code style
 
 - TypeScript in strict mode everywhere. Avoid `any`; where it cannot be avoided, the reason is visible in the same line.
