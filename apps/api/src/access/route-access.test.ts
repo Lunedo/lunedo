@@ -7,8 +7,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { configureApp, createFastifyAdapter } from "../app.js";
 import { AppModule } from "../app.module.js";
 import type { ApiContext } from "../context.js";
-import { PublicRoute } from "./route-access.js";
 import { RouteAccessGuard } from "./route-access.guard.js";
+import { PublicRoute } from "./route-access.js";
 import { registeredRoutes } from "./route-access.verifier.js";
 
 const context: ApiContext = {
