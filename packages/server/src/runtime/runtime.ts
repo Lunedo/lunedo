@@ -1,11 +1,12 @@
+import { randomBytes } from "node:crypto";
 import type { HealthCheck } from "@pagehall/shared";
-import { ensureSecretFile, generateKey, generateToken } from "../config/generated-secrets.js";
+import { ensureSecretFile, generateToken } from "../config/generated-secrets.js";
 import { type Env, loadConfig, type ServerConfig } from "../config/load.js";
 import { Secret } from "../config/secret.js";
 import { encryptedColumns } from "../crypto/encrypted-column.js";
 import { Encryption } from "../crypto/envelope.js";
 import { createKeyProvider } from "../crypto/key-provider.js";
-import { KeyRingError, SecretKey } from "../crypto/key-ring.js";
+import { formatKeyEntry, KEY_LENGTH, type KeyRing, KeyRingError, parseKeyRing } from "../crypto/key-ring.js";
 import { KeyRingHolder } from "../crypto/key-ring-holder.js";
 import { KeyRotation, rotateDataKeysJob } from "../crypto/rotation.js";
 import { masterStreamKeys, type StreamKeys } from "../crypto/stream.js";
@@ -47,17 +48,18 @@ export interface ServerRuntime {
 /** Secrets that are generated into the secrets volume on first start unless configured. */
 export function resolveGeneratedSecrets(config: ServerConfig): {
   metricsToken: Secret;
-  backupKey: SecretKey;
+  backupKeys: KeyRing;
 } {
   const metricsToken =
     config.metricsToken ?? ensureSecretFile(config.paths.secrets, "metrics-token", generateToken);
-  const backupKeyText =
-    config.keys.backupKey ?? ensureSecretFile(config.paths.secrets, "backup-key", generateKey);
-  const backupKeyBytes = Buffer.from(backupKeyText.reveal(), "base64");
-  if (backupKeyBytes.length !== 32) {
-    throw new KeyRingError("PAGEHALL_BACKUP_KEY must be 32 bytes, encoded as base64");
+  const backupKeys =
+    config.keys.backupKeys ??
+    ensureSecretFile(config.paths.secrets, "backup-keys", () => formatKeyEntry(1, randomBytes(KEY_LENGTH)));
+  try {
+    return { metricsToken, backupKeys: parseKeyRing(backupKeys.reveal()) };
+  } catch (error) {
+    throw new KeyRingError(`PAGEHALL_BACKUP_KEY: ${(error as Error).message}`);
   }
-  return { metricsToken, backupKey: new SecretKey(backupKeyBytes) };
 }
 
 /**

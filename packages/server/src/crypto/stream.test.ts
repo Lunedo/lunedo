@@ -4,7 +4,7 @@ import { buffer } from "node:stream/consumers";
 import { pipeline } from "node:stream/promises";
 import { describe, expect, it } from "vitest";
 import { DecryptionError } from "./envelope.js";
-import { formatKeyEntry, KeyRingError, parseKeyRing, SecretKey } from "./key-ring.js";
+import { formatKeyEntry, KeyRingError, parseKeyRing } from "./key-ring.js";
 import {
   backupStreamKeys,
   createDecryptStream,
@@ -132,22 +132,63 @@ describe("stream encryption", () => {
 });
 
 describe("backup keys", () => {
-  const backupKey = new SecretKey(randomBytes(32));
+  const key1 = randomBytes(32);
+  const key2 = randomBytes(32);
+  const ring = (...entries: [number, Buffer][]) =>
+    parseKeyRing(entries.map(([version, key]) => formatKeyEntry(version, key)).join("\n"));
 
-  it("round-trips with the backup key", async () => {
+  it("round-trip with the current backup key version", async () => {
     const data = randomBytes(200);
-    const keys = backupStreamKeys(backupKey);
+    const keys = backupStreamKeys(ring([1, key1]));
     expect((await decrypt(await encrypt(data, keys), keys)).equals(data)).toBe(true);
   });
 
-  it("reports a different backup key before decrypting", async () => {
-    const ciphertext = await encrypt(randomBytes(20), backupStreamKeys(backupKey));
-    const other = backupStreamKeys(new SecretKey(randomBytes(32)));
-    await expect(decrypt(ciphertext, other)).rejects.toThrow("different backup key");
+  it("stay readable after a new version is added", async () => {
+    const data = randomBytes(50);
+    const ciphertext = await encrypt(data, backupStreamKeys(ring([1, key1])));
+    const rotated = backupStreamKeys(ring([1, key1], [2, key2]));
+    expect((await decrypt(ciphertext, rotated)).equals(data)).toBe(true);
   });
 
-  it("does not accept master key streams as backups", async () => {
+  it("report a missing version before decrypting", async () => {
+    const ciphertext = await encrypt(randomBytes(20), backupStreamKeys(ring([2, key2])));
+    await expect(decrypt(ciphertext, backupStreamKeys(ring([1, key1])))).rejects.toThrow(
+      "Backup key version 2 is not available",
+    );
+  });
+
+  it("report a different key under the same version", async () => {
+    const ciphertext = await encrypt(randomBytes(20), backupStreamKeys(ring([1, key1])));
+    await expect(decrypt(ciphertext, backupStreamKeys(ring([1, key2])))).rejects.toThrow("different key");
+  });
+
+  it("do not accept master key streams as backups", async () => {
     const ciphertext = await encrypt(randomBytes(20));
-    await expect(decrypt(ciphertext, backupStreamKeys(backupKey))).rejects.toThrow(KeyRingError);
+    await expect(decrypt(ciphertext, backupStreamKeys(ring([1, key1])))).rejects.toThrow(KeyRingError);
+  });
+});
+
+describe("associated data", () => {
+  async function roundTrip(written: Buffer, read: Buffer) {
+    const ciphertext = await buffer(
+      Readable.from([randomBytes(100)]).pipe(
+        createEncryptStream(master, { chunkSize: 16, associatedData: written }),
+      ),
+    );
+    const chunks: Buffer[] = [];
+    await pipeline(
+      Readable.from([ciphertext]),
+      createDecryptStream(master, { associatedData: read }),
+      async (source) => {
+        for await (const chunk of source) chunks.push(chunk as Buffer);
+      },
+    );
+    return Buffer.concat(chunks);
+  }
+
+  it("must match to decrypt", async () => {
+    expect(await roundTrip(Buffer.from("header"), Buffer.from("header"))).toHaveLength(100);
+    await expect(roundTrip(Buffer.from("header"), Buffer.from("headex"))).rejects.toThrow(DecryptionError);
+    await expect(roundTrip(Buffer.from("header"), Buffer.alloc(0))).rejects.toThrow(DecryptionError);
   });
 });

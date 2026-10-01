@@ -1,22 +1,58 @@
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream, type Dirent } from "node:fs";
-import { mkdir, readdir, rename, rm, stat } from "node:fs/promises";
+import { mkdir, open, readdir, rename, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { createGunzip, createGzip } from "node:zlib";
 import tar from "tar-stream";
 import { z } from "zod";
-import type { SecretKey } from "../crypto/key-ring.js";
-import { backupStreamKeys, createDecryptStream, createEncryptStream } from "../crypto/stream.js";
+import type { KeyRing } from "../crypto/key-ring.js";
+import {
+  backupKeyFingerprint,
+  backupStreamKeys,
+  createDecryptStream,
+  createEncryptStream,
+  DEFAULT_CHUNK_SIZE,
+} from "../crypto/stream.js";
 import type { Logger } from "../logging/logger.js";
 import type { DatabaseArchiver } from "./postgres.js";
 
+/*
+ * Backup file layout:
+ *
+ *   0   magic "PHBK"            4 bytes
+ *   4   format version           uint16, big endian
+ *   6   header length n          uint32, big endian
+ *   10  header                   n bytes of UTF-8 JSON, not encrypted
+ *   10+n encrypted stream        stream format of the crypto module under the backup key;
+ *                                every chunk authenticates bytes 0 to 10+n
+ *
+ * Inside the stream: a gzip-compressed tar archive whose last entry is manifest.json.
+ */
 export const BACKUP_FORMAT_VERSION = 1;
+const MAGIC = Buffer.from("PHBK");
+const PREFIX_LENGTH = 10;
+const MAX_HEADER_LENGTH = 64 * 1024;
+const CIPHER = "AES-256-GCM";
 const DATABASE_ENTRY = "database.dump";
 const FILES_PREFIX = "files/";
 const CONFIG_PREFIX = "config/";
 const MANIFEST_ENTRY = "manifest.json";
+
+const headerSchema = z.object({
+  pagehallVersion: z.string(),
+  schemaVersion: z.string(),
+  createdAt: z.iso.datetime(),
+  key: z.object({
+    version: z.int().positive(),
+    fingerprint: z.string().regex(/^[0-9a-f]{16}$/),
+  }),
+  cipher: z.string(),
+  chunkSize: z.int().positive(),
+});
+
+export type BackupHeader = z.infer<typeof headerSchema>;
 
 const manifestSchema = z.object({
   format: z.literal(BACKUP_FORMAT_VERSION),
@@ -52,6 +88,15 @@ function isKnownEntry(name: string): boolean {
   return false;
 }
 
+const ENTRY_TYPE_NAMES: Record<string, string> = {
+  symlink: "a symbolic link",
+  link: "a hard link",
+  "character-device": "a device file",
+  "block-device": "a device file",
+  fifo: "a named pipe",
+  directory: "a directory",
+};
+
 class Hasher extends Transform {
   readonly hash = createHash("sha256");
   size = 0;
@@ -66,6 +111,121 @@ class Hasher extends Transform {
   digest(): string {
     return this.hash.digest("hex");
   }
+}
+
+export function encodeBackupHeader(header: BackupHeader, formatVersion = BACKUP_FORMAT_VERSION): Buffer {
+  const json = Buffer.from(JSON.stringify(header), "utf8");
+  const prefix = Buffer.alloc(PREFIX_LENGTH);
+  MAGIC.copy(prefix, 0);
+  prefix.writeUInt16BE(formatVersion, 4);
+  prefix.writeUInt32BE(json.length, 6);
+  return Buffer.concat([prefix, json]);
+}
+
+/** Reads the unencrypted header without touching the rest of the file. */
+export async function readBackupHeader(input: string): Promise<{ header: BackupHeader; bytes: Buffer }> {
+  const file = await open(input, "r");
+  try {
+    const prefix = Buffer.alloc(PREFIX_LENGTH);
+    const { bytesRead } = await file.read(prefix, 0, PREFIX_LENGTH, 0);
+    if (bytesRead < PREFIX_LENGTH || !prefix.subarray(0, 4).equals(MAGIC)) {
+      throw new BackupError(`${input} is not a Pagehall backup`);
+    }
+    const formatVersion = prefix.readUInt16BE(4);
+    if (formatVersion !== BACKUP_FORMAT_VERSION) {
+      throw new BackupError(
+        `The backup uses format version ${formatVersion}, which this Pagehall version cannot read. Restore it with the Pagehall version that created it or a newer one.`,
+      );
+    }
+    const length = prefix.readUInt32BE(6);
+    if (length > MAX_HEADER_LENGTH) throw new BackupError("The backup header is damaged");
+    const json = Buffer.alloc(length);
+    const read = await file.read(json, 0, length, PREFIX_LENGTH);
+    if (read.bytesRead < length) throw new BackupError("The backup header is damaged");
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(json.toString("utf8"));
+    } catch {
+      throw new BackupError("The backup header is damaged");
+    }
+    const header = headerSchema.safeParse(parsed);
+    if (!header.success) throw new BackupError("The backup header is damaged");
+    return { header: header.data, bytes: Buffer.concat([prefix, json]) };
+  } finally {
+    await file.close();
+  }
+}
+
+/**
+ * Checks a header against this installation before any data is read. Each failure tells
+ * the administrator what to do.
+ */
+export function checkBackupHeader(
+  header: BackupHeader,
+  options: { backupKeys: KeyRing; knownSchemaVersions: readonly string[] },
+): void {
+  if (header.cipher !== CIPHER) {
+    throw new BackupError(
+      `The backup is encrypted with ${header.cipher}, which this Pagehall version does not support. Restore it with the Pagehall version that created it or a newer one.`,
+    );
+  }
+  if (!options.knownSchemaVersions.includes(header.schemaVersion)) {
+    throw new BackupError(
+      `The backup was created by Pagehall ${header.pagehallVersion} with schema version ${header.schemaVersion}, which is newer than this Pagehall version supports. Update Pagehall to version ${header.pagehallVersion} or newer and run the command again.`,
+    );
+  }
+  const { version, fingerprint } = header.key;
+  if (!options.backupKeys.has(version)) {
+    throw new BackupError(
+      `The backup is encrypted with backup key version ${version} (fingerprint ${fingerprint}), which is not configured. Add this key version to PAGEHALL_BACKUP_KEY or to the backup-keys file in the secrets directory and run the command again.`,
+    );
+  }
+  const configured = backupKeyFingerprint(options.backupKeys.get(version)).toString("hex");
+  if (configured !== fingerprint) {
+    throw new BackupError(
+      `The backup is encrypted with backup key version ${version} (fingerprint ${fingerprint}), but the configured key version ${version} has fingerprint ${configured}. Configure the key the backup was created with.`,
+    );
+  }
+}
+
+export interface BackupArchiveWriter {
+  header: BackupHeader;
+  pack: tar.Pack;
+  /** Resolves when the archive has been finalized and written. */
+  finished: Promise<void>;
+}
+
+/** Writes the header and opens the encrypted archive behind it. Callers add entries and finalize `pack`. */
+export function openBackupArchive(options: {
+  output: string;
+  backupKeys: KeyRing;
+  pagehallVersion: string;
+  schemaVersion: string;
+  chunkSize?: number;
+}): BackupArchiveWriter {
+  const chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE;
+  const header: BackupHeader = {
+    pagehallVersion: options.pagehallVersion,
+    schemaVersion: options.schemaVersion,
+    createdAt: new Date().toISOString(),
+    key: {
+      version: options.backupKeys.currentVersion,
+      fingerprint: backupKeyFingerprint(options.backupKeys.current()).toString("hex"),
+    },
+    cipher: CIPHER,
+    chunkSize,
+  };
+  const headerBytes = encodeBackupHeader(header);
+  const pack = tar.pack();
+  const output = createWriteStream(options.output, { mode: 0o600 });
+  output.write(headerBytes);
+  const finished = pipeline(
+    pack,
+    createGzip(),
+    createEncryptStream(backupStreamKeys(options.backupKeys), { chunkSize, associatedData: headerBytes }),
+    output,
+  );
+  return { header, pack, finished };
 }
 
 async function listFiles(root: string): Promise<string[]> {
@@ -99,7 +259,7 @@ async function isEmptyDirectory(dir: string): Promise<boolean> {
 
 export interface CreateBackupOptions {
   output: string;
-  backupKey: SecretKey;
+  backupKeys: KeyRing;
   database: DatabaseArchiver;
   filesDir: string;
   /** Configuration files to include, by name. They must not contain the master or backup key. */
@@ -121,13 +281,12 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
   try {
     await pipeline(options.database.dump(), createWriteStream(staged, { mode: 0o600 }));
 
-    const pack = tar.pack();
-    const written = pipeline(
-      pack,
-      createGzip(),
-      createEncryptStream(backupStreamKeys(options.backupKey)),
-      createWriteStream(partial, { mode: 0o600 }),
-    );
+    const { header, pack, finished } = openBackupArchive({
+      output: partial,
+      backupKeys: options.backupKeys,
+      pagehallVersion: options.pagehallVersion,
+      schemaVersion: options.schemaVersion,
+    });
 
     const add = async (name: string, source: Readable, size: number) => {
       const hasher = new Hasher();
@@ -149,9 +308,9 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
 
     const manifest: BackupManifest = {
       format: BACKUP_FORMAT_VERSION,
-      pagehallVersion: options.pagehallVersion,
-      schemaVersion: options.schemaVersion,
-      createdAt: new Date().toISOString(),
+      pagehallVersion: header.pagehallVersion,
+      schemaVersion: header.schemaVersion,
+      createdAt: header.createdAt,
       entries,
     };
     const manifestBytes = Buffer.from(JSON.stringify(manifest, null, 2), "utf8");
@@ -160,7 +319,7 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
       manifestBytes,
     );
     pack.finalize();
-    await written;
+    await finished;
     await rename(partial, options.output);
     options.logger.info({ entries: entries.length, schemaVersion: options.schemaVersion }, "Backup created");
     return manifest;
@@ -172,16 +331,24 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
 
 type EntryHandler = (name: string, content: Readable) => Promise<void>;
 
-/** Decrypts and reads an archive, checks every entry against the manifest and returns it. */
-async function readArchive(
-  input: string,
-  backupKey: SecretKey,
-  handle: EntryHandler,
-): Promise<BackupManifest> {
+interface ReadOptions {
+  input: string;
+  backupKeys: KeyRing;
+  knownSchemaVersions: readonly string[];
+}
+
+/**
+ * Checks the header, then decrypts and reads the archive, checks every entry against the
+ * manifest and returns it.
+ */
+async function readArchive(options: ReadOptions, handle: EntryHandler): Promise<BackupManifest> {
+  const { header, bytes } = await readBackupHeader(options.input);
+  checkBackupHeader(header, options);
+
   const extract = tar.extract();
   const reading = pipeline(
-    createReadStream(input),
-    createDecryptStream(backupStreamKeys(backupKey)),
+    createReadStream(options.input, { start: bytes.length }),
+    createDecryptStream(backupStreamKeys(options.backupKeys), { associatedData: bytes }),
     createGunzip(),
     extract,
   );
@@ -191,7 +358,10 @@ async function readArchive(
     for await (const entry of extract) {
       const name = entry.header.name;
       if (manifest) throw new BackupError("The backup contains data after its manifest");
-      if (entry.header.type !== "file") throw new BackupError(`Unexpected entry type for ${name}`);
+      if (entry.header.type !== "file") {
+        const kind = ENTRY_TYPE_NAMES[entry.header.type] ?? "an unsupported entry";
+        throw new BackupError(`Restore refused: the backup entry ${name} is ${kind}`);
+      }
       if (name === MANIFEST_ENTRY) {
         const chunks: Buffer[] = [];
         for await (const chunk of entry) chunks.push(chunk as Buffer);
@@ -200,7 +370,9 @@ async function readArchive(
         manifest = parsed.data;
         continue;
       }
-      if (!isKnownEntry(name)) throw new BackupError(`Unexpected entry ${name} in the backup`);
+      if (!isKnownEntry(name)) {
+        throw new BackupError(`Restore refused: the backup entry ${name} is outside the restore targets`);
+      }
       const hasher = new Hasher();
       await handle(name, entry.pipe(hasher));
       seen.push({ path: name, size: hasher.size, sha256: hasher.digest() });
@@ -211,6 +383,13 @@ async function readArchive(
     throw error;
   }
   if (!manifest) throw new BackupError("The backup has no manifest; it may be truncated");
+  if (
+    manifest.schemaVersion !== header.schemaVersion ||
+    manifest.pagehallVersion !== header.pagehallVersion ||
+    manifest.createdAt !== header.createdAt
+  ) {
+    throw new BackupError("The backup manifest does not match its header");
+  }
   const expected = new Map(manifest.entries.map((entry) => [entry.path, entry]));
   if (expected.size !== manifest.entries.length || seen.length !== manifest.entries.length) {
     throw new BackupError("The backup entries do not match the manifest");
@@ -228,25 +407,18 @@ async function drain(content: Readable): Promise<void> {
   for await (const _chunk of content);
 }
 
-/** Checks decryption, the manifest and all checksums without restoring anything. */
-export async function verifyBackup(options: {
-  input: string;
-  backupKey: SecretKey;
-}): Promise<BackupManifest> {
-  return readArchive(options.input, options.backupKey, (_name, content) => drain(content));
+/** Checks the header, decryption, the manifest and all checksums without restoring anything. */
+export async function verifyBackup(options: ReadOptions): Promise<BackupManifest> {
+  return readArchive(options, (_name, content) => drain(content));
 }
 
-export interface RestoreBackupOptions {
-  input: string;
-  backupKey: SecretKey;
+export interface RestoreBackupOptions extends ReadOptions {
   database: DatabaseArchiver;
   filesDir: string;
   /** Where configuration files from the backup are written; skipped when not set. */
   configDir?: string | undefined;
   /** Overwrite a database or file store that is not empty. */
   force: boolean;
-  /** Schema versions this Pagehall version knows; newer backups are refused. */
-  knownSchemaVersions: readonly string[];
   logger: Logger;
 }
 
@@ -256,11 +428,6 @@ export interface RestoreBackupOptions {
  */
 export async function restoreBackup(options: RestoreBackupOptions): Promise<BackupManifest> {
   const manifest = await verifyBackup(options);
-  if (!options.knownSchemaVersions.includes(manifest.schemaVersion)) {
-    throw new BackupError(
-      `The backup has schema version ${manifest.schemaVersion}, which this Pagehall version does not know; restore it with the version that created it or a newer one`,
-    );
-  }
 
   const databaseEmpty = await options.database.isEmpty();
   const filesEmpty = await isEmptyDirectory(options.filesDir);
@@ -277,7 +444,7 @@ export async function restoreBackup(options: RestoreBackupOptions): Promise<Back
   }
   await mkdir(options.filesDir, { recursive: true });
 
-  await readArchive(options.input, options.backupKey, async (name, content) => {
+  await readArchive(options, async (name, content) => {
     if (name === DATABASE_ENTRY) {
       await options.database.restore(content);
     } else if (name.startsWith(FILES_PREFIX)) {

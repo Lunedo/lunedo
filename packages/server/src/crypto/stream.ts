@@ -10,7 +10,8 @@ import { KEY_LENGTH, type KeyRing, KeyRingError, type SecretKey } from "./key-ri
  *     0  magic "PHS"          3 bytes
  *     3  format version (1)   1 byte
  *     4  key kind             1 byte: 1 master key, 2 backup key
- *     5  key ID               8 bytes: master key version or backup key fingerprint
+ *     5  key ID               8 bytes: master key version (bytes 4-7), or backup key version
+ *                             (bytes 0-3) and the first 4 bytes of its fingerprint
  *    13  wrap IV              12 bytes
  *    25  wrapped data key     32 bytes (AES-256-GCM, authenticates bytes 0-12)
  *    57  wrap tag             16 bytes
@@ -22,8 +23,9 @@ import { KEY_LENGTH, type KeyRing, KeyRingError, type SecretKey } from "./key-ri
  *     ciphertext and tag
  *
  * Each chunk is encrypted with the data key; its nonce is prefix, chunk counter (uint32)
- * and final flag, and it authenticates the whole header. Reordering, dropping, truncating
- * or appending chunks fails authentication.
+ * and final flag, and it authenticates the caller's associated data followed by the whole
+ * header. Reordering, dropping, truncating or appending chunks fails authentication, and so
+ * does any change to the associated data, such as an unencrypted file header.
  */
 const MAGIC = Buffer.from("PHS");
 const FORMAT_VERSION = 1;
@@ -74,13 +76,31 @@ export function backupKeyFingerprint(key: SecretKey): Buffer {
   return createHash("sha256").update("pagehall-backup-key").update(key.use()).digest().subarray(0, 8);
 }
 
-export function backupStreamKeys(key: SecretKey): StreamKeys {
-  const id = backupKeyFingerprint(key);
+function backupKeyId(version: number, key: SecretKey): Buffer {
+  const id = Buffer.alloc(8);
+  id.writeUInt32BE(version, 0);
+  backupKeyFingerprint(key).copy(id, 4, 0, 4);
+  return id;
+}
+
+/** Backup keys are versioned like master keys; new backups use the current version. */
+export function backupStreamKeys(ring: KeyRing): StreamKeys {
   return {
-    current: () => ({ kind: "backup", id, key }),
+    current: () => ({
+      kind: "backup",
+      id: backupKeyId(ring.currentVersion, ring.current()),
+      key: ring.current(),
+    }),
     resolve(kind, streamId) {
       if (kind !== "backup") throw new KeyRingError("The data is not encrypted with a backup key");
-      if (!streamId.equals(id)) throw new KeyRingError("The data was encrypted with a different backup key");
+      const version = streamId.readUInt32BE(0);
+      if (!ring.has(version)) throw new KeyRingError(`Backup key version ${version} is not available`);
+      const key = ring.get(version);
+      if (!streamId.equals(backupKeyId(version, key))) {
+        throw new KeyRingError(
+          `The data was encrypted with a different key than backup key version ${version}`,
+        );
+      }
       return key;
     },
   };
@@ -96,6 +116,7 @@ function nonce(prefix: Buffer, counter: number, final: boolean): Buffer {
 
 class EncryptStream extends Transform {
   readonly #header: Buffer;
+  readonly #aad: Buffer;
   readonly #dataKey: Buffer;
   readonly #prefix: Buffer;
   readonly #chunkSize: number;
@@ -104,7 +125,7 @@ class EncryptStream extends Transform {
   #counter = 0;
   #headerSent = false;
 
-  constructor(keys: StreamKeys, chunkSize: number) {
+  constructor(keys: StreamKeys, chunkSize: number, associatedData: Buffer) {
     super();
     if (!Number.isInteger(chunkSize) || chunkSize < 1 || chunkSize > MAX_CHUNK_SIZE) {
       throw new RangeError("Invalid chunk size");
@@ -129,6 +150,7 @@ class EncryptStream extends Transform {
     this.#prefix.copy(head, 73);
     head.writeUInt32BE(chunkSize, 80);
     this.#header = head;
+    this.#aad = Buffer.concat([associatedData, head]);
   }
 
   #sendHeader() {
@@ -141,7 +163,7 @@ class EncryptStream extends Transform {
   #emitChunk(plaintext: Buffer, final: boolean) {
     if (this.#counter > 0xffffffff) throw new RangeError("Stream too long");
     const cipher = createCipheriv("aes-256-gcm", this.#dataKey, nonce(this.#prefix, this.#counter, final));
-    cipher.setAAD(this.#header);
+    cipher.setAAD(this.#aad);
     const body = Buffer.concat([cipher.update(plaintext), cipher.final(), cipher.getAuthTag()]);
     const frame = Buffer.alloc(FRAME_HEADER_LENGTH);
     frame[0] = final ? 1 : 0;
@@ -182,17 +204,20 @@ class EncryptStream extends Transform {
 
 class DecryptStream extends Transform {
   readonly #keys: StreamKeys;
+  readonly #associatedData: Buffer;
   #buffer = Buffer.alloc(0);
   #header: Buffer | undefined;
+  #aad: Buffer | undefined;
   #dataKey: Buffer | undefined;
   #prefix: Buffer | undefined;
   #chunkSize = 0;
   #counter = 0;
   #finished = false;
 
-  constructor(keys: StreamKeys) {
+  constructor(keys: StreamKeys, associatedData: Buffer) {
     super();
     this.#keys = keys;
+    this.#associatedData = associatedData;
   }
 
   #readHeader(): boolean {
@@ -215,6 +240,7 @@ class DecryptStream extends Transform {
     this.#chunkSize = head.readUInt32BE(80);
     if (this.#chunkSize < 1 || this.#chunkSize > MAX_CHUNK_SIZE) throw new DecryptionError();
     this.#header = head;
+    this.#aad = Buffer.concat([this.#associatedData, head]);
     return true;
   }
 
@@ -236,7 +262,7 @@ class DecryptStream extends Transform {
           this.#dataKey as Buffer,
           nonce(this.#prefix as Buffer, this.#counter, final),
         );
-        decipher.setAAD(this.#header as Buffer);
+        decipher.setAAD(this.#aad as Buffer);
         decipher.setAuthTag(body.subarray(body.length - TAG_LENGTH));
         this.push(
           Buffer.concat([decipher.update(body.subarray(0, body.length - TAG_LENGTH)), decipher.final()]),
@@ -270,11 +296,18 @@ class DecryptStream extends Transform {
 }
 
 /** Encrypts a byte stream with a fresh data key wrapped by the current key of `keys`. */
-export function createEncryptStream(keys: StreamKeys, options: { chunkSize?: number } = {}): Transform {
-  return new EncryptStream(keys, options.chunkSize ?? DEFAULT_CHUNK_SIZE);
+export function createEncryptStream(
+  keys: StreamKeys,
+  options: { chunkSize?: number; associatedData?: Buffer } = {},
+): Transform {
+  return new EncryptStream(
+    keys,
+    options.chunkSize ?? DEFAULT_CHUNK_SIZE,
+    options.associatedData ?? Buffer.alloc(0),
+  );
 }
 
 /** Decrypts and authenticates a stream; fails if any part was changed, removed or appended. */
-export function createDecryptStream(keys: StreamKeys): Transform {
-  return new DecryptStream(keys);
+export function createDecryptStream(keys: StreamKeys, options: { associatedData?: Buffer } = {}): Transform {
+  return new DecryptStream(keys, options.associatedData ?? Buffer.alloc(0));
 }

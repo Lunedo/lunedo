@@ -29,10 +29,6 @@ export function ensureSecretFile(dir: string, name: string, generate: () => stri
   return new Secret(readFileSync(target, "utf8").trim());
 }
 
-export function generateKey(): string {
-  return randomBytes(32).toString("base64");
-}
-
 export function generateToken(): string {
   return randomBytes(32).toString("base64url");
 }

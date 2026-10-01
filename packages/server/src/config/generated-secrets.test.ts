@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:f
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { ensureSecretFile, generateKey, generateToken } from "./generated-secrets.js";
+import { ensureSecretFile, generateToken } from "./generated-secrets.js";
 
 let dir: string | undefined;
 
@@ -14,11 +14,11 @@ describe("ensureSecretFile", () => {
   it("generates a secret once and returns the stored value afterwards", () => {
     dir = mkdtempSync(path.join(tmpdir(), "pagehall-secrets-"));
     const secretsDir = path.join(dir, "secrets");
-    const first = ensureSecretFile(secretsDir, "backup-key", generateKey);
-    const second = ensureSecretFile(secretsDir, "backup-key", () => "other");
+    const first = ensureSecretFile(secretsDir, "backup-keys", generateToken);
+    const second = ensureSecretFile(secretsDir, "backup-keys", () => "other");
     expect(second.reveal()).toBe(first.reveal());
-    expect(readFileSync(path.join(secretsDir, "backup-key"), "utf8").trim()).toBe(first.reveal());
-    expect(readdirSync(secretsDir)).toEqual(["backup-key"]);
+    expect(readFileSync(path.join(secretsDir, "backup-keys"), "utf8").trim()).toBe(first.reveal());
+    expect(readdirSync(secretsDir)).toEqual(["backup-keys"]);
   });
 
   it("keeps the first value when several callers race", () => {
@@ -38,8 +38,7 @@ describe("ensureSecretFile", () => {
 
 describe("generators", () => {
   it("create 256-bit random values", () => {
-    expect(Buffer.from(generateKey(), "base64")).toHaveLength(32);
     expect(Buffer.from(generateToken(), "base64url")).toHaveLength(32);
-    expect(generateKey()).not.toBe(generateKey());
+    expect(generateToken()).not.toBe(generateToken());
   });
 });

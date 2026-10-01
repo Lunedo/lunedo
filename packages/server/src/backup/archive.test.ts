@@ -1,19 +1,22 @@
 import { randomBytes } from "node:crypto";
-import { createWriteStream } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, rm, truncate, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { Readable } from "node:stream";
-import { pipeline } from "node:stream/promises";
-import { createGzip } from "node:zlib";
-import tar from "tar-stream";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { configurationForBackup } from "../config/backup-view.js";
 import { DecryptionError } from "../crypto/envelope.js";
-import { KeyRingError, SecretKey } from "../crypto/key-ring.js";
-import { backupStreamKeys, createEncryptStream } from "../crypto/stream.js";
+import { formatKeyEntry, type KeyRing, parseKeyRing } from "../crypto/key-ring.js";
 import { createLogger } from "../logging/logger.js";
-import { BackupError, createBackup, isSafeRelativePath, restoreBackup, verifyBackup } from "./archive.js";
+import {
+  BackupError,
+  createBackup,
+  isSafeRelativePath,
+  openBackupArchive,
+  readBackupHeader,
+  restoreBackup,
+  verifyBackup,
+} from "./archive.js";
 import type { DatabaseArchiver } from "./postgres.js";
 
 const logger = createLogger({ service: "test", level: "silent" });
@@ -47,16 +50,22 @@ class FakeDatabase implements DatabaseArchiver {
   }
 }
 
+const ring = (...entries: [number, Buffer][]): KeyRing =>
+  parseKeyRing(entries.map(([version, key]) => formatKeyEntry(version, key)).join("\n"));
+
 let dir: string;
-let backupKey: SecretKey;
+let key1: Buffer;
+let backupKeys: KeyRing;
 let filesDir: string;
 let archivePath: string;
 const databaseDump = Buffer.from("PGDMP fake database dump with marker-database-content");
 const schemaVersion = "0000_foundation";
+const knownSchemaVersions = [schemaVersion];
 
 beforeEach(async () => {
   dir = await mkdtemp(path.join(tmpdir(), "pagehall-backup-"));
-  backupKey = new SecretKey(randomBytes(32));
+  key1 = randomBytes(32);
+  backupKeys = ring([1, key1]);
   filesDir = path.join(dir, "files");
   archivePath = path.join(dir, "backup.phbak");
   await mkdir(path.join(filesDir, "attachments", "2026"), { recursive: true });
@@ -68,30 +77,36 @@ afterEach(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
-async function create(database = new FakeDatabase(databaseDump)) {
+async function create(options: { schemaVersion?: string; keys?: KeyRing } = {}) {
   return createBackup({
     output: archivePath,
-    backupKey,
-    database,
+    backupKeys: options.keys ?? backupKeys,
+    database: new FakeDatabase(databaseDump),
     filesDir,
     config: { "environment.json": '{"PAGEHALL_HOST":"0.0.0.0"}\n' },
     pagehallVersion: "1.0.0",
-    schemaVersion,
+    schemaVersion: options.schemaVersion ?? schemaVersion,
     logger,
   });
 }
 
-async function restoreInto(target: string, database: FakeDatabase, options: { force?: boolean } = {}) {
+function restoreInto(target: string, database: DatabaseArchiver, options: { force?: boolean } = {}) {
   return restoreBackup({
     input: archivePath,
-    backupKey,
+    backupKeys,
+    knownSchemaVersions,
     database,
     filesDir: target,
     configDir: path.join(dir, "restored-config"),
     force: options.force ?? false,
-    knownSchemaVersions: [schemaVersion],
     logger,
   });
+}
+
+/** Replaces everything after the header with garbage, to prove that a check runs before data is read. */
+async function destroyData() {
+  const { bytes } = await readBackupHeader(archivePath);
+  await writeFile(archivePath, Buffer.concat([bytes, randomBytes(64)]));
 }
 
 describe("backups", () => {
@@ -103,18 +118,34 @@ describe("backups", () => {
       "files/logo.png",
       "config/environment.json",
     ]);
-    const verified = await verifyBackup({ input: archivePath, backupKey });
+    const verified = await verifyBackup({ input: archivePath, backupKeys, knownSchemaVersions });
     expect(verified).toEqual(created);
-    expect(verified).toMatchObject({ format: 1, pagehallVersion: "1.0.0", schemaVersion });
   });
 
-  it("are encrypted", async () => {
+  it("start with a readable, unencrypted header", async () => {
+    const created = await create();
+    const { header, bytes } = await readBackupHeader(archivePath);
+    expect(bytes.subarray(0, 4).toString()).toBe("PHBK");
+    expect(bytes.readUInt16BE(4)).toBe(1);
+    expect(header).toEqual({
+      pagehallVersion: "1.0.0",
+      schemaVersion,
+      createdAt: created.createdAt,
+      key: { version: 1, fingerprint: expect.stringMatching(/^[0-9a-f]{16}$/) },
+      cipher: "AES-256-GCM",
+      chunkSize: 65536,
+    });
+  });
+
+  it("encrypt everything after the header", async () => {
     await create();
     const raw = await readFile(archivePath);
-    expect(raw.subarray(0, 3).toString()).toBe("PHS");
-    expect(raw.includes("marker-file-content")).toBe(false);
-    expect(raw.includes("marker-database-content")).toBe(false);
-    expect(raw.includes("report.pdf")).toBe(false);
+    const { bytes } = await readBackupHeader(archivePath);
+    const body = raw.subarray(bytes.length);
+    expect(body.subarray(0, 3).toString()).toBe("PHS");
+    for (const marker of ["marker-file-content", "marker-database-content", "report.pdf"]) {
+      expect(raw.includes(marker)).toBe(false);
+    }
   });
 
   it("restore into an empty instance with identical content", async () => {
@@ -152,68 +183,155 @@ describe("backups", () => {
     expect((await readdir(target)).sort()).toEqual(["attachments", "logo.png"]);
   });
 
-  it("refuse backups with a schema version this version does not know", async () => {
+  it("stay readable after a new backup key version is added", async () => {
     await create();
+    const rotated = ring([1, key1], [2, randomBytes(32)]);
     await expect(
-      restoreBackup({
-        input: archivePath,
-        backupKey,
-        database: new FakeDatabase(Buffer.alloc(0)),
-        filesDir: path.join(dir, "target"),
-        force: false,
-        knownSchemaVersions: ["0000_other"],
-        logger,
-      }),
-    ).rejects.toThrow("does not know");
+      verifyBackup({ input: archivePath, backupKeys: rotated, knownSchemaVersions }),
+    ).resolves.toBeTruthy();
   });
 
-  it("cannot be read with a different backup key", async () => {
-    await create();
-    await expect(
-      verifyBackup({ input: archivePath, backupKey: new SecretKey(randomBytes(32)) }),
-    ).rejects.toThrow(KeyRingError);
-  });
-
-  it("detect tampering and truncation", async () => {
+  it("detect tampering and truncation of the encrypted data", async () => {
     await create();
     const raw = await readFile(archivePath);
     const tampered = Buffer.from(raw);
     const middle = Math.floor(raw.length / 2);
     tampered[middle] = (tampered[middle] ?? 0) ^ 0x01;
     await writeFile(archivePath, tampered);
-    await expect(verifyBackup({ input: archivePath, backupKey })).rejects.toThrow(DecryptionError);
+    await expect(verifyBackup({ input: archivePath, backupKeys, knownSchemaVersions })).rejects.toThrow(
+      DecryptionError,
+    );
 
     await writeFile(archivePath, raw);
     await truncate(archivePath, raw.length - 100);
-    await expect(verifyBackup({ input: archivePath, backupKey })).rejects.toThrow();
+    await expect(verifyBackup({ input: archivePath, backupKeys, knownSchemaVersions })).rejects.toThrow();
+  });
+});
+
+describe("the backup header", () => {
+  it("is authenticated: a modified header fails decryption", async () => {
+    const created = await create();
+    const raw = await readFile(archivePath);
+    const original = Buffer.from(created.createdAt);
+    const changed = Buffer.from(
+      created.createdAt.replace(/\d(?=Z$)/, (digit) => String((Number(digit) + 1) % 10)),
+    );
+    const offset = raw.indexOf(original);
+    expect(offset).toBeGreaterThan(0);
+    changed.copy(raw, offset);
+    await writeFile(archivePath, raw);
+    expect((await readBackupHeader(archivePath)).header.createdAt).toBe(changed.toString());
+    await expect(verifyBackup({ input: archivePath, backupKeys, knownSchemaVersions })).rejects.toThrow(
+      DecryptionError,
+    );
   });
 
-  it("reject archives with paths outside the file store", async () => {
-    const pack = tar.pack();
-    const writing = pipeline(
-      pack,
-      createGzip(),
-      createEncryptStream(backupStreamKeys(backupKey)),
-      createWriteStream(archivePath),
+  it("refuses an unknown format version before reading data", async () => {
+    await create();
+    const raw = await readFile(archivePath);
+    raw.writeUInt16BE(2, 4);
+    await writeFile(archivePath, raw);
+    await expect(verifyBackup({ input: archivePath, backupKeys, knownSchemaVersions })).rejects.toThrow(
+      "The backup uses format version 2, which this Pagehall version cannot read.",
     );
-    pack.entry({ name: "files/../../escape.txt" }, "x");
-    pack.finalize();
-    await writing;
-    await expect(verifyBackup({ input: archivePath, backupKey })).rejects.toThrow(BackupError);
   });
 
-  it("reject archives without a manifest", async () => {
-    const pack = tar.pack();
-    const writing = pipeline(
-      pack,
-      createGzip(),
-      createEncryptStream(backupStreamKeys(backupKey)),
-      createWriteStream(archivePath),
+  it("refuses files that are not backups", async () => {
+    await writeFile(archivePath, "not a backup");
+    await expect(verifyBackup({ input: archivePath, backupKeys, knownSchemaVersions })).rejects.toThrow(
+      "is not a Pagehall backup",
     );
-    pack.entry({ name: "database.dump" }, "x");
+  });
+
+  it("refuses a backup from a newer schema version before reading data", async () => {
+    await create({ schemaVersion: "0099_future" });
+    await destroyData();
+    for (const run of [
+      () => verifyBackup({ input: archivePath, backupKeys, knownSchemaVersions }),
+      () => restoreInto(path.join(dir, "target"), new FakeDatabase(Buffer.alloc(0))),
+    ]) {
+      await expect(run()).rejects.toThrow(
+        "The backup was created by Pagehall 1.0.0 with schema version 0099_future, which is newer than this Pagehall version supports. Update Pagehall to version 1.0.0 or newer and run the command again.",
+      );
+    }
+  });
+
+  it("reports a missing backup key version before reading data", async () => {
+    await create({ keys: ring([1, key1], [2, randomBytes(32)]) });
+    await destroyData();
+    await expect(verifyBackup({ input: archivePath, backupKeys, knownSchemaVersions })).rejects.toThrow(
+      /^The backup is encrypted with backup key version 2 \(fingerprint [0-9a-f]{16}\), which is not configured\. Add this key version to PAGEHALL_BACKUP_KEY/,
+    );
+  });
+
+  it("reports a different key under the same version before reading data", async () => {
+    await create({ keys: ring([1, randomBytes(32)]) });
+    await destroyData();
+    await expect(verifyBackup({ input: archivePath, backupKeys, knownSchemaVersions })).rejects.toThrow(
+      /but the configured key version 1 has fingerprint/,
+    );
+  });
+});
+
+describe("archive entries", () => {
+  async function craft(entries: { name: string; type?: string; linkname?: string; content?: string }[]) {
+    const { pack, finished } = openBackupArchive({
+      output: archivePath,
+      backupKeys,
+      pagehallVersion: "1.0.0",
+      schemaVersion,
+    });
+    for (const entry of entries) {
+      pack.entry(
+        { name: entry.name, type: entry.type as never, linkname: entry.linkname },
+        entry.content ?? "",
+      );
+    }
     pack.finalize();
-    await writing;
-    await expect(verifyBackup({ input: archivePath, backupKey })).rejects.toThrow("no manifest");
+    await finished;
+  }
+
+  it.each([
+    ["a symbolic link", { name: "files/link", type: "symlink", linkname: "/etc/passwd" }],
+    ["a hard link", { name: "files/hard", type: "link", linkname: "files/other" }],
+    ["a device file", { name: "files/tty", type: "character-device" }],
+    ["a device file", { name: "files/disk", type: "block-device" }],
+    ["a named pipe", { name: "files/pipe", type: "fifo" }],
+    ["a directory", { name: "files/dir/", type: "directory" }],
+  ])("rejects %s", async (kind, entry) => {
+    await craft([entry]);
+    await expect(restoreInto(path.join(dir, "target"), new FakeDatabase(Buffer.alloc(0)))).rejects.toThrow(
+      `is ${kind}`,
+    );
+  });
+
+  it.each([
+    ["an absolute path", "/etc/passwd"],
+    ["an absolute path inside the file store", "files//etc/passwd"],
+    ["a parent reference", "files/../../escape.txt"],
+    ["an unknown location", "elsewhere/file.txt"],
+  ])("rejects %s", async (_case, name) => {
+    await craft([{ name, content: "x" }]);
+    await expect(restoreInto(path.join(dir, "target"), new FakeDatabase(Buffer.alloc(0)))).rejects.toThrow(
+      "is outside the restore targets",
+    );
+  });
+
+  it("rejects an archive without a manifest", async () => {
+    await craft([{ name: "database.dump", content: "x" }]);
+    await expect(verifyBackup({ input: archivePath, backupKeys, knownSchemaVersions })).rejects.toThrow(
+      "no manifest",
+    );
+  });
+
+  it("writes nothing when an entry is rejected", async () => {
+    await craft([
+      { name: "files/ok.txt", content: "ok" },
+      { name: "files/link", type: "symlink", linkname: "/etc/passwd" },
+    ]);
+    const target = path.join(dir, "target");
+    await expect(restoreInto(target, new FakeDatabase(Buffer.alloc(0)))).rejects.toThrow(BackupError);
+    await expect(readdir(target)).rejects.toThrow();
   });
 });
 

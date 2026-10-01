@@ -22,11 +22,11 @@ Settings marked as secret can be given in three ways:
 
 1. Directly, for example `PAGEHALL_METRICS_TOKEN=...`.
 2. As a file, by appending `_FILE` to the name, for example `PAGEHALL_METRICS_TOKEN_FILE=/run/secrets/metrics-token`. This works with Docker and Kubernetes secrets. A trailing newline is removed. Setting both forms is an error.
-3. Generated on first start. The master keys, the backup key and the metrics token are created in the secrets directory when they are not configured. Generated secrets are never written to logs.
+3. Generated on first start. The master keys, the backup keys and the metrics token are created in the secrets directory (`master-keys`, `backup-keys`, `metrics-token`) when they are not configured. Generated secrets are never written to logs.
 
 Several nodes can start at the same time on a shared secrets directory; exactly one generated value is kept. In a setup with several nodes and no shared volume, configure all secrets explicitly.
 
-The master keys and the backup key are needed to read encrypted data and backups. Back up the secrets directory, or the values you configured, separately from the backups.
+The master keys and the backup keys are needed to read encrypted data and backups. Back up the secrets directory, or the values you configured, separately from the backups.
 
 ## Settings
 
@@ -45,14 +45,14 @@ The master keys and the backup key are needed to read encrypted data and backups
 | `PAGEHALL_KEY_PROVIDER` | see description | | `env` or `file`. Defaults to `env` when `PAGEHALL_MASTER_KEYS` is set, `file` otherwise. |
 | `PAGEHALL_MASTER_KEYS` | none | yes | Master key ring for the env key provider. |
 | `PAGEHALL_MASTER_KEYS_PATH` | `master-keys` in the secrets directory | | Master key ring file for the file key provider. |
-| `PAGEHALL_BACKUP_KEY` | generated | yes | Key that encrypts backups: 32 bytes, base64. |
+| `PAGEHALL_BACKUP_KEY` | generated | yes | Key ring that encrypts backups, in the same format as the master keys. |
 | `PAGEHALL_METRICS_TOKEN` | generated | yes | Bearer token required by `/metrics`. |
 | `PAGEHALL_WEB_ROOT` | `/app/web` in the image | | Directory with the built web client, served by the API. |
 | `PAGEHALL_SHUTDOWN_TIMEOUT_SECONDS` | `30` | | Time running requests and jobs get to finish on shutdown. |
 
-## Master keys
+## Key rings
 
-A key ring holds one or more versions of the master key, one `<version>:<base64 key>` entry per line (or separated by commas in `PAGEHALL_MASTER_KEYS`). Each key is 32 random bytes. The highest version encrypts new data; older versions stay available to read data that has not been rotated yet. See [encryption.md](encryption.md) for rotation.
+Master keys and backup keys are key rings: one or more versions of a key, one `<version>:<base64 key>` entry per line (or separated by commas in an environment variable). Each key is 32 random bytes. The highest version encrypts new data; older versions stay available to read data and backups created with them. See [encryption.md](encryption.md) for rotation and [backup.md](backup.md) for backup keys.
 
 Generate a key with:
 

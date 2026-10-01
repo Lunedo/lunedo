@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { uuidv7 } from "@pagehall/shared";
 import { afterEach, describe, expect, it } from "vitest";
-import { SecretKey } from "../crypto/key-ring.js";
+import { formatKeyEntry, parseKeyRing } from "../crypto/key-ring.js";
 import { currentSchemaVersion, runMigrations } from "../database/migrate.js";
 import { createDatabasePool } from "../database/pool.js";
 import { createLogger } from "../logging/logger.js";
@@ -61,11 +61,11 @@ describe.skipIf(!baseUrl || !hasTools)("PostgresArchiver", () => {
     await sourcePool.query("insert into test_blobs values (1, $1)", [secret]);
     await sourcePool.end();
 
-    const backupKey = new SecretKey(randomBytes(32));
+    const backupKeys = parseKeyRing(formatKeyEntry(1, randomBytes(32)));
     const output = path.join(dir, "backup.phbak");
     await createBackup({
       output,
-      backupKey,
+      backupKeys,
       database: new PostgresArchiver({ databaseUrl: source.url }),
       filesDir: path.join(dir, "files"),
       config: {},
@@ -79,7 +79,7 @@ describe.skipIf(!baseUrl || !hasTools)("PostgresArchiver", () => {
     expect(await archiver.isEmpty()).toBe(true);
     await restoreBackup({
       input: output,
-      backupKey,
+      backupKeys,
       database: archiver,
       filesDir: path.join(dir, "restored-files"),
       force: false,
@@ -107,7 +107,7 @@ describe.skipIf(!baseUrl || !hasTools)("PostgresArchiver", () => {
     await expect(
       restoreBackup({
         input: output,
-        backupKey,
+        backupKeys,
         database: archiver,
         filesDir: path.join(dir, "other-files"),
         force: false,
@@ -118,7 +118,7 @@ describe.skipIf(!baseUrl || !hasTools)("PostgresArchiver", () => {
 
     await restoreBackup({
       input: output,
-      backupKey,
+      backupKeys,
       database: archiver,
       filesDir: path.join(dir, "other-files"),
       force: true,

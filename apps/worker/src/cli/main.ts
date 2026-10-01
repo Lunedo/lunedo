@@ -37,10 +37,10 @@ async function run(command: Command): Promise<void> {
 
   switch (command.name) {
     case "backup create": {
-      const { backupKey } = resolveGeneratedSecrets(config);
+      const { backupKeys } = resolveGeneratedSecrets(config);
       const manifest = await createBackup({
         output: path.resolve(command.output),
-        backupKey,
+        backupKeys,
         database: new PostgresArchiver({ databaseUrl }),
         filesDir: config.paths.files,
         config: configurationForBackup(env),
@@ -53,18 +53,22 @@ async function run(command: Command): Promise<void> {
       return;
     }
     case "backup verify": {
-      const { backupKey } = resolveGeneratedSecrets(config);
-      const manifest = await verifyBackup({ input: command.input, backupKey });
+      const { backupKeys } = resolveGeneratedSecrets(config);
+      const manifest = await verifyBackup({
+        input: command.input,
+        backupKeys,
+        knownSchemaVersions: knownSchemaVersions(),
+      });
       write(
         `Backup is complete and readable: ${manifest.entries.length} entries, schema ${manifest.schemaVersion}, created ${manifest.createdAt} by Pagehall ${manifest.pagehallVersion}.`,
       );
       return;
     }
     case "backup restore": {
-      const { backupKey } = resolveGeneratedSecrets(config);
+      const { backupKeys } = resolveGeneratedSecrets(config);
       const manifest = await restoreBackup({
         input: command.input,
-        backupKey,
+        backupKeys,
         database: new PostgresArchiver({ databaseUrl }),
         filesDir: config.paths.files,
         configDir: command.configDir,

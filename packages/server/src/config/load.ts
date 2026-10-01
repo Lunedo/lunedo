@@ -23,7 +23,7 @@ export interface ServerConfig {
     masterKeys: Secret | undefined;
     /** Used by the file provider. */
     masterKeysPath: string;
-    backupKey: Secret | undefined;
+    backupKeys: Secret | undefined;
   };
   metricsToken: Secret | undefined;
   shutdownTimeoutSeconds: number;
@@ -154,7 +154,7 @@ export function loadConfig(env: Env): ServerConfig {
       masterKeys: secret("PAGEHALL_MASTER_KEYS"),
       masterKeysPath:
         (values.PAGEHALL_MASTER_KEYS_PATH as string | undefined) ?? path.join(secretsDir, "master-keys"),
-      backupKey: secret("PAGEHALL_BACKUP_KEY"),
+      backupKeys: secret("PAGEHALL_BACKUP_KEY"),
     },
     metricsToken: secret("PAGEHALL_METRICS_TOKEN"),
     shutdownTimeoutSeconds: values.PAGEHALL_SHUTDOWN_TIMEOUT_SECONDS as number,

@@ -93,10 +93,10 @@ export function parseKeyRing(text: string): KeyRing {
     const match = /^(\d+):([A-Za-z0-9+/=_-]+)$/.exec(trimmed);
     if (!match) throw new KeyRingError("Key ring entries must look like <version>:<base64 key>");
     const version = Number(match[1]);
-    if (keys.has(version)) throw new KeyRingError(`Master key version ${version} appears twice`);
+    if (keys.has(version)) throw new KeyRingError(`Key version ${version} appears twice`);
     const bytes = Buffer.from(match[2] ?? "", "base64");
     if (bytes.length !== KEY_LENGTH) {
-      throw new KeyRingError(`Master key version ${version} must be ${KEY_LENGTH} bytes, encoded as base64`);
+      throw new KeyRingError(`Key version ${version} must be ${KEY_LENGTH} bytes, encoded as base64`);
     }
     keys.set(version, new SecretKey(bytes));
   }

@@ -50,7 +50,7 @@ export const configSettings = [
     path.optional(),
     "Master key ring file for the file key provider. Defaults to master-keys in the secrets directory.",
   ),
-  setting("PAGEHALL_BACKUP_KEY", nonEmpty.optional(), "Key that encrypts backups.", true),
+  setting("PAGEHALL_BACKUP_KEY", nonEmpty.optional(), "Key ring that encrypts backups.", true),
   setting("PAGEHALL_METRICS_TOKEN", nonEmpty.optional(), "Bearer token required by /metrics.", true),
   setting("PAGEHALL_WEB_ROOT", path.optional(), "Directory with the built web client, served by the API."),
   setting(
