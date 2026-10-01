@@ -101,6 +101,19 @@ test("switches language, color mode and text size immediately", async ({ page })
     .first()
     .click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  const textSize = page.getByRole("group", { name: "Text size" });
+  await textSize.getByRole("button", { name: "Increase" }).click();
+  await expect(textSize.getByText("112.5%")).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        getComputedStyle(document.documentElement).getPropertyValue("--ph-text-scale").trim(),
+      ),
+    )
+    .toBe("1.125");
+  await textSize.getByRole("button", { name: "Default" }).click();
+  await expect(textSize.getByText("100%")).toBeVisible();
+  await expect(textSize.getByRole("button", { name: "Default" })).toHaveCount(0);
   await page.getByRole("combobox", { name: "Language" }).click();
   await page.getByRole("option", { name: "Deutsch" }).click();
   await expect(page.getByRole("heading", { name: "Darstellung und Sprache" })).toBeVisible();

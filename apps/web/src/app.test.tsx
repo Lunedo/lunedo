@@ -144,6 +144,26 @@ describe("the web client", () => {
     expect(within(navigation).queryByRole("link", { name: "Organizations" })).toBeNull();
   });
 
+  it("steps the text size and offers the default only when it differs", async () => {
+    const { requests } = api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "PUT /api/v1/account/preferences/appearance.textSize": () => ({ status: 204 }),
+    });
+    await renderApp("/settings/preferences");
+    const textSize = await screen.findByRole("group", { name: "Text size" });
+    expect(await within(textSize).findByText("125%")).toBeTruthy();
+    expect(within(textSize).getByRole("button", { name: "Default" })).toBeTruthy();
+    expect(within(textSize).getByRole("button", { name: "Increase" }).getAttribute("aria-disabled")).toBe(
+      "true",
+    );
+    await userEvent.click(within(textSize).getByRole("button", { name: "Decrease" }));
+    await waitFor(() =>
+      expect(
+        requests.find((request) => request.path === "/api/v1/account/preferences/appearance.textSize")?.body,
+      ).toEqual({ value: 1.125 }),
+    );
+  });
+
   it("asks for the identity before a sensitive change and repeats it", async () => {
     let confirmed = false;
     const { requests } = api({

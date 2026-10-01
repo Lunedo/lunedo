@@ -1,5 +1,5 @@
 import { textSizes } from "@pagehall/shared";
-import { Section, SegmentedControl, Select, SettingRow, Skeleton, Slider, Switch } from "@pagehall/ui";
+import { Section, SegmentedControl, Select, SettingRow, Skeleton, Stepper, Switch } from "@pagehall/ui";
 import { Palette } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { SettingEntry } from "../../api/organization-queries.js";
@@ -7,7 +7,7 @@ import { SettingSource } from "../../components/setting-source.js";
 import { useFailureToast } from "../../errors/failure.js";
 import { translateKey } from "../../i18n/translate.js";
 import { preferenceKeys, usePreferenceList, useUpdatePreference } from "../../preferences/preferences.js";
-import { usePreferences } from "../../preferences/preferences-provider.js";
+import { useFormat, usePreferences } from "../../preferences/preferences-provider.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 import { localeOptionSets } from "./preference-options.js";
@@ -17,6 +17,7 @@ const INHERIT = "inherit";
 export function PreferencesScreen() {
   const { t, i18n } = useTranslation();
   const preferences = usePreferences();
+  const format = useFormat();
   const list = usePreferenceList();
   const update = useUpdatePreference();
   const showFailure = useFailureToast();
@@ -61,12 +62,13 @@ export function PreferencesScreen() {
           label={t("preferences.textSize")}
           description={t("preferences.textSizeHint")}
           control={
-            <Slider
+            <Stepper
               label={t("preferences.textSize")}
               value={preferences.textSize}
-              steps={[...textSizes]}
+              steps={textSizes}
+              defaultValue={1}
               onValueChange={(value) => set(preferenceKeys.textSize, value)}
-              formatValue={(value) => `${Math.round(value * 1000) / 10} %`}
+              formatValue={(value) => format.percent(value)}
             />
           }
         />
