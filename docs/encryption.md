@@ -71,11 +71,13 @@ Every `encrypted()` column is listed in `encryptedColumns` in `packages/server/s
 
 ```ts
 export const encryptedColumns: readonly EncryptedColumn[] = [
-  { table: "smtp_settings", idColumn: "id", column: "password" },
+  { table: "instance_secrets", idColumn: "name", column: "value" },
+  { table: "mail_outbox", idColumn: "id", column: "message" },
+  { table: "totp_credentials", idColumn: "id", column: "secret" },
 ];
 ```
 
-A test fails when a column of the schema is missing from the list.
+A test fails when a column of the schema is missing from the list. Hashes and other binary values that are not encrypted use `bytes()` instead.
 
 ## Encrypted streams
 

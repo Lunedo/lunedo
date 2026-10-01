@@ -14,6 +14,7 @@ export interface SettingDefinition<T> {
   levels: readonly SettingLevel[];
   /** Whether a level can lock the value for the levels below it. */
   lockable: boolean;
+  stricterOnly?: "lower" | "higher";
 }
 
 export function defineSetting<T>(definition: SettingDefinition<T>): SettingDefinition<T> {
@@ -24,8 +25,18 @@ export function defineSetting<T>(definition: SettingDefinition<T>): SettingDefin
   if (!definition.schema.safeParse(definition.default).success) {
     throw new Error(`The default of setting ${definition.key} does not match its schema`);
   }
+  if (definition.stricterOnly && !["number", "boolean"].includes(typeof definition.default)) {
+    throw new Error(`Setting ${definition.key} can only be stricter-only with a number or boolean value`);
+  }
   const levels = settingLevels.filter((level) => definition.levels.includes(level));
   return { ...definition, levels };
+}
+
+export function isAtLeastAsStrict<T>(definition: SettingDefinition<T>, candidate: T, inherited: T): boolean {
+  if (!definition.stricterOnly) return true;
+  const value = Number(candidate);
+  const reference = Number(inherited);
+  return definition.stricterOnly === "lower" ? value <= reference : value >= reference;
 }
 
 /** All settings known to this process. Modules register theirs at startup. */

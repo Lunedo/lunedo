@@ -1,7 +1,18 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
+import { instanceUrlSchema } from "../accounts/instance-settings.js";
 import type { LogLevel } from "../logging/logger.js";
+
+function isTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 import { type ConfigSettingName, configSettings } from "./definitions.js";
 import { Secret } from "./secret.js";
 
@@ -27,6 +38,26 @@ export interface ServerConfig {
   };
   metricsToken: Secret | undefined;
   shutdownTimeoutSeconds: number;
+  trustedProxies: string[];
+  passwordHashConcurrency: number;
+  setup: ConfiguredSetup | undefined;
+}
+
+export interface ConfiguredSmtp {
+  host: string;
+  port: number;
+  security: "tls" | "starttls" | "none";
+  username: string | null;
+  password: Secret | null;
+  from: string;
+}
+
+export interface ConfiguredSetup {
+  instanceUrl: string;
+  instanceName: string | undefined;
+  owner: { email: string; name: string; password: Secret };
+  organization: { name: string; language: "en" | "de" | undefined; timeZone: string | undefined };
+  smtp: ConfiguredSmtp | undefined;
 }
 
 const settingNames = new Set<string>(configSettings.map((setting) => setting.name));
@@ -122,6 +153,7 @@ export function loadConfig(env: Env): ServerConfig {
   if (provider === "file" && values.PAGEHALL_MASTER_KEYS) {
     problems.push("PAGEHALL_MASTER_KEYS: is only used by the env key provider");
   }
+  const setup = configuredSetup(values, problems);
   if (problems.length > 0) {
     throw new ConfigError(`Invalid configuration:\n  ${problems.join("\n  ")}`);
   }
@@ -158,5 +190,107 @@ export function loadConfig(env: Env): ServerConfig {
     },
     metricsToken: secret("PAGEHALL_METRICS_TOKEN"),
     shutdownTimeoutSeconds: values.PAGEHALL_SHUTDOWN_TIMEOUT_SECONDS as number,
+    trustedProxies: values.PAGEHALL_TRUSTED_PROXIES as string[],
+    passwordHashConcurrency: values.PAGEHALL_PASSWORD_HASH_CONCURRENCY as number,
+    setup,
+  };
+}
+
+const SETUP_SETTINGS = [
+  "PAGEHALL_INSTANCE_URL",
+  "PAGEHALL_INSTANCE_NAME",
+  "PAGEHALL_OWNER_EMAIL",
+  "PAGEHALL_OWNER_NAME",
+  "PAGEHALL_OWNER_PASSWORD",
+  "PAGEHALL_ORGANIZATION_NAME",
+  "PAGEHALL_ORGANIZATION_LANGUAGE",
+  "PAGEHALL_ORGANIZATION_TIME_ZONE",
+] as const;
+
+const SMTP_SETTINGS = [
+  "PAGEHALL_SMTP_HOST",
+  "PAGEHALL_SMTP_PORT",
+  "PAGEHALL_SMTP_SECURITY",
+  "PAGEHALL_SMTP_USERNAME",
+  "PAGEHALL_SMTP_PASSWORD",
+  "PAGEHALL_SMTP_FROM",
+] as const;
+
+function configuredSetup(
+  values: Record<ConfigSettingName, unknown>,
+  problems: string[],
+): ConfiguredSetup | undefined {
+  const given = (names: readonly ConfigSettingName[]) => names.filter((name) => values[name] !== undefined);
+  if (given([...SETUP_SETTINGS, ...SMTP_SETTINGS]).length === 0) return undefined;
+  if (given(SETUP_SETTINGS).length === 0) {
+    problems.push(
+      "PAGEHALL_SMTP_HOST: SMTP settings in the configuration require setup through configuration",
+    );
+  }
+  for (const name of [
+    "PAGEHALL_INSTANCE_URL",
+    "PAGEHALL_OWNER_EMAIL",
+    "PAGEHALL_OWNER_NAME",
+    "PAGEHALL_OWNER_PASSWORD",
+    "PAGEHALL_ORGANIZATION_NAME",
+  ] as const) {
+    if (values[name] === undefined) problems.push(`${name}: is required for setup through configuration`);
+  }
+  const url = instanceUrlSchema.safeParse(values.PAGEHALL_INSTANCE_URL);
+  if (values.PAGEHALL_INSTANCE_URL !== undefined && !url.success) {
+    problems.push(`PAGEHALL_INSTANCE_URL: ${url.error.issues[0]?.message ?? "is invalid"}`);
+  }
+  const timeZone = values.PAGEHALL_ORGANIZATION_TIME_ZONE as string | undefined;
+  if (timeZone !== undefined && !isTimeZone(timeZone)) {
+    problems.push("PAGEHALL_ORGANIZATION_TIME_ZONE: must be an IANA time zone");
+  }
+  if (
+    values.PAGEHALL_OWNER_EMAIL !== undefined &&
+    !z.email().safeParse(values.PAGEHALL_OWNER_EMAIL).success
+  ) {
+    problems.push("PAGEHALL_OWNER_EMAIL: must be an e-mail address");
+  }
+
+  let smtp: ConfiguredSmtp | undefined;
+  if (given(SMTP_SETTINGS).length > 0) {
+    for (const name of ["PAGEHALL_SMTP_HOST", "PAGEHALL_SMTP_FROM"] as const) {
+      if (values[name] === undefined) problems.push(`${name}: is required when SMTP is configured`);
+    }
+    if (values.PAGEHALL_SMTP_FROM !== undefined && !z.email().safeParse(values.PAGEHALL_SMTP_FROM).success) {
+      problems.push("PAGEHALL_SMTP_FROM: must be an e-mail address");
+    }
+    const security = (values.PAGEHALL_SMTP_SECURITY as ConfiguredSmtp["security"] | undefined) ?? "starttls";
+    const username = (values.PAGEHALL_SMTP_USERNAME as string | undefined) ?? null;
+    const password = values.PAGEHALL_SMTP_PASSWORD as string | undefined;
+    if ((password !== undefined) !== (username !== null)) {
+      problems.push("PAGEHALL_SMTP_USERNAME: set together with PAGEHALL_SMTP_PASSWORD");
+    }
+    if (security === "none" && username !== null) {
+      problems.push("PAGEHALL_SMTP_SECURITY: credentials require tls or starttls");
+    }
+    smtp = {
+      host: values.PAGEHALL_SMTP_HOST as string,
+      port: (values.PAGEHALL_SMTP_PORT as number | undefined) ?? (security === "tls" ? 465 : 587),
+      security,
+      username,
+      password: password === undefined ? null : new Secret(password),
+      from: values.PAGEHALL_SMTP_FROM as string,
+    };
+  }
+
+  return {
+    instanceUrl: url.success ? url.data : "",
+    instanceName: values.PAGEHALL_INSTANCE_NAME as string | undefined,
+    owner: {
+      email: values.PAGEHALL_OWNER_EMAIL as string,
+      name: values.PAGEHALL_OWNER_NAME as string,
+      password: new Secret((values.PAGEHALL_OWNER_PASSWORD as string | undefined) ?? ""),
+    },
+    organization: {
+      name: values.PAGEHALL_ORGANIZATION_NAME as string,
+      language: values.PAGEHALL_ORGANIZATION_LANGUAGE as "en" | "de" | undefined,
+      timeZone: values.PAGEHALL_ORGANIZATION_TIME_ZONE as string | undefined,
+    },
+    smtp,
   };
 }

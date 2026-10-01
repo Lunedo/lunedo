@@ -164,17 +164,18 @@ describe.skipIf(!databaseUrl)("PgBossQueue", () => {
     expect((await producer.get(job, id))?.state).toBe("cancelled");
   });
 
-  it("runs handlers with the request ID of the enqueueing request", async () => {
+  it("runs handlers with the request ID, client address and user agent of the enqueueing request", async () => {
     const job = define("context");
-    const requestIds: (string | undefined)[] = [];
+    const contexts: unknown[] = [];
     await worker.work(job, async () => {
-      requestIds.push(currentRequestContext()?.requestId);
+      contexts.push(currentRequestContext());
     });
-    const id = await runWithRequestContext({ requestId: "req-123" }, () =>
-      producer.enqueue(job, { value: 1 }),
+    const id = await runWithRequestContext(
+      { requestId: "req-123", clientIp: "203.0.113.9", userAgent: "Agent/1", actor: { type: "anonymous" } },
+      () => producer.enqueue(job, { value: 1 }),
     );
     await waitFor(async () => (await producer.get(job, id))?.state === "completed");
-    expect(requestIds).toEqual(["req-123"]);
+    expect(contexts).toEqual([{ requestId: "req-123", clientIp: "203.0.113.9", userAgent: "Agent/1" }]);
   });
 
   it("does not let the producer role run jobs", async () => {

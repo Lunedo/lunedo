@@ -10,7 +10,7 @@ start_role() {
 }
 
 case "$role" in
-  backup | keys | help)
+  backup | keys | audit | help)
     exec node --enable-source-maps /app/worker/dist/cli/main.js "$@"
     ;;
   api | collab | worker)
@@ -30,7 +30,7 @@ case "$role" in
     exit "$status"
     ;;
   *)
-    echo "Unknown command '$role'. Use api, collab, worker, all, backup or keys." >&2
+    echo "Unknown command '$role'. Use api, collab, worker, all, backup, keys or audit." >&2
     exit 64
     ;;
 esac

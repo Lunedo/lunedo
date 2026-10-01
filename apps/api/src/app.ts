@@ -1,28 +1,66 @@
 import { randomUUID } from "node:crypto";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
-import { enterRequestContext, type Logger } from "@pagehall/server";
-import { LogController } from "fastify";
+import { ANONYMOUS, enterRequestContext, instanceUrlSetting, type Logger } from "@pagehall/server";
+import { type FastifyRequest, LogController } from "fastify";
 import { AppModule } from "./app.module.js";
 import type { ApiContext } from "./context.js";
+import { COOKIES, readCookie } from "./http/cookies.js";
+import { changesState, isCsrfSafe, ownOrigin } from "./http/csrf.js";
+import { sendProblem } from "./http/error.filter.js";
+import { bearerToken, carriesCookieCredentials } from "./http/request.js";
 import { NestLogger } from "./nest-logger.js";
 import { registerWebClient } from "./web-client.js";
 
-export function createFastifyAdapter(logger: Logger): FastifyAdapter {
+export function createFastifyAdapter(logger: Logger, trustedProxies: string[] = []): FastifyAdapter {
   return new FastifyAdapter({
     loggerInstance: logger,
     logController: new LogController({ disableRequestLogging: true, requestIdLogLabel: "requestId" }),
     genReqId: () => randomUUID(),
+    trustProxy: trustedProxies.length > 0 ? trustedProxies : false,
   });
 }
 
-/** Applies request context, request logging, metrics and the web client to an application. */
+async function allowedOrigins(request: FastifyRequest, context: ApiContext): Promise<string[]> {
+  const instanceUrl = context.settings ? await context.settings.get(instanceUrlSetting, {}) : "";
+  const origins = [instanceUrl || ownOrigin(request)];
+  const setup = context.services?.setup;
+  const path = request.url.split("?")[0] ?? "";
+  if (setup && path.startsWith("/api/v1/setup/") && !(await setup.isComplete())) {
+    if (path === "/api/v1/setup/session") origins.push(ownOrigin(request));
+    const token = readCookie(request, COOKIES.setup);
+    const origin = token ? await setup.sessionOrigin(token) : null;
+    if (origin) origins.push(origin);
+  }
+  return origins;
+}
+
 export async function configureApp(app: NestFastifyApplication, context: ApiContext): Promise<void> {
   const fastify = app.getHttpAdapter().getInstance();
 
   fastify.addHook("onRequest", async (request, reply) => {
-    enterRequestContext({ requestId: request.id });
+    const userAgent = request.headers["user-agent"];
+    enterRequestContext({
+      requestId: request.id,
+      clientIp: request.ip,
+      ...(userAgent ? { userAgent } : {}),
+      actor: ANONYMOUS,
+    });
     reply.header("x-request-id", request.id);
+  });
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (bearerToken(request) !== undefined) {
+      if (readCookie(request, COOKIES.session) !== undefined) {
+        return sendProblem(reply, "ambiguousCredentials", "Send either a session cookie or an API token");
+      }
+      if (!carriesCookieCredentials(request)) return;
+    }
+    if (!changesState(request) || isCsrfSafe(request, await allowedOrigins(request, context))) return;
+    return sendProblem(
+      reply,
+      "csrfRejected",
+      "State-changing requests need the X-Pagehall-Request header and a matching Origin",
+    );
   });
   fastify.addHook("onResponse", async (request, reply) => {
     const path = request.url.split("?")[0] ?? "";
@@ -45,7 +83,7 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
 export async function createApp(context: ApiContext): Promise<NestFastifyApplication> {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule.forRoot(context),
-    createFastifyAdapter(context.logger),
+    createFastifyAdapter(context.logger, context.trustedProxies),
     { logger: new NestLogger(context.logger.child({ component: "nest" })) },
   );
   await configureApp(app, context);

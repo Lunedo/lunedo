@@ -44,7 +44,7 @@ git commit -s
 
 This adds a `Signed-off-by` line with your name and e-mail address. It must match the commit author. CI checks every commit of a pull request; pull requests opened by Dependabot are exempt. There is no Contributor License Agreement.
 
-`pnpm install` sets `core.hooksPath` to `.githooks`, whose `commit-msg` hook rejects a commit without a sign-off by its author, so a missing sign-off is caught before it reaches a pull request.
+`pnpm install` sets `core.hooksPath` to `.githooks`, whose `commit-msg` hook rejects a commit without a sign-off by its author, so a missing sign-off is caught before it reaches a pull request. The hooks also reject references to the maintainers' internal planning documents in files and commit messages; CI runs the same check with `pnpm references:check`.
 
 ## Code style
 
@@ -62,7 +62,7 @@ Every change comes with tests.
 
 - Unit tests use Vitest: `pnpm test`.
 - End-to-end tests use Playwright: `pnpm test:e2e`.
-- Integration tests run against a real PostgreSQL. Set `PAGEHALL_TEST_DATABASE_URL`, for example to the database of the development environment, to include them locally. CI always runs them.
+- Integration tests run against a real PostgreSQL. Set `PAGEHALL_TEST_DATABASE_URL`, for example to the database of the development environment, to include them locally. Mail tests also need `PAGEHALL_TEST_MAILPIT_URL=http://localhost:8025`. CI always runs them.
 - Authentication, permissions, encryption and imports require thorough tests of both allowed and denied cases.
 
 `pnpm lint`, `pnpm typecheck` and `pnpm test` must pass before a pull request is reviewed.

@@ -1,12 +1,16 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import type { Principal } from "../accounts/principal.js";
 
 export interface RequestContext {
   requestId: string;
+  clientIp?: string;
+  userAgent?: string;
+  actor?: Principal;
+  cache?: Map<string, unknown>;
 }
 
 const storage = new AsyncLocalStorage<RequestContext>();
 
-/** Runs `fn` with a request context that log lines and enqueued jobs pick up. */
 export function runWithRequestContext<T>(context: RequestContext, fn: () => T): T {
   return storage.run(context, fn);
 }

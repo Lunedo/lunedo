@@ -5,11 +5,12 @@
   "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-docs-assets.mjs",
     "dev": "pagehall-dev --start dist/main.js --watch src --watch node_modules/@pagehall/shared/dist --watch node_modules/@pagehall/server/dist",
     "start": "node --enable-source-maps dist/main.js",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "openapi": "node --enable-source-maps dist/openapi/write.js openapi.json"
   },
   "dependencies": {
     "@fastify/static": "^10.1.5",
@@ -20,12 +21,16 @@
     "@pagehall/shared": "workspace:*",
     "fastify": "^5.12.5",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@nestjs/testing": "^12.1.1",
     "@pagehall/config": "workspace:*",
+    "@scalar/api-reference": "^1.71.0",
     "@types/node": "^24.19.0",
+    "ajv": "^8.20.0",
+    "otpauth": "^9.5.2",
     "typescript": "^7.0.2",
     "vitest": "^5.0.2"
   },

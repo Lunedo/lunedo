@@ -24,6 +24,7 @@ The workspace is managed with pnpm and Turborepo. The compiler is TypeScript 7 (
 `pnpm dev` runs `docker/compose.dev.yml`:
 
 - `postgres`: PostgreSQL 16 on `localhost:5432`, user, password and database `pagehall`.
+- `mailpit`: catches all outgoing e-mail. SMTP on `localhost:1025`, web interface on `http://localhost:8025`. See [email.md](email.md).
 - `app`: installs dependencies inside the container and runs `pnpm dev:apps`, which starts every package's `dev` task through Turborepo.
 
 The repository is mounted into the container. Dependencies live in Docker volumes, so the container never uses packages installed for the host system. File changes are detected by polling, because file system events do not reach containers through Windows bind mounts. The Node.js processes use `pagehall-dev` from `packages/config`, which rebuilds a package on changes and restarts its process; the web client uses Vite with polling.
@@ -34,11 +35,11 @@ To run everything on the host instead, start PostgreSQL, set `PAGEHALL_DATABASE_
 
 ## Operations
 
-All settings are described in [configuration.md](configuration.md). The database conventions are in [database.md](database.md), encryption and key rotation in [encryption.md](encryption.md), backups in [backup.md](backup.md).
+All settings are described in [configuration.md](configuration.md). The database conventions are in [database.md](database.md), encryption and key rotation in [encryption.md](encryption.md), backups in [backup.md](backup.md). Setup is described in [setup.md](setup.md), sign-in and sessions in [authentication.md](authentication.md), the audit log in [audit.md](audit.md) and e-mail in [email.md](email.md).
 
 Every process exposes `GET /health/live`, `GET /health/ready` and `GET /metrics`. Readiness covers the database, the migration state and the master key; metrics require the metrics token. Logs are JSON lines on stdout and carry the request ID, also in jobs enqueued by a request.
 
-Every API route declares how it may be accessed (`@PublicRoute()`, `@MetricsTokenRoute()`); the API refuses to start when a route has none, and the global guard rejects such routes as well.
+Every API route declares how it may be accessed (`@PublicRoute()`, `@MetricsTokenRoute()`, `@SessionRoute()`, `@SetupCodeRoute()`, `@SetupSessionRoute()`, or `@Permission(action, resource)` for routes that act on instance or organization resources, see [organizations.md](organizations.md)); the API refuses to start when a route has none, and the global guard rejects such routes as well. Routes that only the web client uses are marked with `@InternalRoute()`.
 
 ## Container image
 

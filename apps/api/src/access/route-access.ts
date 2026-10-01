@@ -1,17 +1,63 @@
-import { SetMetadata } from "@nestjs/common";
+import { applyDecorators, SetMetadata } from "@nestjs/common";
 
-/**
- * How a route may be accessed. Every route declares exactly one; the global guard rejects
- * routes without a declaration. Permission-based access is added with the authorization
- * service.
- */
-export type RouteAccess = { kind: "public" } | { kind: "metricsToken" };
+export type RouteAccess =
+  | { kind: "public" }
+  | { kind: "metricsToken" }
+  | {
+      kind: "session";
+      secondFactorSetup: boolean;
+      recentAuthentication: boolean;
+    }
+  | { kind: "setupCode" }
+  | { kind: "setupSession" }
+  | { kind: "apiDocumentation" }
+  | {
+      kind: "permission";
+      action: string;
+      alternatives: string[];
+      resource: ResourceSource;
+      recentAuthentication: boolean;
+      sessionOnly: boolean;
+    };
+
+export type ResourceSource = { type: "instance" } | { type: string; param: string };
 
 export const ROUTE_ACCESS = "pagehall:route-access";
 
-/** Open to everyone. Only for health endpoints and similar operational routes. */
+export const INTERNAL_ROUTE = "pagehall:internal-route";
+
 export const PublicRoute = () => SetMetadata(ROUTE_ACCESS, { kind: "public" } satisfies RouteAccess);
 
-/** Requires the metrics bearer token from the configuration. */
 export const MetricsTokenRoute = () =>
   SetMetadata(ROUTE_ACCESS, { kind: "metricsToken" } satisfies RouteAccess);
+
+export const SessionRoute = (options: { secondFactorSetup?: boolean; recentAuthentication?: boolean } = {}) =>
+  SetMetadata(ROUTE_ACCESS, {
+    kind: "session",
+    secondFactorSetup: options.secondFactorSetup ?? false,
+    recentAuthentication: options.recentAuthentication ?? false,
+  } satisfies RouteAccess);
+
+export const SetupCodeRoute = () => SetMetadata(ROUTE_ACCESS, { kind: "setupCode" } satisfies RouteAccess);
+
+export const SetupSessionRoute = () =>
+  SetMetadata(ROUTE_ACCESS, { kind: "setupSession" } satisfies RouteAccess);
+
+export const ApiDocumentationRoute = () =>
+  SetMetadata(ROUTE_ACCESS, { kind: "apiDocumentation" } satisfies RouteAccess);
+
+export const Permission = (
+  action: string | [string, ...string[]],
+  resource: ResourceSource = { type: "instance" },
+  options: { recentAuthentication?: boolean; sessionOnly?: boolean } = {},
+) =>
+  SetMetadata(ROUTE_ACCESS, {
+    kind: "permission",
+    action: typeof action === "string" ? action : action[0],
+    alternatives: typeof action === "string" ? [] : action.slice(1),
+    resource,
+    recentAuthentication: options.recentAuthentication ?? false,
+    sessionOnly: options.sessionOnly ?? false,
+  } satisfies RouteAccess);
+
+export const InternalRoute = () => applyDecorators(SetMetadata(INTERNAL_ROUTE, true));

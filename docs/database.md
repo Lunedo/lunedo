@@ -34,4 +34,6 @@ Integration tests run against a real PostgreSQL server. Set `PAGEHALL_TEST_DATAB
 PAGEHALL_TEST_DATABASE_URL=postgres://pagehall:pagehall@localhost:5432/pagehall pnpm test
 ```
 
-Each test run creates a fresh, migrated database and drops it afterwards. Tests that need an empty database create their own. Without the variable, database tests are skipped locally; in CI they are required.
+Each test run creates a fresh, migrated database and drops it afterwards. Tests that need an empty database, or an instance state of their own such as setup, create their own. Without the variable, database tests are skipped locally; in CI they are required.
+
+End-to-end mail tests need Mailpit, which the development environment includes. Set `PAGEHALL_TEST_MAILPIT_URL=http://localhost:8025`; its SMTP server is expected on port 1025 of the same host. Without the variable these tests are skipped locally; in CI they are required.

@@ -6,7 +6,12 @@ import { customType } from "drizzle-orm/pg-core";
  */
 export const encrypted = customType<{ data: Buffer; driverData: Buffer }>({
   dataType: () => "bytea",
+  toDriver: encryptedToDriver,
 });
+
+export function encryptedToDriver(value: Buffer): Buffer {
+  return value;
+}
 
 /** Table and column of an encrypted value, as SQL names. */
 export interface EncryptedColumn {
@@ -19,4 +24,8 @@ export interface EncryptedColumn {
  * All encrypted columns. Modules add their columns here together with the schema change;
  * a test compares this list with the `encrypted()` columns of the schema.
  */
-export const encryptedColumns: readonly EncryptedColumn[] = [];
+export const encryptedColumns: readonly EncryptedColumn[] = [
+  { table: "instance_secrets", idColumn: "name", column: "value" },
+  { table: "mail_outbox", idColumn: "id", column: "message" },
+  { table: "totp_credentials", idColumn: "id", column: "secret" },
+];

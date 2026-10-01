@@ -147,3 +147,142 @@ describe("loadConfig", () => {
     );
   });
 });
+
+describe("loadConfig for sign-in and setup", () => {
+  const base = { PAGEHALL_DATABASE_URL: databaseUrl };
+
+  it("reads trusted proxies and rejects invalid entries", () => {
+    expect(loadConfig(base).trustedProxies).toEqual([]);
+    expect(
+      loadConfig({ ...base, PAGEHALL_TRUSTED_PROXIES: "10.0.0.0/8, 2001:db8::/32 ,192.0.2.1" })
+        .trustedProxies,
+    ).toEqual(["10.0.0.0/8", "2001:db8::/32", "192.0.2.1"]);
+    for (const invalid of ["10.0.0.0/33", "proxy.example.org", "10.0.0.1/8/1", "::1/129"]) {
+      expectConfigError(
+        () => loadConfig({ ...base, PAGEHALL_TRUSTED_PROXIES: invalid }),
+        "PAGEHALL_TRUSTED_PROXIES",
+      );
+    }
+  });
+
+  it("has no setup values unless they are configured", () => {
+    expect(loadConfig(base).setup).toBeUndefined();
+  });
+
+  it("reads setup values, with SMTP defaults", () => {
+    const config = loadConfig({
+      ...base,
+      PAGEHALL_INSTANCE_URL: "https://wiki.example.org",
+      PAGEHALL_OWNER_EMAIL: "owner@example.org",
+      PAGEHALL_OWNER_NAME: "Owner",
+      PAGEHALL_OWNER_PASSWORD: "owner-password-value",
+      PAGEHALL_ORGANIZATION_NAME: "Docs team",
+      PAGEHALL_SMTP_HOST: "smtp.example.org",
+      PAGEHALL_SMTP_USERNAME: "wiki",
+      PAGEHALL_SMTP_PASSWORD: "smtp-password-value",
+      PAGEHALL_SMTP_FROM: "wiki@example.org",
+    });
+    expect(config.setup).toMatchObject({
+      instanceUrl: "https://wiki.example.org",
+      instanceName: undefined,
+      owner: { email: "owner@example.org", name: "Owner" },
+      smtp: {
+        host: "smtp.example.org",
+        port: 587,
+        security: "starttls",
+        username: "wiki",
+        from: "wiki@example.org",
+      },
+    });
+    expect(config.setup?.owner.password.reveal()).toBe("owner-password-value");
+    const printed = `${JSON.stringify(config)} ${inspect(config)}`;
+    expect(printed).not.toContain("owner-password-value");
+    expect(printed).not.toContain("smtp-password-value");
+  });
+
+  it("requires the instance URL and the owner together and validates them", () => {
+    expectConfigError(
+      () => loadConfig({ ...base, PAGEHALL_OWNER_EMAIL: "owner@example.org" }),
+      /PAGEHALL_INSTANCE_URL: is required for setup through configuration[\s\S]*PAGEHALL_OWNER_PASSWORD: is required/,
+    );
+    expectConfigError(
+      () =>
+        loadConfig({
+          ...base,
+          PAGEHALL_INSTANCE_URL: "https://wiki.example.org/path",
+          PAGEHALL_OWNER_EMAIL: "not an address",
+          PAGEHALL_OWNER_NAME: "Owner",
+          PAGEHALL_OWNER_PASSWORD: "secret-owner-password",
+        }),
+      /PAGEHALL_INSTANCE_URL: must be an http or https origin[\s\S]*PAGEHALL_OWNER_EMAIL: must be an e-mail address/,
+    );
+    expectConfigError(
+      () =>
+        loadConfig({
+          ...base,
+          PAGEHALL_SMTP_HOST: "smtp.example.org",
+          PAGEHALL_SMTP_FROM: "wiki@example.org",
+        }),
+      "SMTP settings in the configuration require setup through configuration",
+    );
+  });
+
+  it("reads and validates the first organization", () => {
+    const setup = {
+      ...base,
+      PAGEHALL_INSTANCE_URL: "https://wiki.example.org",
+      PAGEHALL_OWNER_EMAIL: "owner@example.org",
+      PAGEHALL_OWNER_NAME: "Owner",
+      PAGEHALL_OWNER_PASSWORD: "owner-password-value",
+    };
+    expectConfigError(
+      () => loadConfig(setup),
+      "PAGEHALL_ORGANIZATION_NAME: is required for setup through configuration",
+    );
+    expect(
+      loadConfig({
+        ...setup,
+        PAGEHALL_ORGANIZATION_NAME: "Docs team",
+        PAGEHALL_ORGANIZATION_LANGUAGE: "de",
+        PAGEHALL_ORGANIZATION_TIME_ZONE: "Europe/Vienna",
+      }).setup?.organization,
+    ).toEqual({ name: "Docs team", language: "de", timeZone: "Europe/Vienna" });
+    expectConfigError(
+      () =>
+        loadConfig({
+          ...setup,
+          PAGEHALL_ORGANIZATION_NAME: "Docs",
+          PAGEHALL_ORGANIZATION_TIME_ZONE: "Mars/Olympus",
+        }),
+      "PAGEHALL_ORGANIZATION_TIME_ZONE: must be an IANA time zone",
+    );
+  });
+
+  it("rejects SMTP credentials without TLS and a password without a user name", () => {
+    const setup = {
+      ...base,
+      PAGEHALL_INSTANCE_URL: "https://wiki.example.org",
+      PAGEHALL_OWNER_EMAIL: "owner@example.org",
+      PAGEHALL_OWNER_NAME: "Owner",
+      PAGEHALL_OWNER_PASSWORD: "owner-password-value",
+      PAGEHALL_ORGANIZATION_NAME: "Docs team",
+      PAGEHALL_SMTP_HOST: "smtp.example.org",
+      PAGEHALL_SMTP_FROM: "wiki@example.org",
+    };
+    expectConfigError(
+      () =>
+        loadConfig({
+          ...setup,
+          PAGEHALL_SMTP_SECURITY: "none",
+          PAGEHALL_SMTP_USERNAME: "wiki",
+          PAGEHALL_SMTP_PASSWORD: "x",
+        }),
+      "PAGEHALL_SMTP_SECURITY: credentials require tls or starttls",
+    );
+    expectConfigError(
+      () => loadConfig({ ...setup, PAGEHALL_SMTP_PASSWORD: "x" }),
+      "PAGEHALL_SMTP_USERNAME: set together with PAGEHALL_SMTP_PASSWORD",
+    );
+    expect(loadConfig({ ...setup, PAGEHALL_SMTP_SECURITY: "tls" }).setup?.smtp?.port).toBe(465);
+  });
+});

@@ -1,0 +1,136 @@
+import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException, Inject } from "@nestjs/common";
+import {
+  AuthError,
+  BusyError,
+  EmailInUseError,
+  ForbiddenError,
+  OrganizationError,
+  PasswordPolicyError,
+  RelyingPartyError,
+  SessionGoneError,
+  SettingError,
+  SettingLockedError,
+  SetupNotFoundError,
+  SetupStepError,
+  SmtpConfigurationError,
+  TokenRejectedError,
+} from "@pagehall/server";
+import type { FastifyReply } from "fastify";
+import { ZodError } from "zod";
+import { API_CONTEXT, type ApiContext } from "../context.js";
+import { isProblemCode, type ProblemCode, ProblemException, problemBody } from "./problems.js";
+
+const STATUS_CODES: Record<number, ProblemCode> = {
+  400: "invalidInput",
+  401: "notSignedIn",
+  403: "forbidden",
+  404: "notFound",
+  405: "methodNotAllowed",
+  413: "payloadTooLarge",
+  415: "unsupportedMediaType",
+  429: "rateLimited",
+  503: "busy",
+};
+
+export function sendProblem(
+  reply: FastifyReply,
+  code: ProblemCode,
+  detail?: string,
+  extensions: Record<string, unknown> = {},
+) {
+  const body = problemBody(code, detail, extensions);
+  return reply.status(body.status).type("application/problem+json").send(body);
+}
+
+export function problemForStatus(status: number): ProblemCode {
+  return STATUS_CODES[status] ?? (status >= 500 ? "internalError" : "invalidInput");
+}
+
+function codeOf(code: string, fallback: ProblemCode): ProblemCode {
+  return isProblemCode(code) ? code : fallback;
+}
+
+interface Mapped {
+  code: ProblemCode;
+  detail?: string;
+  extensions?: Record<string, unknown>;
+}
+
+function zodFields(error: ZodError): string[] {
+  return error.issues.map((issue) => issue.path.join("."));
+}
+
+function map(error: unknown): Mapped | null {
+  if (error instanceof ProblemException) {
+    const body = error.getResponse() as { detail?: string };
+    return {
+      code: error.code,
+      ...(body.detail ? { detail: body.detail } : {}),
+      extensions: error.extensions,
+    };
+  }
+  if (error instanceof SetupNotFoundError) return { code: "notFound" };
+  if (error instanceof TokenRejectedError) return { code: "invalidApiToken", detail: error.message };
+  if (error instanceof AuthError) {
+    return {
+      code: codeOf(error.code, "invalidInput"),
+      detail: error.message,
+      ...(error.retryAfterSeconds !== undefined
+        ? { extensions: { retryAfterSeconds: error.retryAfterSeconds } }
+        : {}),
+    };
+  }
+  if (error instanceof PasswordPolicyError) {
+    return {
+      code: "passwordPolicy",
+      detail: error.message,
+      extensions: { problem: error.problem, minLength: error.minLength },
+    };
+  }
+  if (error instanceof EmailInUseError) return { code: "emailInUse", detail: error.message };
+  if (error instanceof BusyError) return { code: "busy", detail: error.message };
+  if (error instanceof SessionGoneError) return { code: "sessionEnded", detail: error.message };
+  if (error instanceof RelyingPartyError) return { code: "instanceUrlMissing", detail: error.message };
+  if (error instanceof SmtpConfigurationError)
+    return { code: "invalidSmtpConfiguration", detail: error.message };
+  if (error instanceof ForbiddenError)
+    return { code: "forbidden", extensions: { denials: error.decision.denials } };
+  if (error instanceof OrganizationError)
+    return { code: codeOf(error.code, "invalidInput"), detail: error.message };
+  if (error instanceof SettingLockedError) {
+    return { code: "settingLocked", detail: error.message, extensions: { lockedBy: error.lockedBy.level } };
+  }
+  if (error instanceof SettingError) return { code: "invalidSetting", detail: error.message };
+  if (error instanceof ZodError) {
+    return {
+      code: "invalidInput",
+      detail: "The request is not valid",
+      extensions: { fields: zodFields(error) },
+    };
+  }
+  if (error instanceof SetupStepError)
+    return { code: codeOf(error.code, "setupNotReady"), detail: error.message };
+  if (error instanceof HttpException) return { code: problemForStatus(error.getStatus()) };
+  const status = error instanceof Error ? (error as { statusCode?: unknown }).statusCode : undefined;
+  if (typeof status === "number" && status >= 400 && status < 500) return { code: problemForStatus(status) };
+  return null;
+}
+
+@Catch()
+export class ErrorFilter implements ExceptionFilter {
+  constructor(@Inject(API_CONTEXT) private readonly context: ApiContext) {}
+
+  catch(error: unknown, host: ArgumentsHost): void {
+    const reply = host.switchToHttp().getResponse<FastifyReply>();
+    const mapped = map(error);
+    if (!mapped) {
+      this.context.logger.error({ err: error }, "Request failed");
+      void sendProblem(reply, "internalError");
+      return;
+    }
+    const retryAfter = mapped.extensions?.retryAfterSeconds;
+    if (typeof retryAfter === "number") reply.header("retry-after", String(retryAfter));
+    if (error instanceof BusyError) reply.header("retry-after", "1");
+    void sendProblem(reply, mapped.code, mapped.detail, mapped.extensions);
+  }
+}

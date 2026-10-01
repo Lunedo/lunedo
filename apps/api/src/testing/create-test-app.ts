@@ -14,12 +14,17 @@ export async function createTestApp(context: Partial<ApiContext> = {}): Promise<
     metricsToken: new Secret(TEST_METRICS_TOKEN),
     readiness: {},
     webRoot: undefined,
+    trustedProxies: [],
+    services: undefined,
+    settings: undefined,
+    settingsRegistry: undefined,
     ...context,
   };
   const moduleRef = await Test.createTestingModule({ imports: [AppModule.forRoot(full)] }).compile();
-  const app = moduleRef.createNestApplication<NestFastifyApplication>(createFastifyAdapter(full.logger), {
-    logger: false,
-  });
+  const app = moduleRef.createNestApplication<NestFastifyApplication>(
+    createFastifyAdapter(full.logger, full.trustedProxies),
+    { logger: false },
+  );
   await configureApp(app, full);
   await app.init();
   await app.getHttpAdapter().getInstance().ready();

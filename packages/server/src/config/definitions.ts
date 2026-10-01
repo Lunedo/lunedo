@@ -1,3 +1,4 @@
+import { BlockList, isIP } from "node:net";
 import { z } from "zod";
 import { logLevels } from "../logging/logger.js";
 
@@ -13,6 +14,20 @@ const port = z.coerce.number().int().min(1).max(65535);
 const positiveInt = z.coerce.number().int().positive();
 const nonEmpty = z.string().trim().min(1);
 const path = z.string().trim().min(1);
+
+export function isAddressOrRange(value: string): boolean {
+  const [address = "", prefix, ...rest] = value.split("/");
+  const family = isIP(address);
+  if (family === 0 || rest.length > 0) return false;
+  if (prefix === undefined) return true;
+  if (!/^[0-9]+$/.test(prefix)) return false;
+  try {
+    new BlockList().addSubnet(address, Number(prefix), family === 4 ? "ipv4" : "ipv6");
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function setting(name: string, schema: z.ZodType, description: string, secret = false): ConfigSetting {
   return { name, schema, secret, description };
@@ -53,6 +68,75 @@ export const configSettings = [
   setting("PAGEHALL_BACKUP_KEY", nonEmpty.optional(), "Key ring that encrypts backups.", true),
   setting("PAGEHALL_METRICS_TOKEN", nonEmpty.optional(), "Bearer token required by /metrics.", true),
   setting("PAGEHALL_WEB_ROOT", path.optional(), "Directory with the built web client, served by the API."),
+  setting(
+    "PAGEHALL_TRUSTED_PROXIES",
+    z
+      .string()
+      .trim()
+      .optional()
+      .transform((value) =>
+        value
+          ? value
+              .split(",")
+              .map((entry) => entry.trim())
+              .filter(Boolean)
+          : [],
+      )
+      .refine(
+        (entries) => entries.every(isAddressOrRange),
+        "must be a comma-separated list of IP addresses and CIDR ranges",
+      ),
+    "Proxies whose forwarding headers are trusted for the client address and protocol.",
+  ),
+  setting(
+    "PAGEHALL_PASSWORD_HASH_CONCURRENCY",
+    positiveInt.max(64).default(4),
+    "Password hashes computed at once per process; each needs about 19 MiB of memory.",
+  ),
+  setting("PAGEHALL_INSTANCE_URL", nonEmpty.optional(), "Instance URL for setup through configuration."),
+  setting("PAGEHALL_INSTANCE_NAME", nonEmpty.optional(), "Instance name for setup through configuration."),
+  setting(
+    "PAGEHALL_OWNER_EMAIL",
+    nonEmpty.optional(),
+    "E-mail address of the owner for setup through configuration.",
+  ),
+  setting("PAGEHALL_OWNER_NAME", nonEmpty.optional(), "Name of the owner for setup through configuration."),
+  setting(
+    "PAGEHALL_OWNER_PASSWORD",
+    nonEmpty.optional(),
+    "Password of the owner for setup through configuration.",
+    true,
+  ),
+  setting(
+    "PAGEHALL_ORGANIZATION_NAME",
+    nonEmpty.optional(),
+    "Name of the first organization for setup through configuration.",
+  ),
+  setting(
+    "PAGEHALL_ORGANIZATION_LANGUAGE",
+    z.enum(["en", "de"]).optional(),
+    "Language of the first organization for setup through configuration.",
+  ),
+  setting(
+    "PAGEHALL_ORGANIZATION_TIME_ZONE",
+    nonEmpty.optional(),
+    "Time zone of the first organization for setup through configuration.",
+  ),
+  setting("PAGEHALL_SMTP_HOST", nonEmpty.optional(), "SMTP server for setup through configuration."),
+  setting("PAGEHALL_SMTP_PORT", port.optional(), "SMTP port for setup through configuration."),
+  setting(
+    "PAGEHALL_SMTP_SECURITY",
+    z.enum(["tls", "starttls", "none"]).optional(),
+    "SMTP connection security.",
+  ),
+  setting("PAGEHALL_SMTP_USERNAME", nonEmpty.optional(), "SMTP user name for setup through configuration."),
+  setting(
+    "PAGEHALL_SMTP_PASSWORD",
+    nonEmpty.optional(),
+    "SMTP password for setup through configuration.",
+    true,
+  ),
+  setting("PAGEHALL_SMTP_FROM", nonEmpty.optional(), "Sender address for setup through configuration."),
   setting(
     "PAGEHALL_SHUTDOWN_TIMEOUT_SECONDS",
     positiveInt.default(30),

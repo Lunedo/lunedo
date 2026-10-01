@@ -1,5 +1,9 @@
 import { randomBytes } from "node:crypto";
 import type { HealthCheck } from "@pagehall/shared";
+import { instanceSettings } from "../accounts/instance-settings.js";
+import { AuditLog, auditSettingChanges } from "../audit/audit-log.js";
+import { auditRetentionSetting } from "../audit/retention.js";
+import { authSettings } from "../auth/settings.js";
 import { checkRestoreComplete } from "../backup/restore-marker.js";
 import { ensureSecretFile, generateToken } from "../config/generated-secrets.js";
 import { type Env, loadConfig, type ServerConfig } from "../config/load.js";
@@ -26,10 +30,15 @@ import {
   cleanupJobProgressJob,
 } from "../jobs/progress-cleanup.js";
 import { createLogger, type Logger } from "../logging/logger.js";
+import { smtpSetting } from "../mail/mail-service.js";
+import type { MailTransport, SmtpOptions } from "../mail/transport.js";
 import { Metrics } from "../observability/metrics.js";
+import { organizationSettings } from "../organizations/settings.js";
+import { type AccountServices, createAccountServices, workAccountJobs } from "../services.js";
 import { builtinSettings } from "../settings/builtin.js";
 import { type SettingDefinition, SettingsRegistry } from "../settings/definition.js";
 import { SettingsService } from "../settings/service.js";
+import { tokenSettings } from "../tokens/settings.js";
 
 export type ProcessRole = "api" | "collab" | "worker";
 
@@ -44,6 +53,8 @@ export interface ServerRuntime {
   streamKeys: StreamKeys;
   settings: SettingsService;
   settingsRegistry: SettingsRegistry;
+  audit: AuditLog;
+  services: AccountServices;
   /** Undefined for the collaboration server, which does not use jobs yet. */
   jobs: JobQueue | undefined;
   keyRotation: KeyRotation | undefined;
@@ -81,12 +92,13 @@ export async function createServerRuntime(options: {
   settings?: SettingDefinition<never>[];
   /** Encrypted data for key checks and rotation; defaults to the registered columns and streams. */
   encrypted?: { columns?: readonly EncryptedColumn[]; streamOwners?: readonly EncryptedStreamOwner[] };
+  mailTransport?: (options: SmtpOptions) => MailTransport;
 }): Promise<ServerRuntime> {
   const { role } = options;
   const config = loadConfig(options.env);
   const logger = createLogger({ service: role, level: config.logLevel });
   await checkRestoreComplete(config.paths.files);
-  const { metricsToken } = resolveGeneratedSecrets(config);
+  const { metricsToken, backupKeys } = resolveGeneratedSecrets(config);
 
   const connectionString = config.database.url.reveal();
   const pool = createDatabasePool({
@@ -115,10 +127,19 @@ export async function createServerRuntime(options: {
     const encryption = new Encryption(() => keyRing.ring);
 
     const settingsRegistry = new SettingsRegistry().register(
-      ...(builtinSettings as SettingDefinition<never>[]),
+      ...([
+        ...builtinSettings,
+        ...instanceSettings,
+        ...authSettings,
+        ...organizationSettings,
+        ...tokenSettings,
+        auditRetentionSetting,
+        smtpSetting,
+      ] as SettingDefinition<never>[]),
       ...(options.settings ?? []),
     );
-    const settings = new SettingsService({ database, logger });
+    const audit = new AuditLog({ database });
+    const settings = new SettingsService({ database, logger, onChange: auditSettingChanges(audit) });
     await settings.enableCache(listener);
 
     let keyRotation: KeyRotation | undefined;
@@ -139,7 +160,26 @@ export async function createServerRuntime(options: {
         columns: () => columns,
         streams,
       });
+    }
+
+    const services = createAccountServices({
+      database,
+      pool,
+      settings,
+      audit,
+      encryption,
+      keyRing,
+      backupKeys,
+      jobs,
+      logger,
+      filesDir: config.paths.files,
+      passwordHashConcurrency: config.passwordHashConcurrency,
+      ...(options.mailTransport ? { mailTransport: options.mailTransport } : {}),
+    });
+
+    if (jobs && keyRotation) {
       if (role === "worker") {
+        await workAccountJobs(jobs, services, settings);
         metrics.observeJobQueue(jobs);
         await jobs.work(rotateDataKeysJob, keyRotation.run);
         await jobs.work(cleanupJobProgressJob, async () => {
@@ -164,6 +204,8 @@ export async function createServerRuntime(options: {
       streamKeys: masterStreamKeys(() => keyRing.ring),
       settings,
       settingsRegistry,
+      audit,
+      services,
       jobs,
       keyRotation,
       metrics,

@@ -1,21 +1,43 @@
 import { randomBytes } from "node:crypto";
 import { TestClock } from "pg-boss";
-import { afterEach, beforeEach, describe, expect, inject, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { createDatabase, type Database } from "../database/database.js";
+import { runMigrations } from "../database/migrate.js";
 import { createDatabasePool, type DatabasePool } from "../database/pool.js";
 import { createLogger } from "../logging/logger.js";
+import { createTemporaryDatabase, type TemporaryDatabase, testDatabaseBaseUrl } from "../testing/database.js";
 import { defineJob } from "./job-queue.js";
 import { PgBossQueue } from "./pg-boss-queue.js";
 
-const databaseUrl = inject("databaseUrl");
+const baseUrl = testDatabaseBaseUrl();
 const logger = createLogger({ service: "test", level: "silent" });
 
-describe.skipIf(!databaseUrl)("recurring jobs", () => {
+describe.skipIf(!baseUrl)("recurring jobs", () => {
+  let temporary: TemporaryDatabase;
+  let databaseUrl: string;
   let pool: DatabasePool;
   let database: Database;
   let clock: TestClock;
   let queue: PgBossQueue;
+
+  beforeAll(async () => {
+    temporary = await createTemporaryDatabase(baseUrl ?? "", "pagehall_schedule_test");
+    databaseUrl = temporary.url;
+    const migrationPool = createDatabasePool({
+      connectionString: databaseUrl,
+      applicationName: "pagehall-test",
+    });
+    try {
+      await runMigrations(migrationPool, { logger });
+    } finally {
+      await migrationPool.end();
+    }
+  });
+
+  afterAll(async () => {
+    await temporary?.drop();
+  });
 
   beforeEach(async () => {
     pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });

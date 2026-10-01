@@ -35,8 +35,16 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
+      mailpit:
+        image: axllent/mailpit:v1.31.3
+        env:
+          MP_DISABLE_VERSION_CHECK: "true"
+        ports:
+          - 1025:1025
+          - 8025:8025
     env:
       PAGEHALL_TEST_DATABASE_URL: postgres://pagehall:pagehall@localhost:5432/pagehall
+      PAGEHALL_TEST_MAILPIT_URL: http://localhost:8025
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -50,6 +58,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      - run: pnpm references:check
       - run: pnpm typecheck
       - run: pnpm test
 

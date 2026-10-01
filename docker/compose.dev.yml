@@ -21,6 +21,7 @@ x-node-modules: &node-modules
 services:
   postgres:
     image: postgres:16-alpine
+    command: ["postgres", "-c", "max_connections=400"]
     environment:
       POSTGRES_USER: pagehall
       POSTGRES_PASSWORD: pagehall
@@ -34,6 +35,14 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  mailpit:
+    image: axllent/mailpit:v1.31.3
+    environment:
+      MP_DISABLE_VERSION_CHECK: "true"
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
 
   app:
     build:

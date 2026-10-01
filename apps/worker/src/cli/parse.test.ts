@@ -25,6 +25,7 @@ describe("parseCommand", () => {
   it("parses key commands and help", () => {
     expect(parseCommand(["keys", "rotate"])).toEqual({ name: "keys rotate" });
     expect(parseCommand(["keys", "status"])).toEqual({ name: "keys status" });
+    expect(parseCommand(["audit", "verify"])).toEqual({ name: "audit verify" });
     expect(parseCommand([])).toEqual({ name: "help" });
     expect(parseCommand(["--help"])).toEqual({ name: "help" });
   });
