@@ -1,9 +1,9 @@
 import { type SetupStepId, setupCodeSchema } from "@pagehall/shared";
 import { Button, Field, Input, Notice, Skeleton } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { api } from "../../api/client.js";
@@ -20,24 +20,34 @@ import { OrganizationStep } from "./steps/organization-step.js";
 import { OwnerStep } from "./steps/owner-step.js";
 import { SystemCheckStep } from "./steps/system-check-step.js";
 
-const SETUP_CODE_COMMAND = 'docker compose logs pagehall | grep "Setup code"';
+const SETUP_CODE_COMMAND = 'docker compose logs pagehall | grep "Setup link"';
 
 const STEP_ORDER: SetupStepId[] = ["systemCheck", "instance", "owner", "keyBackup", "organization", "mail"];
 
 export function SetupScreen() {
+  const router = useRouter();
   const state = useQuery(setupStateQuery);
+  const [linkedCode] = useState(() => codeFromFragment(window.location.hash));
+  useEffect(() => {
+    if (window.location.hash) router.history.replace(`${window.location.pathname}${window.location.search}`);
+  }, [router]);
   if (state.isPending) return <SetupFrame step={0} total={STEP_ORDER.length + 1} title="" loading />;
   if (state.data?.session) return <SetupSteps />;
-  return <SetupCode />;
+  return <SetupCode linkedCode={linkedCode} />;
 }
 
 const codeForm = z.object({ code: setupCodeSchema });
 
-function SetupCode() {
+export function codeFromFragment(hash: string): string {
+  const value = new URLSearchParams(hash.replace(/^#/, "")).get("code")?.trim() ?? "";
+  return setupCodeSchema.safeParse(value).success ? value : "";
+}
+
+function SetupCode({ linkedCode }: { linkedCode: string }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
-  const form = useSchemaForm(codeForm, { defaultValues: { code: "" } });
+  const form = useSchemaForm(codeForm, { defaultValues: { code: linkedCode } });
   const submit = form.handleSubmit(async (values) => {
     setError(null);
     try {
@@ -64,6 +74,7 @@ function SetupCode() {
             {...form.register("code")}
           />
         </Field>
+        <p className="text-sm text-text-muted">{t("setup.code.where")}</p>
         <pre className="overflow-x-auto rounded-md border border-border bg-surface-sunken p-3 font-mono text-sm">
           {SETUP_CODE_COMMAND}
         </pre>

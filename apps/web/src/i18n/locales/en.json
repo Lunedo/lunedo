@@ -318,8 +318,9 @@
     "code": {
       "name": "Setup code",
       "title": "Set up Pagehall",
-      "description": "Enter the setup code from the container log. It proves that you operate this server.",
+      "description": "Enter the setup code. It proves that you operate this server.",
       "label": "Setup code",
+      "where": "The code is in the .env file if you used the setup script or set PAGEHALL_SETUP_CODE. Otherwise it is in the log of the Pagehall container:",
       "hint": "The code stops working once the setup is complete."
     },
     "systemCheck": {

@@ -23,7 +23,10 @@ test("sets up a fresh instance and signs in the owner with a second factor", asy
   await page.getByLabel("Setup code").fill("WRONG-CODE-0000");
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByText("The setup code is not correct.")).toBeVisible();
-  await page.getByLabel("Setup code").fill(setupCode ?? "");
+  await page.goto("about:blank");
+  await page.goto(`/setup#code=${setupCode ?? ""}`);
+  await expect(page.getByLabel("Setup code")).toHaveValue(setupCode ?? "");
+  await expect(page).toHaveURL(/\/setup$/);
   await page.getByRole("button", { name: "Continue" }).click();
 
   await expect(page.getByRole("heading", { name: "System check" })).toBeVisible();
