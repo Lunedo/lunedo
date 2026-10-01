@@ -50,14 +50,22 @@ for _ in $(seq 1 60); do
 done
 psql_in source -c "create database target"
 
-echo "Migrating the source instance and creating sample data"
-docker run -d --name "${postgres}-worker" --network "$network" \
-  -e PAGEHALL_DATABASE_URL="$(url source)" -v "$source_data:/var/lib/pagehall" "$image" worker >/dev/null
+echo "Setting up the source instance through configuration and creating sample data"
+docker run -d --name "${postgres}-api" --network "$network" \
+  -e PAGEHALL_DATABASE_URL="$(url source)" -e PAGEHALL_INSTANCE_URL=https://wiki.example.org \
+  -e PAGEHALL_OWNER_EMAIL=owner@example.org -e PAGEHALL_OWNER_NAME=Owner \
+  -e PAGEHALL_OWNER_PASSWORD="roundtrip owner ${suffix}" \
+  -v "$source_data:/var/lib/pagehall" "$image" api >/dev/null
 for _ in $(seq 1 60); do
-  if [ "$(psql_in source -c "select to_regclass('public.setting_values') is not null")" = "t" ]; then break; fi
+  if [ "$(psql_in source -c "select to_regclass('public.instance') is not null
+    and exists (select 1 from instance where setup_completed_at is not null)" 2>/dev/null)" = "t" ]; then break; fi
   sleep 1
 done
-docker rm -f "${postgres}-worker" >/dev/null
+docker rm -f "${postgres}-api" >/dev/null
+if [ "$(psql_in source -c "select count(*) from audit_events")" -lt 3 ]; then
+  echo "Setup through configuration wrote no audit events" >&2
+  exit 1
+fi
 psql_in source -c "insert into setting_values (id, level, scope_id, key, value, locked) values
   ('0192f0e0-0000-7000-8000-000000000001', 'instance', '00000000-0000-0000-0000-000000000000', 'locale.language', '\"de\"', true),
   ('0192f0e0-0000-7000-8000-000000000002', 'organization', '0192f0e0-0000-7000-8000-00000000000a', 'locale.timeZone', '\"Europe/Vienna\"', false)"
@@ -107,5 +115,6 @@ fi
 
 echo "Checking the restored instance"
 pagehall "$target_data" target keys status
+pagehall "$target_data" target audit verify
 
 echo "Backup round trip succeeded"

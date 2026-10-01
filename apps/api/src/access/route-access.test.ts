@@ -17,6 +17,9 @@ const context: ApiContext = {
   metricsToken: new Secret("token"),
   readiness: {},
   webRoot: undefined,
+  trustedProxies: [],
+  services: undefined,
+  settings: undefined,
 };
 
 @Controller("test")
@@ -107,14 +110,16 @@ describe("RouteAccessGuard", () => {
 
   const guard = new RouteAccessGuard(new Reflector(), context);
 
-  it("denies a route without a declaration", () => {
-    expect(() => guard.canActivate(executionFor(UndeclaredController.prototype.undeclared))).toThrow(
+  it("denies a route without a declaration", async () => {
+    await expect(guard.canActivate(executionFor(UndeclaredController.prototype.undeclared))).rejects.toThrow(
       ForbiddenException,
     );
   });
 
-  it("allows a public route", () => {
-    expect(guard.canActivate(executionFor(UndeclaredController.prototype.declared))).toBe(true);
+  it("allows a public route", async () => {
+    await expect(guard.canActivate(executionFor(UndeclaredController.prototype.declared))).resolves.toBe(
+      true,
+    );
   });
 });
 

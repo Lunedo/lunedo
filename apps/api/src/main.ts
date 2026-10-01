@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import {
+  applyConfiguredSetup,
   ConfigError,
   createLogger,
   createServerRuntime,
@@ -13,6 +14,18 @@ async function main() {
   let runtime: Awaited<ReturnType<typeof createServerRuntime>>;
   try {
     runtime = await createServerRuntime({ role: "api", env: process.env });
+    const { config, services, settings, logger } = runtime;
+    if (config.setup) {
+      await applyConfiguredSetup({
+        setup: config.setup,
+        service: services.setup,
+        accounts: services.accounts,
+        settings,
+        mail: services.mail,
+        logger,
+      });
+    }
+    await services.setup.issueCode(logger);
   } catch (error) {
     if (!(error instanceof ConfigError) && !(error instanceof StartupError)) throw error;
     createLogger({ service: "api", level: "info" }).fatal(error.message);
