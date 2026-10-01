@@ -309,6 +309,7 @@ function Display() {
 
 function Forms() {
   const t = useText();
+  const pageLanguage = useContext(LanguageContext);
   const [language, setLanguage] = useState("en");
   const [checked, setChecked] = useState(true);
   const [enabled, setEnabled] = useState(true);
@@ -378,7 +379,12 @@ function Forms() {
           label={t("Session length", "Sitzungsdauer")}
           hint={t("Signed-in people stay signed in this long.", "So lange bleiben Personen angemeldet.")}
         >
-          <DurationInput value={43200} quickChoices={[1440, 10080, 43200]} units={["hours", "days"]} />
+          <DurationInput
+            value={43200}
+            quickChoices={[1440, 10080, 43200]}
+            units={["hours", "days"]}
+            locale={pageLanguage}
+          />
         </Field>
       </div>
       <div className="flex w-full flex-col gap-3">
