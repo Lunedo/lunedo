@@ -45,6 +45,8 @@ services:
       && pnpm dev:apps"
     working_dir: /repo
     init: true
+    # PAGEHALL_SHUTDOWN_TIMEOUT_SECONDS (30) plus the 10 second shutdown margin, with some room.
+    stop_grace_period: 45s
     environment:
       PAGEHALL_DATABASE_URL: postgres://pagehall:pagehall@postgres:5432/pagehall
       PAGEHALL_LOG_LEVEL: debug

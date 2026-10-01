@@ -25,7 +25,11 @@ const server = createCollabServer({
 await server.listen();
 logger.info({ port: server.address.port }, "Collaboration server listening");
 
-registerShutdown(logger, async () => {
-  await server.destroy();
-  await runtime.close();
-});
+registerShutdown(
+  logger,
+  async () => {
+    await server.destroy();
+    await runtime.close();
+  },
+  { timeoutSeconds: config.shutdownTimeoutSeconds },
+);

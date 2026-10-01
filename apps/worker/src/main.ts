@@ -25,7 +25,11 @@ const server = createOperationsServer({
 const address = await server.start();
 logger.info({ port: address.port }, "Worker listening");
 
-registerShutdown(logger, async () => {
-  await server.stop();
-  await runtime.close();
-});
+registerShutdown(
+  logger,
+  async () => {
+    await server.stop();
+    await runtime.close();
+  },
+  { timeoutSeconds: config.shutdownTimeoutSeconds },
+);

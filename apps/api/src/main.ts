@@ -17,10 +17,14 @@ async function main() {
   const app = await createApp(apiContextOf(runtime));
   await app.listen({ port: config.ports.api, host: config.host });
   logger.info({ port: config.ports.api }, "API listening");
-  registerShutdown(logger, async () => {
-    await app.close();
-    await runtime.close();
-  });
+  registerShutdown(
+    logger,
+    async () => {
+      await app.close();
+      await runtime.close();
+    },
+    { timeoutSeconds: config.shutdownTimeoutSeconds },
+  );
 }
 
 await main();

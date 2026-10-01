@@ -60,6 +60,12 @@ Generate a key with:
 openssl rand -base64 32
 ```
 
+## Shutdown
+
+On SIGTERM or SIGINT, Pagehall stops accepting new work and gives running requests and jobs `PAGEHALL_SHUTDOWN_TIMEOUT_SECONDS` to finish. Jobs that are still running then go back to the queue and run again on another worker. Closing connections takes up to 10 seconds more; only after the timeout plus these 10 seconds is the process ended forcibly.
+
+Container orchestrators must therefore allow a stop grace period of at least the timeout plus 10 seconds, otherwise they kill the process while jobs are still being handed back. Docker and Docker Compose default to 10 seconds; set `stop_grace_period` (Compose) or `terminationGracePeriodSeconds` (Kubernetes) accordingly. The Compose files use 45 seconds for the default timeout of 30 seconds.
+
 ## Metrics
 
 `GET /metrics` on the API, collaboration and worker ports answers in the Prometheus format when the request carries `Authorization: Bearer <PAGEHALL_METRICS_TOKEN>`. Without a configured token, the generated one is in `metrics-token` in the secrets directory.
