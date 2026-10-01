@@ -26,7 +26,7 @@ import {
   settingLabelKey,
 } from "../settings/setting-fields.js";
 import type { SettingChange } from "../settings/setting-mutations.js";
-import { inheritedValue, SettingSource } from "./setting-source.js";
+import { disabledReason, inheritedValue, SettingSource } from "./setting-source.js";
 
 type Level = "instance" | "organization";
 
@@ -125,6 +125,9 @@ function SettingItem({
           labelHidden
           checked={entry.value === true}
           disabled={!writable}
+          {...(writable
+            ? {}
+            : { disabledReason: disabledReason(t, entry, level, editable, organizationName) })}
           onCheckedChange={(checked) => void onChange({ value: checked })}
         />
       );

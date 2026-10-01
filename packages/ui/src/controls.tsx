@@ -145,7 +145,7 @@ export function Checkbox({
         {...(disabled !== undefined ? { disabled } : {})}
         {...(props["aria-label"] ? { "aria-label": props["aria-label"] } : {})}
         {...(descriptionId ? { "aria-describedby": descriptionId } : {})}
-        className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-sm border border-border bg-surface text-on-accent focus-visible:focus-ring disabled:opacity-60 aria-checked:border-accent aria-checked:bg-accent"
+        className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-sm border border-control-border bg-surface text-on-accent focus-visible:focus-ring disabled:opacity-60 aria-checked:border-accent aria-checked:bg-accent"
       >
         <CheckboxPrimitive.Indicator>
           <Icon icon={Check} size="sm" />
@@ -257,7 +257,7 @@ export function RadioGroup({ value, onValueChange, options, label, variant = "de
             <RadioGroupPrimitive.Item
               id={itemId}
               value={option.value}
-              className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-full border border-border bg-surface focus-visible:focus-ring aria-checked:border-accent"
+              className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-full border border-control-border bg-surface focus-visible:focus-ring aria-checked:border-accent"
             >
               <RadioGroupPrimitive.Indicator className="block size-2 rounded-full bg-accent" />
             </RadioGroupPrimitive.Item>

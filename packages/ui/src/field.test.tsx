@@ -2,7 +2,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
-import { Checkbox, Switch } from "./controls.js";
+import { Checkbox, RadioGroup, Switch } from "./controls.js";
 import { Field, Input, PasswordInput, Textarea } from "./field.js";
 import { renderUi } from "./testing/render.js";
 
@@ -114,5 +114,26 @@ describe("Checkbox and Switch", () => {
     expect(toggle.className).toContain("border-control-border");
     expect(toggle.className).toContain("data-disabled:opacity-50");
     expect(toggle.className).toContain("data-disabled:cursor-not-allowed");
+  });
+});
+
+describe("Checkbox and radio borders", () => {
+  it("use the control border that keeps 3:1 contrast", () => {
+    renderUi(
+      <>
+        <Checkbox checked={false} onCheckedChange={() => {}} label="Notify me" />
+        <RadioGroup
+          label="Expiry"
+          value="never"
+          onValueChange={() => {}}
+          options={[
+            { value: "never", label: "No expiry" },
+            { value: "days30", label: "30 days" },
+          ]}
+        />
+      </>,
+    );
+    expect(screen.getByRole("checkbox", { name: "Notify me" }).className).toContain("border-control-border");
+    expect(screen.getByRole("radio", { name: "30 days" }).className).toContain("border-control-border");
   });
 });

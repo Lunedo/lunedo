@@ -2,7 +2,7 @@ import { Button, Section, Skeleton, Switch, Table } from "@pagehall/ui";
 import { useTranslation } from "react-i18next";
 import type { SettingEntry } from "../api/organization-queries.js";
 import { translateKey } from "../i18n/translate.js";
-import { type SettingLevel, SettingSource } from "./setting-source.js";
+import { disabledReason, type SettingLevel, SettingSource } from "./setting-source.js";
 
 interface Channels {
   inApp: boolean;
@@ -81,12 +81,14 @@ export function NotificationPreferences({
               header: t(`notifications.channels.${channel}`),
               cell: (entry: SettingEntry) => {
                 const value = entry.value as Channels;
+                const reason = disabledReason(t, entry, level, editable, organizationName);
                 return (
                   <Switch
                     label={`${label(entry)}: ${t(`notifications.channels.${channel}`)}`}
                     labelHidden
                     checked={value[channel]}
-                    disabled={!editable || (entry.lockedBy !== null && entry.lockedBy !== level)}
+                    disabled={reason !== undefined}
+                    {...(reason ? { disabledReason: reason } : {})}
                     onCheckedChange={(checked) => onChange(entry.key, { ...value, [channel]: checked })}
                   />
                 );

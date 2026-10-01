@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next";
 import { Link2, Lock, PenLine } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { SettingEntry } from "../api/organization-queries.js";
@@ -27,6 +28,21 @@ export function inheritedFrom(entry: SettingEntry, level: SettingLevel): string 
     )
     .at(-1);
   return source?.level ?? "default";
+}
+
+export function disabledReason(
+  t: TFunction,
+  entry: SettingEntry,
+  level: SettingLevel,
+  editable: boolean,
+  organizationName?: string,
+): string | undefined {
+  if (entry.lockedBy && entry.lockedBy !== level) {
+    return entry.lockedBy === "instance"
+      ? t("settings.disabled.lockedByInstance")
+      : t("settings.disabled.lockedByOrganization", { name: organizationName ?? "" });
+  }
+  return editable ? undefined : t("settings.disabled.noPermission");
 }
 
 export function SettingSource({

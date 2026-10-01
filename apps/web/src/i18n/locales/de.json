@@ -720,6 +720,11 @@
         "label": "Aufbewahrung von Benachrichtigungen",
         "description": "Ältere Benachrichtigungen werden entfernt."
       }
+    },
+    "disabled": {
+      "lockedByInstance": "Die Instanz hat diese Einstellung gesperrt, deshalb lässt sie sich hier nicht ändern.",
+      "lockedByOrganization": "{name} hat diese Einstellung gesperrt, deshalb lässt sie sich hier nicht ändern.",
+      "noPermission": "Deine Rollen erlauben dir nicht, diese Einstellung zu ändern."
     }
   },
   "security": {

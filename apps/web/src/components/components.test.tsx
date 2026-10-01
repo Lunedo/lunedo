@@ -177,6 +177,36 @@ describe("SettingsList", () => {
     expect(within(dialog).getByText("The value 14 days comes from the organization.")).toBeTruthy();
   });
 
+  it("says why a switch cannot be changed", async () => {
+    await renderList(
+      [
+        entry({
+          key: "organizations.selfRegistration",
+          value: false,
+          defaultValue: false,
+          lockedBy: "instance",
+          source: "instance",
+        }),
+      ],
+      vi.fn(),
+    );
+    const locked = screen.getByRole("switch", { name: "Self-registration" });
+    expect(locked.getAttribute("aria-disabled")).toBe("true");
+    const description = document.getElementById(locked.getAttribute("aria-describedby") ?? "");
+    expect(description?.textContent).toBe("The instance locked this setting, so it cannot be changed here.");
+  });
+
+  it("names missing permissions as the reason a switch is disabled", async () => {
+    await renderList(
+      [entry({ key: "organizations.selfRegistration", value: false, defaultValue: false })],
+      vi.fn(),
+      false,
+    );
+    const toggle = screen.getByRole("switch", { name: "Self-registration" });
+    const description = document.getElementById(toggle.getAttribute("aria-describedby") ?? "");
+    expect(description?.textContent).toBe("Your roles do not allow you to change this setting.");
+  });
+
   it("only shows values to people who may not change them", async () => {
     await renderList([entry({})], vi.fn(), false);
     expect(screen.queryByRole("button", { name: "Override" })).toBeNull();

@@ -720,6 +720,11 @@
         "label": "Notification retention",
         "description": "Older notifications are removed."
       }
+    },
+    "disabled": {
+      "lockedByInstance": "The instance locked this setting, so it cannot be changed here.",
+      "lockedByOrganization": "{name} locked this setting, so it cannot be changed here.",
+      "noPermission": "Your roles do not allow you to change this setting."
     }
   },
   "security": {
