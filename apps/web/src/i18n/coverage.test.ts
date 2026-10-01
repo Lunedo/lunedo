@@ -1,8 +1,14 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { accentColors, instanceAreas, organizationAreas, setupStepIds } from "@pagehall/shared";
+import {
+  accentColors,
+  auditEventNames,
+  instanceAreas,
+  organizationAreas,
+  setupStepIds,
+} from "@pagehall/shared";
 import { describe, expect, it } from "vitest";
-import { AUDIT_EVENTS, auditEventKey } from "../components/audit-log.js";
+import { auditEventKey } from "../components/audit-log.js";
 import { knownSettingKeys, settingDescriptionKey, settingLabelKey } from "../settings/setting-fields.js";
 import { resources } from "./index.js";
 
@@ -50,7 +56,7 @@ describe("translations", () => {
 
   it("cover the keys that are built at runtime", () => {
     const families = [
-      ...AUDIT_EVENTS.map(auditEventKey),
+      ...auditEventNames.map(auditEventKey),
       ...knownSettingKeys.flatMap((key) => [settingLabelKey(key), settingDescriptionKey(key)]),
       ...organizationAreas.flatMap((area) => [
         `areas.organization.${area}`,

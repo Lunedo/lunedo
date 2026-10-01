@@ -39,6 +39,7 @@ export interface TableProps<T> {
   empty?: ReactNode;
   loading?: boolean;
   pagination?: TablePagination;
+  onRowClick?: (row: T) => void;
 }
 
 const HIDDEN: Record<"sm" | "md", string> = {
@@ -61,6 +62,7 @@ export function Table<T>({
   empty,
   loading = false,
   pagination,
+  onRowClick,
 }: TableProps<T>) {
   const labels = useUiLabels();
   const cellClass = (column: TableColumn<T>) =>
@@ -134,7 +136,14 @@ export function Table<T>({
               </tr>
             ) : (
               rows.map((row) => (
-                <tr key={rowKey(row)} className="border-b border-border last:border-b-0">
+                <tr
+                  key={rowKey(row)}
+                  className={classNames(
+                    "border-b border-border last:border-b-0",
+                    onRowClick && "cursor-pointer hover:bg-hover",
+                  )}
+                  {...(onRowClick ? { onClick: () => onRowClick(row) } : {})}
+                >
                   {columns.map((column) => (
                     <td key={column.key} className={classNames(cellClass(column), "py-2 align-middle")}>
                       {column.cell(row)}

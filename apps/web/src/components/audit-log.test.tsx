@@ -1,0 +1,123 @@
+import { screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it } from "vitest";
+import { PreferencesProvider } from "../preferences/preferences-provider.js";
+import { mockApi, problem, renderWithProviders } from "../testing/render.js";
+import { AuditLog } from "./audit-log.js";
+import type { AuditItem } from "./audit-presentation.js";
+
+const NIL = "00000000-0000-0000-0000-000000000000";
+const OLIVIA = "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c";
+const EDITORS = "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9e";
+const GONE = "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9f";
+
+function event(patch: Partial<AuditItem>): AuditItem {
+  return {
+    id: "01929b1f-5fc2-7fa6-97c3-bea0a18bd2e3",
+    scopeType: "instance",
+    scopeId: NIL,
+    sequence: 7,
+    name: "settings.changed",
+    actorType: "account",
+    actorId: OLIVIA,
+    targetType: "setting",
+    targetId: "branding.accentColor",
+    fields: { key: "branding.accentColor", action: "set", value: "blue", previousValue: "violet" },
+    occurredAt: "2026-10-01T08:00:00.000Z",
+    requestId: "6f1c2b0e-5d4a-4c3b-9a2f-1e0d9c8b7a6f",
+    clientIp: "203.0.113.7",
+    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+    labelKey: "audit.events.settings.changed",
+    changeKind: "setting",
+    actor: { type: "account", id: OLIVIA, name: "Olivia Owner" },
+    target: { type: "setting", id: "branding.accentColor", name: null },
+    scope: { type: "instance", id: null, name: null },
+    changes: [{ property: "value", old: "violet", new: "blue" }],
+    references: {},
+    ...patch,
+  } as AuditItem;
+}
+
+const ROLE_ASSIGNED = event({
+  id: "01929b1f-5fc2-7fa6-97c3-bea0a18bd2e4",
+  scopeType: "organization",
+  scopeId: "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f",
+  name: "role.assigned",
+  targetType: "roleAssignment",
+  targetId: "01929b1e-9e5c-7f40-b16d-5e4f3a2b7c8d",
+  labelKey: "audit.events.role.assigned",
+  changeKind: "fields",
+  actor: { type: "account", id: GONE, name: null },
+  target: { type: "roleAssignment", id: "01929b1e-9e5c-7f40-b16d-5e4f3a2b7c8d", name: null },
+  scope: { type: "organization", id: "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f", name: "Platform Team" },
+  changes: [
+    { property: "role", old: null, new: "Handbook editors" },
+    { property: "principalKind", old: null, new: "group" },
+    { property: "principalId", old: null, new: EDITORS },
+    { property: "accountId", old: null, new: GONE },
+  ],
+  references: { [EDITORS]: "Editors" },
+});
+
+let requests: { path: string }[] = [];
+
+beforeEach(() => {
+  ({ requests } = mockApi({
+    "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
+    "GET /api/v1/instance/audit-events": () => ({
+      body: { items: [event({}), ROLE_ASSIGNED], nextCursor: null },
+    }),
+  }));
+});
+
+async function renderLog() {
+  await renderWithProviders(
+    <PreferencesProvider>
+      <AuditLog scope="instance" people={[{ id: OLIVIA, name: "Olivia Owner" }]} canExport />
+    </PreferencesProvider>,
+  );
+  return screen.findByRole("table", { name: "Events" });
+}
+
+describe("the audit log", () => {
+  it("reads like sentences and never shows IDs", async () => {
+    const table = await renderLog();
+    await within(table).findByText("Violet → Blue");
+    const rows = within(table).getAllByRole("row");
+    const setting = rows[1] as HTMLElement;
+    expect(within(setting).getByText("Olivia Owner")).toBeTruthy();
+    expect(within(setting).getByText("Setting changed")).toBeTruthy();
+    expect(within(setting).getByText("Accent color")).toBeTruthy();
+    expect(within(setting).getByText("Instance")).toBeTruthy();
+    expect(within(setting).getByText("Violet → Blue")).toBeTruthy();
+    const role = rows[2] as HTMLElement;
+    expect(within(role).getByText("Deleted account")).toBeTruthy();
+    expect(within(role).getByText("Platform Team")).toBeTruthy();
+    expect(
+      within(role).getByText(/Role: Handbook editors; Given to kind: Group; 2 more changes/),
+    ).toBeTruthy();
+    expect(table.textContent).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/);
+  });
+
+  it("opens every detail of an event in a side panel", async () => {
+    const table = await renderLog();
+    await userEvent.click(await within(table).findByText("Platform Team"));
+    const panel = await screen.findByRole("dialog", { name: "Role given" });
+    expect(within(panel).getByText("Editors")).toBeTruthy();
+    expect(within(panel).getByText("removed")).toBeTruthy();
+    expect(within(panel).getByText("203.0.113.7")).toBeTruthy();
+    expect(within(panel).getByText("Firefox 131 on Windows")).toBeTruthy();
+    expect(within(panel).getByText("6f1c2b0e-5d4a-4c3b-9a2f-1e0d9c8b7a6f")).toBeTruthy();
+    const raw = within(panel).getByText("Raw event").closest("details") as HTMLDetailsElement;
+    expect(raw.open).toBe(false);
+  });
+
+  it("filters by action", async () => {
+    await renderLog();
+    await userEvent.click(screen.getByRole("combobox", { name: "Action" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Setting changed" }));
+    await waitFor(() =>
+      expect(requests.some((request) => request.path.includes("name=settings.changed"))).toBe(true),
+    );
+  });
+});

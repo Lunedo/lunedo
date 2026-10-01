@@ -36,6 +36,13 @@ describe("Table", () => {
     );
   });
 
+  it("opens a row when it is clicked", async () => {
+    const onRowClick = vi.fn<(row: Person) => void>();
+    renderTable({ onRowClick });
+    await userEvent.click(screen.getByText("Tomas Kern"));
+    expect(onRowClick).toHaveBeenCalledWith(people[1]);
+  });
+
   it("states the sort order and asks for the next one", async () => {
     const onSortChange = vi.fn<(sort: TableSort) => void>();
     renderTable({ sort: { key: "name", direction: "asc" }, onSortChange });

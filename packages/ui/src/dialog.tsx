@@ -140,10 +140,18 @@ export interface DrawerProps {
   onOpenChange: (open: boolean) => void;
   title: ReactNode;
   side?: "left" | "right";
+  size?: "sidebar" | "panel";
   children?: ReactNode;
 }
 
-export function Drawer({ open, onOpenChange, title, side = "left", children }: DrawerProps) {
+export function Drawer({
+  open,
+  onOpenChange,
+  title,
+  side = "left",
+  size = "sidebar",
+  children,
+}: DrawerProps) {
   const labels = useUiLabels();
   const returnFocus = useReturnFocus(open);
   return (
@@ -154,7 +162,8 @@ export function Drawer({ open, onOpenChange, title, side = "left", children }: D
           onCloseAutoFocus={returnFocus}
           aria-describedby={undefined}
           className={classNames(
-            "fixed inset-y-0 z-50 flex w-sidebar max-w-full flex-col bg-sidebar text-text shadow-dialog focus-visible:focus-ring",
+            "fixed inset-y-0 z-50 flex max-w-full flex-col bg-sidebar text-text shadow-dialog focus-visible:focus-ring",
+            size === "panel" ? "w-panel" : "w-sidebar",
             side === "left" ? "left-0 border-r border-border" : "right-0 border-l border-border",
           )}
         >
