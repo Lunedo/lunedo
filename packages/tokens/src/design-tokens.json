@@ -187,7 +187,7 @@
     "sidebarWidth": "16.5rem",
     "toolbarHeight": "3.25rem",
     "contentWidth": "47.5rem",
-    "rowHeight": { "default": "1.875rem", "compact": "1.625rem" },
+    "rowHeight": { "default": "1.875rem", "compact": "1.75rem" },
     "control": { "sm": "1.75rem", "md": "2rem", "lg": "2.5rem", "field": "2.25rem" },
     "controlCompact": { "sm": "1.5rem", "md": "1.75rem", "lg": "2.25rem", "field": "2rem" },
     "cardWidth": "25rem",

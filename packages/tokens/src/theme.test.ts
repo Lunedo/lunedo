@@ -127,9 +127,15 @@ describe("generateThemeCss", () => {
 
   it("shrinks rows and controls in the compact density", () => {
     const compact = ruleBody(css, ':root[data-density="compact"]');
-    expect(compact).toContain("--ph-row: 1.625rem;");
+    expect(compact).toContain("--ph-row: 1.75rem;");
     expect(compact).toContain("--ph-control-field: 2rem;");
     expect(ruleBody(css, "@theme inline")).toContain("--spacing-control-md: var(--ph-control-md);");
+  });
+
+  it("keeps rows at least 24 pixels high at the smallest text size", () => {
+    const smallest = (value: string) => Number.parseFloat(value) * 16 * tokens.textScale.min;
+    expect(smallest(tokens.layout.rowHeight.default)).toBeGreaterThanOrEqual(24);
+    expect(smallest(tokens.layout.rowHeight.compact)).toBeGreaterThanOrEqual(24);
   });
 
   it("switches the font for the reading-friendly option", () => {
