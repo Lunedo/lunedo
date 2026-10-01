@@ -16,6 +16,7 @@ export const setupSteps = pgTable("setup_steps", {
 export const setupSessions = pgTable("setup_sessions", {
   id: primaryId(),
   tokenHash: bytes().notNull().unique(),
+  origin: text().notNull(),
   expiresAt: timestampColumn().notNull(),
   createdAt: timestampColumn().notNull().defaultNow(),
 });

@@ -121,7 +121,7 @@ export class SetupService {
    * rate-limited per client only: with 80 bits the code cannot be guessed, and a limit for the
    * whole instance would let any client block the operator.
    */
-  async exchangeCode(code: string, clientIp: string | undefined): Promise<string> {
+  async exchangeCode(code: string, clientIp: string | undefined, origin: string): Promise<string> {
     if (await this.isComplete()) throw new SetupNotFoundError();
     const limit = await this.#rateLimiter.consume(
       `setupCode:client:${clientSubject(clientIp ?? "unknown")}`,
@@ -140,7 +140,7 @@ export class SetupService {
       await tx.update(instance).set({ setupCodeHash: null }).where(eq(instance.id, 1));
       await tx
         .insert(setupSessions)
-        .values({ tokenHash: hashToken(token), expiresAt: new Date(Date.now() + SESSION_IDLE_MS) });
+        .values({ tokenHash: hashToken(token), origin, expiresAt: new Date(Date.now() + SESSION_IDLE_MS) });
       await this.#audit.record(tx, {
         name: "setup.sessionStarted",
         actor: ANONYMOUS,
@@ -168,6 +168,21 @@ export class SetupService {
       )
       .returning({ id: setupSessions.id });
     return updated.length === 1;
+  }
+
+  async sessionOrigin(token: string): Promise<string | null> {
+    if (!isWellFormedToken(token) || (await this.isComplete())) return null;
+    const [row] = await this.#database
+      .select({ origin: setupSessions.origin })
+      .from(setupSessions)
+      .where(
+        and(
+          eq(setupSessions.tokenHash, hashToken(token)),
+          gt(setupSessions.expiresAt, new Date()),
+          gt(setupSessions.createdAt, new Date(Date.now() - SESSION_MAX_MS)),
+        ),
+      );
+    return row?.origin ?? null;
   }
 
   async #states(): Promise<Map<string, { state: Record<string, unknown>; completed: boolean }>> {

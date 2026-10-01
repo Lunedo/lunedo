@@ -2,10 +2,11 @@ import { randomUUID } from "node:crypto";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { ANONYMOUS, enterRequestContext, instanceUrlSetting, type Logger } from "@pagehall/server";
-import { LogController } from "fastify";
+import { type FastifyRequest, LogController } from "fastify";
 import { AppModule } from "./app.module.js";
 import type { ApiContext } from "./context.js";
-import { isCsrfSafe } from "./http/csrf.js";
+import { COOKIES, readCookie } from "./http/cookies.js";
+import { changesState, isCsrfSafe, ownOrigin } from "./http/csrf.js";
 import { NestLogger } from "./nest-logger.js";
 import { registerWebClient } from "./web-client.js";
 
@@ -23,6 +24,20 @@ export function createFastifyAdapter(logger: Logger, trustedProxies: string[] = 
 }
 
 /** Applies request context, CSRF protection, request logging, metrics and the web client to an application. */
+async function allowedOrigins(request: FastifyRequest, context: ApiContext): Promise<string[]> {
+  const instanceUrl = context.settings ? await context.settings.get(instanceUrlSetting, {}) : "";
+  const origins = [instanceUrl || ownOrigin(request)];
+  const setup = context.services?.setup;
+  const path = request.url.split("?")[0] ?? "";
+  if (setup && path.startsWith("/api/v1/setup/") && !(await setup.isComplete())) {
+    if (path === "/api/v1/setup/session") origins.push(ownOrigin(request));
+    const token = readCookie(request, COOKIES.setup);
+    const origin = token ? await setup.sessionOrigin(token) : null;
+    if (origin) origins.push(origin);
+  }
+  return origins;
+}
+
 export async function configureApp(app: NestFastifyApplication, context: ApiContext): Promise<void> {
   const fastify = app.getHttpAdapter().getInstance();
 
@@ -37,8 +52,7 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
     reply.header("x-request-id", request.id);
   });
   fastify.addHook("onRequest", async (request, reply) => {
-    const instanceUrl = context.settings ? await context.settings.get(instanceUrlSetting, {}) : "";
-    if (isCsrfSafe(request, instanceUrl)) return;
+    if (!changesState(request) || isCsrfSafe(request, await allowedOrigins(request, context))) return;
     await reply.status(403).send({
       statusCode: 403,
       code: "csrfRejected",

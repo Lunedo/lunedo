@@ -83,7 +83,7 @@ Sensitive actions answer `403` with the code `reauthenticationRequired` unless t
 
 ## CSRF protection
 
-State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) must carry the header `X-Pagehall-Request: 1` and an `Origin` header equal to the instance URL. Before the instance URL is set during setup, the origin must match the host the request was sent to. Other requests are answered with `403` and the code `csrfRejected`.
+State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) must carry the header `X-Pagehall-Request: 1` and an `Origin` header equal to the instance URL. Before the instance URL is set during setup, the origin must match the host the request was sent to. Until setup is complete, setup requests also pass with the origin the setup session was started from, and entering the setup code passes with the origin of the host the request was sent to, so a wrong instance URL can still be corrected. Other requests are answered with `403` and the code `csrfRejected`.
 
 ## Endpoints
 

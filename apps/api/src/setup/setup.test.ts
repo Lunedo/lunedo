@@ -232,3 +232,50 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
     expect(first.json()).toEqual({ status: "secondFactorRequired", factors: ["totp", "recoveryCode"] });
   });
 });
+
+describe.skipIf(!databaseBaseUrl)("setup with an instance URL that differs from the origin in use", () => {
+  let test: AuthTestApp;
+
+  beforeAll(async () => {
+    test = await createAuthTestApp({ PAGEHALL_TRUSTED_PROXIES: CLIENT_IP });
+  });
+
+  afterAll(async () => {
+    await test?.close();
+  });
+
+  it("keeps accepting the origin of the setup session until setup is complete", async () => {
+    const client = new TestClient(test.app, { remoteAddress: CLIENT_IP });
+    const post = (url: string, body?: unknown, origin = TEST_ORIGIN) =>
+      client.post(url, body, { ...behindProxy, origin });
+    expect((await post("/api/v1/setup/session", { code: await issueCode(test) })).statusCode).toBe(204);
+
+    const wrongUrl = { url: "https://wiki.elsewhere.example", name: "Test wiki" };
+    expect((await post("/api/v1/setup/steps/instance/save", wrongUrl)).statusCode).toBe(200);
+    expect((await post("/api/v1/setup/steps/systemCheck/acknowledge")).statusCode).toBe(200);
+    expect(
+      (await post("/api/v1/setup/steps/instance/save", { url: TEST_ORIGIN, name: "Test wiki" })).statusCode,
+    ).toBe(200);
+
+    expect((await post("/api/v1/setup/steps/instance/save", wrongUrl)).statusCode).toBe(200);
+    const foreign = await post(
+      "/api/v1/setup/steps/systemCheck/acknowledge",
+      undefined,
+      "https://evil.example",
+    );
+    expect(foreign.json()).toMatchObject({ code: "csrfRejected" });
+    const signIn = await post("/api/v1/auth/sign-in", {
+      email: "someone@example.org",
+      password: "whatever it is",
+    });
+    expect(signIn.json()).toMatchObject({ code: "csrfRejected" });
+
+    const anotherClient = new TestClient(test.app, { remoteAddress: CLIENT_IP });
+    const restart = await anotherClient.post(
+      "/api/v1/setup/session",
+      { code: await issueCode(test) },
+      { ...behindProxy, origin: TEST_ORIGIN },
+    );
+    expect(restart.statusCode).toBe(204);
+  });
+});

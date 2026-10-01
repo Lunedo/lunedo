@@ -315,7 +315,9 @@ describe.skipIf(!databaseBaseUrl)("account security", () => {
       const account = await createAccount(test, "many.changes@example.org");
       const client = await signedInClient(test, account.email, account.password);
       for (let attempt = 0; attempt < 5; attempt++) {
-        const response = await client.post("/api/v1/account/email", { email: `target${attempt}@example.org` });
+        const response = await client.post("/api/v1/account/email", {
+          email: `target${attempt}@example.org`,
+        });
         expect(response.statusCode).toBe(202);
       }
       const sixth = await client.post("/api/v1/account/email", { email: "target5@example.org" });
@@ -327,11 +329,15 @@ describe.skipIf(!databaseBaseUrl)("account security", () => {
       for (let attempt = 0; attempt < 4; attempt++) {
         const sender = await createAccount(test, `sender${attempt}@example.org`);
         const senderClient = await signedInClient(test, sender.email, sender.password);
-        statuses.push((await senderClient.post("/api/v1/account/email", { email: "Victim@example.org" })).statusCode);
+        statuses.push(
+          (await senderClient.post("/api/v1/account/email", { email: "Victim@example.org" })).statusCode,
+        );
       }
       expect(statuses).toEqual([202, 202, 202, 429]);
       await test.deliverMail();
-      expect(test.mail.sent.slice(sentBefore).filter((mail) => mail.to === "Victim@example.org")).toHaveLength(3);
+      expect(
+        test.mail.sent.slice(sentBefore).filter((mail) => mail.to === "Victim@example.org"),
+      ).toHaveLength(3);
     });
 
     it("does not reveal that the new address belongs to another account", async () => {

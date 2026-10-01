@@ -52,13 +52,22 @@ describe.skipIf(!baseUrl)("SetupService", () => {
     expect(second).not.toBe(first);
     expect(JSON.parse(log.lines[0] ?? "{}")).toMatchObject({ level: "warn" });
 
-    await expect(setup.exchangeCode(first, "203.0.113.1")).rejects.toThrow(SetupStepError);
-    const token = await setup.exchangeCode(second.toLowerCase().replaceAll("-", ""), "203.0.113.1");
+    await expect(setup.exchangeCode(first, "203.0.113.1", "https://wiki.example.org")).rejects.toThrow(
+      SetupStepError,
+    );
+    const token = await setup.exchangeCode(
+      second.toLowerCase().replaceAll("-", ""),
+      "203.0.113.1",
+      "https://wiki.example.org",
+    );
     expect(await setup.validSession(token)).toBe(true);
+    expect(await setup.sessionOrigin(token)).toBe("https://wiki.example.org");
     expect(await setup.validSession("x".repeat(43))).toBe(false);
     await test?.pool.query("update setup_sessions set created_at = now() - interval '25 hours'");
     expect(await setup.validSession(token)).toBe(false);
-    await expect(setup.exchangeCode(second, "203.0.113.1")).rejects.toThrow(SetupStepError);
+    await expect(setup.exchangeCode(second, "203.0.113.1", "https://wiki.example.org")).rejects.toThrow(
+      SetupStepError,
+    );
   });
 
   it("limits code exchanges per client", async () => {
@@ -68,10 +77,16 @@ describe.skipIf(!baseUrl)("SetupService", () => {
     const log = capturingLogger();
     await setup.issueCode(log.logger);
     for (let attempt = 0; attempt < 10; attempt++) {
-      await expect(setup.exchangeCode("WRONG-CODE", "203.0.113.2")).rejects.toThrow(SetupStepError);
+      await expect(
+        setup.exchangeCode("WRONG-CODE", "203.0.113.2", "https://wiki.example.org"),
+      ).rejects.toThrow(SetupStepError);
     }
-    await expect(setup.exchangeCode(log.code(), "203.0.113.2")).rejects.toThrow(RateLimitedError);
-    expect(await setup.exchangeCode(log.code(), "203.0.113.3")).toMatch(/^[\w-]{43}$/);
+    await expect(setup.exchangeCode(log.code(), "203.0.113.2", "https://wiki.example.org")).rejects.toThrow(
+      RateLimitedError,
+    );
+    expect(await setup.exchangeCode(log.code(), "203.0.113.3", "https://wiki.example.org")).toMatch(
+      /^[\w-]{43}$/,
+    );
   });
 
   it("does not let a client over its limit block the exchange for others", async () => {
@@ -81,9 +96,13 @@ describe.skipIf(!baseUrl)("SetupService", () => {
     const log = capturingLogger();
     await setup.issueCode(log.logger);
     for (let attempt = 0; attempt < 60; attempt++) {
-      await expect(setup.exchangeCode("WRONG-CODE", "203.0.113.20")).rejects.toThrow();
+      await expect(
+        setup.exchangeCode("WRONG-CODE", "203.0.113.20", "https://wiki.example.org"),
+      ).rejects.toThrow();
     }
-    expect(await setup.exchangeCode(log.code(), "198.51.100.20")).toMatch(/^[\w-]{43}$/);
+    expect(await setup.exchangeCode(log.code(), "198.51.100.20", "https://wiki.example.org")).toMatch(
+      /^[\w-]{43}$/,
+    );
   });
 
   it("applies the configuration once when several nodes start at the same time", async () => {
@@ -107,9 +126,9 @@ describe.skipIf(!baseUrl)("SetupService", () => {
     const log = capturingLogger();
     await accountServices.setup.issueCode(log.logger);
     expect(log.lines).toEqual([]);
-    await expect(accountServices.setup.exchangeCode("ANY", "203.0.113.4")).rejects.toThrow(
-      SetupNotFoundError,
-    );
+    await expect(
+      accountServices.setup.exchangeCode("ANY", "203.0.113.4", "https://wiki.example.org"),
+    ).rejects.toThrow(SetupNotFoundError);
     const completed = await pool.query(
       "select setup_completed_through, owner_account_id is not null as owner from instance",
     );

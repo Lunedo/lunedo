@@ -40,7 +40,7 @@ export class SetupController {
     @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
-    const token = await this.#setup.exchangeCode(body.code, request.ip);
+    const token = await this.#setup.exchangeCode(body.code, request.ip, request.headers.origin ?? "");
     setCookie(reply, COOKIES.setup, token, SETUP_COOKIE_MAX_AGE_SECONDS);
   }
 
