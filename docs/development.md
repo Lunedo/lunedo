@@ -54,13 +54,13 @@ Roles are `api`, `collab`, `worker` and `all` (default), which runs all three pr
 
 ## Design tokens
 
-`packages/tokens/src/design-tokens.json` is the single source for colors, type, spacing, radii and shadows. The build generates `packages/tokens/generated/theme.css`, which defines the Tailwind theme and the CSS variables for light and dark mode. The default Tailwind scales are removed, so only token values can be used in class names.
+`packages/tokens/src/design-tokens.json` is the single source for colors, type, spacing, radii and shadows. The build generates `packages/tokens/generated/theme.css`, which defines the Tailwind theme and the CSS variables for light and dark mode. The default Tailwind scales are removed, so only token values can be used in class names. The web client is described in [web-client.md](web-client.md).
 
 ## Continuous integration
 
 | Workflow | Trigger | Checks |
 |---|---|---|
-| `ci.yml` | pull requests, pushes to `main` | lint, typecheck, unit tests against PostgreSQL, Playwright, backup round trip with the image, license check, dependency audit, DCO sign-off |
+| `ci.yml` | pull requests, pushes to `main` | lint, translation check, typecheck, unit tests against PostgreSQL, end-to-end tests with accessibility checks and screenshots, backup round trip with the image, license check, dependency audit, DCO sign-off |
 | `image.yml` | pushes to `main`, pull requests that change `docker/` | image build for amd64 and arm64, not published |
 | `audit.yml` | Mondays 05:00 UTC, manual | `pnpm audit` on `main`; fails on any known vulnerability and lists the findings in the job summary |
 
