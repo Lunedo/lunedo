@@ -1,4 +1,4 @@
-import { Button, Table, useToast } from "@pagehall/ui";
+import { Button, Table } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { KeyRound } from "lucide-react";
@@ -11,7 +11,7 @@ import { membersQuery, organizationKeys, organizationTokensQuery } from "../../a
 import { request } from "../../api/request.js";
 import { usePaged, useSorted } from "../../components/table-state.js";
 import { RevokeTokenDialog, scopeSummary } from "../../components/token-dialogs.js";
-import { problemMessage } from "../../errors/problem-message.js";
+import { useFailureToast } from "../../errors/failure.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
@@ -23,7 +23,7 @@ export function OrganizationTokensScreen() {
   const { organizationId } = route.useParams();
   const state = useOrganizationState();
   const format = useFormat();
-  const { toast } = useToast();
+  const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const tokens = useQuery(organizationTokensQuery(organizationId));
   const members = useQuery(membersQuery(organizationId));
@@ -120,7 +120,7 @@ export function OrganizationTokensScreen() {
             setRevoking(null);
             await queryClient.invalidateQueries({ queryKey: organizationKeys.tokens(organizationId) });
           } catch (failure) {
-            toast({ title: problemMessage(t, failure), variant: "error" });
+            showFailure(t("failures.revokeToken"), failure);
           }
         }}
       />

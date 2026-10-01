@@ -33,6 +33,7 @@ import { request } from "../../api/request.js";
 import { RecoveryCodes } from "../../components/recovery-codes.js";
 import { CreateTokenDialog, RevokeTokenDialog, scopeSummary } from "../../components/token-dialogs.js";
 import { TotpEnrollment } from "../../components/totp-enrollment.js";
+import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
@@ -124,7 +125,11 @@ function ChangePasswordDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={t("security.changePassword")} size="sm">
       <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
-        {error ? <Notice variant="danger">{error}</Notice> : null}
+        {error ? (
+          <Notice variant="danger" title={t("failures.changePassword")}>
+            {error}
+          </Notice>
+        ) : null}
         <Field
           label={t("auth.newPassword")}
           hint={t("auth.passwordHint", { minimum: info.data?.passwordMinLength ?? 12 })}
@@ -177,7 +182,11 @@ function ChangeEmailDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       size="sm"
     >
       <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
-        {error ? <Notice variant="danger">{error}</Notice> : null}
+        {error ? (
+          <Notice variant="danger" title={t("failures.changeEmail")}>
+            {error}
+          </Notice>
+        ) : null}
         <Field label={t("security.newEmail")} error={form.formState.errors.email?.message}>
           <Input type="email" autoComplete="email" autoFocus {...form.register("email")} />
         </Field>
@@ -198,8 +207,9 @@ function TwoFactorSection() {
   const { t } = useTranslation();
   const format = useFormat();
   const { toast } = useToast();
+  const showFailure = useFailureToast();
   const queryClient = useQueryClient();
-  const security = useQuery(securityQuery);
+  const security = useQuery({ ...securityQuery, throwOnError: false });
   const [dialog, setDialog] = useState<"totp" | "removeTotp" | "passkey" | "codes" | null>(null);
   const [removePasskey, setRemovePasskey] = useState<{ id: string; name: string } | null>(null);
   const [codes, setCodes] = useState<string[] | null>(null);
@@ -212,11 +222,18 @@ function TwoFactorSection() {
       setDialog(null);
       await refresh();
     },
-    onError: (failure) => toast({ title: problemMessage(t, failure), variant: "error" }),
+    onError: (failure) => showFailure(t("failures.generateRecoveryCodes"), failure),
   });
 
   if (security.isPending) return <Skeleton className="h-12 w-full" />;
-  if (security.isError) return <Notice variant="danger">{problemMessage(t, security.error)}</Notice>;
+  if (security.isError)
+    return (
+      <LoadError
+        what={t("failures.loadSecurity")}
+        error={security.error}
+        onRetry={() => security.refetch()}
+      />
+    );
   const data = security.data;
   const hasFactor = data.totp || data.passkeys.length > 0;
 
@@ -327,7 +344,7 @@ function TwoFactorSection() {
             setDialog(null);
             await refresh();
           } catch (failure) {
-            toast({ title: problemMessage(t, failure), variant: "error" });
+            showFailure(t("failures.removeAuthenticator"), failure);
           }
         }}
       />
@@ -359,7 +376,7 @@ function TwoFactorSection() {
             setRemovePasskey(null);
             await refresh();
           } catch (failure) {
-            toast({ title: problemMessage(t, failure), variant: "error" });
+            showFailure(t("failures.removePasskey"), failure);
           }
         }}
       />
@@ -417,7 +434,11 @@ function AddPasskeyDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={t("security.addPasskey")} size="sm">
       <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
-        {error ? <Notice variant="danger">{error}</Notice> : null}
+        {error ? (
+          <Notice variant="danger" title={t("failures.addPasskey")}>
+            {error}
+          </Notice>
+        ) : null}
         <Field
           label={t("security.passkeyName")}
           hint={t("security.passkeyNameHint")}
@@ -441,7 +462,7 @@ function AddPasskeyDialog({
 function SessionsSection() {
   const { t } = useTranslation();
   const format = useFormat();
-  const { toast } = useToast();
+  const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const sessions = useQuery(sessionsQuery);
   const [ending, setEnding] = useState<"others" | string | null>(null);
@@ -508,7 +529,7 @@ function SessionsSection() {
             setEnding(null);
             await refresh();
           } catch (failure) {
-            toast({ title: problemMessage(t, failure), variant: "error" });
+            showFailure(t("failures.endSession"), failure);
           }
         }}
       />
@@ -519,7 +540,7 @@ function SessionsSection() {
 function TokensSection() {
   const { t } = useTranslation();
   const format = useFormat();
-  const { toast } = useToast();
+  const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const organization = useOrganizationState();
   const tokens = useQuery(ownTokensQuery);
@@ -603,7 +624,7 @@ function TokensSection() {
             setRevoking(null);
             await refresh();
           } catch (failure) {
-            toast({ title: problemMessage(t, failure), variant: "error" });
+            showFailure(t("failures.revokeToken"), failure);
           }
         }}
       />

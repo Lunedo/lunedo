@@ -88,7 +88,11 @@ export function SecondFactorScreen() {
 
   return (
     <AuthCard title={t("auth.verifyTitle")} description={t("auth.verifyDescription")}>
-      {error ? <Notice variant="danger">{error}</Notice> : null}
+      {error ? (
+        <Notice variant="danger" title={t("failures.verifySecondFactor")}>
+          {error}
+        </Notice>
+      ) : null}
       {expired ? (
         <Button variant="primary" block asChild>
           <Link to="/sign-in" search={search.redirect ? { redirect: search.redirect } : {}}>

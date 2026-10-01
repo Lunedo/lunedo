@@ -125,7 +125,11 @@ function CreateGroupDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={t("groups.create")} size="sm">
       <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
-        {error ? <Notice variant="danger">{error}</Notice> : null}
+        {error ? (
+          <Notice variant="danger" title={t("failures.createGroup")}>
+            {error}
+          </Notice>
+        ) : null}
         <Field label={t("groups.name")} error={form.formState.errors.name?.message}>
           <Input autoFocus {...form.register("name")} />
         </Field>

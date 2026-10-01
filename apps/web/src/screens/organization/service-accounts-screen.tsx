@@ -139,7 +139,11 @@ function CreateServiceAccountDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={t("serviceAccounts.create")} size="sm">
       <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
-        {error ? <Notice variant="danger">{error}</Notice> : null}
+        {error ? (
+          <Notice variant="danger" title={t("failures.createServiceAccount")}>
+            {error}
+          </Notice>
+        ) : null}
         <Field label={t("serviceAccounts.name")} error={form.formState.errors.name?.message}>
           <Input autoFocus {...form.register("name")} />
         </Field>

@@ -9,6 +9,7 @@ import { z } from "zod";
 import { api } from "../../api/client.js";
 import { queryKeys } from "../../api/queries.js";
 import { request } from "../../api/request.js";
+import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { AuthCard } from "../auth/auth-layout.js";
@@ -65,7 +66,11 @@ function SetupCode({ linkedCode }: { linkedCode: string }) {
       description={t("setup.code.description")}
     >
       <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
-        {error ? <Notice variant="danger">{error}</Notice> : null}
+        {error ? (
+          <Notice variant="danger" title={t("failures.enterSetupCode")}>
+            {error}
+          </Notice>
+        ) : null}
         <Field label={t("setup.code.label")} error={form.formState.errors.code?.message}>
           <Input
             autoComplete="off"
@@ -93,7 +98,7 @@ function SetupSteps() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const steps = useQuery(setupStepsQuery);
+  const steps = useQuery({ ...setupStepsQuery, throwOnError: false });
   const [current, setCurrent] = useState<SetupStepId | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,7 +107,7 @@ function SetupSteps() {
   if (steps.isError) {
     return (
       <SetupFrame step={1} total={STEP_ORDER.length + 1} title={t("setup.failed")}>
-        <Notice variant="danger">{problemMessage(t, steps.error)}</Notice>
+        <LoadError what={t("failures.loadSetupSteps")} error={steps.error} onRetry={() => steps.refetch()} />
       </SetupFrame>
     );
   }
@@ -154,7 +159,11 @@ function SetupSteps() {
       title={t(`setup.${active}.title`)}
       description={t(`setup.${active}.description`)}
     >
-      {error ? <Notice variant="danger">{error}</Notice> : null}
+      {error ? (
+        <Notice variant="danger" title={t("failures.finishSetup")}>
+          {error}
+        </Notice>
+      ) : null}
       {active === "systemCheck" && step ? (
         <SystemCheckStep {...common} details={step.details as never} />
       ) : null}

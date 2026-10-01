@@ -1,10 +1,10 @@
-import { Section, useToast } from "@pagehall/ui";
+import { Section } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
 import { SlidersHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { instanceSettingsQuery } from "../../api/instance-queries.js";
 import { SettingsList } from "../../components/settings-list.js";
-import { problemMessage } from "../../errors/problem-message.js";
+import { useFailureToast } from "../../errors/failure.js";
 import { type SettingChange, useInstanceSettingMutation } from "../../settings/setting-mutations.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
@@ -18,7 +18,7 @@ export function settingPermission(key: string): string {
 
 export function useInstanceSettingsEditor() {
   const { t } = useTranslation();
-  const { toast } = useToast();
+  const showFailure = useFailureToast();
   const state = useOrganizationState();
   const settings = useQuery(instanceSettingsQuery);
   const mutation = useInstanceSettingMutation();
@@ -27,7 +27,7 @@ export function useInstanceSettingsEditor() {
     canManage: (key: string) => state.can(settingPermission(key)),
     onChange: async (key: string, change: SettingChange) => {
       await mutation.mutateAsync({ key, change }).catch((error: unknown) => {
-        toast({ title: problemMessage(t, error), variant: "error" });
+        showFailure(t("failures.saveSetting"), error);
       });
     },
   };

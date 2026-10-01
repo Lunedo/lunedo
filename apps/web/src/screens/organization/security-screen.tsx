@@ -1,11 +1,11 @@
-import { Section, useToast } from "@pagehall/ui";
+import { Section } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { LockKeyhole } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { organizationQuery, organizationSettingsQuery } from "../../api/organization-queries.js";
 import { SettingsList } from "../../components/settings-list.js";
-import { problemMessage } from "../../errors/problem-message.js";
+import { useFailureToast } from "../../errors/failure.js";
 import { useOrganizationSettingMutation } from "../../settings/setting-mutations.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
@@ -27,13 +27,13 @@ export function OrganizationSecurityScreen() {
   const { t } = useTranslation();
   const { organizationId } = route.useParams();
   const state = useOrganizationState();
-  const { toast } = useToast();
+  const showFailure = useFailureToast();
   const organization = useQuery(organizationQuery(organizationId));
   const settings = useQuery(organizationSettingsQuery(organizationId));
   const mutation = useOrganizationSettingMutation(organizationId);
   const onChange = async (key: string, change: Parameters<typeof mutation.mutateAsync>[0]["change"]) => {
     await mutation.mutateAsync({ key, change }).catch((error: unknown) => {
-      toast({ title: problemMessage(t, error), variant: "error" });
+      showFailure(t("failures.saveSetting"), error);
     });
   };
   const name = organization.data?.name ?? "";

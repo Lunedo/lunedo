@@ -8,7 +8,6 @@ import {
   IconButton,
   Input,
   Menu,
-  Notice,
   Select,
   Table,
   Tabs,
@@ -31,7 +30,7 @@ import {
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
 import { usePaged, useSorted } from "../../components/table-state.js";
-import { problemMessage } from "../../errors/problem-message.js";
+import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { translateKey } from "../../i18n/translate.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState, useSession } from "../../shell/shell-context.js";
@@ -320,6 +319,7 @@ function MemberActionDialogs({
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const showFailure = useFailureToast();
   const session = useSession();
   const queryClient = useQueryClient();
   const [expiry, setExpiry] = useState("");
@@ -332,7 +332,7 @@ function MemberActionDialogs({
       toast({ title: success, variant: "success" });
       onClose();
     } catch (failure) {
-      toast({ title: problemMessage(t, failure), variant: "error" });
+      showFailure(t("failures.changeMember"), failure);
     }
   };
   const close = (open: boolean) => {
@@ -540,7 +540,10 @@ function PermissionsDialog({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const decisions = useQuery(memberPermissionsQuery(organizationId, member.accountId));
+  const decisions = useQuery({
+    ...memberPermissionsQuery(organizationId, member.accountId),
+    throwOnError: false,
+  });
   return (
     <Dialog
       open
@@ -551,7 +554,13 @@ function PermissionsDialog({
       description={t("members.permissionsDescription")}
       size="lg"
     >
-      {decisions.isError ? <Notice variant="danger">{problemMessage(t, decisions.error)}</Notice> : null}
+      {decisions.isError ? (
+        <LoadError
+          what={t("failures.loadPermissions")}
+          error={decisions.error}
+          onRetry={() => decisions.refetch()}
+        />
+      ) : null}
       <Table
         caption={t("members.permissionsTitle", { name: member.name })}
         rowKey={(decision) => decision.action}
@@ -614,7 +623,7 @@ function grantText(t: Parameters<typeof translateKey>[0], grant: unknown): strin
 function InvitationsTable({ organizationId }: { organizationId: string }) {
   const { t } = useTranslation();
   const format = useFormat();
-  const { toast } = useToast();
+  const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const invitations = useQuery(invitationsQuery(organizationId));
   const [revoking, setRevoking] = useState<{ id: string; email: string } | null>(null);
@@ -682,7 +691,7 @@ function InvitationsTable({ organizationId }: { organizationId: string }) {
             setRevoking(null);
             await queryClient.invalidateQueries({ queryKey: organizationKeys.invitations(organizationId) });
           } catch (failure) {
-            toast({ title: problemMessage(t, failure), variant: "error" });
+            showFailure(t("failures.revokeInvitation"), failure);
           }
         }}
       />

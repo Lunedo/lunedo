@@ -173,7 +173,34 @@ function ToastProbe() {
   return <Button onClick={() => toast({ title: "Token created", variant: "success" })}>Create</Button>;
 }
 
+function FailureProbe({ retry }: { retry: () => void }) {
+  const { toast } = useToast();
+  return (
+    <Button
+      onClick={() =>
+        toast({
+          title: "The role was not saved",
+          description: "Pagehall cannot be reached.",
+          variant: "error",
+          action: { label: "Retry", onSelect: retry },
+        })
+      }
+    >
+      Save
+    </Button>
+  );
+}
+
 describe("Toast", () => {
+  it("offers a retry for a failure", async () => {
+    const retry = vi.fn();
+    renderUi(<FailureProbe retry={retry} />);
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("Pagehall cannot be reached.")).toBeDefined();
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(retry).toHaveBeenCalledOnce();
+  });
+
   it("shows a message", async () => {
     renderUi(<ToastProbe />);
     await userEvent.click(screen.getByRole("button", { name: "Create" }));

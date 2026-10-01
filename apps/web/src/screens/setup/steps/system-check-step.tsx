@@ -1,8 +1,12 @@
-import { Badge, Button, Field, List, ListRow, Notice, Select } from "@pagehall/ui";
-import { CircleAlert, CircleCheck, CircleX } from "lucide-react";
+import type { SetupStepDetails } from "@pagehall/shared";
+import { Badge, Button, ErrorState, Field, List, ListRow, Notice, Select } from "@pagehall/ui";
+import type { TFunction } from "i18next";
+import { CircleAlert, CircleCheck, CircleX, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { problemMessage } from "../../../errors/problem-message.js";
+import { docsUrl } from "../../../docs/docs-url.js";
+import { FailureNotice } from "../../../errors/failure.js";
+import type { Formatter } from "../../../format/format.js";
 import { isLanguage, rememberLanguage, supportedLanguages } from "../../../i18n/index.js";
 import { translateKey } from "../../../i18n/translate.js";
 import { useFormat } from "../../../preferences/preferences-provider.js";
@@ -10,63 +14,83 @@ import { runSetupAction } from "../setup-api.js";
 import type { StepProps } from "./step-props.js";
 
 type Status = "ok" | "warning" | "error";
+type Checks = SetupStepDetails<"systemCheck">["checks"];
+type CheckKey = keyof Checks;
 
 const ICONS = { ok: CircleCheck, warning: CircleAlert, error: CircleX } as const;
 const BADGES = { ok: "success", warning: "warning", error: "danger" } as const;
+const CHECK_ORDER: CheckKey[] = ["database", "fileStorage", "clock", "instanceUrl", "https"];
 
-export function SystemCheckStep({ details, back, onDone }: StepProps<"systemCheck">) {
+function unknownId(t: TFunction, id: number | null): string {
+  return id === null ? t("setup.systemCheck.unknownId") : String(id);
+}
+
+function passedDescription(t: TFunction, format: Formatter, checks: Checks, key: CheckKey): string {
+  switch (key) {
+    case "database":
+      return t("setup.systemCheck.databaseOk", { version: checks.database.version ?? "" });
+    case "fileStorage":
+      return t("setup.systemCheck.storageFree", { free: format.bytes(checks.fileStorage.freeBytes ?? 0) });
+    case "clock":
+      return t("setup.systemCheck.clockOk");
+    case "instanceUrl":
+      return t("setup.systemCheck.urlOk");
+    case "https":
+      return t("setup.systemCheck.httpsOk");
+  }
+}
+
+export function checkExplanation(
+  t: TFunction,
+  format: Formatter,
+  checks: Checks,
+  key: CheckKey,
+): { cause: string; action: string } | null {
+  const check = checks[key];
+  if (check.status === "ok" || check.cause === null) return null;
+  const storage = checks.fileStorage;
+  const values: Record<string, string | number> = {
+    path: storage.path,
+    processUid: unknownId(t, storage.processUid),
+    ownerUid: unknownId(t, storage.ownerUid),
+    free: format.bytes(storage.freeBytes ?? 0),
+    minimum: format.bytes(storage.minimumFreeBytes),
+    seconds: Math.round(Math.abs(checks.clock.offsetMs ?? 0) / 1000),
+    tolerance: Math.round(checks.clock.toleranceMs / 1000),
+  };
+  const base = `setup.systemCheck.causes.${key}.${check.cause}`;
+  return {
+    cause: translateKey(t, `${base}.cause`, values),
+    action: translateKey(t, `${base}.action`, values),
+  };
+}
+
+export function SystemCheckStep({ details, back, onDone, refresh }: StepProps<"systemCheck">) {
   const { t, i18n } = useTranslation();
   const format = useFormat();
-  const [error, setError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState<CheckKey | "all" | null>(null);
   const { checks } = details;
-  const rows: { key: string; status: Status; description: string }[] = [
-    {
-      key: "database",
-      status: checks.database.status,
-      description: checks.database.migrationsUpToDate
-        ? t("setup.systemCheck.databaseOk", { version: checks.database.version ?? "" })
-        : t("setup.systemCheck.databaseMigrations"),
-    },
-    {
-      key: "fileStorage",
-      status: checks.fileStorage.status,
-      description: checks.fileStorage.writable
-        ? t("setup.systemCheck.storageFree", { free: format.bytes(checks.fileStorage.freeBytes ?? 0) })
-        : t("setup.systemCheck.storageNotWritable"),
-    },
-    {
-      key: "clock",
-      status: checks.clock.status,
-      description:
-        checks.clock.status === "ok"
-          ? t("setup.systemCheck.clockOk")
-          : t("setup.systemCheck.clockOffset", { seconds: Math.round((checks.clock.offsetMs ?? 0) / 1000) }),
-    },
-    {
-      key: "instanceUrl",
-      status: checks.instanceUrl.status,
-      description: checks.instanceUrl.configured
-        ? t("setup.systemCheck.urlOk")
-        : t("setup.systemCheck.urlMissing"),
-    },
-    {
-      key: "https",
-      status: checks.https.status,
-      description:
-        checks.https.status === "ok" ? t("setup.systemCheck.httpsOk") : t("setup.systemCheck.httpsMissing"),
-    },
-  ];
-  const blocked = rows.some((row) => row.status === "error");
+  const blocked = CHECK_ORDER.some((key) => checks[key].status === "error");
+
+  const checkAgain = async (key: CheckKey | "all") => {
+    setChecking(key);
+    try {
+      await refresh();
+    } finally {
+      setChecking(null);
+    }
+  };
 
   const acknowledge = async () => {
-    setError(null);
+    setFailure(null);
     setBusy(true);
     try {
       await runSetupAction("systemCheck", "acknowledge", {});
       await onDone();
-    } catch (failure) {
-      setError(problemMessage(t, failure));
+    } catch (error) {
+      setFailure(error);
     } finally {
       setBusy(false);
     }
@@ -89,23 +113,59 @@ export function SystemCheckStep({ details, back, onDone }: StepProps<"systemChec
         />
       </Field>
       <List>
-        {rows.map((row) => {
-          const Icon = ICONS[row.status];
+        {CHECK_ORDER.map((key) => {
+          const check = checks[key];
+          const status: Status = check.status;
+          const title = translateKey(t, `setup.systemCheck.checks.${key}`);
+          const explanation = checkExplanation(t, format, checks, key);
           return (
             <ListRow
-              key={row.key}
-              icon={Icon}
-              title={translateKey(t, `setup.systemCheck.checks.${row.key}`)}
-              description={row.description}
-              actions={
-                <Badge variant={BADGES[row.status]}>{t(`setup.systemCheck.status.${row.status}`)}</Badge>
+              key={key}
+              icon={ICONS[status]}
+              title={title}
+              description={
+                explanation ? (
+                  <div className="mt-2">
+                    <ErrorState
+                      variant={status === "error" ? "danger" : "warning"}
+                      title={t("setup.systemCheck.failedTitle", { check: title })}
+                      cause={explanation.cause}
+                      action={explanation.action}
+                      {...(check.fixCommand ? { command: check.fixCommand } : {})}
+                      documentationUrl={docsUrl(check.docs)}
+                      onRetry={() => void checkAgain(key)}
+                      retryLabel={
+                        checking === key ? t("setup.systemCheck.checking") : t("setup.systemCheck.checkAgain")
+                      }
+                    />
+                  </div>
+                ) : (
+                  passedDescription(t, format, checks, key)
+                )
               }
+              actions={<Badge variant={BADGES[status]}>{t(`setup.systemCheck.status.${status}`)}</Badge>}
             />
           );
         })}
       </List>
+      <div>
+        <Button
+          variant="outline"
+          icon={RotateCcw}
+          loading={checking === "all"}
+          onClick={() => void checkAgain("all")}
+        >
+          {t("setup.systemCheck.checkAllAgain")}
+        </Button>
+      </div>
       {blocked ? <Notice variant="danger">{t("setup.systemCheck.blocked")}</Notice> : null}
-      {error ? <Notice variant="danger">{error}</Notice> : null}
+      {failure ? (
+        <FailureNotice
+          what={t("setup.systemCheck.acknowledgeFailed")}
+          error={failure}
+          onRetry={() => void acknowledge()}
+        />
+      ) : null}
       <div className="flex justify-between gap-2">
         {back}
         <Button variant="primary" loading={busy} disabled={blocked} onClick={() => void acknowledge()}>

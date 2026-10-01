@@ -140,8 +140,12 @@ export function isAccentColor(value: unknown): value is AccentColor {
 }
 
 export function usePreferenceList() {
-  const session = useQuery(sessionQuery);
-  return useQuery({ ...preferencesQuery, enabled: session.data?.sessionKind === "full" });
+  const session = useQuery({ ...sessionQuery, throwOnError: false });
+  return useQuery({
+    ...preferencesQuery,
+    enabled: session.data?.sessionKind === "full",
+    throwOnError: false,
+  });
 }
 
 export function useUpdatePreference() {

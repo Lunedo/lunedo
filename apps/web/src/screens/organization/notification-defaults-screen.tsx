@@ -1,11 +1,10 @@
-import { useToast } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { BellRing } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { organizationQuery, organizationSettingsQuery } from "../../api/organization-queries.js";
 import { NotificationPreferences } from "../../components/notification-preferences.js";
-import { problemMessage } from "../../errors/problem-message.js";
+import { useFailureToast } from "../../errors/failure.js";
 import { useOrganizationSettingMutation } from "../../settings/setting-mutations.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
@@ -14,7 +13,7 @@ const route = getRouteApi("/app/settings/organizations/$organizationId/notificat
 
 export function OrganizationNotificationDefaultsScreen() {
   const { t } = useTranslation();
-  const { toast } = useToast();
+  const showFailure = useFailureToast();
   const { organizationId } = route.useParams();
   const state = useOrganizationState();
   const organization = useQuery(organizationQuery(organizationId));
@@ -36,7 +35,7 @@ export function OrganizationNotificationDefaultsScreen() {
         onChange={(key, value) =>
           mutation.mutate(
             { key, change: value === undefined ? { clear: true } : { value } },
-            { onError: (error) => toast({ title: problemMessage(t, error), variant: "error" }) },
+            { onError: (error) => showFailure(t("failures.saveSetting"), error) },
           )
         }
       />

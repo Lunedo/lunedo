@@ -1,4 +1,4 @@
-import { Badge, ConfirmDialog, IconButton, Input, Menu, Table, useToast } from "@pagehall/ui";
+import { Badge, ConfirmDialog, IconButton, Input, Menu, Table } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MoreHorizontal, Search, UserRound } from "lucide-react";
 import { useState } from "react";
@@ -13,7 +13,7 @@ import {
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
 import { usePaged, useSorted } from "../../components/table-state.js";
-import { problemMessage } from "../../errors/problem-message.js";
+import { useFailureToast } from "../../errors/failure.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState, useSession } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
@@ -31,7 +31,7 @@ export function InstanceAccountsScreen() {
   const state = useOrganizationState();
   const session = useSession();
   const format = useFormat();
-  const { toast } = useToast();
+  const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const accounts = useQuery(instanceAccountsQuery);
   const organizations = useQuery({
@@ -203,7 +203,7 @@ export function InstanceAccountsScreen() {
             await queryClient.invalidateQueries({ queryKey: instanceKeys.accounts });
             await queryClient.invalidateQueries({ queryKey: ["account", "permissions"] });
           } catch (failure) {
-            toast({ title: problemMessage(t, failure), variant: "error" });
+            showFailure(t("failures.changeAccount"), failure);
           }
         }}
       >

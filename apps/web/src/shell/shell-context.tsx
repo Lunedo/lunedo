@@ -59,13 +59,13 @@ export function chooseOrganization(
 
 export function OrganizationProvider({ session, children }: { session: SessionInfo; children: ReactNode }) {
   const params = useParams({ strict: false }) as { organizationId?: string };
-  const organizations = useQuery(organizationsQuery);
+  const organizations = useQuery({ ...organizationsQuery, throwOnError: false });
   const accountId = session.account?.id ?? "";
   const list = organizations.data ?? [];
   const organization = chooseOrganization(list, params.organizationId, rememberedOrganization(accountId));
   const routeOrganization = params.organizationId ?? null;
   const organizationId = routeOrganization ?? organization?.id ?? null;
-  const permissions = useQuery(permissionsQuery(organizationId));
+  const permissions = useQuery({ ...permissionsQuery(organizationId), throwOnError: false });
 
   useEffect(() => {
     if (accountId && organization && params.organizationId === organization.id) {
@@ -100,7 +100,7 @@ export function useOrganizationState(): OrganizationState {
 }
 
 export function useSession(): SessionInfo {
-  const session = useQuery(sessionQuery);
+  const session = useQuery({ ...sessionQuery, throwOnError: false });
   const state = useContext(OrganizationContext);
   const value = session.data ?? state?.session;
   if (!value) throw new Error("useSession needs a signed-in session");

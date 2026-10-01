@@ -11,7 +11,6 @@ import {
   Section,
   Select,
   Table,
-  useToast,
 } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
@@ -30,6 +29,7 @@ import {
 } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
+import { useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { translateKey } from "../../i18n/translate.js";
@@ -48,7 +48,7 @@ export function OrganizationRolesScreen() {
   const { organizationId } = route.useParams();
   const state = useOrganizationState();
   const format = useFormat();
-  const { toast } = useToast();
+  const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const organization = useQuery(organizationQuery(organizationId));
   const roles = useQuery(rolesQuery(organizationId));
@@ -253,7 +253,7 @@ export function OrganizationRolesScreen() {
             await queryClient.invalidateQueries({ queryKey: organizationKeys.roles(organizationId) });
             await queryClient.invalidateQueries({ queryKey: organizationKeys.assignments(organizationId) });
           } catch (failure) {
-            toast({ title: problemMessage(t, failure), variant: "error" });
+            showFailure(t("failures.deleteRole"), failure);
           }
         }}
       >
@@ -286,7 +286,7 @@ export function OrganizationRolesScreen() {
             await queryClient.invalidateQueries({ queryKey: organizationKeys.assignments(organizationId) });
             await queryClient.invalidateQueries({ queryKey: organizationKeys.members(organizationId) });
           } catch (failure) {
-            toast({ title: problemMessage(t, failure), variant: "error" });
+            showFailure(t("failures.unassignRole"), failure);
           }
         }}
       >
@@ -357,7 +357,11 @@ export function RoleEditorDialog({
       size="md"
     >
       <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
-        {error ? <Notice variant="danger">{error}</Notice> : null}
+        {error ? (
+          <Notice variant="danger" title={t("failures.saveRole")}>
+            {error}
+          </Notice>
+        ) : null}
         <Field label={t("roles.name")} error={form.formState.errors.name?.message}>
           <Input autoFocus {...form.register("name")} />
         </Field>

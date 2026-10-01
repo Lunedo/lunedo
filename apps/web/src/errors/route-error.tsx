@@ -1,8 +1,10 @@
-import { Button, EmptyState } from "@pagehall/ui";
+import { Button, EmptyState, ErrorState } from "@pagehall/ui";
+import { useQueryErrorResetBoundary } from "@tanstack/react-query";
 import { type ErrorComponentProps, Link, useRouter } from "@tanstack/react-router";
-import { CircleAlert, Compass, Lock } from "lucide-react";
+import { Compass, Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { isApiError } from "../api/request.js";
+import { isRetryable } from "./failure.js";
 import { problemMessage } from "./problem-message.js";
 
 export function NotFoundScreen() {
@@ -23,29 +25,49 @@ export function NotFoundScreen() {
   );
 }
 
-export function RouteErrorScreen({ error, reset }: ErrorComponentProps) {
+function ForbiddenScreen() {
   const { t } = useTranslation();
-  const router = useRouter();
-  if (isApiError(error, "notFound")) return <NotFoundScreen />;
-  const forbidden = isApiError(error, "forbidden");
   return (
-    <main className="flex min-h-full items-center justify-center p-6">
+    <div className="flex min-h-full items-center justify-center p-6">
       <EmptyState
-        icon={forbidden ? Lock : CircleAlert}
-        title={forbidden ? t("errors.forbiddenTitle") : t("errors.failedTitle")}
-        description={forbidden ? t("errors.forbiddenDescription") : problemMessage(t, error)}
-        action={
-          <Button
-            variant="primary"
-            onClick={() => {
-              reset();
-              void router.invalidate();
-            }}
-          >
-            {t("errors.retry")}
-          </Button>
-        }
+        icon={Lock}
+        title={t("errors.forbiddenTitle")}
+        description={t("errors.forbiddenDescription")}
       />
+    </div>
+  );
+}
+
+function useRetry(reset: () => void) {
+  const router = useRouter();
+  const queries = useQueryErrorResetBoundary();
+  return () => {
+    queries.reset();
+    reset();
+    void router.invalidate();
+  };
+}
+
+export function ScreenErrorScreen({ error, reset }: ErrorComponentProps) {
+  const { t } = useTranslation();
+  const retry = useRetry(reset);
+  if (isApiError(error, "notFound")) return <NotFoundScreen />;
+  if (isApiError(error, "forbidden")) return <ForbiddenScreen />;
+  return (
+    <div className="mx-auto w-full max-w-content p-6">
+      <ErrorState
+        title={t("errors.failedTitle")}
+        cause={problemMessage(t, error)}
+        {...(isRetryable(error) ? { onRetry: retry } : {})}
+      />
+    </div>
+  );
+}
+
+export function RouteErrorScreen(props: ErrorComponentProps) {
+  return (
+    <main className="flex min-h-full items-center justify-center">
+      <ScreenErrorScreen {...props} />
     </main>
   );
 }

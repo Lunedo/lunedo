@@ -11,7 +11,7 @@
     "add": "Hinzufügen",
     "cancel": "Abbrechen",
     "copy": "Kopieren",
-    "copyFailed": "Kopieren fehlgeschlagen. Markiere den Text und kopiere ihn von Hand.",
+    "copyFailed": "Kopieren fehlgeschlagen, weil der Browser den Zugriff auf die Zwischenablage blockiert hat. Markiere den Text und kopiere ihn von Hand.",
     "delete": "Löschen",
     "done": "Fertig",
     "download": "Herunterladen",
@@ -132,11 +132,11 @@
   },
   "errors": {
     "notFoundTitle": "Seite nicht gefunden",
-    "notFoundDescription": "Die Seite gibt es nicht, oder du hast keinen Zugriff darauf.",
+    "notFoundDescription": "Die Seite gibt es nicht, oder du hast keinen Zugriff darauf. Prüfe die Adresse oder geh zur Startseite.",
     "backHome": "Zur Startseite",
     "forbiddenTitle": "Kein Zugriff",
-    "forbiddenDescription": "Du hast keine Berechtigung für diese Seite.",
-    "failedTitle": "Etwas ist schiefgegangen",
+    "forbiddenDescription": "Deine Rollen erlauben dir diese Seite nicht. Bitte einen Owner der Organisation um Zugriff, wenn du ihn brauchst.",
+    "failedTitle": "Diese Seite konnte nicht geladen werden",
     "retry": "Erneut versuchen"
   },
   "validation": {
@@ -158,74 +158,74 @@
     "instanceUrl": "Gib eine Adresse wie https://wiki.example.org ohne Pfad ein."
   },
   "problems": {
-    "unknown": "Etwas ist schiefgegangen. Versuche es erneut.",
+    "unknown": "Der Server hat unerwartet geantwortet. Versuche es erneut; klappt es weiterhin nicht, bitte deine Administration, das Server-Log zu prüfen.",
     "networkError": "Pagehall ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.",
-    "invalidInput": "Einige Angaben sind nicht gültig.",
-    "passwordPolicy": "Das Passwort erfüllt die Anforderungen nicht.",
+    "invalidInput": "Einige Angaben sind nicht gültig. Korrigiere die markierten Felder und versuche es erneut.",
+    "passwordPolicy": "Das Passwort erfüllt die Anforderungen nicht. Wähle ein längeres oder weniger verbreitetes Passwort.",
     "passwordTooShort": "Verwende mindestens {minimum} Zeichen.",
-    "passwordTooLong": "Das Passwort ist zu lang.",
+    "passwordTooLong": "Das Passwort ist zu lang. Verwende höchstens 256 Zeichen.",
     "passwordCommon": "Dieses Passwort ist zu verbreitet. Wähle ein anderes.",
-    "invalidToken": "Der Link ist ungültig oder abgelaufen.",
-    "sameEmail": "Das ist bereits deine E-Mail-Adresse.",
-    "invalidSmtpConfiguration": "Die Einstellungen des Mailservers sind nicht gültig. Zugangsdaten brauchen eine TLS-Verbindung.",
-    "invalidSetting": "Der Wert ist für diese Einstellung nicht gültig.",
-    "invalidPrincipal": "Diese Rolle kann nicht an sie vergeben werden.",
-    "roleNotAssignable": "Diese Rolle kann nicht vergeben werden.",
-    "ownerExpiry": "Die Rolle Owner kann nicht ablaufen.",
-    "expiryInPast": "Das Datum liegt in der Vergangenheit.",
-    "expiryRequired": "Wähle ein Ablaufdatum.",
-    "expiryTooLate": "Das Ablaufdatum liegt später als erlaubt.",
-    "invalidOwner": "Dieses Konto kann nicht Owner werden.",
-    "invalidLogo": "Verwende ein PNG-, JPEG- oder WebP-Bild mit höchstens 256 KiB.",
-    "invalidScopes": "Das Token kann diesen Zugriff nicht haben.",
-    "invalidResponsible": "Diese Person kann nicht verantwortlich sein.",
-    "invalidInvitation": "Diese Einladung kann mit diesem Konto nicht angenommen werden.",
-    "accountDetailsRequired": "Gib einen Namen und ein Passwort ein.",
-    "notGuest": "Das Konto ist kein Gast.",
-    "notMember": "Das Konto ist kein Mitglied.",
+    "invalidToken": "Der Link ist ungültig oder abgelaufen. Fordere einen neuen Link an.",
+    "sameEmail": "Das ist bereits deine E-Mail-Adresse. Gib eine andere ein.",
+    "invalidSmtpConfiguration": "Die Einstellungen des Mailservers sind nicht gültig: Zugangsdaten brauchen eine TLS-Verbindung. Wähle TLS oder STARTTLS oder entferne die Zugangsdaten.",
+    "invalidSetting": "Der Wert ist für diese Einstellung nicht gültig. Prüfe den erlaubten Bereich und versuche es erneut.",
+    "invalidPrincipal": "Diese Rolle passt nicht zu ihrer Art von Konto. Wähle eine andere Rolle oder Person.",
+    "roleNotAssignable": "Diese Rolle kann hier nicht vergeben werden. Wähle eine andere Rolle.",
+    "ownerExpiry": "Die Rolle Owner kann nicht ablaufen. Entferne das Ablaufdatum.",
+    "expiryInPast": "Das Datum liegt in der Vergangenheit. Wähle ein Datum in der Zukunft.",
+    "expiryRequired": "Hier ist ein Ablaufdatum nötig. Wähle eines.",
+    "expiryTooLate": "Das Ablaufdatum liegt später, als die maximale Lebensdauer erlaubt. Wähle ein früheres Datum.",
+    "invalidOwner": "Dieses Konto kann nicht Owner werden, weil es kein aktives Mitglied ist. Wähle ein anderes Konto.",
+    "invalidLogo": "Die Datei ist kein PNG-, JPEG- oder WebP-Bild mit höchstens 256 KiB. Wähle ein anderes Bild.",
+    "invalidScopes": "Das Token kann diesen Zugriff nicht haben, weil du ihn selbst nicht hast. Wähle weniger Berechtigungen.",
+    "invalidResponsible": "Diese Person kann nicht verantwortlich sein, weil sie kein Mitglied der Organisation ist. Wähle ein Mitglied.",
+    "invalidInvitation": "Diese Einladung ging an eine andere E-Mail-Adresse. Melde dich mit dieser Adresse an oder bitte um eine neue Einladung.",
+    "accountDetailsRequired": "Name und Passwort fehlen. Gib beides ein.",
+    "notGuest": "Das Konto ist kein Gast, deshalb passt diese Aktion nicht. Lade die Seite neu.",
+    "notMember": "Das Konto ist kein Mitglied, deshalb passt diese Aktion nicht. Lade die Seite neu.",
     "invalidCredentials": "Die E-Mail-Adresse oder das Passwort ist nicht korrekt.",
-    "invalidSecondFactor": "Der Code ist nicht korrekt.",
+    "invalidSecondFactor": "Der Code ist nicht korrekt. Gib den aktuellen Code ein.",
     "challengeExpired": "Die Anmeldung hat zu lange gedauert. Beginne neu.",
     "notSignedIn": "Melde dich an, um fortzufahren.",
     "sessionEnded": "Deine Sitzung ist beendet. Melde dich erneut an.",
     "invalidSetupCode": "Der Setup-Code ist nicht korrekt.",
-    "setupSessionRequired": "Gib zuerst den Setup-Code ein.",
-    "forbidden": "Das darfst du nicht.",
+    "setupSessionRequired": "Die Einrichtungssitzung ist beendet. Gib den Setup-Code erneut ein.",
+    "forbidden": "Deine Rollen erlauben das nicht. Bitte einen Owner der Organisation, wenn du es brauchst.",
     "csrfRejected": "Die Anfrage wurde blockiert. Lade die Seite neu und versuche es erneut.",
     "secondFactorSetupRequired": "Richte zuerst einen zweiten Faktor ein.",
     "reauthenticationRequired": "Bestätige zuerst deine Identität.",
-    "notFound": "Das gibt es nicht oder es wurde entfernt.",
-    "roleNotFound": "Die Rolle gibt es nicht.",
-    "groupNotFound": "Die Gruppe gibt es nicht.",
-    "emailInUse": "Diese E-Mail-Adresse verwendet bereits ein anderes Konto.",
-    "slugTaken": "Eine andere Organisation verwendet diesen Kurznamen.",
-    "domainTaken": "Die Domain gehört zu einer anderen Organisation.",
-    "roleNameTaken": "Eine Rolle mit diesem Namen gibt es bereits.",
-    "groupNameTaken": "Eine Gruppe mit diesem Namen gibt es bereits.",
-    "alreadyMember": "Diese Person ist bereits Mitglied.",
-    "alreadyAssigned": "Diese Rolle ist bereits vergeben.",
-    "lastOwner": "Der letzte Owner kann die Organisation nicht verlassen und die Rolle nicht verlieren.",
-    "homeOrganization": "Ein Konto kann seine Heimatorganisation nicht verlassen.",
-    "deactivateSelf": "Du kannst dein eigenes Konto nicht deaktivieren.",
-    "instanceOwner": "Der Owner der Instanz kann so nicht geändert werden.",
-    "settingLocked": "Eine höhere Ebene hat diese Einstellung gesperrt.",
-    "settingLockedBy": "Die Ebene {level} hat diese Einstellung gesperrt.",
-    "setupIncomplete": "Die Einrichtung ist noch nicht abgeschlossen.",
-    "setupNotReady": "Schließe zuerst die vorherigen Schritte ab.",
-    "keysNotDownloaded": "Lade zuerst die Schlüssel herunter.",
-    "keysAlreadyDownloaded": "Die Schlüssel wurden bereits heruntergeladen.",
-    "totpExists": "Eine Authenticator-App ist bereits eingerichtet.",
-    "ownerMissing": "Lege zuerst das Owner-Konto an.",
+    "notFound": "Das gibt es nicht oder es wurde entfernt. Lade die Seite neu.",
+    "roleNotFound": "Die Rolle wurde inzwischen entfernt. Lade die Seite neu.",
+    "groupNotFound": "Die Gruppe wurde inzwischen entfernt. Lade die Seite neu.",
+    "emailInUse": "Diese E-Mail-Adresse verwendet bereits ein anderes Konto. Verwende eine andere.",
+    "slugTaken": "Eine andere Organisation verwendet diesen Kurznamen. Wähle einen anderen.",
+    "domainTaken": "Die Domain gehört zu einer anderen Organisation. Wende dich an die Administration der Instanz, wenn das nicht stimmt.",
+    "roleNameTaken": "Eine Rolle mit diesem Namen gibt es bereits. Wähle einen anderen Namen.",
+    "groupNameTaken": "Eine Gruppe mit diesem Namen gibt es bereits. Wähle einen anderen Namen.",
+    "alreadyMember": "Diese Person ist bereits Mitglied. Eine Einladung ist nicht nötig.",
+    "alreadyAssigned": "Diese Rolle ist bereits vergeben. Es ist nichts zu ändern.",
+    "lastOwner": "Die Organisation braucht mindestens einen Owner. Mach zuerst eine andere Person zum Owner.",
+    "homeOrganization": "Ein Konto kann seine Heimatorganisation nicht verlassen. Deaktiviere stattdessen das Konto.",
+    "deactivateSelf": "Du kannst dein eigenes Konto nicht deaktivieren. Bitte eine andere Person aus der Administration.",
+    "instanceOwner": "Der Owner der Instanz kann so nicht geändert werden. Verwende den Notfallzugriff des Instanz-Owners.",
+    "settingLocked": "Eine höhere Ebene hat diese Einstellung gesperrt. Bitte deren Administration, sie zu entsperren.",
+    "settingLockedBy": "Die Ebene {level} hat diese Einstellung gesperrt. Bitte deren Administration, sie zu entsperren.",
+    "setupIncomplete": "Die Einrichtung ist noch nicht abgeschlossen. Schließ zuerst die Einrichtung ab.",
+    "setupNotReady": "Einige nötige Schritte sind nicht abgeschlossen. Schließ zuerst die vorherigen Schritte ab.",
+    "keysNotDownloaded": "Die Schlüssel wurden noch nicht heruntergeladen. Lade sie zuerst herunter.",
+    "keysAlreadyDownloaded": "Die Schlüssel wurden bereits heruntergeladen und werden nicht erneut angezeigt. Verwende deine gespeicherte Kopie.",
+    "totpExists": "Eine Authenticator-App ist bereits eingerichtet. Entferne sie zuerst, um eine andere einzurichten.",
+    "ownerMissing": "Das Owner-Konto gibt es noch nicht. Lege es zuerst an.",
     "lastSecondFactor": "Dein zweiter Faktor ist erforderlich. Füge einen weiteren hinzu, bevor du diesen entfernst.",
-    "noSecondFactor": "Es ist kein zweiter Faktor eingerichtet.",
-    "secondFactorExists": "Dieser zweite Faktor existiert bereits.",
-    "instanceUrlMissing": "Lege zuerst die Adresse der Instanz fest.",
-    "payloadTooLarge": "Der Upload ist zu groß.",
+    "noSecondFactor": "Es ist kein zweiter Faktor eingerichtet. Füge zuerst einen hinzu.",
+    "secondFactorExists": "Dieser zweite Faktor existiert bereits. Es ist nichts zu ändern.",
+    "instanceUrlMissing": "Die Adresse der Instanz ist nicht festgelegt. Lege sie zuerst fest.",
+    "payloadTooLarge": "Der Upload ist größer als erlaubt. Wähle eine kleinere Datei.",
     "locked": "Zu viele Fehlversuche. Versuche es später erneut.",
     "lockedRetry": "Zu viele Fehlversuche. Versuche es in {seconds, plural, one {# Sekunde} other {# Sekunden}} erneut.",
     "rateLimited": "Zu viele Anfragen. Warte einen Moment und versuche es erneut.",
     "rateLimitedRetry": "Zu viele Anfragen. Versuche es in {seconds, plural, one {# Sekunde} other {# Sekunden}} erneut.",
-    "internalError": "Der Server konnte die Anfrage nicht ausführen.",
+    "internalError": "Der Server konnte die Anfrage nicht ausführen. Versuche es erneut; klappt es weiterhin nicht, bitte deine Administration, das Server-Log zu prüfen.",
     "busy": "Der Server ist ausgelastet. Versuche es gleich erneut."
   },
   "access": {
@@ -350,19 +350,72 @@
       },
       "status": {
         "ok": "OK",
-        "warning": "Warnung",
-        "error": "Fehler"
+        "warning": "Prüfen",
+        "error": "Muss behoben werden"
       },
       "databaseOk": "PostgreSQL {version}, Migrationen ausgeführt",
-      "databaseMigrations": "Die Datenbank ist nicht aktuell. Sieh im Server-Log nach.",
       "storageFree": "Beschreibbar, {free} frei",
-      "storageNotWritable": "Der Dateispeicher ist nicht beschreibbar.",
       "clockOk": "Stimmt mit der Datenbank überein",
-      "clockOffset": "Weicht um {seconds, plural, one {# Sekunde} other {# Sekunden}} von der Datenbank ab",
       "urlOk": "Festgelegt",
-      "urlMissing": "Noch nicht festgelegt. Du legst sie im nächsten Schritt fest.",
       "httpsOk": "Aktiv",
-      "httpsMissing": "Nicht erkannt. Betreibe Pagehall hinter einem Reverse Proxy mit TLS, bevor du Personen einlädst."
+      "failedTitle": "{check}: Prüfung nicht bestanden",
+      "checkAgain": "Erneut prüfen",
+      "checking": "Wird geprüft …",
+      "checkAllAgain": "Alles erneut prüfen",
+      "acknowledgeFailed": "Die Systemprüfung konnte nicht bestätigt werden",
+      "unknownId": "unbekannt",
+      "causes": {
+        "database": {
+          "unreachable": {
+            "cause": "Pagehall erreicht die Datenbank nicht.",
+            "action": "Prüfe PAGEHALL_DATABASE_URL und ob PostgreSQL läuft, dann prüfe erneut."
+          },
+          "migrationsPending": {
+            "cause": "Das Datenbankschema ist älter als diese Version von Pagehall.",
+            "action": "Starte den Pagehall-Container neu, damit er die Migrationen ausführt, und sieh im Log nach Fehlern bei den Migrationen."
+          }
+        },
+        "clock": {
+          "offset": {
+            "cause": "Die Uhr dieses Servers weicht um {seconds, plural, one {# Sekunde} other {# Sekunden}} von der Datenbank ab; erlaubt {tolerance, plural, one {ist # Sekunde} other {sind # Sekunden}}.",
+            "action": "Synchronisiere die Uhren beider Server, zum Beispiel mit NTP, dann prüfe erneut."
+          },
+          "unknown": {
+            "cause": "Die Abweichung der Uhr ließ sich nicht messen, weil die Datenbank nicht antwortete.",
+            "action": "Behebe zuerst die Verbindung zur Datenbank, dann prüfe erneut."
+          }
+        },
+        "fileStorage": {
+          "missing": {
+            "cause": "Das Verzeichnis {path} existiert nicht.",
+            "action": "Lege es an und mach es für den Benutzer beschreibbar, unter dem Pagehall läuft (UID {processUid}), zum Beispiel mit diesem Befehl:"
+          },
+          "notWritable": {
+            "cause": "{path} ist für den Benutzer, unter dem Pagehall läuft (UID {processUid}), nicht beschreibbar. Das Verzeichnis gehört UID {ownerUid}.",
+            "action": "Übergib das Verzeichnis an den Benutzer, unter dem Pagehall läuft, zum Beispiel mit diesem Befehl:"
+          },
+          "lowSpace": {
+            "cause": "In {path} sind nur {free} frei; empfohlen sind mindestens {minimum}.",
+            "action": "Schaffe Platz oder vergrößere das Volume, bevor Personen Dateien hochladen."
+          }
+        },
+        "instanceUrl": {
+          "notSet": {
+            "cause": "Die Adresse, unter der Personen Pagehall erreichen, ist noch nicht festgelegt.",
+            "action": "Du legst sie im nächsten Schritt fest."
+          }
+        },
+        "https": {
+          "instanceUrlNotHttps": {
+            "cause": "Die Adresse der Instanz beginnt nicht mit https://.",
+            "action": "Betreibe Pagehall hinter einem Reverse Proxy mit TLS und verwende eine https://-Adresse, bevor du Personen einlädst."
+          },
+          "requestNotHttps": {
+            "cause": "Diese Seite wurde nicht über HTTPS geladen.",
+            "action": "Betreibe Pagehall hinter einem Reverse Proxy mit TLS, bevor du Personen einlädst. Gibt es schon einen, trage seine Adresse in PAGEHALL_TRUSTED_PROXIES ein, damit Pagehall das Protokoll erkennt."
+          }
+        }
+      }
     },
     "instance": {
       "title": "Deine Instanz",
@@ -849,7 +902,9 @@
     "testRecipient": "Testmail senden an",
     "sendTest": "Testmail senden",
     "testDelivered": "Der Mailserver hat die Testmail angenommen.",
-    "testFailed": "Die Testmail konnte nicht gesendet werden. {detail}"
+    "testFailed": "Die Test-E-Mail wurde nicht gesendet",
+    "testFailedUnknown": "Der Mailserver hat die Nachricht nicht angenommen.",
+    "testFailedAction": "Prüfe Server, Port, Verbindungssicherheit und Zugangsdaten und sende den Test dann erneut."
   },
   "organization": {
     "general": {
@@ -1396,5 +1451,66 @@
       "memberOrManager": "Mitglied oder Verwalter der Gruppe",
       "homeOrganizationAdministrator": "Administrator der Heimatorganisation"
     }
+  },
+  "failures": {
+    "loadAuthenticatorSetup": "Die Einrichtung der Authenticator-App konnte nicht starten",
+    "loadNotifications": "Benachrichtigungen konnten nicht geladen werden",
+    "loadSecurity": "Deine Sicherheitseinstellungen konnten nicht geladen werden",
+    "loadMail": "Die E-Mail-Einstellungen konnten nicht geladen werden",
+    "loadGroup": "Die Gruppe konnte nicht geladen werden",
+    "loadServiceAccount": "Das Dienstkonto konnte nicht geladen werden",
+    "loadPermissions": "Die Berechtigungen konnten nicht geladen werden",
+    "loadSetupSteps": "Die Schritte der Einrichtung konnten nicht geladen werden",
+    "confirmEmail": "Die E-Mail-Adresse konnte nicht bestätigt werden",
+    "saveMail": "Die E-Mail-Einstellungen wurden nicht gespeichert",
+    "createToken": "Das Token wurde nicht erstellt",
+    "addAuthenticator": "Die Authenticator-App wurde nicht hinzugefügt",
+    "changePassword": "Das Passwort wurde nicht geändert",
+    "changeEmail": "Die E-Mail-Adresse wurde nicht geändert",
+    "addPasskey": "Der Passkey wurde nicht hinzugefügt",
+    "acceptInvitation": "Die Einladung wurde nicht angenommen",
+    "completeRegistration": "Die Registrierung wurde nicht abgeschlossen",
+    "register": "Die Registrierung wurde nicht gesendet",
+    "requestReset": "Der Link zum Zurücksetzen wurde nicht gesendet",
+    "resetPassword": "Das Passwort wurde nicht zurückgesetzt",
+    "verifySecondFactor": "Der zweite Faktor wurde nicht bestätigt",
+    "setUpSecondFactor": "Der zweite Faktor wurde nicht eingerichtet",
+    "startBreakGlass": "Der Notfallzugriff wurde nicht begonnen",
+    "createOrganization": "Die Organisation wurde nicht erstellt",
+    "assignRole": "Die Rolle wurde nicht vergeben",
+    "saveOrganization": "Die Organisation wurde nicht gespeichert",
+    "saveGroup": "Die Gruppe wurde nicht gespeichert",
+    "createGroup": "Die Gruppe wurde nicht erstellt",
+    "sendInvitations": "Nicht alle Einladungen wurden gesendet",
+    "saveRole": "Die Rolle wurde nicht gespeichert",
+    "saveServiceAccount": "Das Dienstkonto wurde nicht gespeichert",
+    "createServiceAccount": "Das Dienstkonto wurde nicht erstellt",
+    "enterSetupCode": "Der Setup-Code wurde nicht angenommen",
+    "finishSetup": "Die Einrichtung wurde nicht abgeschlossen",
+    "saveInstance": "Die Angaben zur Instanz wurden nicht gespeichert",
+    "keyBackup": "Die Sicherung der Schlüssel ist nicht abgeschlossen",
+    "createOwner": "Das Owner-Konto wurde nicht angelegt",
+    "confirmIdentity": "Deine Identität wurde nicht bestätigt",
+    "exportAudit": "Das Audit-Log wurde nicht exportiert",
+    "saveSetting": "Die Einstellung wurde nicht gespeichert",
+    "generateRecoveryCodes": "Es wurden keine neuen Wiederherstellungscodes erstellt",
+    "removeAuthenticator": "Die Authenticator-App wurde nicht entfernt",
+    "removePasskey": "Der Passkey wurde nicht entfernt",
+    "endSession": "Die Sitzung wurde nicht beendet",
+    "revokeToken": "Das Token wurde nicht widerrufen",
+    "changeAccount": "Das Konto wurde nicht geändert",
+    "endBreakGlass": "Der Notfallzugriff wurde nicht beendet",
+    "deleteRole": "Die Rolle wurde nicht gelöscht",
+    "unassignRole": "Die Rolle wurde nicht entzogen",
+    "removeDomain": "Die Domain wurde nicht entfernt",
+    "uploadLogo": "Das Logo wurde nicht hochgeladen",
+    "removeLogo": "Das Logo wurde nicht entfernt",
+    "leaveOrganization": "Du hast die Organisation nicht verlassen",
+    "changeGroup": "Die Gruppe wurde nicht geändert",
+    "deleteGroup": "Die Gruppe wurde nicht gelöscht",
+    "changeMember": "Die Mitgliedschaft wurde nicht geändert",
+    "revokeInvitation": "Die Einladung wurde nicht widerrufen",
+    "changeServiceAccount": "Das Dienstkonto wurde nicht geändert",
+    "deactivateServiceAccount": "Das Dienstkonto wurde nicht deaktiviert"
   }
 }

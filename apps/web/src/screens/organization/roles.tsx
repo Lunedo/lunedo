@@ -161,7 +161,11 @@ export function AssignRoleDialog({
       size="md"
     >
       <div className="flex flex-col gap-4">
-        {error ? <Notice variant="danger">{error}</Notice> : null}
+        {error ? (
+          <Notice variant="danger" title={t("failures.assignRole")}>
+            {error}
+          </Notice>
+        ) : null}
         <Field label={t("roles.role")}>
           <Select
             value={role}

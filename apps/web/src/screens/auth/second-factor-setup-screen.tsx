@@ -77,7 +77,11 @@ export function SecondFactorSetupScreen() {
           ]}
         />
       ) : null}
-      {error ? <Notice variant="danger">{error}</Notice> : null}
+      {error ? (
+        <Notice variant="danger" title={t("failures.setUpSecondFactor")}>
+          {error}
+        </Notice>
+      ) : null}
       {method === "totp" ? (
         <TotpEnrollment
           queryKey={["account", "totp", "enrollment"]}

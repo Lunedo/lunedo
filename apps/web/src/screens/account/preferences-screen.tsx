@@ -1,19 +1,10 @@
 import { textSizes } from "@pagehall/shared";
-import {
-  Section,
-  SegmentedControl,
-  Select,
-  SettingRow,
-  Skeleton,
-  Slider,
-  Switch,
-  useToast,
-} from "@pagehall/ui";
+import { Section, SegmentedControl, Select, SettingRow, Skeleton, Slider, Switch } from "@pagehall/ui";
 import { Palette } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { SettingEntry } from "../../api/organization-queries.js";
 import { SettingSource } from "../../components/setting-source.js";
-import { problemMessage } from "../../errors/problem-message.js";
+import { useFailureToast } from "../../errors/failure.js";
 import { translateKey } from "../../i18n/translate.js";
 import { preferenceKeys, usePreferenceList, useUpdatePreference } from "../../preferences/preferences.js";
 import { usePreferences } from "../../preferences/preferences-provider.js";
@@ -28,15 +19,12 @@ export function PreferencesScreen() {
   const preferences = usePreferences();
   const list = usePreferenceList();
   const update = useUpdatePreference();
-  const { toast } = useToast();
+  const showFailure = useFailureToast();
   const organization = useOrganizationState();
   const homeOrganization = organization.organizations.find((entry) => entry.membershipKind === "member");
 
   const set = (key: string, value: unknown) =>
-    update.mutate(
-      { key, value },
-      { onError: (error) => toast({ title: problemMessage(t, error), variant: "error" }) },
-    );
+    update.mutate({ key, value }, { onError: (error) => showFailure(t("failures.saveSetting"), error) });
 
   return (
     <SettingsPage title={t("preferences.title")} description={t("preferences.description")} icon={Palette}>

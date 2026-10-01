@@ -32,6 +32,7 @@ import {
 } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
+import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
@@ -56,9 +57,10 @@ export function GroupScreen() {
   const state = useOrganizationState();
   const format = useFormat();
   const { toast } = useToast();
+  const showFailure = useFailureToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const group = useQuery(groupQuery(groupId));
+  const group = useQuery({ ...groupQuery(groupId), throwOnError: false });
   const members = useQuery(groupMembersQuery(groupId));
   const assignments = useQuery({
     ...assignmentsQuery(organizationId),
@@ -83,11 +85,12 @@ export function GroupScreen() {
       setPending(null);
       toast({ title: success, variant: "success" });
     } catch (failure) {
-      toast({ title: problemMessage(t, failure), variant: "error" });
+      showFailure(t("failures.changeGroup"), failure);
     }
   };
 
-  if (group.isError) return <Notice variant="danger">{problemMessage(t, group.error)}</Notice>;
+  if (group.isError)
+    return <LoadError what={t("failures.loadGroup")} error={group.error} onRetry={() => group.refetch()} />;
 
   return (
     <SettingsPage
@@ -319,7 +322,7 @@ export function GroupScreen() {
               params: { organizationId },
             });
           } catch (failure) {
-            toast({ title: problemMessage(t, failure), variant: "error" });
+            showFailure(t("failures.deleteGroup"), failure);
           }
         }}
       >
@@ -367,7 +370,11 @@ function DetailsSection({
   return (
     <Section title={t("groups.details")}>
       <form className="flex flex-col gap-4 p-4" noValidate onSubmit={submitWith(submit)}>
-        {error ? <Notice variant="danger">{error}</Notice> : null}
+        {error ? (
+          <Notice variant="danger" title={t("failures.saveGroup")}>
+            {error}
+          </Notice>
+        ) : null}
         <Field label={t("groups.name")} error={form.formState.errors.name?.message}>
           <Input {...form.register("name")} />
         </Field>

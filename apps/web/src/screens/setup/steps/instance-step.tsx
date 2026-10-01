@@ -32,7 +32,11 @@ export function InstanceStep({ details, back, onDone }: StepProps<"instance">) {
   });
   return (
     <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
-      {error ? <Notice variant="danger">{error}</Notice> : null}
+      {error ? (
+        <Notice variant="danger" title={t("failures.saveInstance")}>
+          {error}
+        </Notice>
+      ) : null}
       <Field
         label={t("setup.instance.url")}
         hint={t("setup.instance.urlHint")}

@@ -58,7 +58,11 @@ export function AcceptInvitationScreen() {
 
   return (
     <AuthCard title={t("auth.invitationTitle")} description={t("auth.invitationDescription")}>
-      {error ? <Notice variant="danger">{error}</Notice> : null}
+      {error ? (
+        <Notice variant="danger" title={t("failures.acceptInvitation")}>
+          {error}
+        </Notice>
+      ) : null}
       {state === "start" ? (
         <Button variant="primary" size="lg" block loading={busy} onClick={() => void accept()}>
           {t("auth.acceptInvitation")}

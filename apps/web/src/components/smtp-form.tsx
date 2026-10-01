@@ -5,7 +5,7 @@ import {
   smtpConfigurationSchema,
   smtpSecurityModes,
 } from "@pagehall/shared";
-import { Button, Field, Input, Notice, PasswordInput, Select } from "@pagehall/ui";
+import { Button, ErrorState, Field, Input, Notice, PasswordInput, Select } from "@pagehall/ui";
 import { Send } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Controller } from "react-hook-form";
@@ -126,7 +126,11 @@ export function SmtpForm({
 
   return (
     <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(save)}>
-      {error ? <Notice variant="danger">{error}</Notice> : null}
+      {error ? (
+        <Notice variant="danger" title={t("failures.saveMail")}>
+          {error}
+        </Notice>
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="sm:col-span-2">
           <Field label={t("mail.host")} error={form.formState.errors.host?.message}>
@@ -180,14 +184,20 @@ export function SmtpForm({
           <Button variant="outline" icon={Send} loading={testing} onClick={() => void test()}>
             {t("mail.sendTest")}
           </Button>
-          {testResult ? (
-            <span role="status" className={testResult.delivered ? "text-success" : "text-danger"}>
-              {testResult.delivered
-                ? t("mail.testDelivered")
-                : t("mail.testFailed", { detail: testResult.detail ?? "" })}
+          {testResult?.delivered ? (
+            <span role="status" className="text-success">
+              {t("mail.testDelivered")}
             </span>
           ) : null}
         </div>
+        {testResult && !testResult.delivered ? (
+          <ErrorState
+            title={t("mail.testFailed")}
+            cause={testResult.detail ?? t("mail.testFailedUnknown")}
+            action={t("mail.testFailedAction")}
+            onRetry={() => void test()}
+          />
+        ) : null}
       </div>
       <div className="flex flex-wrap justify-between gap-2">
         {secondary ?? <span />}

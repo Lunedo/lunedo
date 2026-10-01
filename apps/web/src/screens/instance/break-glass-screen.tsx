@@ -1,4 +1,4 @@
-import { Badge, Button, Field, Notice, Section, Select, Table, useToast } from "@pagehall/ui";
+import { Badge, Button, Field, Notice, Section, Select, Table } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShieldAlert } from "lucide-react";
 import { useState } from "react";
@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { breakGlassQuery, instanceKeys, instanceOrganizationsQuery } from "../../api/instance-queries.js";
 import { request } from "../../api/request.js";
-import { problemMessage } from "../../errors/problem-message.js";
+import { useFailureToast } from "../../errors/failure.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState, useSession } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
@@ -24,7 +24,7 @@ export function BreakGlassScreen() {
   const format = useFormat();
   const state = useOrganizationState();
   const session = useSession();
-  const { toast } = useToast();
+  const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const entries = useQuery(breakGlassQuery);
   const organizations = useQuery(instanceOrganizationsQuery);
@@ -44,7 +44,7 @@ export function BreakGlassScreen() {
       await queryClient.invalidateQueries({ queryKey: instanceKeys.breakGlass });
       await queryClient.invalidateQueries({ queryKey: ["account", "permissions"] });
     } catch (failure) {
-      toast({ title: problemMessage(t, failure), variant: "error" });
+      showFailure(t("failures.endBreakGlass"), failure);
     }
   };
 

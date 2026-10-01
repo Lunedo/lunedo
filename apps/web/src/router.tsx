@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-router";
 import { z } from "zod";
 import { instanceInfoQuery, sessionQuery } from "./api/queries.js";
-import { NotFoundScreen, RouteErrorScreen } from "./errors/route-error.js";
+import { NotFoundScreen, RouteErrorScreen, ScreenErrorScreen } from "./errors/route-error.js";
 import { RootLayout } from "./root-layout.js";
 import { safeRedirect } from "./session/redirect.js";
 
@@ -399,6 +399,7 @@ export function createAppRouter(queryClient: QueryClient) {
     routeTree,
     context: { queryClient },
     defaultPreload: "intent",
+    defaultErrorComponent: ScreenErrorScreen,
     defaultPreloadStaleTime: 0,
     scrollRestoration: true,
   });

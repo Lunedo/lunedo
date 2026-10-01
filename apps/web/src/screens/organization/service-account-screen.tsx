@@ -30,6 +30,7 @@ import {
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
 import { CreateTokenDialog, RevokeTokenDialog, scopeSummary } from "../../components/token-dialogs.js";
+import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
@@ -48,9 +49,9 @@ export function ServiceAccountScreen() {
   const { organizationId, serviceAccountId } = route.useParams();
   const state = useOrganizationState();
   const format = useFormat();
-  const { toast } = useToast();
+  const showFailure = useFailureToast();
   const queryClient = useQueryClient();
-  const account = useQuery(serviceAccountQuery(serviceAccountId));
+  const account = useQuery({ ...serviceAccountQuery(serviceAccountId), throwOnError: false });
   const tokens = useQuery(serviceAccountTokensQuery(serviceAccountId));
   const members = useQuery(membersQuery(organizationId));
   const manage = state.can("organization.integrations.manage");
@@ -76,11 +77,18 @@ export function ServiceAccountScreen() {
       );
       await refresh();
     } catch (failure) {
-      toast({ title: problemMessage(t, failure), variant: "error" });
+      showFailure(t("failures.changeServiceAccount"), failure);
     }
   };
 
-  if (account.isError) return <Notice variant="danger">{problemMessage(t, account.error)}</Notice>;
+  if (account.isError)
+    return (
+      <LoadError
+        what={t("failures.loadServiceAccount")}
+        error={account.error}
+        onRetry={() => account.refetch()}
+      />
+    );
   const data = account.data;
   const active = data?.state === "active";
 
@@ -233,7 +241,7 @@ export function ServiceAccountScreen() {
             setRevoking(null);
             await refresh();
           } catch (failure) {
-            toast({ title: problemMessage(t, failure), variant: "error" });
+            showFailure(t("failures.revokeToken"), failure);
           }
         }}
       />
@@ -255,7 +263,7 @@ export function ServiceAccountScreen() {
             setDeactivating(false);
             await refresh();
           } catch (failure) {
-            toast({ title: problemMessage(t, failure), variant: "error" });
+            showFailure(t("failures.deactivateServiceAccount"), failure);
           }
         }}
       >
@@ -302,7 +310,11 @@ function DetailsSection({
   return (
     <Section title={t("serviceAccounts.details")}>
       <form className="flex flex-col gap-4 p-4" noValidate onSubmit={submitWith(submit)}>
-        {error ? <Notice variant="danger">{error}</Notice> : null}
+        {error ? (
+          <Notice variant="danger" title={t("failures.saveServiceAccount")}>
+            {error}
+          </Notice>
+        ) : null}
         <Field label={t("serviceAccounts.name")} error={form.formState.errors.name?.message}>
           <Input {...form.register("name")} />
         </Field>

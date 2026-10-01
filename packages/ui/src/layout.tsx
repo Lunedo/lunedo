@@ -156,7 +156,7 @@ export function ListRow({
       {glyph && <span className="flex shrink-0 items-center text-text-muted">{glyph}</span>}
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="font-medium text-text">{title}</span>
-        {description && <span className="text-sm text-text-muted">{description}</span>}
+        {description && <div className="text-sm text-text-muted">{description}</div>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </li>

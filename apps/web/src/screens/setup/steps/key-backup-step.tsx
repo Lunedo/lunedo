@@ -52,7 +52,11 @@ export function KeyBackupStep({ details, back, onDone, refresh }: StepProps<"key
 
   return (
     <div className="flex flex-col gap-4">
-      {error ? <Notice variant="danger">{error}</Notice> : null}
+      {error ? (
+        <Notice variant="danger" title={t("failures.keyBackup")}>
+          {error}
+        </Notice>
+      ) : null}
       {details.downloaded && !content ? (
         <Notice variant="info">{t("setup.keyBackup.alreadyDownloaded")}</Notice>
       ) : null}

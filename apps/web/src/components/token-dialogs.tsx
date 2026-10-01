@@ -154,7 +154,11 @@ export function CreateTokenDialog({
         </div>
       ) : (
         <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
-          {error ? <Notice variant="danger">{error}</Notice> : null}
+          {error ? (
+            <Notice variant="danger" title={t("failures.createToken")}>
+              {error}
+            </Notice>
+          ) : null}
           <Field label={t("tokens.name")} error={form.formState.errors.name?.message}>
             <Input autoComplete="off" autoFocus {...form.register("name")} />
           </Field>

@@ -11,7 +11,6 @@ import {
   Section,
   Select,
   Table,
-  useToast,
 } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MoreHorizontal, Plus, ShieldCheck } from "lucide-react";
@@ -26,6 +25,7 @@ import {
 } from "../../api/instance-queries.js";
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
+import { useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { translateKey } from "../../i18n/translate.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
@@ -41,7 +41,7 @@ export function InstanceRolesScreen() {
   const { t } = useTranslation();
   const state = useOrganizationState();
   const format = useFormat();
-  const { toast } = useToast();
+  const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const roles = useQuery(instanceRolesQuery);
   const assignments = useQuery(instanceAssignmentsQuery);
@@ -222,7 +222,7 @@ export function InstanceRolesScreen() {
             setDeleting(null);
             await refresh();
           } catch (failure) {
-            toast({ title: problemMessage(t, failure), variant: "error" });
+            showFailure(t("failures.deleteRole"), failure);
           }
         }}
       >
@@ -254,7 +254,7 @@ export function InstanceRolesScreen() {
             setRemoving(null);
             await refresh();
           } catch (failure) {
-            toast({ title: problemMessage(t, failure), variant: "error" });
+            showFailure(t("failures.unassignRole"), failure);
           }
         }}
       >
@@ -323,7 +323,11 @@ function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; rol
       size="md"
     >
       <div className="flex flex-col gap-4">
-        {error ? <Notice variant="danger">{error}</Notice> : null}
+        {error ? (
+          <Notice variant="danger" title={t("failures.assignRole")}>
+            {error}
+          </Notice>
+        ) : null}
         <Field label={t("roles.role")}>
           <Select
             value={role}

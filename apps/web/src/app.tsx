@@ -15,6 +15,8 @@ export function createQueryClient(): QueryClient {
           if (error instanceof ApiError && error.status > 0 && error.status < 500) return false;
           return failures < 2;
         },
+        throwOnError: (error, query) =>
+          query.state.data === undefined && !(error instanceof ApiError && error.status === 401),
       },
       mutations: { retry: false },
     },

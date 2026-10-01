@@ -1,5 +1,5 @@
 import { domainSchema } from "@pagehall/shared";
-import { Button, ConfirmDialog, Field, Input, List, ListRow, Notice, Section, useToast } from "@pagehall/ui";
+import { Button, ConfirmDialog, Field, Input, List, ListRow, Notice, Section } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { Globe, Plus } from "lucide-react";
@@ -15,6 +15,7 @@ import {
 } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
 import { SettingsList } from "../../components/settings-list.js";
+import { useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { useOrganizationSettingMutation } from "../../settings/setting-mutations.js";
@@ -29,7 +30,7 @@ export function DomainsScreen() {
   const { t } = useTranslation();
   const { organizationId } = route.useParams();
   const state = useOrganizationState();
-  const { toast } = useToast();
+  const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const organization = useQuery(organizationQuery(organizationId));
   const domains = useQuery(domainsQuery(organizationId));
@@ -61,7 +62,7 @@ export function DomainsScreen() {
   });
   const onChange = async (key: string, change: Parameters<typeof mutation.mutateAsync>[0]["change"]) => {
     await mutation.mutateAsync({ key, change }).catch((failure: unknown) => {
-      toast({ title: problemMessage(t, failure), variant: "error" });
+      showFailure(t("failures.saveSetting"), failure);
     });
   };
 
@@ -160,7 +161,7 @@ export function DomainsScreen() {
             setRemoving(null);
             await queryClient.invalidateQueries({ queryKey: organizationKeys.domains(organizationId) });
           } catch (failure) {
-            toast({ title: problemMessage(t, failure), variant: "error" });
+            showFailure(t("failures.removeDomain"), failure);
           }
         }}
       />

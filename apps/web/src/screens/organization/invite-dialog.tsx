@@ -107,7 +107,11 @@ export function InviteDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={t("members.invite")} size="md">
       <div className="flex flex-col gap-4">
-        {error ? <Notice variant="danger">{error}</Notice> : null}
+        {error ? (
+          <Notice variant="danger" title={t("failures.sendInvitations")}>
+            {error}
+          </Notice>
+        ) : null}
         <Field label={t("members.emails")} hint={t("members.emailsHint")}>
           <Textarea value={emails} onChange={(event) => setEmails(event.target.value)} rows={3} autoFocus />
         </Field>

@@ -1,10 +1,11 @@
-import { Button, Field, Input, Notice, Section, Select, Table, useToast } from "@pagehall/ui";
+import { Button, Field, Input, Notice, Section, Select, Table } from "@pagehall/ui";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Download, FilterX } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
+import { useFailureToast } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { translateKey } from "../i18n/translate.js";
 import { useFormat } from "../preferences/preferences-provider.js";
@@ -113,7 +114,7 @@ export function AuditLog({
 }) {
   const { t } = useTranslation();
   const format = useFormat();
-  const { toast } = useToast();
+  const showFailure = useFailureToast();
   const [filters, setFilters] = useState<Filters>(EMPTY);
   const [cursors, setCursors] = useState<(string | undefined)[]>([undefined]);
   const [exporting, setExporting] = useState(false);
@@ -159,7 +160,7 @@ export function AuditLog({
       );
       downloadBlob(`pagehall-audit-${new Date().toISOString().slice(0, 10)}.csv`, blob as Blob);
     } catch (failure) {
-      toast({ title: problemMessage(t, failure), variant: "error" });
+      showFailure(t("failures.exportAudit"), failure);
     } finally {
       setExporting(false);
     }

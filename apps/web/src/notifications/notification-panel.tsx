@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { BellOff, CheckCheck, Settings, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { problemMessage } from "../errors/problem-message.js";
+import { LoadError } from "../errors/failure.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { NotificationEntry } from "./notification-entry.js";
 import { type NotificationItem, useMarkAllRead, useNotificationList } from "./notifications-api.js";
@@ -102,7 +102,15 @@ export function NotificationPanel({ onClose }: { onClose: () => void }) {
             <Skeleton className="h-12 w-full" />
           </div>
         ) : null}
-        {list.isError ? <p className="p-4 text-danger">{problemMessage(t, list.error)}</p> : null}
+        {list.isError ? (
+          <div className="p-2">
+            <LoadError
+              what={t("failures.loadNotifications")}
+              error={list.error}
+              onRetry={() => list.refetch()}
+            />
+          </div>
+        ) : null}
         {list.isSuccess && items.length === 0 ? (
           <EmptyState
             icon={BellOff}

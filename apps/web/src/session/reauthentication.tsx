@@ -63,6 +63,7 @@ function ReauthenticationDialog() {
   const security = useQuery({
     queryKey: ["account", "security"],
     queryFn: () => request(() => api.GET("/api/v1/account/security"), { sessionHandling: false }),
+    throwOnError: false,
   });
   const methods: Method[] = ["password"];
   if (security.data?.totp) methods.push("totp");
@@ -135,7 +136,11 @@ function ReauthenticationDialog() {
             options={methods.map((value) => ({ value, label: t(`reauthentication.methods.${value}`) }))}
           />
         ) : null}
-        {error ? <Notice variant="danger">{error}</Notice> : null}
+        {error ? (
+          <Notice variant="danger" title={t("failures.confirmIdentity")}>
+            {error}
+          </Notice>
+        ) : null}
         {method === "password" ? (
           <form
             className="flex flex-col gap-4"

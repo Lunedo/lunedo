@@ -57,7 +57,11 @@ export function BreakGlassDialog({
       size="md"
     >
       <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
-        {error ? <Notice variant="danger">{error}</Notice> : null}
+        {error ? (
+          <Notice variant="danger" title={t("failures.startBreakGlass")}>
+            {error}
+          </Notice>
+        ) : null}
         <Notice variant="warning" title={t("breakGlass.audited")}>
           {t("breakGlass.ownersNotified")}
         </Notice>

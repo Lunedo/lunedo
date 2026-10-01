@@ -6,7 +6,7 @@ import { api } from "../../api/client.js";
 import { instanceKeys, mailQuery } from "../../api/instance-queries.js";
 import { request } from "../../api/request.js";
 import { SmtpForm } from "../../components/smtp-form.js";
-import { problemMessage } from "../../errors/problem-message.js";
+import { LoadError } from "../../errors/failure.js";
 import { useOrganizationState, useSession } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 
@@ -16,12 +16,14 @@ export function InstanceMailScreen() {
   const queryClient = useQueryClient();
   const session = useSession();
   const state = useOrganizationState();
-  const mail = useQuery(mailQuery);
+  const mail = useQuery({ ...mailQuery, throwOnError: false });
   const manage = state.can("instance.settings.manage");
   return (
     <SettingsPage title={t("mail.title")} description={t("mail.description")} icon={Mail}>
       {mail.isPending ? <Skeleton className="h-12 w-full" /> : null}
-      {mail.isError ? <Notice variant="danger">{problemMessage(t, mail.error)}</Notice> : null}
+      {mail.isError ? (
+        <LoadError what={t("failures.loadMail")} error={mail.error} onRetry={() => mail.refetch()} />
+      ) : null}
       {mail.data && !mail.data.smtp ? <Notice variant="warning">{t("mail.notConfigured")}</Notice> : null}
       {mail.data ? (
         <Section title={t("mail.smtp")}>

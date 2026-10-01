@@ -45,7 +45,11 @@ function RequestReset() {
         <Notice variant="success">{t("auth.resetSent")}</Notice>
       ) : (
         <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
-          {error ? <Notice variant="danger">{error}</Notice> : null}
+          {error ? (
+            <Notice variant="danger" title={t("failures.requestReset")}>
+              {error}
+            </Notice>
+          ) : null}
           <Field label={t("auth.email")} error={form.formState.errors.email?.message}>
             <Input type="email" autoComplete="username" autoFocus {...form.register("email")} />
           </Field>
@@ -92,7 +96,11 @@ function NewPassword({ token }: { token: string }) {
         </>
       ) : (
         <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
-          {error ? <Notice variant="danger">{error}</Notice> : null}
+          {error ? (
+            <Notice variant="danger" title={t("failures.resetPassword")}>
+              {error}
+            </Notice>
+          ) : null}
           <Field
             label={t("auth.newPassword")}
             hint={t("auth.passwordHint", { minimum: info.data?.passwordMinLength ?? 12 })}

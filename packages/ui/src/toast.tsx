@@ -11,6 +11,7 @@ export interface ToastOptions {
   title: ReactNode;
   description?: ReactNode;
   variant?: ToastVariant;
+  action?: { label: string; onSelect: () => void };
 }
 
 interface ToastEntry extends ToastOptions {
@@ -61,6 +62,17 @@ export function ToastProvider({ children, label }: { children: ReactNode; label?
                 <ToastPrimitive.Description className="text-sm opacity-90">
                   {entry.description}
                 </ToastPrimitive.Description>
+              )}
+              {entry.action && (
+                <ToastPrimitive.Action altText={entry.action.label} asChild>
+                  <button
+                    type="button"
+                    onClick={entry.action.onSelect}
+                    className="mt-1 w-fit rounded-sm border border-current px-2 py-1 text-sm font-medium hover:opacity-80 focus-visible:focus-ring"
+                  >
+                    {entry.action.label}
+                  </button>
+                </ToastPrimitive.Action>
               )}
             </div>
             <ToastPrimitive.Close

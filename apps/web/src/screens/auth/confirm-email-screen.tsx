@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
-import { problemMessage } from "../../errors/problem-message.js";
+import { FailureNotice } from "../../errors/failure.js";
 import { useLinkToken } from "../../session/link-token.js";
 import { AuthCard } from "./auth-layout.js";
 
@@ -32,7 +32,7 @@ export function ConfirmEmailScreen() {
       {!token ? <Notice variant="danger">{t("problems.invalidToken")}</Notice> : null}
       {confirm.isPending ? <Spinner label={t("auth.confirmingEmail")} /> : null}
       {confirm.isSuccess ? <Notice variant="success">{t("auth.emailConfirmed")}</Notice> : null}
-      {confirm.isError ? <Notice variant="danger">{problemMessage(t, confirm.error)}</Notice> : null}
+      {confirm.isError ? <FailureNotice what={t("failures.confirmEmail")} error={confirm.error} /> : null}
       <Button variant="primary" block asChild>
         <Link to="/">{t("auth.continue")}</Link>
       </Button>

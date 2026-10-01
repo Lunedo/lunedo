@@ -25,6 +25,7 @@ import {
 import { queryKeys } from "../../api/queries.js";
 import { request } from "../../api/request.js";
 import { SettingsList } from "../../components/settings-list.js";
+import { useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { useOrganizationSettingMutation } from "../../settings/setting-mutations.js";
@@ -53,7 +54,7 @@ export function OrganizationGeneralScreen() {
   const organization = useQuery(organizationQuery(organizationId));
   const settings = useQuery(organizationSettingsQuery(organizationId));
   const mutation = useOrganizationSettingMutation(organizationId);
-  const { toast } = useToast();
+  const showFailure = useFailureToast();
   const canUpdate = state.can("organization.update");
   const canManageSettings = state.can("organization.settings.manage");
   const membership = state.organizations.find((entry) => entry.id === organizationId);
@@ -83,7 +84,7 @@ export function OrganizationGeneralScreen() {
           canManage={() => canManageSettings}
           onChange={async (key, change) => {
             await mutation.mutateAsync({ key, change }).catch((error: unknown) => {
-              toast({ title: problemMessage(t, error), variant: "error" });
+              showFailure(t("failures.saveSetting"), error);
             });
           }}
         />
@@ -104,7 +105,7 @@ export function OrganizationGeneralScreen() {
           canManage={() => canManageSettings}
           onChange={async (key, change) => {
             await mutation.mutateAsync({ key, change }).catch((error: unknown) => {
-              toast({ title: problemMessage(t, error), variant: "error" });
+              showFailure(t("failures.saveSetting"), error);
             });
           }}
         />
@@ -151,7 +152,11 @@ function ProfileSection({
   return (
     <Section title={t("organization.general.profile")}>
       <form className="flex flex-col gap-4 p-4" noValidate onSubmit={submitWith(submit)}>
-        {error ? <Notice variant="danger">{error}</Notice> : null}
+        {error ? (
+          <Notice variant="danger" title={t("failures.saveOrganization")}>
+            {error}
+          </Notice>
+        ) : null}
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t("organization.general.name")} error={form.formState.errors.name?.message}>
             <Input disabled={!editable} {...form.register("name")} />
@@ -190,6 +195,7 @@ function LogoRow({
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -202,7 +208,7 @@ function LogoRow({
 
   const upload = async (file: File) => {
     if (!(LOGO_TYPES as readonly string[]).includes(file.type) || file.size > LOGO_MAX_BYTES) {
-      toast({ title: t("problems.invalidLogo"), variant: "error" });
+      toast({ title: t("failures.uploadLogo"), description: t("problems.invalidLogo"), variant: "error" });
       return;
     }
     setBusy(true);
@@ -217,7 +223,7 @@ function LogoRow({
       await refresh();
       toast({ title: t("organization.general.logoUploaded"), variant: "success" });
     } catch (failure) {
-      toast({ title: problemMessage(t, failure), variant: "error" });
+      showFailure(t("failures.uploadLogo"), failure);
     } finally {
       setBusy(false);
       if (input.current) input.current.value = "";
@@ -283,7 +289,7 @@ function LogoRow({
                 setRemoving(false);
                 await refresh();
               } catch (failure) {
-                toast({ title: problemMessage(t, failure), variant: "error" });
+                showFailure(t("failures.removeLogo"), failure);
               }
             }}
           />
@@ -295,7 +301,7 @@ function LogoRow({
 
 function LeaveSection({ organizationId, name }: { organizationId: string; name: string }) {
   const { t } = useTranslation();
-  const { toast } = useToast();
+  const showFailure = useFailureToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -329,7 +335,7 @@ function LeaveSection({ organizationId, name }: { organizationId: string; name: 
             await queryClient.invalidateQueries({ queryKey: queryKeys.organizations });
             await navigate({ to: "/settings/preferences" });
           } catch (failure) {
-            toast({ title: problemMessage(t, failure), variant: "error" });
+            showFailure(t("failures.leaveOrganization"), failure);
           }
         }}
       >

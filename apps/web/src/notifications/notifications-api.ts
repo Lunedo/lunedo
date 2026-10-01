@@ -14,12 +14,14 @@ export function useUnreadCount() {
     queryKey: notificationKeys.unread,
     queryFn: async () => (await request(() => api.GET("/api/v1/notifications/unread-count"))).count,
     staleTime: 60_000,
+    throwOnError: false,
   });
 }
 
 export function useNotificationList(unreadOnly: boolean) {
   return useInfiniteQuery({
     queryKey: notificationKeys.list(unreadOnly),
+    throwOnError: false,
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) =>
       request(() =>

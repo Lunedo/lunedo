@@ -1,15 +1,14 @@
-import { useToast } from "@pagehall/ui";
 import { BellRing } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { NotificationPreferences } from "../../components/notification-preferences.js";
-import { problemMessage } from "../../errors/problem-message.js";
+import { useFailureToast } from "../../errors/failure.js";
 import { usePreferenceList, useUpdatePreference } from "../../preferences/preferences.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 
 export function NotificationPreferencesScreen() {
   const { t } = useTranslation();
-  const { toast } = useToast();
+  const showFailure = useFailureToast();
   const list = usePreferenceList();
   const update = useUpdatePreference();
   const organization = useOrganizationState();
@@ -27,10 +26,7 @@ export function NotificationPreferencesScreen() {
         {...(home ? { organizationName: home.name } : {})}
         editable
         onChange={(key, value) =>
-          update.mutate(
-            { key, value },
-            { onError: (error) => toast({ title: problemMessage(t, error), variant: "error" }) },
-          )
+          update.mutate({ key, value }, { onError: (error) => showFailure(t("failures.saveSetting"), error) })
         }
       />
     </SettingsPage>

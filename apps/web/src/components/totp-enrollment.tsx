@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
+import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { submitWith, useSchemaForm } from "../forms/use-schema-form.js";
 import { QrCode } from "./qr-code.js";
@@ -23,7 +24,13 @@ export function formatSecret(secret: string): string {
 
 export function TotpEnrollment({ queryKey, begin, confirm, submitLabel }: TotpEnrollmentProps) {
   const { t } = useTranslation();
-  const setup = useQuery({ queryKey, queryFn: begin, staleTime: Number.POSITIVE_INFINITY, retry: false });
+  const setup = useQuery({
+    queryKey,
+    queryFn: begin,
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: false,
+    throwOnError: false,
+  });
   const [error, setError] = useState<string | null>(null);
   const form = useSchemaForm(codeForm, { defaultValues: { code: "" } });
   const submit = form.handleSubmit(async (values) => {
@@ -36,7 +43,14 @@ export function TotpEnrollment({ queryKey, begin, confirm, submitLabel }: TotpEn
     }
   });
 
-  if (setup.isError) return <Notice variant="danger">{problemMessage(t, setup.error)}</Notice>;
+  if (setup.isError)
+    return (
+      <LoadError
+        what={t("failures.loadAuthenticatorSetup")}
+        error={setup.error}
+        onRetry={() => setup.refetch()}
+      />
+    );
 
   return (
     <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
@@ -56,7 +70,11 @@ export function TotpEnrollment({ queryKey, begin, confirm, submitLabel }: TotpEn
           ) : null}
         </div>
       </div>
-      {error ? <Notice variant="danger">{error}</Notice> : null}
+      {error ? (
+        <Notice variant="danger" title={t("failures.addAuthenticator")}>
+          {error}
+        </Notice>
+      ) : null}
       <Field
         label={t("auth.authenticatorCode")}
         hint={t("auth.authenticatorCodeHint")}
