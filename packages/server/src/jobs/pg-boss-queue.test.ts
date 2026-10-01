@@ -1,0 +1,278 @@
+import { randomBytes } from "node:crypto";
+import { sql } from "drizzle-orm";
+import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { z } from "zod";
+import { createDatabase, type Database } from "../database/database.js";
+import { createDatabasePool, type DatabasePool } from "../database/pool.js";
+import { createLogger } from "../logging/logger.js";
+import { currentRequestContext, runWithRequestContext } from "../observability/request-context.js";
+import { defineJob, type JobDefinition, type JobFinishedEvent } from "./job-queue.js";
+import { idempotentJobId, PgBossQueue } from "./pg-boss-queue.js";
+
+const databaseUrl = inject("databaseUrl");
+const logger = createLogger({ service: "test", level: "silent" });
+
+function uniqueName(action: string) {
+  return `test.${action}-${randomBytes(4).toString("hex")}`;
+}
+
+async function waitFor<T>(check: () => Promise<T | undefined | false>, timeoutMs = 15_000): Promise<T> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const value = await check();
+    if (value) return value;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error("Condition not met in time");
+}
+
+describe("idempotentJobId", () => {
+  it("is stable per name and key and differs otherwise", () => {
+    expect(idempotentJobId("a.b", "k")).toBe(idempotentJobId("a.b", "k"));
+    expect(idempotentJobId("a.b", "k")).not.toBe(idempotentJobId("a.c", "k"));
+    expect(idempotentJobId("a.b", "k")).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-8[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+  });
+});
+
+describe("defineJob", () => {
+  it("requires module-qualified names", () => {
+    expect(() => defineJob({ name: "nomodule", payload: z.object({}) })).toThrow("<module>.<action>");
+  });
+});
+
+describe.skipIf(!databaseUrl)("PgBossQueue", () => {
+  let pool: DatabasePool;
+  let database: Database;
+  let worker: PgBossQueue;
+  let producer: PgBossQueue;
+  const finished: JobFinishedEvent[] = [];
+
+  beforeAll(async () => {
+    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    database = createDatabase(pool);
+    worker = new PgBossQueue({
+      connectionString: databaseUrl,
+      database,
+      logger,
+      role: "worker",
+      pollingIntervalSeconds: 0.5,
+      onJobFinished: (event) => finished.push(event),
+    });
+    producer = new PgBossQueue({ connectionString: databaseUrl, database, logger, role: "producer" });
+    await worker.start();
+    await producer.start();
+  });
+
+  afterAll(async () => {
+    await producer?.stop({ timeoutSeconds: 1 });
+    await worker?.stop({ timeoutSeconds: 1 });
+    await pool?.end();
+  });
+
+  function define(action: string, options: Partial<JobDefinition<{ value: number }>> = {}) {
+    return defineJob({ name: uniqueName(action), payload: z.object({ value: z.number() }), ...options });
+  }
+
+  it("runs enqueued jobs in the worker and reports progress", async () => {
+    const job = define("progress");
+    const seen: number[] = [];
+    await worker.work(job, async ({ payload, reportProgress }) => {
+      seen.push(payload.value);
+      await reportProgress(1, 2, "halfway");
+      await reportProgress(2, 2, "done");
+    });
+    const id = await producer.enqueue(job, { value: 7 });
+    const info = await waitFor(async () => {
+      const current = await producer.get(job, id);
+      return current?.state === "completed" ? current : undefined;
+    });
+    expect(seen).toEqual([7]);
+    expect(info.progress).toEqual({ done: 2, total: 2, message: "done" });
+    expect(finished.find((event) => event.name === job.name)?.state).toBe("completed");
+  });
+
+  it("validates payloads before enqueueing", async () => {
+    const job = define("validation");
+    await expect(producer.enqueue(job, { value: "x" } as never)).rejects.toThrow();
+  });
+
+  it("returns the existing job for a repeated idempotency key", async () => {
+    const job = define("idempotency");
+    const first = await producer.enqueue(job, { value: 1 }, { idempotencyKey: "import-42" });
+    const second = await producer.enqueue(job, { value: 1 }, { idempotencyKey: "import-42" });
+    expect(second).toBe(first);
+    const rows = await database.execute(sql`select id from pgboss.job where name = ${job.name}`);
+    expect(rows.rows).toHaveLength(1);
+  });
+
+  it("retries failed attempts until they succeed", async () => {
+    const job = define("retry", { retryLimit: 3, retryDelaySeconds: 1, retryBackoff: false });
+    let attempts = 0;
+    await worker.work(job, async ({ retryCount }) => {
+      attempts += 1;
+      if (retryCount < 2) throw new Error(`attempt ${retryCount} failed`);
+    });
+    const id = await producer.enqueue(job, { value: 1 });
+    const info = await waitFor(async () => {
+      const current = await producer.get(job, id);
+      return current?.state === "completed" ? current : undefined;
+    }, 20_000);
+    expect(attempts).toBe(3);
+    expect(info.retryCount).toBe(2);
+  });
+
+  it("keeps jobs that exhausted their retries for inspection and can retry them", async () => {
+    const job = define("failing", { retryLimit: 0 });
+    let succeed = false;
+    await worker.work(job, async () => {
+      if (!succeed) throw new Error("upstream unavailable");
+    });
+    const id = await producer.enqueue(job, { value: 1 });
+    await waitFor(async () => (await producer.get(job, id))?.state === "failed");
+    const failed = await producer.listFailed(job);
+    expect(failed.map((info) => info.id)).toEqual([id]);
+    expect(failed[0]?.error).toBe("upstream unavailable");
+
+    succeed = true;
+    await producer.retry(job, id);
+    await waitFor(async () => (await producer.get(job, id))?.state === "completed");
+  });
+
+  it("starts delayed jobs only after their start time", async () => {
+    const job = define("delayed");
+    const ran: Date[] = [];
+    await worker.work(job, async () => {
+      ran.push(new Date());
+    });
+    const startAfter = new Date(Date.now() + 2000);
+    const id = await producer.enqueue(job, { value: 1 }, { startAfter });
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    expect((await producer.get(job, id))?.state).toBe("created");
+    await waitFor(async () => (await producer.get(job, id))?.state === "completed");
+    expect(ran[0]?.getTime()).toBeGreaterThanOrEqual(startAfter.getTime() - 50);
+  });
+
+  it("registers and removes recurring schedules", async () => {
+    const job = define("recurring");
+    await producer.schedule(job, "0 3 * * *", { value: 1 }, { key: "nightly", timeZone: "Europe/Vienna" });
+    const schedules = () =>
+      database.execute<{ cron: string; timezone: string }>(
+        sql`select cron, timezone from pgboss.schedule where name = ${job.name}`,
+      );
+    expect((await schedules()).rows).toEqual([{ cron: "0 3 * * *", timezone: "Europe/Vienna" }]);
+    await producer.unschedule(job, "nightly");
+    expect((await schedules()).rows).toEqual([]);
+  });
+
+  it("aborts a running job when it is cancelled", async () => {
+    const job = define("cancel");
+    let aborted = false;
+    await worker.work(job, async ({ reportProgress, signal }) => {
+      for (let step = 0; step < 100 && !signal.aborted; step++) {
+        await reportProgress(step, 100);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      aborted = signal.aborted;
+    });
+    const id = await producer.enqueue(job, { value: 1 });
+    await waitFor(async () => ((await producer.get(job, id))?.progress?.done ?? 0) > 0);
+    await producer.cancel(job, id);
+    await waitFor(async () => aborted);
+    expect((await producer.get(job, id))?.state).toBe("cancelled");
+  });
+
+  it("runs handlers with the request ID of the enqueueing request", async () => {
+    const job = define("context");
+    const requestIds: (string | undefined)[] = [];
+    await worker.work(job, async () => {
+      requestIds.push(currentRequestContext()?.requestId);
+    });
+    const id = await runWithRequestContext({ requestId: "req-123" }, () =>
+      producer.enqueue(job, { value: 1 }),
+    );
+    await waitFor(async () => (await producer.get(job, id))?.state === "completed");
+    expect(requestIds).toEqual(["req-123"]);
+  });
+
+  it("does not let the producer role run jobs", async () => {
+    await expect(producer.work(define("producer"), async () => {})).rejects.toThrow("Only the worker role");
+  });
+
+  it("counts jobs per queue without the queue's internal queues", async () => {
+    const job = define("counts");
+    await producer.register(job);
+    const counts = await producer.counts();
+    expect(Object.keys(counts[job.name] ?? {}).sort()).toEqual(["active", "deferred", "failed", "queued"]);
+    expect(Object.keys(counts).filter((name) => name.startsWith("__pgboss__"))).toEqual([]);
+  });
+});
+
+describe.skipIf(!databaseUrl)("graceful shutdown", () => {
+  let pool: DatabasePool;
+  let database: Database;
+
+  beforeAll(() => {
+    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    database = createDatabase(pool);
+  });
+
+  afterAll(async () => {
+    await pool?.end();
+  });
+
+  function newWorker(): PgBossQueue {
+    return new PgBossQueue({
+      connectionString: databaseUrl,
+      database,
+      logger,
+      role: "worker",
+      pollingIntervalSeconds: 0.5,
+    });
+  }
+
+  it("lets running jobs finish within the timeout", async () => {
+    const queue = newWorker();
+    const job = defineJob({ name: uniqueName("finish"), payload: z.object({}) });
+    let started = false;
+    await queue.work(job, async () => {
+      started = true;
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    });
+    const id = await queue.enqueue(job, {});
+    await waitFor(async () => started);
+    await queue.stop({ timeoutSeconds: 10 });
+
+    const check = newWorker();
+    expect((await check.get(job, id))?.state).toBe("completed");
+    await check.stop({ timeoutSeconds: 1 });
+  });
+
+  it("hands jobs back to the queue when they do not finish in time", async () => {
+    const queue = newWorker();
+    const job = defineJob({ name: uniqueName("handback"), payload: z.object({}), retryLimit: 2 });
+    let started = false;
+    let aborted = false;
+    await queue.work(job, async ({ signal }) => {
+      started = true;
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, 30_000);
+        signal.addEventListener("abort", () => {
+          aborted = true;
+          clearTimeout(timer);
+          resolve();
+        });
+      });
+    });
+    const id = await queue.enqueue(job, {});
+    await waitFor(async () => started);
+    await queue.stop({ timeoutSeconds: 1 });
+
+    const check = newWorker();
+    const info = await check.get(job, id);
+    expect(aborted).toBe(true);
+    expect(info?.state).toBe("retry");
+    await check.stop({ timeoutSeconds: 1 });
+  });
+});
