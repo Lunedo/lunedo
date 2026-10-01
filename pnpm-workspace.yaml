@@ -7,3 +7,6 @@ packages:
 allowBuilds:
   esbuild: false
   vue-demi: false
+
+overrides:
+  "@scalar/json-magic>undici": ^7.29.1
