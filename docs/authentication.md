@@ -83,7 +83,7 @@ Sensitive actions answer `403` with the code `reauthenticationRequired` unless t
 
 ## CSRF protection
 
-State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) must carry the header `X-Pagehall-Request: 1` and an `Origin` header equal to the instance URL. Before the instance URL is set during setup, the origin must match the host the request was sent to. Until setup is complete, setup requests also pass with the origin the setup session was started from, and entering the setup code passes with the origin of the host the request was sent to, so a wrong instance URL can still be corrected. Other requests are answered with `403` and the code `csrfRejected`.
+State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) must carry the header `X-Pagehall-Request: 1` and an `Origin` header equal to the instance URL. Before the instance URL is set during setup, the origin must match the host the request was sent to. Until setup is complete, setup requests also pass with the origin the setup session was started from, and entering the setup code passes with the origin of the host the request was sent to, so a wrong instance URL can still be corrected. Other requests are answered with `403` and the code `csrfRejected`. Requests with an API token and without session cookies are exempt, because browsers do not attach tokens on their own (see [api.md](api.md)).
 
 ## Endpoints
 
@@ -105,4 +105,4 @@ All endpoints are internal: they serve the web client and are not part of the pu
 | `POST /api/v1/account/recovery-codes` | session, recent authentication |
 | `GET /api/v1/account/sessions`, `DELETE /api/v1/account/sessions/{id}`, `POST /api/v1/account/sessions/end-others` | session |
 
-Errors carry a stable `code`, for example `invalidCredentials`, `invalidSecondFactor`, `locked`, `rateLimited`, `challengeExpired`, `passwordPolicy`, `reauthenticationRequired` or `secondFactorSetupRequired`. `locked` and `rateLimited` come with `Retry-After`.
+Errors are Problem Details (RFC 9457) with a stable `type` such as `urn:pagehall:problem:invalidCredentials` and the same value as `code`, for example `invalidCredentials`, `invalidSecondFactor`, `locked`, `rateLimited`, `challengeExpired`, `passwordPolicy`, `reauthenticationRequired` or `secondFactorSetupRequired`. `locked` and `rateLimited` come with `Retry-After`.

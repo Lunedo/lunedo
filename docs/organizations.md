@@ -79,19 +79,19 @@ An instance administrator can request access to an organization with a reason. T
 
 The authorization service is the only place that decides whether a principal may perform an action on a resource. Resource types register their actions: each action names the area and level that grant it, membership kinds that grant it, or a rule, such as group managers managing their group. Every API route declares its action with `@Permission(...)`; the global guard asks the service before the handler runs.
 
-Principals are accounts, groups, all members of an organization, all internal users, anonymous and system; service accounts follow with API tokens. Decisions are computed per request and cached only for the length of a request, so a change of roles, memberships or account state takes effect on the next request on every node.
+Principals are accounts, including service accounts, groups, all members of an organization, all internal users, anonymous and system. A request with an API token is limited further by the token's scopes, see [api.md](api.md). Decisions are computed per request and cached only for the length of a request, so a change of roles, memberships or account state takes effect on the next request on every node.
 
-`explain` returns why a principal has or lacks a permission: the role, how it is held (directly, through a group, through all members, through break-glass access) and, when denied, the reason, for example `notMember`, `limitedMembership`, `noRoleGrantsArea`, `ownerOnly` or `instanceRolesDoNotGrantOrganizationAccess`.
+`explain` returns why a principal has or lacks a permission: the role, how it is held (directly, through a group, through all members, through break-glass access) and, when denied, the reason, for example `notMember`, `limitedMembership`, `noRoleGrantsArea`, `ownerOnly`, `instanceRolesDoNotGrantOrganizationAccess`, `tokenScope` or `responsibleLacksPermission`.
 
-A permission matrix test checks every combination of principal kind, built-in role, a custom role per area and registered action against an expected table. Adding an action without updating the table fails the test.
+A permission matrix test generates every combination of account kind, principal kind, built-in role, a custom role per area and registered action, and compares each decision with a model of the rules. New actions and roles are covered without changing the test; an action with a rule the model does not know fails it.
 
 ## Endpoints
 
-All endpoints are internal. Each declares the action it requires.
+Each endpoint declares the action it requires. Endpoints marked internal serve the web client and are left out of the public API reference; the others are described at `/api/docs`, see [api.md](api.md).
 
 | Endpoint | Action |
 |---|---|
-| `GET /api/v1/organizations` | session: organizations of the caller |
+| `GET /api/v1/organizations` | session: organizations of the caller; internal |
 | `POST /api/v1/organizations` | `instance.organizations.create` |
 | `GET, PATCH /api/v1/organizations/{id}` | `organization.view`, `organization.update` |
 | `GET /api/v1/organizations/{id}/domains` | `organization.signIn.view` |
@@ -99,18 +99,18 @@ All endpoints are internal. Each declares the action it requires.
 | `GET /api/v1/organizations/{id}/members` | `organization.members.view` |
 | `PATCH, DELETE /api/v1/organizations/{id}/members/{accountId}` | `organization.members.manage` |
 | `GET /api/v1/organizations/{id}/members/{accountId}/permissions` | `organization.members.manage` |
-| `DELETE /api/v1/organizations/{id}/membership` | `organization.leave` |
+| `DELETE /api/v1/organizations/{id}/membership` | `organization.leave`; internal |
 | `GET, POST, PATCH, DELETE /api/v1/organizations/{id}/roles` | `organization.roles.view`, `organization.roles.manage` |
 | `GET, POST, DELETE /api/v1/organizations/{id}/role-assignments` | `organization.roles.view`, `organization.roles.manage` |
 | `GET, POST /api/v1/organizations/{id}/groups` | `organization.groups.view`, `organization.groups.create` |
 | `GET, PATCH, DELETE /api/v1/groups/{id}`, members and managers | `group.view`, `group.manage`, `group.delete` |
 | `GET, POST, DELETE /api/v1/organizations/{id}/invitations` | `organization.members.manage` |
 | `GET, PUT /api/v1/organizations/{id}/settings` | `organization.settings.view`; changes need `organization.settings.manage`, or `organization.signIn.manage` for `auth.*` |
-| `POST, DELETE /api/v1/organizations/{id}/break-glass` | `instance.breakGlass.request` |
+| `POST, DELETE /api/v1/organizations/{id}/break-glass` | `instance.breakGlass.request`, session only; internal |
 | `GET /api/v1/instance/organizations`, `.../accounts` | `instance.organizations.view`, `instance.accounts.view` |
 | `GET, POST, PATCH, DELETE /api/v1/instance/roles`, `.../role-assignments` | `instance.roles.view`, `instance.roles.manage` |
-| `POST /api/v1/instance/ownership` | `instance.ownership.transfer`, recent authentication |
+| `POST /api/v1/instance/ownership` | `instance.ownership.transfer`, recent authentication; internal |
 | `GET, PUT /api/v1/instance/settings` | `instance.settings.view`; changes need the area of the setting |
-| `POST /api/v1/accounts/{id}/deactivate` | `account.deactivate`, recent authentication |
-| `POST /api/v1/invitations/accept` | public, with the token from the mail |
-| `POST /api/v1/registrations`, `.../complete` | public |
+| `POST /api/v1/accounts/{id}/deactivate` | `account.deactivate`, recent authentication; internal |
+| `POST /api/v1/invitations/accept` | public, with the token from the mail; internal |
+| `POST /api/v1/registrations`, `.../complete` | public; internal |

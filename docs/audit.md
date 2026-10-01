@@ -16,6 +16,12 @@ Events belong to a scope: the instance or an organization. Each scope has its ow
 - Each scope forms a hash chain: every entry contains the SHA-256 hash of the previous entry of its scope, and its own hash covers all its fields. Writers lock the head of the chain until their transaction commits, so concurrent writes get consecutive sequence numbers.
 - Retention removes entries older than the setting `audit.retentionDays` (default 365) once a day. The hash of the last removed entry is kept as the anchor of the chain, so the remaining entries can still be verified.
 
+## Reading and exporting
+
+`GET /api/v1/organizations/{id}/audit-events` lists the events of an organization; it needs `organization.audit.view`, which organization administrators and holders of the audit log area have. `GET /api/v1/instance/audit-events` lists the events of the instance and all organizations; it needs `instance.audit.view`, which instance administrators and security auditors have. Both accept the filters `from`, `to`, `actorId`, `targetType`, `targetId` and `name`, the instance endpoint also `organizationId`, and page with `cursor` and `limit`, newest first.
+
+The same filters work on `.../audit-events/export`, which streams all matching events as CSV. The export reads the events in batches, so its size is not limited by memory. Cells that start with `=`, `+`, `-`, `@`, a tab or a carriage return get a leading apostrophe, so spreadsheets do not run them as formulas. Every export is recorded as `audit.exported` with its filters.
+
 ## Verification
 
 ```sh
