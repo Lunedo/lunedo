@@ -19,15 +19,63 @@ const hasTools = spawnSync("pg_dump", ["--version"]).status === 0;
 if (process.env.CI && !hasTools) throw new Error("pg_dump must be installed in CI");
 
 describe("libpqEnvironment", () => {
+  const base = "postgres://user%40x:p%40ss@db.example:6543/pagehall";
+
   it("passes credentials through the environment", () => {
-    expect(libpqEnvironment("postgres://user%40x:p%40ss@db.example:6543/pagehall?sslmode=require")).toEqual({
+    expect(libpqEnvironment(base)).toEqual({
       PGHOST: "db.example",
       PGPORT: "6543",
       PGUSER: "user@x",
       PGPASSWORD: "p@ss",
       PGDATABASE: "pagehall",
-      PGSSLMODE: "require",
     });
+  });
+
+  it("strips the brackets of IPv6 hosts", () => {
+    expect(libpqEnvironment("postgres://u:p@[::1]:5432/pagehall").PGHOST).toBe("::1");
+    expect(libpqEnvironment("postgres://u:p@[2001:db8::5]/pagehall").PGHOST).toBe("2001:db8::5");
+  });
+
+  it.each([
+    ["sslmode=disable", "disable"],
+    ["sslmode=prefer", "verify-full"],
+    ["sslmode=require", "verify-full"],
+    ["sslmode=verify-ca", "verify-full"],
+    ["sslmode=verify-full", "verify-full"],
+    ["sslmode=no-verify", "require"],
+    ["ssl=true", "verify-full"],
+    ["ssl=1", "verify-full"],
+    ["sslmode=prefer&uselibpqcompat=true", "prefer"],
+    ["sslmode=require&uselibpqcompat=true", "require"],
+    ["sslmode=verify-ca&uselibpqcompat=true", "verify-ca"],
+  ])("verifies TLS at least like node-pg for %s", (query, mode) => {
+    expect(libpqEnvironment(`${base}?${query}`).PGSSLMODE).toBe(mode);
+  });
+
+  it("leaves the libpq default without TLS parameters", () => {
+    expect(libpqEnvironment(base).PGSSLMODE).toBeUndefined();
+  });
+
+  it("passes certificate files and the application name", () => {
+    const env = libpqEnvironment(
+      `${base}?sslmode=verify-full&sslrootcert=/run/secrets/ca.pem&sslcert=/run/secrets/client.pem&sslkey=/run/secrets/client.key&application_name=pagehall`,
+    );
+    expect(env).toMatchObject({
+      PGSSLMODE: "verify-full",
+      PGSSLROOTCERT: "/run/secrets/ca.pem",
+      PGSSLCERT: "/run/secrets/client.pem",
+      PGSSLKEY: "/run/secrets/client.key",
+      PGAPPNAME: "pagehall",
+    });
+  });
+
+  it.each([
+    ["options=-c%20search_path%3Dx", "the backup tools cannot use the URL parameter options"],
+    ["host=/var/run/postgresql", "the backup tools cannot use the URL parameter host"],
+    ["sslmode=allow", "the backup tools do not support sslmode=allow"],
+    ["ssl=false", "the backup tools do not support ssl=false; use sslmode=disable instead"],
+  ])("rejects %s with a message naming the parameter", (query, message) => {
+    expect(() => libpqEnvironment(`${base}?${query}`)).toThrow(`PAGEHALL_DATABASE_URL: ${message}`);
   });
 });
 

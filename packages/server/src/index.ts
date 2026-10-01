@@ -6,7 +6,7 @@ export {
   restoreBackup,
   verifyBackup,
 } from "./backup/archive.js";
-export { type DatabaseArchiver, PostgresArchiver } from "./backup/postgres.js";
+export { BackupConfigurationError, type DatabaseArchiver, PostgresArchiver } from "./backup/postgres.js";
 export { configurationForBackup } from "./config/backup-view.js";
 export { configSettings } from "./config/definitions.js";
 export { ConfigError, type Env, loadConfig, type ServerConfig } from "./config/load.js";

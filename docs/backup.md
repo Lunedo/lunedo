@@ -95,6 +95,21 @@ Verification and restore reject a backup when:
 
 Because the whole backup is verified before anything is written, a rejected backup leaves the target untouched.
 
+## Database connection
+
+The backup tools use the same `PAGEHALL_DATABASE_URL` as the application. They pass credentials through the environment, never on the command line, and they verify TLS at least as strictly as the application:
+
+| URL parameter | Backup tools (libpq) |
+|---|---|
+| `sslmode=disable` | `disable` |
+| `sslmode=prefer`, `require`, `verify-ca`, `verify-full`, or `ssl=true` | `verify-full`, because the application verifies the certificate and host name for these |
+| `sslmode=no-verify` | `require` |
+| `sslmode=<mode>&uselibpqcompat=true` | `<mode>` |
+| `sslrootcert`, `sslcert`, `sslkey` | `PGSSLROOTCERT`, `PGSSLCERT`, `PGSSLKEY` |
+| `application_name` | `PGAPPNAME` |
+
+Other URL parameters stop the command with a message that names the parameter.
+
 ## PostgreSQL versions
 
 `pg_dump` must be at least as new as the server, and dumps should be restored with the client that matches the target server. The image contains the clients for PostgreSQL 16, 17 and 18 and picks the one that matches the server's major version.

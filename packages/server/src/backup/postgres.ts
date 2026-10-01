@@ -19,18 +19,73 @@ export interface DatabaseArchiver {
 
 const SYSTEM_SCHEMAS = ["pg_catalog", "information_schema", "pg_toast"];
 
-/** Environment for libpq tools, so that the password never appears in the process list. */
+export class BackupConfigurationError extends Error {
+  override name = "BackupConfigurationError";
+
+  constructor(message: string) {
+    super(`PAGEHALL_DATABASE_URL: ${message}`);
+  }
+}
+
+const SSL_MODES = ["disable", "prefer", "require", "verify-ca", "verify-full", "no-verify"] as const;
+const FILE_PARAMETERS = { sslrootcert: "PGSSLROOTCERT", sslcert: "PGSSLCERT", sslkey: "PGSSLKEY" } as const;
+const SUPPORTED_PARAMETERS = new Set([
+  "sslmode",
+  "ssl",
+  "uselibpqcompat",
+  "application_name",
+  ...Object.keys(FILE_PARAMETERS),
+]);
+
+/**
+ * The libpq SSL mode that verifies at least as much as node-pg does for the same URL. Without
+ * `uselibpqcompat`, node-pg verifies the certificate and host name for every mode except
+ * `disable` and `no-verify`.
+ */
+function libpqSslMode(url: URL): string | undefined {
+  const mode = url.searchParams.get("sslmode");
+  const ssl = url.searchParams.get("ssl");
+  if (mode !== null && !(SSL_MODES as readonly string[]).includes(mode)) {
+    throw new BackupConfigurationError(`the backup tools do not support sslmode=${mode}`);
+  }
+  if (ssl !== null && ssl !== "true" && ssl !== "1") {
+    throw new BackupConfigurationError(
+      `the backup tools do not support ssl=${ssl}; use sslmode=disable instead`,
+    );
+  }
+  if (mode === "disable") return "disable";
+  if (mode === "no-verify") return "require";
+  if (url.searchParams.get("uselibpqcompat") === "true" && mode !== null) return mode;
+  if (mode !== null || ssl !== null) return "verify-full";
+  return undefined;
+}
+
+/**
+ * Environment for libpq tools such as pg_dump. The password never appears in the process
+ * list, and TLS is never weaker than the application's connection for the same URL.
+ */
 export function libpqEnvironment(databaseUrl: string): NodeJS.ProcessEnv {
   const url = new URL(databaseUrl);
+  for (const name of url.searchParams.keys()) {
+    if (!SUPPORTED_PARAMETERS.has(name)) {
+      throw new BackupConfigurationError(`the backup tools cannot use the URL parameter ${name}`);
+    }
+  }
   const env: NodeJS.ProcessEnv = {
-    PGHOST: url.hostname,
+    PGHOST: url.hostname.replace(/^\[(.*)\]$/, "$1"),
     PGPORT: url.port || "5432",
     PGUSER: decodeURIComponent(url.username),
     PGPASSWORD: decodeURIComponent(url.password),
     PGDATABASE: decodeURIComponent(url.pathname.replace(/^\//, "")),
   };
-  const sslmode = url.searchParams.get("sslmode");
+  const sslmode = libpqSslMode(url);
   if (sslmode) env.PGSSLMODE = sslmode;
+  for (const [parameter, variable] of Object.entries(FILE_PARAMETERS)) {
+    const value = url.searchParams.get(parameter);
+    if (value) env[variable] = value;
+  }
+  const applicationName = url.searchParams.get("application_name");
+  if (applicationName) env.PGAPPNAME = applicationName;
   return env;
 }
 
