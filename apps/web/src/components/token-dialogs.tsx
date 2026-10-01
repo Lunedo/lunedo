@@ -5,9 +5,19 @@ import {
   organizationAreas,
   tokenNameSchema,
 } from "@pagehall/shared";
-import { Button, ConfirmDialog, Dialog, Field, Input, Notice, Select, useToast } from "@pagehall/ui";
+import {
+  Button,
+  ConfirmDialog,
+  Dialog,
+  Field,
+  Input,
+  Notice,
+  RadioGroup,
+  Select,
+  useToast,
+} from "@pagehall/ui";
 import { Copy } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Controller } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -17,11 +27,27 @@ import { applyServerFieldErrors, submitWith, useSchemaForm } from "../forms/use-
 import { translateKey } from "../i18n/translate.js";
 
 const NONE = "none";
-const EXPIRY_OPTIONS = ["30", "90", "365", "never"] as const;
+const EXPIRY_OPTIONS = ["never", "30", "90", "365", "custom"] as const;
+const DAY_MS = 86_400_000;
+
+type ExpiryOption = (typeof EXPIRY_OPTIONS)[number];
+
+export function expiryChoices(maxLifetimeDays: number | null): ExpiryOption[] {
+  return EXPIRY_OPTIONS.filter((option) => {
+    if (maxLifetimeDays === null) return true;
+    if (option === "never") return false;
+    return option === "custom" || Number(option) <= maxLifetimeDays;
+  });
+}
+
+function dateInDays(days: number): string {
+  return new Date(Date.now() + days * DAY_MS).toISOString().slice(0, 10);
+}
 
 const tokenForm = z.object({
   name: tokenNameSchema,
   expiry: z.enum(EXPIRY_OPTIONS),
+  customDate: z.string(),
   instance: z.record(z.string(), z.enum(["none", "view", "manage"])),
   organization: z.record(z.string(), z.enum(["none", "view", "manage"])),
 });
@@ -60,7 +86,9 @@ export function CreateTokenDialog({
   allowOrganization,
   onCreate,
   hint,
+  maxLifetimeDays,
 }: {
+  maxLifetimeDays: number | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   allowInstance: boolean;
@@ -75,11 +103,20 @@ export function CreateTokenDialog({
   const form = useSchemaForm(tokenForm, {
     defaultValues: {
       name: "",
-      expiry: "90",
+      expiry: expiryChoices(maxLifetimeDays)[0] ?? "custom",
+      customDate: dateInDays(Math.min(30, maxLifetimeDays ?? 30)),
       instance: Object.fromEntries(instanceAreas.map((area) => [area, NONE])),
       organization: Object.fromEntries(organizationAreas.map((area) => [area, NONE])),
     } as TokenFormValues,
   });
+
+  const choices = expiryChoices(maxLifetimeDays);
+  const latestDate = maxLifetimeDays === null ? undefined : dateInDays(maxLifetimeDays);
+
+  useEffect(() => {
+    const allowed = expiryChoices(maxLifetimeDays);
+    if (!allowed.includes(form.getValues("expiry"))) form.setValue("expiry", allowed[0] ?? "custom");
+  }, [maxLifetimeDays, form]);
 
   const close = (next: boolean) => {
     if (!next) {
@@ -98,10 +135,27 @@ export function CreateTokenDialog({
       setError(t("tokens.scopeRequired"));
       return;
     }
-    const expiresAt =
-      values.expiry === "never"
-        ? null
-        : new Date(Date.now() + Number(values.expiry) * 86_400_000).toISOString();
+    let expiresAt: string | null = null;
+    if (values.expiry === "custom") {
+      const date = new Date(`${values.customDate}T23:59:59`);
+      if (
+        !values.customDate ||
+        Number.isNaN(date.getTime()) ||
+        date.getTime() <= Date.now() ||
+        (latestDate !== undefined && values.customDate > latestDate)
+      ) {
+        form.setError("customDate", {
+          message:
+            latestDate === undefined
+              ? t("tokens.customDateFuture")
+              : t("tokens.customDateWithin", { days: maxLifetimeDays ?? 0 }),
+        });
+        return;
+      }
+      expiresAt = date.toISOString();
+    } else if (values.expiry !== "never") {
+      expiresAt = new Date(Date.now() + Number(values.expiry) * DAY_MS).toISOString();
+    }
     try {
       const created = await onCreate({
         name: values.name,
@@ -205,19 +259,39 @@ export function CreateTokenDialog({
             </fieldset>
           ) : null}
           <p className="text-sm text-text-muted">{hint ?? t("tokens.neverMore")}</p>
-          <Field label={t("tokens.expires")}>
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1 font-medium">{t("tokens.expires")}</legend>
+            {maxLifetimeDays !== null ? (
+              <p className="text-sm text-text-muted">
+                {t("tokens.maximumApplies", { days: maxLifetimeDays })}
+              </p>
+            ) : null}
             <Controller
               control={form.control}
               name="expiry"
               render={({ field }) => (
-                <Select
+                <RadioGroup
+                  label={t("tokens.expires")}
                   value={field.value}
                   onValueChange={field.onChange}
-                  options={EXPIRY_OPTIONS.map((value) => ({ value, label: t(`tokens.expiry.${value}`) }))}
+                  options={choices.map((value) => ({
+                    value,
+                    label: translateKey(t, `tokens.expiry.${value}`),
+                  }))}
                 />
               )}
             />
-          </Field>
+            {form.watch("expiry") === "custom" ? (
+              <Field label={t("tokens.customDate")} error={form.formState.errors.customDate?.message}>
+                <Input
+                  type="date"
+                  min={dateInDays(1)}
+                  {...(latestDate ? { max: latestDate } : {})}
+                  {...form.register("customDate")}
+                />
+              </Field>
+            ) : null}
+          </fieldset>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => close(false)}>
               {t("common.cancel")}

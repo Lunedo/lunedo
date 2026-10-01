@@ -6,7 +6,15 @@ export type SettingFieldType =
       kind: "number";
       min: number;
       max: number;
-      unit: "days" | "minutes" | "characters" | "count" | "perMinute";
+      unit: "characters" | "count" | "perMinute";
+    }
+  | {
+      kind: "duration";
+      unit: "minutes" | "days";
+      min: number;
+      max: number;
+      quickChoices: readonly number[];
+      nullable?: boolean;
     }
   | { kind: "enum"; values: readonly string[]; labelPrefix: string }
   | { kind: "locale" }
@@ -17,7 +25,16 @@ export interface SettingField {
   type: SettingFieldType;
 }
 
-const DAY = 24 * 60;
+const HOUR = 60;
+const DAY = 24 * HOUR;
+
+function minutes(min: number, max: number, quickChoices: readonly number[]): SettingFieldType {
+  return { kind: "duration", unit: "minutes", min, max, quickChoices };
+}
+
+function days(min: number, max: number, quickChoices: readonly number[], nullable = false): SettingFieldType {
+  return { kind: "duration", unit: "days", min, max, quickChoices, ...(nullable ? { nullable } : {}) };
+}
 
 const fields: SettingField[] = [
   { key: "instance.name", type: { kind: "text" } },
@@ -35,12 +52,9 @@ const fields: SettingField[] = [
   { key: "auth.passwordMinLength", type: { kind: "number", min: 8, max: 256, unit: "characters" } },
   { key: "auth.twoFactorRequired", type: { kind: "boolean" } },
   { key: "auth.maxSessionsPerAccount", type: { kind: "number", min: 1, max: 100, unit: "count" } },
-  {
-    key: "auth.sessionIdleTimeoutMinutes",
-    type: { kind: "number", min: 5, max: 365 * DAY, unit: "minutes" },
-  },
-  { key: "auth.sessionLifetimeMinutes", type: { kind: "number", min: 5, max: 365 * DAY, unit: "minutes" } },
-  { key: "auth.reauthenticationMinutes", type: { kind: "number", min: 1, max: 60, unit: "minutes" } },
+  { key: "auth.sessionIdleTimeoutMinutes", type: minutes(5, 365 * DAY, [30, 8 * HOUR, DAY, 7 * DAY]) },
+  { key: "auth.sessionLifetimeMinutes", type: minutes(5, 365 * DAY, [DAY, 7 * DAY, 30 * DAY]) },
+  { key: "auth.reauthenticationMinutes", type: minutes(1, 60, [5, 15, 30]) },
   {
     key: "auth.signInAttemptsPerAccountPerMinute",
     type: { kind: "number", min: 1, max: 1000, unit: "perMinute" },
@@ -51,22 +65,23 @@ const fields: SettingField[] = [
   },
   { key: "auth.lockoutFailuresPerAccount", type: { kind: "number", min: 3, max: 1000, unit: "count" } },
   { key: "auth.lockoutFailuresPerClient", type: { kind: "number", min: 3, max: 10_000, unit: "count" } },
-  { key: "auth.lockoutWindowMinutes", type: { kind: "number", min: 1, max: DAY, unit: "minutes" } },
-  { key: "auth.lockoutMinutes", type: { kind: "number", min: 1, max: DAY, unit: "minutes" } },
-  { key: "auth.lockoutMaxMinutes", type: { kind: "number", min: 1, max: 7 * DAY, unit: "minutes" } },
-  { key: "apiTokens.maxLifetimeDays", type: { kind: "number", min: 1, max: 3650, unit: "days" } },
+  { key: "auth.lockoutWindowMinutes", type: minutes(1, DAY, [5, 15, HOUR]) },
+  { key: "auth.lockoutMinutes", type: minutes(1, DAY, [5, 15, HOUR]) },
+  { key: "auth.lockoutMaxMinutes", type: minutes(1, 7 * DAY, [HOUR, DAY]) },
+  { key: "apiTokens.maxLifetimeDays", type: days(1, 3650, [30, 90, 365], true) },
   { key: "apiTokens.requestsPerMinute", type: { kind: "number", min: 1, max: 100_000, unit: "perMinute" } },
-  { key: "apiTokens.expiryReminderDays", type: { kind: "number", min: 1, max: 90, unit: "days" } },
+  { key: "apiTokens.expiryReminderDays", type: days(1, 90, [7, 14, 30]) },
+  { key: "apiTokens.unusedNoticeDays", type: days(7, 3650, [30, 90, 180]) },
   { key: "apiTokens.publicDocumentation", type: { kind: "boolean" } },
   { key: "organizations.selfServiceCreation", type: { kind: "boolean" } },
   { key: "organizations.membersCreateGroups", type: { kind: "boolean" } },
   { key: "organizations.selfRegistration", type: { kind: "boolean" } },
-  { key: "organizations.guestExpiryReminderDays", type: { kind: "number", min: 1, max: 90, unit: "days" } },
-  { key: "organizations.guestInactivityDays", type: { kind: "number", min: 1, max: 365, unit: "days" } },
-  { key: "organizations.expiryReminderDays", type: { kind: "number", min: 1, max: 90, unit: "days" } },
-  { key: "organizations.breakGlassMinutes", type: { kind: "number", min: 5, max: DAY, unit: "minutes" } },
-  { key: "audit.retentionDays", type: { kind: "number", min: 1, max: 36_500, unit: "days" } },
-  { key: "notifications.retentionDays", type: { kind: "number", min: 1, max: 3650, unit: "days" } },
+  { key: "organizations.guestExpiryReminderDays", type: days(1, 90, [7, 14, 30]) },
+  { key: "organizations.guestInactivityDays", type: days(1, 365, [30, 90, 180]) },
+  { key: "organizations.expiryReminderDays", type: days(1, 90, [7, 14, 30]) },
+  { key: "organizations.breakGlassMinutes", type: minutes(5, DAY, [30, HOUR, 4 * HOUR]) },
+  { key: "audit.retentionDays", type: days(1, 36_500, [90, 365, 3650]) },
+  { key: "notifications.retentionDays", type: days(1, 3650, [30, 90, 365]) },
 ];
 
 const byKey = new Map(fields.map((field) => [field.key, field]));
@@ -84,3 +99,13 @@ export function settingDescriptionKey(key: string): string {
 }
 
 export const knownSettingKeys = fields.map((field) => field.key);
+
+export const MINUTES_PER_DAY = DAY;
+
+export function toMinutes(type: Extract<SettingFieldType, { kind: "duration" }>, value: number): number {
+  return type.unit === "days" ? value * DAY : value;
+}
+
+export function fromMinutes(type: Extract<SettingFieldType, { kind: "duration" }>, minutes: number): number {
+  return type.unit === "days" ? Math.round(minutes / DAY) : minutes;
+}

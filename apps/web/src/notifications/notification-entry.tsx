@@ -1,4 +1,4 @@
-import { IconButton } from "@pagehall/ui";
+import { formatDuration, IconButton } from "@pagehall/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { Bell, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -22,8 +22,10 @@ export function notificationText(
           : value,
     ]),
   );
+  const minutes = (item.params as Record<string, unknown> | null)?.minutes;
   return translateKey(t, `notifications.types.${item.type}`, {
     ...params,
+    ...(typeof minutes === "number" ? { duration: formatDuration(minutes, format.settings.language) } : {}),
     count: item.count,
     actor: item.actor?.name ?? "",
   });

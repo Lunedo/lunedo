@@ -21,6 +21,16 @@ notificationTypes.register(
         : { to: "/settings/security" };
     },
   },
+  {
+    id: "apiToken.unused",
+    icon: KeyRound,
+    link: (item) => {
+      const serviceAccountId = (item.params as { serviceAccountId?: string | null }).serviceAccountId;
+      return serviceAccountId
+        ? inOrganization(item, "/service-accounts/$serviceAccountId", { serviceAccountId })
+        : { to: "/settings/security" };
+    },
+  },
   { id: "guest.expiring", icon: UserRound, link: (item) => inOrganization(item, "/members") },
   { id: "guest.inactive", icon: UserRoundX, link: (item) => inOrganization(item, "/members") },
   { id: "access.expiring", icon: ShieldCheck, link: (item) => inOrganization(item, "/members") },

@@ -46,7 +46,12 @@ export function InstanceSecurityScreen() {
       <Section title={t("instance.security.apiTokens")}>
         <SettingsList
           {...editor}
-          keys={["apiTokens.maxLifetimeDays", "apiTokens.requestsPerMinute", "apiTokens.expiryReminderDays"]}
+          keys={[
+            "apiTokens.maxLifetimeDays",
+            "apiTokens.requestsPerMinute",
+            "apiTokens.expiryReminderDays",
+            "apiTokens.unusedNoticeDays",
+          ]}
           level="instance"
         />
       </Section>

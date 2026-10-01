@@ -1,9 +1,13 @@
 import {
   Badge,
   Button,
+  Checkbox,
   Dialog,
+  DurationInput,
+  formatDuration,
   IconButton,
   Input,
+  isDurationWithin,
   Menu,
   Select,
   SettingRow,
@@ -20,10 +24,12 @@ import { translateKey } from "../i18n/translate.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { localeOptionSet } from "../settings/locale-options.js";
 import {
+  fromMinutes,
   type SettingField,
   settingDescriptionKey,
   settingField,
   settingLabelKey,
+  toMinutes,
 } from "../settings/setting-fields.js";
 import type { SettingChange } from "../settings/setting-mutations.js";
 import { disabledReason, inheritedValue, SettingSource } from "./setting-source.js";
@@ -34,6 +40,8 @@ export function useSettingValueFormatter() {
   const { t, i18n } = useTranslation();
   const format = useFormat();
   return (field: SettingField | undefined, value: unknown): string => {
+    if (field?.type.kind === "duration" && field.type.nullable && value === null)
+      return t("settings.noLimit");
     if (value === null || value === undefined || value === "") return t("settings.notSet");
     if (!field) return typeof value === "object" ? JSON.stringify(value) : String(value);
     switch (field.type.kind) {
@@ -44,6 +52,8 @@ export function useSettingValueFormatter() {
           count: Number(value),
           value: format.number(Number(value)),
         });
+      case "duration":
+        return formatDuration(toMinutes(field.type, Number(value)), i18n.language);
       case "enum":
         return translateKey(t, `${field.type.labelPrefix}.${String(value)}`);
       case "locale":
@@ -285,6 +295,18 @@ function ValueEditor({
   const [draft, setDraft] = useState(String(value ?? ""));
   const [error, setError] = useState<string | null>(null);
 
+  if (field.type.kind === "duration") {
+    return (
+      <DurationEditor
+        type={field.type}
+        label={label}
+        value={typeof value === "number" ? value : null}
+        disabled={disabled}
+        onSave={onSave}
+      />
+    );
+  }
+
   if (field.type.kind === "enum" || field.type.kind === "locale") {
     const options =
       field.type.kind === "locale"
@@ -342,6 +364,77 @@ function ValueEditor({
           {t("common.save")}
         </Button>
       </div>
+      {error ? (
+        <span role="alert" className="text-danger text-sm">
+          {error}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+type DurationType = Extract<SettingField["type"], { kind: "duration" }>;
+
+function DurationEditor({
+  type,
+  label,
+  value,
+  disabled,
+  onSave,
+}: {
+  type: DurationType;
+  label: string;
+  value: number | null;
+  disabled: boolean;
+  onSave: (value: unknown) => Promise<void>;
+}) {
+  const { t, i18n } = useTranslation();
+  const [error, setError] = useState<string | null>(null);
+  const [limited, setLimited] = useState(value !== null);
+  const min = toMinutes(type, type.min);
+  const max = toMinutes(type, type.max);
+  const commit = (minutes: number | null) => {
+    if (!isDurationWithin(minutes, min, max) || minutes === null) {
+      setError(
+        t("validation.durationRange", {
+          minimum: formatDuration(min, i18n.language),
+          maximum: formatDuration(max, i18n.language),
+        }),
+      );
+      return;
+    }
+    setError(null);
+    const next = fromMinutes(type, minutes);
+    if (next !== value) void onSave(next);
+  };
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      {type.nullable ? (
+        <Checkbox
+          label={t("settings.limitDuration")}
+          checked={limited}
+          disabled={disabled}
+          onCheckedChange={(checked) => {
+            setLimited(checked);
+            setError(null);
+            if (!checked && value !== null) void onSave(null);
+          }}
+        />
+      ) : null}
+      {limited || !type.nullable ? (
+        <DurationInput
+          aria-label={label}
+          value={value === null ? null : toMinutes(type, value)}
+          units={type.unit === "days" ? ["days"] : ["minutes", "hours", "days"]}
+          quickChoices={type.quickChoices.map((choice) => toMinutes(type, choice))}
+          min={min}
+          max={max}
+          locale={i18n.language}
+          invalid={error !== null}
+          disabled={disabled}
+          onCommit={commit}
+        />
+      ) : null}
       {error ? (
         <span role="alert" className="text-danger text-sm">
           {error}

@@ -2,8 +2,10 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App, createQueryClient } from "../app.js";
+import { createFormatter } from "../format/format.js";
 import { initI18n } from "../i18n/index.js";
 import { mockApi, problem } from "../testing/render.js";
+import { notificationText } from "./notification-entry.js";
 import { groupByDay } from "./notification-panel.js";
 import type { NotificationItem } from "./notifications-api.js";
 
@@ -81,6 +83,43 @@ describe("groupByDay", () => {
       ["yesterday", ["b"]],
       ["earlier", ["c"]],
     ]);
+  });
+});
+
+describe("notificationText", () => {
+  it("shows durations readably and explains an unused token", async () => {
+    const i18n = await initI18n(["en"]);
+    const t = i18n.getFixedT("en");
+    const format = createFormatter({
+      language: "en",
+      timeZone: "UTC",
+      dateFormat: "auto",
+      timeFormat: "auto",
+      numberFormat: "auto",
+      firstDayOfWeek: "auto",
+    });
+    expect(
+      notificationText(
+        t,
+        notification("x", {
+          type: "breakGlass.started",
+          params: { requesterName: "Ian", organizationName: "Platform Team", minutes: 240, reason: "Outage" },
+        }),
+        format,
+      ),
+    ).toBe("Ian started break-glass access to Platform Team for 4 hours: Outage");
+    expect(
+      notificationText(
+        t,
+        notification("y", {
+          type: "apiToken.unused",
+          params: { tokenName: "Deploy", lastUsedAt: null, days: 90, serviceAccountId: null },
+        }),
+        format,
+      ),
+    ).toBe(
+      "The API token Deploy has not been used for 90 days. It keeps working; revoke it if nobody needs it anymore.",
+    );
   });
 });
 

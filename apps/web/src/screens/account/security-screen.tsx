@@ -26,6 +26,7 @@ import {
   ownTokensQuery,
   securityQuery,
   sessionsQuery,
+  tokenLifetimeQuery,
 } from "../../api/account-queries.js";
 import { api } from "../../api/client.js";
 import { instanceInfoQuery } from "../../api/queries.js";
@@ -545,6 +546,11 @@ function TokensSection() {
   const organization = useOrganizationState();
   const tokens = useQuery(ownTokensQuery);
   const [creating, setCreating] = useState(false);
+  const lifetime = useQuery({
+    ...tokenLifetimeQuery(organization.organizationId),
+    enabled: creating,
+    throwOnError: false,
+  });
   const [revoking, setRevoking] = useState<ApiToken | null>(null);
   const refresh = () => queryClient.invalidateQueries({ queryKey: accountKeys.tokens });
   const instanceAccess = [
@@ -593,6 +599,7 @@ function TokensSection() {
       <CreateTokenDialog
         open={creating}
         onOpenChange={setCreating}
+        maxLifetimeDays={lifetime.data ?? null}
         allowInstance={instanceAccess}
         allowOrganization={organization.organizationId !== null}
         onCreate={async (input) => {

@@ -155,7 +155,8 @@
     "choice": "Wähle eine der Möglichkeiten.",
     "slug": "Verwende Kleinbuchstaben, Ziffern und Bindestriche.",
     "domain": "Gib eine Domain wie example.org ein.",
-    "instanceUrl": "Gib eine Adresse wie https://wiki.example.org ohne Pfad ein."
+    "instanceUrl": "Gib eine Adresse wie https://wiki.example.org ohne Pfad ein.",
+    "durationRange": "Wähle eine Dauer von {minimum} bis {maximum}."
   },
   "problems": {
     "unknown": "Der Server hat unerwartet geantwortet. Versuche es erneut; klappt es weiterhin nicht, bitte deine Administration, das Server-Log zu prüfen.",
@@ -538,8 +539,6 @@
       "lockedBelow": "für untere Ebenen gesperrt"
     },
     "units": {
-      "days": "{count, plural, one {# Tag} other {{value} Tage}}",
-      "minutes": "{count, plural, one {# Minute} other {{value} Minuten}}",
       "characters": "{count, plural, one {# Zeichen} other {{value} Zeichen}}",
       "count": "{value}",
       "perMinute": "{value} pro Minute"
@@ -646,7 +645,7 @@
       },
       "apiTokens_maxLifetimeDays": {
         "label": "Maximale Lebensdauer von API-Tokens",
-        "description": "Leer: Tokens dürfen ohne Ablauf sein. Organisationen können sie nur verkürzen."
+        "description": "Ohne Begrenzung dürfen Tokens ohne Ablauf sein. Organisationen können die Begrenzung nur verschärfen."
       },
       "apiTokens_requestsPerMinute": {
         "label": "Anfragen pro Token",
@@ -695,13 +694,19 @@
       "notifications_retentionDays": {
         "label": "Aufbewahrung von Benachrichtigungen",
         "description": "Ältere Benachrichtigungen werden entfernt."
+      },
+      "apiTokens_unusedNoticeDays": {
+        "label": "Ungenutzte API-Tokens",
+        "description": "Benachrichtige die Person, der ein Token gehört, wenn es so lange nicht verwendet wurde. Das Token funktioniert weiter."
       }
     },
     "disabled": {
       "lockedByInstance": "Die Instanz hat diese Einstellung gesperrt, deshalb lässt sie sich hier nicht ändern.",
       "lockedByOrganization": "{name} hat diese Einstellung gesperrt, deshalb lässt sie sich hier nicht ändern.",
       "noPermission": "Deine Rollen erlauben dir nicht, diese Einstellung zu ändern."
-    }
+    },
+    "noLimit": "Keine Begrenzung",
+    "limitDuration": "Begrenzen"
   },
   "security": {
     "title": "Sicherheit",
@@ -776,10 +781,11 @@
     "scopeRequired": "Wähle mindestens einen Bereich.",
     "expires": "Läuft ab",
     "expiry": {
-      "30": "In 30 Tagen",
-      "90": "In 90 Tagen",
-      "365": "In einem Jahr",
-      "never": "Nie"
+      "30": "30 Tage",
+      "90": "90 Tage",
+      "365": "365 Tage",
+      "never": "Kein Ablauf",
+      "custom": "Eigenes Datum"
     },
     "shownOnce": "Kopiere das Token jetzt. Es wird nur einmal angezeigt.",
     "copied": "Das Token wurde kopiert.",
@@ -794,7 +800,11 @@
     "revokeDescription": "Das Token funktioniert sofort nicht mehr.",
     "revokeImpact": "Skripte und Integrationen, die {name} verwenden, verlieren ihren Zugriff.",
     "organizationTitle": "API-Tokens",
-    "organizationDescription": "Alle Tokens mit Zugriff auf diese Organisation, von Personen und Dienstkonten."
+    "organizationDescription": "Alle Tokens mit Zugriff auf diese Organisation, von Personen und Dienstkonten.",
+    "customDate": "Läuft ab am",
+    "customDateFuture": "Wähle ein Datum in der Zukunft.",
+    "customDateWithin": "Wähle ein Datum in den nächsten {days, plural, one {# Tag} other {# Tagen}}.",
+    "maximumApplies": "Tokens dürfen hier höchstens {days, plural, one {# Tag} other {# Tage}} gültig sein."
   },
   "notifications": {
     "title": "Benachrichtigungen",
@@ -836,11 +846,13 @@
       "accessExpiring": "Rolle oder Mitgliedschaft endet bald",
       "serviceAccountUnattended": "Dienstkonto ohne verantwortliche Person",
       "breakGlassStarted": "Notfallzugriff begonnen",
-      "signInNewBrowser": "Anmeldung in einem neuen Browser"
+      "signInNewBrowser": "Anmeldung in einem neuen Browser",
+      "apiTokenUnused": "API-Token ungenutzt"
     },
     "types": {
       "apiToken": {
-        "expiring": "Das API-Token {tokenName} läuft am {expiresAt} ab."
+        "expiring": "Das API-Token {tokenName} läuft am {expiresAt} ab.",
+        "unused": "Das API-Token {tokenName} wurde seit {days, plural, one {# Tag} other {# Tagen}} nicht verwendet. Es funktioniert weiter; widerrufe es, wenn es niemand mehr braucht."
       },
       "guest": {
         "expiring": "Der Gastzugang von {guestName} zu {organizationName} endet am {expiresAt}.",
@@ -853,7 +865,7 @@
         "unattended": "Für das Dienstkonto {serviceAccountName} in {organizationName} ist niemand mehr verantwortlich."
       },
       "breakGlass": {
-        "started": "{requesterName} hat einen Notfallzugriff auf {organizationName} für {minutes} Minuten begonnen: {reason}"
+        "started": "{requesterName} hat einen Notfallzugriff auf {organizationName} für {duration} begonnen: {reason}"
       },
       "signIn": {
         "newBrowser": "Dein Konto wurde in einem neuen Browser angemeldet: {browser} auf {operatingSystem}, {clientIp}."

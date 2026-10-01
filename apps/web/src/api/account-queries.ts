@@ -39,3 +39,17 @@ export const ownTokensQuery = queryOptions({
 });
 
 export type ApiToken = Awaited<ReturnType<NonNullable<(typeof ownTokensQuery)["queryFn"]>>>[number];
+
+export function tokenLifetimeQuery(organizationId: string | null) {
+  return queryOptions({
+    queryKey: [...accountKeys.tokens, "lifetime", organizationId],
+    queryFn: async () =>
+      (
+        await request(() =>
+          api.GET("/api/v1/account/tokens/lifetime", {
+            params: { query: organizationId ? { organizationId } : {} },
+          }),
+        )
+      ).maxLifetimeDays,
+  });
+}

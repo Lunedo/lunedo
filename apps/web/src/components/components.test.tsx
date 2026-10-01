@@ -119,23 +119,71 @@ describe("SettingsList", () => {
     );
   }
 
-  it("overrides an inherited number and saves it", async () => {
+  it("overrides an inherited duration and saves it on Enter", async () => {
     const onChange = vi.fn(async () => undefined);
     await renderList([entry({})], onChange);
     expect(screen.getByText("Inactive guests")).toBeTruthy();
+    expect(screen.getByText("30 days")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Override" }));
     const input = screen.getByRole("textbox", { name: "Inactive guests" });
     await userEvent.clear(input);
-    await userEvent.type(input, "500");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(screen.getByRole("alert").textContent).toBe("Enter a whole number from 1 to 365.");
+    await userEvent.type(input, "500{Enter}");
+    expect(screen.getByRole("alert").textContent).toBe("Choose a duration from 1 day to 365 days.");
     expect(onChange).not.toHaveBeenCalled();
     await userEvent.clear(input);
-    await userEvent.type(input, "14");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.type(input, "14{Enter}");
     await waitFor(() =>
       expect(onChange).toHaveBeenCalledWith("organizations.guestInactivityDays", { value: 14 }),
     );
+  });
+
+  it("shows minute settings readably and offers quick choices", async () => {
+    const onChange = vi.fn(async () => undefined);
+    await renderList(
+      [
+        entry({
+          key: "auth.sessionLifetimeMinutes",
+          value: 10_080,
+          defaultValue: 10_080,
+          source: "organization",
+        }),
+      ],
+      onChange,
+    );
+    expect((screen.getByRole("textbox", { name: "Maximum session length" }) as HTMLInputElement).value).toBe(
+      "7",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "30 days" }));
+    await waitFor(() =>
+      expect(onChange).toHaveBeenCalledWith("auth.sessionLifetimeMinutes", { value: 43_200 }),
+    );
+  });
+
+  it("names an unset maximum token lifetime", async () => {
+    await renderList([entry({ key: "apiTokens.maxLifetimeDays", value: null, defaultValue: null })]);
+    expect(screen.getByText("Default: No limit")).toBeTruthy();
+  });
+
+  it("lets a maximum token lifetime be removed or set", async () => {
+    const onChange = vi.fn(async () => undefined);
+    await renderList(
+      [
+        entry({
+          key: "apiTokens.maxLifetimeDays",
+          value: null,
+          defaultValue: null,
+          source: "organization",
+          levelsBelow: [],
+        }),
+      ],
+      onChange,
+    );
+    const limit = screen.getByRole("checkbox", { name: "Set a limit" });
+    expect(limit.getAttribute("aria-checked")).toBe("false");
+    expect(screen.queryByRole("textbox", { name: "Maximum lifetime of API tokens" })).toBeNull();
+    await userEvent.click(limit);
+    await userEvent.click(screen.getByRole("button", { name: "90 days" }));
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith("apiTokens.maxLifetimeDays", { value: 90 }));
   });
 
   it("toggles booleans directly and offers a lock only when lower levels exist", async () => {

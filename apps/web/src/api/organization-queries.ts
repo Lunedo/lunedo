@@ -221,3 +221,17 @@ export function memberPermissionsQuery(organizationId: string, accountId: string
       ),
   });
 }
+
+export function serviceAccountTokenLifetimeQuery(serviceAccountId: string) {
+  return queryOptions({
+    queryKey: [...organizationKeys.serviceAccountTokens(serviceAccountId), "lifetime"],
+    queryFn: async () =>
+      (
+        await request(() =>
+          api.GET("/api/v1/service-accounts/{serviceAccountId}/tokens/lifetime", {
+            params: { path: { serviceAccountId } },
+          }),
+        )
+      ).maxLifetimeDays,
+  });
+}

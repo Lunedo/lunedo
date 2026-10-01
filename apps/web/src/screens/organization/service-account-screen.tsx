@@ -25,6 +25,7 @@ import {
   membersQuery,
   organizationKeys,
   serviceAccountQuery,
+  serviceAccountTokenLifetimeQuery,
   serviceAccountTokensQuery,
 } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
@@ -53,9 +54,14 @@ export function ServiceAccountScreen() {
   const queryClient = useQueryClient();
   const account = useQuery({ ...serviceAccountQuery(serviceAccountId), throwOnError: false });
   const tokens = useQuery(serviceAccountTokensQuery(serviceAccountId));
+  const [creating, setCreating] = useState(false);
+  const lifetime = useQuery({
+    ...serviceAccountTokenLifetimeQuery(serviceAccountId),
+    enabled: creating,
+    throwOnError: false,
+  });
   const members = useQuery(membersQuery(organizationId));
   const manage = state.can("organization.integrations.manage");
-  const [creating, setCreating] = useState(false);
   const [revoking, setRevoking] = useState<ApiToken | null>(null);
   const [deactivating, setDeactivating] = useState(false);
   const [adding, setAdding] = useState("");
@@ -211,6 +217,7 @@ export function ServiceAccountScreen() {
       <CreateTokenDialog
         open={creating}
         onOpenChange={setCreating}
+        maxLifetimeDays={lifetime.data ?? null}
         allowInstance={false}
         allowOrganization
         hint={t("serviceAccounts.tokenHint")}
