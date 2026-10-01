@@ -285,7 +285,8 @@
     "registrationComplete": "Dein Konto ist bereit. Melde dich an, um zu beginnen.",
     "secondFactorSetupTitle": "Zweiten Faktor einrichten",
     "secondFactorSetupDescription": "Deine Organisation verlangt einen zweiten Faktor. Richte einen ein, um fortzufahren.",
-    "secondFactorMethod": "Zweiter Faktor"
+    "secondFactorMethod": "Zweiter Faktor",
+    "registerLink": "Noch kein Konto? Lege eines an"
   },
   "reauthentication": {
     "title": "Identität bestätigen",

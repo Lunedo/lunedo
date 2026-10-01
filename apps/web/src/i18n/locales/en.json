@@ -285,7 +285,8 @@
     "registrationComplete": "Your account is ready. Sign in to start.",
     "secondFactorSetupTitle": "Set up a second factor",
     "secondFactorSetupDescription": "Your organization requires a second factor. Set one up to continue.",
-    "secondFactorMethod": "Second factor"
+    "secondFactorMethod": "Second factor",
+    "registerLink": "No account yet? Create one"
   },
   "reauthentication": {
     "title": "Confirm your identity",

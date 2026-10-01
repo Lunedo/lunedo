@@ -20,7 +20,7 @@ import type { MembershipService } from "./memberships.js";
 import { lockOrganization } from "./memberships.js";
 import { OrganizationError, type OrganizationService } from "./organizations.js";
 import type { RoleInput, RoleService } from "./roles.js";
-import { organizations } from "./schema.js";
+import { organizationDomains, organizations } from "./schema.js";
 import { organizationSettingsChain, selfRegistrationSetting } from "./settings.js";
 
 const INVITATION_DAYS = 7;
@@ -399,6 +399,17 @@ export class InvitationService {
     );
     if (!allowed.allowed || !this.#jobs) return;
     await this.#jobs.enqueue(registrationRequestJob, { email: email.trim() });
+  }
+
+  async selfRegistrationOpen(): Promise<boolean> {
+    const rows = await this.#database
+      .selectDistinct({ organizationId: organizationDomains.organizationId })
+      .from(organizationDomains);
+    for (const { organizationId } of rows) {
+      if (await this.#settings.get(selfRegistrationSetting, organizationSettingsChain(organizationId)))
+        return true;
+    }
+    return false;
   }
 
   handleRegistrationRequest = async (job: JobContext<{ email: string }>): Promise<void> => {

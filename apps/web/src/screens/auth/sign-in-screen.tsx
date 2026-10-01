@@ -126,6 +126,13 @@ export function SignInScreen() {
           {t("auth.signIn")}
         </Button>
       </form>
+      {info.data?.selfRegistration ? (
+        <p className="text-center text-sm">
+          <Link to="/register" className="font-medium text-accent hover:underline">
+            {t("auth.registerLink")}
+          </Link>
+        </p>
+      ) : null}
     </AuthCard>
   );
 }

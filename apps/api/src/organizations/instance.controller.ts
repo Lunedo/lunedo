@@ -55,6 +55,7 @@ const instanceInfoSchema = z.object({
   language: z.enum(supportedLanguages),
   accentColor: z.enum(accentColors),
   passwordMinLength: z.number().int(),
+  selfRegistration: z.boolean(),
   organization: z
     .object({
       id: z.uuid(),
@@ -194,6 +195,7 @@ export class InstanceController {
       language: await settings.get(languageSetting, {}),
       accentColor: await settings.get(accentColorSetting, {}),
       passwordMinLength: await settings.get(passwordMinLengthSetting, {}),
+      selfRegistration: setupComplete ? await services.invitations.selfRegistrationOpen() : false,
       organization: only
         ? {
             id: only.id,

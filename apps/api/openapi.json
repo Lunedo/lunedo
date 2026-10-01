@@ -9039,6 +9039,9 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
                     },
+                    "selfRegistration": {
+                      "type": "boolean"
+                    },
                     "organization": {
                       "anyOf": [
                         {
@@ -9090,6 +9093,7 @@
                     "language",
                     "accentColor",
                     "passwordMinLength",
+                    "selfRegistration",
                     "organization"
                   ],
                   "additionalProperties": false

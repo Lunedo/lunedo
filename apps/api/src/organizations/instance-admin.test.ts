@@ -1,4 +1,9 @@
-import { accentColorSetting, accountAttemptLimitSetting, clientAttemptLimitSetting } from "@pagehall/server";
+import {
+  accentColorSetting,
+  accountAttemptLimitSetting,
+  clientAttemptLimitSetting,
+  selfRegistrationSetting,
+} from "@pagehall/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -50,8 +55,33 @@ describe.skipIf(!databaseBaseUrl)("instance administration for the interface", (
       language: "en",
       accentColor: "petrol",
       passwordMinLength: 12,
+      selfRegistration: false,
       organization: { id: organizationId, name: "Test organization", logoRef: null, accentColor: "violet" },
     });
+  });
+
+  it("tells the sign-in page whether people can register themselves", async () => {
+    const anonymous = new TestClient(test.app);
+    expect((await anonymous.get("/api/v1/instance/info")).json().selfRegistration).toBe(false);
+    await test.runtime.settings.set(
+      selfRegistrationSetting,
+      { organization: organizationId },
+      "organization",
+      true,
+    );
+    expect((await anonymous.get("/api/v1/instance/info")).json().selfRegistration).toBe(false);
+    const added = await owner.post(`/api/v1/organizations/${organizationId}/domains`, {
+      domain: "register.example",
+    });
+    expect(added.statusCode).toBe(201);
+    expect((await anonymous.get("/api/v1/instance/info")).json().selfRegistration).toBe(true);
+    await test.runtime.settings.set(
+      selfRegistrationSetting,
+      { organization: organizationId },
+      "organization",
+      false,
+    );
+    expect((await anonymous.get("/api/v1/instance/info")).json().selfRegistration).toBe(false);
   });
 
   it("uploads, serves and removes an organization logo", async () => {
