@@ -118,8 +118,8 @@ export class AuthController {
   @Post("sign-in/passkey-options")
   @PublicRoute()
   @HttpCode(200)
-  async passkeyOptions(@Res({ passthrough: true }) reply: FastifyReply) {
-    const { options, token } = await this.#services.signIn.passkeyOptions();
+  async passkeyOptions(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
+    const { options, token } = await this.#services.signIn.passkeyOptions(request.ip);
     setPendingCookie(reply, token);
     return options;
   }

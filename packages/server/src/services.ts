@@ -90,6 +90,7 @@ export function createAccountServices(options: {
     accounts,
     hasher,
     throttle,
+    rateLimiter,
     sessions,
     challenges,
     totp,

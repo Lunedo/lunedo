@@ -18,7 +18,13 @@ import {
 import type { PasswordHasher } from "./passwords.js";
 import type { ClientInfo, Session, SessionKind, SessionService } from "./sessions.js";
 import { twoFactorRequiredSetting } from "./settings.js";
-import type { Lockout, SignInThrottle, ThrottleSubjects } from "./throttle.js";
+import {
+  clientSubject,
+  type Lockout,
+  type RateLimiter,
+  type SignInThrottle,
+  type ThrottleSubjects,
+} from "./throttle.js";
 import { hashToken } from "./tokens.js";
 import {
   hasSecondFactor,
@@ -64,6 +70,8 @@ function canSignIn(account: Account | null): account is Account & { email: strin
   );
 }
 
+const PASSKEY_OPTIONS_PER_CLIENT_PER_MINUTE = 30;
+
 function availableFactors(factors: SecondFactors): SecondFactorType[] {
   const available: SecondFactorType[] = [];
   if (factors.totp) available.push("totp");
@@ -83,6 +91,7 @@ export class SignInService {
   readonly #accounts: AccountService;
   readonly #hasher: PasswordHasher;
   readonly #throttle: SignInThrottle;
+  readonly #rateLimiter: RateLimiter;
   readonly #sessions: SessionService;
   readonly #challenges: ChallengeStore;
   readonly #totp: TotpService;
@@ -98,6 +107,7 @@ export class SignInService {
     accounts: AccountService;
     hasher: PasswordHasher;
     throttle: SignInThrottle;
+    rateLimiter: RateLimiter;
     sessions: SessionService;
     challenges: ChallengeStore;
     totp: TotpService;
@@ -112,6 +122,7 @@ export class SignInService {
     this.#accounts = options.accounts;
     this.#hasher = options.hasher;
     this.#throttle = options.throttle;
+    this.#rateLimiter = options.rateLimiter;
     this.#sessions = options.sessions;
     this.#challenges = options.challenges;
     this.#totp = options.totp;
@@ -302,9 +313,19 @@ export class SignInService {
     try {
       result = await this.#database.transaction(async (tx) => {
         if (!(await this.#challenges.consume(tx, pending.id))) throw new ChallengeExpiredError();
-        if (input.factor.type === "recoveryCode") {
-          const remaining = await this.#recoveryCodes.use(tx, account.id, input.factor.code);
-          if (remaining === null) throw new RecoveryCodeRejected();
+        const remaining =
+          input.factor.type === "recoveryCode"
+            ? await this.#recoveryCodes.use(tx, account.id, input.factor.code)
+            : null;
+        if (input.factor.type === "recoveryCode" && remaining === null) throw new RecoveryCodeRejected();
+        const signedIn = await this.#createSession(
+          tx,
+          account,
+          [...pending.methods, method],
+          "full",
+          input.client,
+        );
+        if (remaining !== null) {
           await this.#audit.record(tx, {
             name: "twoFactor.recoveryCodeUsed",
             actor: ANONYMOUS,
@@ -320,7 +341,7 @@ export class SignInService {
             }),
           );
         }
-        return this.#createSession(tx, account, [...pending.methods, method], "full", input.client);
+        return signedIn;
       });
     } catch (error) {
       if (error instanceof RecoveryCodeRejected) throw await failed();
@@ -331,7 +352,13 @@ export class SignInService {
     return result;
   }
 
-  async passkeyOptions() {
+  async passkeyOptions(clientIp: string | undefined) {
+    const limit = await this.#rateLimiter.consume(
+      `passkeyOptions:client:${clientSubject(clientIp ?? "unknown")}`,
+      PASSKEY_OPTIONS_PER_CLIENT_PER_MINUTE,
+      60,
+    );
+    if (!limit.allowed) throw new RateLimitedError(limit.retryAfterSeconds);
     const options = await this.#webauthn.authenticationOptions({ userVerification: "required" });
     const created = await this.#challenges.create(this.#database, {
       purpose: "passkeySignIn",
