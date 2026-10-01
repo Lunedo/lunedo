@@ -52,7 +52,7 @@ export interface SetupStepDependencies {
   filesDir: string;
 }
 
-/** System checks: database, file storage, instance URL, HTTPS and clock (ADR 0021). */
+/** System checks: database, file storage, instance URL, HTTPS and clock. */
 export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
   return {
     id: "systemCheck",
@@ -157,7 +157,7 @@ async function ownerOf(context: SetupActionContext): Promise<{ id: string; email
 
 /**
  * The owner account with password and mandatory TOTP, plus recovery codes. The owner is also the
- * break-glass account (ADR 0011). Until setup is complete nobody can sign in, so the step can be
+ * break-glass account. Until setup is complete nobody can sign in, so the step can be
  * repeated: the owner's details are replaced and its factors removed.
  */
 export function ownerStep(deps: SetupStepDependencies): SetupStep {

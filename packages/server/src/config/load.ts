@@ -205,7 +205,7 @@ const SMTP_SETTINGS = [
 ] as const;
 
 /**
- * Setup values from the configuration (ADR 0021). Instance URL and owner are required together;
+ * Setup values from the configuration. Instance URL and owner are required together;
  * SMTP is optional. Without them, the setup assistant runs.
  */
 function configuredSetup(

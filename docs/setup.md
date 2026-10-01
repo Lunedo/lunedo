@@ -30,7 +30,7 @@ The setup state is stored in the database, so all nodes agree on it.
 
 ## Endpoints
 
-All endpoints are internal (ADR 0013). After setup they answer `404` like routes that do not exist.
+All endpoints are internal. After setup they answer `404` like routes that do not exist.
 
 | Endpoint | Access |
 |---|---|

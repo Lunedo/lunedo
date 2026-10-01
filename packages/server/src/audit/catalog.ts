@@ -33,7 +33,7 @@ const sessionReference = z.object({ sessionId: z.uuid() });
 const credential = z.object({ credentialId: z.uuid(), name: z.string() });
 
 /**
- * Every audited action (ADR 0028). Recording an event that is not listed here does not compile,
+ * Every audited action. Recording an event that is not listed here does not compile,
  * and its fields are checked against the schema. Fields never contain passwords, tokens, codes
  * or other secrets.
  */

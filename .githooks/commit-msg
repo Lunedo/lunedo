@@ -1,2 +1,2 @@
 #!/bin/sh
-exec node scripts/check-sign-off.ts "$1"
+node scripts/check-sign-off.ts "$1" && exec node scripts/check-private-references.ts --message "$1"

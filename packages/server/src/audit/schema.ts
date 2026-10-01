@@ -35,7 +35,7 @@ export const auditChains = pgTable(
   (table) => [primaryKey({ columns: [table.scopeType, table.scopeId] })],
 );
 
-/** Append-only audit log (ADR 0028). A database trigger rejects updates and deletes. */
+/** Append-only audit log. A database trigger rejects updates and deletes. */
 export const auditEvents = pgTable(
   "audit_events",
   {

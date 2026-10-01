@@ -69,7 +69,7 @@ export async function withUniqueEmail<T>(operation: () => Promise<T>): Promise<T
   }
 }
 
-/** Accounts (ADR 0015). This task creates standard accounts only. */
+/** Accounts. This task creates standard accounts only. */
 export class AccountService {
   readonly #database: Database;
   readonly #settings: SettingsService;

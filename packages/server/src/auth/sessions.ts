@@ -66,7 +66,7 @@ function describeClient(userAgent: string | undefined): {
 }
 
 /**
- * Server-side sessions in PostgreSQL (ADR 0007, 0011). The cookie holds a random 256-bit ID;
+ * Server-side sessions in PostgreSQL. The cookie holds a random 256-bit ID;
  * the database stores only its SHA-256 hash.
  */
 export class SessionService {

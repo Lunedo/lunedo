@@ -55,7 +55,7 @@ export interface SecondFactorRequired {
   factors: SecondFactorType[];
 }
 
-/** Account types that sign in interactively; service accounts use API tokens only (ADR 0015). */
+/** Account types that sign in interactively; service accounts use API tokens only. */
 const INTERACTIVE_TYPES = new Set(["standard", "guest", "portal"]);
 
 function canSignIn(account: Account | null): account is Account & { email: string } {
@@ -83,7 +83,7 @@ class RecoveryCodeRejected extends Error {}
 
 /**
  * Sign-in with e-mail and password followed by a second factor, passwordless sign-in with a
- * passkey, and re-authentication for sensitive actions (ADR 0011).
+ * passkey, and re-authentication for sensitive actions.
  */
 export class SignInService {
   readonly #database: Database;
@@ -130,7 +130,7 @@ export class SignInService {
     this.#setupComplete = options.setupComplete;
   }
 
-  /** Whether the account must have a second factor: by setting, or as the instance owner (ADR 0011). */
+  /** Whether the account must have a second factor: by setting, or as the instance owner. */
   async secondFactorRequired(accountId: string): Promise<boolean> {
     if ((await this.#accounts.ownerId()) === accountId) return true;
     return this.#settings.get(twoFactorRequiredSetting, accountScopeChain(accountId));

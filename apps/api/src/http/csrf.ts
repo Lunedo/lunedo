@@ -6,7 +6,7 @@ export const CSRF_HEADER = "x-pagehall-request";
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 /**
- * CSRF protection for state-changing API requests (ADR 0011, 0013): they need the custom header
+ * CSRF protection for state-changing API requests: they need the custom header
  * and an `Origin` that matches the instance URL. Before the instance URL is configured during
  * setup, the origin must match the host the request was sent to.
  */

@@ -97,7 +97,7 @@ export interface Lockout {
 type SubjectKey = { subject: Lockout["subject"]; key: string };
 
 /**
- * Protects sign-in against brute force (ADR 0011): attempts are rate-limited per account address
+ * Protects sign-in against brute force: attempts are rate-limited per account address
  * and per client IP, and repeated failures lock the address or the client temporarily, with a
  * duration that doubles with each lockout in a row. Unknown addresses are counted like known
  * ones, so that a lockout does not reveal whether an account exists.

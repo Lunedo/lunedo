@@ -87,7 +87,7 @@ State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) must carry the header
 
 ## Endpoints
 
-All endpoints are internal (ADR 0013): they serve the web client and are not part of the public API documentation.
+All endpoints are internal: they serve the web client and are not part of the public API documentation.
 
 | Endpoint | Access |
 |---|---|

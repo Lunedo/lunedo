@@ -12,11 +12,11 @@ import {
 } from "drizzle-orm/pg-core";
 import { bytes, primaryId, timestamps } from "../database/columns.js";
 
-/** Account types (ADR 0015). */
+/** Account types. */
 export const accountTypes = ["standard", "guest", "portal", "service"] as const;
 export type AccountType = (typeof accountTypes)[number];
 
-/** Account states (ADR 0015). Accounts are deactivated or anonymized, never deleted. */
+/** Account states. Accounts are deactivated or anonymized, never deleted. */
 export const accountStates = ["invited", "active", "deactivated", "anonymized", "placeholder"] as const;
 export type AccountState = (typeof accountStates)[number];
 

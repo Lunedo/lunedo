@@ -1,6 +1,6 @@
 # Audit log
 
-The audit log records every action that affects security, access or configuration (ADR 0028). It is separate from the application log.
+The audit log records every action that affects security, access or configuration. It is separate from the application log.
 
 ## Catalog
 

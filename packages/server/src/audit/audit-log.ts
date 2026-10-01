@@ -95,7 +95,7 @@ export interface AuditVerification {
 }
 
 /**
- * Writes audit events (ADR 0028). Each scope forms a hash chain: every entry contains the hash
+ * Writes audit events. Each scope forms a hash chain: every entry contains the hash
  * of the previous entry of its scope. Writers lock the head of the chain, so concurrent writes
  * get consecutive sequence numbers; the lock is held until the transaction commits.
  */

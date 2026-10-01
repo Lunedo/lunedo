@@ -20,7 +20,7 @@ export type RouteAccess =
 
 export const ROUTE_ACCESS = "pagehall:route-access";
 
-/** Marks routes that only the web client uses: excluded from the public API documentation (ADR 0013). */
+/** Marks routes that only the web client uses: excluded from the public API documentation. */
 export const INTERNAL_ROUTE = "pagehall:internal-route";
 
 /**
@@ -48,5 +48,5 @@ export const SetupCodeRoute = () => SetMetadata(ROUTE_ACCESS, { kind: "setupCode
 export const SetupSessionRoute = () =>
   SetMetadata(ROUTE_ACCESS, { kind: "setupSession" } satisfies RouteAccess);
 
-/** Marks a controller or route as internal (ADR 0013). */
+/** Marks a controller or route as internal. */
 export const InternalRoute = () => applyDecorators(SetMetadata(INTERNAL_ROUTE, true));

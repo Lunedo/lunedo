@@ -1,4 +1,4 @@
--- Audit entries are append-only (ADR 0028). Deletes pass only when the retention job sets
+-- Audit entries are append-only. Deletes pass only when the retention job sets
 -- the transaction-local flag pagehall.audit_retention; updates and truncation never pass.
 CREATE FUNCTION "audit_events_reject_changes"() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN

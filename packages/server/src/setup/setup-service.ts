@@ -56,7 +56,7 @@ export interface SetupStatus {
 }
 
 /**
- * First-start setup (ADR 0021). Until setup is complete, every start of an API node issues a new
+ * First-start setup. Until setup is complete, every start of an API node issues a new
  * one-time setup code. The code is exchanged for a setup session, which runs the steps registered
  * by the modules. All state is in the database, so all nodes agree on it.
  */
@@ -110,7 +110,7 @@ export class SetupService {
     });
     if (!issued) return;
     // The only log line that contains a secret: the operator reads the setup code from the
-    // container log to prove access to the server (ADR 0021).
+    // container log to prove access to the server.
     logger.warn(
       `Setup code: ${code}. Open Pagehall in a browser and enter this code to set up the instance.`,
     );
