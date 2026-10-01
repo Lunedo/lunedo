@@ -141,10 +141,12 @@ export class SettingsService {
     if (this.#caching) {
       for (const scope of missing) {
         const key = scopeKey(scope);
-        this.#cache.set(
-          key,
-          loading.then((byScope) => byScope.get(key) ?? new Map()),
-        );
+        const entry = loading.then((byScope) => byScope.get(key) ?? new Map<string, StoredRow>());
+        this.#cache.set(key, entry);
+        // A failed load must not stay cached; the caller receives the error through `loading`.
+        entry.catch(() => {
+          if (this.#cache.get(key) === entry) this.#cache.delete(key);
+        });
       }
     }
     for (const [key, rows] of await loading) result.set(key, rows);

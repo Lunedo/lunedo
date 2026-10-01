@@ -237,3 +237,31 @@ describe.skipIf(!databaseUrl)("SettingsService", () => {
     }
   });
 });
+
+describe.skipIf(!databaseUrl)("SettingsService with a failing database", () => {
+  it("does not cache a failed load and recovers on the next read", async () => {
+    const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    const query = pool.query.bind(pool);
+    let failures = 1;
+    pool.query = ((...args: Parameters<typeof query>) => {
+      if (failures > 0) {
+        failures -= 1;
+        return Promise.reject(new Error("connection terminated unexpectedly"));
+      }
+      return query(...args);
+    }) as typeof pool.query;
+    const listener = { listen: async () => {}, onReconnect: () => {} } as unknown as NotificationListener;
+    const cached = new SettingsService({ database: createDatabase(pool), logger });
+    await cached.enableCache(listener);
+    try {
+      const setting = testSetting();
+      const scopes = chain();
+      await expect(cached.get(setting, scopes)).rejects.toMatchObject({
+        cause: expect.objectContaining({ message: "connection terminated unexpectedly" }),
+      });
+      expect(await cached.get(setting, scopes)).toBe("default");
+    } finally {
+      await pool.end();
+    }
+  });
+});
