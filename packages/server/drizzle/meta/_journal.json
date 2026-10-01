@@ -43,6 +43,20 @@
       "when": 1790857620843,
       "tag": "0005_api_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790862371603,
+      "tag": "0006_keyset_and_responsibles",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790862372536,
+      "tag": "0007_drop_single_responsible",
+      "breakpoints": true
     }
   ]
 }

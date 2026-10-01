@@ -41,6 +41,7 @@ export const accounts = pgTable(
   (table) => [
     uniqueIndex("accounts_email_unique").on(sql`lower(${table.email})`),
     index().on(table.homeOrganizationId),
+    index("accounts_name_id_index").on(sql`lower(${table.name})`, table.id),
   ],
 );
 

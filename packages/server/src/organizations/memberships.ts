@@ -7,6 +7,8 @@ import { authChallenges, sessions } from "../auth/schema.js";
 import { coversAreas } from "../authorization/areas.js";
 import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
 import type { Database, Transaction } from "../database/database.js";
+import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
+import { responsiblesOf } from "../tokens/service-accounts.js";
 import {
   customRoles,
   groupManagers,
@@ -81,9 +83,11 @@ export class MembershipService {
     this.#authorization = options.authorization;
   }
 
-  async list(organizationId: string): Promise<Member[]> {
+  async list(organizationId: string, page: PageRequest = FIRST_PAGE): Promise<Page<Member>> {
+    const sortName = sql<string>`lower(${accounts.name})`;
     const rows = await this.#database
       .select({
+        sortName,
         accountId: memberships.accountId,
         name: accounts.name,
         email: accounts.email,
@@ -99,9 +103,19 @@ export class MembershipService {
           eq(memberships.organizationId, organizationId),
           eq(accounts.state, "active"),
           or(isNull(memberships.expiresAt), sql`${memberships.expiresAt} > now()`),
+          afterKey([sortName, accounts.id], page.after),
         ),
       )
-      .orderBy(asc(accounts.name));
+      .orderBy(sortName, accounts.id)
+      .limit(pageLimit(page));
+    const result = toPage(
+      rows,
+      page,
+      (row) => [row.sortName, row.accountId],
+      ({ sortName: _sortName, ...row }) => row,
+    );
+    const accountIds = result.items.map((row) => row.accountId);
+    if (accountIds.length === 0) return { items: [], next: null };
     const assignments = await this.#database
       .select({
         id: roleAssignments.id,
@@ -117,20 +131,25 @@ export class MembershipService {
         and(
           eq(roleAssignments.organizationId, organizationId),
           eq(roleAssignments.principalKind, "account"),
+          inArray(roleAssignments.principalId, accountIds),
           or(isNull(roleAssignments.expiresAt), sql`${roleAssignments.expiresAt} > now()`),
         ),
-      );
-    return rows.map((row) => ({
-      ...row,
-      roles: assignments
-        .filter((assignment) => assignment.accountId === row.accountId)
-        .map((assignment) => ({
-          assignmentId: assignment.id,
-          role: assignment.builtInRole ?? assignment.customRoleName ?? "",
-          customRoleId: assignment.customRoleId,
-          expiresAt: assignment.expiresAt,
-        })),
-    }));
+      )
+      .orderBy(roleAssignments.id);
+    return {
+      next: result.next,
+      items: result.items.map((row) => ({
+        ...row,
+        roles: assignments
+          .filter((assignment) => assignment.accountId === row.accountId)
+          .map((assignment) => ({
+            assignmentId: assignment.id,
+            role: assignment.builtInRole ?? assignment.customRoleName ?? "",
+            customRoleId: assignment.customRoleId,
+            expiresAt: assignment.expiresAt,
+          })),
+      })),
+    };
   }
 
   async add(
@@ -284,16 +303,17 @@ export class MembershipService {
       )
       .returning({ organizationId: memberships.organizationId, accountId: memberships.accountId });
     const releasedServiceAccounts = await tx.execute<{
-      account_id: string;
+      service_account_id: string;
       organization_id: string;
-      description: string;
-      name: string;
     }>(sql`
-      update service_accounts s set responsible_account_id = null, updated_at = now()
-      from accounts a
-      where a.id = s.account_id and s.responsible_account_id = ${responsibleAccountId}
+      delete from service_account_responsibles r using service_accounts s
+      where s.account_id = r.service_account_id and r.account_id = ${responsibleAccountId}
         ${organizationId ? sql`and s.organization_id = ${organizationId}` : sql``}
-      returning s.account_id, s.organization_id, s.description, a.name`);
+      returning r.service_account_id, s.organization_id`);
+    const remaining = await responsiblesOf(
+      tx,
+      releasedServiceAccounts.rows.map((row) => row.service_account_id),
+    );
     return [
       ...released.map((guest) => ({
         name: "guest.responsibleChanged" as const,
@@ -303,10 +323,10 @@ export class MembershipService {
         scope: scopeOf(guest.organizationId),
       })),
       ...releasedServiceAccounts.rows.map((row) => ({
-        name: "serviceAccount.updated" as const,
+        name: "serviceAccount.responsiblesChanged" as const,
         actor,
-        targetId: row.account_id,
-        fields: { name: row.name, description: row.description, responsibleAccountId: null },
+        targetId: row.service_account_id,
+        fields: { responsibleAccountIds: remaining.get(row.service_account_id) ?? [] },
         scope: scopeOf(row.organization_id),
       })),
     ];

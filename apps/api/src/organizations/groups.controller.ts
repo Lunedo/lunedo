@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Req } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query, Req } from "@nestjs/common";
 import { groupDescriptionSchema, groupNameSchema } from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
@@ -6,13 +6,16 @@ import { Permission } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
+import { nameCursor, pageQuerySchema, pageRequest, pageSchema, toApiPage } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import {
   exampleGroup,
   exampleGroupDetails,
+  exampleGroupMember,
   exampleMember,
   groupDetailsSchema,
+  groupMemberSchema,
   groupSchema,
   optionalExpiry,
   uuid,
@@ -56,7 +59,8 @@ export class GroupsController {
   @Permission("group.view", group)
   @ApiRoute({
     summary: "Get a group",
-    description: "Returns a group with its members and managers.",
+    description:
+      "Returns a group with its managers. List its members with `GET /api/v1/groups/{groupId}/members`.",
     tags: [TAG],
     params: groupParams,
     response: { description: "The group.", schema: groupDetailsSchema, example: exampleGroupDetails },
@@ -65,6 +69,24 @@ export class GroupsController {
     const found = await this.#services.groups.get(groupId);
     if (!found) throw notFound();
     return found;
+  }
+
+  @Get(":groupId/members")
+  @Permission("group.view", group)
+  @ApiRoute({
+    summary: "List group members",
+    description: "Lists the current members of the group.",
+    tags: [TAG],
+    params: groupParams,
+    query: pageQuerySchema,
+    response: {
+      description: "Members of the group.",
+      schema: pageSchema(groupMemberSchema, "Members, ordered by name."),
+      example: { items: [exampleGroupMember], nextCursor: null },
+    },
+  })
+  async members(@Param("groupId") groupId: string, @Query() query: z.output<typeof pageQuerySchema>) {
+    return toApiPage(await this.#services.groups.members(groupId, pageRequest(query, nameCursor)));
   }
 
   @Patch(":groupId")

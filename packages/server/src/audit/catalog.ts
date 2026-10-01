@@ -407,17 +407,25 @@ export const auditCatalog = {
   "serviceAccount.created": event({
     actor: ["account", "system"],
     target: "account",
-    fields: z.object({ name: z.string(), responsibleAccountId: z.uuid().nullable() }),
+    fields: z.object({ name: z.string(), responsibleAccountIds: z.array(z.uuid()) }),
     visibility: "organization",
   }),
   "serviceAccount.updated": event({
     actor: ["account", "system"],
     target: "account",
-    fields: z.object({
-      name: z.string(),
-      description: z.string(),
-      responsibleAccountId: z.uuid().nullable(),
-    }),
+    fields: z.object({ name: z.string(), description: z.string() }),
+    visibility: "organization",
+  }),
+  "serviceAccount.responsiblesChanged": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({ responsibleAccountIds: z.array(z.uuid()) }),
+    visibility: "organization",
+  }),
+  "serviceAccount.unattended": event({
+    actor: ["system"],
+    target: "account",
+    fields: z.object({ notifiedCount: z.number().int().nonnegative() }),
     visibility: "organization",
   }),
   "serviceAccount.deactivated": event({

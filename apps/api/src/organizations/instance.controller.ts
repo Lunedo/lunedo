@@ -6,7 +6,15 @@ import { InternalRoute, Permission } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
-import { pageQuerySchema, pageSchema, paginate } from "../http/pagination.js";
+import {
+  idCursor,
+  nameCursor,
+  pageQuerySchema,
+  pageRequest,
+  pageSchema,
+  paginate,
+  toApiPage,
+} from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import {
@@ -137,7 +145,7 @@ export class InstanceController {
     },
   })
   async organizations(@Query() query: z.output<typeof pageQuerySchema>) {
-    return paginate(await this.#services.organizations.list(), byName, query);
+    return toApiPage(await this.#services.organizations.list(pageRequest(query, nameCursor)));
   }
 
   @Get("accounts")
@@ -154,7 +162,7 @@ export class InstanceController {
     },
   })
   async accounts(@Query() query: z.output<typeof pageQuerySchema>) {
-    return paginate(await this.#services.accounts.list(), byName, query);
+    return toApiPage(await this.#services.accounts.list(pageRequest(query, nameCursor)));
   }
 
   @Get("roles")
@@ -237,8 +245,9 @@ export class InstanceController {
     },
   })
   async assignments(@Query() query: z.output<typeof pageQuerySchema>) {
-    const assignments = await this.#services.roles.listAssignments("instance", null);
-    return paginate(assignments, (assignment) => [assignment.id], query);
+    return toApiPage(
+      await this.#services.roles.listAssignments("instance", null, pageRequest(query, idCursor)),
+    );
   }
 
   @Post("role-assignments")

@@ -106,6 +106,11 @@ describe.skipIf(!databaseBaseUrl)("organizations through the API", () => {
     groupId = group.json().id;
     const details = (await owner.get(`/api/v1/groups/${groupId}`)).json();
     expect(details.managers).toEqual([expect.objectContaining({ name: "Olivia Owner" })]);
+    expect(details).not.toHaveProperty("members");
+    expect((await owner.get(`/api/v1/groups/${groupId}/members`)).json()).toEqual({
+      items: [],
+      nextCursor: null,
+    });
   });
 
   it("invites a member with a role who creates the account on acceptance", async () => {
@@ -297,5 +302,28 @@ describe.skipIf(!databaseBaseUrl)("organizations through the API", () => {
       "select 1 from audit_events where name = 'instance.ownershipTransferred'",
     );
     expect(audit.rows).toHaveLength(1);
+  });
+
+  it("pages lists in the database with an opaque cursor", async () => {
+    for (const name of ["Paged A", "paged b", "Paged C"]) {
+      await owner.post(`/api/v1/organizations/${organizationId}/groups`, { name });
+    }
+    const url = `/api/v1/organizations/${organizationId}/groups`;
+    const all = (await owner.get(`${url}?limit=200`)).json().items.map((group: { id: string }) => group.id);
+    const seen: string[] = [];
+    let cursor: string | null = null;
+    do {
+      const page: { items: { id: string }[]; nextCursor: string | null } = (
+        await owner.get(`${url}?limit=2${cursor ? `&cursor=${cursor}` : ""}`)
+      ).json();
+      expect(page.items.length).toBeLessThanOrEqual(2);
+      seen.push(...page.items.map((group: { id: string }) => group.id));
+      cursor = page.nextCursor;
+    } while (cursor);
+    expect(seen).toEqual(all);
+    const tampered = Buffer.from(JSON.stringify(["x", "not-a-uuid"])).toString("base64url");
+    const invalid = await owner.get(`${url}?cursor=${tampered}`);
+    expect(invalid.statusCode).toBe(400);
+    expect(invalid.json()).toMatchObject({ code: "invalidInput", fields: ["cursor"] });
   });
 });

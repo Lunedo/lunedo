@@ -81,7 +81,7 @@ The authorization service is the only place that decides whether a principal may
 
 Principals are accounts, including service accounts, groups, all members of an organization, all internal users, anonymous and system. A request with an API token is limited further by the token's scopes, see [api.md](api.md). Decisions are computed per request and cached only for the length of a request, so a change of roles, memberships or account state takes effect on the next request on every node.
 
-`explain` returns why a principal has or lacks a permission: the role, how it is held (directly, through a group, through all members, through break-glass access) and, when denied, the reason, for example `notMember`, `limitedMembership`, `noRoleGrantsArea`, `ownerOnly`, `instanceRolesDoNotGrantOrganizationAccess`, `tokenScope` or `responsibleLacksPermission`.
+`explain` returns why a principal has or lacks a permission: the role, how it is held (directly, through a group, through all members, through break-glass access) and, when denied, the reason, for example `notMember`, `limitedMembership`, `noRoleGrantsArea`, `ownerOnly`, `instanceRolesDoNotGrantOrganizationAccess` or `tokenScope`.
 
 A permission matrix test generates every combination of account kind, principal kind, built-in role, a custom role per area and registered action, and compares each decision with a model of the rules. New actions and roles are covered without changing the test; an action with a rule the model does not know fails it.
 

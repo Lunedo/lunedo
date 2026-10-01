@@ -6,6 +6,7 @@ import type { AuditLog } from "../audit/audit-log.js";
 import { type Areas, builtInRoleAreas } from "../authorization/areas.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Transaction } from "../database/database.js";
+import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
 import {
   customRoles,
   groupManagers,
@@ -28,8 +29,13 @@ export interface Group {
 }
 
 export interface GroupDetails extends Group {
-  members: { accountId: string; name: string; expiresAt: Date | null }[];
   managers: { accountId: string; name: string }[];
+}
+
+export interface GroupMember {
+  accountId: string;
+  name: string;
+  expiresAt: Date | null;
 }
 
 function scopeOf(organizationId: string) {
@@ -57,17 +63,54 @@ export class GroupService {
     this.#authorization = options.authorization;
   }
 
-  async list(organizationId: string): Promise<Group[]> {
-    return this.#database
+  async list(organizationId: string, page: PageRequest = FIRST_PAGE): Promise<Page<Group>> {
+    const sortName = sql<string>`lower(${groups.name})`;
+    const rows = await this.#database
       .select({
         id: groups.id,
         organizationId: groups.organizationId,
         name: groups.name,
         description: groups.description,
+        sortName,
       })
       .from(groups)
-      .where(eq(groups.organizationId, organizationId))
-      .orderBy(asc(groups.name));
+      .where(and(eq(groups.organizationId, organizationId), afterKey([sortName, groups.id], page.after)))
+      .orderBy(sortName, groups.id)
+      .limit(pageLimit(page));
+    return toPage(
+      rows,
+      page,
+      (row) => [row.sortName, row.id],
+      ({ sortName: _sortName, ...row }) => row,
+    );
+  }
+
+  async members(groupId: string, page: PageRequest = FIRST_PAGE): Promise<Page<GroupMember>> {
+    const sortName = sql<string>`lower(${accounts.name})`;
+    const rows = await this.#database
+      .select({
+        accountId: groupMembers.accountId,
+        name: accounts.name,
+        expiresAt: groupMembers.expiresAt,
+        sortName,
+      })
+      .from(groupMembers)
+      .innerJoin(accounts, eq(accounts.id, groupMembers.accountId))
+      .where(
+        and(
+          eq(groupMembers.groupId, groupId),
+          or(isNull(groupMembers.expiresAt), sql`${groupMembers.expiresAt} > now()`),
+          afterKey([sortName, accounts.id], page.after),
+        ),
+      )
+      .orderBy(sortName, accounts.id)
+      .limit(pageLimit(page));
+    return toPage(
+      rows,
+      page,
+      (row) => [row.sortName, row.accountId],
+      ({ sortName: _sortName, ...row }) => row,
+    );
   }
 
   async get(id: string): Promise<GroupDetails | null> {
@@ -81,24 +124,13 @@ export class GroupService {
       .from(groups)
       .where(eq(groups.id, id));
     if (!group) return null;
-    const members = await this.#database
-      .select({ accountId: groupMembers.accountId, name: accounts.name, expiresAt: groupMembers.expiresAt })
-      .from(groupMembers)
-      .innerJoin(accounts, eq(accounts.id, groupMembers.accountId))
-      .where(
-        and(
-          eq(groupMembers.groupId, id),
-          or(isNull(groupMembers.expiresAt), sql`${groupMembers.expiresAt} > now()`),
-        ),
-      )
-      .orderBy(asc(accounts.name));
     const managers = await this.#database
       .select({ accountId: groupManagers.accountId, name: accounts.name })
       .from(groupManagers)
       .innerJoin(accounts, eq(accounts.id, groupManagers.accountId))
       .where(eq(groupManagers.groupId, id))
       .orderBy(asc(accounts.name));
-    return { ...group, members, managers };
+    return { ...group, managers };
   }
 
   async #lockGroup(tx: Transaction, id: string): Promise<Group> {

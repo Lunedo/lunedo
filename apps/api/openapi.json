@@ -216,7 +216,7 @@
       "get": {
         "operationId": "groups.get",
         "summary": "Get a group",
-        "description": "Returns a group with its members and managers.\n\nRequires the permission `group.view` on the group in `groupId`.",
+        "description": "Returns a group with its managers. List its members with `GET /api/v1/groups/{groupId}/members`.\n\nRequires the permission `group.view` on the group in `groupId`.",
         "tags": [
           "Groups"
         ],
@@ -271,43 +271,6 @@
                       "type": "string",
                       "description": "Description, up to 1000 characters."
                     },
-                    "members": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "accountId": {
-                            "type": "string",
-                            "format": "uuid",
-                            "description": "ID of the member."
-                          },
-                          "name": {
-                            "type": "string",
-                            "description": "Display name of the member."
-                          },
-                          "expiresAt": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "format": "date-time"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "description": "When the group membership ends, or null. ISO 8601 timestamp in UTC."
-                          }
-                        },
-                        "required": [
-                          "accountId",
-                          "name",
-                          "expiresAt"
-                        ],
-                        "additionalProperties": false,
-                        "description": "A member of the group."
-                      },
-                      "description": "Members of the group."
-                    },
                     "managers": {
                       "type": "array",
                       "items": {
@@ -338,24 +301,16 @@
                     "organizationId",
                     "name",
                     "description",
-                    "members",
                     "managers"
                   ],
                   "additionalProperties": false,
-                  "description": "A group with its members and managers."
+                  "description": "A group with its managers. Its members are listed separately."
                 },
                 "example": {
                   "id": "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9e",
                   "organizationId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a6b",
                   "name": "Editors",
                   "description": "Everyone who edits the handbook",
-                  "members": [
-                    {
-                      "accountId": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
-                      "name": "Ada Lovelace",
-                      "expiresAt": null
-                    }
-                  ],
                   "managers": [
                     {
                       "accountId": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
@@ -1108,6 +1063,251 @@
       }
     },
     "/api/v1/groups/{groupId}/members": {
+      "get": {
+        "operationId": "groups.members",
+        "summary": "List group members",
+        "description": "Lists the current members of the group.\n\nRequires the permission `group.view` on the group in `groupId`.",
+        "tags": [
+          "Groups"
+        ],
+        "x-pagehall-permission": {
+          "action": "group.view",
+          "resource": "group",
+          "parameter": "groupId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the group.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items in the page, from 1 to 200. Default 50.",
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Members of the group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "accountId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the member."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Display name of the member."
+                          },
+                          "expiresAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When the group membership ends, or null. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "accountId",
+                          "name",
+                          "expiresAt"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A member of the group."
+                      },
+                      "description": "Members, ordered by name."
+                    },
+                    "nextCursor": {
+                      "description": "Cursor for the next page, or null on the last page. Pass it as `cursor`.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextCursor"
+                  ],
+                  "additionalProperties": false,
+                  "description": "One page of results."
+                },
+                "example": {
+                  "items": [
+                    {
+                      "accountId": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
+                      "name": "Ada Lovelace",
+                      "expiresAt": null
+                    }
+                  ],
+                  "nextCursor": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "operationId": "groups.addMember",
         "summary": "Add a group member",
@@ -1547,7 +1747,7 @@
             "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
             "schema": {
               "type": "string",
-              "maxLength": 500
+              "maxLength": 2000
             }
           },
           {
@@ -1874,7 +2074,7 @@
             "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
             "schema": {
               "type": "string",
-              "maxLength": 500
+              "maxLength": 2000
             }
           },
           {
@@ -2383,7 +2583,7 @@
             "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
             "schema": {
               "type": "string",
-              "maxLength": 500
+              "maxLength": 2000
             }
           },
           {
@@ -2623,7 +2823,7 @@
             "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
             "schema": {
               "type": "string",
-              "maxLength": 500
+              "maxLength": 2000
             }
           },
           {
@@ -3522,7 +3722,7 @@
             "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
             "schema": {
               "type": "string",
-              "maxLength": 500
+              "maxLength": 2000
             }
           },
           {
@@ -4589,7 +4789,7 @@
             "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
             "schema": {
               "type": "string",
-              "maxLength": 500
+              "maxLength": 2000
             }
           },
           {
@@ -5894,7 +6094,7 @@
             "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
             "schema": {
               "type": "string",
-              "maxLength": 500
+              "maxLength": 2000
             }
           },
           {
@@ -6455,7 +6655,7 @@
             "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
             "schema": {
               "type": "string",
-              "maxLength": 500
+              "maxLength": 2000
             }
           },
           {
@@ -7083,7 +7283,7 @@
             "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
             "schema": {
               "type": "string",
-              "maxLength": 500
+              "maxLength": 2000
             }
           },
           {
@@ -7584,7 +7784,7 @@
             "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
             "schema": {
               "type": "string",
-              "maxLength": 500
+              "maxLength": 2000
             }
           },
           {
@@ -8428,7 +8628,7 @@
             "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
             "schema": {
               "type": "string",
-              "maxLength": 500
+              "maxLength": 2000
             }
           },
           {
@@ -9436,7 +9636,7 @@
             "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
             "schema": {
               "type": "string",
-              "maxLength": 500
+              "maxLength": 2000
             }
           },
           {
@@ -10462,7 +10662,7 @@
             "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
             "schema": {
               "type": "string",
-              "maxLength": 500
+              "maxLength": 2000
             }
           },
           {
@@ -11580,7 +11780,7 @@
       "get": {
         "operationId": "serviceAccounts.list",
         "summary": "List service accounts",
-        "description": "Lists the service accounts of the organization, active and deactivated.\n\nRequires the permission `organization.integrations.view` on the organization in `organizationId`.",
+        "description": "Lists the service accounts of the organization, active and deactivated. Service accounts without a responsible person are marked as `unattended`.\n\nRequires the permission `organization.integrations.view` on the organization in `organizationId`.",
         "tags": [
           "Service accounts"
         ],
@@ -11615,7 +11815,7 @@
             "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
             "schema": {
               "type": "string",
-              "maxLength": 500
+              "maxLength": 2000
             }
           },
           {
@@ -11666,17 +11866,18 @@
                             "type": "string",
                             "description": "`active` or `deactivated`."
                           },
-                          "responsibleAccountId": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "format": "uuid"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "description": "Member whose permissions bound the service account, or null when that person left."
+                          "responsibleAccountIds": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of a responsible member."
+                            },
+                            "description": "Members who receive reminders and notices about the service account. They grant no permissions and limit none."
+                          },
+                          "unattended": {
+                            "type": "boolean",
+                            "description": "True when the service account has no responsible person. Its permissions stay unchanged."
                           },
                           "createdAt": {
                             "type": "string",
@@ -11690,7 +11891,8 @@
                           "name",
                           "description",
                           "state",
-                          "responsibleAccountId",
+                          "responsibleAccountIds",
+                          "unattended",
                           "createdAt"
                         ],
                         "additionalProperties": false,
@@ -11721,7 +11923,10 @@
                       "name": "Release bot",
                       "description": "Publishes release notes",
                       "state": "active",
-                      "responsibleAccountId": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
+                      "responsibleAccountIds": [
+                        "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c"
+                      ],
+                      "unattended": false,
                       "createdAt": "2026-10-01T08:00:00.000Z"
                     }
                   ],
@@ -11851,7 +12056,7 @@
       "post": {
         "operationId": "serviceAccounts.create",
         "summary": "Create a service account",
-        "description": "Creates an account for scripts and integrations. It has no password and cannot sign in; it acts only through API tokens. The creator becomes the responsible person: the service account never has more permissions than that person.\n\nRequires the permission `organization.integrations.manage` on the organization in `organizationId`.",
+        "description": "Creates an account for scripts and integrations. It has no password and cannot sign in; it acts only through API tokens. Its permissions come only from the roles and groups it is given. The creator becomes its responsible person unless a list is given.\n\nRequires the permission `organization.integrations.manage` on the organization in `organizationId`.",
         "tags": [
           "Service accounts"
         ],
@@ -11897,6 +12102,15 @@
                     "description": "What it is for, up to 1000 characters.",
                     "type": "string",
                     "maxLength": 1000
+                  },
+                  "responsibleAccountIds": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "description": "Members who receive reminders and notices, up to 20. They grant no permissions. The caller when left out; an empty list for nobody."
                   }
                 },
                 "required": [
@@ -11942,17 +12156,18 @@
                       "type": "string",
                       "description": "`active` or `deactivated`."
                     },
-                    "responsibleAccountId": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "description": "Member whose permissions bound the service account, or null when that person left."
+                    "responsibleAccountIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of a responsible member."
+                      },
+                      "description": "Members who receive reminders and notices about the service account. They grant no permissions and limit none."
+                    },
+                    "unattended": {
+                      "type": "boolean",
+                      "description": "True when the service account has no responsible person. Its permissions stay unchanged."
                     },
                     "createdAt": {
                       "type": "string",
@@ -11966,7 +12181,8 @@
                     "name",
                     "description",
                     "state",
-                    "responsibleAccountId",
+                    "responsibleAccountIds",
+                    "unattended",
                     "createdAt"
                   ],
                   "additionalProperties": false,
@@ -11978,14 +12194,17 @@
                   "name": "Release bot",
                   "description": "Publishes release notes",
                   "state": "active",
-                  "responsibleAccountId": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
+                  "responsibleAccountIds": [
+                    "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c"
+                  ],
+                  "unattended": false,
                   "createdAt": "2026-10-01T08:00:00.000Z"
                 }
               }
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidResponsible`: The responsible person is not valid.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -12006,6 +12225,14 @@
                       "title": "The request is not valid",
                       "status": 400,
                       "code": "invalidInput"
+                    }
+                  },
+                  "invalidResponsible": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidResponsible",
+                      "title": "The responsible person is not valid",
+                      "status": 400,
+                      "code": "invalidResponsible"
                     }
                   }
                 }
@@ -12150,7 +12377,7 @@
             "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
             "schema": {
               "type": "string",
-              "maxLength": 500
+              "maxLength": 2000
             }
           },
           {
@@ -12679,17 +12906,18 @@
                       "type": "string",
                       "description": "`active` or `deactivated`."
                     },
-                    "responsibleAccountId": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "description": "Member whose permissions bound the service account, or null when that person left."
+                    "responsibleAccountIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of a responsible member."
+                      },
+                      "description": "Members who receive reminders and notices about the service account. They grant no permissions and limit none."
+                    },
+                    "unattended": {
+                      "type": "boolean",
+                      "description": "True when the service account has no responsible person. Its permissions stay unchanged."
                     },
                     "createdAt": {
                       "type": "string",
@@ -12703,7 +12931,8 @@
                     "name",
                     "description",
                     "state",
-                    "responsibleAccountId",
+                    "responsibleAccountIds",
+                    "unattended",
                     "createdAt"
                   ],
                   "additionalProperties": false,
@@ -12715,7 +12944,10 @@
                   "name": "Release bot",
                   "description": "Publishes release notes",
                   "state": "active",
-                  "responsibleAccountId": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
+                  "responsibleAccountIds": [
+                    "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c"
+                  ],
+                  "unattended": false,
                   "createdAt": "2026-10-01T08:00:00.000Z"
                 }
               }
@@ -12842,7 +13074,7 @@
       "patch": {
         "operationId": "serviceAccounts.update",
         "summary": "Change a service account",
-        "description": "Changes name, description or the responsible person, who must be an active member.\n\nRequires the permission `serviceAccount.manage` on the serviceAccount in `serviceAccountId`.",
+        "description": "Changes name, description or the responsible people, who must be active members. Responsible people receive reminders and notices; they do not change permissions.\n\nRequires the permission `serviceAccount.manage` on the serviceAccount in `serviceAccountId`.",
         "tags": [
           "Service accounts"
         ],
@@ -12889,24 +13121,23 @@
                     "type": "string",
                     "maxLength": 1000
                   },
-                  "responsibleAccountId": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "description": "Member whose permissions bound the service account, or null for nobody."
+                  "responsibleAccountIds": {
+                    "description": "New list of responsible members. Replaces the old list.",
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
                   }
                 },
                 "additionalProperties": false,
                 "description": "Fields to change."
               },
               "example": {
-                "responsibleAccountId": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c"
+                "responsibleAccountIds": [
+                  "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c"
+                ]
               }
             }
           }
@@ -12941,17 +13172,18 @@
                       "type": "string",
                       "description": "`active` or `deactivated`."
                     },
-                    "responsibleAccountId": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "description": "Member whose permissions bound the service account, or null when that person left."
+                    "responsibleAccountIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of a responsible member."
+                      },
+                      "description": "Members who receive reminders and notices about the service account. They grant no permissions and limit none."
+                    },
+                    "unattended": {
+                      "type": "boolean",
+                      "description": "True when the service account has no responsible person. Its permissions stay unchanged."
                     },
                     "createdAt": {
                       "type": "string",
@@ -12965,7 +13197,8 @@
                     "name",
                     "description",
                     "state",
-                    "responsibleAccountId",
+                    "responsibleAccountIds",
+                    "unattended",
                     "createdAt"
                   ],
                   "additionalProperties": false,
@@ -12977,7 +13210,10 @@
                   "name": "Release bot",
                   "description": "Publishes release notes",
                   "state": "active",
-                  "responsibleAccountId": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
+                  "responsibleAccountIds": [
+                    "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c"
+                  ],
+                  "unattended": false,
                   "createdAt": "2026-10-01T08:00:00.000Z"
                 }
               }

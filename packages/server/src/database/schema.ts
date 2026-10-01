@@ -41,4 +41,4 @@ export {
 export { organizationDomains, organizations } from "../organizations/schema.js";
 export { settingLevel, settingValues } from "../settings/schema.js";
 export { setupSessions, setupSteps } from "../setup/schema.js";
-export { apiTokens, serviceAccounts } from "../tokens/schema.js";
+export { apiTokens, serviceAccountResponsibles, serviceAccounts } from "../tokens/schema.js";

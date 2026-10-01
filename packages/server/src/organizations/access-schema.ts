@@ -105,7 +105,7 @@ export const roleAssignments = pgTable(
       )
       .nullsNotDistinct(),
     index().on(table.principalKind, table.principalId),
-    index().on(table.organizationId),
+    index().on(table.organizationId, table.id),
     check(
       "role_assignments_one_role",
       sql`(${table.builtInRole} is null) <> (${table.customRoleId} is null)`,
@@ -184,7 +184,14 @@ export const invitations = pgTable(
     revokedAt: timestampColumn(),
     ...timestamps(),
   },
-  (table) => [uniqueIndex().on(table.tokenHash), index().on(table.organizationId)],
+  (table) => [
+    uniqueIndex().on(table.tokenHash),
+    index("invitations_organization_email_id_index").on(
+      table.organizationId,
+      sql`lower(${table.email})`,
+      table.id,
+    ),
+  ],
 );
 
 export const registrationTokens = pgTable(

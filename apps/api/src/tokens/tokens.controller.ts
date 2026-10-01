@@ -6,7 +6,7 @@ import { InternalRoute, Permission, SessionRoute } from "../access/route-access.
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
-import { pageQuerySchema, pageSchema, paginate } from "../http/pagination.js";
+import { idCursor, pageQuerySchema, pageRequest, pageSchema, toApiPage } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import {
@@ -55,8 +55,7 @@ const createdSchema = z
   })
   .describe("The new token with its secret.");
 
-const tokenPage = pageSchema(apiTokenSchema, "Tokens, ordered by creation time.");
-const byCreation = (token: ApiToken) => [token.createdAt.getTime(), token.id];
+const tokenPage = pageSchema(apiTokenSchema, "Tokens, oldest first.");
 
 @Controller("api/v1")
 @InternalRoute()
@@ -88,7 +87,9 @@ export class TokensController {
     response: { description: "Tokens of the caller.", schema: tokenPage },
   })
   async list(@Req() request: FastifyRequest, @Query() query: z.output<typeof pageQuerySchema>) {
-    return paginate(await this.#services.apiTokens.listForAccount(actorOf(request).id), byCreation, query);
+    return toApiPage(
+      await this.#services.apiTokens.listForAccount(actorOf(request).id, pageRequest(query, idCursor)),
+    );
   }
 
   @Post("account/tokens")
@@ -151,7 +152,9 @@ export class TokensController {
     @Param("serviceAccountId") serviceAccountId: string,
     @Query() query: z.output<typeof pageQuerySchema>,
   ) {
-    return paginate(await this.#services.apiTokens.listForAccount(serviceAccountId), byCreation, query);
+    return toApiPage(
+      await this.#services.apiTokens.listForAccount(serviceAccountId, pageRequest(query, idCursor)),
+    );
   }
 
   @Post("service-accounts/:serviceAccountId/tokens")
@@ -214,7 +217,9 @@ export class TokensController {
     @Param("organizationId") organizationId: string,
     @Query() query: z.output<typeof pageQuerySchema>,
   ) {
-    return paginate(await this.#services.apiTokens.listForOrganization(organizationId), byCreation, query);
+    return toApiPage(
+      await this.#services.apiTokens.listForOrganization(organizationId, pageRequest(query, idCursor)),
+    );
   }
 
   @Delete("organizations/:organizationId/api-tokens/:tokenId")
@@ -225,8 +230,7 @@ export class TokensController {
     @Param("tokenId") tokenId: string,
     @Req() request: FastifyRequest,
   ) {
-    const listed = await this.#services.apiTokens.listForOrganization(organizationId);
-    if (!listed.some((token) => token.id === tokenId)) throw notFound();
+    if (!(await this.#services.apiTokens.belongsToOrganization(tokenId, organizationId))) throw notFound();
     if (!(await this.#services.apiTokens.revoke(actorOf(request), tokenId))) throw notFound();
   }
 }

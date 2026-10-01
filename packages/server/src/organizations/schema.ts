@@ -11,7 +11,10 @@ export const organizations = pgTable(
     logoRef: text(),
     ...timestamps(),
   },
-  (table) => [uniqueIndex("organizations_slug_unique").on(sql`lower(${table.slug})`)],
+  (table) => [
+    uniqueIndex("organizations_slug_unique").on(sql`lower(${table.slug})`),
+    index("organizations_name_id_index").on(sql`lower(${table.name})`, table.id),
+  ],
 );
 
 export const organizationDomains = pgTable(

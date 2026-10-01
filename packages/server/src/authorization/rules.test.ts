@@ -204,7 +204,7 @@ describe.skipIf(!baseUrl)("authorization rules", () => {
   describe("the last owner", () => {
     it("cannot be removed, leave or lose the owner role", async () => {
       const org = await organization();
-      const assignments = await test.services.roles.listAssignments("organization", org.id);
+      const assignments = (await test.services.roles.listAssignments("organization", org.id)).items;
       const ownerAssignment = assignments.find((assignment) => assignment.role === "owner");
       await expect(
         test.services.roles.unassign(SYSTEM, "organization", org.id, ownerAssignment?.id ?? ""),
@@ -240,7 +240,7 @@ describe.skipIf(!baseUrl)("authorization rules", () => {
         role: { builtIn: "owner" },
         principal: { kind: "account", id: second },
       });
-      const assignments = await test.services.roles.listAssignments("organization", org.id);
+      const assignments = (await test.services.roles.listAssignments("organization", org.id)).items;
       const ofAccount = (id: string) =>
         assignments.find((assignment) => assignment.principalId === id)?.id ?? "";
       const results = await Promise.allSettled([

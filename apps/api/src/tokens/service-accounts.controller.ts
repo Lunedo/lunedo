@@ -1,12 +1,17 @@
 import { Body, Controller, Get, Inject, Param, Patch, Post, Query, Req } from "@nestjs/common";
-import { serviceAccountDescriptionSchema, serviceAccountNameSchema } from "@pagehall/server";
+import {
+  responsibleAccountIdsSchema,
+  type ServiceAccount,
+  serviceAccountDescriptionSchema,
+  serviceAccountNameSchema,
+} from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
-import { pageQuerySchema, pageSchema, paginate } from "../http/pagination.js";
+import { nameCursor, pageQuerySchema, pageRequest, pageSchema, toApiPage } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import {
@@ -22,12 +27,21 @@ const organization = { type: "organization", param: "organizationId" } as const;
 const serviceAccount = { type: "serviceAccount", param: "serviceAccountId" } as const;
 const serviceAccountParams = z.object({ serviceAccountId: uuid("ID of the service account.") }).strict();
 
+const responsibleAccountIds = responsibleAccountIdsSchema.describe(
+  "Members who receive reminders and notices, up to 20. They grant no permissions. The caller when left out; an empty list for nobody.",
+);
+
+function present(account: ServiceAccount) {
+  return { ...account, unattended: account.responsibleAccountIds.length === 0 };
+}
+
 const createSchema = z
   .object({
     name: serviceAccountNameSchema.describe("Display name, 1 to 200 characters."),
     description: serviceAccountDescriptionSchema
       .optional()
       .describe("What it is for, up to 1000 characters."),
+    responsibleAccountIds: responsibleAccountIds.optional(),
   })
   .strict()
   .describe("A new service account.");
@@ -36,9 +50,9 @@ const updateSchema = z
   .object({
     name: serviceAccountNameSchema.optional().describe("New display name."),
     description: serviceAccountDescriptionSchema.optional().describe("New description."),
-    responsibleAccountId: uuid("Member whose permissions bound the service account, or null for nobody.")
-      .nullable()
-      .optional(),
+    responsibleAccountIds: responsibleAccountIds
+      .optional()
+      .describe("New list of responsible members. Replaces the old list."),
   })
   .strict()
   .describe("Fields to change.");
@@ -59,7 +73,8 @@ export class ServiceAccountsController {
   @Permission("organization.integrations.view", organization)
   @ApiRoute({
     summary: "List service accounts",
-    description: "Lists the service accounts of the organization, active and deactivated.",
+    description:
+      "Lists the service accounts of the organization, active and deactivated. Service accounts without a responsible person are marked as `unattended`.",
     tags: [TAG],
     params: organizationIdParams,
     query: pageQuerySchema,
@@ -73,8 +88,8 @@ export class ServiceAccountsController {
     @Param("organizationId") organizationId: string,
     @Query() query: z.output<typeof pageQuerySchema>,
   ) {
-    const accounts = await this.#services.serviceAccounts.list(organizationId);
-    return paginate(accounts, (account) => [account.name.toLowerCase(), account.id], query);
+    const page = await this.#services.serviceAccounts.list(organizationId, pageRequest(query, nameCursor));
+    return toApiPage({ ...page, items: page.items.map(present) });
   }
 
   @Post("organizations/:organizationId/service-accounts")
@@ -82,12 +97,13 @@ export class ServiceAccountsController {
   @ApiRoute({
     summary: "Create a service account",
     description:
-      "Creates an account for scripts and integrations. It has no password and cannot sign in; it acts only through API tokens. The creator becomes the responsible person: the service account never has more permissions than that person.",
+      "Creates an account for scripts and integrations. It has no password and cannot sign in; it acts only through API tokens. Its permissions come only from the roles and groups it is given. The creator becomes its responsible person unless a list is given.",
     tags: [TAG],
     status: 201,
     params: organizationIdParams,
     body: createSchema,
     bodyExample: { name: "Release bot", description: "Publishes release notes" },
+    errors: ["invalidResponsible"],
     response: {
       description: "The new service account.",
       schema: serviceAccountSchema,
@@ -99,7 +115,7 @@ export class ServiceAccountsController {
     @Body() body: z.output<typeof createSchema>,
     @Req() request: FastifyRequest,
   ) {
-    return this.#services.serviceAccounts.create(actorOf(request), organizationId, body);
+    return present(await this.#services.serviceAccounts.create(actorOf(request), organizationId, body));
   }
 
   @Get("service-accounts/:serviceAccountId")
@@ -118,18 +134,19 @@ export class ServiceAccountsController {
   async get(@Param("serviceAccountId") serviceAccountId: string) {
     const found = await this.#services.serviceAccounts.get(serviceAccountId);
     if (!found) throw notFound();
-    return found;
+    return present(found);
   }
 
   @Patch("service-accounts/:serviceAccountId")
   @Permission("serviceAccount.manage", serviceAccount)
   @ApiRoute({
     summary: "Change a service account",
-    description: "Changes name, description or the responsible person, who must be an active member.",
+    description:
+      "Changes name, description or the responsible people, who must be active members. Responsible people receive reminders and notices; they do not change permissions.",
     tags: [TAG],
     params: serviceAccountParams,
     body: updateSchema,
-    bodyExample: { responsibleAccountId: exampleMember.accountId },
+    bodyExample: { responsibleAccountIds: [exampleMember.accountId] },
     response: {
       description: "The changed service account.",
       schema: serviceAccountSchema,
@@ -142,7 +159,7 @@ export class ServiceAccountsController {
     @Body() body: z.output<typeof updateSchema>,
     @Req() request: FastifyRequest,
   ) {
-    return this.#services.serviceAccounts.update(actorOf(request), serviceAccountId, body);
+    return present(await this.#services.serviceAccounts.update(actorOf(request), serviceAccountId, body));
   }
 
   @Post("service-accounts/:serviceAccountId/deactivate")

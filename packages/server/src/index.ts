@@ -111,6 +111,7 @@ export {
 } from "./crypto/stream.js";
 export { primaryId, timestamps } from "./database/columns.js";
 export { createDatabase, type Database } from "./database/database.js";
+export { type KeysetKey, MAX_PAGE_SIZE, type Page, type PageRequest } from "./database/keyset.js";
 export {
   currentSchemaVersion,
   knownSchemaVersions,
@@ -145,7 +146,7 @@ export {
 } from "./observability/request-context.js";
 export type { BreakGlassAccess } from "./organizations/break-glass.js";
 export { breakGlassReasonSchema } from "./organizations/break-glass.js";
-export type { Group, GroupDetails } from "./organizations/groups.js";
+export type { Group, GroupDetails, GroupMember } from "./organizations/groups.js";
 export { groupDescriptionSchema, groupNameSchema } from "./organizations/groups.js";
 export type { Invitation } from "./organizations/invitations.js";
 export type { Member } from "./organizations/memberships.js";
@@ -197,6 +198,7 @@ export {
 } from "./tokens/api-tokens.js";
 export { isValidApiTokenFormat } from "./tokens/format.js";
 export {
+  responsibleAccountIdsSchema,
   type ServiceAccount,
   serviceAccountDescriptionSchema,
   serviceAccountNameSchema,

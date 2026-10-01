@@ -4,6 +4,7 @@ import type { Principal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
+import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
 import { languageSetting, supportedLanguages, timeZoneSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import { memberships, roleAssignments } from "./access-schema.js";
@@ -100,9 +101,21 @@ export class OrganizationService {
     return row ? this.#withSettings(row) : null;
   }
 
-  async list(): Promise<Organization[]> {
-    const rows = await this.#database.select().from(organizations).orderBy(organizations.name);
-    return Promise.all(rows.map((row) => this.#withSettings(row)));
+  async list(page: PageRequest = FIRST_PAGE): Promise<Page<Organization>> {
+    const sortName = sql<string>`lower(${organizations.name})`;
+    const rows = await this.#database
+      .select({ organization: organizations, sortName })
+      .from(organizations)
+      .where(afterKey([sortName, organizations.id], page.after))
+      .orderBy(sortName, organizations.id)
+      .limit(pageLimit(page));
+    const result = toPage(
+      rows,
+      page,
+      (row) => [row.sortName, row.organization.id],
+      (row) => row.organization,
+    );
+    return { ...result, items: await Promise.all(result.items.map((row) => this.#withSettings(row))) };
   }
 
   async listForAccount(accountId: string): Promise<(Organization & { membershipKind: string })[]> {

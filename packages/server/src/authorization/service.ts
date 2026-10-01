@@ -32,7 +32,6 @@ export type Denial =
   | "instanceRolesDoNotGrantOrganizationAccess"
   | "roleExceedsOwnPermissions"
   | "selfExtension"
-  | "responsibleLacksPermission"
   | "tokenScope";
 
 export interface RoleTarget {
@@ -152,22 +151,12 @@ export class AuthorizationService {
     if (action.rule && (await this.#rule(action, accountId, resource, organizationId, executor, fresh))) {
       grants.push({ kind: "rule", rule: action.rule });
     }
-    const result = limitByToken(
+    return limitByToken(
       principal,
       action,
       organizationId,
       decision(grants, await this.#organizationDenials(action, facts, accountId, executor, fresh)),
     );
-    if (!result.allowed || facts.account.type !== "service") return result;
-    const responsible = await executor.execute<{ responsible_account_id: string | null }>(
-      sql`select responsible_account_id from service_accounts where account_id = ${accountId}`,
-    );
-    const responsibleId = responsible.rows[0]?.responsible_account_id;
-    if (!responsibleId) return result;
-    const bound = await this.explain({ type: "account", id: responsibleId }, actionName, resource, options);
-    return bound.allowed
-      ? result
-      : { ...result, allowed: false, grants: [], denials: ["responsibleLacksPermission"] };
   }
 
   async decide(

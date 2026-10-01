@@ -137,7 +137,7 @@ export function createAccountServices(options: {
     jobs,
   });
   const auditReader = new AuditReader({ database, authorization, audit });
-  const serviceAccounts = new ServiceAccountService({ database, audit });
+  const serviceAccounts = new ServiceAccountService({ database, audit, mail });
   const apiTokens = new ApiTokenService({ database, audit, settings, rateLimiter, mail });
   const setupRegistry = new SetupRegistry();
   const setup = new SetupService({ database, registry: setupRegistry, audit, rateLimiter });
@@ -233,6 +233,9 @@ export async function workAccountJobs(
   await jobs.work(organizationExpiryJob, async (job) => {
     const processed = await services.lifecycle.processExpiry();
     if (processed > 0) job.logger.info({ processed }, "Expired access removed");
+    const notified = await services.serviceAccounts.notifyUnattended();
+    if (notified > 0)
+      job.logger.info({ notified }, "Owners told about service accounts without responsible people");
   });
   await jobs.work(organizationRemindersJob, async (job) => {
     const sent = await services.lifecycle.sendReminders();

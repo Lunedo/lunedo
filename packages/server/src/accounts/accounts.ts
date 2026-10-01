@@ -5,6 +5,7 @@ import type { PasswordHasher, PasswordProblem } from "../auth/passwords.js";
 import { passwordProblem } from "../auth/passwords.js";
 import { passwordMinLengthSetting } from "../auth/settings.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
+import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
 import { memberships } from "../organizations/access-schema.js";
 import type { SettingsService } from "../settings/service.js";
 import { type AccountState, type AccountType, accounts, instance } from "./schema.js";
@@ -89,9 +90,21 @@ export class AccountService {
     this.#hasher = options.hasher;
   }
 
-  async list(): Promise<Omit<Account, "passwordHash">[]> {
+  async list(page: PageRequest = FIRST_PAGE): Promise<Page<Omit<Account, "passwordHash">>> {
     const { passwordHash: _passwordHash, ...columns } = accountColumns;
-    return this.#database.select(columns).from(accounts).orderBy(accounts.name);
+    const sortName = sql<string>`lower(${accounts.name})`;
+    const rows = await this.#database
+      .select({ ...columns, sortName })
+      .from(accounts)
+      .where(afterKey([sortName, accounts.id], page.after))
+      .orderBy(sortName, accounts.id)
+      .limit(pageLimit(page));
+    return toPage(
+      rows,
+      page,
+      (row) => [row.sortName, row.id],
+      ({ sortName: _sortName, ...row }) => row,
+    );
   }
 
   async get(id: string, executor: Executor = this.#database): Promise<Account | null> {

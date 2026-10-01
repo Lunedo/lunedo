@@ -20,14 +20,14 @@ Tests fail when the committed file differs from the generated one, when a public
 - Routes are versioned under `/api/v1`.
 - Each route declares its permission; the description names it in `x-pagehall-permission` and in the text.
 - Errors are Problem Details (RFC 9457) with the media type `application/problem+json`. `type` is stable, for example `urn:pagehall:problem:forbidden`, and `code` repeats its last part.
-- Lists use cursor pagination: `?cursor=&limit=` (1 to 200, default 50) and the response `{ "items": [...], "nextCursor": "..." }`; `nextCursor` is `null` on the last page.
+- Lists use cursor pagination: `?cursor=&limit=` (1 to 200, default 50) and the response `{ "items": [...], "nextCursor": "..." }`; `nextCursor` is `null` on the last page. Lists that grow with an organization or the instance page in the database on an index, so a page costs the same at any position; only lists with a fixed upper bound, such as roles or one's own sessions, are paged in memory.
 - Every response passes through its declared schema. Fields that are not declared are not sent.
 
 ## Service accounts
 
-A service account belongs to an organization and acts only through API tokens: it has no password, no sessions and no interactive sign-in. Holders of the organization area "integrations and API" create, change and deactivate service accounts. A service account is a member of its organization and holds roles and group memberships like other accounts; nobody can give it more than they hold themselves.
+A service account belongs to an organization and acts only through API tokens: it has no password, no sessions and no interactive sign-in. Holders of the organization area "integrations and API" create, change and deactivate service accounts. A service account is a principal of its own: its permissions come only from its own roles and group memberships, which can be much narrower than those of any person. Nobody can give it more than they hold themselves.
 
-The person who creates a service account becomes its responsible person. While that person is an active member, the service account never has a permission that the responsible person lacks: when they lose a role, the service account loses it at the same moment. When the responsible person leaves or is deactivated, the field is cleared and the service account keeps working with its own roles. Administrators can name another responsible member.
+A service account has zero, one or several responsible people, by default its creator. They receive reminders before its tokens expire and notices about it; they grant no permissions and limit none. Holders of the integrations area change the list, and every change is audited. When the last responsible person leaves the organization or is deactivated, the organization's owners receive an e-mail once and the list of service accounts marks it as `unattended`; its permissions do not change. Token expiry remains the safeguard against forgotten service accounts: a token nobody renews stops working.
 
 Deactivating a service account revokes all its tokens at once.
 
@@ -37,7 +37,7 @@ There are personal tokens, which act as their owner, and tokens of service accou
 
 - A token is `ph_` followed by 43 base62 characters (256 bits of randomness) and a six-character checksum, so secret scanners recognize it and clients can reject typos without a request. Only a hash is stored; the token is shown once, when it is created.
 - Scopes are permission areas with `view` or `manage`, for the instance and for organizations, optionally limited to one organization. At every request the token can do only what both its scopes and the current permissions of its owner allow.
-- Tokens expire, by default after 90 days. `apiTokens.maxLifetimeDays` (default 365) caps the lifetime; organizations may only lower it. Tokens without expiry need `apiTokens.withoutExpiry`, which is off by default and can only be turned off at lower levels. The owner, or the responsible person of a service account, gets an e-mail `apiTokens.expiryReminderDays` (default 7) before a token expires.
+- Tokens expire, by default after 90 days. `apiTokens.maxLifetimeDays` (default 365) caps the lifetime; organizations may only lower it. Tokens without expiry need `apiTokens.withoutExpiry`, which is off by default and can only be turned off at lower levels. The owner, or every responsible person of a service account, gets an e-mail `apiTokens.expiryReminderDays` (default 7) before a token expires.
 - Personal tokens stop working when their account is deactivated; deactivation revokes them.
 - Tokens are accepted only in `Authorization: Bearer`. A request that carries both a session cookie and a token is rejected with `ambiguousCredentials`. Requests with a token and no session cookies are exempt from the cross-site request check.
 - Each token may send `apiTokens.requestsPerMinute` requests per minute (default 600); above that the API answers `429` with `Retry-After`. The limit is kept in the database, so it holds across nodes.

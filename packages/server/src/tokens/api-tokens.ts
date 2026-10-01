@@ -9,6 +9,7 @@ import { clientSubject, type RateLimiter } from "../auth/throttle.js";
 import { hashToken } from "../auth/tokens.js";
 import { areasSchema } from "../authorization/areas.js";
 import type { Database, Executor } from "../database/database.js";
+import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
 import { defineJob } from "../jobs/job-queue.js";
 import type { MailService } from "../mail/mail-service.js";
 import { OrganizationError } from "../organizations/organizations.js";
@@ -224,31 +225,54 @@ export class ApiTokenService {
     return row ? toToken(row) : null;
   }
 
-  async listForAccount(accountId: string): Promise<ApiToken[]> {
+  async listForAccount(accountId: string, page: PageRequest = FIRST_PAGE): Promise<Page<ApiToken>> {
     const rows = await this.#database
       .select(columns)
       .from(apiTokens)
-      .where(and(eq(apiTokens.accountId, accountId), isNull(apiTokens.revokedAt)))
-      .orderBy(asc(apiTokens.createdAt), asc(apiTokens.id));
-    return rows.map(toToken);
+      .where(
+        and(
+          eq(apiTokens.accountId, accountId),
+          isNull(apiTokens.revokedAt),
+          afterKey([apiTokens.id], page.after),
+        ),
+      )
+      .orderBy(asc(apiTokens.id))
+      .limit(pageLimit(page));
+    return toPage(rows, page, (row) => [row.id], toToken);
   }
 
-  async listForOrganization(organizationId: string): Promise<ApiToken[]> {
+  #inOrganization(organizationId: string) {
     const owners = this.#database
       .select({ id: accounts.id })
       .from(accounts)
       .where(eq(accounts.homeOrganizationId, organizationId));
+    return or(eq(apiTokens.organizationId, organizationId), inArray(apiTokens.accountId, owners));
+  }
+
+  async listForOrganization(organizationId: string, page: PageRequest = FIRST_PAGE): Promise<Page<ApiToken>> {
     const rows = await this.#database
       .select(columns)
       .from(apiTokens)
       .where(
         and(
           isNull(apiTokens.revokedAt),
-          or(eq(apiTokens.organizationId, organizationId), inArray(apiTokens.accountId, owners)),
+          this.#inOrganization(organizationId),
+          afterKey([apiTokens.id], page.after),
         ),
       )
-      .orderBy(asc(apiTokens.createdAt), asc(apiTokens.id));
-    return rows.map(toToken);
+      .orderBy(asc(apiTokens.id))
+      .limit(pageLimit(page));
+    return toPage(rows, page, (row) => [row.id], toToken);
+  }
+
+  async belongsToOrganization(tokenId: string, organizationId: string): Promise<boolean> {
+    const [row] = await this.#database
+      .select({ id: apiTokens.id })
+      .from(apiTokens)
+      .where(
+        and(eq(apiTokens.id, tokenId), isNull(apiTokens.revokedAt), this.#inOrganization(organizationId)),
+      );
+    return row !== undefined;
   }
 
   async organizationOf(executor: Executor, id: string): Promise<string | null> {
@@ -394,32 +418,39 @@ export class ApiTokenService {
 
   async sendReminders(): Promise<number> {
     const days = await this.#settings.get(tokenExpiryReminderDaysSetting, {});
-    const due = await this.#database.execute<{
-      name: string;
-      expires_at: Date | string;
-      recipient_id: string | null;
-      recipient_email: string | null;
-    }>(sql`
-      update api_tokens t set expiry_reminded_at = now()
-      from accounts a left join service_accounts s on s.account_id = a.id
-        left join accounts r on r.id = coalesce(s.responsible_account_id, a.id)
-      where a.id = t.account_id and t.expiry_reminded_at is null and t.revoked_at is null
-        and t.expires_at > now() and t.expires_at <= now() + make_interval(days => ${days})
-      returning t.name, t.expires_at, r.id as recipient_id, r.email as recipient_email`);
+    const due = await this.#database.execute<{ id: string }>(sql`
+      select id from api_tokens
+      where expiry_reminded_at is null and revoked_at is null
+        and expires_at > now() and expires_at <= now() + make_interval(days => ${days})
+      limit 500`);
     const mailIds: string[] = [];
-    for (const token of due.rows) {
-      if (!token.recipient_id || !token.recipient_email) continue;
-      const recipientId = token.recipient_id;
-      const recipientEmail = token.recipient_email;
-      const id = await this.#database.transaction(async (tx) =>
-        this.#mail.queue(tx, {
-          to: recipientEmail,
-          template: "tokenExpiring",
-          language: await this.#mail.languageOf(recipientId),
-          params: { tokenName: token.name, date: new Date(token.expires_at).toISOString().slice(0, 10) },
-        }),
-      );
-      mailIds.push(id);
+    for (const { id } of due.rows) {
+      const queued = await this.#database.transaction(async (tx) => {
+        const marked = await tx.execute<{ name: string; expires_at: Date | string; account_id: string }>(sql`
+          update api_tokens set expiry_reminded_at = now()
+          where id = ${id} and expiry_reminded_at is null and revoked_at is null
+          returning name, expires_at, account_id`);
+        const token = marked.rows[0];
+        if (!token) return [];
+        const recipients = await tx.execute<{ id: string; email: string }>(sql`
+          select a.id, a.email from accounts a
+          where a.state = 'active' and a.email is not null and (
+            a.id = ${token.account_id}
+            or a.id in (select account_id from service_account_responsibles where service_account_id = ${token.account_id}))`);
+        const ids: string[] = [];
+        for (const recipient of recipients.rows) {
+          ids.push(
+            await this.#mail.queue(tx, {
+              to: recipient.email,
+              template: "tokenExpiring",
+              language: await this.#mail.languageOf(recipient.id),
+              params: { tokenName: token.name, date: new Date(token.expires_at).toISOString().slice(0, 10) },
+            }),
+          );
+        }
+        return ids;
+      });
+      mailIds.push(...queued);
     }
     await this.#mail.dispatch(mailIds);
     return mailIds.length;

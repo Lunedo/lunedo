@@ -7,6 +7,7 @@ import { type Areas, areasSchema, builtInRoleAreas } from "../authorization/area
 import type { RoleReference } from "../authorization/facts.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
+import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
 import {
   type BuiltInRoleKey,
   customRoles,
@@ -200,7 +201,11 @@ export class RoleService {
     });
   }
 
-  async listAssignments(scope: RoleScope, organizationId: string | null): Promise<RoleAssignment[]> {
+  async listAssignments(
+    scope: RoleScope,
+    organizationId: string | null,
+    page: PageRequest = FIRST_PAGE,
+  ): Promise<Page<RoleAssignment>> {
     const rows = await this.#database
       .select({
         id: roleAssignments.id,
@@ -222,13 +227,17 @@ export class RoleService {
             ? eq(roleAssignments.organizationId, organizationId)
             : isNull(roleAssignments.organizationId),
           or(isNull(roleAssignments.expiresAt), sql`${roleAssignments.expiresAt} > now()`),
+          afterKey([roleAssignments.id], page.after),
         ),
       )
-      .orderBy(roleAssignments.createdAt);
-    return rows.map(({ customRoleName, ...row }) => ({
-      ...row,
-      role: row.builtInRole ?? customRoleName ?? "",
-    }));
+      .orderBy(roleAssignments.id)
+      .limit(pageLimit(page));
+    return toPage(
+      rows,
+      page,
+      (row) => [row.id],
+      ({ customRoleName, ...row }) => ({ ...row, role: row.builtInRole ?? customRoleName ?? "" }),
+    );
   }
 
   async #resolveRole(

@@ -19,7 +19,15 @@ import { InternalRoute, Permission, SessionRoute } from "../access/route-access.
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
-import { pageQuerySchema, pageSchema, paginate } from "../http/pagination.js";
+import {
+  idCursor,
+  nameCursor,
+  pageQuerySchema,
+  pageRequest,
+  pageSchema,
+  paginate,
+  toApiPage,
+} from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { actorOf, sessionOf } from "../http/request.js";
 import {
@@ -412,8 +420,7 @@ export class OrganizationsController {
     @Param("organizationId") organizationId: string,
     @Query() query: z.output<typeof pageQuerySchema>,
   ) {
-    const members = await this.#services.memberships.list(organizationId);
-    return paginate(members, (member) => [member.name.toLowerCase(), member.accountId], query);
+    return toApiPage(await this.#services.memberships.list(organizationId, pageRequest(query, nameCursor)));
   }
 
   @Patch(":organizationId/members/:accountId")
@@ -599,8 +606,13 @@ export class OrganizationsController {
     @Param("organizationId") organizationId: string,
     @Query() query: z.output<typeof pageQuerySchema>,
   ) {
-    const assignments = await this.#services.roles.listAssignments("organization", organizationId);
-    return paginate(assignments, (assignment) => [assignment.id], query);
+    return toApiPage(
+      await this.#services.roles.listAssignments(
+        "organization",
+        organizationId,
+        pageRequest(query, idCursor),
+      ),
+    );
   }
 
   @Post(":organizationId/role-assignments")
@@ -683,7 +695,7 @@ export class OrganizationsController {
     @Param("organizationId") organizationId: string,
     @Query() query: z.output<typeof pageQuerySchema>,
   ) {
-    return paginate(await this.#services.groups.list(organizationId), byName, query);
+    return toApiPage(await this.#services.groups.list(organizationId, pageRequest(query, nameCursor)));
   }
 
   @Post(":organizationId/groups")
@@ -725,8 +737,7 @@ export class OrganizationsController {
     @Param("organizationId") organizationId: string,
     @Query() query: z.output<typeof pageQuerySchema>,
   ) {
-    const invitations = await this.#services.invitations.list(organizationId);
-    return paginate(invitations, (invitation) => [invitation.email, invitation.id], query);
+    return toApiPage(await this.#services.invitations.list(organizationId, pageRequest(query, nameCursor)));
   }
 
   @Post(":organizationId/invitations")

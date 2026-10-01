@@ -9,6 +9,7 @@ import { InvalidTokenError, RateLimitedError } from "../auth/errors.js";
 import { accountSubject, clientSubject, type RateLimiter } from "../auth/throttle.js";
 import { generateToken, hashToken, isWellFormedToken } from "../auth/tokens.js";
 import type { Database, Transaction } from "../database/database.js";
+import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
 import { defineJob, type JobContext, type JobQueue } from "../jobs/job-queue.js";
 import type { MailService } from "../mail/mail-service.js";
 import type { Language } from "../mail/templates.js";
@@ -95,9 +96,10 @@ export class InvitationService {
     return `${await this.#settings.get(instanceUrlSetting, {})}${path}#token=${token}`;
   }
 
-  async list(organizationId: string): Promise<Invitation[]> {
+  async list(organizationId: string, page: PageRequest = FIRST_PAGE): Promise<Page<Invitation>> {
+    const sortEmail = sql<string>`lower(${invitations.email})`;
     const rows = await this.#database
-      .select()
+      .select({ invitation: invitations, sortEmail })
       .from(invitations)
       .where(
         and(
@@ -105,18 +107,25 @@ export class InvitationService {
           isNull(invitations.acceptedAt),
           isNull(invitations.revokedAt),
           gt(invitations.expiresAt, sql`now()`),
+          afterKey([sortEmail, invitations.id], page.after),
         ),
       )
-      .orderBy(invitations.createdAt);
-    return rows.map((row) => ({
-      id: row.id,
-      organizationId: row.organizationId,
-      email: row.email,
-      kind: row.kind,
-      role: row.builtInRole ?? row.customRoleId,
-      membershipExpiresAt: row.membershipExpiresAt,
-      expiresAt: row.expiresAt,
-    }));
+      .orderBy(sortEmail, invitations.id)
+      .limit(pageLimit(page));
+    return toPage(
+      rows,
+      page,
+      (row) => [row.sortEmail, row.invitation.id],
+      ({ invitation: row }) => ({
+        id: row.id,
+        organizationId: row.organizationId,
+        email: row.email,
+        kind: row.kind,
+        role: row.builtInRole ?? row.customRoleId,
+        membershipExpiresAt: row.membershipExpiresAt,
+        expiresAt: row.expiresAt,
+      }),
+    );
   }
 
   async create(

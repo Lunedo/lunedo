@@ -73,7 +73,7 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
     return response.json().id as string;
   }
 
-  it("lets a service account act within its scopes and the permissions of its creator", async () => {
+  it("lets a service account act within its scopes and its own roles, whoever created it", async () => {
     const { account: creator, client: creatorClient } = await member("integrator@pagehall.test");
     const integrator = await customRole("Integrator", {
       integrationsAndApi: "manage",
@@ -87,7 +87,11 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
     });
     expect(created.statusCode, created.body).toBe(201);
     const serviceAccount = created.json();
-    expect(serviceAccount).toMatchObject({ name: "Directory bot", responsibleAccountId: creator.id });
+    expect(serviceAccount).toMatchObject({
+      name: "Directory bot",
+      responsibleAccountIds: [creator.id],
+      unattended: false,
+    });
 
     const directory = await customRole("Directory", { membersAndGroups: "manage", settings: "view" });
     const beyondCreator = await creatorClient.post(
@@ -130,16 +134,25 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
       (await owner.delete(`/api/v1/organizations/${organizationId}/role-assignments/${creatorAssignment}`))
         .statusCode,
     ).toBe(204);
-    const refused = await bot.post(
+    const stillAllowed = await bot.post(
       `/api/v1/organizations/${organizationId}/groups`,
       { name: "Later" },
       bearer(token),
     );
-    expect(refused.statusCode).toBe(403);
-    expect(refused.json()).toMatchObject({ denials: ["responsibleLacksPermission"] });
-    expect((await bot.get(`/api/v1/organizations/${organizationId}/members`, bearer(token))).statusCode).toBe(
-      200,
-    );
+    expect(stillAllowed.statusCode, stillAllowed.body).toBe(201);
+
+    const handedOver = await owner.patch(`/api/v1/service-accounts/${serviceAccount.id}`, {
+      responsibleAccountIds: [],
+    });
+    expect(handedOver.json()).toMatchObject({ responsibleAccountIds: [], unattended: true });
+    const listed = await owner.get(`/api/v1/organizations/${organizationId}/service-accounts`);
+    expect(listed.json().items).toEqual([
+      expect.objectContaining({ id: serviceAccount.id, unattended: true }),
+    ]);
+    const outsider = await owner.patch(`/api/v1/service-accounts/${serviceAccount.id}`, {
+      responsibleAccountIds: [other.json().id],
+    });
+    expect(outsider.json()).toMatchObject({ code: "invalidResponsible" });
 
     const deactivated = await owner.post(`/api/v1/service-accounts/${serviceAccount.id}/deactivate`);
     expect(deactivated.json()).toEqual({ revokedTokens: 1 });
@@ -246,7 +259,7 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
     const query = await new TestClient(test.app).get(`${url}?access_token=${token}`);
     expect(query.statusCode).toBe(401);
     expect(query.json()).toMatchObject({ code: "notSignedIn" });
-    const malformed = await new TestClient(test.app).get(url, bearer(`${token.slice(0, -1)}x`));
+    const malformed = await new TestClient(test.app).get(url, bearer(`${token.slice(0, -1)}${token.endsWith("x") ? "y" : "x"}`));
     expect(malformed.statusCode).toBe(401);
     const unknownScheme = await new TestClient(test.app).get(url, { authorization: `Basic ${token}` });
     expect(unknownScheme.statusCode).toBe(401);

@@ -344,7 +344,7 @@ describe.skipIf(!baseUrl)("API tokens and service accounts", () => {
     await expect(test.services.apiTokens.authenticate(token, undefined)).rejects.toMatchObject({
       reason: "revoked",
     });
-    expect(await test.services.apiTokens.listForAccount(org.owner)).toEqual([]);
+    expect((await test.services.apiTokens.listForAccount(org.owner)).items).toEqual([]);
     expect(await auditNames(apiToken.id)).toEqual([
       "apiToken.created",
       "apiToken.revoked",
@@ -474,11 +474,11 @@ describe.skipIf(!baseUrl)("API tokens and service accounts", () => {
       "Renamed",
     );
     expect(renamed.name).toBe("Renamed");
-    const listed = await test.services.apiTokens.listForOrganization(org.id);
+    const listed = (await test.services.apiTokens.listForOrganization(org.id)).items;
     expect(listed.map((token) => token.id)).toContain(own.apiToken.id);
     const other = await organization();
     expect(
-      (await test.services.apiTokens.listForOrganization(other.id)).map((token) => token.id),
+      (await test.services.apiTokens.listForOrganization(other.id)).items.map((token) => token.id),
     ).not.toContain(own.apiToken.id);
     expect(await auditNames(own.apiToken.id)).toEqual(["apiToken.created", "apiToken.updated"]);
   });
@@ -507,14 +507,24 @@ describe.skipIf(!baseUrl)("API tokens and service accounts", () => {
     expect(mails[0]?.subject).toContain("Nightly export");
   });
 
+  async function ownerEmail(organizationId: string): Promise<string> {
+    const result = await test.pool.query<{ email: string }>(
+      `select a.email from role_assignments ra join accounts a on a.id = ra.principal_id
+       where ra.organization_id = $1 and ra.built_in_role = 'owner'`,
+      [organizationId],
+    );
+    return result.rows[0]?.email ?? "";
+  }
+
   describe("service accounts", () => {
-    it("act within their roles and the permissions of their creator", async () => {
+    it("act only through their own roles, independent of their responsible people", async () => {
       const org = await organization();
       const creator = await member(org.id, { integrationsAndApi: "manage", spaces: "manage" });
       const service = await test.services.serviceAccounts.create(accountPrincipal(creator), org.id, {
         name: "Deploy bot",
         description: "Publishes release notes",
       });
+      expect(service.responsibleAccountIds).toEqual([creator]);
       const role = await test.services.roles.createCustom(SYSTEM, "organization", org.id, {
         name: "Bot",
         areas: { spaces: "manage", settings: "manage" },
@@ -535,73 +545,139 @@ describe.skipIf(!baseUrl)("API tokens and service accounts", () => {
       const resource = { type: "organization", id: org.id };
       const auth = test.services.authorization;
       expect(await auth.authorize(principal, "organization.spaces.manage", resource)).toBe(true);
-      const outside = await auth.explain(principal, "organization.settings.manage", resource);
-      expect(outside).toMatchObject({ allowed: false, denials: ["responsibleLacksPermission"] });
+      expect(await auth.authorize(principal, "organization.settings.manage", resource)).toBe(true);
       expect(await auth.authorize(principal, "organization.members.manage", resource)).toBe(false);
       const other = await organization();
       expect(
         await auth.authorize(principal, "organization.view", { type: "organization", id: other.id }),
       ).toBe(false);
 
-      const assignments = await test.services.roles.listAssignments("organization", org.id);
+      const assignments = (await test.services.roles.listAssignments("organization", org.id)).items;
       const creatorAssignment = assignments.find(
         (assignment) => assignment.principalKind === "account" && assignment.principalId === creator,
       );
       if (!creatorAssignment) throw new Error("The creator has no role");
       await test.services.roles.unassign(SYSTEM, "organization", org.id, creatorAssignment.id);
-      const refused = await auth.explain(principal, "organization.spaces.manage", resource);
-      expect(refused).toMatchObject({ allowed: false, denials: ["responsibleLacksPermission"] });
+      expect(await auth.authorize(principal, "organization.spaces.manage", resource)).toBe(true);
+      expect(await auth.authorize(principal, "organization.settings.manage", resource)).toBe(true);
     });
 
-    it("keep working when the creator leaves", async () => {
+    it("have zero, one or several responsible people, and changes are audited", async () => {
       const org = await organization();
-      const creator = await member(org.id, { integrationsAndApi: "manage", spaces: "view" });
-      const service = await test.services.serviceAccounts.create(accountPrincipal(creator), org.id, {
-        name: "Sync",
+      const first = await member(org.id);
+      const second = await member(org.id);
+      const service = await test.services.serviceAccounts.create(SYSTEM, org.id, { name: "Unowned" });
+      expect(service.responsibleAccountIds).toEqual([]);
+      const both = await test.services.serviceAccounts.update(SYSTEM, service.id, {
+        responsibleAccountIds: [first, second, first],
       });
-      const { token } = await test.services.apiTokens.create(accountPrincipal(creator), {
-        accountId: service.id,
-        name: "Sync",
-        scopes: { organization: { membersAndGroups: "view" } },
+      expect([...both.responsibleAccountIds].sort()).toEqual([first, second].sort());
+      await test.services.serviceAccounts.update(SYSTEM, service.id, {
+        responsibleAccountIds: [second, first],
       });
-      await test.services.memberships.deactivate(SYSTEM, creator);
-      expect((await test.services.serviceAccounts.get(service.id))?.responsibleAccountId).toBeNull();
-      const principal = await principalFor(token);
-      expect(
-        await test.services.authorization.authorize(principal, "organization.members.view", {
-          type: "organization",
-          id: org.id,
+      const outsider = await standard(null);
+      await expect(
+        test.services.serviceAccounts.update(SYSTEM, service.id, {
+          responsibleAccountIds: [first, outsider],
         }),
-      ).toBe(true);
-      expect(await auditNames(service.id)).toEqual(["serviceAccount.created", "serviceAccount.updated"]);
-    });
-
-    it("lose the bound of a creator who is removed from the organization", async () => {
-      const org = await organization();
-      const creator = await standard(null);
+      ).rejects.toMatchObject({ code: "invalidResponsible" });
+      const collaborator = await standard(null);
       await test.database.transaction((tx) =>
         test.services.memberships.add(tx, SYSTEM, {
           organizationId: org.id,
-          accountId: creator,
+          accountId: collaborator,
+          kind: "collaborator",
+        }),
+      );
+      await expect(
+        test.services.serviceAccounts.update(SYSTEM, service.id, { responsibleAccountIds: [collaborator] }),
+      ).rejects.toMatchObject({ code: "invalidResponsible" });
+      const renamed = await test.services.serviceAccounts.update(SYSTEM, service.id, { name: "Owned" });
+      expect(renamed.name).toBe("Owned");
+      expect(await auditNames(service.id)).toEqual([
+        "serviceAccount.created",
+        "serviceAccount.responsiblesChanged",
+        "serviceAccount.updated",
+      ]);
+      const listed = (await test.services.serviceAccounts.list(org.id)).items;
+      expect(listed).toHaveLength(1);
+      expect([...(listed[0]?.responsibleAccountIds ?? [])].sort()).toEqual([first, second].sort());
+    });
+
+    it("tell the owners once when the last responsible person leaves, without changing permissions", async () => {
+      const org = await organization();
+      const creator = await member(org.id, { integrationsAndApi: "manage" });
+      const visitor = await standard(null);
+      await test.database.transaction((tx) =>
+        test.services.memberships.add(tx, SYSTEM, {
+          organizationId: org.id,
+          accountId: visitor,
           kind: "member",
         }),
       );
       const service = await test.services.serviceAccounts.create(accountPrincipal(creator), org.id, {
-        name: "Guest helper",
+        name: "Sync",
+        responsibleAccountIds: [creator, visitor],
       });
-      expect((await test.services.serviceAccounts.get(service.id))?.responsibleAccountId).toBe(creator);
-      expect(await test.services.memberships.remove(SYSTEM, org.id, creator)).toBe(true);
-      expect((await test.services.serviceAccounts.get(service.id))?.responsibleAccountId).toBeNull();
-      expect(
-        await test.services.authorization.authorize(
+      const resource = { type: "organization", id: org.id };
+      const canViewMembers = () =>
+        test.services.authorization.authorize(
           accountPrincipal(service.id),
           "organization.members.view",
-          {
-            type: "organization",
-            id: org.id,
-          },
-        ),
-      ).toBe(true);
+          resource,
+        );
+      expect(await canViewMembers()).toBe(true);
+
+      expect(await test.services.memberships.remove(SYSTEM, org.id, visitor)).toBe(true);
+      expect((await test.services.serviceAccounts.get(service.id))?.responsibleAccountIds).toEqual([creator]);
+      expect(await test.services.serviceAccounts.notifyUnattended()).toBe(0);
+
+      await test.services.memberships.deactivate(SYSTEM, creator);
+      expect((await test.services.serviceAccounts.get(service.id))?.responsibleAccountIds).toEqual([]);
+      expect(await test.services.serviceAccounts.notifyUnattended()).toBe(1);
+      expect(await test.services.serviceAccounts.notifyUnattended()).toBe(0);
+      await deliverPendingMail(test.services, test.database);
+      const owner = await ownerEmail(org.id);
+      const mails = test.mail.sent.filter((mail) => mail.to === owner);
+      expect(mails).toHaveLength(1);
+      expect(mails[0]?.subject).toContain("Sync");
+      expect(await canViewMembers()).toBe(true);
+      expect(await auditNames(service.id)).toEqual([
+        "serviceAccount.created",
+        "serviceAccount.responsiblesChanged",
+        "serviceAccount.responsiblesChanged",
+        "serviceAccount.unattended",
+      ]);
+
+      const successor = await member(org.id);
+      await test.services.serviceAccounts.update(SYSTEM, service.id, { responsibleAccountIds: [successor] });
+      await test.services.memberships.deactivate(SYSTEM, successor);
+      expect(await test.services.serviceAccounts.notifyUnattended()).toBe(1);
+    });
+
+    it("remind every responsible person before a token expires", async () => {
+      const org = await organization();
+      const firstEmail = `${randomUUID()}@example.org`;
+      const secondEmail = `${randomUUID()}@example.org`;
+      const first = await standard(org.id, firstEmail);
+      const second = await standard(org.id, secondEmail);
+      const service = await test.services.serviceAccounts.create(SYSTEM, org.id, {
+        name: "Reporter",
+        responsibleAccountIds: [first, second],
+      });
+      await test.services.apiTokens.create(SYSTEM, {
+        accountId: service.id,
+        name: "Weekly report",
+        scopes: { organization: { membersAndGroups: "view" } },
+        expiresAt: new Date(Date.now() + 2 * DAY_MS),
+      });
+      expect(await test.services.apiTokens.sendReminders()).toBeGreaterThanOrEqual(2);
+      await deliverPendingMail(test.services, test.database);
+      for (const address of [firstEmail, secondEmail]) {
+        const mails = test.mail.sent.filter((mail) => mail.to === address);
+        expect(mails, address).toHaveLength(1);
+        expect(mails[0]?.subject).toContain("Weekly report");
+      }
     });
 
     it("lose all tokens at once when deactivated", async () => {
@@ -662,24 +738,6 @@ describe.skipIf(!baseUrl)("API tokens and service accounts", () => {
           scopes: { organization: { spaces: "view" } },
         }),
       ).rejects.toMatchObject({ code: "invalidScopes" });
-    });
-
-    it("accept only active members as responsible person", async () => {
-      const org = await organization();
-      const service = await test.services.serviceAccounts.create(accountPrincipal(org.owner), org.id, {
-        name: "Handover",
-      });
-      const outsider = await standard(null);
-      await expect(
-        test.services.serviceAccounts.update(SYSTEM, service.id, { responsibleAccountId: outsider }),
-      ).rejects.toMatchObject({ code: "invalidResponsible" });
-      const colleague = await member(org.id);
-      const updated = await test.services.serviceAccounts.update(SYSTEM, service.id, {
-        responsibleAccountId: colleague,
-        description: "Now looked after by a colleague",
-      });
-      expect(updated).toMatchObject({ responsibleAccountId: colleague });
-      expect(await test.services.serviceAccounts.list(org.id)).toHaveLength(1);
     });
   });
 });

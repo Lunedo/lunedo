@@ -28,6 +28,7 @@ export interface MailTemplates {
   guestExpiring: { instanceName: string; organizationName: string; guestName: string; date: string };
   guestInactive: { instanceName: string; organizationName: string; guestName: string; days: number };
   tokenExpiring: { instanceName: string; tokenName: string; date: string };
+  serviceAccountUnattended: { instanceName: string; serviceAccountName: string; organizationName: string };
   accessExpiring: {
     instanceName: string;
     organizationName: string;
@@ -135,6 +136,12 @@ const catalogs: Record<Language, Catalog> = {
         `${guestName} has not used ${instanceName} for ${days} days. You are responsible for this guest in ${organizationName}; remove the guest if the access is no longer needed.`,
       ],
     }),
+    serviceAccountUnattended: ({ instanceName, serviceAccountName, organizationName }) => ({
+      subject: `Service account ${serviceAccountName} in ${organizationName} has no responsible person`,
+      paragraphs: [
+        `The last responsible person of the service account ${serviceAccountName} in ${organizationName} on ${instanceName} left or was deactivated. The service account keeps its permissions. Name a new responsible person or deactivate it.`,
+      ],
+    }),
     tokenExpiring: ({ instanceName, tokenName, date }) => ({
       subject: `API token ${tokenName} on ${instanceName} expires soon`,
       paragraphs: [
@@ -228,6 +235,12 @@ const catalogs: Record<Language, Catalog> = {
       subject: `Gast ${guestName} ist in ${organizationName} inaktiv`,
       paragraphs: [
         `${guestName} hat ${instanceName} seit ${days} Tagen nicht verwendet. Sie sind für diesen Gast in ${organizationName} verantwortlich; entfernen Sie den Gast, wenn der Zugang nicht mehr gebraucht wird.`,
+      ],
+    }),
+    serviceAccountUnattended: ({ instanceName, serviceAccountName, organizationName }) => ({
+      subject: `Servicekonto ${serviceAccountName} in ${organizationName} hat keine verantwortliche Person`,
+      paragraphs: [
+        `Die letzte verantwortliche Person des Servicekontos ${serviceAccountName} in ${organizationName} auf ${instanceName} hat die Organisation verlassen oder wurde deaktiviert. Das Servicekonto behält seine Berechtigungen. Benennen Sie eine neue verantwortliche Person oder deaktivieren Sie es.`,
       ],
     }),
     tokenExpiring: ({ instanceName, tokenName, date }) => ({

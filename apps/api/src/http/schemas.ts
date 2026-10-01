@@ -118,19 +118,22 @@ export const exampleGroup = {
   description: "Everyone who edits the handbook",
 };
 
+export const groupMemberSchema = z
+  .object({
+    accountId: uuid("ID of the member."),
+    name: z.string().describe("Display name of the member."),
+    expiresAt: timestamp("When the group membership ends, or null.").nullable(),
+  })
+  .describe("A member of the group.");
+
+export const exampleGroupMember = {
+  accountId: exampleMember.accountId,
+  name: exampleMember.name,
+  expiresAt: null,
+};
+
 export const groupDetailsSchema = groupSchema
   .extend({
-    members: z
-      .array(
-        z
-          .object({
-            accountId: uuid("ID of the member."),
-            name: z.string().describe("Display name of the member."),
-            expiresAt: timestamp("When the group membership ends, or null.").nullable(),
-          })
-          .describe("A member of the group."),
-      )
-      .describe("Members of the group."),
     managers: z
       .array(
         z
@@ -142,11 +145,10 @@ export const groupDetailsSchema = groupSchema
       )
       .describe("Accounts that manage the group's members."),
   })
-  .describe("A group with its members and managers.");
+  .describe("A group with its managers. Its members are listed separately.");
 
 export const exampleGroupDetails = {
   ...exampleGroup,
-  members: [{ accountId: exampleMember.accountId, name: exampleMember.name, expiresAt: null }],
   managers: [{ accountId: exampleMember.accountId, name: exampleMember.name }],
 };
 
@@ -276,9 +278,14 @@ export const serviceAccountSchema = z
     name: z.string().describe("Display name, 1 to 200 characters."),
     description: z.string().describe("What the service account is for, up to 1000 characters."),
     state: z.string().describe("`active` or `deactivated`."),
-    responsibleAccountId: uuid(
-      "Member whose permissions bound the service account, or null when that person left.",
-    ).nullable(),
+    responsibleAccountIds: z
+      .array(uuid("ID of a responsible member."))
+      .describe(
+        "Members who receive reminders and notices about the service account. They grant no permissions and limit none.",
+      ),
+    unattended: z
+      .boolean()
+      .describe("True when the service account has no responsible person. Its permissions stay unchanged."),
     createdAt: timestamp("When the service account was created."),
   })
   .describe("An account for scripts and integrations, without password or sign-in.");
@@ -289,7 +296,8 @@ export const exampleServiceAccount = {
   name: "Release bot",
   description: "Publishes release notes",
   state: "active",
-  responsibleAccountId: exampleMember.accountId,
+  responsibleAccountIds: [exampleMember.accountId],
+  unattended: false,
   createdAt: "2026-10-01T08:00:00.000Z",
 };
 

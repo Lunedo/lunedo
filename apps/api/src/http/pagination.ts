@@ -1,3 +1,4 @@
+import type { PageRequest, Page as ServerPage } from "@pagehall/server";
 import { z } from "zod";
 import { ProblemException } from "./problems.js";
 
@@ -7,7 +8,7 @@ export const MAX_PAGE_SIZE = 200;
 export const pageQuery = {
   cursor: z
     .string()
-    .max(500)
+    .max(2000)
     .optional()
     .describe("Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page."),
   limit: z.coerce
@@ -54,6 +55,21 @@ export function decodeCursor<T extends z.ZodType>(
   } catch {
     throw new ProblemException("invalidInput", "The cursor is not valid", { fields: ["cursor"] });
   }
+}
+
+export const nameCursor = z.tuple([z.string().max(1000), z.uuid()]);
+export const idCursor = z.tuple([z.uuid()]);
+
+export function pageRequest(
+  query: { cursor?: string | undefined; limit: number },
+  cursor: typeof nameCursor | typeof idCursor,
+): PageRequest {
+  const after = decodeCursor(query.cursor, cursor);
+  return { limit: query.limit, ...(after ? { after: [...after] } : {}) };
+}
+
+export function toApiPage<T>(page: ServerPage<T>): Page<T> {
+  return { items: page.items, nextCursor: page.next ? encodeCursor(page.next) : null };
 }
 
 const keyCursor = z
