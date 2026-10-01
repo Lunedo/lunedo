@@ -259,7 +259,10 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
     const query = await new TestClient(test.app).get(`${url}?access_token=${token}`);
     expect(query.statusCode).toBe(401);
     expect(query.json()).toMatchObject({ code: "notSignedIn" });
-    const malformed = await new TestClient(test.app).get(url, bearer(`${token.slice(0, -1)}${token.endsWith("x") ? "y" : "x"}`));
+    const malformed = await new TestClient(test.app).get(
+      url,
+      bearer(`${token.slice(0, -1)}${token.endsWith("x") ? "y" : "x"}`),
+    );
     expect(malformed.statusCode).toBe(401);
     const unknownScheme = await new TestClient(test.app).get(url, { authorization: `Basic ${token}` });
     expect(unknownScheme.statusCode).toBe(401);
