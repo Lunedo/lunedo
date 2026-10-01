@@ -143,5 +143,19 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     },
   };
 
-  return [instance, organization, group, account];
+  const serviceAccount: ResourceType = {
+    type: "serviceAccount",
+    organizationOf: async (executor, id) => {
+      const result = await executor.execute<{ organization_id: string }>(
+        sql`select organization_id from service_accounts where account_id = ${id}`,
+      );
+      return result.rows[0]?.organization_id ?? null;
+    },
+    actions: {
+      "serviceAccount.view": organizationArea("integrationsAndApi", "view"),
+      "serviceAccount.manage": organizationArea("integrationsAndApi", "manage"),
+    },
+  };
+
+  return [instance, organization, group, account, serviceAccount];
 }

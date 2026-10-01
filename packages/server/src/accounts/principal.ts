@@ -1,4 +1,20 @@
-export type Principal = { type: "account"; id: string } | { type: "anonymous" } | { type: "system" };
+import type { Areas } from "../authorization/areas.js";
+
+export interface TokenScopes {
+  instance?: Areas;
+  organization?: Areas;
+}
+
+export interface TokenGrant {
+  id: string;
+  organizationId: string | null;
+  scopes: TokenScopes;
+}
+
+export type Principal =
+  | { type: "account"; id: string; token?: TokenGrant }
+  | { type: "anonymous" }
+  | { type: "system" };
 
 export type PrincipalType = Principal["type"];
 

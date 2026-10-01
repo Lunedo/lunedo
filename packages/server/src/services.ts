@@ -45,6 +45,8 @@ import type { SettingsService } from "./settings/service.js";
 import { SetupRegistry } from "./setup/framework.js";
 import { SetupService } from "./setup/setup-service.js";
 import { builtinSetupSteps } from "./setup/steps.js";
+import { API_TOKEN_EXPIRY_SCHEDULE, ApiTokenService, apiTokenExpiryJob } from "./tokens/api-tokens.js";
+import { ServiceAccountService } from "./tokens/service-accounts.js";
 
 export interface AccountServices {
   audit: AuditLog;
@@ -71,6 +73,8 @@ export interface AccountServices {
   breakGlass: BreakGlassService;
   lifecycle: OrganizationLifecycle;
   auditReader: AuditReader;
+  serviceAccounts: ServiceAccountService;
+  apiTokens: ApiTokenService;
 }
 
 export function createAccountServices(options: {
@@ -133,6 +137,8 @@ export function createAccountServices(options: {
     jobs,
   });
   const auditReader = new AuditReader({ database, authorization });
+  const serviceAccounts = new ServiceAccountService({ database, audit });
+  const apiTokens = new ApiTokenService({ database, audit, settings, rateLimiter, mail });
   const setupRegistry = new SetupRegistry();
   const setup = new SetupService({ database, registry: setupRegistry, audit, rateLimiter });
   const signIn = new SignInService({
@@ -208,6 +214,8 @@ export function createAccountServices(options: {
     breakGlass,
     lifecycle,
     auditReader,
+    serviceAccounts,
+    apiTokens,
   };
 }
 
@@ -230,6 +238,11 @@ export async function workAccountJobs(
     const sent = await services.lifecycle.sendReminders();
     if (sent > 0) job.logger.info({ sent }, "Expiry reminders sent");
   });
+  await jobs.work(apiTokenExpiryJob, async (job) => {
+    const expired = await services.apiTokens.recordExpired();
+    const reminded = await services.apiTokens.sendReminders();
+    if (expired + reminded > 0) job.logger.info({ expired, reminded }, "API token expiry processed");
+  });
   await jobs.work(authCleanupJob, async (job) => {
     const removed = {
       sessions: await services.sessions.cleanup(),
@@ -251,5 +264,6 @@ export async function workAccountJobs(
   await jobs.schedule(authCleanupJob, AUTH_CLEANUP_SCHEDULE, {}, { key: "regular" });
   await jobs.schedule(auditRetentionJob, AUDIT_RETENTION_SCHEDULE, {}, { key: "daily" });
   await jobs.schedule(organizationExpiryJob, ORGANIZATION_EXPIRY_SCHEDULE, {}, { key: "minutely" });
+  await jobs.schedule(apiTokenExpiryJob, API_TOKEN_EXPIRY_SCHEDULE, {}, { key: "regular" });
   await jobs.schedule(organizationRemindersJob, ORGANIZATION_REMINDERS_SCHEDULE, {}, { key: "hourly" });
 }

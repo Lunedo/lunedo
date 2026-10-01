@@ -1,137 +1,146 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ANONYMOUS, type Principal, SYSTEM } from "../accounts/principal.js";
-import type { RoleScope } from "../organizations/access-schema.js";
+import {
+  type BuiltInRoleKey,
+  type MembershipKind,
+  type PrincipalKind,
+  principalKinds,
+  type RoleScope,
+} from "../organizations/access-schema.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
-import { type Area, instanceAreas, organizationAreas } from "./areas.js";
-import type { Resource } from "./registry.js";
+import {
+  type AccessLevel,
+  type Area,
+  type Areas,
+  builtInRoles,
+  grantsLevel,
+  instanceAreas,
+  mergeAreas,
+  organizationAreas,
+} from "./areas.js";
+import type { RegisteredAction, Resource } from "./registry.js";
 
 const baseUrl = testDatabaseBaseUrl();
 
-const INSTANCE_ACTIONS = [
-  "instance.organizations.view",
-  "instance.organizations.manage",
-  "instance.organizations.create",
-  "instance.accounts.view",
-  "instance.accounts.manage",
-  "instance.roles.view",
-  "instance.roles.manage",
-  "instance.ownership.transfer",
-  "instance.signIn.view",
-  "instance.signIn.manage",
-  "instance.settings.view",
-  "instance.settings.manage",
-  "instance.operations.view",
-  "instance.operations.manage",
-  "instance.audit.view",
-  "instance.audit.manage",
-  "instance.breakGlass.request",
-];
-const ORGANIZATION_ACTIONS = [
-  "organization.view",
-  "organization.leave",
-  "organization.update",
-  "organization.settings.view",
-  "organization.settings.manage",
-  "organization.members.view",
-  "organization.members.manage",
-  "organization.roles.view",
-  "organization.roles.manage",
-  "organization.groups.view",
-  "organization.groups.create",
-  "organization.spaces.view",
-  "organization.spaces.manage",
-  "organization.signIn.view",
-  "organization.signIn.manage",
-  "organization.integrations.view",
-  "organization.integrations.manage",
-  "organization.audit.view",
-];
-const GROUP_ACTIONS = ["group.view", "group.manage", "group.delete"];
-const ACCOUNT_ACTIONS = ["account.deactivate"];
-const ALL_ACTIONS = [...INSTANCE_ACTIONS, ...ORGANIZATION_ACTIONS, ...GROUP_ACTIONS, ...ACCOUNT_ACTIONS];
+const subjects = ["member", "serviceAccount", "collaborator", "guest", "deactivated", "nonMember"] as const;
+type Subject = (typeof subjects)[number];
 
-const MEMBER = [
-  "organization.view",
-  "organization.leave",
-  "organization.members.view",
-  "organization.roles.view",
-  "organization.groups.view",
-  "group.view",
-];
-const ORGANIZATION_ADMINISTRATOR = [...ORGANIZATION_ACTIONS, ...GROUP_ACTIONS, "account.deactivate"];
+interface RoleCase {
+  scope: RoleScope;
+  name: string;
+  builtIn: BuiltInRoleKey | null;
+  areas: Areas;
+}
 
-const EXPECTED: Record<string, string[]> = {
-  "instance.owner": [...INSTANCE_ACTIONS, "account.deactivate"],
-  "instance.administrator": [
-    ...INSTANCE_ACTIONS.filter((action) => action !== "instance.ownership.transfer"),
-    "account.deactivate",
-  ],
-  "instance.securityAuditor": [
-    "instance.organizations.view",
-    "instance.accounts.view",
-    "instance.roles.view",
-    "instance.signIn.view",
-    "instance.settings.view",
-    "instance.operations.view",
-    "instance.audit.view",
-  ],
-  "instance.custom.organizations": [
-    "instance.organizations.view",
-    "instance.organizations.manage",
-    "instance.organizations.create",
-    "instance.breakGlass.request",
-  ],
-  "instance.custom.accounts": [
-    "instance.accounts.view",
-    "instance.accounts.manage",
-    "instance.roles.view",
-    "instance.roles.manage",
-    "account.deactivate",
-  ],
-  "instance.custom.signInAndSecurity": ["instance.signIn.view", "instance.signIn.manage"],
-  "instance.custom.settings": ["instance.settings.view", "instance.settings.manage"],
-  "instance.custom.operations": ["instance.operations.view", "instance.operations.manage"],
-  "instance.custom.auditLog": ["instance.audit.view", "instance.audit.manage"],
-  "organization.owner": ORGANIZATION_ADMINISTRATOR,
-  "organization.administrator": ORGANIZATION_ADMINISTRATOR,
-  "organization.member": MEMBER,
-  "organization.custom.membersAndGroups": [
-    ...MEMBER,
-    "organization.members.manage",
-    "organization.roles.manage",
-    "organization.groups.create",
-    "group.manage",
-    "group.delete",
-    "account.deactivate",
-  ],
-  "organization.custom.spaces": [...MEMBER, "organization.spaces.view", "organization.spaces.manage"],
-  "organization.custom.settings": [
-    ...MEMBER,
-    "organization.update",
-    "organization.settings.view",
-    "organization.settings.manage",
-  ],
-  "organization.custom.signInAndSecurity": [
-    ...MEMBER,
-    "organization.signIn.view",
-    "organization.signIn.manage",
-  ],
-  "organization.custom.integrationsAndApi": [
-    ...MEMBER,
-    "organization.integrations.view",
-    "organization.integrations.manage",
-  ],
-  "organization.custom.auditLog": [...MEMBER, "organization.audit.view"],
-  collaborator: ["organization.view", "organization.leave"],
-  guest: ["organization.view", "organization.leave"],
-  breakGlass: [...ORGANIZATION_ADMINISTRATOR.filter((action) => action !== "organization.leave")],
-  nonMember: [],
-  deactivated: [],
-  anonymous: [],
-  system: ALL_ACTIONS,
+function roleCases(scope: RoleScope): RoleCase[] {
+  const builtIns = Object.entries(builtInRoles[scope]) as [BuiltInRoleKey, Areas][];
+  const areas: readonly Area[] = scope === "instance" ? instanceAreas : organizationAreas;
+  return [
+    ...builtIns.map(([key, roleAreas]) => ({ scope, name: key, builtIn: key, areas: roleAreas })),
+    ...areas.map((area) => ({
+      scope,
+      name: `custom ${area}`,
+      builtIn: null,
+      areas: { [area]: "manage" as AccessLevel },
+    })),
+  ];
+}
+
+const ROLES = [...roleCases("instance"), ...roleCases("organization")];
+const ASSIGNABLE: Record<RoleScope, readonly BuiltInRoleKey[]> = {
+  instance: ["administrator", "securityAuditor"],
+  organization: ["owner", "administrator"],
 };
+
+interface SubjectFacts {
+  type: "standard" | "service" | "guest";
+  membership: MembershipKind | null;
+  active: boolean;
+}
+
+const SUBJECT_FACTS: Record<Subject, SubjectFacts> = {
+  member: { type: "standard", membership: "member", active: true },
+  serviceAccount: { type: "service", membership: "member", active: true },
+  collaborator: { type: "standard", membership: "collaborator", active: true },
+  guest: { type: "guest", membership: "guest", active: true },
+  deactivated: { type: "standard", membership: "member", active: true },
+  nonMember: { type: "standard", membership: null, active: true },
+};
+
+function assignmentValid(subject: Subject, via: PrincipalKind, role: RoleCase): boolean {
+  const facts = SUBJECT_FACTS[subject];
+  if (role.scope === "instance" && role.builtIn === "owner")
+    return via === "account" && facts.type === "standard";
+  if (role.builtIn && !ASSIGNABLE[role.scope].includes(role.builtIn)) return false;
+  if (role.builtIn === "owner" && via !== "account") return false;
+  if (role.scope === "instance" && (via === "group" || via === "organizationMembers")) return false;
+  if (via !== "account") return true;
+  if (role.scope === "instance") return facts.type === "standard";
+  return facts.membership === "member";
+}
+
+interface Held {
+  subject: Subject;
+  via: PrincipalKind | null;
+  role: RoleCase | null;
+  breakGlass: boolean;
+}
+
+function roleApplies(held: Held, scope: RoleScope): boolean {
+  if (!held.role || !held.via || held.role.scope !== scope) return false;
+  if (!assignmentValid(held.subject, held.via, held.role)) return false;
+  const facts = SUBJECT_FACTS[held.subject];
+  if (held.via === "instanceUsers" && facts.type !== "standard") return false;
+  if (scope === "organization") return facts.membership === "member";
+  return true;
+}
+
+function instanceAreasOf(held: Held): Areas {
+  return held.role && roleApplies(held, "instance") ? held.role.areas : {};
+}
+
+function organizationAreasOf(held: Held): Areas {
+  const sets: Areas[] = [];
+  if (SUBJECT_FACTS[held.subject].membership === "member") sets.push(builtInRoles.organization.member ?? {});
+  if (held.role && roleApplies(held, "organization")) sets.push(held.role.areas);
+  if (held.breakGlass) sets.push(builtInRoles.organization.administrator ?? {});
+  return mergeAreas(...sets);
+}
+
+function expectedAllowed(held: Held, action: RegisteredAction): boolean {
+  if (held.subject === "deactivated") return false;
+  const facts = SUBJECT_FACTS[held.subject];
+  const instanceOwner =
+    held.role?.scope === "instance" && held.role.builtIn === "owner" && roleApplies(held, "instance");
+  const organization = organizationAreasOf(held);
+  const rules: Record<string, () => boolean> = {
+    selfService: () => false,
+    membersCreateGroups: () => false,
+    homeOrganizationAdministrator: () => grantsLevel(organization.membersAndGroups, "manage"),
+    manager: () => false,
+    memberOrManager: () => facts.membership !== null && held.via === "group",
+  };
+  const rule = action.rule ? rules[action.rule] : undefined;
+  if (action.rule && !rule) throw new Error(`The matrix has no model for the rule ${action.rule}`);
+  if (rule?.()) return true;
+  if (action.scope === "instance") {
+    if (action.ownerOnly) return instanceOwner;
+    const areas = instanceAreasOf(held);
+    return (
+      action.area !== undefined && action.level !== undefined && grantsLevel(areas[action.area], action.level)
+    );
+  }
+  if (facts.membership && action.membership?.includes(facts.membership)) return true;
+  if (action.breakGlass && held.breakGlass) return true;
+  if (action.ownerOnly) return false;
+  return (
+    action.area !== undefined &&
+    action.level !== undefined &&
+    grantsLevel(organization[action.area], action.level)
+  );
+}
 
 interface Fixture {
   organizationId: string;
@@ -141,27 +150,28 @@ interface Fixture {
 
 describe.skipIf(!baseUrl)("permission matrix", () => {
   let test: TestServices;
+  let actions: RegisteredAction[];
+  let evaluated = 0;
 
   beforeAll(async () => {
     test = await createTestServices(baseUrl ?? "");
     await test.pool.query("insert into instance (id) values (1)");
+    actions = test.services.authorization.registry.actions();
   });
 
   afterAll(async () => {
     await test?.close();
   });
 
-  async function account(
-    options: { type?: "standard" | "guest"; home?: string | null } = {},
-  ): Promise<string> {
+  async function account(type: "standard" | "guest", home: string | null): Promise<string> {
     const result = await test.pool.query<{ id: string }>(
       "insert into accounts (id, type, state, email, name, home_organization_id) values ($1, $2, 'active', $3, 'Test', $4) returning id",
-      [randomUUID(), options.type ?? "standard", `${randomUUID()}@example.org`, options.home ?? null],
+      [randomUUID(), type, `${randomUUID()}@example.org`, home],
     );
     return result.rows[0]?.id ?? "";
   }
 
-  async function membership(organizationId: string, accountId: string, kind: string) {
+  async function membership(organizationId: string, accountId: string, kind: MembershipKind) {
     await test.pool.query(
       "insert into memberships (id, organization_id, account_id, kind) values ($1, $2, $3, $4)",
       [randomUUID(), organizationId, accountId, kind],
@@ -169,7 +179,7 @@ describe.skipIf(!baseUrl)("permission matrix", () => {
   }
 
   async function fixture(): Promise<Fixture> {
-    const owner = await account();
+    const owner = await account("standard", null);
     const created = await test.services.organizations.createAsActor(SYSTEM, {
       name: `Organization ${randomUUID().slice(0, 8)}`,
       ownerAccountId: owner,
@@ -178,239 +188,177 @@ describe.skipIf(!baseUrl)("permission matrix", () => {
       "insert into groups (id, organization_id, name) values ($1, $2, 'Group') returning id",
       [randomUUID(), created.id],
     );
-    const targetId = await account({ home: created.id });
+    const targetId = await account("standard", created.id);
     await membership(created.id, targetId, "member");
     return { organizationId: created.id, groupId: group.rows[0]?.id ?? "", targetId };
   }
 
-  async function customRole(scope: RoleScope, organizationId: string | null, area: Area): Promise<string> {
-    const result = await test.pool.query<{ id: string }>(
-      "insert into custom_roles (id, scope, organization_id, name, areas) values ($1, $2, $3, $4, $5) returning id",
-      [
-        randomUUID(),
-        scope,
-        organizationId,
-        `${area} ${randomUUID().slice(0, 6)}`,
-        JSON.stringify({ [area]: "manage" }),
-      ],
-    );
-    return result.rows[0]?.id ?? "";
+  async function subjectAccount(subject: Subject, target: Fixture): Promise<string> {
+    switch (subject) {
+      case "member":
+      case "deactivated": {
+        const id = await account("standard", target.organizationId);
+        await membership(target.organizationId, id, "member");
+        return id;
+      }
+      case "serviceAccount":
+        return (await test.services.serviceAccounts.create(SYSTEM, target.organizationId, { name: "Bot" }))
+          .id;
+      case "collaborator": {
+        const id = await account("standard", null);
+        await membership(target.organizationId, id, "collaborator");
+        return id;
+      }
+      case "guest": {
+        const id = await account("guest", null);
+        await membership(target.organizationId, id, "guest");
+        return id;
+      }
+      case "nonMember":
+        return account("standard", null);
+    }
+  }
+
+  function resourceFor(action: RegisteredAction, target: Fixture & { serviceAccountId: string }): Resource {
+    switch (action.resourceType.type) {
+      case "instance":
+        return { type: "instance" };
+      case "organization":
+        return { type: "organization", id: target.organizationId };
+      case "group":
+        return { type: "group", id: target.groupId };
+      case "account":
+        return { type: "account", id: target.targetId };
+      case "serviceAccount":
+        return { type: "serviceAccount", id: target.serviceAccountId };
+      default:
+        throw new Error(`The matrix has no resource for ${action.resourceType.type}`);
+    }
+  }
+
+  async function check(
+    principal: Principal,
+    target: Fixture & { serviceAccountId: string },
+    held: Held | "system" | "anonymous",
+  ) {
+    const mismatches: string[] = [];
+    for (const action of actions) {
+      const decision = await test.services.authorization.explain(
+        principal,
+        action.name,
+        resourceFor(action, target),
+      );
+      const expected =
+        held === "system" ? true : held === "anonymous" ? false : expectedAllowed(held, action);
+      evaluated += 1;
+      if (decision.allowed !== expected) mismatches.push(`${action.name}: expected ${expected}`);
+    }
+    expect(mismatches).toEqual([]);
+  }
+
+  async function withServiceAccount(target: Fixture) {
+    const service = await test.services.serviceAccounts.create(SYSTEM, target.organizationId, {
+      name: "Target",
+    });
+    return { ...target, serviceAccountId: service.id };
   }
 
   async function assign(
-    scope: RoleScope,
-    organizationId: string | null,
-    principal: { kind: string; id: string | null },
-    role: { builtIn: string } | { customRoleId: string },
-  ): Promise<string> {
-    const result = await test.pool.query<{ id: string }>(
-      `insert into role_assignments (id, scope, organization_id, principal_kind, principal_id, built_in_role, custom_role_id)
-       values ($1, $2, $3, $4, $5, $6, $7) returning id`,
-      [
-        randomUUID(),
-        scope,
-        organizationId,
-        principal.kind,
-        principal.id,
-        "builtIn" in role ? role.builtIn : null,
-        "customRoleId" in role ? role.customRoleId : null,
-      ],
-    );
-    return result.rows[0]?.id ?? "";
-  }
-
-  async function allowedActions(principal: Principal, target: Fixture): Promise<string[]> {
-    const allowed: string[] = [];
-    for (const action of test.services.authorization.registry.actions()) {
-      const resource: Resource =
-        action.resourceType.type === "instance"
-          ? { type: "instance" }
-          : action.resourceType.type === "organization"
-            ? { type: "organization", id: target.organizationId }
-            : action.resourceType.type === "group"
-              ? { type: "group", id: target.groupId }
-              : { type: "account", id: target.targetId };
-      const decision = await test.services.authorization.explain(principal, action.name, resource);
-      if (decision.allowed) allowed.push(action.name);
+    held: Held & { role: RoleCase; via: PrincipalKind },
+    target: Fixture,
+    accountId: string,
+  ) {
+    const { role, via } = held;
+    if (via === "group") {
+      await test.pool.query("insert into group_members (group_id, account_id) values ($1, $2)", [
+        target.groupId,
+        accountId,
+      ]);
     }
-    return allowed.sort();
-  }
-
-  it("covers every registered action in the expected table", () => {
-    const registered = test.services.authorization.registry.actions().map((action) => action.name);
-    expect([...registered].sort()).toEqual([...ALL_ACTIONS].sort());
-    for (const [role, actions] of Object.entries(EXPECTED)) {
-      for (const action of actions) expect(ALL_ACTIONS, role).toContain(action);
+    if (role.scope === "instance" && role.builtIn === "owner") {
+      if (assignmentValid(held.subject, via, role)) {
+        await test.pool.query("update instance set owner_account_id = $1", [accountId]);
+        return;
+      }
+      await expect(
+        test.services.roles.assign(SYSTEM, {
+          scope: "instance",
+          organizationId: null,
+          role: { builtIn: "owner" },
+          principal: { kind: via, id: via === "account" ? accountId : null },
+        }),
+      ).rejects.toThrow();
+      return;
     }
-  });
-
-  const instanceRoles: {
-    key: string;
-    role: (fixture: Fixture) => Promise<{ builtIn: string } | { customRoleId: string }>;
-  }[] = [
-    { key: "instance.administrator", role: async () => ({ builtIn: "administrator" }) },
-    { key: "instance.securityAuditor", role: async () => ({ builtIn: "securityAuditor" }) },
-    ...instanceAreas.map((area) => ({
-      key: `instance.custom.${area}`,
-      role: async () => ({ customRoleId: await customRole("instance", null, area) }),
-    })),
-  ];
-
-  for (const { key, role } of instanceRoles) {
-    for (const variant of ["account", "instanceUsers"] as const) {
-      it(`${key} through ${variant}`, async () => {
-        const target = await fixture();
-        const accountId = await account();
-        const assignment = await assign(
-          "instance",
-          null,
-          variant === "account" ? { kind: "account", id: accountId } : { kind: "instanceUsers", id: null },
-          await role(target),
-        );
-        try {
-          expect(await allowedActions({ type: "account", id: accountId }, target)).toEqual(
-            [...(EXPECTED[key] ?? [])].sort(),
-          );
-        } finally {
-          await test.pool.query("delete from role_assignments where id = $1", [assignment]);
-        }
-      });
-    }
-  }
-
-  it("instance.owner", async () => {
-    const target = await fixture();
-    const accountId = await account();
-    await test.pool.query("update instance set owner_account_id = $1", [accountId]);
-    try {
-      expect(await allowedActions({ type: "account", id: accountId }, target)).toEqual(
-        [...(EXPECTED["instance.owner"] ?? [])].sort(),
-      );
-    } finally {
-      await test.pool.query("update instance set owner_account_id = null");
-    }
-  });
-
-  const organizationRoles: {
-    key: string;
-    role: (fixture: Fixture) => Promise<{ builtIn: string } | { customRoleId: string } | null>;
-  }[] = [
-    { key: "organization.owner", role: async () => ({ builtIn: "owner" }) },
-    { key: "organization.administrator", role: async () => ({ builtIn: "administrator" }) },
-    { key: "organization.member", role: async () => null },
-    ...organizationAreas.map((area) => ({
-      key: `organization.custom.${area}`,
-      role: async (target: Fixture) => ({
-        customRoleId: await customRole("organization", target.organizationId, area),
-      }),
-    })),
-  ];
-
-  for (const { key, role } of organizationRoles) {
-    for (const variant of ["account", "group", "organizationMembers", "instanceUsers"] as const) {
-      it(`${key} through ${variant}`, async () => {
-        const target = await fixture();
-        const accountId = await account({ home: target.organizationId });
-        await membership(target.organizationId, accountId, "member");
-        const granted = await role(target);
-        let instanceAssignment: string | null = null;
-        if (granted) {
-          if (variant === "group") {
-            await test.pool.query("insert into group_members (group_id, account_id) values ($1, $2)", [
-              target.groupId,
-              accountId,
-            ]);
-          }
-          const principal =
-            variant === "account"
-              ? { kind: "account", id: accountId }
-              : variant === "group"
-                ? { kind: "group", id: target.groupId }
-                : { kind: variant, id: null };
-          const assignment = await assign("organization", target.organizationId, principal, granted);
-          if (variant === "instanceUsers") instanceAssignment = assignment;
-        }
-        try {
-          expect(await allowedActions({ type: "account", id: accountId }, target)).toEqual(
-            [...(EXPECTED[key] ?? [])].sort(),
-          );
-        } finally {
-          if (instanceAssignment)
-            await test.pool.query("delete from role_assignments where id = $1", [instanceAssignment]);
-        }
-      });
-    }
-  }
-
-  for (const kind of ["collaborator", "guest"] as const) {
-    it(`${kind} with roles that its fixed limits ignore`, async () => {
-      const target = await fixture();
-      const accountId = await account({ type: kind === "guest" ? "guest" : "standard" });
-      await membership(target.organizationId, accountId, kind);
-      await assign(
-        "organization",
-        target.organizationId,
-        { kind: "account", id: accountId },
-        { builtIn: "administrator" },
-      );
-      await assign(
-        "organization",
-        target.organizationId,
-        { kind: "organizationMembers", id: null },
-        { builtIn: "administrator" },
-      );
-      expect(await allowedActions({ type: "account", id: accountId }, target)).toEqual(
-        [...(EXPECTED[kind] ?? [])].sort(),
-      );
+    const organizationId = role.scope === "organization" ? target.organizationId : null;
+    const reference = role.builtIn
+      ? { builtIn: role.builtIn }
+      : {
+          customRoleId: (
+            await test.services.roles.createCustom(SYSTEM, role.scope, organizationId, {
+              name: `${role.name} ${randomUUID().slice(0, 6)}`,
+              areas: role.areas,
+            })
+          ).id,
+        };
+    const principalId = via === "account" ? accountId : via === "group" ? target.groupId : null;
+    const assignment = test.services.roles.assign(SYSTEM, {
+      scope: role.scope,
+      organizationId,
+      role: reference,
+      principal: { kind: via, id: principalId },
     });
+    if (assignmentValid(held.subject, via, role)) await expect(assignment).resolves.toBeTruthy();
+    else await expect(assignment).rejects.toMatchObject({ name: "OrganizationError" });
   }
 
-  it("breakGlass", async () => {
-    const target = await fixture();
-    const accountId = await account();
+  for (const subject of subjects) {
+    for (const via of principalKinds) {
+      for (const role of ROLES) {
+        it(`${subject} holding ${role.scope} ${role.name} through ${via}`, async () => {
+          const target = await withServiceAccount(await fixture());
+          const accountId = await subjectAccount(subject, target);
+          const held = { subject, via, role, breakGlass: false };
+          try {
+            await assign(held, target, accountId);
+            if (subject === "deactivated") {
+              await test.pool.query("update accounts set state = 'deactivated' where id = $1", [accountId]);
+            }
+            await check({ type: "account", id: accountId }, target, held);
+          } finally {
+            await test.pool.query("delete from role_assignments where scope = 'instance'");
+            await test.pool.query("update instance set owner_account_id = null");
+          }
+        });
+      }
+    }
+  }
+
+  it("break-glass access", async () => {
+    const target = await withServiceAccount(await fixture());
+    const accountId = await account("standard", null);
     await test.pool.query(
       "insert into break_glass_accesses (id, organization_id, account_id, reason, expires_at) values ($1, $2, $3, 'Matrix test reason', now() + interval '1 hour')",
       [randomUUID(), target.organizationId, accountId],
     );
-    expect(await allowedActions({ type: "account", id: accountId }, target)).toEqual(
-      [...(EXPECTED.breakGlass ?? [])].sort(),
-    );
-  });
-
-  it("nonMember", async () => {
-    const target = await fixture();
-    const other = await fixture();
-    const accountId = await account({ home: other.organizationId });
-    await membership(other.organizationId, accountId, "member");
-    await assign(
-      "organization",
-      other.organizationId,
-      { kind: "account", id: accountId },
-      { builtIn: "owner" },
-    );
-    expect(await allowedActions({ type: "account", id: accountId }, target)).toEqual(EXPECTED.nonMember);
-  });
-
-  it("deactivated", async () => {
-    const target = await fixture();
-    const accountId = await account({ home: target.organizationId });
-    await membership(target.organizationId, accountId, "member");
-    await assign(
-      "organization",
-      target.organizationId,
-      { kind: "account", id: accountId },
-      { builtIn: "owner" },
-    );
-    await assign("instance", null, { kind: "account", id: accountId }, { builtIn: "administrator" });
-    await test.pool.query("update accounts set state = 'deactivated' where id = $1", [accountId]);
-    expect(await allowedActions({ type: "account", id: accountId }, target)).toEqual(EXPECTED.deactivated);
+    await check({ type: "account", id: accountId }, target, {
+      subject: "nonMember",
+      via: null,
+      role: null,
+      breakGlass: true,
+    });
   });
 
   it("anonymous", async () => {
-    expect(await allowedActions(ANONYMOUS, await fixture())).toEqual(EXPECTED.anonymous);
+    await check(ANONYMOUS, await withServiceAccount(await fixture()), "anonymous");
   });
 
   it("system", async () => {
-    expect(await allowedActions(SYSTEM, await fixture())).toEqual([...(EXPECTED.system ?? [])].sort());
+    await check(SYSTEM, await withServiceAccount(await fixture()), "system");
+  });
+
+  it("evaluates the full cross product", () => {
+    const cases = subjects.length * principalKinds.length * ROLES.length + 3;
+    expect(evaluated).toBe(cases * actions.length);
   });
 });

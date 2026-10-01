@@ -60,6 +60,15 @@ export function mergeAreas(...sets: Areas[]): Areas {
   return merged;
 }
 
+export function intersectAreas(left: Areas, right: Areas): Areas {
+  const result: Areas = {};
+  for (const [area, level] of Object.entries(left) as [Area, AccessLevel][]) {
+    const other = right[area];
+    if (other) result[area] = rank(level) <= rank(other) ? level : other;
+  }
+  return result;
+}
+
 function all(scope: RoleScope, level: AccessLevel): Areas {
   return Object.fromEntries(areasOf(scope).map((area) => [area, level]));
 }

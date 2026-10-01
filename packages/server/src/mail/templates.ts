@@ -27,6 +27,7 @@ export interface MailTemplates {
   };
   guestExpiring: { instanceName: string; organizationName: string; guestName: string; date: string };
   guestInactive: { instanceName: string; organizationName: string; guestName: string; days: number };
+  tokenExpiring: { instanceName: string; tokenName: string; date: string };
   accessExpiring: {
     instanceName: string;
     organizationName: string;
@@ -134,6 +135,12 @@ const catalogs: Record<Language, Catalog> = {
         `${guestName} has not used ${instanceName} for ${days} days. You are responsible for this guest in ${organizationName}; remove the guest if the access is no longer needed.`,
       ],
     }),
+    tokenExpiring: ({ instanceName, tokenName, date }) => ({
+      subject: `API token ${tokenName} on ${instanceName} expires soon`,
+      paragraphs: [
+        `The API token ${tokenName} on ${instanceName} expires on ${date}. Create a new token before then, or scripts using it will stop working.`,
+      ],
+    }),
     accessExpiring: ({ instanceName, organizationName, kind, name, date }) => ({
       subject: `Access in ${organizationName} expires soon`,
       paragraphs: [
@@ -221,6 +228,12 @@ const catalogs: Record<Language, Catalog> = {
       subject: `Gast ${guestName} ist in ${organizationName} inaktiv`,
       paragraphs: [
         `${guestName} hat ${instanceName} seit ${days} Tagen nicht verwendet. Sie sind für diesen Gast in ${organizationName} verantwortlich; entfernen Sie den Gast, wenn der Zugang nicht mehr gebraucht wird.`,
+      ],
+    }),
+    tokenExpiring: ({ instanceName, tokenName, date }) => ({
+      subject: `API-Token ${tokenName} auf ${instanceName} läuft bald ab`,
+      paragraphs: [
+        `Das API-Token ${tokenName} auf ${instanceName} läuft am ${date} ab. Erstellen Sie vorher ein neues Token, sonst funktionieren Skripte, die es verwenden, nicht mehr.`,
       ],
     }),
     accessExpiring: ({ instanceName, organizationName, kind, name, date }) => ({

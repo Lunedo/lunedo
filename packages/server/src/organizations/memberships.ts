@@ -283,13 +283,33 @@ export class MembershipService {
         ),
       )
       .returning({ organizationId: memberships.organizationId, accountId: memberships.accountId });
-    return released.map((guest) => ({
-      name: "guest.responsibleChanged" as const,
-      actor,
-      targetId: guest.accountId,
-      fields: { responsibleAccountId: null },
-      scope: scopeOf(guest.organizationId),
-    }));
+    const releasedServiceAccounts = await tx.execute<{
+      account_id: string;
+      organization_id: string;
+      description: string;
+      name: string;
+    }>(sql`
+      update service_accounts s set responsible_account_id = null, updated_at = now()
+      from accounts a
+      where a.id = s.account_id and s.responsible_account_id = ${responsibleAccountId}
+        ${organizationId ? sql`and s.organization_id = ${organizationId}` : sql``}
+      returning s.account_id, s.organization_id, s.description, a.name`);
+    return [
+      ...released.map((guest) => ({
+        name: "guest.responsibleChanged" as const,
+        actor,
+        targetId: guest.accountId,
+        fields: { responsibleAccountId: null },
+        scope: scopeOf(guest.organizationId),
+      })),
+      ...releasedServiceAccounts.rows.map((row) => ({
+        name: "serviceAccount.updated" as const,
+        actor,
+        targetId: row.account_id,
+        fields: { name: row.name, description: row.description, responsibleAccountId: null },
+        scope: scopeOf(row.organization_id),
+      })),
+    ];
   }
 
   async remove(
@@ -483,7 +503,21 @@ export class MembershipService {
         .where(eq(sessions.accountId, accountId))
         .returning({ id: sessions.id });
       await tx.delete(authChallenges).where(eq(authChallenges.accountId, accountId));
+      const revoked = await tx.execute<{ id: string; organization_id: string | null }>(sql`
+        update api_tokens set revoked_at = now(), updated_at = now()
+        where account_id = ${accountId} and revoked_at is null
+        returning id, organization_id`);
       const events = await this.#releaseGuests(tx, actor, accountId);
+      for (const token of revoked.rows) {
+        const scope = token.organization_id ?? target.home;
+        events.push({
+          name: "apiToken.revoked",
+          actor,
+          targetId: token.id,
+          fields: { accountId, reason: "accountDeactivated" },
+          ...(scope ? { scope: scopeOf(scope) } : {}),
+        });
+      }
       events.unshift({
         name: "account.deactivated",
         actor,

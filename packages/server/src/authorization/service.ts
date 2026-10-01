@@ -1,9 +1,9 @@
 import { sql } from "drizzle-orm";
-import type { Principal } from "../accounts/principal.js";
+import type { Principal, TokenGrant } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Executor } from "../database/database.js";
 import type { PrincipalKind, RoleScope } from "../organizations/access-schema.js";
-import { type Areas, coversAreas, grantsLevel, mergeAreas } from "./areas.js";
+import { type Areas, coversAreas, grantsLevel, intersectAreas, mergeAreas } from "./areas.js";
 import {
   type HeldRole,
   type InstanceFacts,
@@ -31,7 +31,9 @@ export type Denial =
   | "ownerOnly"
   | "instanceRolesDoNotGrantOrganizationAccess"
   | "roleExceedsOwnPermissions"
-  | "selfExtension";
+  | "selfExtension"
+  | "responsibleLacksPermission"
+  | "tokenScope";
 
 export interface RoleTarget {
   scope: RoleScope;
@@ -61,6 +63,28 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function roleGrant(role: HeldRole): Grant {
   return { kind: "role", role: role.role, via: role.via, expiresAt: role.expiresAt };
+}
+
+function tokenAreas(token: TokenGrant, scope: RoleScope, organizationId: string | null): Areas {
+  if (scope === "organization" && token.organizationId && token.organizationId !== organizationId) return {};
+  return (scope === "instance" ? token.scopes.instance : token.scopes.organization) ?? {};
+}
+
+function tokenAllows(token: TokenGrant, action: RegisteredAction, organizationId: string | null): boolean {
+  const areas = tokenAreas(token, action.scope, organizationId);
+  if (action.area && action.level) return grantsLevel(areas[action.area], action.level);
+  return action.name.endsWith(".view") && Object.keys(areas).length > 0;
+}
+
+function limitByToken(
+  principal: Principal,
+  action: RegisteredAction,
+  organizationId: string | null,
+  decision: Decision,
+): Decision {
+  if (!decision.allowed || principal.type !== "account" || !principal.token) return decision;
+  if (tokenAllows(principal.token, action, organizationId)) return decision;
+  return { ...decision, allowed: false, grants: [], denials: ["tokenScope"] };
 }
 
 function ownerRole(role: HeldRole): boolean {
@@ -111,7 +135,7 @@ export class AuthorizationService {
         const allowed = await this.#rule(action, accountId, resource, null, executor, fresh);
         if (allowed) grants.push({ kind: "rule", rule: action.rule });
       }
-      return decision(grants, denials);
+      return limitByToken(principal, action, null, decision(grants, denials));
     }
 
     const organizationId = await this.#organizationOf(action, resource, executor);
@@ -128,7 +152,22 @@ export class AuthorizationService {
     if (action.rule && (await this.#rule(action, accountId, resource, organizationId, executor, fresh))) {
       grants.push({ kind: "rule", rule: action.rule });
     }
-    return decision(grants, await this.#organizationDenials(action, facts, accountId, executor, fresh));
+    const result = limitByToken(
+      principal,
+      action,
+      organizationId,
+      decision(grants, await this.#organizationDenials(action, facts, accountId, executor, fresh)),
+    );
+    if (!result.allowed || facts.account.type !== "service") return result;
+    const responsible = await executor.execute<{ responsible_account_id: string | null }>(
+      sql`select responsible_account_id from service_accounts where account_id = ${accountId}`,
+    );
+    const responsibleId = responsible.rows[0]?.responsible_account_id;
+    if (!responsibleId) return result;
+    const bound = await this.explain({ type: "account", id: responsibleId }, actionName, resource, options);
+    return bound.allowed
+      ? result
+      : { ...result, allowed: false, grants: [], denials: ["responsibleLacksPermission"] };
   }
 
   async decide(
@@ -210,9 +249,12 @@ export class AuthorizationService {
     };
     if (actor.type === "anonymous") return deny("anonymous");
     const executor = options.executor ?? this.#database;
-    const { roles, facts } = await this.#heldRoles(actor.id, target.scope, target.organizationId, executor);
+    const held = await this.#heldRoles(actor.id, target.scope, target.organizationId, executor);
+    const { facts } = held;
+    const roles = this.#limitRoles(held.roles, actor, target.scope, target.organizationId);
     const isOwnerRole = "builtIn" in target.role && target.role.builtIn === "owner";
     if (isOwnerRole) {
+      if (actor.token) deny("tokenScope");
       if (!roles.some((role) => ownerRole(role) && role.via.type !== "breakGlass")) deny("ownerOnly");
       return;
     }
@@ -237,12 +279,8 @@ export class AuthorizationService {
     if (actor.type === "anonymous") {
       throw new ForbiddenError({ action, resource, allowed: false, grants: [], denials: ["anonymous"] });
     }
-    const { roles } = await this.#heldRoles(
-      actor.id,
-      scope,
-      organizationId,
-      options.executor ?? this.#database,
-    );
+    const held = await this.#heldRoles(actor.id, scope, organizationId, options.executor ?? this.#database);
+    const roles = this.#limitRoles(held.roles, actor, scope, organizationId);
     if (!coversAreas(mergeAreas(...roles.map((role) => role.areas)), areas)) {
       throw new ForbiddenError({
         action,
@@ -267,6 +305,17 @@ export class AuthorizationService {
   ) {
     const { roles } = await this.#heldRoles(accountId, scope, organizationId, executor);
     return mergeAreas(...roles.map((role) => role.areas));
+  }
+
+  #limitRoles(
+    roles: HeldRole[],
+    actor: Principal,
+    scope: RoleScope,
+    organizationId: string | null,
+  ): HeldRole[] {
+    if (actor.type !== "account" || !actor.token) return roles;
+    const limit = tokenAreas(actor.token, scope, organizationId);
+    return roles.map((role) => ({ ...role, areas: intersectAreas(role.areas, limit) }));
   }
 
   #roleGrants(action: RegisteredAction, roles: HeldRole[]): Grant[] {

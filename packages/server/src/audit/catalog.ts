@@ -12,6 +12,8 @@ export const auditTargetTypes = [
   "roleAssignment",
   "invitation",
   "breakGlassAccess",
+  "apiToken",
+  "audit",
 ] as const;
 export type AuditTargetType = (typeof auditTargetTypes)[number];
 
@@ -400,6 +402,82 @@ export const auditCatalog = {
     actor: ["account", "system"],
     target: "breakGlassAccess",
     fields: z.object({ reason: z.enum(["endedByAccount", "expired"]) }),
+    visibility: "organization",
+  }),
+  "serviceAccount.created": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({ name: z.string(), responsibleAccountId: z.uuid().nullable() }),
+    visibility: "organization",
+  }),
+  "serviceAccount.updated": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({
+      name: z.string(),
+      description: z.string(),
+      responsibleAccountId: z.uuid().nullable(),
+    }),
+    visibility: "organization",
+  }),
+  "serviceAccount.deactivated": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({ revokedCount: z.number().int().nonnegative() }),
+    visibility: "organization",
+  }),
+  "apiToken.created": event({
+    actor: ["account", "system"],
+    target: "apiToken",
+    fields: z.object({
+      accountId: z.uuid(),
+      name: z.string(),
+      organizationId: z.uuid().nullable(),
+      scopes: z.object({
+        instance: z.record(z.string(), z.string()).optional(),
+        organization: z.record(z.string(), z.string()).optional(),
+      }),
+      expiresAt: z.iso.datetime().nullable(),
+    }),
+    visibility: "organization",
+  }),
+  "apiToken.updated": event({
+    actor: ["account", "system"],
+    target: "apiToken",
+    fields: z.object({ name: z.string() }),
+    visibility: "organization",
+  }),
+  "apiToken.revoked": event({
+    actor: ["account", "system"],
+    target: "apiToken",
+    fields: z.object({ accountId: z.uuid(), reason: z.enum(["revoked", "accountDeactivated"]) }),
+    visibility: "organization",
+  }),
+  "apiToken.expired": event({
+    actor: ["system"],
+    target: "apiToken",
+    fields: z.object({ accountId: z.uuid() }),
+    visibility: "organization",
+  }),
+  "apiToken.rejected": event({
+    actor: ["anonymous"],
+    target: "apiToken",
+    fields: z.object({ reason: z.enum(["unknown", "revoked", "expired", "accountInactive"]) }),
+    visibility: "organization",
+  }),
+  "audit.exported": event({
+    actor: ["account"],
+    target: "audit",
+    fields: z.object({
+      scopeType: z.string(),
+      scopeId: z.uuid(),
+      from: z.iso.datetime().nullable(),
+      to: z.iso.datetime().nullable(),
+      actorId: z.uuid().nullable(),
+      targetType: z.string().nullable(),
+      targetId: z.string().nullable(),
+      name: z.string().nullable(),
+    }),
     visibility: "organization",
   }),
 } as const satisfies Record<string, AuditEventDefinition>;
