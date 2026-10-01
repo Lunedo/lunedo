@@ -17,6 +17,11 @@ import { createDatabasePool, type DatabasePool } from "../database/pool.js";
 import { readinessChecks } from "../health/readiness.js";
 import type { JobQueue } from "../jobs/job-queue.js";
 import { PgBossQueue } from "../jobs/pg-boss-queue.js";
+import {
+  CLEANUP_JOB_PROGRESS_SCHEDULE,
+  cleanupJobProgress,
+  cleanupJobProgressJob,
+} from "../jobs/progress-cleanup.js";
 import { createLogger, type Logger } from "../logging/logger.js";
 import { Metrics } from "../observability/metrics.js";
 import { builtinSettings } from "../settings/builtin.js";
@@ -119,6 +124,10 @@ export async function createServerRuntime(options: {
       if (role === "worker") {
         metrics.observeJobQueue(jobs);
         await jobs.work(rotateDataKeysJob, keyRotation.run);
+        await jobs.work(cleanupJobProgressJob, async () => {
+          await cleanupJobProgress(database);
+        });
+        await jobs.schedule(cleanupJobProgressJob, CLEANUP_JOB_PROGRESS_SCHEDULE, {}, { key: "hourly" });
       } else {
         await jobs.register(rotateDataKeysJob);
       }
