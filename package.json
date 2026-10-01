@@ -22,7 +22,8 @@
     "dco:check": "node scripts/check-dco.ts",
     "prepare": "node scripts/install-hooks.ts",
     "lint:fix": "biome check --write .",
-    "references:check": "node scripts/check-private-references.ts"
+    "references:check": "node scripts/check-private-references.ts",
+    "i18n:check": "node scripts/check-i18n.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
