@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "docker compose -f docker/compose.dev.yml up --build",
     "dev:down": "docker compose -f docker/compose.dev.yml down",
+    "dev:reset": "node scripts/reset-dev.ts",
     "dev:apps": "turbo run dev --concurrency=20",
     "build": "turbo run build",
     "lint": "biome ci . && eslint",
