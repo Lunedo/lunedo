@@ -274,7 +274,10 @@ export async function workAccountJobs(
   await jobs.work(apiTokenExpiryJob, async (job) => {
     const expired = await services.apiTokens.recordExpired();
     const reminded = await services.apiTokens.sendReminders();
-    if (expired + reminded > 0) job.logger.info({ expired, reminded }, "API token expiry processed");
+    const unused = await services.apiTokens.notifyUnused();
+    if (expired + reminded + unused > 0) {
+      job.logger.info({ expired, reminded, unused }, "API token expiry processed");
+    }
   });
   await jobs.work(authCleanupJob, async (job) => {
     const removed = {

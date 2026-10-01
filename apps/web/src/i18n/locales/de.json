@@ -616,12 +616,8 @@
         "description": "Länger dauert eine Sperre nicht."
       },
       "apiTokens_maxLifetimeDays": {
-        "label": "Maximale Laufzeit von Tokens",
-        "description": "Tokens laufen spätestens nach dieser Zeit ab."
-      },
-      "apiTokens_withoutExpiry": {
-        "label": "Tokens ohne Ablauf",
-        "description": "Erlaubt Tokens, die nie ablaufen."
+        "label": "Maximale Lebensdauer von API-Tokens",
+        "description": "Leer: Tokens dürfen ohne Ablauf sein. Organisationen können sie nur verkürzen."
       },
       "apiTokens_requestsPerMinute": {
         "label": "Anfragen pro Token",

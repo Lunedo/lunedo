@@ -72,6 +72,30 @@ const apiTokenExpiring = defineNotificationType({
   }),
 });
 
+const apiTokenUnused = defineNotificationType({
+  type: "apiToken.unused",
+  targetType: "apiToken",
+  params: notificationParamSchemas["apiToken.unused"],
+  setting: settingOf("apiToken.unused"),
+  async visible(context) {
+    if (!context.targetId) return false;
+    const owned = await context.executor.execute(sql`
+      select 1 from api_tokens t where t.id = ${context.targetId} and (t.account_id = ${context.recipientId}
+        or exists (select 1 from service_account_responsibles r
+          where r.service_account_id = t.account_id and r.account_id = ${context.recipientId}))`);
+    if (owned.rows.length > 0) return true;
+    const serviceAccountId = context.params.serviceAccountId;
+    return (
+      serviceAccountId !== null &&
+      context.can("serviceAccount.view", { type: "serviceAccount", id: serviceAccountId })
+    );
+  },
+  mail: (params) => ({
+    template: "tokenUnused",
+    params: { tokenName: params.tokenName, days: params.days },
+  }),
+});
+
 async function responsibleOrMemberManager(context: VisibilityContext<unknown>): Promise<boolean> {
   if (!context.organizationId) return false;
   if (context.targetId) {
@@ -160,6 +184,7 @@ const signInNewBrowser = defineNotificationType({
 
 export const builtinNotificationTypes = [
   apiTokenExpiring,
+  apiTokenUnused,
   guestExpiring,
   guestInactive,
   accessExpiring,

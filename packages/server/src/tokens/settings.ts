@@ -1,22 +1,21 @@
 import { z } from "zod";
 import { defineSetting } from "../settings/definition.js";
 
-export const tokenMaxLifetimeSetting = defineSetting({
+export const tokenMaxLifetimeSetting = defineSetting<number | null>({
   key: "apiTokens.maxLifetimeDays",
-  schema: z.number().int().min(1).max(3650),
-  default: 365,
+  schema: z.number().int().min(1).max(3650).nullable(),
+  default: null,
   levels: ["instance", "organization"],
   lockable: true,
   stricterOnly: "lower",
 });
 
-export const tokensWithoutExpirySetting = defineSetting({
-  key: "apiTokens.withoutExpiry",
-  schema: z.boolean(),
-  default: false,
-  levels: ["instance", "organization"],
-  lockable: true,
-  stricterOnly: "lower",
+export const tokenUnusedNoticeDaysSetting = defineSetting({
+  key: "apiTokens.unusedNoticeDays",
+  schema: z.number().int().min(7).max(3650),
+  default: 90,
+  levels: ["instance"],
+  lockable: false,
 });
 
 export const tokenRequestsPerMinuteSetting = defineSetting({
@@ -45,7 +44,7 @@ export const publicApiDocumentationSetting = defineSetting({
 
 export const tokenSettings = [
   tokenMaxLifetimeSetting,
-  tokensWithoutExpirySetting,
+  tokenUnusedNoticeDaysSetting,
   tokenRequestsPerMinuteSetting,
   tokenExpiryReminderDaysSetting,
   publicApiDocumentationSetting,

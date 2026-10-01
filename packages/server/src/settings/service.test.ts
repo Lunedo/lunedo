@@ -54,6 +54,18 @@ describe("defineSetting", () => {
     });
     expect(isAtLeastAsStrict(limit, 5, 10)).toBe(true);
     expect(isAtLeastAsStrict(limit, 11, 10)).toBe(false);
+    const optionalLimit = defineSetting({
+      key: "test.optionalLimit",
+      schema: z.number().nullable(),
+      default: null,
+      levels: ["instance", "organization"],
+      lockable: false,
+      stricterOnly: "lower",
+    });
+    expect(isAtLeastAsStrict(optionalLimit, 30, null)).toBe(true);
+    expect(isAtLeastAsStrict(optionalLimit, null, null)).toBe(true);
+    expect(isAtLeastAsStrict(optionalLimit, null, 30)).toBe(false);
+    expect(isAtLeastAsStrict(optionalLimit, 20, 30)).toBe(true);
     const required = defineSetting({
       key: "test.required",
       schema: z.boolean(),

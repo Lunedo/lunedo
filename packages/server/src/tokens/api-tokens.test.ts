@@ -7,11 +7,7 @@ import { deliverPendingMail } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { TokenRejectedError } from "./api-tokens.js";
 import { apiTokenPrefix, generateApiToken, isValidApiTokenFormat } from "./format.js";
-import {
-  tokenMaxLifetimeSetting,
-  tokenRequestsPerMinuteSetting,
-  tokensWithoutExpirySetting,
-} from "./settings.js";
+import { tokenMaxLifetimeSetting, tokenRequestsPerMinuteSetting } from "./settings.js";
 
 const baseUrl = testDatabaseBaseUrl();
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -139,7 +135,7 @@ describe.skipIf(!baseUrl)("API tokens and service accounts", () => {
     expect(JSON.stringify(event.rows[0]?.fields)).not.toContain(created.token);
   });
 
-  it("requires an expiry within the maximum lifetime", async () => {
+  it("creates tokens without expiry unless a maximum lifetime applies", async () => {
     const org = await organization();
     const actor = accountPrincipal(org.owner);
     const base = {
@@ -147,43 +143,48 @@ describe.skipIf(!baseUrl)("API tokens and service accounts", () => {
       name: "Expiry",
       scopes: { organization: { spaces: "view" as const } },
     };
+    expect(await test.services.apiTokens.maxLifetimeDays(org.owner)).toBeNull();
     const defaulted = await test.services.apiTokens.create(actor, base);
-    const lifetime = (defaulted.apiToken.expiresAt?.getTime() ?? 0) - Date.now();
-    expect(Math.round(lifetime / DAY_MS)).toBe(90);
-    await expect(test.services.apiTokens.create(actor, { ...base, expiresAt: null })).rejects.toMatchObject({
-      code: "expiryRequired",
+    expect(defaulted.apiToken.expiresAt).toBeNull();
+    const explicit = await test.services.apiTokens.create(actor, { ...base, expiresAt: null });
+    expect(explicit.apiToken.expiresAt).toBeNull();
+    const far = await test.services.apiTokens.create(actor, {
+      ...base,
+      expiresAt: new Date(Date.now() + 4000 * DAY_MS),
     });
+    expect(far.apiToken.expiresAt).not.toBeNull();
     await expect(
       test.services.apiTokens.create(actor, { ...base, expiresAt: new Date(Date.now() - 1000) }),
     ).rejects.toMatchObject({ code: "expiryInPast" });
-    await expect(
-      test.services.apiTokens.create(actor, { ...base, expiresAt: new Date(Date.now() + 400 * DAY_MS) }),
-    ).rejects.toMatchObject({ code: "expiryTooLate" });
+
     await test.settings.set(tokenMaxLifetimeSetting, { organization: org.id }, "organization", 30);
+    expect(await test.services.apiTokens.maxLifetimeDays(org.owner)).toBe(30);
     const capped = await test.services.apiTokens.create(actor, base);
     expect(Math.round(((capped.apiToken.expiresAt?.getTime() ?? 0) - Date.now()) / DAY_MS)).toBe(30);
-    await expect(
-      test.services.apiTokens.create(actor, { ...base, expiresAt: new Date(Date.now() + 60 * DAY_MS) }),
-    ).rejects.toMatchObject({ code: "expiryTooLate" });
-    await test.settings.set(tokensWithoutExpirySetting, { organization: org.id }, "organization", false);
     await expect(test.services.apiTokens.create(actor, { ...base, expiresAt: null })).rejects.toMatchObject({
       code: "expiryRequired",
+      details: { maxLifetimeDays: 30 },
     });
+    await expect(
+      test.services.apiTokens.create(actor, { ...base, expiresAt: new Date(Date.now() + 60 * DAY_MS) }),
+    ).rejects.toMatchObject({ code: "expiryTooLate", details: { maxLifetimeDays: 30 } });
   });
 
-  it("allows tokens without expiry only when the setting permits it", async () => {
-    const owner = await standard(null);
-    await test.settings.set(tokensWithoutExpirySetting, {}, "instance", true);
+  it("lets lower levels only shorten the maximum lifetime", async () => {
+    const org = await organization();
+    await test.settings.set(tokenMaxLifetimeSetting, {}, "instance", 90);
     try {
-      const created = await test.services.apiTokens.create(accountPrincipal(owner), {
-        accountId: owner,
-        name: "Forever",
-        scopes: { instance: { operations: "view" } },
-        expiresAt: null,
-      });
-      expect(created.apiToken.expiresAt).toBeNull();
+      await expect(
+        test.settings.set(tokenMaxLifetimeSetting, { organization: org.id }, "organization", 120),
+      ).rejects.toThrow("stricter");
+      await expect(
+        test.settings.set(tokenMaxLifetimeSetting, { organization: org.id }, "organization", null),
+      ).rejects.toThrow("stricter");
+      await test.settings.set(tokenMaxLifetimeSetting, { organization: org.id }, "organization", 60);
+      expect(await test.services.apiTokens.maxLifetimeDays(org.owner)).toBe(60);
     } finally {
-      await test.settings.set(tokensWithoutExpirySetting, {}, "instance", false);
+      await test.settings.clear(tokenMaxLifetimeSetting, { organization: org.id }, "organization");
+      await test.settings.clear(tokenMaxLifetimeSetting, {}, "instance");
     }
   });
 
@@ -505,6 +506,78 @@ describe.skipIf(!baseUrl)("API tokens and service accounts", () => {
     const mails = test.mail.sent.filter((mail) => mail.to === email);
     expect(mails).toHaveLength(1);
     expect(mails[0]?.subject).toContain("Nightly export");
+  });
+
+  async function unusedNotices(tokenId: string): Promise<string[]> {
+    const result = await test.pool.query<{ recipient_id: string }>(
+      "select recipient_id from notifications where type = 'apiToken.unused' and target_id = $1 order by recipient_id",
+      [tokenId],
+    );
+    return result.rows.map((row) => row.recipient_id);
+  }
+
+  async function idleFor(tokenId: string, days: number, used: boolean): Promise<void> {
+    await test.pool.query(
+      `update api_tokens set created_at = now() - make_interval(days => $2::int + 5),
+         last_used_at = case when $3 then now() - make_interval(days => $2::int) else null end
+       where id = $1`,
+      [tokenId, days, used],
+    );
+  }
+
+  it("tells the owner once per idle period about a token that is not used", async () => {
+    const org = await organization();
+    const person = await standard(org.id);
+    const { apiToken, token } = await test.services.apiTokens.create(accountPrincipal(person), {
+      accountId: person,
+      name: "Forgotten script",
+      scopes: { organization: { membersAndGroups: "view" } },
+    });
+    await idleFor(apiToken.id, 30, true);
+    await test.services.apiTokens.notifyUnused();
+    expect(await unusedNotices(apiToken.id)).toEqual([]);
+
+    await idleFor(apiToken.id, 91, false);
+    await test.services.apiTokens.notifyUnused();
+    await test.services.apiTokens.notifyUnused();
+    expect(await unusedNotices(apiToken.id)).toEqual([person]);
+    const [notice] = (
+      await test.pool.query<{ params: Record<string, unknown> }>(
+        "select params from notifications where type = 'apiToken.unused' and target_id = $1",
+        [apiToken.id],
+      )
+    ).rows;
+    expect(notice?.params).toMatchObject({ tokenName: "Forgotten script", lastUsedAt: null, days: 90 });
+    expect((await test.services.apiTokens.authenticate(token, "192.0.2.1")).accountId).toBe(person);
+
+    await test.pool.query("delete from notifications where target_id = $1", [apiToken.id]);
+    await test.pool.query("update api_tokens set last_used_at = now() where id = $1", [apiToken.id]);
+    await test.services.apiTokens.notifyUnused();
+    expect(await unusedNotices(apiToken.id)).toEqual([]);
+    await test.pool.query(
+      "update api_tokens set unused_noticed_at = now() - interval '200 days' where id = $1",
+      [apiToken.id],
+    );
+    await idleFor(apiToken.id, 95, true);
+    await test.services.apiTokens.notifyUnused();
+    expect(await unusedNotices(apiToken.id)).toEqual([person]);
+  });
+
+  it("tells the owners about an unused service account token without responsible people", async () => {
+    const org = await organization();
+    const service = await test.services.serviceAccounts.create(SYSTEM, org.id, { name: "Lonely bot" });
+    await test.pool.query(
+      "update service_accounts set unattended_notified_at = now() where account_id = $1",
+      [service.id],
+    );
+    const { apiToken } = await test.services.apiTokens.create(accountPrincipal(org.owner), {
+      accountId: service.id,
+      name: "Bot token",
+      scopes: { organization: { spaces: "view" } },
+    });
+    await idleFor(apiToken.id, 100, true);
+    await test.services.apiTokens.notifyUnused();
+    expect(await unusedNotices(apiToken.id)).toEqual([org.owner]);
   });
 
   async function ownerEmail(organizationId: string): Promise<string> {

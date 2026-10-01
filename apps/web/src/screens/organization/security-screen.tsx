@@ -21,7 +21,7 @@ export const ORGANIZATION_SIGN_IN_KEYS = [
   "auth.maxSessionsPerAccount",
 ];
 
-export const ORGANIZATION_TOKEN_KEYS = ["apiTokens.maxLifetimeDays", "apiTokens.withoutExpiry"];
+export const ORGANIZATION_TOKEN_KEYS = ["apiTokens.maxLifetimeDays"];
 
 export function OrganizationSecurityScreen() {
   const { t } = useTranslation();

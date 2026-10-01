@@ -29,6 +29,7 @@ export interface MailTemplates {
   guestExpiring: { instanceName: string; organizationName: string; guestName: string; date: string };
   guestInactive: { instanceName: string; organizationName: string; guestName: string; days: number };
   tokenExpiring: { instanceName: string; tokenName: string; date: string };
+  tokenUnused: { instanceName: string; tokenName: string; days: number };
   serviceAccountUnattended: { instanceName: string; serviceAccountName: string; organizationName: string };
   signInNewBrowser: {
     instanceName: string;
@@ -159,6 +160,12 @@ const catalogs: Record<Language, Catalog> = {
         `The last responsible person of the service account ${serviceAccountName} in ${organizationName} on ${instanceName} left or was deactivated. The service account keeps its permissions. Name a new responsible person or deactivate it.`,
       ],
     }),
+    tokenUnused: ({ instanceName, tokenName, days }) => ({
+      subject: `API token ${tokenName} on ${instanceName} has not been used for ${days} days`,
+      paragraphs: [
+        `The API token ${tokenName} on ${instanceName} has not been used for ${days} days. It keeps working. If nothing needs it any more, revoke it, so it cannot be misused.`,
+      ],
+    }),
     tokenExpiring: ({ instanceName, tokenName, date }) => ({
       subject: `API token ${tokenName} on ${instanceName} expires soon`,
       paragraphs: [
@@ -265,6 +272,12 @@ const catalogs: Record<Language, Catalog> = {
       subject: `Servicekonto ${serviceAccountName} in ${organizationName} hat keine verantwortliche Person`,
       paragraphs: [
         `Die letzte verantwortliche Person des Servicekontos ${serviceAccountName} in ${organizationName} auf ${instanceName} hat die Organisation verlassen oder wurde deaktiviert. Das Servicekonto behält seine Berechtigungen. Benennen Sie eine neue verantwortliche Person oder deaktivieren Sie es.`,
+      ],
+    }),
+    tokenUnused: ({ instanceName, tokenName, days }) => ({
+      subject: `API-Token ${tokenName} auf ${instanceName} wurde seit ${days} Tagen nicht verwendet`,
+      paragraphs: [
+        `Das API-Token ${tokenName} auf ${instanceName} wurde seit ${days} Tagen nicht verwendet. Es funktioniert weiterhin. Wenn es nicht mehr gebraucht wird, widerrufen Sie es, damit es nicht missbraucht werden kann.`,
       ],
     }),
     tokenExpiring: ({ instanceName, tokenName, date }) => ({

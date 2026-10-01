@@ -11,6 +11,12 @@ export const notificationParamSchemas = {
     expiresAt: instant,
     serviceAccountId: z.uuid().nullable(),
   }),
+  "apiToken.unused": z.object({
+    tokenName: z.string(),
+    lastUsedAt: instant.nullable(),
+    days: z.number().int(),
+    serviceAccountId: z.uuid().nullable(),
+  }),
   "guest.expiring": z.object({ organizationName: z.string(), guestName: z.string(), expiresAt: instant }),
   "guest.inactive": z.object({
     organizationName: z.string(),

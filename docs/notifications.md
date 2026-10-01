@@ -7,6 +7,7 @@ The notification center is the core channel: it always works, also without a mai
 | Type | Recipients | Target |
 |---|---|---|
 | `apiToken.expiring` | Owner of a personal token; responsible people of a service account | The token |
+| `apiToken.unused` | Owner of a personal token; responsible people of a service account, otherwise owners of its organization | The token |
 | `guest.expiring` | The guest's responsible person, otherwise owners and administrators | The guest's account |
 | `guest.inactive` | As above | The guest's account |
 | `access.expiring` | Who granted the role or membership, a manager of the group, otherwise owners and administrators | The role assignment, group or membership |

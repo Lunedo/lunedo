@@ -616,12 +616,8 @@
         "description": "The longest a lockout lasts."
       },
       "apiTokens_maxLifetimeDays": {
-        "label": "Maximum token lifetime",
-        "description": "Tokens expire at the latest after this time."
-      },
-      "apiTokens_withoutExpiry": {
-        "label": "Tokens without expiry",
-        "description": "Allows tokens that never expire."
+        "label": "Maximum lifetime of API tokens",
+        "description": "Empty: tokens may have no expiry. Organizations can only shorten it."
       },
       "apiTokens_requestsPerMinute": {
         "label": "Requests per token",

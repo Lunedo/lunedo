@@ -9,7 +9,7 @@ import { clientSubject, type RateLimiter } from "../auth/throttle.js";
 import { hashToken } from "../auth/tokens.js";
 import { intersectAreas } from "../authorization/areas.js";
 import type { AuthorizationService } from "../authorization/service.js";
-import type { Database, Executor } from "../database/database.js";
+import type { Database, Executor, Transaction } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
 import { defineJob } from "../jobs/job-queue.js";
 import type { NotificationService } from "../notifications/service.js";
@@ -22,7 +22,7 @@ import {
   tokenExpiryReminderDaysSetting,
   tokenMaxLifetimeSetting,
   tokenRequestsPerMinuteSetting,
-  tokensWithoutExpirySetting,
+  tokenUnusedNoticeDaysSetting,
 } from "./settings.js";
 
 export const apiTokenExpiryJob = defineJob({
@@ -34,7 +34,6 @@ export const apiTokenExpiryJob = defineJob({
 export const API_TOKEN_EXPIRY_SCHEDULE = "*/5 * * * *";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const DEFAULT_LIFETIME_DAYS = 90;
 const TOUCH_INTERVAL_MS = 60_000;
 const REJECTION_EVENTS_PER_CLIENT_PER_MINUTE = 10;
 
@@ -148,14 +147,21 @@ export class ApiTokenService {
     return [home, ...memberOf.map((row) => ({ organization: row.organizationId }))];
   }
 
-  async #lifetime(chains: ScopeChain[]): Promise<{ maxDays: number; withoutExpiry: boolean }> {
-    let maxDays = Number.POSITIVE_INFINITY;
-    let withoutExpiry = true;
+  async #maxLifetimeDays(chains: ScopeChain[]): Promise<number | null> {
+    let maxDays: number | null = null;
     for (const chain of chains) {
-      maxDays = Math.min(maxDays, await this.#settings.get(tokenMaxLifetimeSetting, chain));
-      withoutExpiry = withoutExpiry && (await this.#settings.get(tokensWithoutExpirySetting, chain));
+      const limit = await this.#settings.get(tokenMaxLifetimeSetting, chain);
+      if (limit !== null) maxDays = maxDays === null ? limit : Math.min(maxDays, limit);
     }
-    return { maxDays, withoutExpiry };
+    return maxDays;
+  }
+
+  async maxLifetimeDays(accountId: string, organizationId: string | null = null): Promise<number | null> {
+    const owner = await this.#owner(this.#database, accountId);
+    const service = owner?.serviceOrganization ?? null;
+    return this.#maxLifetimeDays(
+      await this.#chains(this.#database, accountId, service, service ?? organizationId),
+    );
   }
 
   async ownerOrganization(accountId: string): Promise<string | null> {
@@ -206,21 +212,27 @@ export class ApiTokenService {
         action: "serviceAccount.manage",
       });
     }
-    const { maxDays, withoutExpiry } = await this.#lifetime(
+    const maxDays = await this.#maxLifetimeDays(
       await this.#chains(this.#database, input.accountId, service, organizationId),
     );
     const now = Date.now();
-    let expiresAt: Date | null;
-    if (input.expiresAt === undefined)
-      expiresAt = new Date(now + Math.min(DEFAULT_LIFETIME_DAYS, maxDays) * DAY_MS);
-    else expiresAt = input.expiresAt;
-    if (expiresAt === null && !withoutExpiry) {
-      throw new OrganizationError("expiryRequired", "Tokens need an expiry date");
+    const expiresAt =
+      input.expiresAt === undefined
+        ? maxDays === null
+          ? null
+          : new Date(now + maxDays * DAY_MS)
+        : input.expiresAt;
+    if (expiresAt === null && maxDays !== null) {
+      throw new OrganizationError("expiryRequired", `Tokens expire after at most ${maxDays} days`, {
+        maxLifetimeDays: maxDays,
+      });
     }
     if (expiresAt && expiresAt.getTime() <= now)
       throw new OrganizationError("expiryInPast", "The expiry must be in the future");
-    if (expiresAt && expiresAt.getTime() > now + maxDays * DAY_MS) {
-      throw new OrganizationError("expiryTooLate", `Tokens expire after at most ${maxDays} days`);
+    if (expiresAt && maxDays !== null && expiresAt.getTime() > now + maxDays * DAY_MS) {
+      throw new OrganizationError("expiryTooLate", `Tokens expire after at most ${maxDays} days`, {
+        maxLifetimeDays: maxDays,
+      });
     }
     const token = generateApiToken();
     return this.#database.transaction(async (tx) => {
@@ -501,5 +513,82 @@ export class ApiTokenService {
     }
     await this.#notifications.dispatch(mailIds);
     return reminded;
+  }
+
+  async notifyUnused(): Promise<number> {
+    const days = await this.#settings.get(tokenUnusedNoticeDaysSetting, {});
+    const idle = sql`coalesce(t.last_used_at, t.created_at)`;
+    const due = await this.#database.execute<{ id: string }>(sql`
+      select t.id from api_tokens t
+      where t.revoked_at is null and (t.expires_at is null or t.expires_at > now())
+        and ${idle} <= now() - make_interval(days => ${days})
+        and (t.unused_noticed_at is null or t.unused_noticed_at < ${idle})
+      limit 500`);
+    const mailIds: string[] = [];
+    let notified = 0;
+    for (const { id } of due.rows) {
+      const result = await this.#database.transaction(async (tx) => {
+        const marked = await tx.execute<{
+          name: string;
+          last_used_at: Date | string | null;
+          account_id: string;
+          organization_id: string | null;
+          service_account_id: string | null;
+        }>(sql`
+          update api_tokens t set unused_noticed_at = now()
+          from accounts a left join service_accounts s on s.account_id = a.id
+          where t.id = ${id} and a.id = t.account_id and t.revoked_at is null
+            and ${idle} <= now() - make_interval(days => ${days})
+            and (t.unused_noticed_at is null or t.unused_noticed_at < ${idle})
+          returning t.name, t.last_used_at, t.account_id,
+            coalesce(t.organization_id, s.organization_id, a.home_organization_id) as organization_id,
+            s.account_id as service_account_id`);
+        const token = marked.rows[0];
+        if (!token) return null;
+        const recipients = await this.#unusedRecipients(
+          tx,
+          token.account_id,
+          token.service_account_id,
+          token.organization_id,
+        );
+        return this.#notifications.notify(tx, {
+          type: "apiToken.unused",
+          recipients,
+          organizationId: token.organization_id,
+          targetId: id,
+          params: {
+            tokenName: token.name,
+            lastUsedAt: token.last_used_at ? new Date(token.last_used_at).toISOString() : null,
+            days,
+            serviceAccountId: token.service_account_id,
+          },
+        });
+      });
+      if (!result) continue;
+      mailIds.push(...result.mailIds);
+      notified += result.recipients;
+    }
+    await this.#notifications.dispatch(mailIds);
+    return notified;
+  }
+
+  async #unusedRecipients(
+    tx: Transaction,
+    accountId: string,
+    serviceAccountId: string | null,
+    organizationId: string | null,
+  ): Promise<string[]> {
+    if (!serviceAccountId) return [accountId];
+    const responsible = await tx.execute<{ id: string }>(sql`
+      select a.id from service_account_responsibles r join accounts a on a.id = r.account_id
+      where r.service_account_id = ${serviceAccountId} and a.state = 'active'`);
+    if (responsible.rows.length > 0 || !organizationId) return responsible.rows.map((row) => row.id);
+    const owners = await tx.execute<{ id: string }>(sql`
+      select distinct a.id from role_assignments ra
+      join accounts a on a.id = ra.principal_id
+      join memberships m on m.account_id = a.id and m.organization_id = ra.organization_id
+      where ra.organization_id = ${organizationId} and ra.principal_kind = 'account'
+        and ra.built_in_role = 'owner' and a.state = 'active' and m.kind = 'member'`);
+    return owners.rows.map((row) => row.id);
   }
 }

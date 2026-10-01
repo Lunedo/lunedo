@@ -2864,7 +2864,7 @@
                     "description": "Limit the token to this organization. Leave it out for all organizations."
                   },
                   "expiresAt": {
-                    "description": "When the token stops working, ISO 8601. Default 90 days, at most the configured maximum. Null only when tokens without expiry are allowed.",
+                    "description": "When the token stops working, ISO 8601. Null or left out for a token without expiry. When a maximum lifetime of API tokens applies, an expiry within it is required; left out, it defaults to the maximum.",
                     "anyOf": [
                       {
                         "description": "When the token stops working. ISO 8601 timestamp; an offset is allowed.",
@@ -3709,6 +3709,126 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/account/tokens/lifetime": {
+      "get": {
+        "operationId": "tokens.lifetime",
+        "summary": "Get the lifetime rules for a new personal token",
+        "tags": [
+          "API tokens"
+        ],
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "query",
+            "required": false,
+            "description": "Organization the new token would be limited to. Leave it out for all organizations.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The maximum lifetime that applies.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "maxLifetimeDays": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Maximum lifetime of API tokens in days that applies to a new token, or null when tokens may have no expiry."
+                    }
+                  },
+                  "required": [
+                    "maxLifetimeDays"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The lifetime rules for a new token."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
                     }
                   }
                 }
@@ -24668,7 +24788,7 @@
                     "description": "Limit the token to this organization. Leave it out for all organizations."
                   },
                   "expiresAt": {
-                    "description": "When the token stops working, ISO 8601. Default 90 days, at most the configured maximum. Null only when tokens without expiry are allowed.",
+                    "description": "When the token stops working, ISO 8601. Null or left out for a token without expiry. When a maximum lifetime of API tokens applies, an expiry within it is required; left out, it defaults to the maximum.",
                     "anyOf": [
                       {
                         "description": "When the token stops working. ISO 8601 timestamp; an offset is allowed.",
@@ -25177,6 +25297,159 @@
                       "code": "csrfRejected"
                     }
                   },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/service-accounts/{serviceAccountId}/tokens/lifetime": {
+      "get": {
+        "operationId": "tokens.lifetimeForServiceAccount",
+        "summary": "Get the lifetime rules for a new service account token",
+        "tags": [
+          "API tokens"
+        ],
+        "x-pagehall-permission": {
+          "action": "serviceAccount.view",
+          "resource": "serviceAccount",
+          "parameter": "serviceAccountId"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "serviceAccountId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the service account.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The maximum lifetime that applies.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "maxLifetimeDays": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Maximum lifetime of API tokens in days that applies to a new token, or null when tokens may have no expiry."
+                    }
+                  },
+                  "required": [
+                    "maxLifetimeDays"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The lifetime rules for a new token."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
                   "forbidden": {
                     "value": {
                       "type": "urn:pagehall:problem:forbidden",
@@ -26514,6 +26787,12 @@
           "lockedBy": {
             "description": "Level that locked the setting, for `settingLocked`.",
             "type": "string"
+          },
+          "maxLifetimeDays": {
+            "description": "Maximum lifetime of API tokens in days, for `expiryRequired` and `expiryTooLate`.",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
           }
         },
         "required": [

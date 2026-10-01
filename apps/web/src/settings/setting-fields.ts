@@ -68,7 +68,6 @@ const fields: SettingField[] = [
   { key: "auth.lockoutMinutes", type: { kind: "number", min: 1, max: DAY, unit: "minutes" } },
   { key: "auth.lockoutMaxMinutes", type: { kind: "number", min: 1, max: 7 * DAY, unit: "minutes" } },
   { key: "apiTokens.maxLifetimeDays", type: { kind: "number", min: 1, max: 3650, unit: "days" } },
-  { key: "apiTokens.withoutExpiry", type: { kind: "boolean" } },
   { key: "apiTokens.requestsPerMinute", type: { kind: "number", min: 1, max: 100_000, unit: "perMinute" } },
   { key: "apiTokens.expiryReminderDays", type: { kind: "number", min: 1, max: 90, unit: "days" } },
   { key: "apiTokens.publicDocumentation", type: { kind: "boolean" } },

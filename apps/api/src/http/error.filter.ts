@@ -96,7 +96,7 @@ function map(error: unknown): Mapped | null {
   if (error instanceof ForbiddenError)
     return { code: "forbidden", extensions: { denials: error.decision.denials } };
   if (error instanceof OrganizationError)
-    return { code: codeOf(error.code, "invalidInput"), detail: error.message };
+    return { code: codeOf(error.code, "invalidInput"), detail: error.message, extensions: error.details };
   if (error instanceof SettingLockedError) {
     return { code: "settingLocked", detail: error.message, extensions: { lockedBy: error.lockedBy.level } };
   }
