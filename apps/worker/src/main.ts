@@ -1,13 +1,19 @@
-import { ConfigError, createLogger, createServerRuntime, registerShutdown } from "@pagehall/server";
+import {
+  ConfigError,
+  createLogger,
+  createServerRuntime,
+  registerShutdown,
+  StartupError,
+} from "@pagehall/server";
 import { createOperationsServer } from "./worker.js";
 
 let runtime: Awaited<ReturnType<typeof createServerRuntime>>;
 try {
   runtime = await createServerRuntime({ role: "worker", env: process.env });
 } catch (error) {
-  if (!(error instanceof ConfigError)) throw error;
+  if (!(error instanceof ConfigError) && !(error instanceof StartupError)) throw error;
   createLogger({ service: "worker", level: "info" }).fatal(error.message);
-  process.exit(78);
+  process.exit(error instanceof ConfigError ? 78 : 1);
 }
 
 const { config, logger } = runtime;

@@ -26,9 +26,14 @@ export {
   FileKeyProvider,
   type KeyProvider,
 } from "./crypto/key-provider.js";
-export { KeyRing, KeyRingError, SecretKey } from "./crypto/key-ring.js";
+export { KeyRing, KeyRingError, keyFingerprint, SecretKey } from "./crypto/key-ring.js";
 export { KEY_RING_CHANNEL, KeyRingHolder } from "./crypto/key-ring-holder.js";
-export { type EncryptedStreams, masterKeyVersionsInUse } from "./crypto/key-usage.js";
+export {
+  type EncryptedStreams,
+  loadMasterKeyRing,
+  MasterKeyError,
+  masterKeyVersionsInUse,
+} from "./crypto/key-usage.js";
 export { KeyRotation, type RotationStatus, rotateDataKeysJob, rotateMasterKey } from "./crypto/rotation.js";
 export {
   backupStreamKeys,
@@ -78,7 +83,8 @@ export {
   resolveGeneratedSecrets,
   type ServerRuntime,
 } from "./runtime/runtime.js";
-export { registerShutdown } from "./runtime/shutdown.js";
+export { registerShutdown, SHUTDOWN_MARGIN_SECONDS } from "./runtime/shutdown.js";
+export { StartupError } from "./runtime/startup-error.js";
 export { builtinSettings, languageSetting, timeZoneSetting } from "./settings/builtin.js";
 export {
   defineSetting,

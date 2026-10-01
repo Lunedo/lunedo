@@ -1,20 +1,41 @@
 import { randomBytes } from "node:crypto";
 import { EventEmitter } from "node:events";
-import { mkdtemp, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
-import { afterEach, describe, expect, inject, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { z } from "zod";
+import type { EncryptedColumn } from "../crypto/encrypted-column.js";
+import { Encryption } from "../crypto/envelope.js";
+import { formatKeyEntry, parseKeyRing } from "../crypto/key-ring.js";
+import { MasterKeyError } from "../crypto/key-usage.js";
 import { createDatabasePool } from "../database/pool.js";
 import { defineJob } from "../jobs/job-queue.js";
 import { createLogger } from "../logging/logger.js";
+import { createTemporaryDatabase, type TemporaryDatabase } from "../testing/database.js";
 import { createServerRuntime, type ServerRuntime } from "./runtime.js";
 import { registerShutdown } from "./shutdown.js";
+import { StartupError } from "./startup-error.js";
 
-const databaseUrl = inject("databaseUrl");
+const testDatabaseUrl = inject("databaseUrl");
 const logger = createLogger({ service: "test", level: "silent" });
 
+/** Runtimes here work every queue, so they get a database of their own instead of the shared one. */
+let database: TemporaryDatabase | undefined;
+let databaseUrl = "";
+
+beforeAll(async () => {
+  if (!testDatabaseUrl) return;
+  database = await createTemporaryDatabase(testDatabaseUrl, "pagehall_runtime");
+  databaseUrl = database.url;
+});
+
+afterAll(async () => {
+  await database?.drop();
+});
 function fakeProcess() {
   const signals = new EventEmitter();
   const exits: number[] = [];
@@ -65,7 +86,7 @@ describe("registerShutdown", () => {
   });
 });
 
-describe.skipIf(!databaseUrl)("shutting down the worker runtime", () => {
+describe.skipIf(!testDatabaseUrl)("shutting down the worker runtime", () => {
   let dir: string | undefined;
   let runtime: ServerRuntime | undefined;
 
@@ -149,5 +170,90 @@ describe.skipIf(!databaseUrl)("shutting down the worker runtime", () => {
     expect(process.exits).toEqual([0]);
     expect(aborted).toBe(true);
     expect(await jobState(id)).toBe("retry");
+  });
+});
+
+describe.skipIf(!testDatabaseUrl)("starting with encrypted data", () => {
+  const table = `test_secrets_${randomBytes(4).toString("hex")}`;
+  const column: EncryptedColumn = { table, idColumn: "id", column: "value" };
+  let dir: string | undefined;
+
+  afterEach(async () => {
+    if (dir) await rm(dir, { recursive: true, force: true });
+    dir = undefined;
+    const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    try {
+      await pool.query(`drop table if exists "${table}"`);
+    } finally {
+      await pool.end();
+    }
+  });
+
+  /** Stores one value encrypted with master key version 2. */
+  async function storeEncryptedValue() {
+    const ring = parseKeyRing(formatKeyEntry(2, randomBytes(32)));
+    const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    try {
+      await pool.query(`create table "${table}" (id uuid primary key, value bytea)`);
+      const id = uuidv7();
+      await pool.query(`insert into "${table}" values ($1, $2)`, [
+        id,
+        new Encryption(() => ring).encrypt("secret", id),
+      ]);
+    } finally {
+      await pool.end();
+    }
+  }
+
+  async function start(masterKeys?: string) {
+    dir = await mkdtemp(path.join(tmpdir(), "pagehall-runtime-"));
+    const secretsDir = path.join(dir, "secrets");
+    if (masterKeys !== undefined) {
+      await mkdir(secretsDir, { recursive: true });
+      await writeFile(path.join(secretsDir, "master-keys"), masterKeys, { mode: 0o600 });
+    }
+    const runtime = createServerRuntime({
+      role: "api",
+      env: {
+        PAGEHALL_DATABASE_URL: databaseUrl,
+        PAGEHALL_SECRETS_DIR: secretsDir,
+        PAGEHALL_FILES_DIR: path.join(dir, "files"),
+        PAGEHALL_LOG_LEVEL: "silent",
+      },
+      encrypted: { columns: [column], streamOwners: [] },
+    });
+    return { runtime, keyFile: path.join(secretsDir, "master-keys") };
+  }
+
+  it("never creates a new master key", async () => {
+    await storeEncryptedValue();
+    const { runtime, keyFile } = await start();
+    const error = await runtime.catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(MasterKeyError);
+    expect(error).toBeInstanceOf(StartupError);
+    expect((error as Error).message).toMatch(
+      /^The database contains data encrypted with master key version 2, but no master key ring is available: .*Restore the master key ring/,
+    );
+    expect(existsSync(keyFile)).toBe(false);
+  });
+
+  it("refuses to start without every key version in use", async () => {
+    await storeEncryptedValue();
+    const { runtime } = await start(formatKeyEntry(1, randomBytes(32)));
+    await expect(runtime).rejects.toThrow(
+      "Stored data uses master key version 2, which the master key ring does not contain.",
+    );
+  });
+
+  it("creates the first master key while nothing is encrypted", async () => {
+    const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    try {
+      await pool.query(`create table "${table}" (id uuid primary key, value bytea)`);
+    } finally {
+      await pool.end();
+    }
+    const { runtime, keyFile } = await start();
+    await (await runtime).close();
+    expect(existsSync(keyFile)).toBe(true);
   });
 });

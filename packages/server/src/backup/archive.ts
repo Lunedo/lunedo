@@ -7,7 +7,7 @@ import { pipeline } from "node:stream/promises";
 import { createGunzip, createGzip } from "node:zlib";
 import tar from "tar-stream";
 import { z } from "zod";
-import type { KeyRing } from "../crypto/key-ring.js";
+import { type KeyRing, keyFingerprint } from "../crypto/key-ring.js";
 import {
   backupKeyFingerprint,
   backupStreamKeys,
@@ -48,6 +48,10 @@ const headerSchema = z.object({
     version: z.int().positive(),
     fingerprint: z.string().regex(/^[0-9a-f]{16}$/),
   }),
+  /** Master key versions that encrypted data in the backup needs, by fingerprint. */
+  masterKeys: z.array(
+    z.object({ version: z.int().positive(), fingerprint: z.string().regex(/^[0-9a-f]{16}$/) }),
+  ),
   cipher: z.string(),
   chunkSize: z.int().positive(),
 });
@@ -162,7 +166,12 @@ export async function readBackupHeader(input: string): Promise<{ header: BackupH
  */
 export function checkBackupHeader(
   header: BackupHeader,
-  options: { backupKeys: KeyRing; knownSchemaVersions: readonly string[] },
+  options: {
+    backupKeys: KeyRing;
+    knownSchemaVersions: readonly string[];
+    /** Checked when given; `null` means this instance has no master key ring. */
+    masterKeys?: KeyRing | null;
+  },
 ): void {
   if (header.cipher !== CIPHER) {
     throw new BackupError(
@@ -186,6 +195,22 @@ export function checkBackupHeader(
       `The backup is encrypted with backup key version ${version} (fingerprint ${fingerprint}), but the configured key version ${version} has fingerprint ${configured}. Configure the key the backup was created with.`,
     );
   }
+  if (options.masterKeys === undefined) return;
+  const copyKeys =
+    "Copy the master key ring of the instance the backup comes from (master-keys in its secrets directory, or PAGEHALL_MASTER_KEYS) to this instance and run the restore again.";
+  for (const required of header.masterKeys) {
+    if (!options.masterKeys?.has(required.version)) {
+      throw new BackupError(
+        `The backup contains data encrypted with master key version ${required.version} (fingerprint ${required.fingerprint}), which is not available on this instance. ${copyKeys}`,
+      );
+    }
+    const available = keyFingerprint("master", options.masterKeys.get(required.version));
+    if (available !== required.fingerprint) {
+      throw new BackupError(
+        `The backup contains data encrypted with master key version ${required.version} (fingerprint ${required.fingerprint}), but master key version ${required.version} of this instance has fingerprint ${available}. ${copyKeys}`,
+      );
+    }
+  }
 }
 
 export interface BackupArchiveWriter {
@@ -199,6 +224,7 @@ export interface BackupArchiveWriter {
 export function openBackupArchive(options: {
   output: string;
   backupKeys: KeyRing;
+  masterKeys: BackupHeader["masterKeys"];
   pagehallVersion: string;
   schemaVersion: string;
   chunkSize?: number;
@@ -212,6 +238,7 @@ export function openBackupArchive(options: {
       version: options.backupKeys.currentVersion,
       fingerprint: backupKeyFingerprint(options.backupKeys.current()).toString("hex"),
     },
+    masterKeys: options.masterKeys,
     cipher: CIPHER,
     chunkSize,
   };
@@ -260,6 +287,8 @@ async function isEmptyDirectory(dir: string): Promise<boolean> {
 export interface CreateBackupOptions {
   output: string;
   backupKeys: KeyRing;
+  /** Master key versions used by encrypted data in the database and the file store. */
+  masterKeys: BackupHeader["masterKeys"];
   database: DatabaseArchiver;
   filesDir: string;
   /** Configuration files to include, by name. They must not contain the master or backup key. */
@@ -284,6 +313,7 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
     const { header, pack, finished } = openBackupArchive({
       output: partial,
       backupKeys: options.backupKeys,
+      masterKeys: options.masterKeys,
       pagehallVersion: options.pagehallVersion,
       schemaVersion: options.schemaVersion,
     });
@@ -335,6 +365,7 @@ interface ReadOptions {
   input: string;
   backupKeys: KeyRing;
   knownSchemaVersions: readonly string[];
+  masterKeys?: KeyRing | null;
 }
 
 /**
@@ -413,6 +444,8 @@ export async function verifyBackup(options: ReadOptions): Promise<BackupManifest
 }
 
 export interface RestoreBackupOptions extends ReadOptions {
+  /** The master key ring of this instance, or `null` when it has none. */
+  masterKeys: KeyRing | null;
   database: DatabaseArchiver;
   filesDir: string;
   /** Where configuration files from the backup are written; skipped when not set. */

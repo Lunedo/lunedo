@@ -114,6 +114,7 @@ describe.skipIf(!baseUrl || !hasTools)("PostgresArchiver", () => {
     await createBackup({
       output,
       backupKeys,
+      masterKeys: [],
       database: new PostgresArchiver({ databaseUrl: source.url }),
       filesDir: path.join(dir, "files"),
       config: {},
@@ -128,6 +129,7 @@ describe.skipIf(!baseUrl || !hasTools)("PostgresArchiver", () => {
     await restoreBackup({
       input: output,
       backupKeys,
+      masterKeys: null,
       database: archiver,
       filesDir: path.join(dir, "restored-files"),
       force: false,
@@ -156,6 +158,7 @@ describe.skipIf(!baseUrl || !hasTools)("PostgresArchiver", () => {
       restoreBackup({
         input: output,
         backupKeys,
+        masterKeys: null,
         database: archiver,
         filesDir: path.join(dir, "other-files"),
         force: false,
@@ -167,6 +170,7 @@ describe.skipIf(!baseUrl || !hasTools)("PostgresArchiver", () => {
     await restoreBackup({
       input: output,
       backupKeys,
+      masterKeys: null,
       database: archiver,
       filesDir: path.join(dir, "other-files"),
       force: true,

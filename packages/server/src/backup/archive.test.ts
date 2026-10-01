@@ -6,7 +6,7 @@ import { Readable } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { configurationForBackup } from "../config/backup-view.js";
 import { DecryptionError } from "../crypto/envelope.js";
-import { formatKeyEntry, type KeyRing, parseKeyRing } from "../crypto/key-ring.js";
+import { formatKeyEntry, type KeyRing, keyFingerprint, parseKeyRing } from "../crypto/key-ring.js";
 import { createLogger } from "../logging/logger.js";
 import {
   BackupError,
@@ -56,6 +56,7 @@ const ring = (...entries: [number, Buffer][]): KeyRing =>
 let dir: string;
 let key1: Buffer;
 let backupKeys: KeyRing;
+let masterKeys: KeyRing;
 let filesDir: string;
 let archivePath: string;
 const databaseDump = Buffer.from("PGDMP fake database dump with marker-database-content");
@@ -66,6 +67,7 @@ beforeEach(async () => {
   dir = await mkdtemp(path.join(tmpdir(), "pagehall-backup-"));
   key1 = randomBytes(32);
   backupKeys = ring([1, key1]);
+  masterKeys = ring([1, randomBytes(32)]);
   filesDir = path.join(dir, "files");
   archivePath = path.join(dir, "backup.phbak");
   await mkdir(path.join(filesDir, "attachments", "2026"), { recursive: true });
@@ -77,10 +79,18 @@ afterEach(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
-async function create(options: { schemaVersion?: string; keys?: KeyRing } = {}) {
+function requiredMasterKeys(keys: KeyRing = masterKeys) {
+  return keys.versions.map((version) => ({
+    version,
+    fingerprint: keyFingerprint("master", keys.get(version)),
+  }));
+}
+
+async function create(options: { schemaVersion?: string; keys?: KeyRing; masterKeys?: KeyRing } = {}) {
   return createBackup({
     output: archivePath,
     backupKeys: options.keys ?? backupKeys,
+    masterKeys: requiredMasterKeys(options.masterKeys),
     database: new FakeDatabase(databaseDump),
     filesDir,
     config: { "environment.json": '{"PAGEHALL_HOST":"0.0.0.0"}\n' },
@@ -90,11 +100,16 @@ async function create(options: { schemaVersion?: string; keys?: KeyRing } = {}) 
   });
 }
 
-function restoreInto(target: string, database: DatabaseArchiver, options: { force?: boolean } = {}) {
+function restoreInto(
+  target: string,
+  database: DatabaseArchiver,
+  options: { force?: boolean; masterKeys?: KeyRing | null } = {},
+) {
   return restoreBackup({
     input: archivePath,
     backupKeys,
     knownSchemaVersions,
+    masterKeys: options.masterKeys === undefined ? masterKeys : options.masterKeys,
     database,
     filesDir: target,
     configDir: path.join(dir, "restored-config"),
@@ -132,6 +147,7 @@ describe("backups", () => {
       schemaVersion,
       createdAt: created.createdAt,
       key: { version: 1, fingerprint: expect.stringMatching(/^[0-9a-f]{16}$/) },
+      masterKeys: [{ version: 1, fingerprint: keyFingerprint("master", masterKeys.get(1)) }],
       cipher: "AES-256-GCM",
       chunkSize: 65536,
     });
@@ -273,11 +289,49 @@ describe("the backup header", () => {
   });
 });
 
+describe("master keys", () => {
+  it("are listed in the header without revealing them", async () => {
+    await create();
+    const { bytes } = await readBackupHeader(archivePath);
+    expect(bytes.includes(masterKeys.get(1).use())).toBe(false);
+    expect(bytes.includes(masterKeys.get(1).use().toString("base64"))).toBe(false);
+  });
+
+  it("are not needed to verify a backup", async () => {
+    await create();
+    await expect(verifyBackup({ input: archivePath, backupKeys, knownSchemaVersions })).resolves.toBeTruthy();
+  });
+
+  it("must be available before a restore writes anything", async () => {
+    await create({ masterKeys: ring([1, masterKeys.get(1).use()], [2, randomBytes(32)]) });
+    await destroyData();
+    const target = path.join(dir, "target");
+    const database = new FakeDatabase(Buffer.alloc(0));
+    await expect(restoreInto(target, database)).rejects.toThrow(
+      /^The backup contains data encrypted with master key version 2 \(fingerprint [0-9a-f]{16}\), which is not available on this instance\. Copy the master key ring of the instance the backup comes from/,
+    );
+    await expect(restoreInto(target, database, { masterKeys: null })).rejects.toThrow(
+      "which is not available",
+    );
+    expect(database.restored).toBeUndefined();
+    await expect(readdir(target)).rejects.toThrow();
+  });
+
+  it("must be the same keys, not only the same versions", async () => {
+    await create({ masterKeys: ring([1, randomBytes(32)]) });
+    await destroyData();
+    await expect(restoreInto(path.join(dir, "target"), new FakeDatabase(Buffer.alloc(0)))).rejects.toThrow(
+      /but master key version 1 of this instance has fingerprint [0-9a-f]{16}/,
+    );
+  });
+});
+
 describe("archive entries", () => {
   async function craft(entries: { name: string; type?: string; linkname?: string; content?: string }[]) {
     const { pack, finished } = openBackupArchive({
       output: archivePath,
       backupKeys,
+      masterKeys: [],
       pagehallVersion: "1.0.0",
       schemaVersion,
     });

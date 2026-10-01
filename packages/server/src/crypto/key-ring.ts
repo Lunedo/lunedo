@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { inspect } from "node:util";
 
 export const KEY_LENGTH = 32;
@@ -101,6 +102,19 @@ export function parseKeyRing(text: string): KeyRing {
     keys.set(version, new SecretKey(bytes));
   }
   return new KeyRing(keys);
+}
+
+/**
+ * Identifies a key without revealing anything about it: the first 8 bytes of SHA-256 over
+ * a purpose label and the key, in hex.
+ */
+export function keyFingerprint(purpose: "master" | "backup", key: SecretKey): string {
+  return createHash("sha256")
+    .update(`pagehall-${purpose}-key`)
+    .update(key.use())
+    .digest()
+    .subarray(0, 8)
+    .toString("hex");
 }
 
 export function formatKeyEntry(version: number, key: Buffer): string {

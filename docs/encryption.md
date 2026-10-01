@@ -5,6 +5,8 @@ Secrets that Pagehall stores in the database, such as identity provider secrets,
 ## Keys
 
 - **Master keys** protect the data keys. They come from a key provider: the file provider (default, `master-keys` in the secrets directory, generated on first start) or the env provider (`PAGEHALL_MASTER_KEYS`). Further providers, such as HashiCorp Vault, OpenBao or a cloud KMS, implement the same `KeyProvider` interface.
+
+  At startup Pagehall counts the master key versions that encrypted columns and streams use. The file provider generates version 1 only while the database holds no encrypted data; otherwise a missing key file stops the start with a message, so that a lost key ring is never silently replaced by a new key. Pagehall also refuses to start when a key version in use is missing from the ring.
 - **Data keys** are random 256-bit keys, one per encrypted value or stream. They are stored only in wrapped form, next to the data.
 - **The backup key** encrypts backups and is separate from the master keys.
 

@@ -35,8 +35,12 @@ Backup keys form a key ring like the master keys (`PAGEHALL_BACKUP_KEY`, or `bac
 | Newer schema version | `The backup was created by Pagehall <version> with schema version <schema>, which is newer than this Pagehall version supports. Update Pagehall to version <version> or newer and run the command again.` |
 | Backup key version missing | `The backup is encrypted with backup key version <n> (fingerprint <f>), which is not configured. Add this key version to PAGEHALL_BACKUP_KEY or to the backup-keys file in the secrets directory and run the command again.` |
 | Different key under that version | `The backup is encrypted with backup key version <n> (fingerprint <f>), but the configured key version <n> has fingerprint <g>. Configure the key the backup was created with.` |
+| Master key version missing (restore only) | `The backup contains data encrypted with master key version <n> (fingerprint <f>), which is not available on this instance. Copy the master key ring of the instance the backup comes from (master-keys in its secrets directory, or PAGEHALL_MASTER_KEYS) to this instance and run the restore again.` |
+| Different master key under that version (restore only) | `The backup contains data encrypted with master key version <n> (fingerprint <f>), but master key version <n> of this instance has fingerprint <g>. Copy the master key ring of the instance the backup comes from (master-keys in its secrets directory, or PAGEHALL_MASTER_KEYS) to this instance and run the restore again.` |
 
-The fingerprint identifies a key without revealing it: the first 8 bytes of SHA-256 over `pagehall-backup-key` and the key, in hex.
+The header lists every master key version that encrypted data in the backup uses, so a restore stops before it writes anything when those keys are missing. A backup is only created when the master key ring of the instance contains all of them. `verify` does not need the master keys.
+
+The fingerprint identifies a key without revealing it: the first 8 bytes of SHA-256 over `pagehall-backup-key` (or `pagehall-master-key` for master keys) and the key, in hex.
 
 ## Format
 
@@ -58,6 +62,7 @@ The header JSON:
   "schemaVersion": "0000_foundation",
   "createdAt": "2026-10-01T06:00:00.000Z",
   "key": { "version": 1, "fingerprint": "3f0c8a1b2d4e6f70" },
+  "masterKeys": [{ "version": 1, "fingerprint": "9a7e51c04b3d2f18" }],
   "cipher": "AES-256-GCM",
   "chunkSize": 65536
 }

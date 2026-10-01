@@ -34,8 +34,8 @@ export class KeyRingHolder {
     return this.#ring !== undefined;
   }
 
-  async reload(): Promise<KeyRing> {
-    this.#ring = await this.#provider.load();
+  async reload(options: { create?: boolean } = {}): Promise<KeyRing> {
+    this.#ring = await this.#provider.load(options);
     return this.#ring;
   }
 

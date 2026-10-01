@@ -1,5 +1,11 @@
 import "reflect-metadata";
-import { ConfigError, createLogger, createServerRuntime, registerShutdown } from "@pagehall/server";
+import {
+  ConfigError,
+  createLogger,
+  createServerRuntime,
+  registerShutdown,
+  StartupError,
+} from "@pagehall/server";
 import { createApp } from "./app.js";
 import { apiContextOf } from "./context.js";
 
@@ -8,9 +14,9 @@ async function main() {
   try {
     runtime = await createServerRuntime({ role: "api", env: process.env });
   } catch (error) {
-    if (!(error instanceof ConfigError)) throw error;
+    if (!(error instanceof ConfigError) && !(error instanceof StartupError)) throw error;
     createLogger({ service: "api", level: "info" }).fatal(error.message);
-    process.exit(78);
+    process.exit(error instanceof ConfigError ? 78 : 1);
   }
 
   const { config, logger } = runtime;

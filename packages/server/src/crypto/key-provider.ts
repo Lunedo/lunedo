@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import { readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ensureSecretFile } from "../config/generated-secrets.js";
 import type { ServerConfig } from "../config/load.js";
@@ -12,7 +12,11 @@ import { formatKeyEntry, KEY_LENGTH, type KeyRing, KeyRingError, parseKeyRing } 
  */
 export interface KeyProvider {
   readonly name: string;
-  load(): Promise<KeyRing>;
+  /**
+   * Loads the key ring. A provider that manages keys itself creates the first key only with
+   * `create: true`; otherwise a missing key ring is an error.
+   */
+  load(options?: { create?: boolean }): Promise<KeyRing>;
   /** Creates the next key version, where the provider manages keys itself. */
   addVersion(): Promise<KeyRing>;
 }
@@ -38,8 +42,8 @@ export class EnvKeyProvider implements KeyProvider {
 }
 
 /**
- * Reads the key ring from a file, by default in the secrets volume. The first start
- * generates version 1; rotation appends a new version.
+ * Reads the key ring from a file, by default in the secrets volume. The first start of an
+ * empty instance generates version 1; rotation appends a new version.
  */
 export class FileKeyProvider implements KeyProvider {
   readonly name = "file";
@@ -49,7 +53,10 @@ export class FileKeyProvider implements KeyProvider {
     this.#file = file;
   }
 
-  async load(): Promise<KeyRing> {
+  async load(options: { create?: boolean } = {}): Promise<KeyRing> {
+    if (!options.create && !existsSync(this.#file)) {
+      throw new KeyRingError(`The master key ring ${this.#file} does not exist`);
+    }
     const secret = ensureSecretFile(path.dirname(this.#file), path.basename(this.#file), () =>
       formatKeyEntry(1, randomBytes(KEY_LENGTH)),
     );

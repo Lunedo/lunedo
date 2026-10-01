@@ -80,7 +80,7 @@ describe.skipIf(!databaseUrl)("key rotation", () => {
     const keyFile = path.join(dir, "master-keys");
     const provider = new FileKeyProvider(keyFile);
     const holder = new KeyRingHolder(provider, logger);
-    await holder.reload();
+    await holder.reload({ create: true });
     const encryption = new Encryption(() => holder.ring);
 
     const values = new Map<string, string>();
@@ -169,7 +169,7 @@ describe.skipIf(!databaseUrl)("concurrent key rotations", () => {
         return { keyRing, encryption, rotation };
       };
       const [a, b, worker] = [node(), node(), node()];
-      for (const holder of [a, b, worker]) await holder.keyRing.reload();
+      for (const holder of [a, b, worker]) await holder.keyRing.reload({ create: true });
 
       const values = new Map<string, string>();
       for (let i = 0; i < 50; i++) {
@@ -235,7 +235,7 @@ describe.skipIf(!databaseUrl)("key rotation of streams", () => {
     try {
       const keyFile = path.join(dir, "master-keys");
       const keyRing = new KeyRingHolder(new FileKeyProvider(keyFile), logger);
-      await keyRing.reload();
+      await keyRing.reload({ create: true });
       const streamsDir = path.join(dir, "streams");
       mkdirSync(streamsDir);
 

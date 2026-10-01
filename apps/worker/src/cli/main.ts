@@ -11,21 +11,63 @@ import {
   Encryption,
   encryptedColumns,
   encryptedStreamOwners,
+  type KeyRing,
+  KeyRingError,
   KeyRingHolder,
   KeyRotation,
+  keyFingerprint,
   knownSchemaVersions,
   loadConfig,
+  masterKeyVersionsInUse,
   PgBossQueue,
   PostgresArchiver,
   resolveGeneratedSecrets,
   restoreBackup,
   rotateDataKeysJob,
   rotateMasterKey,
+  type ServerConfig,
   verifyBackup,
 } from "@pagehall/server";
 import { type Command, parseCommand, UsageError, usage } from "./parse.js";
 
 const write = (text: string) => process.stdout.write(`${text}\n`);
+
+/** Master key versions that encrypted data of this instance uses, for the backup header. */
+async function requiredMasterKeys(config: ServerConfig, databaseUrl: string) {
+  const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-cli" });
+  try {
+    const database = createDatabase(pool);
+    const inUse = Object.keys(
+      await masterKeyVersionsInUse({
+        database,
+        columns: encryptedColumns,
+        streams: { owners: () => encryptedStreamOwners, context: { database, filesDir: config.paths.files } },
+      }),
+    ).map(Number);
+    if (inUse.length === 0) return [];
+    const ring = await createKeyProvider(config).load();
+    return inUse.map((version) => {
+      if (!ring.has(version)) {
+        throw new Error(
+          `Encrypted data uses master key version ${version}, which is not in the master key ring of this instance, so a backup could not be restored. Restore that key version first.`,
+        );
+      }
+      return { version, fingerprint: keyFingerprint("master", ring.get(version)) };
+    });
+  } finally {
+    await pool.end();
+  }
+}
+
+/** The master key ring of this instance, without creating one. */
+async function availableMasterKeys(config: ServerConfig): Promise<KeyRing | null> {
+  try {
+    return await createKeyProvider(config).load();
+  } catch (error) {
+    if (error instanceof KeyRingError) return null;
+    throw error;
+  }
+}
 
 async function run(command: Command): Promise<void> {
   if (command.name === "help") {
@@ -43,6 +85,7 @@ async function run(command: Command): Promise<void> {
       const manifest = await createBackup({
         output: path.resolve(command.output),
         backupKeys,
+        masterKeys: await requiredMasterKeys(config, databaseUrl),
         database: new PostgresArchiver({ databaseUrl }),
         filesDir: config.paths.files,
         config: configurationForBackup(env),
@@ -71,6 +114,7 @@ async function run(command: Command): Promise<void> {
       const manifest = await restoreBackup({
         input: command.input,
         backupKeys,
+        masterKeys: await availableMasterKeys(config),
         database: new PostgresArchiver({ databaseUrl }),
         filesDir: config.paths.files,
         configDir: command.configDir,

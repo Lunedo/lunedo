@@ -1,7 +1,7 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { Transform, type TransformCallback } from "node:stream";
 import { DecryptionError } from "./envelope.js";
-import { KEY_LENGTH, type KeyRing, KeyRingError, type SecretKey } from "./key-ring.js";
+import { KEY_LENGTH, type KeyRing, KeyRingError, keyFingerprint, type SecretKey } from "./key-ring.js";
 
 /*
  * Stream format, version 1 (for attachments and backups):
@@ -80,7 +80,7 @@ export function masterStreamKeys(keyRing: () => KeyRing): StreamKeys {
 
 /** The fingerprint identifies the backup key without revealing it. */
 export function backupKeyFingerprint(key: SecretKey): Buffer {
-  return createHash("sha256").update("pagehall-backup-key").update(key.use()).digest().subarray(0, 8);
+  return Buffer.from(keyFingerprint("backup", key), "hex");
 }
 
 function backupKeyId(version: number, key: SecretKey): Buffer {

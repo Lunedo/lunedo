@@ -3,12 +3,13 @@ import type { HealthCheck } from "@pagehall/shared";
 import { ensureSecretFile, generateToken } from "../config/generated-secrets.js";
 import { type Env, loadConfig, type ServerConfig } from "../config/load.js";
 import { Secret } from "../config/secret.js";
-import { encryptedColumns } from "../crypto/encrypted-column.js";
-import { encryptedStreamOwners } from "../crypto/encrypted-stream.js";
+import { type EncryptedColumn, encryptedColumns } from "../crypto/encrypted-column.js";
+import { type EncryptedStreamOwner, encryptedStreamOwners } from "../crypto/encrypted-stream.js";
 import { Encryption } from "../crypto/envelope.js";
 import { createKeyProvider } from "../crypto/key-provider.js";
 import { formatKeyEntry, KEY_LENGTH, type KeyRing, KeyRingError, parseKeyRing } from "../crypto/key-ring.js";
 import { KeyRingHolder } from "../crypto/key-ring-holder.js";
+import { loadMasterKeyRing } from "../crypto/key-usage.js";
 import { KeyRotation, rotateDataKeysJob } from "../crypto/rotation.js";
 import { masterStreamKeys, type StreamKeys } from "../crypto/stream.js";
 import { createDatabase, type Database } from "../database/database.js";
@@ -77,6 +78,8 @@ export async function createServerRuntime(options: {
   role: ProcessRole;
   env: Env;
   settings?: SettingDefinition<never>[];
+  /** Encrypted data for key checks and rotation; defaults to the registered columns and streams. */
+  encrypted?: { columns?: readonly EncryptedColumn[]; streamOwners?: readonly EncryptedStreamOwner[] };
 }): Promise<ServerRuntime> {
   const { role } = options;
   const config = loadConfig(options.env);
@@ -99,8 +102,13 @@ export async function createServerRuntime(options: {
   try {
     await runMigrations(pool, { logger });
 
+    const columns = options.encrypted?.columns ?? encryptedColumns;
+    const streams = {
+      owners: () => options.encrypted?.streamOwners ?? encryptedStreamOwners,
+      context: { database, filesDir: config.paths.files },
+    };
     const keyRing = new KeyRingHolder(createKeyProvider(config), logger);
-    await keyRing.reload();
+    await loadMasterKeyRing({ keyRing, database, columns, streams });
     await keyRing.subscribe(listener);
     const encryption = new Encryption(() => keyRing.ring);
 
@@ -126,8 +134,8 @@ export async function createServerRuntime(options: {
         encryption,
         keyRing,
         jobs,
-        columns: () => encryptedColumns,
-        streams: { owners: () => encryptedStreamOwners, context: { database, filesDir: config.paths.files } },
+        columns: () => columns,
+        streams,
       });
       if (role === "worker") {
         metrics.observeJobQueue(jobs);

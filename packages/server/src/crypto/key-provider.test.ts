@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -19,16 +19,26 @@ describe("FileKeyProvider", () => {
     dir = mkdtempSync(path.join(tmpdir(), "pagehall-keys-"));
     const file = path.join(dir, "secrets", "master-keys");
     const provider = new FileKeyProvider(file);
-    const first = await provider.load();
+    const first = await provider.load({ create: true });
     expect(first.versions).toEqual([1]);
     const again = await new FileKeyProvider(file).load();
     expect(again.get(1).use().equals(first.get(1).use())).toBe(true);
   });
 
+  it("never creates a key unless asked to", async () => {
+    dir = mkdtempSync(path.join(tmpdir(), "pagehall-keys-"));
+    const file = path.join(dir, "master-keys");
+    await expect(new FileKeyProvider(file).load()).rejects.toThrow(
+      `The master key ring ${file} does not exist`,
+    );
+    await expect(new FileKeyProvider(file).addVersion()).rejects.toThrow("does not exist");
+    expect(existsSync(file)).toBe(false);
+  });
+
   it("appends a new version and keeps the old ones", async () => {
     dir = mkdtempSync(path.join(tmpdir(), "pagehall-keys-"));
     const provider = new FileKeyProvider(path.join(dir, "master-keys"));
-    const first = await provider.load();
+    const first = await provider.load({ create: true });
     const rotated = await provider.addVersion();
     expect(rotated.versions).toEqual([1, 2]);
     expect(rotated.currentVersion).toBe(2);
