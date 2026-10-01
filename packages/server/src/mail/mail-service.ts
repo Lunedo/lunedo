@@ -256,13 +256,15 @@ export class MailService {
     const message: MailMessage = renderMail("smtpTest", language, { instanceName }, to);
     const adHoc = smtp ? smtpConfigurationSchema.parse(smtp.configuration) : undefined;
     const password =
-      adHoc?.username === null ? null : smtp?.password === undefined ? await this.#smtpPassword() : smtp.password;
+      adHoc?.username === null
+        ? null
+        : smtp?.password === undefined
+          ? await this.#smtpPassword()
+          : smtp.password;
     if (adHoc) checkSmtpCredentials(adHoc, password !== null);
     let error: { code: string | null; responseCode: number | null } | null = null;
     try {
-      const transport = adHoc
-        ? this.#transport({ ...adHoc, password })
-        : await this.#transportOrThrow();
+      const transport = adHoc ? this.#transport({ ...adHoc, password }) : await this.#transportOrThrow();
       await transport.send(message);
     } catch (failure) {
       error =

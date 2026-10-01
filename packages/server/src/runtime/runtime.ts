@@ -36,8 +36,8 @@ import { Metrics } from "../observability/metrics.js";
 import { organizationSettings } from "../organizations/settings.js";
 import { type AccountServices, createAccountServices, workAccountJobs } from "../services.js";
 import { builtinSettings } from "../settings/builtin.js";
-import { preferenceSettings } from "../settings/preferences.js";
 import { type SettingDefinition, SettingsRegistry } from "../settings/definition.js";
+import { preferenceSettings } from "../settings/preferences.js";
 import { SettingsService } from "../settings/service.js";
 import { tokenSettings } from "../tokens/settings.js";
 

@@ -47,7 +47,9 @@ export class BreakGlassService {
     this.#settings = options.settings;
   }
 
-  async recent(days: number): Promise<(BreakGlassAccess & { organizationName: string; accountName: string })[]> {
+  async recent(
+    days: number,
+  ): Promise<(BreakGlassAccess & { organizationName: string; accountName: string })[]> {
     return this.#database
       .select({
         id: breakGlassAccesses.id,

@@ -92,7 +92,6 @@ export class AccountService {
     return { ...(await accountScopeChain(this.#database, accountId)), user: accountId };
   }
 
-
   async list(page: PageRequest = FIRST_PAGE): Promise<Page<Omit<Account, "passwordHash">>> {
     const { passwordHash: _passwordHash, ...columns } = accountColumns;
     const sortName = sql<string>`lower(${accounts.name})`;

@@ -15,6 +15,7 @@ export {
   type TokenGrant,
   type TokenScopes,
 } from "./accounts/principal.js";
+export { accountScopeChain } from "./accounts/scope.js";
 export { AuditLog, type AuditScope, type AuditVerification } from "./audit/audit-log.js";
 export { type AuditEventName, auditCatalog, type SignInMethod } from "./audit/catalog.js";
 export type { AuditCursor, AuditEntry, AuditFilter } from "./audit/reader.js";
@@ -40,7 +41,6 @@ export {
   type SessionKind,
   SessionService,
 } from "./auth/sessions.js";
-export { accountScopeChain } from "./accounts/scope.js";
 export * from "./auth/settings.js";
 export type { ReauthenticationInput, SecondFactorInput, SecondFactorType } from "./auth/sign-in.js";
 export { clientSubject } from "./auth/throttle.js";
@@ -175,13 +175,13 @@ export { registerShutdown, SHUTDOWN_MARGIN_SECONDS } from "./runtime/shutdown.js
 export { StartupError } from "./runtime/startup-error.js";
 export { type AccountServices, createAccountServices } from "./services.js";
 export { builtinSettings, languageSetting, supportedLanguages, timeZoneSetting } from "./settings/builtin.js";
-export * from "./settings/preferences.js";
 export {
   defineSetting,
   type SettingDefinition,
   type SettingLevel,
   SettingsRegistry,
 } from "./settings/definition.js";
+export * from "./settings/preferences.js";
 export {
   INSTANCE_SCOPE_ID,
   type Scope,
