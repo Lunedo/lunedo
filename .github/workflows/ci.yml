@@ -46,10 +46,25 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
+      - name: Install PostgreSQL client tools for the backup tests
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+
+  backup:
+    name: Backup round trip
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build the image
+        run: docker build -f docker/Dockerfile --build-arg VERSION=ci -t pagehall:ci .
+      - name: Back up, restore and compare
+        run: scripts/backup-roundtrip.sh pagehall:ci
 
   e2e:
     name: Playwright smoke test

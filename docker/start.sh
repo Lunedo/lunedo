@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Starts one role or all roles of Pagehall in this container.
+# Starts one role or all roles of Pagehall in this container, or runs a maintenance command.
 set -euo pipefail
 
 roles=(api collab worker)
@@ -10,6 +10,9 @@ start_role() {
 }
 
 case "$role" in
+  backup | keys | help)
+    exec node --enable-source-maps /app/worker/dist/cli/main.js "$@"
+    ;;
   api | collab | worker)
     exec node --enable-source-maps "/app/$role/dist/main.js"
     ;;
@@ -27,7 +30,7 @@ case "$role" in
     exit "$status"
     ;;
   *)
-    echo "Unknown role '$role'. Use api, collab, worker or all." >&2
+    echo "Unknown command '$role'. Use api, collab, worker, all, backup or keys." >&2
     exit 64
     ;;
 esac

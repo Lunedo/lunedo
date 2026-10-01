@@ -3,6 +3,8 @@
 # restore it into a fresh database and file store, and compare the result with the original.
 # Usage: scripts/backup-roundtrip.sh <image>
 set -euo pipefail
+# Keeps Git Bash on Windows from rewriting container paths.
+export MSYS_NO_PATHCONV=1
 
 image="${1:?usage: scripts/backup-roundtrip.sh <image>}"
 suffix="$$"
@@ -27,7 +29,7 @@ pagehall() {
   shift 2
   docker run --rm --network "$network" \
     -e PAGEHALL_DATABASE_URL="$(url "$database")" \
-    -v "$data:/var/lib/pagehall" -v "$backups:/backups" \
+    -v "$data:/var/lib/pagehall" -v "$backups:/var/lib/pagehall/backups" \
     "$image" "$@"
 }
 
@@ -61,13 +63,14 @@ docker run --rm -v "$source_data:/var/lib/pagehall" --entrypoint sh "$image" -c 
   'mkdir -p /var/lib/pagehall/files/attachments/2026 && head -c 3000000 /dev/urandom > /var/lib/pagehall/files/attachments/2026/large.bin && echo "report" > /var/lib/pagehall/files/report.txt'
 
 echo "Creating and verifying the backup"
-pagehall "$source_data" source backup create --output /backups/roundtrip.phbak
-pagehall "$source_data" source backup verify --input /backups/roundtrip.phbak
+pagehall "$source_data" source backup create --output /var/lib/pagehall/backups/roundtrip.phbak
+pagehall "$source_data" source backup verify --input /var/lib/pagehall/backups/roundtrip.phbak
 
 echo "Restoring into a fresh instance"
-docker run --rm -v "$source_data:/source" -v "$target_data:/target" --entrypoint sh "$image" -c \
-  'mkdir -p /target/secrets && cp /source/secrets/* /target/secrets/'
-pagehall "$target_data" target backup restore --input /backups/roundtrip.phbak
+# The operator keeps the secrets separately from backups; the new instance gets the same keys.
+docker run --rm -v "$target_data:/var/lib/pagehall" -v "$source_data:/source:ro" --entrypoint sh "$image" -c \
+  'cp /source/secrets/* /var/lib/pagehall/secrets/'
+pagehall "$target_data" target backup restore --input /var/lib/pagehall/backups/roundtrip.phbak
 
 echo "Comparing"
 query="select level, scope_id, key, value, locked from setting_values order by id"
@@ -77,12 +80,12 @@ diff <(docker run --rm -v "$source_data:/var/lib/pagehall" --entrypoint sh "$ima
   <(docker run --rm -v "$target_data:/var/lib/pagehall" --entrypoint sh "$image" -c "$checksums")
 
 echo "Checking that a second restore is refused"
-if pagehall "$target_data" target backup restore --input /backups/roundtrip.phbak 2>/dev/null; then
+if pagehall "$target_data" target backup restore --input /var/lib/pagehall/backups/roundtrip.phbak 2>/dev/null; then
   echo "A restore into a non-empty instance was not refused" >&2
   exit 1
 fi
 
-echo "Checking that the restored instance starts"
+echo "Checking the restored instance"
 pagehall "$target_data" target keys status
 
 echo "Backup round trip succeeded"
