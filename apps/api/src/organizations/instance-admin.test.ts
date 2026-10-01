@@ -189,7 +189,19 @@ describe.skipIf(!databaseBaseUrl)("instance administration for the interface", (
     const settings = (await owner.get(`/api/v1/organizations/${organizationId}/settings?limit=200`)).json()
       .items;
     const accent = settings.find((entry: { key: string }) => entry.key === "branding.accentColor");
-    expect(accent).toMatchObject({ value: "violet", source: "organization" });
+    expect(accent).toMatchObject({
+      value: "violet",
+      source: "organization",
+      defaultValue: "petrol",
+      levelsBelow: [],
+    });
+    const language = settings.find((entry: { key: string }) => entry.key === "locale.language");
+    expect(language).toMatchObject({ defaultValue: "en", lockable: true, levelsBelow: ["user"] });
+    const instanceSettings = (await owner.get("/api/v1/instance/settings?limit=200")).json().items;
+    const twoFactor = instanceSettings.find(
+      (entry: { key: string }) => entry.key === "auth.twoFactorRequired",
+    );
+    expect(twoFactor).toMatchObject({ defaultValue: false, levelsBelow: ["organization"] });
     expect(accent.levels).toEqual([
       { level: "instance", value: null, locked: false, effective: true },
       { level: "organization", value: "violet", locked: false, effective: true },

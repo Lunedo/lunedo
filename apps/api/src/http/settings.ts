@@ -53,10 +53,12 @@ export async function listSettings(
       return {
         key: definition.key,
         value: explanation.value,
+        defaultValue: definition.default,
         source: explanation.source === "default" ? "default" : explanation.source.level,
         lockedBy: explanation.lockedBy?.level ?? null,
         locked: own?.locked ?? false,
         lockable: definition.lockable,
+        levelsBelow: definition.levels.slice(definition.levels.indexOf(level) + 1),
         editable: !MANAGED_ELSEWHERE.has(definition.key),
         levels: explanation.levels
           .filter((state) => state.applies)

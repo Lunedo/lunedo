@@ -258,10 +258,14 @@ export const settingSchema = z
   .object({
     key: z.string().describe("Key of the setting."),
     value: z.json().describe("Effective value at this level."),
+    defaultValue: z.json().describe("Value that applies when no level sets one."),
     source: z.string().describe("Level the effective value comes from, or `default`."),
     lockedBy: z.string().nullable().describe("Higher level that locked the setting, or null."),
     locked: z.boolean().describe("Whether this level locks the setting for lower levels."),
     lockable: z.boolean().describe("Whether the setting can be locked."),
+    levelsBelow: z
+      .array(z.string())
+      .describe("Lower levels where the setting can be set. A lock at this level applies to them."),
     editable: z.boolean().describe("Whether the setting can be changed through the settings endpoint."),
     levels: z
       .array(
@@ -285,10 +289,12 @@ export const settingSchema = z
 export const exampleSetting = {
   key: "organizations.membersCreateGroups",
   value: false,
+  defaultValue: false,
   source: "default",
   lockedBy: null,
   locked: false,
   lockable: true,
+  levelsBelow: ["organization"],
   editable: true,
   levels: [
     { level: "instance", value: null, locked: false, effective: true },

@@ -1428,6 +1428,10 @@
                         "description": "Effective value at this level.",
                         "$ref": "#/components/schemas/Schema113ae44d8375"
                       },
+                      "defaultValue": {
+                        "description": "Value that applies when no level sets one.",
+                        "$ref": "#/components/schemas/Schemafbc378f59d82"
+                      },
                       "source": {
                         "type": "string",
                         "description": "Level the effective value comes from, or `default`."
@@ -1447,6 +1451,13 @@
                         "type": "boolean",
                         "description": "Whether the setting can be locked."
                       },
+                      "levelsBelow": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "Lower levels where the setting can be set. A lock at this level applies to them."
+                      },
                       "editable": {
                         "type": "boolean",
                         "description": "Whether the setting can be changed through the settings endpoint."
@@ -1462,7 +1473,7 @@
                             },
                             "value": {
                               "description": "Value stored at this level, or null.",
-                              "$ref": "#/components/schemas/Schemafbc378f59d82"
+                              "$ref": "#/components/schemas/Schema682d67ac39ef"
                             },
                             "locked": {
                               "type": "boolean",
@@ -1488,10 +1499,12 @@
                     "required": [
                       "key",
                       "value",
+                      "defaultValue",
                       "source",
                       "lockedBy",
                       "locked",
                       "lockable",
+                      "levelsBelow",
                       "editable",
                       "levels"
                     ],
@@ -12149,6 +12162,10 @@
                             "description": "Effective value at this level.",
                             "$ref": "#/components/schemas/Schema113ae44d8375"
                           },
+                          "defaultValue": {
+                            "description": "Value that applies when no level sets one.",
+                            "$ref": "#/components/schemas/Schemafbc378f59d82"
+                          },
                           "source": {
                             "type": "string",
                             "description": "Level the effective value comes from, or `default`."
@@ -12168,6 +12185,13 @@
                             "type": "boolean",
                             "description": "Whether the setting can be locked."
                           },
+                          "levelsBelow": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Lower levels where the setting can be set. A lock at this level applies to them."
+                          },
                           "editable": {
                             "type": "boolean",
                             "description": "Whether the setting can be changed through the settings endpoint."
@@ -12183,7 +12207,7 @@
                                 },
                                 "value": {
                                   "description": "Value stored at this level, or null.",
-                                  "$ref": "#/components/schemas/Schemafbc378f59d82"
+                                  "$ref": "#/components/schemas/Schema682d67ac39ef"
                                 },
                                 "locked": {
                                   "type": "boolean",
@@ -12209,10 +12233,12 @@
                         "required": [
                           "key",
                           "value",
+                          "defaultValue",
                           "source",
                           "lockedBy",
                           "locked",
                           "lockable",
+                          "levelsBelow",
                           "editable",
                           "levels"
                         ],
@@ -12241,10 +12267,14 @@
                     {
                       "key": "organizations.membersCreateGroups",
                       "value": false,
+                      "defaultValue": false,
                       "source": "default",
                       "lockedBy": null,
                       "locked": false,
                       "lockable": true,
+                      "levelsBelow": [
+                        "organization"
+                      ],
                       "editable": true,
                       "levels": [
                         {
@@ -21859,6 +21889,10 @@
                             "description": "Effective value at this level.",
                             "$ref": "#/components/schemas/Schema113ae44d8375"
                           },
+                          "defaultValue": {
+                            "description": "Value that applies when no level sets one.",
+                            "$ref": "#/components/schemas/Schemafbc378f59d82"
+                          },
                           "source": {
                             "type": "string",
                             "description": "Level the effective value comes from, or `default`."
@@ -21878,6 +21912,13 @@
                             "type": "boolean",
                             "description": "Whether the setting can be locked."
                           },
+                          "levelsBelow": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Lower levels where the setting can be set. A lock at this level applies to them."
+                          },
                           "editable": {
                             "type": "boolean",
                             "description": "Whether the setting can be changed through the settings endpoint."
@@ -21893,7 +21934,7 @@
                                 },
                                 "value": {
                                   "description": "Value stored at this level, or null.",
-                                  "$ref": "#/components/schemas/Schemafbc378f59d82"
+                                  "$ref": "#/components/schemas/Schema682d67ac39ef"
                                 },
                                 "locked": {
                                   "type": "boolean",
@@ -21919,10 +21960,12 @@
                         "required": [
                           "key",
                           "value",
+                          "defaultValue",
                           "source",
                           "lockedBy",
                           "locked",
                           "lockable",
+                          "levelsBelow",
                           "editable",
                           "levels"
                         ],
@@ -21951,10 +21994,14 @@
                     {
                       "key": "organizations.membersCreateGroups",
                       "value": false,
+                      "defaultValue": false,
                       "source": "default",
                       "lockedBy": null,
                       "locked": false,
                       "lockable": true,
+                      "levelsBelow": [
+                        "organization"
+                      ],
                       "editable": true,
                       "levels": [
                         {
@@ -25532,6 +25579,37 @@
             },
             "additionalProperties": {
               "$ref": "#/components/schemas/Schema113ae44d8375"
+            }
+          }
+        ]
+      },
+      "Schema682d67ac39ef": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          },
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Schema682d67ac39ef"
+            }
+          },
+          {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Schema682d67ac39ef"
             }
           }
         ]
