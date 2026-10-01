@@ -14,14 +14,9 @@ import {
   lockoutWindowSetting,
 } from "./settings.js";
 
-/** Lockouts in a row stop doubling after a day without one. */
 const LOCKOUT_MEMORY_MINUTES = 24 * 60;
 const MINUTE = 60_000;
 
-/**
- * The part of a client address that identifies one client: the address for IPv4 and the /64
- * prefix for IPv6, because a single IPv6 client usually controls a whole /64.
- */
 export function clientSubject(ip: string): string {
   const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(ip);
   if (mapped?.[1]) return mapped[1];
@@ -40,7 +35,6 @@ export function clientSubject(ip: string): string {
     .join(":")}::/64`;
 }
 
-/** Account addresses are hashed, so that addresses of unknown accounts are not stored. */
 export function accountSubject(email: string): string {
   return createHash("sha256").update(email.trim().toLowerCase(), "utf8").digest("hex");
 }
@@ -50,7 +44,6 @@ export interface RateLimitResult {
   retryAfterSeconds: number;
 }
 
-/** Fixed-window request counters in PostgreSQL, so that all nodes share them. */
 export class RateLimiter {
   readonly #database: Database;
 
@@ -58,7 +51,6 @@ export class RateLimiter {
     this.#database = options.database;
   }
 
-  /** Counts one request for `key` and tells whether it is within `limit` per window. */
   async consume(key: string, limit: number, windowSeconds: number): Promise<RateLimitResult> {
     const window = sql`make_interval(secs => ${windowSeconds})`;
     const expired = sql`${rateLimits.windowStart} <= now() - ${window}`;
@@ -73,7 +65,6 @@ export class RateLimiter {
     return { allowed: count <= limit, retryAfterSeconds: Math.max(1, Number(row?.retry_after ?? 1)) };
   }
 
-  /** Removes counters whose window ended more than a day ago. */
   async cleanup(): Promise<number> {
     const deleted = await this.#database
       .delete(rateLimits)
@@ -83,7 +74,6 @@ export class RateLimiter {
 }
 
 export interface ThrottleSubjects {
-  /** The address entered for sign-in, or the address of the account. */
   email?: string;
   clientIp?: string;
 }
@@ -96,12 +86,6 @@ export interface Lockout {
 
 type SubjectKey = { subject: Lockout["subject"]; key: string };
 
-/**
- * Protects sign-in against brute force: attempts are rate-limited per account address
- * and per client IP, and repeated failures lock the address or the client temporarily, with a
- * duration that doubles with each lockout in a row. Unknown addresses are counted like known
- * ones, so that a lockout does not reveal whether an account exists.
- */
 export class SignInThrottle {
   readonly #database: Database;
   readonly #settings: SettingsService;
@@ -122,7 +106,6 @@ export class SignInThrottle {
     return keys;
   }
 
-  /** Counts an attempt. Returns the seconds to wait when the rate limit is exceeded. */
   async attempt(subjects: ThrottleSubjects): Promise<RateLimitResult> {
     const limits = {
       account: await this.#settings.get(accountAttemptLimitSetting, {}),
@@ -136,7 +119,6 @@ export class SignInThrottle {
     return { allowed: retryAfterSeconds === 0, retryAfterSeconds };
   }
 
-  /** The lockout that applies to these subjects, if any. */
   async lockout(
     subjects: ThrottleSubjects,
   ): Promise<{ subject: Lockout["subject"]; lockedUntil: Date } | null> {
@@ -160,7 +142,6 @@ export class SignInThrottle {
     return { subject, lockedUntil: row.lockedUntil };
   }
 
-  /** Counts a failed attempt and returns the lockouts it caused. */
   async recordFailure(subjects: ThrottleSubjects, executor: Executor = this.#database): Promise<Lockout[]> {
     const thresholds = {
       account: await this.#settings.get(accountLockoutFailuresSetting, {}),
@@ -226,12 +207,10 @@ export class SignInThrottle {
     return lockouts;
   }
 
-  /** A successful sign-in clears the failures of the account address; client failures remain. */
   async recordSuccess(email: string, executor: Executor = this.#database): Promise<void> {
     await executor.delete(signInFailures).where(eq(signInFailures.key, `account:${accountSubject(email)}`));
   }
 
-  /** Removes entries without failures or lockouts in the last day. */
   async cleanup(): Promise<number> {
     const deleted = await this.#database
       .delete(signInFailures)

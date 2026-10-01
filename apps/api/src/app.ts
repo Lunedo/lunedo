@@ -10,10 +10,6 @@ import { changesState, isCsrfSafe, ownOrigin } from "./http/csrf.js";
 import { NestLogger } from "./nest-logger.js";
 import { registerWebClient } from "./web-client.js";
 
-/**
- * Fastify takes the client address and protocol from forwarding headers only when the request
- * comes from one of the trusted proxies.
- */
 export function createFastifyAdapter(logger: Logger, trustedProxies: string[] = []): FastifyAdapter {
   return new FastifyAdapter({
     loggerInstance: logger,
@@ -23,7 +19,6 @@ export function createFastifyAdapter(logger: Logger, trustedProxies: string[] = 
   });
 }
 
-/** Applies request context, CSRF protection, request logging, metrics and the web client to an application. */
 async function allowedOrigins(request: FastifyRequest, context: ApiContext): Promise<string[]> {
   const instanceUrl = context.settings ? await context.settings.get(instanceUrlSetting, {}) : "";
   const origins = [instanceUrl || ownOrigin(request)];

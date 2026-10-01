@@ -58,21 +58,17 @@ export class SettingLockedError extends SettingError {
   }
 }
 
-/** A change written by the settings service, passed to `onChange` inside its transaction. */
 export interface SettingChange {
   key: string;
   scope: Scope;
   action: "set" | "clear" | "lock" | "unlock";
-  /** The new value, for `set`. */
   value?: unknown;
 }
 
 export type SettingChangeHandler = (tx: Transaction, change: SettingChange) => Promise<void>;
 
 export interface WriteOptions {
-  /** Writes as part of this transaction. */
   tx?: Transaction;
-  /** False when the caller records its own, more specific audit event for the change. */
   audit?: boolean;
 }
 
@@ -97,7 +93,6 @@ export function scopesOf(chain: ScopeChain): Scope[] {
   return scopes;
 }
 
-/** The part of `chain` above `level`. */
 function chainAbove(chain: ScopeChain, level: SettingLevel): ScopeChain {
   const above: ScopeChain = {};
   for (const candidate of settingLevels) {

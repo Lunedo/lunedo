@@ -63,7 +63,6 @@ describe.skipIf(!databaseUrl)("AuditLog", () => {
       .orderBy(asc(auditEvents.sequence));
   }
 
-  /** Changes rows behind the append-only trigger, as someone with direct database access could. */
   async function tamper(statement: ReturnType<typeof sql>) {
     await database.transaction(async (tx) => {
       await tx.execute(sql`set local session_replication_role = replica`);

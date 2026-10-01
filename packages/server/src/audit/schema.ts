@@ -17,10 +17,6 @@ import { bytes, primaryId } from "../database/columns.js";
 export const auditScopeType = pgEnum("audit_scope_type", ["instance", "organization"]);
 export const principalType = pgEnum("principal_type", principalTypes);
 
-/**
- * Head of the hash chain of one audit scope. Writers lock this row, so entries of a scope get
- * consecutive sequence numbers. The anchor holds the last entry removed by retention.
- */
 export const auditChains = pgTable(
   "audit_chains",
   {
@@ -35,7 +31,6 @@ export const auditChains = pgTable(
   (table) => [primaryKey({ columns: [table.scopeType, table.scopeId] })],
 );
 
-/** Append-only audit log. A database trigger rejects updates and deletes. */
 export const auditEvents = pgTable(
   "audit_events",
   {

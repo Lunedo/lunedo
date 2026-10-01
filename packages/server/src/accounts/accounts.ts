@@ -59,7 +59,6 @@ function isUniqueViolation(error: unknown, constraint: string): boolean {
   return details.code === "23505" && details.constraint === constraint;
 }
 
-/** Translates a violation of the unique e-mail index into `EmailInUseError`. */
 export async function withUniqueEmail<T>(operation: () => Promise<T>): Promise<T> {
   try {
     return await operation();
@@ -69,7 +68,6 @@ export async function withUniqueEmail<T>(operation: () => Promise<T>): Promise<T
   }
 }
 
-/** Accounts. This task creates standard accounts only. */
 export class AccountService {
   readonly #database: Database;
   readonly #settings: SettingsService;
@@ -93,7 +91,6 @@ export class AccountService {
     return row ?? null;
   }
 
-  /** The account with this address, compared regardless of case. */
   async findByEmail(email: string, executor: Executor = this.#database): Promise<Account | null> {
     const [row] = await executor
       .select(accountColumns)
@@ -102,7 +99,6 @@ export class AccountService {
     return row ?? null;
   }
 
-  /** Throws `PasswordPolicyError` when the password does not meet the policy for the account. */
   async checkPassword(password: string, accountId?: string): Promise<void> {
     const minLength = await this.#settings.get(
       passwordMinLengthSetting,
@@ -117,7 +113,6 @@ export class AccountService {
     return this.#hasher.hash(password);
   }
 
-  /** Creates an active standard account with a password. */
   async createStandard(
     tx: Transaction,
     input: { email: string; name: string; password: string },
@@ -147,7 +142,6 @@ export class AccountService {
     return row;
   }
 
-  /** Locks the account row until the end of the transaction, to serialize changes to its credentials. */
   async lock(tx: Transaction, id: string): Promise<Account | null> {
     const [row] = await tx.select(accountColumns).from(accounts).where(eq(accounts.id, id)).for("update");
     return row ?? null;

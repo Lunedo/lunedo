@@ -129,7 +129,6 @@ function escapeHtml(text: string): string {
     .replaceAll("'", "&#39;");
 }
 
-/** Renders a template as plain text with a simple HTML version. */
 export function renderMail<T extends MailTemplate>(
   template: T,
   language: Language,

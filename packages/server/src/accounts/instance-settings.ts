@@ -15,7 +15,6 @@ export const instanceUrlSchema = z
     }
   }, "must be an http or https origin without a path, for example https://wiki.example.org");
 
-/** Address of the instance, used in links, e-mails, WebAuthn and the CSRF check. Empty until setup. */
 export const instanceUrlSetting = defineSetting({
   key: "instance.url",
   schema: z.union([z.literal(""), instanceUrlSchema]),

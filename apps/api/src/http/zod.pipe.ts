@@ -1,7 +1,6 @@
 import { BadRequestException, type PipeTransform } from "@nestjs/common";
 import type { z } from "zod";
 
-/** Validates a request body or parameter at the boundary. Unknown fields are rejected. */
 export class ZodPipe<T extends z.ZodType> implements PipeTransform<unknown, z.output<T>> {
   constructor(private readonly schema: T) {}
 

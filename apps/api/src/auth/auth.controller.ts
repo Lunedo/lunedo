@@ -32,7 +32,6 @@ import {
   tokenSchema,
 } from "./schemas.js";
 
-/** Sets the session cookie; it lives as long as the longest possible session. */
 export async function setSessionCookie(
   context: ApiContext,
   reply: FastifyReply,
@@ -55,7 +54,6 @@ async function describeSession(services: AccountServices, session: Session) {
   };
 }
 
-/** Sign-in, second factor, passwordless sign-in, sign-out, re-authentication and password reset. */
 @Controller("api/v1/auth")
 @InternalRoute()
 export class AuthController {

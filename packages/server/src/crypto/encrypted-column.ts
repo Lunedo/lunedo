@@ -9,7 +9,6 @@ export const encrypted = customType<{ data: Buffer; driverData: Buffer }>({
   toDriver: encryptedToDriver,
 });
 
-/** Identity mapping that marks a column as encrypted, so that a test can find every encrypted column. */
 export function encryptedToDriver(value: Buffer): Buffer {
   return value;
 }

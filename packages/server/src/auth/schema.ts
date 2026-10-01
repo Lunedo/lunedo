@@ -20,13 +20,8 @@ const timestampColumn = () => timestamp({ withTimezone: true, mode: "date" });
 
 export const signInMethod = pgEnum("sign_in_method", signInMethods);
 
-/**
- * `full` sessions may use the application. A `secondFactorSetup` session belongs to an account
- * that must set up a second factor first and may only do that.
- */
 export const sessionKind = pgEnum("session_kind", ["full", "secondFactorSetup"]);
 
-/** Server-side sessions. The cookie holds a random ID; only its SHA-256 hash is stored. */
 export const sessions = pgTable(
   "sessions",
   {
@@ -36,7 +31,6 @@ export const sessions = pgTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     tokenHash: bytes().notNull(),
     kind: sessionKind().notNull(),
-    /** SHA-256 of the device cookie of the browser that holds the session. */
     deviceHash: bytes(),
     methods: signInMethod().array().notNull(),
     clientIp: text(),
@@ -60,10 +54,6 @@ export const challengePurpose = pgEnum("challenge_purpose", [
   "reauthentication",
 ]);
 
-/**
- * Short-lived state between two requests: a pending sign-in waiting for its second factor, or a
- * WebAuthn challenge. Pending sign-ins are identified by a cookie whose hash is stored here.
- */
 export const authChallenges = pgTable(
   "auth_challenges",
   {
@@ -72,7 +62,6 @@ export const authChallenges = pgTable(
     tokenHash: bytes(),
     accountId: uuid().references(() => accounts.id, { onDelete: "cascade" }),
     sessionId: uuid().references(() => sessions.id, { onDelete: "cascade" }),
-    /** WebAuthn challenge, base64url. */
     challenge: text(),
     methods: signInMethod().array().notNull().default(sql`'{}'`),
     failedAttempts: integer().notNull().default(0),
@@ -85,7 +74,6 @@ export const authChallenges = pgTable(
 
 export const accountTokenPurpose = pgEnum("account_token_purpose", ["passwordReset", "emailChange"]);
 
-/** Single-use tokens sent by e-mail. Only the SHA-256 hash of a token is stored. */
 export const accountTokens = pgTable(
   "account_tokens",
   {
@@ -95,7 +83,6 @@ export const accountTokens = pgTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     purpose: accountTokenPurpose().notNull(),
     tokenHash: bytes().notNull(),
-    /** The address to confirm, for e-mail changes. */
     newEmail: text(),
     expiresAt: timestampColumn().notNull(),
     usedAt: timestampColumn(),
@@ -104,7 +91,6 @@ export const accountTokens = pgTable(
   (table) => [uniqueIndex().on(table.tokenHash), index().on(table.accountId, table.purpose)],
 );
 
-/** TOTP secret of an account. `confirmedAt` is null until the first valid code was entered. */
 export const totpCredentials = pgTable(
   "totp_credentials",
   {
@@ -114,14 +100,12 @@ export const totpCredentials = pgTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     secret: encrypted().notNull(),
     confirmedAt: timestampColumn(),
-    /** Time step of the last accepted code; a code is accepted once only. */
     lastUsedStep: bigint({ mode: "number" }),
     ...timestamps(),
   },
   (table) => [uniqueIndex().on(table.accountId)],
 );
 
-/** WebAuthn credentials: passkeys and hardware security keys. */
 export const webauthnCredentials = pgTable(
   "webauthn_credentials",
   {
@@ -129,7 +113,6 @@ export const webauthnCredentials = pgTable(
     accountId: uuid()
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    /** Credential ID chosen by the authenticator, base64url. */
     credentialId: text().notNull(),
     publicKey: bytes().notNull(),
     signCount: bigint({ mode: "number" }).notNull(),
@@ -143,7 +126,6 @@ export const webauthnCredentials = pgTable(
   (table) => [uniqueIndex().on(table.credentialId), index().on(table.accountId)],
 );
 
-/** Single-use recovery codes, stored as SHA-256 hashes. */
 export const recoveryCodes = pgTable(
   "recovery_codes",
   {
@@ -158,7 +140,6 @@ export const recoveryCodes = pgTable(
   (table) => [uniqueIndex().on(table.accountId, table.codeHash)],
 );
 
-/** Request counters per key and window, shared by all nodes. */
 export const rateLimits = pgTable(
   "rate_limits",
   {
@@ -169,7 +150,6 @@ export const rateLimits = pgTable(
   (table) => [index().on(table.windowStart)],
 );
 
-/** Failed sign-ins per account address or client, and temporary lockouts with increasing duration. */
 export const signInFailures = pgTable(
   "sign_in_failures",
   {
@@ -177,7 +157,6 @@ export const signInFailures = pgTable(
     failures: integer().notNull().default(0),
     firstFailureAt: timestampColumn(),
     lockedUntil: timestampColumn(),
-    /** Lockouts in a row; each one doubles the duration of the next. */
     lockouts: integer().notNull().default(0),
     lastLockoutAt: timestampColumn(),
     updatedAt: timestampColumn().notNull().defaultNow(),

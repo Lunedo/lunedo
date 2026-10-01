@@ -2,24 +2,16 @@ import { argon2, randomBytes, timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { ConcurrencyLimiter } from "./concurrency.js";
 
-/** Longest password accepted anywhere; longer input is rejected before it is hashed. */
 export const PASSWORD_MAX_LENGTH = 256;
 
-/** The lowest minimum length the setting allows. The bundled list of common passwords starts there. */
 export const PASSWORD_MIN_LENGTH_FLOOR = 8;
 
 export interface Argon2Parameters {
-  /** Memory in KiB. */
   memory: number;
   passes: number;
   parallelism: number;
 }
 
-/**
- * Argon2id parameters for new hashes: the OWASP Password Storage Cheat Sheet recommendation of
- * 19 MiB memory, 2 iterations and 1 degree of parallelism. Hashes with other parameters are
- * replaced at the next sign-in.
- */
 export const ARGON2_PARAMETERS: Argon2Parameters = { memory: 19_456, passes: 2, parallelism: 1 };
 
 const SALT_LENGTH = 16;
@@ -76,14 +68,9 @@ function sameParameters(a: Argon2Parameters, b: Argon2Parameters): boolean {
 
 export interface PasswordVerification {
   valid: boolean;
-  /** The hash uses other parameters than new hashes; store a new hash after a valid sign-in. */
   needsRehash: boolean;
 }
 
-/**
- * Hashes and verifies passwords with Argon2id. Each operation needs about 19 MiB of memory,
- * so the number of operations running at once in this process is limited.
- */
 export class PasswordHasher {
   readonly #parameters: Argon2Parameters;
   readonly #limiter: ConcurrencyLimiter;
@@ -112,10 +99,6 @@ export class PasswordHasher {
     };
   }
 
-  /**
-   * Spends the same time as `verify` without a stored hash, so that a sign-in with an unknown
-   * address cannot be told apart from a wrong password.
-   */
   async verifyNothing(password: string): Promise<void> {
     this.#dummy ??= this.hash(randomBytes(16).toString("hex"));
     await this.verify(await this.#dummy, password);
@@ -125,7 +108,6 @@ export class PasswordHasher {
 const commonPasswordsFile = new URL("../../data/common-passwords.txt", import.meta.url);
 let commonPasswords: Set<string> | undefined;
 
-/** Whether the password is on the bundled list of common passwords, regardless of case. */
 export function isCommonPassword(password: string): boolean {
   commonPasswords ??= new Set(
     readFileSync(commonPasswordsFile, "utf8")
@@ -138,7 +120,6 @@ export function isCommonPassword(password: string): boolean {
 
 export type PasswordProblem = "tooShort" | "tooLong" | "common";
 
-/** Checks a new password. There are no composition rules (NIST SP 800-63B). */
 export function passwordProblem(password: string, minLength: number): PasswordProblem | null {
   const length = [...password.normalize("NFC")].length;
   if (length < minLength) return "tooShort";

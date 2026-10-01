@@ -4,7 +4,6 @@ import { defineSetting } from "../settings/definition.js";
 import type { SettingsService } from "../settings/service.js";
 import type { AuditLog } from "./audit-log.js";
 
-/** Days audit events are kept. */
 export const auditRetentionSetting = defineSetting({
   key: "audit.retentionDays",
   schema: z.number().int().min(1).max(36_500),

@@ -7,7 +7,6 @@ import { mailOutbox } from "../mail/schema.js";
 import type { MailMessage, MailTransport } from "../mail/transport.js";
 import type { AccountServices } from "../services.js";
 
-/** A job context for calling job handlers directly in tests. */
 export function testJobContext<TPayload>(
   name: string,
   payload: TPayload,
@@ -25,7 +24,6 @@ export function testJobContext<TPayload>(
   };
 }
 
-/** Keeps sent mails in memory. */
 export class CapturingTransport implements MailTransport {
   readonly sent: MailMessage[] = [];
 
@@ -34,7 +32,6 @@ export class CapturingTransport implements MailTransport {
   }
 }
 
-/** Delivers all pending mails of the outbox, as the worker would. */
 export async function deliverPendingMail(services: AccountServices, database: Database): Promise<void> {
   const pending = await database
     .select({ id: mailOutbox.id })

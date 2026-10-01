@@ -44,18 +44,15 @@ export type ReauthenticationInput =
 export interface SignedIn {
   status: "signedIn";
   session: Session;
-  /** Value of the session cookie. */
   token: string;
 }
 
 export interface SecondFactorRequired {
   status: "secondFactorRequired";
-  /** Value of the pending sign-in cookie. */
   pendingToken: string;
   factors: SecondFactorType[];
 }
 
-/** Account types that sign in interactively; service accounts use API tokens only. */
 const INTERACTIVE_TYPES = new Set(["standard", "guest", "portal"]);
 
 function canSignIn(account: Account | null): account is Account & { email: string } {
@@ -81,10 +78,6 @@ function secondsUntil(date: Date): number {
 
 class RecoveryCodeRejected extends Error {}
 
-/**
- * Sign-in with e-mail and password followed by a second factor, passwordless sign-in with a
- * passkey, and re-authentication for sensitive actions.
- */
 export class SignInService {
   readonly #database: Database;
   readonly #accounts: AccountService;
@@ -130,7 +123,6 @@ export class SignInService {
     this.#setupComplete = options.setupComplete;
   }
 
-  /** Whether the account must have a second factor: by setting, or as the instance owner. */
   async secondFactorRequired(accountId: string): Promise<boolean> {
     if ((await this.#accounts.ownerId()) === accountId) return true;
     return this.#settings.get(twoFactorRequiredSetting, accountScopeChain(accountId));
@@ -204,10 +196,6 @@ export class SignInService {
     return { status: "signedIn", session, token };
   }
 
-  /**
-   * First step of a sign-in. An unknown address costs the same time and gives the same error as a
-   * wrong password. With a second factor, the result is a pending sign-in for the second step.
-   */
   async signInWithPassword(input: {
     email: string;
     password: string;
@@ -237,8 +225,6 @@ export class SignInService {
       throw new InvalidCredentialsError();
     }
 
-    // Failures are cleared only once a session exists, so that wrong second factors keep counting
-    // after each correct password.
     const factors = await secondFactorsOf(this.#database, account.id);
     if (hasSecondFactor(factors)) {
       const pending = await this.#challenges.create(this.#database, {
@@ -268,7 +254,6 @@ export class SignInService {
     return { pending, account };
   }
 
-  /** WebAuthn options for a passkey as second factor of a pending sign-in. */
   async secondFactorPasskeyOptions(pendingToken: string) {
     const { pending, account } = await this.#pending(pendingToken);
     const options = await this.#webauthn.authenticationOptions({
@@ -279,7 +264,6 @@ export class SignInService {
     return options;
   }
 
-  /** Second step of a sign-in: a TOTP code, a passkey or a recovery code. */
   async completeSecondFactor(input: {
     pendingToken: string;
     factor: SecondFactorInput;
@@ -347,7 +331,6 @@ export class SignInService {
     return result;
   }
 
-  /** Starts a passwordless sign-in. The token identifies the challenge in a cookie. */
   async passkeyOptions() {
     const options = await this.#webauthn.authenticationOptions({ userVerification: "required" });
     const created = await this.#challenges.create(this.#database, {
@@ -358,7 +341,6 @@ export class SignInService {
     return { options, token: created.token ?? "" };
   }
 
-  /** Passwordless sign-in. A passkey with user verification counts as both factors. */
   async signInWithPasskey(input: {
     token: string;
     response: AuthenticationResponseJSON;
@@ -396,7 +378,6 @@ export class SignInService {
     );
   }
 
-  /** WebAuthn options for re-authentication with a passkey. */
   async reauthenticationPasskeyOptions(session: Session) {
     const options = await this.#webauthn.authenticationOptions({
       accountId: session.accountId,
@@ -411,10 +392,6 @@ export class SignInService {
     return options;
   }
 
-  /**
-   * Confirms the identity of a signed-in account with a password, TOTP code or passkey. The session
-   * gets a new ID and counts as recently authenticated. Returns the new session cookie value.
-   */
   async reauthenticate(session: Session, input: ReauthenticationInput, client: ClientInfo): Promise<string> {
     const account = await this.#accounts.get(session.accountId);
     if (!canSignIn(account)) throw new InvalidCredentialsError();

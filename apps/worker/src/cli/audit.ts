@@ -1,9 +1,5 @@
 import { AuditLog, createDatabase, createDatabasePool } from "@pagehall/server";
 
-/**
- * Checks the hash chains of the audit log. Prints one line per chain and returns 1 when a chain
- * is broken, naming its first broken entry.
- */
 export async function verifyAuditLog(databaseUrl: string, write: (line: string) => void): Promise<number> {
   const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-cli" });
   try {

@@ -20,7 +20,6 @@ import { jobProgress } from "./schema.js";
 
 const SCHEMA = "pgboss";
 
-/** The job payload and the context of the request that enqueued it, for logs and audit events. */
 interface StoredData {
   payload: unknown;
   requestId?: string;

@@ -17,7 +17,6 @@ import {
 import { generateToken, hashToken, isWellFormedToken } from "./tokens.js";
 
 const MINUTE = 60_000;
-/** Last use is written at most this often per session. */
 const TOUCH_INTERVAL = MINUTE;
 
 export type SessionKind = (typeof sessions.$inferSelect)["kind"];
@@ -35,11 +34,9 @@ export interface Session {
   operatingSystem: string | null;
 }
 
-/** What the server knows about the client of a request. */
 export interface ClientInfo {
   ip?: string;
   userAgent?: string;
-  /** Value of the device cookie, which identifies the browser. */
   deviceToken?: string;
 }
 
@@ -65,10 +62,6 @@ function describeClient(userAgent: string | undefined): {
   return { browser: parsed.browser.name ?? null, operatingSystem: parsed.os.name ?? null };
 }
 
-/**
- * Server-side sessions in PostgreSQL. The cookie holds a random 256-bit ID;
- * the database stores only its SHA-256 hash.
- */
 export class SessionService {
   readonly #database: Database;
   readonly #settings: SettingsService;
@@ -87,11 +80,6 @@ export class SessionService {
     this.#clock = options.clock ?? (() => new Date());
   }
 
-  /**
-   * Creates a session after a successful sign-in. A session of the same browser is replaced, and
-   * when the account exceeds its session limit, the least recently used sessions end. Sign-ins of
-   * one account are serialized by a lock on the account row.
-   */
   async create(
     tx: Transaction,
     options: { accountId: string; kind: SessionKind; methods: SignInMethod[]; client: ClientInfo },
@@ -102,7 +90,6 @@ export class SessionService {
 
     const ended: { id: string; accountId: string; reason: "replacedOnDevice" | "sessionLimit" }[] = [];
     if (client.deviceToken) {
-      // Serializes sign-ins of one browser, so it never ends up with two sessions.
       await tx.execute(
         sql`select pg_advisory_xact_lock(hashtextextended(${hashToken(client.deviceToken).toString("hex")}, 0))`,
       );
@@ -159,10 +146,6 @@ export class SessionService {
     return { session, token };
   }
 
-  /**
-   * The session for a cookie value, or null when it does not exist, has expired or belongs to an
-   * account that is no longer active. Updates the time of last use at most once per minute.
-   */
   async resolve(token: string): Promise<Session | null> {
     if (!isWellFormedToken(token)) return null;
     const [row] = await this.#database
@@ -199,14 +182,12 @@ export class SessionService {
     );
   }
 
-  /** Whether the session was authenticated recently enough for a sensitive action. */
   async isRecentlyAuthenticated(session: Session): Promise<boolean> {
     if (!session.reauthenticatedAt) return false;
     const minutes = await this.#settings.get(reauthenticationSetting, accountScopeChain(session.accountId));
     return this.#clock().getTime() - session.reauthenticatedAt.getTime() <= minutes * MINUTE;
   }
 
-  /** Gives the session a new ID, e.g. after a change of its authentication state. */
   async rotate(
     executor: Executor,
     sessionId: string,
@@ -235,7 +216,6 @@ export class SessionService {
       .orderBy(desc(sessions.lastUsedAt));
   }
 
-  /** Ends one session of the account; returns false when it does not exist. */
   async end(accountId: string, sessionId: string, reason: "signedOut" | "endedByAccount"): Promise<boolean> {
     return this.#database.transaction(async (tx) => {
       const deleted = await tx
@@ -256,7 +236,6 @@ export class SessionService {
     });
   }
 
-  /** Ends all other sessions of the account at its own request; returns their number. */
   async endOthers(accountId: string, keep: string): Promise<number> {
     return this.#database.transaction(async (tx) => {
       const ended = await this.endAll(tx, accountId, { keep });
@@ -271,7 +250,6 @@ export class SessionService {
     });
   }
 
-  /** Ends all sessions of the account except `keep`; returns their IDs. */
   async endAll(executor: Executor, accountId: string, options: { keep?: string } = {}) {
     const deleted = await executor
       .delete(sessions)
@@ -280,7 +258,6 @@ export class SessionService {
     return deleted.map((row) => row.id);
   }
 
-  /** Removes sessions past the instance's idle timeout or lifetime. */
   async cleanup(): Promise<number> {
     const idle = await this.#settings.get(sessionIdleTimeoutSetting, {});
     const lifetime = await this.#settings.get(sessionLifetimeSetting, {});

@@ -51,10 +51,6 @@ function uuidBytes(id: string): Uint8Array<ArrayBuffer> {
   return new Uint8Array(Buffer.from(id.replaceAll("-", ""), "hex"));
 }
 
-/**
- * WebAuthn passkeys and hardware security keys through SimpleWebAuthn. The relying party ID is
- * the host name of the instance URL. Challenges are kept by the caller in `ChallengeStore`.
- */
 export class WebAuthnService {
   readonly #database: Database;
   readonly #settings: SettingsService;
@@ -99,7 +95,6 @@ export class WebAuthnService {
     });
   }
 
-  /** Verifies a registration and stores the credential. Returns null when it is not valid. */
   async register(
     executor: Executor,
     options: {
@@ -149,10 +144,6 @@ export class WebAuthnService {
     };
   }
 
-  /**
-   * Options for an assertion. With an account, only its credentials are allowed; without one,
-   * the browser offers the passkeys it has for this instance.
-   */
   async authenticationOptions(options: {
     accountId?: string;
     userVerification: "required" | "preferred";
@@ -174,10 +165,6 @@ export class WebAuthnService {
     });
   }
 
-  /**
-   * Verifies an assertion against the stored credential and updates its counter. With
-   * `accountId`, the credential must belong to that account. Returns null when it is not valid.
-   */
   async verify(options: {
     response: AuthenticationResponseJSON;
     expectedChallenge: string;
@@ -247,7 +234,6 @@ export class WebAuthnService {
       .orderBy(webauthnCredentials.createdAt);
   }
 
-  /** Removes a passkey of the account; returns its name, or null when it does not exist. */
   async remove(executor: Executor, accountId: string, id: string): Promise<string | null> {
     const [deleted] = await executor
       .delete(webauthnCredentials)

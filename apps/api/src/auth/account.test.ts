@@ -18,7 +18,6 @@ import { type AuthTestApp, createAuthTestApp, databaseBaseUrl, TestClient } from
 
 const SESSION_COOKIE = "__Host-pagehall-session";
 
-/** Runs the password reset jobs the API queued, as the worker would. */
 async function runPasswordResetJobs(test: AuthTestApp): Promise<number> {
   const jobs = await test.runtime.pool.query<{ id: string; data: { payload: { email: string } } }>(
     "delete from pgboss.job where name = 'auth.password-reset-request' returning id, data",

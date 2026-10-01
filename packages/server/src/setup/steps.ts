@@ -32,7 +32,6 @@ import type { SettingsService } from "../settings/service.js";
 import { defineSetupAction, type SetupActionContext, type SetupStep } from "./framework.js";
 import { SetupStepError } from "./setup-service.js";
 
-/** A difference between the application and database clocks above this is reported. */
 const CLOCK_TOLERANCE_MS = 5_000;
 const LOW_DISK_BYTES = 1024 ** 3;
 
@@ -52,7 +51,6 @@ export interface SetupStepDependencies {
   filesDir: string;
 }
 
-/** System checks: database, file storage, instance URL, HTTPS and clock. */
 export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
   return {
     id: "systemCheck",
@@ -120,7 +118,6 @@ export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
   };
 }
 
-/** Address and name of the instance. */
 export function instanceStep(deps: SetupStepDependencies): SetupStep {
   return {
     id: "instance",
@@ -155,11 +152,6 @@ async function ownerOf(context: SetupActionContext): Promise<{ id: string; email
   return row?.email ? { id: row.id, email: row.email } : null;
 }
 
-/**
- * The owner account with password and mandatory TOTP, plus recovery codes. The owner is also the
- * break-glass account. Until setup is complete nobody can sign in, so the step can be
- * repeated: the owner's details are replaced and its factors removed.
- */
 export function ownerStep(deps: SetupStepDependencies): SetupStep {
   return {
     id: "owner",
@@ -262,10 +254,6 @@ function keyRingLine(ring: KeyRing): string {
   return ring.versions.map((version) => formatKeyEntry(version, ring.get(version).use())).join(",");
 }
 
-/**
- * Backing up the master keys and the backup keys: a one-time download, then a confirmation.
- * Without these keys, encrypted data and backups cannot be restored.
- */
 export function keyBackupStep(deps: SetupStepDependencies): SetupStep {
   return {
     id: "keyBackup",
@@ -319,7 +307,6 @@ const smtpInput = smtpConfigurationSchema
   .extend({ password: z.string().max(1024).nullable().optional() })
   .strict();
 
-/** Optional SMTP settings with a test mail. */
 export function mailStep(deps: SetupStepDependencies): SetupStep {
   return {
     id: "mail",

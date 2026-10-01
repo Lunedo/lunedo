@@ -90,7 +90,6 @@ export async function createServerRuntime(options: {
   settings?: SettingDefinition<never>[];
   /** Encrypted data for key checks and rotation; defaults to the registered columns and streams. */
   encrypted?: { columns?: readonly EncryptedColumn[]; streamOwners?: readonly EncryptedStreamOwner[] };
-  /** Replaces the SMTP transport, for tests. */
   mailTransport?: (options: SmtpOptions) => MailTransport;
 }): Promise<ServerRuntime> {
   const { role } = options;

@@ -1,7 +1,3 @@
-/**
- * Who performed an action. Anonymous stands for visitors who are not signed in,
- * system for automated actions such as cleanup jobs and configuration applied at startup.
- */
 export type Principal = { type: "account"; id: string } | { type: "anonymous" } | { type: "system" };
 
 export type PrincipalType = Principal["type"];

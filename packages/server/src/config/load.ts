@@ -28,10 +28,8 @@ export interface ServerConfig {
   };
   metricsToken: Secret | undefined;
   shutdownTimeoutSeconds: number;
-  /** Addresses and CIDR ranges of reverse proxies whose forwarding headers are trusted. */
   trustedProxies: string[];
   passwordHashConcurrency: number;
-  /** Setup values given through configuration; the setup assistant is skipped when they are set. */
   setup: ConfiguredSetup | undefined;
 }
 
@@ -204,10 +202,6 @@ const SMTP_SETTINGS = [
   "PAGEHALL_SMTP_FROM",
 ] as const;
 
-/**
- * Setup values from the configuration. Instance URL and owner are required together;
- * SMTP is optional. Without them, the setup assistant runs.
- */
 function configuredSetup(
   values: Record<ConfigSettingName, unknown>,
   problems: string[],

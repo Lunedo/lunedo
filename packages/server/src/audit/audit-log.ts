@@ -17,9 +17,7 @@ export const INSTANCE_AUDIT_SCOPE: AuditScope = { type: "instance", id: INSTANCE
 
 export interface AuditEventInput<TName extends AuditEventName> {
   name: TName;
-  /** Defaults to the actor of the current request, or system outside a request. */
   actor?: Principal;
-  /** ID of the target object; null when there is none, e.g. a failed sign-in for an unknown address. */
   targetId: string | null;
   fields: AuditEventFields<TName>;
   scope?: AuditScope;
@@ -47,7 +45,6 @@ interface HashedContent {
   previousHash: Buffer;
 }
 
-/** JSON with sorted object keys, so that a value read back from jsonb hashes the same. */
 function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
   if (value !== null && typeof value === "object") {
@@ -80,7 +77,6 @@ export function hashAuditEntry(entry: HashedContent): Buffer {
   return createHash("sha256").update(content, "utf8").digest();
 }
 
-/** Text as PostgreSQL can store it: without NUL characters, which text columns reject. */
 function storable(value: string | undefined, maxLength = Number.POSITIVE_INFINITY): string | null {
   if (value === undefined) return null;
   return value.replaceAll("\u0000", "").slice(0, maxLength);
@@ -88,17 +84,10 @@ function storable(value: string | undefined, maxLength = Number.POSITIVE_INFINIT
 
 export interface AuditVerification {
   scope: AuditScope;
-  /** Entries checked before the first problem, or all entries of an intact chain. */
   entries: number;
-  /** The first entry that does not match the chain, or null when the chain is intact. */
   broken: { sequence: number; id: string | null; problem: string } | null;
 }
 
-/**
- * Writes audit events. Each scope forms a hash chain: every entry contains the hash
- * of the previous entry of its scope. Writers lock the head of the chain, so concurrent writes
- * get consecutive sequence numbers; the lock is held until the transaction commits.
- */
 export class AuditLog {
   readonly #database: Database;
   readonly #clock: () => Date;
@@ -108,10 +97,6 @@ export class AuditLog {
     this.#clock = options.clock ?? (() => new Date());
   }
 
-  /**
-   * Records an event in the transaction of the change it belongs to. Call it after the change
-   * itself, so that the chain lock is the last lock the transaction takes.
-   */
   async record<TName extends AuditEventName>(tx: Transaction, input: AuditEventInput<TName>): Promise<void> {
     const definition = auditCatalog[input.name];
     const fields: unknown = definition.fields.strict().parse(input.fields);
@@ -160,16 +145,10 @@ export class AuditLog {
       .where(chain);
   }
 
-  /** Records an event in its own transaction, for events that belong to no other change. */
   async recordAlone<TName extends AuditEventName>(input: AuditEventInput<TName>): Promise<void> {
     await this.#database.transaction((tx) => this.record(tx, input));
   }
 
-  /**
-   * Removes entries that occurred before `before`, in batches. The hash of the last removed
-   * entry of each scope becomes the anchor of its chain, so the remaining entries can still
-   * be verified.
-   */
   async removeBefore(before: Date, options: { scopes?: AuditScope[] } = {}): Promise<number> {
     const chains =
       options.scopes?.map((scope) => ({ scopeType: scope.type, scopeId: scope.id })) ??
@@ -191,7 +170,6 @@ export class AuditLog {
             .limit(RETENTION_BATCH);
           const last = expired.at(-1);
           if (!last) return 0;
-          // The append-only trigger lets deletes through only with this transaction-local flag.
           await tx.execute(sql`select set_config('pagehall.audit_retention', 'on', true)`);
           const deleted = await tx
             .delete(auditEvents)
@@ -209,10 +187,6 @@ export class AuditLog {
     return removed;
   }
 
-  /**
-   * Checks every chain. Each result names the first entry that does not match, if any. All reads
-   * come from one snapshot, so entries written or removed during the check do not count as gaps.
-   */
   async verify(): Promise<AuditVerification[]> {
     return this.#database.transaction(
       async (tx) => {
@@ -285,7 +259,6 @@ export class AuditLog {
   }
 }
 
-/** Records every change of the settings service as `settings.changed`, in the transaction of the change. */
 export function auditSettingChanges(audit: AuditLog): SettingChangeHandler {
   return (tx, change) =>
     audit.record(tx, {

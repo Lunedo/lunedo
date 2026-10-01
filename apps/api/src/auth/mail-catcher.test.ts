@@ -18,10 +18,6 @@ function linkToken(text: string): string {
   return match[1];
 }
 
-/**
- * Password reset and e-mail change through the whole chain: API, job queue, worker, outbox, SMTP
- * and the mail catcher of the development environment.
- */
 describe.skipIf(!databaseBaseUrl || !mailpitUrl)("mail end to end", () => {
   const mailpit = new Mailpit(mailpitUrl ?? "http://localhost:8025");
   const unique = randomBytes(4).toString("hex");

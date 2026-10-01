@@ -1,18 +1,12 @@
 import { z } from "zod";
 import type { PrincipalType } from "../accounts/principal.js";
 
-/** Kinds of objects an audit event can be about. */
 export const auditTargetTypes = ["account", "instance", "setting", "setupStep"] as const;
 export type AuditTargetType = (typeof auditTargetTypes)[number];
 
-/**
- * Who may read an event: `instance` events are visible to instance administrators and the
- * security auditor only, `organization` events also to the administrators of the event's organization.
- */
 export type AuditVisibility = "instance" | "organization";
 
 export interface AuditEventDefinition<TFields extends z.ZodObject = z.ZodObject> {
-  /** Principal types that can perform the action. */
   actor: readonly PrincipalType[];
   target: AuditTargetType;
   fields: TFields;
@@ -32,11 +26,6 @@ const methods = z.array(z.enum(signInMethods)).min(1);
 const sessionReference = z.object({ sessionId: z.uuid() });
 const credential = z.object({ credentialId: z.uuid(), name: z.string() });
 
-/**
- * Every audited action. Recording an event that is not listed here does not compile,
- * and its fields are checked against the schema. Fields never contain passwords, tokens, codes
- * or other secrets.
- */
 export const auditCatalog = {
   "auth.signedIn": event({
     actor: ["account"],

@@ -1,4 +1,3 @@
-/** Errors of the sign-in and account security flows. The API maps each to a status and an error code. */
 export class AuthError extends Error {
   override name = "AuthError";
 
@@ -11,7 +10,6 @@ export class AuthError extends Error {
   }
 }
 
-/** Wrong password, unknown address or invalid passkey: always the same answer. */
 export class InvalidCredentialsError extends AuthError {
   constructor() {
     super("invalidCredentials", "The sign-in details are not valid");
@@ -36,7 +34,6 @@ export class RateLimitedError extends AuthError {
   }
 }
 
-/** The pending sign-in or challenge does not exist, was used already or has expired. */
 export class ChallengeExpiredError extends AuthError {
   constructor() {
     super("challengeExpired", "The sign-in step has expired; start again");

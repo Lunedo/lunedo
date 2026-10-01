@@ -5,7 +5,6 @@ import { TEST_ORIGIN, TestClient } from "./auth-app.js";
 
 export const OWNER = { email: "owner@pagehall.test", password: "owner passphrase 42" };
 
-/** Environment for an instance that was set up through configuration. */
 export const configuredSetupEnv = {
   PAGEHALL_INSTANCE_URL: TEST_ORIGIN,
   PAGEHALL_INSTANCE_NAME: "Test wiki",
@@ -30,7 +29,6 @@ export async function completeConfiguredSetup(test: AuthTestApp): Promise<void> 
   });
 }
 
-/** Creates an active standard account through the service layer. */
 export async function createAccount(test: AuthTestApp, email: string, password = "a long enough passphrase") {
   const { database, services } = test.runtime;
   const account = await database.transaction((tx) =>
@@ -43,7 +41,6 @@ export function totpNow(secret: string, offsetSteps = 0): string {
   return TOTP.generate({ secret: Secret.fromBase32(secret), timestamp: Date.now() + offsetSteps * 30_000 });
 }
 
-/** Signs in with a password and expects a session without second factor. */
 export async function signedInClient(
   test: AuthTestApp,
   email: string,
@@ -55,7 +52,6 @@ export async function signedInClient(
   return client;
 }
 
-/** Sets up TOTP for the signed-in client and returns the secret and the recovery codes. */
 export async function addTotp(
   client: TestClient,
 ): Promise<{ secret: string; recoveryCodes: string[] | null }> {

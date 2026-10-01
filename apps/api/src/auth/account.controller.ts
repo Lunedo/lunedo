@@ -32,7 +32,6 @@ function notFound(): NotFoundException {
   return new NotFoundException({ statusCode: 404, code: "notFound", message: "Not found" });
 }
 
-/** Security settings of the signed-in account: password, e-mail, second factors and sessions. */
 @Controller("api/v1/account")
 @InternalRoute()
 export class AccountController {

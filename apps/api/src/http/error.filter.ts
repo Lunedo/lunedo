@@ -42,15 +42,10 @@ interface ErrorBody {
   [key: string]: unknown;
 }
 
-/** The answer for a route that does not exist, as NestJS gives it for unknown paths. */
 export function notFoundBody(request: FastifyRequest): Record<string, unknown> {
   return { message: `Cannot ${request.method} ${request.url}`, error: "Not Found", statusCode: 404 };
 }
 
-/**
- * Maps errors of the services to HTTP answers with a stable error code. Unexpected errors are
- * logged and answered with 500 without details.
- */
 @Catch()
 export class ErrorFilter implements ExceptionFilter {
   constructor(@Inject(API_CONTEXT) private readonly context: ApiContext) {}

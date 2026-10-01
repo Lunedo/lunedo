@@ -1,5 +1,3 @@
--- Audit entries are append-only. Deletes pass only when the retention job sets
--- the transaction-local flag pagehall.audit_retention; updates and truncation never pass.
 CREATE FUNCTION "audit_events_reject_changes"() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
 	IF TG_OP = 'DELETE' AND current_setting('pagehall.audit_retention', true) = 'on' THEN

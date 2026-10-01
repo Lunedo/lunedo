@@ -11,11 +11,6 @@ import { StartupError } from "../runtime/startup-error.js";
 import type { SettingsService } from "../settings/service.js";
 import type { SetupService } from "./setup-service.js";
 
-/**
- * Applies the setup values from the configuration once, when setup is not complete yet. The
- * assistant is skipped; the owner sets up a second factor at the first sign-in, because the owner
- * always needs one. Several nodes may start at once; the setup lock lets one apply it.
- */
 export async function applyConfiguredSetup(options: {
   setup: ConfiguredSetup;
   service: SetupService;

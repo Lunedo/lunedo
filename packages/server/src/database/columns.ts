@@ -19,5 +19,4 @@ export function timestamps() {
   };
 }
 
-/** Binary data such as hashes. Encrypted values use `encrypted()` instead. */
 export const bytes = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" });

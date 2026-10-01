@@ -33,7 +33,6 @@ export const smtpConfigurationSchema = z
 
 export type SmtpConfiguration = z.infer<typeof smtpConfigurationSchema>;
 
-/** SMTP server for outgoing e-mail; null until it is configured. The password is an instance secret. */
 export const smtpSetting = defineSetting({
   key: "mail.smtp",
   schema: smtpConfigurationSchema.nullable(),
@@ -53,7 +52,6 @@ export const deliverMailJob = defineJob({
   expireInSeconds: 5 * 60,
 });
 
-/** Queues mails whose delivery job was never created, e.g. after a crash right after the commit. */
 export const dispatchPendingMailJob = defineJob({
   name: "mail.dispatch-pending",
   payload: z.object({}),
@@ -84,17 +82,12 @@ export class SmtpConfigurationError extends Error {
   override name = "SmtpConfigurationError";
 }
 
-/** Credentials are never sent over a plain-text connection, neither when saving nor when testing. */
 function checkSmtpCredentials(configuration: SmtpConfiguration, hasPassword: boolean): void {
   if (configuration.security === "none" && (configuration.username !== null || hasPassword)) {
     throw new SmtpConfigurationError("SMTP credentials require a TLS connection");
   }
 }
 
-/**
- * Outgoing e-mail. Mails are written to an outbox in the transaction of the change that causes
- * them and delivered by jobs with retries; logs name the mail and template, never the content.
- */
 export class MailService {
   readonly #database: Database;
   readonly #encryption: Encryption;
@@ -111,7 +104,6 @@ export class MailService {
     audit: AuditLog;
     jobs: JobQueue | undefined;
     logger: Logger;
-    /** Replaces the SMTP transport, for tests. */
     transport?: (options: SmtpOptions) => MailTransport;
   }) {
     this.#database = options.database;
@@ -123,12 +115,10 @@ export class MailService {
     this.#transport = options.transport ?? ((smtp) => new SmtpTransport(smtp));
   }
 
-  /** The language of mails to an account: its own, or the inherited default. */
   async languageOf(accountId: string): Promise<Language> {
     return this.#settings.get(languageSetting, { user: accountId });
   }
 
-  /** Writes a mail to the outbox. Call `dispatch` with the returned ID after the commit. */
   async queue<T extends MailTemplate>(
     tx: Transaction,
     mail: { to: string; template: T; language: Language; params: Omit<MailTemplates[T], "instanceName"> },
@@ -149,10 +139,6 @@ export class MailService {
     return id;
   }
 
-  /**
-   * Starts delivery of queued mails. A failure here is only logged: the mails stay in the outbox
-   * and the next dispatch run picks them up.
-   */
   async dispatch(mailIds: readonly string[]): Promise<void> {
     if (!this.#jobs) return;
     for (const mailId of mailIds) {
@@ -174,7 +160,6 @@ export class MailService {
     return pending.length;
   }
 
-  /** Job handler: delivers one mail and deletes it, or marks it failed after the last attempt. */
   deliver = async (job: JobContext<{ mailId: string }>): Promise<void> => {
     const { mailId } = job.payload;
     const [row] = await this.#database
@@ -226,10 +211,6 @@ export class MailService {
     return row ? this.#encryption.decryptString(row.value, secretContext(SMTP_PASSWORD)) : null;
   }
 
-  /**
-   * Stores the SMTP configuration. `password` undefined keeps the stored password, null removes it.
-   * Plain-text connections cannot carry credentials.
-   */
   async configureSmtp(
     configuration: SmtpConfiguration,
     password: string | null | undefined,
@@ -269,10 +250,6 @@ export class MailService {
     await (options.tx ? run(options.tx) : this.#database.transaction(run));
   }
 
-  /**
-   * Sends a test mail right away instead of through the queue, so that the result can be shown.
-   * The failure is reported without the server response.
-   */
   async sendTest(
     to: string,
     language: Language,
@@ -303,7 +280,6 @@ export class MailService {
     return { delivered: error === null, error };
   }
 
-  /** Removes failed mails after a week. */
   async cleanup(): Promise<number> {
     const deleted = await this.#database
       .delete(mailOutbox)

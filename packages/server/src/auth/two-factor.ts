@@ -8,7 +8,6 @@ import { recoveryCodes, totpCredentials, webauthnCredentials } from "./schema.js
 
 const TOTP_PERIOD = 30;
 const TOTP_DIGITS = 6;
-/** Codes of one step before and after the current one are accepted, for clock drift. */
 const TOTP_WINDOW = 1;
 
 function totpContext(id: string): string {
@@ -16,17 +15,10 @@ function totpContext(id: string): string {
 }
 
 export interface TotpSetup {
-  /** Base32 secret for manual entry. */
   secret: string;
-  /** `otpauth://` URI for a QR code. */
   uri: string;
 }
 
-/**
- * TOTP for any authenticator app (RFC 6238, SHA-1, 6 digits, 30 seconds). The secret is stored
- * with envelope encryption. A code is accepted once only: the step of the last accepted code is
- * stored, and only later steps are accepted afterwards.
- */
 export class TotpService {
   readonly #database: Database;
   readonly #encryption: Encryption;
@@ -38,10 +30,6 @@ export class TotpService {
     this.#clock = options.clock ?? (() => new Date());
   }
 
-  /**
-   * Starts setting up TOTP with a new secret. Replaces an unconfirmed secret; returns null when
-   * the account already has confirmed TOTP.
-   */
   async begin(
     accountId: string,
     labels: { issuer: string; account: string },
@@ -71,10 +59,6 @@ export class TotpService {
     });
   }
 
-  /**
-   * Checks a code and marks its step as used. With `confirming`, the code is checked against an
-   * unconfirmed secret, which becomes confirmed.
-   */
   async verify(executor: Executor, accountId: string, code: string, options: { confirming?: boolean } = {}) {
     if (!/^\d{6}$/.test(code)) return false;
     const [row] = await executor
@@ -112,7 +96,6 @@ export class TotpService {
     return accepted.length === 1;
   }
 
-  /** Removes TOTP; returns whether a confirmed secret existed. */
   async remove(executor: Executor, accountId: string): Promise<boolean> {
     const deleted = await executor
       .delete(totpCredentials)
@@ -123,9 +106,7 @@ export class TotpService {
 }
 
 const RECOVERY_CODE_COUNT = 10;
-/** Crockford's base32 alphabet: no I, L, O or U, so codes are easy to read and type. */
 const RECOVERY_ALPHABET = "0123456789abcdefghjkmnpqrstvwxyz";
-/** 16 characters of base32 are 80 bits, too many to guess even with the stored hash. */
 const RECOVERY_CODE_LENGTH = 16;
 
 function normalizeRecoveryCode(code: string): string {
@@ -141,7 +122,6 @@ function generateRecoveryCode(): string {
   return characters.join("").replace(/(.{4})(?!$)/g, "$1-");
 }
 
-/** Ten single-use recovery codes per account, stored as hashes. */
 export class RecoveryCodeService {
   readonly #clock: () => Date;
 
@@ -149,7 +129,6 @@ export class RecoveryCodeService {
     this.#clock = options.clock ?? (() => new Date());
   }
 
-  /** Replaces all codes of the account with new ones and returns them. */
   async generate(executor: Executor, accountId: string): Promise<string[]> {
     const codes = Array.from({ length: RECOVERY_CODE_COUNT }, generateRecoveryCode);
     await executor.delete(recoveryCodes).where(eq(recoveryCodes.accountId, accountId));
@@ -159,7 +138,6 @@ export class RecoveryCodeService {
     return codes;
   }
 
-  /** Uses a code. Returns the number of codes left, or null when the code is not valid. */
   async use(executor: Executor, accountId: string, code: string): Promise<number | null> {
     if (normalizeRecoveryCode(code).length !== RECOVERY_CODE_LENGTH) return null;
     const used = await executor
@@ -192,7 +170,6 @@ export interface SecondFactors {
   recoveryCodes: number;
 }
 
-/** The confirmed second factors of an account and its unused recovery codes. */
 export async function secondFactorsOf(executor: Executor, accountId: string): Promise<SecondFactors> {
   const [row] = await executor
     .execute<{ totp: boolean; passkeys: number; recovery_codes: number }>(sql`

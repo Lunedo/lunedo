@@ -1,14 +1,8 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 
-/**
- * Cookies of Pagehall. The `__Host-` prefix makes browsers accept them only with `Secure`,
- * `Path=/` and without `Domain`, so no subdomain can set or read them.
- */
 export const COOKIES = {
   session: "__Host-pagehall-session",
-  /** Pending sign-in waiting for its second factor, or a passwordless sign-in challenge. */
   pending: "__Host-pagehall-pending",
-  /** Identifies the browser, so that a new sign-in replaces its previous session. */
   device: "__Host-pagehall-device",
   setup: "__Host-pagehall-setup",
 } as const;
@@ -51,7 +45,6 @@ export function setPendingCookie(reply: FastifyReply, token: string): void {
   setCookie(reply, COOKIES.pending, token, PENDING_MAX_AGE_SECONDS);
 }
 
-/** Returns the device cookie of the request, or creates one. */
 export function ensureDeviceCookie(
   request: FastifyRequest,
   reply: FastifyReply,

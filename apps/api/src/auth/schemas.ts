@@ -13,7 +13,6 @@ const extensionResults = z
   .record(z.string().max(64), z.json())
   .refine((value) => JSON.stringify(value).length <= 4096);
 
-/** A WebAuthn assertion as serialized by the browser, with limits on every field. */
 export const authenticationResponseSchema = z
   .object({
     id: base64url(1024),
@@ -32,7 +31,6 @@ export const authenticationResponseSchema = z
   })
   .strict();
 
-/** A WebAuthn registration as serialized by the browser, with limits on every field. */
 export const registrationResponseSchema = z
   .object({
     id: base64url(1024),

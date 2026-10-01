@@ -15,7 +15,6 @@ const positiveInt = z.coerce.number().int().positive();
 const nonEmpty = z.string().trim().min(1);
 const path = z.string().trim().min(1);
 
-/** An IP address or a CIDR range such as `10.0.0.0/8`. */
 export function isAddressOrRange(value: string): boolean {
   const [address = "", prefix, ...rest] = value.split("/");
   const family = isIP(address);

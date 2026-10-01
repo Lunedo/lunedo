@@ -30,16 +30,10 @@ const columns = {
   expiresAt: authChallenges.expiresAt,
 };
 
-/** Pending sign-ins and WebAuthn challenges live this long. */
 export const CHALLENGE_LIFETIME_MS = 5 * 60 * 1000;
 
-/** Wrong second factors a pending sign-in accepts before it ends. */
 export const MAX_CHALLENGE_FAILURES = 5;
 
-/**
- * State between two requests of one flow, shared by all nodes. A challenge is identified either by
- * a cookie token (pending sign-ins, passwordless sign-in) or by the session it belongs to.
- */
 export class ChallengeStore {
   readonly #database: Database;
   readonly #clock: () => Date;
@@ -79,7 +73,6 @@ export class ChallengeStore {
     return { id: row.id, token };
   }
 
-  /** The unexpired challenge with this cookie token and purpose. */
   async findByToken(token: string, purpose: ChallengePurpose): Promise<Challenge | null> {
     if (!isWellFormedToken(token)) return null;
     const [row] = await this.#database
@@ -95,15 +88,10 @@ export class ChallengeStore {
     return row ?? null;
   }
 
-  /** Stores a new WebAuthn challenge on an existing challenge row. */
   async setChallenge(id: string, challenge: string): Promise<void> {
     await this.#database.update(authChallenges).set({ challenge }).where(eq(authChallenges.id, id));
   }
 
-  /**
-   * Deletes and returns the challenge, so that it can be used once only. Returns null when another
-   * request used it first or it has expired.
-   */
   async consume(executor: Executor, id: string): Promise<Challenge | null> {
     const [row] = await executor
       .delete(authChallenges)
@@ -112,7 +100,6 @@ export class ChallengeStore {
     return row ?? null;
   }
 
-  /** Deletes and returns the newest unexpired challenge of a session for this purpose. */
   async consumeForSession(sessionId: string, purpose: ChallengePurpose): Promise<Challenge | null> {
     const [row] = await this.#database
       .delete(authChallenges)
@@ -127,7 +114,6 @@ export class ChallengeStore {
     return row ?? null;
   }
 
-  /** Replaces earlier challenges of a session for this purpose. */
   async replaceForSession(
     sessionId: string,
     accountId: string,
@@ -142,7 +128,6 @@ export class ChallengeStore {
     });
   }
 
-  /** Counts a wrong answer; the challenge ends after `MAX_CHALLENGE_FAILURES`. */
   async recordFailure(id: string): Promise<void> {
     await this.#database.transaction(async (tx) => {
       const [row] = await tx

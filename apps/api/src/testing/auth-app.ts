@@ -22,18 +22,12 @@ export const databaseBaseUrl = testDatabaseBaseUrl();
 export interface AuthTestApp {
   app: NestFastifyApplication;
   runtime: ServerRuntime;
-  /** The environment of the runtime, for further processes on the same instance. */
   env: Env;
   mail: CapturingTransport;
-  /** Delivers the mails in the outbox to `mail.sent`. */
   deliverMail(): Promise<void>;
   close(): Promise<void>;
 }
 
-/**
- * The API with a real runtime on its own database, so that tests of setup and sign-in do not
- * share the instance state with other test files.
- */
 export async function createAuthTestApp(
   env: Env = {},
   options: { captureMail?: boolean } = {},
@@ -78,7 +72,6 @@ export async function createAuthTestApp(
   }
 }
 
-/** An HTTP client with a cookie jar that sends the CSRF header and the instance origin. */
 export class TestClient {
   readonly cookies = new Map<string, string>();
 

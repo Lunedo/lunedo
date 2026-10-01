@@ -38,40 +38,27 @@ const PASSWORD_RESET_MINUTES = 30;
 const EMAIL_CHANGE_HOURS = 24;
 const HOUR_SECONDS = 60 * 60;
 
-/** Requests per address and hour; more are dropped silently, so that the answer stays the same. */
 const PASSWORD_RESETS_PER_ADDRESS = 3;
 const PASSWORD_RESETS_PER_CLIENT = 20;
 const TOKEN_REDEMPTIONS_PER_CLIENT = 30;
 const EMAIL_CHANGES_PER_ACCOUNT = 5;
 const EMAIL_CHANGES_PER_ADDRESS = 3;
 
-/**
- * Handles a password reset request in the worker. Doing the lookup in a job gives the API the same
- * answer and the same timing whether an account exists or not.
- */
 export const passwordResetRequestJob = defineJob({
   name: "auth.password-reset-request",
   payload: z.object({ email: z.string().max(254) }),
   retryLimit: 3,
 });
 
-/** The result of a change that ends the current session's authentication state. */
 export interface RotatedSession {
-  /** New value of the session cookie. */
   token: string;
 }
 
 export interface FactorAdded {
-  /** New session cookie value when a second-factor setup session became a full session. */
   token: string | null;
-  /** New recovery codes when the account had none. */
   recoveryCodes: string[] | null;
 }
 
-/**
- * Changes to the credentials of a signed-in account, password resets and e-mail changes. Routes
- * that change credentials require a recent authentication of the session.
- */
 export class AccountSecurityService {
   readonly #database: Database;
   readonly #accounts: AccountService;
@@ -131,7 +118,6 @@ export class AccountSecurityService {
     return `${base}${path}#token=${token}`;
   }
 
-  /** The second factors of the account, for the security overview. */
   async overview(accountId: string) {
     const factors = await secondFactorsOf(this.#database, accountId);
     return {
@@ -142,10 +128,6 @@ export class AccountSecurityService {
     };
   }
 
-  /**
-   * Upgrades a second-factor setup session to a full session once a factor exists, and creates
-   * recovery codes when the account has none.
-   */
   async #factorAdded(tx: Transaction, session: Session): Promise<FactorAdded> {
     let recoveryCodes: string[] | null = null;
     if ((await this.#recoveryCodes.remaining(tx, session.accountId)) === 0) {
@@ -229,7 +211,6 @@ export class AccountSecurityService {
     });
   }
 
-  /** Fails when removing would leave no factor although the account requires one. */
   async #assertFactorRemains(tx: Transaction, accountId: string): Promise<void> {
     if (hasSecondFactor(await secondFactorsOf(tx, accountId))) return;
     if (await this.#signIn.secondFactorRequired(accountId)) throw new LastFactorError();
@@ -267,7 +248,6 @@ export class AccountSecurityService {
     });
   }
 
-  /** Replaces all recovery codes. The old codes stop working at once. */
   async generateRecoveryCodes(session: Session): Promise<string[]> {
     return this.#database.transaction(async (tx) => {
       await this.#accounts.lock(tx, session.accountId);
@@ -283,7 +263,6 @@ export class AccountSecurityService {
     });
   }
 
-  /** Sets a new password and ends all other sessions. The current session gets a new ID. */
   async changePassword(session: Session, newPassword: string): Promise<RotatedSession> {
     const passwordHash = await this.#accounts.hashPassword(newPassword, session.accountId);
     return this.#database.transaction(async (tx) => {
@@ -307,10 +286,6 @@ export class AccountSecurityService {
     });
   }
 
-  /**
-   * Accepts a password reset request. The answer is the same whether the address belongs to an
-   * account or not; the worker looks it up and sends the mail.
-   */
   async requestPasswordReset(email: string, clientIp: string | undefined): Promise<void> {
     if (clientIp) {
       const perClient = await this.#rateLimiter.consume(
@@ -329,7 +304,6 @@ export class AccountSecurityService {
     await this.#jobs.enqueue(passwordResetRequestJob, { email: email.trim() });
   }
 
-  /** Job handler for `passwordResetRequestJob`. */
   handlePasswordResetRequest = async (job: JobContext<{ email: string }>): Promise<void> => {
     const account = await this.#accounts.findByEmail(job.payload.email);
     if (!account?.email || account.state !== "active" || !account.passwordHash) return;
@@ -395,7 +369,6 @@ export class AccountSecurityService {
     if (!result.allowed) throw new RateLimitedError(result.retryAfterSeconds);
   }
 
-  /** Sets a new password with a reset token. Ends all sessions and clears lockouts of the account. */
   async completePasswordReset(
     token: string,
     newPassword: string,
@@ -423,10 +396,6 @@ export class AccountSecurityService {
     });
   }
 
-  /**
-   * Starts changing the e-mail address: the new address receives a confirmation link. When it
-   * belongs to another account, it receives a notice instead, so the answer reveals nothing.
-   */
   async requestEmailChange(session: Session, newEmail: string): Promise<void> {
     const email = emailSchema.parse(newEmail.trim());
     const account = await this.#account(session.accountId);
@@ -480,7 +449,6 @@ export class AccountSecurityService {
     await this.#mail.dispatch([mailId]);
   }
 
-  /** Confirms a new e-mail address with the token from the confirmation mail. The old address gets a notice. */
   async confirmEmailChange(token: string, clientIp: string | undefined): Promise<void> {
     await this.#limitRedemptions(clientIp);
     const mailId = await this.#database.transaction(async (tx) => {
@@ -508,7 +476,6 @@ export class AccountSecurityService {
     await this.#mail.dispatch([mailId]);
   }
 
-  /** Removes used and expired tokens. */
   async cleanup(): Promise<number> {
     const deleted = await this.#database
       .delete(accountTokens)

@@ -15,7 +15,6 @@ function requestInfo(request: FastifyRequest) {
   return { protocol: request.protocol, host: request.host };
 }
 
-/** The setup assistant. After setup, every route answers as if it did not exist. */
 @Controller("api/v1/setup")
 @InternalRoute()
 export class SetupController {

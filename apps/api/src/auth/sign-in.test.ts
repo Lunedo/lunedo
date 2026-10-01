@@ -65,7 +65,6 @@ describe.skipIf(!databaseBaseUrl)("sign-in", () => {
   beforeAll(async () => {
     test = await createAuthTestApp(configuredSetupEnv);
     await completeConfiguredSetup(test);
-    // All test clients share one address; the limits per client have their own tests.
     await test.runtime.settings.set(clientAttemptLimitSetting, {}, "instance", 10_000);
     await test.runtime.settings.set(clientLockoutFailuresSetting, {}, "instance", 10_000);
   });

@@ -14,7 +14,6 @@ export const passwordMinLengthSetting = defineSetting({
   stricterOnly: "higher",
 });
 
-/** Accounts without a second factor must set one up before they can use the application. */
 export const twoFactorRequiredSetting = defineSetting({
   key: "auth.twoFactorRequired",
   schema: z.boolean(),
@@ -33,7 +32,6 @@ export const maxSessionsSetting = defineSetting({
   stricterOnly: "lower",
 });
 
-/** A session ends after this time without use. */
 export const sessionIdleTimeoutSetting = defineSetting({
   key: "auth.sessionIdleTimeoutMinutes",
   schema: minutes(5, 365 * DAY),
@@ -43,7 +41,6 @@ export const sessionIdleTimeoutSetting = defineSetting({
   stricterOnly: "lower",
 });
 
-/** A session ends at the latest this long after sign-in. */
 export const sessionLifetimeSetting = defineSetting({
   key: "auth.sessionLifetimeMinutes",
   schema: minutes(5, 365 * DAY),
@@ -53,7 +50,6 @@ export const sessionLifetimeSetting = defineSetting({
   stricterOnly: "lower",
 });
 
-/** How long a successful re-authentication allows sensitive actions. */
 export const reauthenticationSetting = defineSetting({
   key: "auth.reauthenticationMinutes",
   schema: minutes(1, 60),
@@ -63,7 +59,6 @@ export const reauthenticationSetting = defineSetting({
   stricterOnly: "lower",
 });
 
-/** Sign-in attempts per account address and minute, successful or not. */
 export const accountAttemptLimitSetting = defineSetting({
   key: "auth.signInAttemptsPerAccountPerMinute",
   schema: z.number().int().min(1).max(1000),
@@ -72,7 +67,6 @@ export const accountAttemptLimitSetting = defineSetting({
   lockable: false,
 });
 
-/** Sign-in attempts per client IP and minute, successful or not. */
 export const clientAttemptLimitSetting = defineSetting({
   key: "auth.signInAttemptsPerClientPerMinute",
   schema: z.number().int().min(1).max(10_000),
@@ -81,7 +75,6 @@ export const clientAttemptLimitSetting = defineSetting({
   lockable: false,
 });
 
-/** Failed sign-ins of one account address within the failure window that lock it. */
 export const accountLockoutFailuresSetting = defineSetting({
   key: "auth.lockoutFailuresPerAccount",
   schema: z.number().int().min(3).max(1000),
@@ -90,7 +83,6 @@ export const accountLockoutFailuresSetting = defineSetting({
   lockable: false,
 });
 
-/** Failed sign-ins from one client IP within the failure window that lock it. */
 export const clientLockoutFailuresSetting = defineSetting({
   key: "auth.lockoutFailuresPerClient",
   schema: z.number().int().min(3).max(10_000),
@@ -99,7 +91,6 @@ export const clientLockoutFailuresSetting = defineSetting({
   lockable: false,
 });
 
-/** Failures older than this window no longer count towards a lockout. */
 export const lockoutWindowSetting = defineSetting({
   key: "auth.lockoutWindowMinutes",
   schema: minutes(1, DAY),
@@ -108,7 +99,6 @@ export const lockoutWindowSetting = defineSetting({
   lockable: false,
 });
 
-/** Duration of the first lockout. Each further lockout in a row doubles it, up to the maximum. */
 export const lockoutDurationSetting = defineSetting({
   key: "auth.lockoutMinutes",
   schema: minutes(1, DAY),

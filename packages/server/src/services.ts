@@ -29,7 +29,6 @@ import { SetupRegistry } from "./setup/framework.js";
 import { SetupService } from "./setup/setup-service.js";
 import { builtinSetupSteps } from "./setup/steps.js";
 
-/** Accounts, sign-in, e-mail, setup and audit services of one process. */
 export interface AccountServices {
   audit: AuditLog;
   accounts: AccountService;
@@ -60,7 +59,6 @@ export function createAccountServices(options: {
   logger: Logger;
   filesDir: string;
   passwordHashConcurrency: number;
-  /** Replaces the SMTP transport, for tests. */
   mailTransport?: (options: SmtpOptions) => MailTransport;
 }): AccountServices {
   const { database, settings, audit, encryption, jobs, logger } = options;
@@ -152,7 +150,6 @@ export function createAccountServices(options: {
   };
 }
 
-/** Runs the jobs and schedules of the account services; only the worker role calls this. */
 export async function workAccountJobs(
   jobs: JobQueue,
   services: AccountServices,

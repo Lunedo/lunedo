@@ -14,10 +14,6 @@ export interface SettingDefinition<T> {
   levels: readonly SettingLevel[];
   /** Whether a level can lock the value for the levels below it. */
   lockable: boolean;
-  /**
-   * Levels below the instance may only make the inherited value stricter. `lower` means a
-   * smaller value is stricter, `higher` a larger one; for booleans `true` is the larger value.
-   */
   stricterOnly?: "lower" | "higher";
 }
 
@@ -36,7 +32,6 @@ export function defineSetting<T>(definition: SettingDefinition<T>): SettingDefin
   return { ...definition, levels };
 }
 
-/** Whether `candidate` is at least as strict as `inherited`; always true without `stricterOnly`. */
 export function isAtLeastAsStrict<T>(definition: SettingDefinition<T>, candidate: T, inherited: T): boolean {
   if (!definition.stricterOnly) return true;
   const value = Number(candidate);

@@ -21,10 +21,6 @@ function counterBytes(counter: number): Buffer {
   return bytes;
 }
 
-/**
- * A software authenticator with one ES256 credential, for tests of passkey registration and
- * sign-in. It produces the JSON a browser would send.
- */
 export class VirtualAuthenticator {
   readonly credentialId = randomBytes(16);
   readonly #privateKey: KeyObject;

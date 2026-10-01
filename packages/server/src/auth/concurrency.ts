@@ -6,11 +6,6 @@ export class BusyError extends Error {
   }
 }
 
-/**
- * Runs at most `limit` tasks at once in this process. Further tasks wait in a queue of at most
- * `maxQueued`; beyond that they fail at once with `BusyError`, so a flood of requests cannot
- * pile up unbounded work.
- */
 export class ConcurrencyLimiter {
   readonly #limit: number;
   readonly #maxQueued: number;

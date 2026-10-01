@@ -26,7 +26,6 @@ export interface TestServices {
   close(): Promise<void>;
 }
 
-/** The account services on a new, migrated database of their own, without a job queue. */
 export async function createTestServices(baseUrl: string): Promise<TestServices> {
   const temporary: TemporaryDatabase = await createTemporaryDatabase(baseUrl, "pagehall_services_test");
   const pool = createDatabasePool({ connectionString: temporary.url, applicationName: "pagehall-test" });

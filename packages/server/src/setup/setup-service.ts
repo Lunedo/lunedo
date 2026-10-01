@@ -12,7 +12,6 @@ import type { Logger } from "../logging/logger.js";
 import type { SetupActionContext, SetupActionResult, SetupRegistry, SetupStep } from "./framework.js";
 import { setupSessions, setupSteps } from "./schema.js";
 
-/** Setup sessions end after an hour without use and a day after the code was entered. */
 const SESSION_IDLE_MS = 60 * 60 * 1000;
 const SESSION_MAX_MS = 24 * 60 * 60 * 1000;
 const CODE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -23,6 +22,12 @@ const ISSUE_LOCK = "pagehall.setup";
 
 function hashCode(code: string): Buffer {
   return createHash("sha256").update(code.toUpperCase().replace(/[\s-]/g, ""), "utf8").digest();
+}
+
+function logTheOnlySecretEverLogged(logger: Logger, setupCode: string): void {
+  logger.warn(
+    `Setup code: ${setupCode}. Open Pagehall in a browser and enter this code to set up the instance.`,
+  );
 }
 
 export class SetupNotFoundError extends Error {
@@ -51,15 +56,9 @@ export interface SetupStatus {
     completed: boolean;
     details: unknown;
   }[];
-  /** Whether every required step is completed, so setup can be finished. */
   ready: boolean;
 }
 
-/**
- * First-start setup. Until setup is complete, every start of an API node issues a new
- * one-time setup code. The code is exchanged for a setup session, which runs the steps registered
- * by the modules. All state is in the database, so all nodes agree on it.
- */
 export class SetupService {
   readonly #database: Database;
   readonly #registry: SetupRegistry;
@@ -79,7 +78,6 @@ export class SetupService {
     this.#rateLimiter = options.rateLimiter;
   }
 
-  /** Whether setup is complete. Completion is final, so a positive answer is kept in memory. */
   async isComplete(): Promise<boolean> {
     if (this.#completed) return true;
     const [row] = await this.#database
@@ -90,10 +88,6 @@ export class SetupService {
     return this.#completed;
   }
 
-  /**
-   * Issues a new setup code and prints it to the log, unless setup is complete. Codes issued
-   * earlier stop working.
-   */
   async issueCode(logger: Logger): Promise<void> {
     const code = Array.from({ length: CODE_LENGTH }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)])
       .join("")
@@ -108,19 +102,9 @@ export class SetupService {
         .returning({ id: instance.id });
       return row !== undefined;
     });
-    if (!issued) return;
-    // The only log line that contains a secret: the operator reads the setup code from the
-    // container log to prove access to the server.
-    logger.warn(
-      `Setup code: ${code}. Open Pagehall in a browser and enter this code to set up the instance.`,
-    );
+    if (issued) logTheOnlySecretEverLogged(logger, code);
   }
 
-  /**
-   * Exchanges the setup code for a setup session. The code works once. The exchange is
-   * rate-limited per client only: with 80 bits the code cannot be guessed, and a limit for the
-   * whole instance would let any client block the operator.
-   */
   async exchangeCode(code: string, clientIp: string | undefined, origin: string): Promise<string> {
     if (await this.isComplete()) throw new SetupNotFoundError();
     const limit = await this.#rateLimiter.consume(
@@ -153,7 +137,6 @@ export class SetupService {
     return token;
   }
 
-  /** Whether the token belongs to an active setup session; extends the session on use. */
   async validSession(token: string): Promise<boolean> {
     if (!isWellFormedToken(token) || (await this.isComplete())) return false;
     const updated = await this.#database
@@ -210,7 +193,6 @@ export class SetupService {
     return { steps, ready: steps.every((step) => !step.required || step.completed) };
   }
 
-  /** Runs an action of a step in one transaction with its audit events. */
   async runAction(
     stepId: string,
     actionName: string,
@@ -267,7 +249,6 @@ export class SetupService {
     await this.#audit.record(tx, { name: "setup.stepCompleted", actor, targetId: step.id, fields: {} });
   }
 
-  /** Marks steps as completed without the assistant, for setup through configuration. */
   async completeSteps(tx: Transaction, stepIds: string[]): Promise<void> {
     for (const id of stepIds) {
       const step = this.#registry.get(id);
@@ -277,7 +258,6 @@ export class SetupService {
     }
   }
 
-  /** Finishes setup once all required steps are completed. The setup endpoints disappear afterwards. */
   async finish(): Promise<void> {
     await this.locked(async (tx) => {
       if (await this.#completedIn(tx)) throw new SetupNotFoundError();
@@ -293,7 +273,6 @@ export class SetupService {
     });
   }
 
-  /** Marks setup as complete and removes the setup code and sessions. */
   async markComplete(tx: Transaction, through: "assistant" | "configuration"): Promise<void> {
     await tx.insert(instance).values({ id: 1 }).onConflictDoNothing();
     const [row] = await tx
@@ -311,7 +290,6 @@ export class SetupService {
     });
   }
 
-  /** Runs `operation` while no other node changes the setup state. */
   async locked<T>(operation: (tx: Transaction) => Promise<T>): Promise<T> {
     return this.#database.transaction(async (tx) => {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${ISSUE_LOCK}))`);

@@ -7,10 +7,6 @@ export interface MailMessage {
   html: string;
 }
 
-/**
- * Delivers e-mail. SMTP is the first implementation; SMTP with OAuth2 and Microsoft Graph are
- * further implementations of this interface.
- */
 export interface MailTransport {
   send(message: MailMessage): Promise<void>;
 }
@@ -21,7 +17,6 @@ export type SmtpSecurity = (typeof smtpSecurityModes)[number];
 export interface SmtpOptions {
   host: string;
   port: number;
-  /** `tls` connects with TLS, `starttls` requires an upgrade to TLS, `none` sends in plain text. */
   security: SmtpSecurity;
   username: string | null;
   password: string | null;
@@ -30,10 +25,6 @@ export interface SmtpOptions {
 
 const TIMEOUT_MS = 30_000;
 
-/**
- * Sends through an SMTP server. Certificates are always verified, and `starttls` fails when the
- * server does not offer STARTTLS instead of falling back to plain text.
- */
 export class SmtpTransport implements MailTransport {
   readonly #options: SmtpOptions;
 
@@ -69,7 +60,6 @@ export class SmtpTransport implements MailTransport {
   }
 }
 
-/** A failure of a transport, described without the message or server response. */
 export function describeMailError(error: unknown): { code: string | null; responseCode: number | null } {
   const details = error as { code?: unknown; responseCode?: unknown };
   return {
