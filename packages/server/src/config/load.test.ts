@@ -260,6 +260,27 @@ describe("loadConfig for sign-in and setup", () => {
     );
   });
 
+  it("takes the instance URL alone as the address without setup through configuration", () => {
+    const config = loadConfig({ ...base, PAGEHALL_INSTANCE_URL: "https://wiki.example.org" });
+    expect(config.setup).toBeUndefined();
+    expect(config.instanceUrl).toBe("https://wiki.example.org");
+    expect(loadConfig(base).instanceUrl).toBeUndefined();
+    expectConfigError(
+      () => loadConfig({ ...base, PAGEHALL_INSTANCE_URL: "https://wiki.example.org/path" }),
+      "PAGEHALL_INSTANCE_URL: must be an http or https origin",
+    );
+    expectConfigError(
+      () =>
+        loadConfig({
+          ...base,
+          PAGEHALL_INSTANCE_URL: "https://wiki.example.org",
+          PAGEHALL_SMTP_HOST: "smtp.example.org",
+          PAGEHALL_SMTP_FROM: "wiki@example.org",
+        }),
+      "SMTP settings in the configuration require setup through configuration",
+    );
+  });
+
   it("reads and validates the first organization", () => {
     const setup = {
       ...base,

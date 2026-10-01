@@ -29,7 +29,7 @@ async function main() {
     }
     await services.setup.issueCode(logger, {
       configuredCode: config.setupCode,
-      instanceUrl: await settings.get(instanceUrlSetting, {}),
+      instanceUrl: (await settings.get(instanceUrlSetting, {})) || config.instanceUrl,
     });
   } catch (error) {
     if (!(error instanceof ConfigError) && !(error instanceof StartupError)) throw error;

@@ -27,7 +27,10 @@ export interface TestServices {
   close(): Promise<void>;
 }
 
-export async function createTestServices(baseUrl: string): Promise<TestServices> {
+export async function createTestServices(
+  baseUrl: string,
+  options: { configuredInstanceUrl?: string } = {},
+): Promise<TestServices> {
   const temporary: TemporaryDatabase = await createTemporaryDatabase(baseUrl, "pagehall_services_test");
   const pool = createDatabasePool({ connectionString: temporary.url, applicationName: "pagehall-test" });
   const logger = createLogger({ service: "test", level: "silent" });
@@ -53,6 +56,7 @@ export async function createTestServices(baseUrl: string): Promise<TestServices>
     logger,
     filesDir: mkdtempSync(path.join(tmpdir(), "pagehall-files-")),
     passwordHashConcurrency: 2,
+    configuredInstanceUrl: options.configuredInstanceUrl,
     mailTransport: () => mail,
   });
   return {

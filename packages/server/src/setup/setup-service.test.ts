@@ -116,6 +116,22 @@ describe.skipIf(!baseUrl)("SetupService", () => {
     expect(log.lines).toHaveLength(1);
   });
 
+  it("suggests the configured instance URL in the instance step", async () => {
+    test = await createTestServices(baseUrl ?? "", { configuredInstanceUrl: "https://docs.example.org" });
+    const request = { protocol: "http", host: "10.0.0.5:3000" };
+    const status = await test.services.setup.status(request);
+    expect(status.steps.find((step) => step.id === "instance")?.details).toMatchObject({
+      url: "",
+      suggestedUrl: "https://docs.example.org",
+    });
+    await test.close();
+    const { services: plain } = await services();
+    const fallback = await plain.setup.status(request);
+    expect(fallback.steps.find((step) => step.id === "instance")?.details).toMatchObject({
+      suggestedUrl: "http://10.0.0.5:3000",
+    });
+  });
+
   it("limits code exchanges per client", async () => {
     const {
       services: { setup },

@@ -43,6 +43,7 @@ export interface SetupStepDependencies {
   keyRing: KeyRingHolder;
   backupKeys: KeyRing;
   filesDir: string;
+  configuredInstanceUrl?: string | undefined;
 }
 
 export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
@@ -121,7 +122,8 @@ export function instanceStep(deps: SetupStepDependencies): SetupStep {
       return {
         url: await deps.settings.get(instanceUrlSetting, {}),
         name: await deps.settings.get(instanceNameSetting, {}),
-        suggestedUrl: request.host ? `${request.protocol}://${request.host}` : null,
+        suggestedUrl:
+          deps.configuredInstanceUrl ?? (request.host ? `${request.protocol}://${request.host}` : null),
       };
     },
     actions: {

@@ -42,6 +42,7 @@ export interface ServerConfig {
   passwordHashConcurrency: number;
   setup: ConfiguredSetup | undefined;
   setupCode: Secret | undefined;
+  instanceUrl: string | undefined;
 }
 
 export interface ConfiguredSmtp {
@@ -196,6 +197,7 @@ export function loadConfig(env: Env): ServerConfig {
     passwordHashConcurrency: values.PAGEHALL_PASSWORD_HASH_CONCURRENCY as number,
     setup,
     setupCode: secret("PAGEHALL_SETUP_CODE"),
+    instanceUrl: instanceUrlSchema.safeParse(values.PAGEHALL_INSTANCE_URL).data,
   };
 }
 
@@ -215,7 +217,6 @@ function checkSetupCode(code: string | undefined, problems: string[]): void {
 }
 
 const SETUP_SETTINGS = [
-  "PAGEHALL_INSTANCE_URL",
   "PAGEHALL_INSTANCE_NAME",
   "PAGEHALL_OWNER_EMAIL",
   "PAGEHALL_OWNER_NAME",
@@ -234,12 +235,22 @@ const SMTP_SETTINGS = [
   "PAGEHALL_SMTP_FROM",
 ] as const;
 
+function checkInstanceUrl(values: Record<ConfigSettingName, unknown>, problems: string[]): void {
+  const url = instanceUrlSchema.safeParse(values.PAGEHALL_INSTANCE_URL);
+  if (values.PAGEHALL_INSTANCE_URL !== undefined && !url.success) {
+    problems.push(`PAGEHALL_INSTANCE_URL: ${url.error.issues[0]?.message ?? "is invalid"}`);
+  }
+}
+
 function configuredSetup(
   values: Record<ConfigSettingName, unknown>,
   problems: string[],
 ): ConfiguredSetup | undefined {
   const given = (names: readonly ConfigSettingName[]) => names.filter((name) => values[name] !== undefined);
-  if (given([...SETUP_SETTINGS, ...SMTP_SETTINGS]).length === 0) return undefined;
+  if (given([...SETUP_SETTINGS, ...SMTP_SETTINGS]).length === 0) {
+    checkInstanceUrl(values, problems);
+    return undefined;
+  }
   if (given(SETUP_SETTINGS).length === 0) {
     problems.push(
       "PAGEHALL_SMTP_HOST: SMTP settings in the configuration require setup through configuration",
@@ -255,9 +266,7 @@ function configuredSetup(
     if (values[name] === undefined) problems.push(`${name}: is required for setup through configuration`);
   }
   const url = instanceUrlSchema.safeParse(values.PAGEHALL_INSTANCE_URL);
-  if (values.PAGEHALL_INSTANCE_URL !== undefined && !url.success) {
-    problems.push(`PAGEHALL_INSTANCE_URL: ${url.error.issues[0]?.message ?? "is invalid"}`);
-  }
+  checkInstanceUrl(values, problems);
   const timeZone = values.PAGEHALL_ORGANIZATION_TIME_ZONE as string | undefined;
   if (timeZone !== undefined && !isTimeZone(timeZone)) {
     problems.push("PAGEHALL_ORGANIZATION_TIME_ZONE: must be an IANA time zone");

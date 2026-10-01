@@ -93,6 +93,7 @@ export function createAccountServices(options: {
   jobs: JobQueue | undefined;
   logger: Logger;
   filesDir: string;
+  configuredInstanceUrl?: string | undefined;
   passwordHashConcurrency: number;
   mailTransport?: (options: SmtpOptions) => MailTransport;
 }): AccountServices {
@@ -214,6 +215,7 @@ export function createAccountServices(options: {
       keyRing: options.keyRing,
       backupKeys: options.backupKeys,
       filesDir: options.filesDir,
+      configuredInstanceUrl: options.configuredInstanceUrl,
     }),
   );
   return {
