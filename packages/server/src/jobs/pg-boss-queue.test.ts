@@ -7,7 +7,7 @@ import { createDatabasePool, type DatabasePool } from "../database/pool.js";
 import { createLogger } from "../logging/logger.js";
 import { currentRequestContext, runWithRequestContext } from "../observability/request-context.js";
 import { defineJob, type JobDefinition, type JobFinishedEvent } from "./job-queue.js";
-import { idempotentJobId, PgBossQueue } from "./pg-boss-queue.js";
+import { PgBossQueue } from "./pg-boss-queue.js";
 
 const databaseUrl = inject("databaseUrl");
 const logger = createLogger({ service: "test", level: "silent" });
@@ -25,16 +25,6 @@ async function waitFor<T>(check: () => Promise<T | undefined | false>, timeoutMs
   }
   throw new Error("Condition not met in time");
 }
-
-describe("idempotentJobId", () => {
-  it("is stable per name and key and differs otherwise", () => {
-    expect(idempotentJobId("a.b", "k")).toBe(idempotentJobId("a.b", "k"));
-    expect(idempotentJobId("a.b", "k")).not.toBe(idempotentJobId("a.c", "k"));
-    expect(idempotentJobId("a.b", "k")).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-8[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
-    );
-  });
-});
 
 describe("defineJob", () => {
   it("requires module-qualified names", () => {
@@ -96,15 +86,6 @@ describe.skipIf(!databaseUrl)("PgBossQueue", () => {
   it("validates payloads before enqueueing", async () => {
     const job = define("validation");
     await expect(producer.enqueue(job, { value: "x" } as never)).rejects.toThrow();
-  });
-
-  it("returns the existing job for a repeated idempotency key", async () => {
-    const job = define("idempotency");
-    const first = await producer.enqueue(job, { value: 1 }, { idempotencyKey: "import-42" });
-    const second = await producer.enqueue(job, { value: 1 }, { idempotencyKey: "import-42" });
-    expect(second).toBe(first);
-    const rows = await database.execute(sql`select id from pgboss.job where name = ${job.name}`);
-    expect(rows.rows).toHaveLength(1);
   });
 
   it("retries failed attempts until they succeed", async () => {

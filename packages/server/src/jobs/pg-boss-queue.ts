@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { type Job, PgBoss } from "pg-boss";
 import type { Database } from "../database/database.js";
@@ -38,16 +38,15 @@ type JobRow = {
 };
 
 /**
- * Deterministic job ID for an idempotency key: the queue rejects a second job with the
- * same ID, whatever state the first one is in.
+ * Every queue uses the `exclusive` policy of pg-boss: a unique index allows one job per queue
+ * and singleton key while it is created, retrying or active. Completed, failed and cancelled
+ * jobs free the key. Jobs without an idempotency key get a random key, so they never block
+ * each other.
  */
-export function idempotentJobId(name: string, key: string): string {
-  const bytes = createHash("sha256").update(`${name}\0${key}`).digest().subarray(0, 16);
-  bytes[6] = 0x80 | ((bytes[6] ?? 0) & 0x0f);
-  bytes[8] = 0x80 | ((bytes[8] ?? 0) & 0x3f);
-  const hex = bytes.toString("hex");
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-}
+const QUEUE_POLICY = "exclusive";
+const IDEMPOTENCY_PREFIX = "key:";
+const UNIQUE_PREFIX = "job:";
+const ENQUEUE_ATTEMPTS = 5;
 
 export interface PgBossQueueOptions {
   connectionString: string;
@@ -93,12 +92,20 @@ export class PgBossQueue implements JobQueue {
       retryBackoff: definition.retryBackoff,
       expireInSeconds: definition.expireInSeconds,
     };
-    if (await this.#boss.getQueue(definition.name)) {
+    const existing = await this.#boss.getQueue(definition.name);
+    if (existing) {
+      if (existing.policy !== QUEUE_POLICY) {
+        throw new Error(
+          `Queue ${definition.name} uses the ${existing.policy} policy instead of ${QUEUE_POLICY}; recreate it`,
+        );
+      }
       await this.#boss.updateQueue(definition.name, queue);
     } else {
-      await this.#boss.createQueue(definition.name, queue).catch(async (error: unknown) => {
-        if (!(await this.#boss.getQueue(definition.name))) throw error;
-      });
+      await this.#boss
+        .createQueue(definition.name, { ...queue, policy: QUEUE_POLICY })
+        .catch(async (error: unknown) => {
+          if (!(await this.#boss.getQueue(definition.name))) throw error;
+        });
     }
     this.#registered.add(definition.name);
   }
@@ -112,15 +119,26 @@ export class PgBossQueue implements JobQueue {
     const data: StoredData = { payload: definition.payload.parse(payload) };
     const requestId = currentRequestContext()?.requestId;
     if (requestId) data.requestId = requestId;
-    const id = options.idempotencyKey ? idempotentJobId(definition.name, options.idempotencyKey) : undefined;
-    const created = await this.#boss.send(definition.name, data, {
-      ...(id ? { id } : {}),
-      ...(options.startAfter ? { startAfter: options.startAfter } : {}),
-      ...(options.priority !== undefined ? { priority: options.priority } : {}),
-    });
-    const result = created ?? id;
-    if (!result) throw new Error(`Job ${definition.name} was not enqueued`);
-    return result;
+    const singletonKey = options.idempotencyKey
+      ? `${IDEMPOTENCY_PREFIX}${options.idempotencyKey}`
+      : `${UNIQUE_PREFIX}${randomUUID()}`;
+    // A rejected send means a job with this key is pending; it may finish before the lookup.
+    for (let attempt = 0; attempt < ENQUEUE_ATTEMPTS; attempt++) {
+      const created = await this.#boss.send(definition.name, data, {
+        singletonKey,
+        ...(options.startAfter ? { startAfter: options.startAfter } : {}),
+        ...(options.priority !== undefined ? { priority: options.priority } : {}),
+      });
+      if (created) return created;
+      const pending = await this.#options.database.execute<{ id: string }>(
+        sql`select id from ${sql.identifier(SCHEMA)}.job
+            where name = ${definition.name} and singleton_key = ${singletonKey}
+              and state in ('created', 'retry', 'active')`,
+      );
+      const id = pending.rows[0]?.id;
+      if (id) return id;
+    }
+    throw new Error(`Job ${definition.name} was not enqueued`);
   }
 
   async schedule<TPayload>(
