@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { type Job, PgBoss } from "pg-boss";
+import { type Clock, type Job, PgBoss } from "pg-boss";
 import type { Database } from "../database/database.js";
 import type { Logger } from "../logging/logger.js";
 import { currentRequestContext, runWithRequestContext } from "../observability/request-context.js";
@@ -46,6 +46,9 @@ type JobRow = {
 const QUEUE_POLICY = "exclusive";
 const IDEMPOTENCY_PREFIX = "key:";
 const UNIQUE_PREFIX = "job:";
+/** Each schedule has its own key: schedules never block each other, an occurrence only skips while the previous one of the same schedule is still pending. */
+const SCHEDULE_PREFIX = "schedule:";
+const DEFAULT_SCHEDULE_KEY = "default";
 const ENQUEUE_ATTEMPTS = 5;
 
 export interface PgBossQueueOptions {
@@ -56,6 +59,8 @@ export interface PgBossQueueOptions {
   role: "producer" | "worker";
   pollingIntervalSeconds?: number;
   onJobFinished?: (event: JobFinishedEvent) => void;
+  /** Replaces the system clock, for tests of schedules. */
+  clock?: Clock;
 }
 
 export class PgBossQueue implements JobQueue {
@@ -74,6 +79,7 @@ export class PgBossQueue implements JobQueue {
       max: 4,
       supervise: worker,
       schedule: worker,
+      ...(options.clock ? { clock: options.clock } : {}),
     });
     this.#boss.on("error", (error) => options.logger.error({ err: error }, "Job queue error"));
   }
@@ -149,15 +155,17 @@ export class PgBossQueue implements JobQueue {
   ): Promise<void> {
     await this.register(definition);
     const data: StoredData = { payload: definition.payload.parse(payload) };
+    const key = options.key ?? DEFAULT_SCHEDULE_KEY;
     await this.#boss.schedule(definition.name, cron, data, {
-      ...(options.key ? { key: options.key } : {}),
+      key,
+      singletonKey: `${SCHEDULE_PREFIX}${key}`,
       ...(options.timeZone ? { tz: options.timeZone } : {}),
     });
   }
 
   async unschedule<TPayload>(definition: JobDefinition<TPayload>, key?: string): Promise<void> {
     await this.start();
-    await this.#boss.unschedule(definition.name, key);
+    await this.#boss.unschedule(definition.name, key ?? DEFAULT_SCHEDULE_KEY);
   }
 
   async work<TPayload>(

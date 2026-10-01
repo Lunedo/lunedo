@@ -35,6 +35,11 @@ export interface EnqueueOptions {
   priority?: number;
 }
 
+/**
+ * Schedules of the same job run independently. An occurrence is skipped while the previous
+ * occurrence of the same schedule is still waiting, retrying or running, so a slow job never
+ * runs twice in parallel.
+ */
 export interface ScheduleOptions {
   /** Distinguishes several schedules of the same job. */
   key?: string;
