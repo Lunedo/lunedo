@@ -10,7 +10,7 @@ While setup is not complete, every start of an API node prints a one-time setup 
 Setup code: 7KQ2-M9XA-P4RT-HB3C. Open Pagehall in a browser and enter this code to set up the instance.
 ```
 
-Read it with `docker compose logs pagehall | grep "Setup code"`. A new start issues a new code and the earlier one stops working, so with several API nodes use the newest code. The code works once and proves that whoever runs the assistant operates the server. It is the only secret Pagehall ever writes to its log. Exchanges are limited to 10 per client and 50 for the instance in 15 minutes.
+Read it with `docker compose logs pagehall | grep "Setup code"`. A new start issues a new code and the earlier one stops working, so with several API nodes use the newest code. The code works once and proves that whoever runs the assistant operates the server. It is the only secret Pagehall ever writes to its log. Exchanges are limited to 10 per client in 15 minutes; the code has 80 bits, so it cannot be guessed.
 
 The code is exchanged for a setup session, held in the cookie `__Host-pagehall-setup`. A setup session ends after an hour without use and a day after the code was entered.
 

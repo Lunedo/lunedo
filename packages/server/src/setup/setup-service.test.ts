@@ -74,6 +74,18 @@ describe.skipIf(!baseUrl)("SetupService", () => {
     expect(await setup.exchangeCode(log.code(), "203.0.113.3")).toMatch(/^[\w-]{43}$/);
   });
 
+  it("does not let a client over its limit block the exchange for others", async () => {
+    const {
+      services: { setup },
+    } = await services();
+    const log = capturingLogger();
+    await setup.issueCode(log.logger);
+    for (let attempt = 0; attempt < 60; attempt++) {
+      await expect(setup.exchangeCode("WRONG-CODE", "203.0.113.20")).rejects.toThrow();
+    }
+    expect(await setup.exchangeCode(log.code(), "198.51.100.20")).toMatch(/^[\w-]{43}$/);
+  });
+
   it("applies the configuration once when several nodes start at the same time", async () => {
     const { services: accountServices, settings, pool } = await services();
     const logger = createLogger({ service: "test", level: "silent" });

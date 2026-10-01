@@ -18,7 +18,6 @@ const SESSION_MAX_MS = 24 * 60 * 60 * 1000;
 const CODE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 const CODE_LENGTH = 16;
 const EXCHANGES_PER_CLIENT = 10;
-const EXCHANGES_PER_INSTANCE = 50;
 const EXCHANGE_WINDOW_SECONDS = 15 * 60;
 const ISSUE_LOCK = "pagehall.setup";
 
@@ -118,26 +117,18 @@ export class SetupService {
   }
 
   /**
-   * Exchanges the setup code for a setup session. The code works once; the exchange is
-   * rate-limited per client and for the whole instance.
+   * Exchanges the setup code for a setup session. The code works once. The exchange is
+   * rate-limited per client only: with 80 bits the code cannot be guessed, and a limit for the
+   * whole instance would let any client block the operator.
    */
   async exchangeCode(code: string, clientIp: string | undefined): Promise<string> {
     if (await this.isComplete()) throw new SetupNotFoundError();
-    const limits = [
-      this.#rateLimiter.consume("setupCode:instance", EXCHANGES_PER_INSTANCE, EXCHANGE_WINDOW_SECONDS),
-      ...(clientIp
-        ? [
-            this.#rateLimiter.consume(
-              `setupCode:client:${clientSubject(clientIp)}`,
-              EXCHANGES_PER_CLIENT,
-              EXCHANGE_WINDOW_SECONDS,
-            ),
-          ]
-        : []),
-    ];
-    for (const limit of await Promise.all(limits)) {
-      if (!limit.allowed) throw new RateLimitedError(limit.retryAfterSeconds);
-    }
+    const limit = await this.#rateLimiter.consume(
+      `setupCode:client:${clientSubject(clientIp ?? "unknown")}`,
+      EXCHANGES_PER_CLIENT,
+      EXCHANGE_WINDOW_SECONDS,
+    );
+    if (!limit.allowed) throw new RateLimitedError(limit.retryAfterSeconds);
     const token = generateToken();
     const exchanged = await this.#database.transaction(async (tx) => {
       const [row] = await tx
