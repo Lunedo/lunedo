@@ -390,6 +390,47 @@ export const auditEntrySchema = z
     requestId: z.string().nullable().describe("ID of the HTTP request, or null."),
     clientIp: z.string().nullable().describe("Client IP address, or null."),
     userAgent: z.string().nullable().describe("User agent of the client, or null."),
+    labelKey: z
+      .string()
+      .describe("Translation key of the action, `audit.events.` followed by the event type."),
+    changeKind: z
+      .enum(["setting", "fields"])
+      .describe("How `changes` reads: a setting value or lock, or changed fields."),
+    actor: z
+      .object({
+        type: z.string().describe("`account`, `system` or `anonymous`."),
+        id: z.string().nullable().describe("ID of the account, or null."),
+        name: z.string().nullable().describe("Name of the account when the event happened, or null."),
+      })
+      .describe("Who acted."),
+    target: z
+      .object({
+        type: z.string().describe("Kind of object."),
+        id: z.string().nullable().describe("ID of the object, or for settings the setting key."),
+        name: z.string().nullable().describe("Name of the object when the event happened, or null."),
+      })
+      .describe("What the event is about."),
+    scope: z
+      .object({
+        type: z.enum(["instance", "organization"]).describe("Instance or organization."),
+        id: z.string().nullable().describe("ID of the organization, null for the instance."),
+        name: z.string().nullable().describe("Name of the organization when the event happened, or null."),
+      })
+      .describe("Where the event happened."),
+    changes: z
+      .array(
+        z
+          .object({
+            property: z.string().describe("Changed property or field."),
+            old: z.json().describe("Value before, or null when unknown or not set."),
+            new: z.json().describe("Value after, or null when removed."),
+          })
+          .describe("One change."),
+      )
+      .describe("What changed, readable without the raw fields."),
+    references: z
+      .record(z.string(), z.string())
+      .describe("Names of accounts, organizations, groups and roles that the fields refer to, by ID."),
   })
   .describe("An entry of the audit log.");
 
@@ -408,6 +449,17 @@ export const exampleAuditEntry = {
   requestId: "6f1c2b0e-5d4a-4c3b-9a2f-1e0d9c8b7a6f",
   clientIp: "203.0.113.7",
   userAgent: "curl/8.9.1",
+  labelKey: "audit.events.role.assigned",
+  changeKind: "fields",
+  actor: { type: "account", id: exampleMember.accountId, name: "Olivia Owner" },
+  target: { type: "roleAssignment", id: exampleRoleAssignment.id, name: null },
+  scope: { type: "organization", id: exampleOrganization.id, name: "Platform Team" },
+  changes: [
+    { property: "role", old: null, new: "Handbook editors" },
+    { property: "principalKind", old: null, new: "group" },
+    { property: "principalId", old: null, new: exampleGroup.id },
+  ],
+  references: { [exampleGroup.id]: "Editors" },
 };
 
 export const decisionSchema = z

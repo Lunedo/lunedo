@@ -197,7 +197,11 @@ export class RoleService {
         name: "role.updated",
         actor,
         targetId: id,
-        fields: { name, areas: areas as Record<string, string> },
+        fields: {
+          name,
+          areas: areas as Record<string, string>,
+          previous: { name: current.name, areas: current.areas as Record<string, string> },
+        },
         ...(scopeOf(scope, organizationId) ? { scope: scopeOf(scope, organizationId) } : {}),
       });
       return { ...current, name, areas };

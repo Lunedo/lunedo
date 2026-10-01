@@ -333,6 +333,11 @@ export class ApiTokenService {
   async rename(actor: Principal, id: string, name: string): Promise<ApiToken> {
     const parsed = tokenNameSchema.parse(name);
     return this.#database.transaction(async (tx) => {
+      const [current] = await tx
+        .select({ name: apiTokens.name })
+        .from(apiTokens)
+        .where(eq(apiTokens.id, id))
+        .for("update");
       const [row] = await tx
         .update(apiTokens)
         .set({ name: parsed, updatedAt: new Date() })
@@ -344,7 +349,7 @@ export class ApiTokenService {
         name: "apiToken.updated",
         actor,
         targetId: id,
-        fields: { name: parsed },
+        fields: { name: parsed, previous: { name: current?.name ?? null } },
         ...(scope ? { scope: { type: "organization" as const, id: scope } } : {}),
       });
       return toToken(row);

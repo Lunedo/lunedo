@@ -17,7 +17,14 @@ export {
 } from "./accounts/principal.js";
 export { accountScopeChain } from "./accounts/scope.js";
 export { AuditLog, type AuditScope, type AuditVerification } from "./audit/audit-log.js";
-export { type AuditEventName, auditCatalog, type SignInMethod } from "./audit/catalog.js";
+export {
+  type AuditChangeKind,
+  type AuditEventName,
+  auditCatalog,
+  type SignInMethod,
+} from "./audit/catalog.js";
+export type { AuditLabels } from "./audit/labels.js";
+export { type AuditChange, type AuditPresentation, presentAuditEntry } from "./audit/presentation.js";
 export type { AuditCursor, AuditEntry, AuditFilter } from "./audit/reader.js";
 export { auditRetentionSetting } from "./audit/retention.js";
 export type { FactorAdded } from "./auth/account-security.js";

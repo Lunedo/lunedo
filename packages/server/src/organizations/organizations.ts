@@ -347,7 +347,10 @@ export class OrganizationService {
         name: "organization.updated",
         actor,
         targetId: id,
-        fields: changes,
+        fields: {
+          ...changes,
+          previous: { name: current.name, slug: current.slug, logoRef: current.logoRef },
+        },
         scope: scopeOf(id),
       });
       return row;
@@ -388,7 +391,7 @@ export class OrganizationService {
         name: "organization.updated",
         actor,
         targetId: id,
-        fields: { name: row.name, slug: row.slug, logoRef: ref },
+        fields: { name: row.name, slug: row.slug, logoRef: ref, previous: { logoRef: current.logoRef } },
         scope: scopeOf(id),
       });
       return row;

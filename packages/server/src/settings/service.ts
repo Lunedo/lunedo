@@ -63,6 +63,8 @@ export interface SettingChange {
   scope: Scope;
   action: "set" | "clear" | "lock" | "unlock";
   value?: unknown;
+  previousValue: unknown;
+  previousLocked: boolean;
 }
 
 export type SettingChangeHandler = (tx: Transaction, change: SettingChange) => Promise<void>;
@@ -248,6 +250,17 @@ export class SettingsService {
     options: WriteOptions,
   ) {
     await (options.tx ?? this.#database).transaction(async (tx) => {
+      const [previous] = await tx
+        .select({ value: settingValues.value, locked: settingValues.locked })
+        .from(settingValues)
+        .where(
+          and(
+            eq(settingValues.level, target.level),
+            eq(settingValues.scopeId, target.id),
+            eq(settingValues.key, key),
+          ),
+        )
+        .for("update");
       await tx
         .insert(settingValues)
         .values({
@@ -268,6 +281,8 @@ export class SettingsService {
         scope: target,
         action,
         ...(action === "set" ? { value: values.value } : {}),
+        previousValue: previous?.value ?? null,
+        previousLocked: previous?.locked ?? false,
       });
     });
     this.#cache.delete(scopeKey(target));

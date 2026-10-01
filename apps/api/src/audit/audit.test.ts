@@ -83,8 +83,9 @@ describe.skipIf(!databaseBaseUrl)("audit log through the API", () => {
     expect(response.headers["content-disposition"]).toContain("attachment");
     const lines = response.body.trim().split("\r\n");
     expect(lines[0]).toBe(
-      "occurredAt,name,scopeType,scopeId,actorType,actorId,targetType,targetId,fields,clientIp,userAgent,requestId,sequence,id",
+      "time,actor,action,target,scope,changes,occurredAt,name,scopeType,scopeId,actorType,actorId,targetType,targetId,fields,clientIp,userAgent,requestId,sequence,id",
     );
+    expect(lines[1]).toMatch(/^"[^"]+","Olivia Owner","group.created","Readers","[^"]+","name: Readers",/);
     expect(lines).toHaveLength(4);
     expect(response.body).toContain(`"{""name"":""=cmd|' /C calc'!A0""}"`);
     expect(lines.slice(1).every((line) => line.includes('"group.created"'))).toBe(true);
@@ -92,6 +93,32 @@ describe.skipIf(!databaseBaseUrl)("audit log through the API", () => {
       await owner.get(`/api/v1/organizations/${organizationId}/audit-events?name=audit.exported`)
     ).json();
     expect(exported.items[0].fields).toMatchObject({ scopeType: "organization", name: "group.created" });
+  });
+
+  it("lists events readably with names, scope and changes", async () => {
+    const put = (value: string) => owner.put("/api/v1/instance/settings/branding.accentColor", { value });
+    expect((await put("violet")).statusCode).toBe(204);
+    expect((await put("blue")).statusCode).toBe(204);
+    const [latest] = (await owner.get("/api/v1/instance/audit-events?name=settings.changed&limit=1")).json()
+      .items;
+    expect(latest).toMatchObject({
+      labelKey: "audit.events.settings.changed",
+      changeKind: "setting",
+      actor: { type: "account", name: "Olivia Owner" },
+      target: { type: "setting", id: "branding.accentColor" },
+      scope: { type: "instance", id: null },
+      changes: [{ property: "value", old: "violet", new: "blue" }],
+    });
+    expect(latest).not.toHaveProperty("labels");
+
+    const groups = (
+      await owner.get(`/api/v1/organizations/${organizationId}/audit-events?name=group.created&limit=1`)
+    ).json().items;
+    expect(groups[0]).toMatchObject({
+      target: { type: "group", name: "Readers" },
+      scope: { type: "organization", id: organizationId, name: expect.any(String) },
+      changes: [{ property: "name", old: null, new: "Readers" }],
+    });
   });
 
   it("gives the security auditor everything and members nothing", async () => {

@@ -8512,6 +8512,150 @@
                               "string",
                               "null"
                             ]
+                          },
+                          "labelKey": {
+                            "type": "string",
+                            "description": "Translation key of the action, `audit.events.` followed by the event type."
+                          },
+                          "changeKind": {
+                            "type": "string",
+                            "enum": [
+                              "setting",
+                              "fields"
+                            ],
+                            "description": "How `changes` reads: a setting value or lock, or changed fields."
+                          },
+                          "actor": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "`account`, `system` or `anonymous`."
+                              },
+                              "id": {
+                                "description": "ID of the account, or null.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "description": "Name of the account when the event happened, or null.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false,
+                            "description": "Who acted."
+                          },
+                          "target": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "Kind of object."
+                              },
+                              "id": {
+                                "description": "ID of the object, or for settings the setting key.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "description": "Name of the object when the event happened, or null.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false,
+                            "description": "What the event is about."
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "instance",
+                                  "organization"
+                                ],
+                                "description": "Instance or organization."
+                              },
+                              "id": {
+                                "description": "ID of the organization, null for the instance.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "description": "Name of the organization when the event happened, or null.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false,
+                            "description": "Where the event happened."
+                          },
+                          "changes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "property": {
+                                  "type": "string",
+                                  "description": "Changed property or field."
+                                },
+                                "old": {
+                                  "description": "Value before, or null when unknown or not set.",
+                                  "$ref": "#/components/schemas/Schemafbc378f59d82"
+                                },
+                                "new": {
+                                  "description": "Value after, or null when removed.",
+                                  "$ref": "#/components/schemas/Schema682d67ac39ef"
+                                }
+                              },
+                              "required": [
+                                "property",
+                                "old",
+                                "new"
+                              ],
+                              "additionalProperties": false,
+                              "description": "One change."
+                            },
+                            "description": "What changed, readable without the raw fields."
+                          },
+                          "references": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "description": "Names of accounts, organizations, groups and roles that the fields refer to, by ID."
                           }
                         },
                         "required": [
@@ -8528,7 +8672,14 @@
                           "occurredAt",
                           "requestId",
                           "clientIp",
-                          "userAgent"
+                          "userAgent",
+                          "labelKey",
+                          "changeKind",
+                          "actor",
+                          "target",
+                          "scope",
+                          "changes",
+                          "references"
                         ],
                         "additionalProperties": false,
                         "description": "An entry of the audit log."
@@ -8570,7 +8721,44 @@
                       "occurredAt": "2026-10-01T08:00:00.000Z",
                       "requestId": "6f1c2b0e-5d4a-4c3b-9a2f-1e0d9c8b7a6f",
                       "clientIp": "203.0.113.7",
-                      "userAgent": "curl/8.9.1"
+                      "userAgent": "curl/8.9.1",
+                      "labelKey": "audit.events.role.assigned",
+                      "changeKind": "fields",
+                      "actor": {
+                        "type": "account",
+                        "id": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
+                        "name": "Olivia Owner"
+                      },
+                      "target": {
+                        "type": "roleAssignment",
+                        "id": "01929b1e-9e5c-7f40-b16d-5e4f3a2b7c8d",
+                        "name": null
+                      },
+                      "scope": {
+                        "type": "organization",
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a6b",
+                        "name": "Platform Team"
+                      },
+                      "changes": [
+                        {
+                          "property": "role",
+                          "old": null,
+                          "new": "Handbook editors"
+                        },
+                        {
+                          "property": "principalKind",
+                          "old": null,
+                          "new": "group"
+                        },
+                        {
+                          "property": "principalId",
+                          "old": null,
+                          "new": "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9e"
+                        }
+                      ],
+                      "references": {
+                        "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9e": "Editors"
+                      }
                     }
                   ],
                   "nextCursor": null
@@ -8777,7 +8965,7 @@
                 "schema": {
                   "type": "string"
                 },
-                "example": "occurredAt,name,scopeType,scopeId,actorType,actorId,targetType,targetId,fields,clientIp,userAgent,requestId,sequence,id\r\n\"2026-10-01T08:00:00.000Z\",\"role.assigned\",\"organization\",...\r\n"
+                "example": "time,actor,action,target,scope,changes,occurredAt,name,scopeType,scopeId,actorType,actorId,targetType,targetId,fields,clientIp,userAgent,requestId,sequence,id\r\n\"2026-10-01T08:00:00.000Z\",\"Olivia Owner\",\"role.assigned\",...\r\n"
               }
             }
           },
@@ -15375,6 +15563,150 @@
                               "string",
                               "null"
                             ]
+                          },
+                          "labelKey": {
+                            "type": "string",
+                            "description": "Translation key of the action, `audit.events.` followed by the event type."
+                          },
+                          "changeKind": {
+                            "type": "string",
+                            "enum": [
+                              "setting",
+                              "fields"
+                            ],
+                            "description": "How `changes` reads: a setting value or lock, or changed fields."
+                          },
+                          "actor": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "`account`, `system` or `anonymous`."
+                              },
+                              "id": {
+                                "description": "ID of the account, or null.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "description": "Name of the account when the event happened, or null.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false,
+                            "description": "Who acted."
+                          },
+                          "target": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "Kind of object."
+                              },
+                              "id": {
+                                "description": "ID of the object, or for settings the setting key.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "description": "Name of the object when the event happened, or null.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false,
+                            "description": "What the event is about."
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "instance",
+                                  "organization"
+                                ],
+                                "description": "Instance or organization."
+                              },
+                              "id": {
+                                "description": "ID of the organization, null for the instance.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "description": "Name of the organization when the event happened, or null.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false,
+                            "description": "Where the event happened."
+                          },
+                          "changes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "property": {
+                                  "type": "string",
+                                  "description": "Changed property or field."
+                                },
+                                "old": {
+                                  "description": "Value before, or null when unknown or not set.",
+                                  "$ref": "#/components/schemas/Schemafbc378f59d82"
+                                },
+                                "new": {
+                                  "description": "Value after, or null when removed.",
+                                  "$ref": "#/components/schemas/Schema682d67ac39ef"
+                                }
+                              },
+                              "required": [
+                                "property",
+                                "old",
+                                "new"
+                              ],
+                              "additionalProperties": false,
+                              "description": "One change."
+                            },
+                            "description": "What changed, readable without the raw fields."
+                          },
+                          "references": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "description": "Names of accounts, organizations, groups and roles that the fields refer to, by ID."
                           }
                         },
                         "required": [
@@ -15391,7 +15723,14 @@
                           "occurredAt",
                           "requestId",
                           "clientIp",
-                          "userAgent"
+                          "userAgent",
+                          "labelKey",
+                          "changeKind",
+                          "actor",
+                          "target",
+                          "scope",
+                          "changes",
+                          "references"
                         ],
                         "additionalProperties": false,
                         "description": "An entry of the audit log."
@@ -15433,7 +15772,44 @@
                       "occurredAt": "2026-10-01T08:00:00.000Z",
                       "requestId": "6f1c2b0e-5d4a-4c3b-9a2f-1e0d9c8b7a6f",
                       "clientIp": "203.0.113.7",
-                      "userAgent": "curl/8.9.1"
+                      "userAgent": "curl/8.9.1",
+                      "labelKey": "audit.events.role.assigned",
+                      "changeKind": "fields",
+                      "actor": {
+                        "type": "account",
+                        "id": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
+                        "name": "Olivia Owner"
+                      },
+                      "target": {
+                        "type": "roleAssignment",
+                        "id": "01929b1e-9e5c-7f40-b16d-5e4f3a2b7c8d",
+                        "name": null
+                      },
+                      "scope": {
+                        "type": "organization",
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a6b",
+                        "name": "Platform Team"
+                      },
+                      "changes": [
+                        {
+                          "property": "role",
+                          "old": null,
+                          "new": "Handbook editors"
+                        },
+                        {
+                          "property": "principalKind",
+                          "old": null,
+                          "new": "group"
+                        },
+                        {
+                          "property": "principalId",
+                          "old": null,
+                          "new": "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9e"
+                        }
+                      ],
+                      "references": {
+                        "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9e": "Editors"
+                      }
                     }
                   ],
                   "nextCursor": null
@@ -15661,7 +16037,7 @@
                 "schema": {
                   "type": "string"
                 },
-                "example": "occurredAt,name,scopeType,scopeId,actorType,actorId,targetType,targetId,fields,clientIp,userAgent,requestId,sequence,id\r\n\"2026-10-01T08:00:00.000Z\",\"role.assigned\",\"organization\",...\r\n"
+                "example": "time,actor,action,target,scope,changes,occurredAt,name,scopeType,scopeId,actorType,actorId,targetType,targetId,fields,clientIp,userAgent,requestId,sequence,id\r\n\"2026-10-01T08:00:00.000Z\",\"Olivia Owner\",\"role.assigned\",...\r\n"
               }
             }
           },

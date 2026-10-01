@@ -216,7 +216,7 @@ export class GroupService {
         name: "group.updated",
         actor,
         targetId: id,
-        fields: { name, description },
+        fields: { name, description, previous: { name: current.name, description: current.description } },
         scope: scopeOf(current.organizationId),
       });
       return { ...current, name, description };

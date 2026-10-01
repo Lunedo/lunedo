@@ -290,9 +290,23 @@ describe.skipIf(!databaseUrl)("SettingsService", () => {
         scope: { level: "organization", id: scopes.organization },
         action: "set",
         value: "value",
+        previousValue: null,
+        previousLocked: false,
       },
-      { key: setting.key, scope: { level: "organization", id: scopes.organization }, action: "lock" },
-      { key: setting.key, scope: { level: "organization", id: scopes.organization }, action: "clear" },
+      {
+        key: setting.key,
+        scope: { level: "organization", id: scopes.organization },
+        action: "lock",
+        previousValue: "value",
+        previousLocked: false,
+      },
+      {
+        key: setting.key,
+        scope: { level: "organization", id: scopes.organization },
+        action: "clear",
+        previousValue: "value",
+        previousLocked: true,
+      },
     ]);
 
     const failing = new SettingsService({

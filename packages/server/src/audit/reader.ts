@@ -17,6 +17,7 @@ export interface AuditEntry {
   targetType: string;
   targetId: string | null;
   fields: unknown;
+  labels: unknown;
   occurredAt: Date;
   requestId: string | null;
   clientIp: string | null;
@@ -51,6 +52,7 @@ const columns = {
   targetType: auditEvents.targetType,
   targetId: auditEvents.targetId,
   fields: auditEvents.fields,
+  labels: auditEvents.labels,
   occurredAt: auditEvents.occurredAt,
   requestId: auditEvents.requestId,
   clientIp: auditEvents.clientIp,
