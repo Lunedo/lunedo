@@ -120,14 +120,18 @@ The restore of the backup <file>, started at <time>, did not complete, so the da
 
 The backup tools use the same `PAGEHALL_DATABASE_URL` as the application. They pass credentials through the environment, never on the command line, and they verify TLS at least as strictly as the application:
 
-| URL parameter | Backup tools (libpq) |
+| URL parameters | Backup tools (`PGSSLMODE`) |
 |---|---|
-| `sslmode=disable` | `disable` |
-| `sslmode=prefer`, `require`, `verify-ca`, `verify-full`, or `ssl=true` | `verify-full`, because the application verifies the certificate and host name for these |
+| no TLS parameters | not set; the libpq default `prefer` is not weaker than the application, which connects without TLS |
+| `sslmode=disable`, also with certificate parameters | `disable` |
+| `sslmode=prefer`, `require`, `verify-ca` or `verify-full`, `ssl=true`, or any of `sslrootcert`, `sslcert`, `sslkey` | `verify-full`, because the application verifies the certificate and host name for these |
 | `sslmode=no-verify` | `require` |
-| `sslmode=<mode>&uselibpqcompat=true` | `<mode>` |
-| `sslrootcert`, `sslcert`, `sslkey` | `PGSSLROOTCERT`, `PGSSLCERT`, `PGSSLKEY` |
-| `application_name` | `PGAPPNAME` |
+| `uselibpqcompat=true&sslmode=prefer` | `require`, because the application requires TLS and never falls back to plaintext |
+| `uselibpqcompat=true&sslmode=require` | `require`; `verify-ca` when `sslrootcert` is given |
+| `uselibpqcompat=true&sslmode=verify-ca` | `verify-ca` |
+| `uselibpqcompat=true` with `sslmode=verify-full`, `sslmode=no-verify`, no `sslmode` but `ssl=true` or certificate parameters | `verify-full` |
+
+Certificate files are passed as `PGSSLROOTCERT`, `PGSSLCERT` and `PGSSLKEY`, and `application_name` as `PGAPPNAME`.
 
 Other URL parameters stop the command with a message that names the parameter.
 

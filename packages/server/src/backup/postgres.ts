@@ -54,9 +54,15 @@ const SUPPORTED_PARAMETERS = new Set([
 ]);
 
 /**
- * The libpq SSL mode that verifies at least as much as node-pg does for the same URL. Without
- * `uselibpqcompat`, node-pg verifies the certificate and host name for every mode except
- * `disable` and `no-verify`.
+ * The libpq SSL mode that matches what node-pg (pg-connection-string 2.x) does for the same URL:
+ *
+ * - Without `uselibpqcompat`, any `sslmode` other than `disable` and `no-verify`, `ssl=true`
+ *   and any certificate parameter make node-pg verify the certificate and the host name.
+ * - With `uselibpqcompat=true`, `prefer` still requires TLS without verification, `require`
+ *   with a root certificate verifies the certificate but not the host name, and the remaining
+ *   cases verify both.
+ *
+ * Without TLS parameters, node-pg connects without TLS; the libpq default `prefer` is not weaker.
  */
 function libpqSslMode(url: URL): string | undefined {
   const mode = url.searchParams.get("sslmode");
@@ -69,10 +75,16 @@ function libpqSslMode(url: URL): string | undefined {
       `the backup tools do not support ssl=${ssl}; use sslmode=disable instead`,
     );
   }
+  const certificates = Object.keys(FILE_PARAMETERS).some((parameter) => !!url.searchParams.get(parameter));
   if (mode === "disable") return "disable";
-  if (mode === "no-verify") return "require";
-  if (url.searchParams.get("uselibpqcompat") === "true" && mode !== null) return mode;
-  if (mode !== null || ssl !== null) return "verify-full";
+  if (url.searchParams.get("uselibpqcompat") === "true") {
+    if (mode === "prefer") return "require";
+    if (mode === "require") return url.searchParams.get("sslrootcert") ? "verify-ca" : "require";
+    if (mode === "verify-ca") return "verify-ca";
+  } else if (mode === "no-verify") {
+    return "require";
+  }
+  if (mode !== null || ssl !== null || certificates) return "verify-full";
   return undefined;
 }
 

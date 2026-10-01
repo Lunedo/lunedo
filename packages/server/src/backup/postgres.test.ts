@@ -57,15 +57,29 @@ describe("libpqEnvironment", () => {
     ["sslmode=no-verify", "require"],
     ["ssl=true", "verify-full"],
     ["ssl=1", "verify-full"],
-    ["sslmode=prefer&uselibpqcompat=true", "prefer"],
-    ["sslmode=require&uselibpqcompat=true", "require"],
-    ["sslmode=verify-ca&uselibpqcompat=true", "verify-ca"],
+    ["sslrootcert=/run/secrets/ca.pem", "verify-full"],
+    ["sslcert=/run/secrets/client.pem&sslkey=/run/secrets/client.key", "verify-full"],
+    ["sslkey=/run/secrets/client.key", "verify-full"],
+    ["sslmode=disable&sslrootcert=/run/secrets/ca.pem", "disable"],
+    ["sslmode=no-verify&sslrootcert=/run/secrets/ca.pem", "require"],
+    ["uselibpqcompat=true&sslmode=disable", "disable"],
+    ["uselibpqcompat=true&sslmode=prefer", "require"],
+    ["uselibpqcompat=true&sslmode=prefer&sslrootcert=/run/secrets/ca.pem", "require"],
+    ["uselibpqcompat=true&sslmode=require", "require"],
+    ["uselibpqcompat=true&sslmode=require&sslrootcert=/run/secrets/ca.pem", "verify-ca"],
+    ["uselibpqcompat=true&sslmode=verify-ca&sslrootcert=/run/secrets/ca.pem", "verify-ca"],
+    ["uselibpqcompat=true&sslmode=verify-full", "verify-full"],
+    ["uselibpqcompat=true&sslmode=no-verify", "verify-full"],
+    ["uselibpqcompat=true&sslrootcert=/run/secrets/ca.pem", "verify-full"],
+    ["uselibpqcompat=true&sslcert=/run/secrets/client.pem&sslkey=/run/secrets/client.key", "verify-full"],
+    ["uselibpqcompat=true&ssl=true", "verify-full"],
   ])("verifies TLS at least like node-pg for %s", (query, mode) => {
     expect(libpqEnvironment(`${base}?${query}`).PGSSLMODE).toBe(mode);
   });
 
   it("leaves the libpq default without TLS parameters", () => {
     expect(libpqEnvironment(base).PGSSLMODE).toBeUndefined();
+    expect(libpqEnvironment(`${base}?uselibpqcompat=true`).PGSSLMODE).toBeUndefined();
   });
 
   it("passes certificate files and the application name", () => {
