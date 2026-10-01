@@ -43,7 +43,8 @@ docker run -d --name "$postgres" --network "$network" \
   -e POSTGRES_USER=pagehall -e POSTGRES_PASSWORD="$password" -e POSTGRES_DB=source \
   postgres:16-alpine >/dev/null
 for _ in $(seq 1 60); do
-  docker exec "$postgres" pg_isready -U pagehall -d source >/dev/null 2>&1 && break
+  # Only the final server listens on TCP; the temporary one during initialization uses the socket.
+  docker exec "$postgres" pg_isready -h 127.0.0.1 -U pagehall -d source >/dev/null 2>&1 && break
   sleep 1
 done
 psql_in source -c "create database target"
