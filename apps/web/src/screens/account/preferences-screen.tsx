@@ -3,14 +3,14 @@ import { Section, SegmentedControl, Select, SettingRow, Skeleton, Stepper, Switc
 import { Palette } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { SettingEntry } from "../../api/organization-queries.js";
-import { SettingSource } from "../../components/setting-source.js";
+import { inheritedValue, SettingSource } from "../../components/setting-source.js";
 import { useFailureToast } from "../../errors/failure.js";
 import { translateKey } from "../../i18n/translate.js";
 import { preferenceKeys, usePreferenceList, useUpdatePreference } from "../../preferences/preferences.js";
 import { useFormat, usePreferences } from "../../preferences/preferences-provider.js";
+import { localeOptionSets } from "../../settings/locale-options.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
-import { localeOptionSets } from "./preference-options.js";
 
 const INHERIT = "inherit";
 
@@ -129,7 +129,15 @@ export function PreferencesScreen() {
                     value={own ? String(entry.value) : INHERIT}
                     disabled={locked}
                     onValueChange={(value) => set(set_.key, value === INHERIT ? undefined : value)}
-                    options={[{ value: INHERIT, label: t("preferences.useDefault") }, ...options]}
+                    options={[
+                      {
+                        value: INHERIT,
+                        label: t("settings.source.fromDefault", {
+                          value: set_.formatValue(t, inheritedValue(entry, "user"), i18n.language),
+                        }),
+                      },
+                      ...options,
+                    ]}
                   />
                 </div>
               }

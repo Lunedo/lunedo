@@ -119,7 +119,7 @@ test("switches language, color mode and text size immediately", async ({ page })
   await expect(page.getByRole("heading", { name: "Darstellung und Sprache" })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "de");
   await page.getByRole("combobox", { name: "Sprache" }).click();
-  await page.getByRole("option", { name: "Standard verwenden" }).click();
+  await page.getByRole("option", { name: /^Standard:/ }).click();
   await expect(page.getByRole("heading", { name: "Preferences" })).toBeVisible();
   await setAppearance(page, { colorMode: "light", textSize: 1 });
 });

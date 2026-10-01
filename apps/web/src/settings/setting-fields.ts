@@ -1,5 +1,4 @@
-import { accentColors, dateFormats, numberFormats, timeFormats, weekStarts } from "@pagehall/shared";
-import { supportedLanguages } from "../i18n/index.js";
+import { accentColors } from "@pagehall/shared";
 
 export type SettingFieldType =
   | { kind: "boolean" }
@@ -10,7 +9,7 @@ export type SettingFieldType =
       unit: "days" | "minutes" | "characters" | "count" | "perMinute";
     }
   | { kind: "enum"; values: readonly string[]; labelPrefix: string }
-  | { kind: "timeZone" }
+  | { kind: "locale" }
   | { kind: "text"; inputType?: "url" | "text" };
 
 export interface SettingField {
@@ -23,24 +22,12 @@ const DAY = 24 * 60;
 const fields: SettingField[] = [
   { key: "instance.name", type: { kind: "text" } },
   { key: "instance.url", type: { kind: "text", inputType: "url" } },
-  { key: "locale.language", type: { kind: "enum", values: supportedLanguages, labelPrefix: "languages" } },
-  { key: "locale.timeZone", type: { kind: "timeZone" } },
-  {
-    key: "locale.dateFormat",
-    type: { kind: "enum", values: dateFormats, labelPrefix: "settings.values.dateFormat" },
-  },
-  {
-    key: "locale.timeFormat",
-    type: { kind: "enum", values: timeFormats, labelPrefix: "settings.values.timeFormat" },
-  },
-  {
-    key: "locale.numberFormat",
-    type: { kind: "enum", values: numberFormats, labelPrefix: "settings.values.numberFormat" },
-  },
-  {
-    key: "locale.firstDayOfWeek",
-    type: { kind: "enum", values: weekStarts, labelPrefix: "settings.values.firstDayOfWeek" },
-  },
+  { key: "locale.language", type: { kind: "locale" } },
+  { key: "locale.timeZone", type: { kind: "locale" } },
+  { key: "locale.dateFormat", type: { kind: "locale" } },
+  { key: "locale.timeFormat", type: { kind: "locale" } },
+  { key: "locale.numberFormat", type: { kind: "locale" } },
+  { key: "locale.firstDayOfWeek", type: { kind: "locale" } },
   {
     key: "branding.accentColor",
     type: { kind: "enum", values: accentColors, labelPrefix: "settings.values.accentColor" },

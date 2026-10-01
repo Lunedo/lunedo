@@ -16,9 +16,9 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import type { SettingEntry } from "../api/organization-queries.js";
-import { timeZoneOptions } from "../format/time-zones.js";
 import { translateKey } from "../i18n/translate.js";
 import { useFormat } from "../preferences/preferences-provider.js";
+import { localeOptionSet } from "../settings/locale-options.js";
 import {
   type SettingField,
   settingDescriptionKey,
@@ -31,7 +31,7 @@ import { disabledReason, inheritedValue, SettingSource } from "./setting-source.
 type Level = "instance" | "organization";
 
 export function useSettingValueFormatter() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const format = useFormat();
   return (field: SettingField | undefined, value: unknown): string => {
     if (value === null || value === undefined || value === "") return t("settings.notSet");
@@ -46,8 +46,8 @@ export function useSettingValueFormatter() {
         });
       case "enum":
         return translateKey(t, `${field.type.labelPrefix}.${String(value)}`);
-      case "timeZone":
-        return String(value).replaceAll("_", " ");
+      case "locale":
+        return localeOptionSet(field.key)?.formatValue(t, value, i18n.language) ?? String(value);
       default:
         return String(value);
     }
@@ -281,14 +281,14 @@ function ValueEditor({
   disabled: boolean;
   onSave: (value: unknown) => Promise<void>;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [draft, setDraft] = useState(String(value ?? ""));
   const [error, setError] = useState<string | null>(null);
 
-  if (field.type.kind === "enum" || field.type.kind === "timeZone") {
+  if (field.type.kind === "enum" || field.type.kind === "locale") {
     const options =
-      field.type.kind === "timeZone"
-        ? timeZoneOptions()
+      field.type.kind === "locale"
+        ? (localeOptionSet(field.key)?.options(t, i18n.language) ?? [])
         : field.type.values.map((option) => ({
             value: option,
             label: translateKey(t, `${(field.type as { labelPrefix: string }).labelPrefix}.${option}`),

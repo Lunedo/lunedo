@@ -43,7 +43,7 @@ function weekStartOf(locale: string): Weekday {
   return locale.startsWith("en-US") ? "sunday" : "monday";
 }
 
-function regionalLocale(language: string): string {
+export function regionalLocale(language: string): string {
   const browser = globalThis.navigator?.language ?? "";
   return browser.toLowerCase().startsWith(`${language}-`) ? browser : language;
 }

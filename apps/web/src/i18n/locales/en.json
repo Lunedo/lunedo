@@ -487,15 +487,16 @@
     "timeFormat": "Time format",
     "numberFormat": "Number format",
     "firstDayOfWeek": "First day of the week",
-    "useDefault": "Use the default",
-    "automatic": "Automatic",
-    "time24": "24 hours (14:30)",
-    "time12": "12 hours (2:30 PM)",
+    "time24": "24-hour (14:30)",
+    "time12": "12-hour (2:30 PM)",
     "weekdays": {
       "monday": "Monday",
       "sunday": "Sunday",
       "saturday": "Saturday"
-    }
+    },
+    "automaticResolved": "Automatic ({value})",
+    "hours24": "24-hour",
+    "hours12": "12-hour"
   },
   "settings": {
     "actions": "Actions",
@@ -544,31 +545,6 @@
       "perMinute": "{value} per minute"
     },
     "values": {
-      "dateFormat": {
-        "auto": "Automatic",
-        "DD.MM.YYYY": "DD.MM.YYYY",
-        "DD/MM/YYYY": "DD/MM/YYYY",
-        "MM/DD/YYYY": "MM/DD/YYYY",
-        "YYYY-MM-DD": "YYYY-MM-DD"
-      },
-      "timeFormat": {
-        "auto": "Automatic",
-        "24h": "24 hours",
-        "12h": "12 hours"
-      },
-      "numberFormat": {
-        "auto": "Automatic",
-        "en-US": "1,234.56",
-        "de-DE": "1.234,56",
-        "de-CH": "1’234.56",
-        "fr-FR": "1 234,56"
-      },
-      "firstDayOfWeek": {
-        "auto": "Automatic",
-        "monday": "Monday",
-        "sunday": "Sunday",
-        "saturday": "Saturday"
-      },
       "accentColor": {
         "petrol": "Petrol",
         "blue": "Blue",
