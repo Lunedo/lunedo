@@ -1,16 +1,1389 @@
 {
+  "brand": {
+    "name": "Pagehall",
+    "organizationLogo": "Logo of {name}"
+  },
+  "languages": {
+    "en": "English",
+    "de": "Deutsch"
+  },
+  "common": {
+    "add": "Add",
+    "cancel": "Cancel",
+    "copy": "Copy",
+    "copyFailed": "Copying failed. Select the text and copy it manually.",
+    "delete": "Delete",
+    "done": "Done",
+    "download": "Download",
+    "edit": "Edit",
+    "never": "never",
+    "no": "No",
+    "off": "Off",
+    "on": "On",
+    "remove": "Remove",
+    "save": "Save",
+    "saved": "Changes saved.",
+    "unknown": "Unknown",
+    "yes": "Yes"
+  },
+  "ui": {
+    "clear": "Clear",
+    "close": "Close",
+    "dismiss": "Dismiss",
+    "hidePassword": "Hide password",
+    "loading": "Loading",
+    "nextPage": "Next page",
+    "notSorted": "Not sorted",
+    "optional": "optional",
+    "page": "Page",
+    "previousPage": "Previous page",
+    "required": "required",
+    "showPassword": "Show password",
+    "sortAscending": "Sorted ascending",
+    "sortDescending": "Sorted descending",
+    "breadcrumbs": "Breadcrumbs",
+    "notifications": "Notifications"
+  },
+  "shell": {
+    "documentTitle": "{title} · Pagehall",
+    "skipToContent": "Skip to content"
+  },
   "rail": {
     "label": "Main navigation",
     "home": "Pagehall home",
-    "create": "Create",
-    "forYou": "For you",
     "search": "Search",
-    "starred": "Starred",
-    "spaces": "Spaces",
-    "projects": "Projects",
     "notifications": "Notifications",
+    "notificationsUnread": "Notifications, {count, plural, one {# unread} other {# unread}}",
     "help": "Help",
     "settings": "Settings",
     "account": "Account"
+  },
+  "help": {
+    "shortcuts": "Keyboard shortcuts",
+    "apiReference": "API reference"
+  },
+  "navigation": {
+    "settings": "Settings",
+    "settingsSection": "Settings section",
+    "myAccount": "My account",
+    "organization": "Organization",
+    "instance": "Instance",
+    "switchOrganization": "Switch organization",
+    "collapseSidebar": "Hide sidebar",
+    "expandSidebar": "Show sidebar",
+    "preferences": "Preferences",
+    "security": "Security",
+    "notifications": "Notifications",
+    "general": "General",
+    "members": "Members",
+    "groups": "Groups",
+    "roles": "Roles",
+    "serviceAccounts": "Service accounts",
+    "apiTokens": "API tokens",
+    "domainsAndGuests": "Domains and guests",
+    "notificationDefaults": "Notification defaults",
+    "auditLog": "Audit log",
+    "organizations": "Organizations",
+    "accounts": "Accounts",
+    "mail": "E-mail",
+    "breakGlass": "Break-glass access"
+  },
+  "commands": {
+    "label": "Command palette",
+    "placeholder": "Search pages and actions",
+    "empty": "Nothing found.",
+    "actions": "Actions",
+    "switchTo": "Switch to {name}",
+    "showShortcuts": "Show keyboard shortcuts",
+    "openNotifications": "Open notifications",
+    "toggleSidebar": "Show or hide the sidebar",
+    "changeLanguage": "Change language",
+    "signOut": "Sign out"
+  },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "then": "then",
+    "groups": {
+      "general": "General",
+      "navigation": "Navigation"
+    },
+    "commandPalette": "Open the command palette",
+    "search": "Search",
+    "overview": "Show this overview",
+    "notifications": "Open or close notifications",
+    "sidebar": "Show or hide the sidebar",
+    "goPreferences": "Go to preferences",
+    "goSecurity": "Go to security",
+    "goMembers": "Go to members",
+    "goAuditLog": "Go to the audit log"
+  },
+  "errors": {
+    "notFoundTitle": "Page not found",
+    "notFoundDescription": "The page does not exist, or you do not have access to it.",
+    "backHome": "Go to the start page",
+    "forbiddenTitle": "No access",
+    "forbiddenDescription": "You do not have permission to see this page.",
+    "failedTitle": "Something went wrong",
+    "retry": "Try again"
+  },
+  "validation": {
+    "required": "This field is required.",
+    "invalid": "This value is not valid.",
+    "tooShort": "Use at least {minimum, plural, one {# character} other {# characters}}.",
+    "tooLong": "Use at most {maximum, plural, one {# character} other {# characters}}.",
+    "tooLow": "Enter {minimum} or more.",
+    "tooHigh": "Enter {maximum} or less.",
+    "range": "Enter a whole number from {minimum} to {maximum}.",
+    "tooFewItems": "Choose at least {minimum}.",
+    "tooManyItems": "Choose at most {maximum}.",
+    "email": "Enter a valid e-mail address.",
+    "url": "Enter a valid address.",
+    "format": "This value has the wrong format.",
+    "choice": "Choose one of the options.",
+    "slug": "Use lowercase letters, digits and hyphens.",
+    "domain": "Enter a domain such as example.org.",
+    "instanceUrl": "Enter an address such as https://wiki.example.org, without a path."
+  },
+  "problems": {
+    "unknown": "Something went wrong. Try again.",
+    "networkError": "Pagehall cannot be reached. Check your connection and try again.",
+    "invalidInput": "Some entries are not valid.",
+    "passwordPolicy": "The password does not meet the requirements.",
+    "passwordTooShort": "Use at least {minimum} characters.",
+    "passwordTooLong": "The password is too long.",
+    "passwordCommon": "This password is too common. Choose another one.",
+    "invalidToken": "The link is not valid or has expired.",
+    "sameEmail": "This is already your e-mail address.",
+    "invalidSmtpConfiguration": "The mail server settings are not valid. Credentials need a TLS connection.",
+    "invalidSetting": "The value is not valid for this setting.",
+    "invalidPrincipal": "This role cannot be given to them.",
+    "roleNotAssignable": "This role cannot be assigned.",
+    "ownerExpiry": "The owner role cannot expire.",
+    "expiryInPast": "The date lies in the past.",
+    "expiryRequired": "Choose an expiry date.",
+    "expiryTooLate": "The expiry date is later than allowed.",
+    "invalidOwner": "This account cannot become the owner.",
+    "invalidLogo": "Use a PNG, JPEG or WebP image of at most 256 KiB.",
+    "invalidScopes": "The token cannot have this access.",
+    "invalidResponsible": "This person cannot be responsible.",
+    "invalidInvitation": "This invitation cannot be accepted with this account.",
+    "accountDetailsRequired": "Enter a name and a password.",
+    "notGuest": "The account is not a guest.",
+    "notMember": "The account is not a member.",
+    "invalidCredentials": "The e-mail address or the password is not correct.",
+    "invalidSecondFactor": "The code is not correct.",
+    "challengeExpired": "This sign-in took too long. Start again.",
+    "notSignedIn": "Sign in to continue.",
+    "sessionEnded": "Your session ended. Sign in again.",
+    "invalidSetupCode": "The setup code is not correct.",
+    "setupSessionRequired": "Enter the setup code first.",
+    "forbidden": "You are not allowed to do this.",
+    "csrfRejected": "The request was blocked. Reload the page and try again.",
+    "secondFactorSetupRequired": "Set up a second factor first.",
+    "reauthenticationRequired": "Confirm your identity first.",
+    "notFound": "It does not exist or was removed.",
+    "roleNotFound": "The role does not exist.",
+    "groupNotFound": "The group does not exist.",
+    "emailInUse": "This e-mail address is already used by another account.",
+    "slugTaken": "Another organization uses this short name.",
+    "domainTaken": "The domain belongs to another organization.",
+    "roleNameTaken": "A role with this name already exists.",
+    "groupNameTaken": "A group with this name already exists.",
+    "alreadyMember": "This person is already a member.",
+    "alreadyAssigned": "This role is already assigned.",
+    "lastOwner": "The last owner cannot leave or lose the role.",
+    "homeOrganization": "An account cannot leave its home organization.",
+    "deactivateSelf": "You cannot deactivate your own account.",
+    "instanceOwner": "The instance owner cannot be changed this way.",
+    "settingLocked": "A higher level locked this setting.",
+    "settingLockedBy": "The {level} locked this setting.",
+    "setupIncomplete": "The setup is not complete yet.",
+    "setupNotReady": "Complete the previous steps first.",
+    "keysNotDownloaded": "Download the keys first.",
+    "keysAlreadyDownloaded": "The keys were already downloaded.",
+    "totpExists": "An authenticator app is already set up.",
+    "ownerMissing": "Create the owner account first.",
+    "lastSecondFactor": "Your second factor is required. Add another one before removing this one.",
+    "noSecondFactor": "No second factor is set up.",
+    "secondFactorExists": "This second factor already exists.",
+    "instanceUrlMissing": "Set the instance address first.",
+    "payloadTooLarge": "The upload is too large.",
+    "locked": "Too many failed attempts. Try again later.",
+    "lockedRetry": "Too many failed attempts. Try again in {seconds, plural, one {# second} other {# seconds}}.",
+    "rateLimited": "Too many requests. Wait a moment and try again.",
+    "rateLimitedRetry": "Too many requests. Try again in {seconds, plural, one {# second} other {# seconds}}.",
+    "internalError": "The server could not complete the request.",
+    "busy": "The server is busy. Try again in a moment."
+  },
+  "access": {
+    "gainsAccess": "Who gains access",
+    "losesAccess": "Who loses access",
+    "peopleGaining": "People who gain access",
+    "peopleLosing": "People who lose access",
+    "andMore": "and {count, plural, one {# more person} other {# more people}}",
+    "nobody": "Nobody right now.",
+    "allMembers": "All {count, plural, one {# member} other {# members}} of {name}",
+    "allInstanceUsers": "Every internal user of the instance"
+  },
+  "auth": {
+    "signInTitle": "Sign in to {name}",
+    "signIn": "Sign in",
+    "signInFailed": "Sign-in failed",
+    "signInWithPasskey": "Sign in with a passkey",
+    "orWithPassword": "or with your password",
+    "email": "E-mail",
+    "workEmail": "Work e-mail address",
+    "password": "Password",
+    "name": "Name",
+    "forgotPassword": "Forgot password?",
+    "sessionEnded": "Your session ended. Sign in again to continue where you were.",
+    "passkeyCancelled": "The passkey was not used. Try again or choose another method.",
+    "passkeyHint": "Use Touch ID, Windows Hello or your security key when your browser asks.",
+    "usePasskey": "Use passkey",
+    "verifyTitle": "Confirm it's you",
+    "verifyDescription": "Your account is protected with a second factor.",
+    "authenticatorCode": "Code from your authenticator app",
+    "authenticatorCodeHint": "Enter the 6-digit code.",
+    "recoveryCode": "Recovery code",
+    "recoveryCodeHint": "Each recovery code works once. Create new codes in your security settings afterwards.",
+    "verify": "Verify",
+    "useFactor": {
+      "totp": "Use authenticator app",
+      "passkey": "Use a passkey",
+      "recoveryCode": "Use a recovery code"
+    },
+    "startOver": "Sign in again",
+    "backToSignIn": "Back to sign in",
+    "language": "Language",
+    "resetTitle": "Reset your password",
+    "resetDescription": "Enter the e-mail address of your account. We send you a link to set a new password.",
+    "sendResetLink": "Send link",
+    "resetSent": "If an account with this address exists, we sent it a link. Check your inbox.",
+    "newPasswordTitle": "Set a new password",
+    "newPassword": "New password",
+    "repeatPassword": "Repeat the password",
+    "passwordHint": "At least {minimum} characters. A passphrase is easier to remember.",
+    "passwordsDiffer": "The passwords do not match.",
+    "setPassword": "Set password",
+    "passwordChanged": "Your password was changed. Sign in with it now.",
+    "confirmEmailTitle": "Confirm your e-mail address",
+    "confirmingEmail": "Confirming",
+    "emailConfirmed": "Your new e-mail address is confirmed.",
+    "continue": "Continue",
+    "invitationTitle": "Join an organization",
+    "invitationDescription": "You were invited to work together on Pagehall.",
+    "acceptInvitation": "Accept invitation",
+    "createAccountForInvitation": "Create your account to accept the invitation.",
+    "createAccount": "Create account",
+    "invitationAccountCreated": "Your account is ready. Sign in to start.",
+    "invitationJoined": "You joined the organization. Sign in to continue.",
+    "registerTitle": "Create an account",
+    "registerDescription": "Enter your work e-mail address. If your organization allows registration, we send you a link.",
+    "sendRegistrationLink": "Send link",
+    "registerSent": "If registration is open for this address, we sent it a link. Check your inbox.",
+    "completeRegistrationTitle": "Complete your registration",
+    "registrationComplete": "Your account is ready. Sign in to start.",
+    "secondFactorSetupTitle": "Set up a second factor",
+    "secondFactorSetupDescription": "Your organization requires a second factor. Set one up to continue.",
+    "secondFactorMethod": "Second factor"
+  },
+  "reauthentication": {
+    "title": "Confirm your identity",
+    "description": "This change needs a recent confirmation that it's you.",
+    "method": "Method",
+    "methods": {
+      "password": "Password",
+      "totp": "Authenticator app",
+      "passkey": "Passkey"
+    },
+    "confirm": "Confirm"
+  },
+  "setup": {
+    "progress": "Step {step} of {total} · {name}",
+    "continue": "Continue",
+    "back": "Back",
+    "finish": "Finish setup",
+    "skipAndFinish": "Skip and finish setup",
+    "failed": "The setup could not be loaded",
+    "notReady": "Complete all required steps before finishing the setup.",
+    "steps": {
+      "systemCheck": "System check",
+      "instance": "Instance",
+      "owner": "Owner account",
+      "keyBackup": "Keys",
+      "organization": "Organization",
+      "mail": "E-mail"
+    },
+    "code": {
+      "name": "Setup code",
+      "title": "Set up Pagehall",
+      "description": "Enter the setup code from the container log. It proves that you operate this server.",
+      "label": "Setup code",
+      "hint": "The code stops working once the setup is complete."
+    },
+    "systemCheck": {
+      "title": "System check",
+      "description": "Pagehall checked its environment. Warnings do not block the setup.",
+      "language": "Language of the setup",
+      "blocked": "Fix the errors above before you continue.",
+      "checks": {
+        "database": "Database",
+        "fileStorage": "File storage",
+        "clock": "Clock",
+        "instanceUrl": "Address",
+        "https": "HTTPS"
+      },
+      "status": {
+        "ok": "OK",
+        "warning": "Warning",
+        "error": "Error"
+      },
+      "databaseOk": "PostgreSQL {version}, migrations applied",
+      "databaseMigrations": "The database is not up to date. Check the server log.",
+      "storageFree": "Writable, {free} free",
+      "storageNotWritable": "The file storage is not writable.",
+      "clockOk": "In sync with the database",
+      "clockOffset": "Differs from the database by {seconds, plural, one {# second} other {# seconds}}",
+      "urlOk": "Set",
+      "urlMissing": "Not set yet. You set it in the next step.",
+      "httpsOk": "Enabled",
+      "httpsMissing": "Not detected. Put Pagehall behind a reverse proxy with TLS before you invite people."
+    },
+    "instance": {
+      "title": "Your instance",
+      "description": "The address and name people see.",
+      "url": "Address",
+      "urlHint": "Used in links, e-mails and for passkeys.",
+      "name": "Instance name"
+    },
+    "owner": {
+      "title": "Owner account",
+      "description": "The owner manages the instance. This account can always sign in with its password.",
+      "twoFactorRequired": "Two-factor authentication is required",
+      "twoFactorDescription": "Scan the code with an authenticator app, then enter the 6-digit code.",
+      "ready": "The owner account is ready",
+      "summary": "{name} ({email}), with an authenticator app",
+      "change": "Change owner"
+    },
+    "keyBackup": {
+      "title": "Back up your keys",
+      "description": "Pagehall encrypts secrets and backups with these keys. Without them, encrypted data and backups cannot be restored.",
+      "download": "Download keys",
+      "saveAgain": "Save again",
+      "copied": "The keys were copied.",
+      "keys": "Master key and backup key",
+      "alreadyDownloaded": "The keys were already downloaded. For security, they can be downloaded only once.",
+      "stored": "I stored both keys in a safe place outside this server, for example in a password manager."
+    },
+    "organization": {
+      "title": "First organization",
+      "description": "Organizations have their own members, groups and settings. You can add more later.",
+      "name": "Name",
+      "language": "Default language",
+      "timeZone": "Default time zone"
+    },
+    "mail": {
+      "title": "E-mail",
+      "description": "Optional. Without e-mail, notifications stay in the app. You can set it up later.",
+      "save": "Save mail server",
+      "saved": "The mail server was saved."
+    }
+  },
+  "preferences": {
+    "title": "Preferences",
+    "description": "How Pagehall looks and behaves for you. Changes apply immediately.",
+    "display": "Display",
+    "colorMode": "Color mode",
+    "colorModeHint": "Automatic follows your system.",
+    "colorModes": {
+      "system": "Automatic",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "highContrast": "High contrast",
+    "highContrastHint": "Stronger colors and borders.",
+    "textSize": "Text size",
+    "textSizeHint": "Scales text, spacing and icons together.",
+    "density": "Density",
+    "densityHint": "Compact fits more items on the screen.",
+    "densities": {
+      "default": "Default",
+      "compact": "Compact"
+    },
+    "readableFont": "Reading-friendly font",
+    "readableFontHint": "Atkinson Hyperlegible, designed for low vision.",
+    "languageAndRegion": "Language and region",
+    "language": "Language",
+    "timeZone": "Time zone",
+    "dateFormat": "Date format",
+    "timeFormat": "Time format",
+    "numberFormat": "Number format",
+    "firstDayOfWeek": "First day of the week",
+    "useDefault": "Use the default",
+    "automatic": "Automatic",
+    "time24": "24 hours (14:30)",
+    "time12": "12 hours (2:30 PM)",
+    "weekdays": {
+      "monday": "Monday",
+      "sunday": "Sunday",
+      "saturday": "Saturday"
+    }
+  },
+  "settings": {
+    "actions": "Actions",
+    "override": "Override",
+    "useDefault": "Use the default",
+    "useInstanceValue": "Use the instance value",
+    "inherit": "Inherit",
+    "lockForOrganizations": "Lock for organizations",
+    "lockForMembers": "Lock for members",
+    "unlock": "Unlock",
+    "locked": "Locked",
+    "explain": "Where does this value come from?",
+    "explainTitle": "Where {name} comes from",
+    "explainDefault": "No level sets a value, so the default applies: {value}.",
+    "explainSource": "The value {value} comes from the {level}.",
+    "level": "Level",
+    "value": "Value",
+    "state": "State",
+    "inherits": "Not set",
+    "ineffective": "Overridden by a lock or stricter value",
+    "applies": "Applies",
+    "notSet": "Not set",
+    "moreFor": "More options for {name}",
+    "levels": {
+      "instance": "instance",
+      "organization": "organization",
+      "space": "space",
+      "user": "user"
+    },
+    "source": {
+      "lockedByInstance": "Locked by the instance",
+      "lockedByOrganization": "Locked by {name}",
+      "setByYou": "Set by you",
+      "setForOrganization": "Set for {name}",
+      "setForInstance": "Set for the instance",
+      "fromOrganization": "Default from {name}: {value}",
+      "fromInstance": "Instance default: {value}",
+      "fromDefault": "Default: {value}",
+      "lockedBelow": "locked for lower levels"
+    },
+    "units": {
+      "days": "{count, plural, one {# day} other {{value} days}}",
+      "minutes": "{count, plural, one {# minute} other {{value} minutes}}",
+      "characters": "{count, plural, one {# character} other {{value} characters}}",
+      "count": "{value}",
+      "perMinute": "{value} per minute"
+    },
+    "values": {
+      "dateFormat": {
+        "auto": "Automatic",
+        "DD.MM.YYYY": "DD.MM.YYYY",
+        "DD/MM/YYYY": "DD/MM/YYYY",
+        "MM/DD/YYYY": "MM/DD/YYYY",
+        "YYYY-MM-DD": "YYYY-MM-DD"
+      },
+      "timeFormat": {
+        "auto": "Automatic",
+        "24h": "24 hours",
+        "12h": "12 hours"
+      },
+      "numberFormat": {
+        "auto": "Automatic",
+        "en-US": "1,234.56",
+        "de-DE": "1.234,56",
+        "de-CH": "1’234.56",
+        "fr-FR": "1 234,56"
+      },
+      "firstDayOfWeek": {
+        "auto": "Automatic",
+        "monday": "Monday",
+        "sunday": "Sunday",
+        "saturday": "Saturday"
+      },
+      "accentColor": {
+        "petrol": "Petrol",
+        "blue": "Blue",
+        "violet": "Violet",
+        "amber": "Amber",
+        "red": "Red",
+        "green": "Green",
+        "gray": "Gray"
+      }
+    },
+    "keys": {
+      "instance_name": {
+        "label": "Instance name",
+        "description": "Shown on the sign-in page, in e-mails and in the browser."
+      },
+      "instance_url": {
+        "label": "Address",
+        "description": "Used in links, e-mails and for passkeys. Changing it invalidates existing passkeys."
+      },
+      "locale_language": {
+        "label": "Language",
+        "description": "Interface and e-mail language of people who did not choose their own."
+      },
+      "locale_timeZone": {
+        "label": "Time zone",
+        "description": "Dates and times are shown in this time zone."
+      },
+      "locale_dateFormat": {
+        "label": "Date format",
+        "description": "How dates are written."
+      },
+      "locale_timeFormat": {
+        "label": "Time format",
+        "description": "24 or 12 hours."
+      },
+      "locale_numberFormat": {
+        "label": "Number format",
+        "description": "Separators for thousands and decimals."
+      },
+      "locale_firstDayOfWeek": {
+        "label": "First day of the week",
+        "description": "Used in calendars and date pickers."
+      },
+      "branding_accentColor": {
+        "label": "Accent color",
+        "description": "Used for the primary action, the active item, links and focus."
+      },
+      "auth_passwordMinLength": {
+        "label": "Minimum password length",
+        "description": "Can only be raised at lower levels."
+      },
+      "auth_twoFactorRequired": {
+        "label": "Require two-factor authentication",
+        "description": "People must set up an authenticator app or a passkey before they can work."
+      },
+      "auth_maxSessionsPerAccount": {
+        "label": "Sessions per account",
+        "description": "The oldest session ends when a new one would exceed the limit."
+      },
+      "auth_sessionIdleTimeoutMinutes": {
+        "label": "Sign out after inactivity",
+        "description": "How long people stay signed in without activity."
+      },
+      "auth_sessionLifetimeMinutes": {
+        "label": "Maximum session length",
+        "description": "People sign in again after this time, even when active."
+      },
+      "auth_reauthenticationMinutes": {
+        "label": "Confirmation for sensitive changes",
+        "description": "How long a confirmed identity is valid for changes such as a new password."
+      },
+      "auth_signInAttemptsPerAccountPerMinute": {
+        "label": "Sign-in attempts per account",
+        "description": "Further attempts are refused for a minute."
+      },
+      "auth_signInAttemptsPerClientPerMinute": {
+        "label": "Sign-in attempts per client",
+        "description": "Counted per IP address."
+      },
+      "auth_lockoutFailuresPerAccount": {
+        "label": "Failures before an account is locked",
+        "description": "Within the lockout window."
+      },
+      "auth_lockoutFailuresPerClient": {
+        "label": "Failures before a client is locked",
+        "description": "Within the lockout window, per IP address."
+      },
+      "auth_lockoutWindowMinutes": {
+        "label": "Lockout window",
+        "description": "Failures within this time count together."
+      },
+      "auth_lockoutMinutes": {
+        "label": "First lockout",
+        "description": "Repeated lockouts grow up to the maximum."
+      },
+      "auth_lockoutMaxMinutes": {
+        "label": "Maximum lockout",
+        "description": "The longest a lockout lasts."
+      },
+      "apiTokens_maxLifetimeDays": {
+        "label": "Maximum token lifetime",
+        "description": "Tokens expire at the latest after this time."
+      },
+      "apiTokens_withoutExpiry": {
+        "label": "Tokens without expiry",
+        "description": "Allows tokens that never expire."
+      },
+      "apiTokens_requestsPerMinute": {
+        "label": "Requests per token",
+        "description": "Per minute. Further requests are refused for a moment."
+      },
+      "apiTokens_expiryReminderDays": {
+        "label": "Expiry reminder",
+        "description": "Owners are reminded this long before a token expires."
+      },
+      "apiTokens_publicDocumentation": {
+        "label": "Public API reference",
+        "description": "Everyone can open the API reference, also without signing in."
+      },
+      "organizations_selfServiceCreation": {
+        "label": "Self-service organizations",
+        "description": "Every member may create organizations, which they then own."
+      },
+      "organizations_membersCreateGroups": {
+        "label": "Members create groups",
+        "description": "Members may create groups and manage them."
+      },
+      "organizations_selfRegistration": {
+        "label": "Self-registration",
+        "description": "People with an address in one of the domains can create an account themselves."
+      },
+      "organizations_guestExpiryReminderDays": {
+        "label": "Guest expiry reminder",
+        "description": "The responsible person is reminded this long before a guest's access ends."
+      },
+      "organizations_guestInactivityDays": {
+        "label": "Inactive guests",
+        "description": "The responsible person is told when a guest has not been active for this long."
+      },
+      "organizations_expiryReminderDays": {
+        "label": "Access expiry reminder",
+        "description": "The people responsible are reminded this long before roles and memberships expire."
+      },
+      "organizations_breakGlassMinutes": {
+        "label": "Break-glass duration",
+        "description": "How long break-glass access lasts."
+      },
+      "audit_retentionDays": {
+        "label": "Audit log retention",
+        "description": "Older events are removed."
+      },
+      "notifications_retentionDays": {
+        "label": "Notification retention",
+        "description": "Older notifications are removed."
+      }
+    }
+  },
+  "security": {
+    "title": "Security",
+    "description": "Sign-in, second factors, sessions and API tokens.",
+    "signIn": "Sign-in",
+    "passwordDescription": "Use a long passphrase that you use nowhere else.",
+    "changePassword": "Change password",
+    "passwordChanged": "Your password was changed. Your other sessions were ended.",
+    "otherSessionsEnd": "Your other sessions end when you change the password.",
+    "changeEmail": "Change e-mail address",
+    "changeEmailDescription": "We send a confirmation link to the new address. Your address changes when you open it.",
+    "newEmail": "New e-mail address",
+    "sendConfirmation": "Send confirmation",
+    "emailConfirmationSent": "Check the inbox of the new address and open the link.",
+    "twoFactor": "Two-factor authentication",
+    "twoFactorRequired": "Your organization requires a second factor. Keep at least one.",
+    "authenticatorApp": "Authenticator app",
+    "authenticatorOn": "Codes from an app on your phone.",
+    "authenticatorOff": "Use an app such as Aegis, Google Authenticator or 1Password.",
+    "setUp": "Set up",
+    "setUpAuthenticator": "Set up an authenticator app",
+    "totpScan": "Scan the code with your authenticator app.",
+    "totpManual": "If you cannot scan it, enter this key in the app:",
+    "totpQrCode": "QR code for your authenticator app",
+    "totpConfirm": "Confirm",
+    "authenticatorAdded": "The authenticator app is set up.",
+    "removeAuthenticatorTitle": "Remove the authenticator app?",
+    "removeAuthenticatorDescription": "You can no longer sign in with codes from this app.",
+    "authenticatorRemoved": "The authenticator app was removed.",
+    "passkey": "Passkey",
+    "passkeys": "Passkeys",
+    "passkeysDescription": "Sign in with your fingerprint, face or security key.",
+    "noPasskeys": "No passkeys yet. Passkeys work as sign-in and as second factor.",
+    "passkeysUnsupported": "This browser does not support passkeys.",
+    "addPasskey": "Add passkey",
+    "passkeyName": "Name",
+    "passkeyNameHint": "For example, the device or security key.",
+    "defaultPasskeyName": "Passkey",
+    "passkeyDetails": "Added {created} · last used {used}",
+    "removePasskeyTitle": "Remove {name}?",
+    "removePasskeyDescription": "You can no longer sign in with this passkey.",
+    "recoveryCodes": "Recovery codes",
+    "recoveryCodesLeft": "{count, plural, one {# unused code} other {# unused codes}}",
+    "recoveryCodesNeedFactor": "Available once you set up a second factor.",
+    "recoveryCodesShownOnce": "Store these codes now",
+    "recoveryCodesDescription": "Each code works once when you cannot use your second factor. They are shown only now.",
+    "recoveryCodesCopied": "The codes were copied.",
+    "newCodes": "Create new codes",
+    "newCodesTitle": "Create new recovery codes?",
+    "newCodesDescription": "Your current recovery codes stop working.",
+    "sessions": "Active sessions",
+    "sessionDetails": "{ip} · last active {used}",
+    "unknownDevice": "Unknown device",
+    "thisDevice": "This device",
+    "endSession": "Sign out",
+    "endSessionTitle": "Sign out this session?",
+    "endSessionDescription": "The device has to sign in again.",
+    "endOthers": "Sign out all other sessions",
+    "endOthersTitle": "Sign out all other sessions?",
+    "endOthersDescription": "Every other device has to sign in again."
+  },
+  "tokens": {
+    "personal": "API tokens",
+    "none": "No tokens yet.",
+    "create": "Create token",
+    "createTitle": "Create API token",
+    "createdTitle": "Your new token",
+    "name": "Name",
+    "organizationAccess": "Access to the organization",
+    "instanceAccess": "Access to the instance",
+    "neverMore": "A token can never do more than your own account.",
+    "scopeRequired": "Choose at least one area.",
+    "expires": "Expires",
+    "expiry": {
+      "30": "In 30 days",
+      "90": "In 90 days",
+      "365": "In one year",
+      "never": "Never"
+    },
+    "shownOnce": "Copy the token now. It is shown only once.",
+    "copied": "The token was copied.",
+    "expiresOn": "expires {date}",
+    "noExpiry": "no expiry",
+    "lastUsed": "last used {when}",
+    "lastUsedColumn": "Last used",
+    "neverUsed": "never used",
+    "owner": "Owner",
+    "revoke": "Revoke",
+    "revokeTitle": "Revoke {name}?",
+    "revokeDescription": "The token stops working immediately.",
+    "revokeImpact": "Scripts and integrations that use {name} lose their access.",
+    "organizationTitle": "API tokens",
+    "organizationDescription": "All tokens that can access this organization, of people and of service accounts."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "close": "Close notifications",
+    "preferences": "Notification settings",
+    "filter": "Show",
+    "all": "All",
+    "unread": "Unread",
+    "markAllRead": "Mark all as read",
+    "markRead": "Mark as read",
+    "unreadLabel": "Unread",
+    "none": "No notifications",
+    "noneUnread": "No unread notifications",
+    "noneDescription": "Reminders and notices about your organizations appear here.",
+    "more": "Show more",
+    "times": "{count, plural, one {once} other {# times}}",
+    "groups": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "earlier": "Earlier"
+    },
+    "preferencesTitle": "Notifications",
+    "preferencesDescription": "Choose how you learn about each kind of event.",
+    "defaultsTitle": "Notification defaults",
+    "organizationDefaultsDescription": "Defaults for members. Everyone can change them for themselves unless you lock them.",
+    "instanceDefaultsDescription": "Defaults for everyone on this instance.",
+    "eventTypes": "Events",
+    "event": "Event",
+    "noEventTypes": "There are no events to configure.",
+    "channels": {
+      "inApp": "In the app",
+      "email": "E-mail",
+      "none": "none"
+    },
+    "events": {
+      "apiTokenExpiring": "API token expires soon",
+      "guestExpiring": "Guest access ends soon",
+      "guestInactive": "Guest is inactive",
+      "accessExpiring": "Role or membership ends soon",
+      "serviceAccountUnattended": "Service account without responsible person",
+      "breakGlassStarted": "Break-glass access started",
+      "signInNewBrowser": "Sign-in from a new browser"
+    },
+    "types": {
+      "apiToken": {
+        "expiring": "The API token {tokenName} expires on {expiresAt}."
+      },
+      "guest": {
+        "expiring": "The guest access of {guestName} to {organizationName} ends on {expiresAt}.",
+        "inactive": "{guestName} has not used {organizationName} for {days, plural, one {# day} other {# days}}."
+      },
+      "access": {
+        "expiring": "{kind, select, role {The role {name}} group {The membership in the group {name}} other {A membership}} in {organizationName} ends on {expiresAt}."
+      },
+      "serviceAccount": {
+        "unattended": "Nobody is responsible for the service account {serviceAccountName} in {organizationName} anymore."
+      },
+      "breakGlass": {
+        "started": "{requesterName} started break-glass access to {organizationName} for {minutes} minutes: {reason}"
+      },
+      "signIn": {
+        "newBrowser": "Your account was signed in from a new browser: {browser} on {operatingSystem}, {clientIp}."
+      }
+    }
+  },
+  "mail": {
+    "title": "E-mail",
+    "description": "The mail server Pagehall sends notifications, invitations and password resets with.",
+    "smtp": "Mail server",
+    "notConfigured": "No mail server is set up. Notifications stay in the app, and nobody can reset a password by e-mail.",
+    "host": "Server",
+    "port": "Port",
+    "security": "Security",
+    "securityHint": "Use TLS or STARTTLS unless the server runs next to Pagehall.",
+    "securityModes": {
+      "tls": "TLS (usually port 465)",
+      "starttls": "STARTTLS (usually port 587)",
+      "none": "None (local relay only)"
+    },
+    "username": "User name",
+    "usernameHint": "Leave empty if the server needs no sign-in.",
+    "password": "Password",
+    "passwordKept": "Leave empty to keep the stored password.",
+    "from": "Sender address",
+    "credentialsNeedTls": "Credentials need a TLS connection.",
+    "testRecipient": "Send a test mail to",
+    "sendTest": "Send test mail",
+    "testDelivered": "The mail server accepted the test mail.",
+    "testFailed": "The test mail could not be sent. {detail}"
+  },
+  "organization": {
+    "general": {
+      "title": "General",
+      "description": "Name, logo and defaults of the organization.",
+      "profile": "Profile",
+      "name": "Name",
+      "slug": "Short name",
+      "slugHint": "Used in addresses. Lowercase letters, digits and hyphens.",
+      "branding": "Appearance",
+      "logo": "Logo",
+      "logoHint": "Shown on the sign-in page and in e-mails. PNG, JPEG or WebP, at most 256 KiB.",
+      "noLogo": "No logo",
+      "uploadLogo": "Upload logo",
+      "replaceLogo": "Replace logo",
+      "logoUploaded": "The logo was uploaded.",
+      "removeLogoTitle": "Remove the logo?",
+      "removeLogoDescription": "Pagehall shows its own logo again.",
+      "localeDefaults": "Language and region",
+      "leaveTitle": "Membership",
+      "leave": "Leave {name}",
+      "leaveAction": "Leave",
+      "leaveDescription": "You lose access to everything in this organization.",
+      "leaveConfirm": "You need a new invitation to join again.",
+      "leaveImpact": "You lose access to {name}."
+    },
+    "security": {
+      "title": "Security",
+      "description": "Sign-in rules for everyone in {name}. Values come from the instance unless you set them here.",
+      "signIn": "Sign-in",
+      "apiTokens": "API tokens"
+    },
+    "domains": {
+      "title": "Domains and guests",
+      "description": "Who belongs to the organization and how long guests keep their access.",
+      "domains": "Domains",
+      "domainsHint": "Accounts with a confirmed address in these domains belong to {name}.",
+      "none": "No domains.",
+      "domain": "Domain",
+      "placeholder": "example.org",
+      "add": "Add domain",
+      "instanceManaged": "Instance administrators assign domains.",
+      "removeTitle": "Remove {domain}?",
+      "removeDescription": "New accounts with this domain no longer join the organization automatically. Existing members stay.",
+      "registration": "Registration and groups",
+      "guests": "Guests and expiry"
+    }
+  },
+  "members": {
+    "title": "Members",
+    "description": "People in {name}.",
+    "tabs": "Kinds of members",
+    "all": "All",
+    "invite": "Invite people",
+    "search": "Search by name or e-mail",
+    "name": "Name",
+    "kind": "Type",
+    "roles": "Roles",
+    "expires": "Expires",
+    "noExpiry": "No expiry",
+    "responsibleIs": "responsible: {name}",
+    "actionsFor": "Actions for {name}",
+    "none": "No members yet.",
+    "noMatches": "Nobody matches the search.",
+    "noLimit": "Pagehall does not count users. Invite as many people as you need.",
+    "kinds": {
+      "member": "Member",
+      "collaborator": "Collaborator",
+      "guest": "Guest"
+    },
+    "kindsPlural": {
+      "member": "Members",
+      "collaborator": "Collaborators",
+      "guest": "Guests"
+    },
+    "actions": {
+      "roles": "Give a role",
+      "removeRole": "Remove role {role}",
+      "expiry": "Set expiry",
+      "responsible": "Change responsible person",
+      "permissions": "Explain permissions",
+      "remove": "Remove from organization",
+      "deactivate": "Deactivate account"
+    },
+    "emails": "E-mail addresses",
+    "emailsHint": "Separate with commas or new lines.",
+    "invalidEmails": "These addresses are not valid: {emails}",
+    "noExtraRole": "No additional role",
+    "expiresHint": "Optional. Access ends at the end of this day.",
+    "responsible": "Responsible person",
+    "responsibleHint": "Is reminded before the guest's access ends.",
+    "collaboratorHint": "Collaborators are members of another organization. They see only what is shared with them.",
+    "guestHint": "Guests sign in with their own account and see only what is shared with them.",
+    "inviteImpact": "They join {name} as {kind} with the role {role} when they accept.",
+    "invitationExpiry": "Invitations expire after 7 days.",
+    "sendInvitations": "{count, plural, one {Send invitation} other {Send # invitations}}",
+    "invitationsSent": "{count, plural, one {# invitation sent.} other {# invitations sent.}}",
+    "invitations": "Invitations",
+    "noInvitations": "No open invitations.",
+    "invitationExpires": "Link expires",
+    "revokeInvitation": "Revoke",
+    "revokeInvitationTitle": "Revoke the invitation to {email}?",
+    "revokeInvitationDescription": "The link in the e-mail stops working.",
+    "removeTitle": "Remove {name}?",
+    "removeDescription": "Their account stays, but they no longer belong to this organization.",
+    "removeImpact": "They lose all access to {name}.",
+    "removed": "The member was removed.",
+    "deactivateTitle": "Deactivate {name}?",
+    "deactivateDescription": "The account can no longer sign in anywhere on this instance. Sessions end at once.",
+    "deactivateImpact": "They lose access to every organization on this instance.",
+    "deactivated": "The account was deactivated.",
+    "expiryTitle": "Expiry for {name}",
+    "expiryHint": "Access ends at the end of this day. Reminders go out beforehand.",
+    "expiryImpact": "They lose access to {name} after {date}.",
+    "responsibleTitle": "Responsible person for {name}",
+    "permissionsTitle": "Permissions of {name}",
+    "permissionsDescription": "Every action in the organization and why it is allowed or not.",
+    "permission": "Permission",
+    "allowed": "Allowed",
+    "why": "Why"
+  },
+  "roles": {
+    "title": "Roles",
+    "description": "Who may administer what in the organization.",
+    "builtInTitle": "Built-in roles",
+    "customTitle": "Custom roles",
+    "assignmentsTitle": "Assignments",
+    "name": "Name",
+    "grants": "Grants",
+    "role": "Role",
+    "principal": "Given to",
+    "person": "Person",
+    "group": "Group",
+    "expires": "Expires",
+    "expiresHint": "Optional. The role ends at the end of this day.",
+    "assign": "Give a role",
+    "assignTo": "Give a role to {name}",
+    "assignAction": "Give role",
+    "assigned": "The role was given.",
+    "unassign": "Remove",
+    "unassignTitle": "Remove this role?",
+    "unassigned": "The role was removed.",
+    "createRole": "Create role",
+    "editRole": "Edit {name}",
+    "deleteTitle": "Delete {name}?",
+    "deleteDescription": "Everyone who holds the role loses it.",
+    "deleteImpact": "Everyone holding {name} loses its permissions.",
+    "editImpact": "Everyone holding the role gets the changed permissions at once.",
+    "actionsFor": "Actions for {name}",
+    "areas": "Areas",
+    "areasHint": "View allows reading, manage also allows changing.",
+    "noAreas": "Nothing",
+    "noCustomRoles": "No custom roles yet.",
+    "noAssignments": "No roles are given.",
+    "noSelfExtension": "Nobody can give more than they hold themselves.",
+    "chooseGroup": "Choose a group",
+    "choosePerson": "Choose a person",
+    "choosePrincipal": "Choose who receives the role.",
+    "groupNamed": "Group {name}",
+    "builtInGroup": "Built-in",
+    "customGroup": "Custom",
+    "gainsWhat": "They receive {role} in {name}: {areas}.",
+    "losesWhat": "They lose {role} in {name}.",
+    "builtIn": {
+      "owner": "Owner",
+      "administrator": "Administrator",
+      "member": "Member",
+      "securityAuditor": "Security auditor"
+    },
+    "builtInDescriptions": {
+      "owner": "Everything, including other owners. An organization always has one.",
+      "administrator": "Everything except managing owners.",
+      "member": "Sees the members and groups. Every member has this role."
+    },
+    "instanceDescriptions": {
+      "owner": "Everything on the instance. Also the break-glass account.",
+      "administrator": "Manages organizations, accounts, settings and operations.",
+      "securityAuditor": "Views everything on the instance without changing it."
+    },
+    "principals": {
+      "account": "One person",
+      "group": "A group",
+      "organizationMembers": "All members of the organization",
+      "instanceUsers": "All internal users of the instance"
+    }
+  },
+  "areas": {
+    "levels": {
+      "none": "No access",
+      "view": "View",
+      "manage": "Manage"
+    },
+    "organization": {
+      "membersAndGroups": "Members and groups",
+      "spaces": "Spaces",
+      "settings": "Settings",
+      "signInAndSecurity": "Sign-in and security",
+      "integrationsAndApi": "Integrations and API",
+      "auditLog": "Audit log"
+    },
+    "instance": {
+      "organizations": "Organizations",
+      "accounts": "Accounts",
+      "signInAndSecurity": "Sign-in and security",
+      "settings": "Settings",
+      "operations": "Operations",
+      "auditLog": "Audit log"
+    },
+    "descriptions": {
+      "organization": {
+        "membersAndGroups": "Invitations, members, groups and roles.",
+        "spaces": "Creating and administering spaces.",
+        "settings": "Organization settings and defaults.",
+        "signInAndSecurity": "Sign-in rules and domains.",
+        "integrationsAndApi": "Service accounts and API tokens.",
+        "auditLog": "Reading and exporting the audit log."
+      },
+      "instance": {
+        "organizations": "Creating organizations and break-glass access.",
+        "accounts": "All accounts and instance roles.",
+        "signInAndSecurity": "Sign-in rules for everyone.",
+        "settings": "Instance settings and the mail server.",
+        "operations": "System status, backups and updates.",
+        "auditLog": "Reading and exporting the instance audit log."
+      }
+    }
+  },
+  "groups": {
+    "title": "Groups",
+    "description": "Groups give roles and access to several people at once.",
+    "create": "Create group",
+    "created": "The group was created.",
+    "creatorManages": "You become the first manager of the group.",
+    "name": "Name",
+    "descriptionLabel": "Description",
+    "noDescription": "No description",
+    "details": "Details",
+    "none": "No groups yet",
+    "noneDescription": "Create a group to give the same access to several people.",
+    "access": "Where this group has access",
+    "noAccess": "The group holds no roles yet.",
+    "roleExpires": "Role in the organization until {date}",
+    "roleInOrganization": "Role in the organization",
+    "managers": "Managers",
+    "addManager": "Add manager",
+    "managerHint": "Managers add and remove members of the group.",
+    "managerAdded": "The manager was added.",
+    "managerRemoved": "The manager was removed.",
+    "members": "{count, plural, one {Members (#)} other {Members (#)}}",
+    "noMembers": "No members yet.",
+    "addMember": "Add member",
+    "memberAdded": "The member was added.",
+    "memberRemoved": "The member was removed.",
+    "expires": "Membership expires",
+    "until": "until {date}",
+    "removeMemberTitle": "Remove {name} from the group?",
+    "removeManagerTitle": "Remove {name} as manager?",
+    "delete": "Delete group",
+    "deleteTitle": "Delete {name}?",
+    "deleteDescription": "The group and its role assignments are removed.",
+    "gainsRoles": "They join {name} and receive its roles: {roles}.",
+    "gainsMembership": "They join {name}.",
+    "losesRoles": "They leave {name} and lose its roles: {roles}.",
+    "losesMembership": "They leave {name}."
+  },
+  "serviceAccounts": {
+    "title": "Service accounts",
+    "description": "Accounts for scripts and integrations. They act only through API tokens.",
+    "create": "Create service account",
+    "createHint": "You become the responsible person.",
+    "none": "No service accounts yet",
+    "noneDescription": "Create a service account for each script or integration.",
+    "name": "Name",
+    "descriptionLabel": "Description",
+    "details": "Details",
+    "responsible": "Responsible people",
+    "responsibleHint": "They receive reminders before tokens expire. They grant no permissions.",
+    "addResponsible": "Add responsible person",
+    "unattended": "No responsible person",
+    "unattendedNotice": "Nobody is responsible for this service account. Add a responsible person or deactivate it.",
+    "state": "State",
+    "states": {
+      "active": "Active",
+      "deactivated": "Deactivated"
+    },
+    "tokens": "Tokens",
+    "tokenHint": "The token can do at most what the service account's roles allow.",
+    "deactivate": "Deactivate",
+    "deactivateTitle": "Deactivate {name}?",
+    "deactivateDescription": "All tokens are revoked. This cannot be undone.",
+    "deactivateImpact": "{count, plural, one {Its token stops working.} other {Its # tokens stop working.}}",
+    "deactivatedNotice": "This service account is deactivated."
+  },
+  "breakGlass": {
+    "title": "Break-glass access",
+    "description": "Temporary administrator access to organizations you do not belong to, for emergencies.",
+    "request": "Request break-glass access",
+    "requestFor": "Break-glass access to {name}",
+    "requestDescription": "You become administrator of the organization for a limited time.",
+    "audited": "Every action is recorded",
+    "ownersNotified": "The owners of the organization are notified at once.",
+    "reason": "Reason",
+    "reasonHint": "At least 10 characters. The owners see it.",
+    "organization": "Organization",
+    "chooseOrganization": "Choose an organization",
+    "continue": "Continue",
+    "noCandidates": "You belong to every organization.",
+    "recent": "Last 90 days",
+    "none": "No break-glass access in the last 90 days.",
+    "requestedBy": "Requested by",
+    "time": "Time",
+    "status": "Status",
+    "statuses": {
+      "active": "Active",
+      "ended": "Ended",
+      "expired": "Expired"
+    },
+    "end": "End access"
+  },
+  "instance": {
+    "general": {
+      "title": "General",
+      "description": "Name, address and defaults of the instance.",
+      "identity": "Instance",
+      "localeDefaults": "Language and region",
+      "organizations": "Organizations",
+      "retention": "Retention and API"
+    },
+    "organizations": {
+      "title": "Organizations",
+      "description": "All organizations on this instance.",
+      "create": "Create organization",
+      "name": "Name",
+      "language": "Language",
+      "created": "Created",
+      "owner": "Owner",
+      "ownerHint": "The owner administers the organization.",
+      "ownerImpact": "They become the owner of the new organization.",
+      "slugHint": "Optional. Derived from the name when empty.",
+      "open": "Open settings",
+      "domains": "Domains",
+      "actionsFor": "Actions for {name}"
+    },
+    "accounts": {
+      "title": "Accounts",
+      "description": "Every account on this instance.",
+      "type": "Type",
+      "state": "State",
+      "home": "Home organization",
+      "created": "Created",
+      "types": {
+        "standard": "Standard",
+        "guest": "Guest",
+        "portal": "Portal",
+        "service": "Service"
+      },
+      "states": {
+        "invited": "Invited",
+        "active": "Active",
+        "deactivated": "Deactivated",
+        "anonymized": "Anonymized",
+        "placeholder": "Placeholder"
+      },
+      "transferOwnership": "Make instance owner",
+      "transferTitle": "Make {name} the instance owner?",
+      "transferDescription": "You stay an administrator. Only the owner can transfer the ownership again.",
+      "transferImpact": "They become the owner of the instance and the break-glass account."
+    },
+    "roles": {
+      "title": "Instance roles",
+      "description": "Who administers the instance.",
+      "noContent": "Instance roles never grant access to the content of organizations.",
+      "gainsWhat": "They receive {role} on the instance: {areas}.",
+      "losesWhat": "They lose {role} on the instance."
+    },
+    "security": {
+      "title": "Security",
+      "description": "Sign-in rules for the whole instance. Locked values apply to every organization.",
+      "signIn": "Sign-in",
+      "protection": "Protection against guessing",
+      "apiTokens": "API tokens"
+    }
+  },
+  "audit": {
+    "title": "Audit log",
+    "organizationDescription": "Security-relevant changes in this organization.",
+    "instanceDescription": "Security-relevant changes on the instance.",
+    "export": "Export CSV",
+    "from": "From",
+    "to": "To",
+    "event": "Event",
+    "allEvents": "All events",
+    "actor": "By",
+    "everyone": "Everyone",
+    "resetFilters": "Reset filters",
+    "none": "No events match the filters.",
+    "time": "Time",
+    "details": "Details",
+    "actorTypes": {
+      "account": "Account",
+      "system": "System",
+      "anonymous": "Anonymous",
+      "group": "Group"
+    },
+    "events": "Events"
+  },
+  "actions": {
+    "instance_organizations_view": "View organizations",
+    "instance_organizations_manage": "Manage organizations",
+    "instance_organizations_create": "Create organizations",
+    "instance_accounts_view": "View accounts",
+    "instance_accounts_manage": "Manage accounts",
+    "instance_roles_view": "View instance roles",
+    "instance_roles_manage": "Manage instance roles",
+    "instance_ownership_transfer": "Transfer instance ownership",
+    "instance_signIn_view": "View sign-in settings",
+    "instance_signIn_manage": "Manage sign-in settings",
+    "instance_settings_view": "View instance settings",
+    "instance_settings_manage": "Manage instance settings",
+    "instance_operations_view": "View operations",
+    "instance_operations_manage": "Manage operations",
+    "instance_audit_view": "View the instance audit log",
+    "instance_audit_manage": "Manage the instance audit log",
+    "instance_breakGlass_request": "Request break-glass access",
+    "organization_view": "View the organization",
+    "organization_leave": "Leave the organization",
+    "organization_update": "Change name and logo",
+    "organization_settings_view": "View settings",
+    "organization_settings_manage": "Manage settings",
+    "organization_members_view": "View members",
+    "organization_members_manage": "Manage members",
+    "organization_roles_view": "View roles",
+    "organization_roles_manage": "Manage roles",
+    "organization_groups_view": "View groups",
+    "organization_groups_create": "Create groups",
+    "organization_spaces_view": "View spaces",
+    "organization_spaces_manage": "Manage spaces",
+    "organization_signIn_view": "View sign-in settings",
+    "organization_signIn_manage": "Manage sign-in settings",
+    "organization_integrations_view": "View integrations and API",
+    "organization_integrations_manage": "Manage integrations and API",
+    "organization_audit_view": "View the audit log"
+  },
+  "denials": {
+    "anonymous": "Not signed in",
+    "accountInactive": "The account is not active",
+    "resourceNotFound": "It does not exist",
+    "notMember": "Not a member",
+    "limitedMembership": "Collaborators and guests cannot do this",
+    "noRoleGrantsArea": "No role grants this area",
+    "ownerOnly": "Only owners can do this",
+    "instanceRolesDoNotGrantOrganizationAccess": "Instance roles do not grant access to organizations",
+    "roleExceedsOwnPermissions": "The role exceeds their own permissions",
+    "selfExtension": "Nobody can extend their own permissions",
+    "tokenScope": "Not allowed for this token"
+  },
+  "grants": {
+    "system": "System",
+    "via": {
+      "account": "directly",
+      "group": "through the group {name}",
+      "organizationMembers": "as member of the organization",
+      "instanceUsers": "as internal user",
+      "membership": "through the membership",
+      "instanceOwner": "as instance owner",
+      "breakGlass": "through break-glass access"
+    },
+    "membership": {
+      "member": "As member",
+      "collaborator": "As collaborator",
+      "guest": "As guest"
+    },
+    "rules": {
+      "selfService": "Self-service organizations are allowed",
+      "membersCreateGroups": "Members may create groups",
+      "manager": "Manages the group",
+      "memberOrManager": "Member or manager of the group",
+      "homeOrganizationAdministrator": "Administrator of the home organization"
+    }
+  },
+  "auditEvents": {
+    "auth_signedIn": "Signed in",
+    "auth_signInFailed": "Sign-in failed",
+    "auth_lockedOut": "Locked out",
+    "auth_signedOut": "Signed out",
+    "auth_sessionEnded": "Session ended",
+    "auth_reauthenticated": "Identity confirmed",
+    "auth_reauthenticationFailed": "Identity confirmation failed",
+    "account_created": "Account created",
+    "account_passwordChanged": "Password changed",
+    "account_passwordResetRequested": "Password reset requested",
+    "account_passwordReset": "Password reset",
+    "account_emailChangeRequested": "E-mail change requested",
+    "account_emailChanged": "E-mail address changed",
+    "account_deactivated": "Account deactivated",
+    "twoFactor_totpAdded": "Authenticator app added",
+    "twoFactor_totpRemoved": "Authenticator app removed",
+    "twoFactor_passkeyAdded": "Passkey added",
+    "twoFactor_passkeyRemoved": "Passkey removed",
+    "twoFactor_recoveryCodesGenerated": "Recovery codes created",
+    "twoFactor_recoveryCodeUsed": "Recovery code used",
+    "setup_sessionStarted": "Setup started",
+    "setup_stepCompleted": "Setup step completed",
+    "setup_keyBackupDownloaded": "Keys downloaded",
+    "setup_completed": "Setup completed",
+    "mail_smtpChanged": "Mail server changed",
+    "mail_testSent": "Test mail sent",
+    "settings_changed": "Setting changed",
+    "organization_created": "Organization created",
+    "organization_updated": "Organization changed",
+    "organization_domainAdded": "Domain added",
+    "organization_domainRemoved": "Domain removed",
+    "membership_added": "Member added",
+    "membership_updated": "Membership changed",
+    "membership_removed": "Member removed",
+    "role_created": "Role created",
+    "role_updated": "Role changed",
+    "role_deleted": "Role deleted",
+    "role_assigned": "Role given",
+    "role_unassigned": "Role removed",
+    "group_created": "Group created",
+    "group_updated": "Group changed",
+    "group_deleted": "Group deleted",
+    "group_memberAdded": "Group member added",
+    "group_memberRemoved": "Group member removed",
+    "group_managerAdded": "Group manager added",
+    "group_managerRemoved": "Group manager removed",
+    "invitation_created": "Invitation sent",
+    "invitation_accepted": "Invitation accepted",
+    "invitation_revoked": "Invitation revoked",
+    "guest_responsibleChanged": "Responsible person changed",
+    "instance_ownershipTransferred": "Instance ownership transferred",
+    "breakGlass_started": "Break-glass access started",
+    "breakGlass_actionAuthorized": "Action with break-glass access",
+    "breakGlass_ended": "Break-glass access ended",
+    "serviceAccount_created": "Service account created",
+    "serviceAccount_updated": "Service account changed",
+    "serviceAccount_responsiblesChanged": "Responsible people changed",
+    "serviceAccount_unattended": "Service account without responsible person",
+    "serviceAccount_deactivated": "Service account deactivated",
+    "apiToken_created": "API token created",
+    "apiToken_updated": "API token changed",
+    "apiToken_revoked": "API token revoked",
+    "apiToken_expired": "API token expired",
+    "apiToken_rejected": "API token refused",
+    "audit_exported": "Audit log exported"
   }
 }

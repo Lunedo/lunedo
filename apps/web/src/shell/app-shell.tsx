@@ -1,0 +1,147 @@
+import { Rail } from "@pagehall/ui";
+import { useQueryClient } from "@tanstack/react-query";
+import { getRouteApi, Link, Outlet, useRouter } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { api } from "../api/client.js";
+import { request } from "../api/request.js";
+import { NotificationPanel } from "../notifications/notification-panel.js";
+import { useNotificationStream } from "../notifications/notifications-api.js";
+import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.js";
+import { usePreferences } from "../preferences/preferences-provider.js";
+import "../notifications/builtin.js";
+import "./builtin.js";
+import { CommandPaletteHost } from "./command-palette.js";
+import { railItems, type ShellContext, type Shortcut, shortcuts } from "./extensions.js";
+import { Heron } from "./heron.js";
+import { createSequenceMatcher, isTypingTarget, keyName } from "./keyboard.js";
+import { useRegistry } from "./registry.js";
+import { type ShellState, ShellStateContext } from "./shell.js";
+import { OrganizationProvider, useOrganizationState } from "./shell-context.js";
+import { ShortcutsDialog } from "./shortcuts-dialog.js";
+
+const route = getRouteApi("/app");
+
+export function AppShell() {
+  const { session } = route.useRouteContext();
+  return (
+    <OrganizationProvider session={session}>
+      <ShellFrame />
+    </OrganizationProvider>
+  );
+}
+
+function ShellFrame() {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const organization = useOrganizationState();
+  const preferences = usePreferences();
+  const updatePreference = useUpdatePreference();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const registeredShortcuts = useRegistry(shortcuts);
+  const items = useRegistry(railItems);
+
+  const signOut = useCallback(() => {
+    void request(() => api.POST("/api/v1/auth/sign-out"), { sessionHandling: false })
+      .catch(() => undefined)
+      .then(async () => {
+        queryClient.clear();
+        await router.navigate({ to: "/sign-in", search: { reason: "signedOut" } });
+      });
+  }, [queryClient, router]);
+
+  const state = useMemo<ShellState>(
+    () => ({
+      organizationId: organization.organizationId,
+      can: organization.can,
+      navigate: (to, params) => void router.navigate({ to: to as never, params: params as never }),
+      openCommandPalette: () => setPaletteOpen(true),
+      openShortcuts: () => setShortcutsOpen(true),
+      toggleNotifications: () => setNotificationsOpen((open) => !open),
+      toggleSidebar: () =>
+        updatePreference.mutate({
+          key: preferenceKeys.sidebarCollapsed,
+          value: !preferences.sidebarCollapsed,
+        }),
+      signOut,
+      notificationsOpen,
+      sidebarCollapsed: preferences.sidebarCollapsed,
+    }),
+    [organization, router, updatePreference, preferences.sidebarCollapsed, signOut, notificationsOpen],
+  );
+
+  useGlobalShortcuts(state, registeredShortcuts);
+  useNotificationStream(true);
+
+  return (
+    <ShellStateContext value={state}>
+      <div className="flex h-full bg-bg text-text">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-surface focus:p-2 focus:shadow-popover"
+        >
+          {t("shell.skipToContent")}
+        </a>
+        <Rail
+          label={t("rail.label")}
+          logo={
+            <Link
+              to="/"
+              aria-label={t("rail.home")}
+              className="flex size-10 items-center justify-center rounded-md text-accent focus-visible:outline-2 focus-visible:outline-accent"
+            >
+              <Heron className="size-8" />
+            </Link>
+          }
+          footer={items
+            .filter((item) => item.placement === "footer")
+            .map((item) => <item.component key={item.id} />)}
+        >
+          {items
+            .filter((item) => item.placement === "main")
+            .map((item) => (
+              <item.component key={item.id} />
+            ))}
+        </Rail>
+        {notificationsOpen ? <NotificationPanel onClose={() => setNotificationsOpen(false)} /> : null}
+        <div className="flex min-w-0 flex-1">
+          <Outlet />
+        </div>
+      </div>
+      <CommandPaletteHost open={paletteOpen} onOpenChange={setPaletteOpen} />
+      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+    </ShellStateContext>
+  );
+}
+
+function useGlobalShortcuts(context: ShellContext, list: readonly Shortcut[]) {
+  const contextRef = useRef(context);
+  useEffect(() => {
+    contextRef.current = context;
+  });
+  useEffect(() => {
+    const matcher = createSequenceMatcher(list.map((shortcut) => shortcut.keys));
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.repeat) return;
+      const name = keyName(event);
+      const global = name.startsWith("mod+");
+      if (!global && isTypingTarget(event.target)) return;
+      if (["Shift", "Control", "Meta", "Alt"].includes(event.key)) return;
+      const matched = matcher.press(name);
+      if (!matched) return;
+      const shortcut = list.find(
+        (candidate) =>
+          candidate.keys.length === matched.length &&
+          candidate.keys.every((key, index) => key === matched[index]),
+      );
+      if (!shortcut) return;
+      event.preventDefault();
+      shortcut.run(contextRef.current);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [list]);
+}

@@ -5,11 +5,13 @@
   "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
-    "build": "vite build",
-    "dev": "vite",
+    "api:types": "openapi-typescript ../api/openapi.json -o src/api/generated/schema.d.ts --silent",
+    "build": "pnpm api:types && vite build",
+    "build:e2e": "pnpm api:types && vite build --mode e2e",
+    "dev": "pnpm api:types && vite",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "typecheck": "pnpm api:types && tsc --noEmit",
+    "test": "pnpm api:types && vitest run",
     "test:e2e": "playwright test"
   },
   "dependencies": {

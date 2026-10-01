@@ -1,16 +1,1389 @@
 {
+  "brand": {
+    "name": "Pagehall",
+    "organizationLogo": "Logo von {name}"
+  },
+  "languages": {
+    "en": "English",
+    "de": "Deutsch"
+  },
+  "common": {
+    "add": "Hinzufügen",
+    "cancel": "Abbrechen",
+    "copy": "Kopieren",
+    "copyFailed": "Kopieren fehlgeschlagen. Markiere den Text und kopiere ihn von Hand.",
+    "delete": "Löschen",
+    "done": "Fertig",
+    "download": "Herunterladen",
+    "edit": "Bearbeiten",
+    "never": "nie",
+    "no": "Nein",
+    "off": "Aus",
+    "on": "An",
+    "remove": "Entfernen",
+    "save": "Speichern",
+    "saved": "Änderungen gespeichert.",
+    "unknown": "Unbekannt",
+    "yes": "Ja"
+  },
+  "ui": {
+    "clear": "Leeren",
+    "close": "Schließen",
+    "dismiss": "Ausblenden",
+    "hidePassword": "Passwort verbergen",
+    "loading": "Wird geladen",
+    "nextPage": "Nächste Seite",
+    "notSorted": "Nicht sortiert",
+    "optional": "optional",
+    "page": "Seite",
+    "previousPage": "Vorherige Seite",
+    "required": "erforderlich",
+    "showPassword": "Passwort anzeigen",
+    "sortAscending": "Aufsteigend sortiert",
+    "sortDescending": "Absteigend sortiert",
+    "breadcrumbs": "Pfadnavigation",
+    "notifications": "Benachrichtigungen"
+  },
+  "shell": {
+    "documentTitle": "{title} · Pagehall",
+    "skipToContent": "Zum Inhalt springen"
+  },
   "rail": {
     "label": "Hauptnavigation",
     "home": "Pagehall-Startseite",
-    "create": "Erstellen",
-    "forYou": "Für dich",
     "search": "Suche",
-    "starred": "Favoriten",
-    "spaces": "Spaces",
-    "projects": "Projekte",
     "notifications": "Benachrichtigungen",
+    "notificationsUnread": "Benachrichtigungen, {count, plural, one {# ungelesen} other {# ungelesen}}",
     "help": "Hilfe",
     "settings": "Einstellungen",
     "account": "Konto"
+  },
+  "help": {
+    "shortcuts": "Tastenkürzel",
+    "apiReference": "API-Referenz"
+  },
+  "navigation": {
+    "settings": "Einstellungen",
+    "settingsSection": "Bereich der Einstellungen",
+    "myAccount": "Mein Konto",
+    "organization": "Organisation",
+    "instance": "Instanz",
+    "switchOrganization": "Organisation wechseln",
+    "collapseSidebar": "Seitenleiste ausblenden",
+    "expandSidebar": "Seitenleiste einblenden",
+    "preferences": "Darstellung und Sprache",
+    "security": "Sicherheit",
+    "notifications": "Benachrichtigungen",
+    "general": "Allgemein",
+    "members": "Mitglieder",
+    "groups": "Gruppen",
+    "roles": "Rollen",
+    "serviceAccounts": "Dienstkonten",
+    "apiTokens": "API-Tokens",
+    "domainsAndGuests": "Domains und Gäste",
+    "notificationDefaults": "Standards für Benachrichtigungen",
+    "auditLog": "Audit-Log",
+    "organizations": "Organisationen",
+    "accounts": "Konten",
+    "mail": "E-Mail",
+    "breakGlass": "Notfallzugriff"
+  },
+  "commands": {
+    "label": "Befehlspalette",
+    "placeholder": "Seiten und Aktionen suchen",
+    "empty": "Nichts gefunden.",
+    "actions": "Aktionen",
+    "switchTo": "Zu {name} wechseln",
+    "showShortcuts": "Tastenkürzel anzeigen",
+    "openNotifications": "Benachrichtigungen öffnen",
+    "toggleSidebar": "Seitenleiste ein- oder ausblenden",
+    "changeLanguage": "Sprache ändern",
+    "signOut": "Abmelden"
+  },
+  "shortcuts": {
+    "title": "Tastenkürzel",
+    "then": "dann",
+    "groups": {
+      "general": "Allgemein",
+      "navigation": "Navigation"
+    },
+    "commandPalette": "Befehlspalette öffnen",
+    "search": "Suchen",
+    "overview": "Diese Übersicht anzeigen",
+    "notifications": "Benachrichtigungen öffnen oder schließen",
+    "sidebar": "Seitenleiste ein- oder ausblenden",
+    "goPreferences": "Zu Darstellung und Sprache",
+    "goSecurity": "Zur Sicherheit",
+    "goMembers": "Zu den Mitgliedern",
+    "goAuditLog": "Zum Audit-Log"
+  },
+  "errors": {
+    "notFoundTitle": "Seite nicht gefunden",
+    "notFoundDescription": "Die Seite gibt es nicht, oder du hast keinen Zugriff darauf.",
+    "backHome": "Zur Startseite",
+    "forbiddenTitle": "Kein Zugriff",
+    "forbiddenDescription": "Du hast keine Berechtigung für diese Seite.",
+    "failedTitle": "Etwas ist schiefgegangen",
+    "retry": "Erneut versuchen"
+  },
+  "validation": {
+    "required": "Dieses Feld ist erforderlich.",
+    "invalid": "Dieser Wert ist nicht gültig.",
+    "tooShort": "Verwende mindestens {minimum, plural, one {# Zeichen} other {# Zeichen}}.",
+    "tooLong": "Verwende höchstens {maximum, plural, one {# Zeichen} other {# Zeichen}}.",
+    "tooLow": "Gib {minimum} oder mehr ein.",
+    "tooHigh": "Gib {maximum} oder weniger ein.",
+    "range": "Gib eine ganze Zahl von {minimum} bis {maximum} ein.",
+    "tooFewItems": "Wähle mindestens {minimum} aus.",
+    "tooManyItems": "Wähle höchstens {maximum} aus.",
+    "email": "Gib eine gültige E-Mail-Adresse ein.",
+    "url": "Gib eine gültige Adresse ein.",
+    "format": "Dieser Wert hat das falsche Format.",
+    "choice": "Wähle eine der Möglichkeiten.",
+    "slug": "Verwende Kleinbuchstaben, Ziffern und Bindestriche.",
+    "domain": "Gib eine Domain wie example.org ein.",
+    "instanceUrl": "Gib eine Adresse wie https://wiki.example.org ohne Pfad ein."
+  },
+  "problems": {
+    "unknown": "Etwas ist schiefgegangen. Versuche es erneut.",
+    "networkError": "Pagehall ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.",
+    "invalidInput": "Einige Angaben sind nicht gültig.",
+    "passwordPolicy": "Das Passwort erfüllt die Anforderungen nicht.",
+    "passwordTooShort": "Verwende mindestens {minimum} Zeichen.",
+    "passwordTooLong": "Das Passwort ist zu lang.",
+    "passwordCommon": "Dieses Passwort ist zu verbreitet. Wähle ein anderes.",
+    "invalidToken": "Der Link ist ungültig oder abgelaufen.",
+    "sameEmail": "Das ist bereits deine E-Mail-Adresse.",
+    "invalidSmtpConfiguration": "Die Einstellungen des Mailservers sind nicht gültig. Zugangsdaten brauchen eine TLS-Verbindung.",
+    "invalidSetting": "Der Wert ist für diese Einstellung nicht gültig.",
+    "invalidPrincipal": "Diese Rolle kann nicht an sie vergeben werden.",
+    "roleNotAssignable": "Diese Rolle kann nicht vergeben werden.",
+    "ownerExpiry": "Die Rolle Owner kann nicht ablaufen.",
+    "expiryInPast": "Das Datum liegt in der Vergangenheit.",
+    "expiryRequired": "Wähle ein Ablaufdatum.",
+    "expiryTooLate": "Das Ablaufdatum liegt später als erlaubt.",
+    "invalidOwner": "Dieses Konto kann nicht Owner werden.",
+    "invalidLogo": "Verwende ein PNG-, JPEG- oder WebP-Bild mit höchstens 256 KiB.",
+    "invalidScopes": "Das Token kann diesen Zugriff nicht haben.",
+    "invalidResponsible": "Diese Person kann nicht verantwortlich sein.",
+    "invalidInvitation": "Diese Einladung kann mit diesem Konto nicht angenommen werden.",
+    "accountDetailsRequired": "Gib einen Namen und ein Passwort ein.",
+    "notGuest": "Das Konto ist kein Gast.",
+    "notMember": "Das Konto ist kein Mitglied.",
+    "invalidCredentials": "Die E-Mail-Adresse oder das Passwort ist nicht korrekt.",
+    "invalidSecondFactor": "Der Code ist nicht korrekt.",
+    "challengeExpired": "Die Anmeldung hat zu lange gedauert. Beginne neu.",
+    "notSignedIn": "Melde dich an, um fortzufahren.",
+    "sessionEnded": "Deine Sitzung ist beendet. Melde dich erneut an.",
+    "invalidSetupCode": "Der Setup-Code ist nicht korrekt.",
+    "setupSessionRequired": "Gib zuerst den Setup-Code ein.",
+    "forbidden": "Das darfst du nicht.",
+    "csrfRejected": "Die Anfrage wurde blockiert. Lade die Seite neu und versuche es erneut.",
+    "secondFactorSetupRequired": "Richte zuerst einen zweiten Faktor ein.",
+    "reauthenticationRequired": "Bestätige zuerst deine Identität.",
+    "notFound": "Das gibt es nicht oder es wurde entfernt.",
+    "roleNotFound": "Die Rolle gibt es nicht.",
+    "groupNotFound": "Die Gruppe gibt es nicht.",
+    "emailInUse": "Diese E-Mail-Adresse verwendet bereits ein anderes Konto.",
+    "slugTaken": "Eine andere Organisation verwendet diesen Kurznamen.",
+    "domainTaken": "Die Domain gehört zu einer anderen Organisation.",
+    "roleNameTaken": "Eine Rolle mit diesem Namen gibt es bereits.",
+    "groupNameTaken": "Eine Gruppe mit diesem Namen gibt es bereits.",
+    "alreadyMember": "Diese Person ist bereits Mitglied.",
+    "alreadyAssigned": "Diese Rolle ist bereits vergeben.",
+    "lastOwner": "Der letzte Owner kann die Organisation nicht verlassen und die Rolle nicht verlieren.",
+    "homeOrganization": "Ein Konto kann seine Heimatorganisation nicht verlassen.",
+    "deactivateSelf": "Du kannst dein eigenes Konto nicht deaktivieren.",
+    "instanceOwner": "Der Owner der Instanz kann so nicht geändert werden.",
+    "settingLocked": "Eine höhere Ebene hat diese Einstellung gesperrt.",
+    "settingLockedBy": "Die Ebene {level} hat diese Einstellung gesperrt.",
+    "setupIncomplete": "Die Einrichtung ist noch nicht abgeschlossen.",
+    "setupNotReady": "Schließe zuerst die vorherigen Schritte ab.",
+    "keysNotDownloaded": "Lade zuerst die Schlüssel herunter.",
+    "keysAlreadyDownloaded": "Die Schlüssel wurden bereits heruntergeladen.",
+    "totpExists": "Eine Authenticator-App ist bereits eingerichtet.",
+    "ownerMissing": "Lege zuerst das Owner-Konto an.",
+    "lastSecondFactor": "Dein zweiter Faktor ist erforderlich. Füge einen weiteren hinzu, bevor du diesen entfernst.",
+    "noSecondFactor": "Es ist kein zweiter Faktor eingerichtet.",
+    "secondFactorExists": "Dieser zweite Faktor existiert bereits.",
+    "instanceUrlMissing": "Lege zuerst die Adresse der Instanz fest.",
+    "payloadTooLarge": "Der Upload ist zu groß.",
+    "locked": "Zu viele Fehlversuche. Versuche es später erneut.",
+    "lockedRetry": "Zu viele Fehlversuche. Versuche es in {seconds, plural, one {# Sekunde} other {# Sekunden}} erneut.",
+    "rateLimited": "Zu viele Anfragen. Warte einen Moment und versuche es erneut.",
+    "rateLimitedRetry": "Zu viele Anfragen. Versuche es in {seconds, plural, one {# Sekunde} other {# Sekunden}} erneut.",
+    "internalError": "Der Server konnte die Anfrage nicht ausführen.",
+    "busy": "Der Server ist ausgelastet. Versuche es gleich erneut."
+  },
+  "access": {
+    "gainsAccess": "Wer Zugriff erhält",
+    "losesAccess": "Wer Zugriff verliert",
+    "peopleGaining": "Personen, die Zugriff erhalten",
+    "peopleLosing": "Personen, die Zugriff verlieren",
+    "andMore": "und {count, plural, one {# weitere Person} other {# weitere Personen}}",
+    "nobody": "Derzeit niemand.",
+    "allMembers": "Alle {count, plural, one {# Mitglied} other {# Mitglieder}} von {name}",
+    "allInstanceUsers": "Alle internen Benutzer der Instanz"
+  },
+  "auth": {
+    "signInTitle": "Bei {name} anmelden",
+    "signIn": "Anmelden",
+    "signInFailed": "Anmeldung fehlgeschlagen",
+    "signInWithPasskey": "Mit Passkey anmelden",
+    "orWithPassword": "oder mit deinem Passwort",
+    "email": "E-Mail",
+    "workEmail": "Geschäftliche E-Mail-Adresse",
+    "password": "Passwort",
+    "name": "Name",
+    "forgotPassword": "Passwort vergessen?",
+    "sessionEnded": "Deine Sitzung ist beendet. Melde dich erneut an, um dort weiterzumachen, wo du warst.",
+    "passkeyCancelled": "Der Passkey wurde nicht verwendet. Versuche es erneut oder wähle eine andere Methode.",
+    "passkeyHint": "Verwende Touch ID, Windows Hello oder deinen Sicherheitsschlüssel, wenn dein Browser danach fragt.",
+    "usePasskey": "Passkey verwenden",
+    "verifyTitle": "Bestätige, dass du es bist",
+    "verifyDescription": "Dein Konto ist mit einem zweiten Faktor geschützt.",
+    "authenticatorCode": "Code aus deiner Authenticator-App",
+    "authenticatorCodeHint": "Gib den sechsstelligen Code ein.",
+    "recoveryCode": "Wiederherstellungscode",
+    "recoveryCodeHint": "Jeder Wiederherstellungscode funktioniert einmal. Erstelle danach in deinen Sicherheitseinstellungen neue Codes.",
+    "verify": "Bestätigen",
+    "useFactor": {
+      "totp": "Authenticator-App verwenden",
+      "passkey": "Passkey verwenden",
+      "recoveryCode": "Wiederherstellungscode verwenden"
+    },
+    "startOver": "Erneut anmelden",
+    "backToSignIn": "Zurück zur Anmeldung",
+    "language": "Sprache",
+    "resetTitle": "Passwort zurücksetzen",
+    "resetDescription": "Gib die E-Mail-Adresse deines Kontos ein. Wir senden dir einen Link, mit dem du ein neues Passwort festlegst.",
+    "sendResetLink": "Link senden",
+    "resetSent": "Wenn es ein Konto mit dieser Adresse gibt, haben wir einen Link geschickt. Sieh in deinem Postfach nach.",
+    "newPasswordTitle": "Neues Passwort festlegen",
+    "newPassword": "Neues Passwort",
+    "repeatPassword": "Passwort wiederholen",
+    "passwordHint": "Mindestens {minimum} Zeichen. Eine Passphrase merkt man sich leichter.",
+    "passwordsDiffer": "Die Passwörter stimmen nicht überein.",
+    "setPassword": "Passwort festlegen",
+    "passwordChanged": "Dein Passwort wurde geändert. Melde dich jetzt damit an.",
+    "confirmEmailTitle": "E-Mail-Adresse bestätigen",
+    "confirmingEmail": "Wird bestätigt",
+    "emailConfirmed": "Deine neue E-Mail-Adresse ist bestätigt.",
+    "continue": "Weiter",
+    "invitationTitle": "Einer Organisation beitreten",
+    "invitationDescription": "Du wurdest eingeladen, auf Pagehall zusammenzuarbeiten.",
+    "acceptInvitation": "Einladung annehmen",
+    "createAccountForInvitation": "Lege dein Konto an, um die Einladung anzunehmen.",
+    "createAccount": "Konto anlegen",
+    "invitationAccountCreated": "Dein Konto ist bereit. Melde dich an, um zu beginnen.",
+    "invitationJoined": "Du bist der Organisation beigetreten. Melde dich an, um fortzufahren.",
+    "registerTitle": "Konto anlegen",
+    "registerDescription": "Gib deine geschäftliche E-Mail-Adresse ein. Wenn deine Organisation die Registrierung erlaubt, senden wir dir einen Link.",
+    "sendRegistrationLink": "Link senden",
+    "registerSent": "Wenn die Registrierung für diese Adresse offen ist, haben wir einen Link geschickt. Sieh in deinem Postfach nach.",
+    "completeRegistrationTitle": "Registrierung abschließen",
+    "registrationComplete": "Dein Konto ist bereit. Melde dich an, um zu beginnen.",
+    "secondFactorSetupTitle": "Zweiten Faktor einrichten",
+    "secondFactorSetupDescription": "Deine Organisation verlangt einen zweiten Faktor. Richte einen ein, um fortzufahren.",
+    "secondFactorMethod": "Zweiter Faktor"
+  },
+  "reauthentication": {
+    "title": "Identität bestätigen",
+    "description": "Für diese Änderung musst du kürzlich bestätigt haben, dass du es bist.",
+    "method": "Methode",
+    "methods": {
+      "password": "Passwort",
+      "totp": "Authenticator-App",
+      "passkey": "Passkey"
+    },
+    "confirm": "Bestätigen"
+  },
+  "setup": {
+    "progress": "Schritt {step} von {total} · {name}",
+    "continue": "Weiter",
+    "back": "Zurück",
+    "finish": "Einrichtung abschließen",
+    "skipAndFinish": "Überspringen und Einrichtung abschließen",
+    "failed": "Die Einrichtung konnte nicht geladen werden",
+    "notReady": "Schließe alle erforderlichen Schritte ab, bevor du die Einrichtung beendest.",
+    "steps": {
+      "systemCheck": "Systemprüfung",
+      "instance": "Instanz",
+      "owner": "Owner-Konto",
+      "keyBackup": "Schlüssel",
+      "organization": "Organisation",
+      "mail": "E-Mail"
+    },
+    "code": {
+      "name": "Setup-Code",
+      "title": "Pagehall einrichten",
+      "description": "Gib den Setup-Code aus dem Container-Log ein. Er belegt, dass du diesen Server betreibst.",
+      "label": "Setup-Code",
+      "hint": "Der Code funktioniert nicht mehr, sobald die Einrichtung abgeschlossen ist."
+    },
+    "systemCheck": {
+      "title": "Systemprüfung",
+      "description": "Pagehall hat seine Umgebung geprüft. Warnungen blockieren die Einrichtung nicht.",
+      "language": "Sprache der Einrichtung",
+      "blocked": "Behebe die Fehler oben, bevor du fortfährst.",
+      "checks": {
+        "database": "Datenbank",
+        "fileStorage": "Dateispeicher",
+        "clock": "Uhrzeit",
+        "instanceUrl": "Adresse",
+        "https": "HTTPS"
+      },
+      "status": {
+        "ok": "OK",
+        "warning": "Warnung",
+        "error": "Fehler"
+      },
+      "databaseOk": "PostgreSQL {version}, Migrationen ausgeführt",
+      "databaseMigrations": "Die Datenbank ist nicht aktuell. Sieh im Server-Log nach.",
+      "storageFree": "Beschreibbar, {free} frei",
+      "storageNotWritable": "Der Dateispeicher ist nicht beschreibbar.",
+      "clockOk": "Stimmt mit der Datenbank überein",
+      "clockOffset": "Weicht um {seconds, plural, one {# Sekunde} other {# Sekunden}} von der Datenbank ab",
+      "urlOk": "Festgelegt",
+      "urlMissing": "Noch nicht festgelegt. Du legst sie im nächsten Schritt fest.",
+      "httpsOk": "Aktiv",
+      "httpsMissing": "Nicht erkannt. Betreibe Pagehall hinter einem Reverse Proxy mit TLS, bevor du Personen einlädst."
+    },
+    "instance": {
+      "title": "Deine Instanz",
+      "description": "Die Adresse und der Name, die alle sehen.",
+      "url": "Adresse",
+      "urlHint": "Wird in Links, E-Mails und für Passkeys verwendet.",
+      "name": "Name der Instanz"
+    },
+    "owner": {
+      "title": "Owner-Konto",
+      "description": "Der Owner verwaltet die Instanz. Dieses Konto kann sich immer mit seinem Passwort anmelden.",
+      "twoFactorRequired": "Zwei-Faktor-Authentifizierung ist erforderlich",
+      "twoFactorDescription": "Scanne den Code mit einer Authenticator-App und gib dann den sechsstelligen Code ein.",
+      "ready": "Das Owner-Konto ist bereit",
+      "summary": "{name} ({email}), mit Authenticator-App",
+      "change": "Owner ändern"
+    },
+    "keyBackup": {
+      "title": "Schlüssel sichern",
+      "description": "Pagehall verschlüsselt Geheimnisse und Backups mit diesen Schlüsseln. Ohne sie lassen sich verschlüsselte Daten und Backups nicht wiederherstellen.",
+      "download": "Schlüssel herunterladen",
+      "saveAgain": "Erneut speichern",
+      "copied": "Die Schlüssel wurden kopiert.",
+      "keys": "Master-Schlüssel und Backup-Schlüssel",
+      "alreadyDownloaded": "Die Schlüssel wurden bereits heruntergeladen. Aus Sicherheitsgründen geht das nur einmal.",
+      "stored": "Ich habe beide Schlüssel an einem sicheren Ort außerhalb dieses Servers abgelegt, zum Beispiel in einem Passwortmanager."
+    },
+    "organization": {
+      "title": "Erste Organisation",
+      "description": "Organisationen haben eigene Mitglieder, Gruppen und Einstellungen. Weitere kannst du später anlegen.",
+      "name": "Name",
+      "language": "Standardsprache",
+      "timeZone": "Standardzeitzone"
+    },
+    "mail": {
+      "title": "E-Mail",
+      "description": "Optional. Ohne E-Mail bleiben Benachrichtigungen in der App. Du kannst das später einrichten.",
+      "save": "Mailserver speichern",
+      "saved": "Der Mailserver wurde gespeichert."
+    }
+  },
+  "preferences": {
+    "title": "Darstellung und Sprache",
+    "description": "Wie Pagehall für dich aussieht und sich verhält. Änderungen gelten sofort.",
+    "display": "Darstellung",
+    "colorMode": "Farbmodus",
+    "colorModeHint": "Automatisch folgt deinem System.",
+    "colorModes": {
+      "system": "Automatisch",
+      "light": "Hell",
+      "dark": "Dunkel"
+    },
+    "highContrast": "Hoher Kontrast",
+    "highContrastHint": "Kräftigere Farben und Rahmen.",
+    "textSize": "Textgröße",
+    "textSizeHint": "Skaliert Text, Abstände und Symbole gemeinsam.",
+    "density": "Dichte",
+    "densityHint": "Kompakt zeigt mehr Einträge auf dem Bildschirm.",
+    "densities": {
+      "default": "Standard",
+      "compact": "Kompakt"
+    },
+    "readableFont": "Leserfreundliche Schrift",
+    "readableFontHint": "Atkinson Hyperlegible, entwickelt für Menschen mit Sehschwäche.",
+    "languageAndRegion": "Sprache und Region",
+    "language": "Sprache",
+    "timeZone": "Zeitzone",
+    "dateFormat": "Datumsformat",
+    "timeFormat": "Zeitformat",
+    "numberFormat": "Zahlenformat",
+    "firstDayOfWeek": "Erster Tag der Woche",
+    "useDefault": "Standard verwenden",
+    "automatic": "Automatisch",
+    "time24": "24 Stunden (14:30)",
+    "time12": "12 Stunden (2:30 PM)",
+    "weekdays": {
+      "monday": "Montag",
+      "sunday": "Sonntag",
+      "saturday": "Samstag"
+    }
+  },
+  "settings": {
+    "actions": "Aktionen",
+    "override": "Überschreiben",
+    "useDefault": "Standard verwenden",
+    "useInstanceValue": "Wert der Instanz verwenden",
+    "inherit": "Erben",
+    "lockForOrganizations": "Für Organisationen sperren",
+    "lockForMembers": "Für Mitglieder sperren",
+    "unlock": "Entsperren",
+    "locked": "Gesperrt",
+    "explain": "Woher kommt dieser Wert?",
+    "explainTitle": "Woher {name} kommt",
+    "explainDefault": "Keine Ebene legt einen Wert fest, daher gilt der Standard: {value}.",
+    "explainSource": "Der Wert {value} kommt von der Ebene {level}.",
+    "level": "Ebene",
+    "value": "Wert",
+    "state": "Zustand",
+    "inherits": "Nicht festgelegt",
+    "ineffective": "Durch eine Sperre oder einen strengeren Wert überlagert",
+    "applies": "Gilt",
+    "notSet": "Nicht festgelegt",
+    "moreFor": "Weitere Optionen für {name}",
+    "levels": {
+      "instance": "Instanz",
+      "organization": "Organisation",
+      "space": "Space",
+      "user": "Benutzer"
+    },
+    "source": {
+      "lockedByInstance": "Von der Instanz gesperrt",
+      "lockedByOrganization": "Von {name} gesperrt",
+      "setByYou": "Von dir festgelegt",
+      "setForOrganization": "Für {name} festgelegt",
+      "setForInstance": "Für die Instanz festgelegt",
+      "fromOrganization": "Standard von {name}: {value}",
+      "fromInstance": "Standard der Instanz: {value}",
+      "fromDefault": "Standard: {value}",
+      "lockedBelow": "für untere Ebenen gesperrt"
+    },
+    "units": {
+      "days": "{count, plural, one {# Tag} other {{value} Tage}}",
+      "minutes": "{count, plural, one {# Minute} other {{value} Minuten}}",
+      "characters": "{count, plural, one {# Zeichen} other {{value} Zeichen}}",
+      "count": "{value}",
+      "perMinute": "{value} pro Minute"
+    },
+    "values": {
+      "dateFormat": {
+        "auto": "Automatisch",
+        "DD.MM.YYYY": "TT.MM.JJJJ",
+        "DD/MM/YYYY": "TT/MM/JJJJ",
+        "MM/DD/YYYY": "MM/TT/JJJJ",
+        "YYYY-MM-DD": "JJJJ-MM-TT"
+      },
+      "timeFormat": {
+        "auto": "Automatisch",
+        "24h": "24 Stunden",
+        "12h": "12 Stunden"
+      },
+      "numberFormat": {
+        "auto": "Automatisch",
+        "en-US": "1,234.56",
+        "de-DE": "1.234,56",
+        "de-CH": "1’234.56",
+        "fr-FR": "1 234,56"
+      },
+      "firstDayOfWeek": {
+        "auto": "Automatisch",
+        "monday": "Montag",
+        "sunday": "Sonntag",
+        "saturday": "Samstag"
+      },
+      "accentColor": {
+        "petrol": "Petrol",
+        "blue": "Blau",
+        "violet": "Violett",
+        "amber": "Bernstein",
+        "red": "Rot",
+        "green": "Grün",
+        "gray": "Grau"
+      }
+    },
+    "keys": {
+      "instance_name": {
+        "label": "Name der Instanz",
+        "description": "Erscheint auf der Anmeldeseite, in E-Mails und im Browser."
+      },
+      "instance_url": {
+        "label": "Adresse",
+        "description": "Wird in Links, E-Mails und für Passkeys verwendet. Eine Änderung macht vorhandene Passkeys ungültig."
+      },
+      "locale_language": {
+        "label": "Sprache",
+        "description": "Sprache der Oberfläche und der E-Mails für alle, die keine eigene gewählt haben."
+      },
+      "locale_timeZone": {
+        "label": "Zeitzone",
+        "description": "Datum und Uhrzeit werden in dieser Zeitzone angezeigt."
+      },
+      "locale_dateFormat": {
+        "label": "Datumsformat",
+        "description": "Wie Daten geschrieben werden."
+      },
+      "locale_timeFormat": {
+        "label": "Zeitformat",
+        "description": "24 oder 12 Stunden."
+      },
+      "locale_numberFormat": {
+        "label": "Zahlenformat",
+        "description": "Trennzeichen für Tausender und Dezimalstellen."
+      },
+      "locale_firstDayOfWeek": {
+        "label": "Erster Tag der Woche",
+        "description": "Gilt für Kalender und Datumsauswahl."
+      },
+      "branding_accentColor": {
+        "label": "Akzentfarbe",
+        "description": "Für die Hauptaktion, das aktive Element, Links und den Fokus."
+      },
+      "auth_passwordMinLength": {
+        "label": "Mindestlänge des Passworts",
+        "description": "Kann auf unteren Ebenen nur erhöht werden."
+      },
+      "auth_twoFactorRequired": {
+        "label": "Zwei-Faktor-Authentifizierung verlangen",
+        "description": "Alle richten eine Authenticator-App oder einen Passkey ein, bevor sie arbeiten können."
+      },
+      "auth_maxSessionsPerAccount": {
+        "label": "Sitzungen pro Konto",
+        "description": "Die älteste Sitzung endet, wenn eine neue das Limit überschreiten würde."
+      },
+      "auth_sessionIdleTimeoutMinutes": {
+        "label": "Abmelden nach Inaktivität",
+        "description": "Wie lange man ohne Aktivität angemeldet bleibt."
+      },
+      "auth_sessionLifetimeMinutes": {
+        "label": "Maximale Sitzungsdauer",
+        "description": "Danach meldet man sich erneut an, auch wenn man aktiv ist."
+      },
+      "auth_reauthenticationMinutes": {
+        "label": "Bestätigung für heikle Änderungen",
+        "description": "Wie lange eine bestätigte Identität für Änderungen wie ein neues Passwort gilt."
+      },
+      "auth_signInAttemptsPerAccountPerMinute": {
+        "label": "Anmeldeversuche pro Konto",
+        "description": "Weitere Versuche werden eine Minute lang abgewiesen."
+      },
+      "auth_signInAttemptsPerClientPerMinute": {
+        "label": "Anmeldeversuche pro Client",
+        "description": "Gezählt pro IP-Adresse."
+      },
+      "auth_lockoutFailuresPerAccount": {
+        "label": "Fehlversuche bis zur Kontosperre",
+        "description": "Innerhalb des Sperrfensters."
+      },
+      "auth_lockoutFailuresPerClient": {
+        "label": "Fehlversuche bis zur Client-Sperre",
+        "description": "Innerhalb des Sperrfensters, pro IP-Adresse."
+      },
+      "auth_lockoutWindowMinutes": {
+        "label": "Sperrfenster",
+        "description": "Fehlversuche innerhalb dieser Zeit zählen zusammen."
+      },
+      "auth_lockoutMinutes": {
+        "label": "Erste Sperre",
+        "description": "Wiederholte Sperren werden bis zum Maximum länger."
+      },
+      "auth_lockoutMaxMinutes": {
+        "label": "Längste Sperre",
+        "description": "Länger dauert eine Sperre nicht."
+      },
+      "apiTokens_maxLifetimeDays": {
+        "label": "Maximale Laufzeit von Tokens",
+        "description": "Tokens laufen spätestens nach dieser Zeit ab."
+      },
+      "apiTokens_withoutExpiry": {
+        "label": "Tokens ohne Ablauf",
+        "description": "Erlaubt Tokens, die nie ablaufen."
+      },
+      "apiTokens_requestsPerMinute": {
+        "label": "Anfragen pro Token",
+        "description": "Pro Minute. Weitere Anfragen werden kurz abgewiesen."
+      },
+      "apiTokens_expiryReminderDays": {
+        "label": "Erinnerung vor Ablauf",
+        "description": "So lange vor dem Ablauf eines Tokens werden die Verantwortlichen erinnert."
+      },
+      "apiTokens_publicDocumentation": {
+        "label": "Öffentliche API-Referenz",
+        "description": "Alle können die API-Referenz öffnen, auch ohne Anmeldung."
+      },
+      "organizations_selfServiceCreation": {
+        "label": "Organisationen selbst anlegen",
+        "description": "Alle Mitglieder dürfen Organisationen anlegen und sind dann deren Owner."
+      },
+      "organizations_membersCreateGroups": {
+        "label": "Mitglieder legen Gruppen an",
+        "description": "Mitglieder dürfen Gruppen anlegen und verwalten."
+      },
+      "organizations_selfRegistration": {
+        "label": "Selbstregistrierung",
+        "description": "Personen mit einer Adresse in einer der Domains können selbst ein Konto anlegen."
+      },
+      "organizations_guestExpiryReminderDays": {
+        "label": "Erinnerung vor Ablauf von Gästen",
+        "description": "So lange vor dem Ende eines Gastzugangs wird die verantwortliche Person erinnert."
+      },
+      "organizations_guestInactivityDays": {
+        "label": "Inaktive Gäste",
+        "description": "Die verantwortliche Person erfährt, wenn ein Gast so lange nicht aktiv war."
+      },
+      "organizations_expiryReminderDays": {
+        "label": "Erinnerung vor Ablauf von Zugängen",
+        "description": "So lange vor dem Ablauf von Rollen und Mitgliedschaften werden die Verantwortlichen erinnert."
+      },
+      "organizations_breakGlassMinutes": {
+        "label": "Dauer des Notfallzugriffs",
+        "description": "So lange gilt ein Notfallzugriff."
+      },
+      "audit_retentionDays": {
+        "label": "Aufbewahrung des Audit-Logs",
+        "description": "Ältere Ereignisse werden entfernt."
+      },
+      "notifications_retentionDays": {
+        "label": "Aufbewahrung von Benachrichtigungen",
+        "description": "Ältere Benachrichtigungen werden entfernt."
+      }
+    }
+  },
+  "security": {
+    "title": "Sicherheit",
+    "description": "Anmeldung, zweite Faktoren, Sitzungen und API-Tokens.",
+    "signIn": "Anmeldung",
+    "passwordDescription": "Verwende eine lange Passphrase, die du sonst nirgends verwendest.",
+    "changePassword": "Passwort ändern",
+    "passwordChanged": "Dein Passwort wurde geändert. Deine anderen Sitzungen wurden beendet.",
+    "otherSessionsEnd": "Wenn du das Passwort änderst, enden deine anderen Sitzungen.",
+    "changeEmail": "E-Mail-Adresse ändern",
+    "changeEmailDescription": "Wir senden einen Bestätigungslink an die neue Adresse. Deine Adresse ändert sich, wenn du ihn öffnest.",
+    "newEmail": "Neue E-Mail-Adresse",
+    "sendConfirmation": "Bestätigung senden",
+    "emailConfirmationSent": "Sieh im Postfach der neuen Adresse nach und öffne den Link.",
+    "twoFactor": "Zwei-Faktor-Authentifizierung",
+    "twoFactorRequired": "Deine Organisation verlangt einen zweiten Faktor. Behalte mindestens einen.",
+    "authenticatorApp": "Authenticator-App",
+    "authenticatorOn": "Codes aus einer App auf deinem Telefon.",
+    "authenticatorOff": "Verwende eine App wie Aegis, Google Authenticator oder 1Password.",
+    "setUp": "Einrichten",
+    "setUpAuthenticator": "Authenticator-App einrichten",
+    "totpScan": "Scanne den Code mit deiner Authenticator-App.",
+    "totpManual": "Wenn das Scannen nicht klappt, gib diesen Schlüssel in der App ein:",
+    "totpQrCode": "QR-Code für deine Authenticator-App",
+    "totpConfirm": "Bestätigen",
+    "authenticatorAdded": "Die Authenticator-App ist eingerichtet.",
+    "removeAuthenticatorTitle": "Authenticator-App entfernen?",
+    "removeAuthenticatorDescription": "Du kannst dich dann nicht mehr mit Codes aus dieser App anmelden.",
+    "authenticatorRemoved": "Die Authenticator-App wurde entfernt.",
+    "passkey": "Passkey",
+    "passkeys": "Passkeys",
+    "passkeysDescription": "Melde dich mit Fingerabdruck, Gesicht oder Sicherheitsschlüssel an.",
+    "noPasskeys": "Noch keine Passkeys. Passkeys dienen zur Anmeldung und als zweiter Faktor.",
+    "passkeysUnsupported": "Dieser Browser unterstützt keine Passkeys.",
+    "addPasskey": "Passkey hinzufügen",
+    "passkeyName": "Name",
+    "passkeyNameHint": "Zum Beispiel das Gerät oder der Sicherheitsschlüssel.",
+    "defaultPasskeyName": "Passkey",
+    "passkeyDetails": "Hinzugefügt {created} · zuletzt verwendet {used}",
+    "removePasskeyTitle": "{name} entfernen?",
+    "removePasskeyDescription": "Du kannst dich dann nicht mehr mit diesem Passkey anmelden.",
+    "recoveryCodes": "Wiederherstellungscodes",
+    "recoveryCodesLeft": "{count, plural, one {# unbenutzter Code} other {# unbenutzte Codes}}",
+    "recoveryCodesNeedFactor": "Verfügbar, sobald du einen zweiten Faktor eingerichtet hast.",
+    "recoveryCodesShownOnce": "Sichere diese Codes jetzt",
+    "recoveryCodesDescription": "Jeder Code funktioniert einmal, wenn du deinen zweiten Faktor nicht verwenden kannst. Sie werden nur jetzt angezeigt.",
+    "recoveryCodesCopied": "Die Codes wurden kopiert.",
+    "newCodes": "Neue Codes erstellen",
+    "newCodesTitle": "Neue Wiederherstellungscodes erstellen?",
+    "newCodesDescription": "Deine bisherigen Wiederherstellungscodes funktionieren dann nicht mehr.",
+    "sessions": "Aktive Sitzungen",
+    "sessionDetails": "{ip} · zuletzt aktiv {used}",
+    "unknownDevice": "Unbekanntes Gerät",
+    "thisDevice": "Dieses Gerät",
+    "endSession": "Abmelden",
+    "endSessionTitle": "Diese Sitzung abmelden?",
+    "endSessionDescription": "Das Gerät muss sich erneut anmelden.",
+    "endOthers": "Alle anderen Sitzungen abmelden",
+    "endOthersTitle": "Alle anderen Sitzungen abmelden?",
+    "endOthersDescription": "Alle anderen Geräte müssen sich erneut anmelden."
+  },
+  "tokens": {
+    "personal": "API-Tokens",
+    "none": "Noch keine Tokens.",
+    "create": "Token erstellen",
+    "createTitle": "API-Token erstellen",
+    "createdTitle": "Dein neues Token",
+    "name": "Name",
+    "organizationAccess": "Zugriff auf die Organisation",
+    "instanceAccess": "Zugriff auf die Instanz",
+    "neverMore": "Ein Token darf nie mehr als dein eigenes Konto.",
+    "scopeRequired": "Wähle mindestens einen Bereich.",
+    "expires": "Läuft ab",
+    "expiry": {
+      "30": "In 30 Tagen",
+      "90": "In 90 Tagen",
+      "365": "In einem Jahr",
+      "never": "Nie"
+    },
+    "shownOnce": "Kopiere das Token jetzt. Es wird nur einmal angezeigt.",
+    "copied": "Das Token wurde kopiert.",
+    "expiresOn": "läuft am {date} ab",
+    "noExpiry": "kein Ablauf",
+    "lastUsed": "zuletzt verwendet {when}",
+    "lastUsedColumn": "Zuletzt verwendet",
+    "neverUsed": "nie verwendet",
+    "owner": "Gehört zu",
+    "revoke": "Widerrufen",
+    "revokeTitle": "{name} widerrufen?",
+    "revokeDescription": "Das Token funktioniert sofort nicht mehr.",
+    "revokeImpact": "Skripte und Integrationen, die {name} verwenden, verlieren ihren Zugriff.",
+    "organizationTitle": "API-Tokens",
+    "organizationDescription": "Alle Tokens mit Zugriff auf diese Organisation, von Personen und Dienstkonten."
+  },
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "close": "Benachrichtigungen schließen",
+    "preferences": "Einstellungen für Benachrichtigungen",
+    "filter": "Anzeigen",
+    "all": "Alle",
+    "unread": "Ungelesen",
+    "markAllRead": "Alle als gelesen markieren",
+    "markRead": "Als gelesen markieren",
+    "unreadLabel": "Ungelesen",
+    "none": "Keine Benachrichtigungen",
+    "noneUnread": "Keine ungelesenen Benachrichtigungen",
+    "noneDescription": "Hier erscheinen Erinnerungen und Hinweise zu deinen Organisationen.",
+    "more": "Mehr anzeigen",
+    "times": "{count, plural, one {einmal} other {# Mal}}",
+    "groups": {
+      "today": "Heute",
+      "yesterday": "Gestern",
+      "earlier": "Früher"
+    },
+    "preferencesTitle": "Benachrichtigungen",
+    "preferencesDescription": "Wähle, wie du von jeder Art von Ereignis erfährst.",
+    "defaultsTitle": "Standards für Benachrichtigungen",
+    "organizationDefaultsDescription": "Standards für Mitglieder. Alle können sie für sich ändern, solange du sie nicht sperrst.",
+    "instanceDefaultsDescription": "Standards für alle auf dieser Instanz.",
+    "eventTypes": "Ereignisse",
+    "event": "Ereignis",
+    "noEventTypes": "Es gibt keine Ereignisse zum Einstellen.",
+    "channels": {
+      "inApp": "In der App",
+      "email": "E-Mail",
+      "none": "keine"
+    },
+    "events": {
+      "apiTokenExpiring": "API-Token läuft bald ab",
+      "guestExpiring": "Gastzugang endet bald",
+      "guestInactive": "Gast ist inaktiv",
+      "accessExpiring": "Rolle oder Mitgliedschaft endet bald",
+      "serviceAccountUnattended": "Dienstkonto ohne verantwortliche Person",
+      "breakGlassStarted": "Notfallzugriff begonnen",
+      "signInNewBrowser": "Anmeldung in einem neuen Browser"
+    },
+    "types": {
+      "apiToken": {
+        "expiring": "Das API-Token {tokenName} läuft am {expiresAt} ab."
+      },
+      "guest": {
+        "expiring": "Der Gastzugang von {guestName} zu {organizationName} endet am {expiresAt}.",
+        "inactive": "{guestName} hat {organizationName} seit {days, plural, one {# Tag} other {# Tagen}} nicht verwendet."
+      },
+      "access": {
+        "expiring": "{kind, select, role {Die Rolle {name}} group {Die Mitgliedschaft in der Gruppe {name}} other {Eine Mitgliedschaft}} in {organizationName} endet am {expiresAt}."
+      },
+      "serviceAccount": {
+        "unattended": "Für das Dienstkonto {serviceAccountName} in {organizationName} ist niemand mehr verantwortlich."
+      },
+      "breakGlass": {
+        "started": "{requesterName} hat einen Notfallzugriff auf {organizationName} für {minutes} Minuten begonnen: {reason}"
+      },
+      "signIn": {
+        "newBrowser": "Dein Konto wurde in einem neuen Browser angemeldet: {browser} auf {operatingSystem}, {clientIp}."
+      }
+    }
+  },
+  "mail": {
+    "title": "E-Mail",
+    "description": "Der Mailserver, über den Pagehall Benachrichtigungen, Einladungen und Passwort-Links versendet.",
+    "smtp": "Mailserver",
+    "notConfigured": "Es ist kein Mailserver eingerichtet. Benachrichtigungen bleiben in der App, und niemand kann sein Passwort per E-Mail zurücksetzen.",
+    "host": "Server",
+    "port": "Port",
+    "security": "Sicherheit",
+    "securityHint": "Verwende TLS oder STARTTLS, außer der Server läuft direkt neben Pagehall.",
+    "securityModes": {
+      "tls": "TLS (meist Port 465)",
+      "starttls": "STARTTLS (meist Port 587)",
+      "none": "Keine (nur lokales Relay)"
+    },
+    "username": "Benutzername",
+    "usernameHint": "Leer lassen, wenn der Server keine Anmeldung braucht.",
+    "password": "Passwort",
+    "passwordKept": "Leer lassen, um das gespeicherte Passwort zu behalten.",
+    "from": "Absenderadresse",
+    "credentialsNeedTls": "Zugangsdaten brauchen eine TLS-Verbindung.",
+    "testRecipient": "Testmail senden an",
+    "sendTest": "Testmail senden",
+    "testDelivered": "Der Mailserver hat die Testmail angenommen.",
+    "testFailed": "Die Testmail konnte nicht gesendet werden. {detail}"
+  },
+  "organization": {
+    "general": {
+      "title": "Allgemein",
+      "description": "Name, Logo und Standards der Organisation.",
+      "profile": "Profil",
+      "name": "Name",
+      "slug": "Kurzname",
+      "slugHint": "Wird in Adressen verwendet. Kleinbuchstaben, Ziffern und Bindestriche.",
+      "branding": "Erscheinungsbild",
+      "logo": "Logo",
+      "logoHint": "Erscheint auf der Anmeldeseite und in E-Mails. PNG, JPEG oder WebP, höchstens 256 KiB.",
+      "noLogo": "Kein Logo",
+      "uploadLogo": "Logo hochladen",
+      "replaceLogo": "Logo ersetzen",
+      "logoUploaded": "Das Logo wurde hochgeladen.",
+      "removeLogoTitle": "Logo entfernen?",
+      "removeLogoDescription": "Pagehall zeigt wieder sein eigenes Logo.",
+      "localeDefaults": "Sprache und Region",
+      "leaveTitle": "Mitgliedschaft",
+      "leave": "{name} verlassen",
+      "leaveAction": "Verlassen",
+      "leaveDescription": "Du verlierst den Zugriff auf alles in dieser Organisation.",
+      "leaveConfirm": "Um wieder beizutreten, brauchst du eine neue Einladung.",
+      "leaveImpact": "Du verlierst den Zugriff auf {name}."
+    },
+    "security": {
+      "title": "Sicherheit",
+      "description": "Anmelderegeln für alle in {name}. Die Werte kommen von der Instanz, solange du sie hier nicht festlegst.",
+      "signIn": "Anmeldung",
+      "apiTokens": "API-Tokens"
+    },
+    "domains": {
+      "title": "Domains und Gäste",
+      "description": "Wer zur Organisation gehört und wie lange Gäste ihren Zugang behalten.",
+      "domains": "Domains",
+      "domainsHint": "Konten mit einer bestätigten Adresse in diesen Domains gehören zu {name}.",
+      "none": "Keine Domains.",
+      "domain": "Domain",
+      "placeholder": "example.org",
+      "add": "Domain hinzufügen",
+      "instanceManaged": "Domains vergeben die Administratoren der Instanz.",
+      "removeTitle": "{domain} entfernen?",
+      "removeDescription": "Neue Konten mit dieser Domain treten der Organisation nicht mehr automatisch bei. Bestehende Mitglieder bleiben.",
+      "registration": "Registrierung und Gruppen",
+      "guests": "Gäste und Ablauf"
+    }
+  },
+  "members": {
+    "title": "Mitglieder",
+    "description": "Personen in {name}.",
+    "tabs": "Arten von Mitgliedern",
+    "all": "Alle",
+    "invite": "Personen einladen",
+    "search": "Nach Name oder E-Mail suchen",
+    "name": "Name",
+    "kind": "Art",
+    "roles": "Rollen",
+    "expires": "Läuft ab",
+    "noExpiry": "Kein Ablauf",
+    "responsibleIs": "verantwortlich: {name}",
+    "actionsFor": "Aktionen für {name}",
+    "none": "Noch keine Mitglieder.",
+    "noMatches": "Niemand passt zur Suche.",
+    "noLimit": "Pagehall zählt keine Benutzer. Lade so viele Personen ein, wie du brauchst.",
+    "kinds": {
+      "member": "Mitglied",
+      "collaborator": "Mitwirkender",
+      "guest": "Gast"
+    },
+    "kindsPlural": {
+      "member": "Mitglieder",
+      "collaborator": "Mitwirkende",
+      "guest": "Gäste"
+    },
+    "actions": {
+      "roles": "Rolle vergeben",
+      "removeRole": "Rolle {role} entfernen",
+      "expiry": "Ablauf festlegen",
+      "responsible": "Verantwortliche Person ändern",
+      "permissions": "Berechtigungen erklären",
+      "remove": "Aus der Organisation entfernen",
+      "deactivate": "Konto deaktivieren"
+    },
+    "emails": "E-Mail-Adressen",
+    "emailsHint": "Durch Kommas oder Zeilenumbrüche trennen.",
+    "invalidEmails": "Diese Adressen sind nicht gültig: {emails}",
+    "noExtraRole": "Keine zusätzliche Rolle",
+    "expiresHint": "Optional. Der Zugang endet am Ende dieses Tages.",
+    "responsible": "Verantwortliche Person",
+    "responsibleHint": "Wird erinnert, bevor der Zugang des Gasts endet.",
+    "collaboratorHint": "Mitwirkende sind Mitglieder einer anderen Organisation. Sie sehen nur, was mit ihnen geteilt wird.",
+    "guestHint": "Gäste melden sich mit eigenem Konto an und sehen nur, was mit ihnen geteilt wird.",
+    "inviteImpact": "Sie treten {name} als {kind} mit der Rolle {role} bei, wenn sie annehmen.",
+    "invitationExpiry": "Einladungen laufen nach 7 Tagen ab.",
+    "sendInvitations": "{count, plural, one {Einladung senden} other {# Einladungen senden}}",
+    "invitationsSent": "{count, plural, one {# Einladung gesendet.} other {# Einladungen gesendet.}}",
+    "invitations": "Einladungen",
+    "noInvitations": "Keine offenen Einladungen.",
+    "invitationExpires": "Link läuft ab",
+    "revokeInvitation": "Widerrufen",
+    "revokeInvitationTitle": "Einladung an {email} widerrufen?",
+    "revokeInvitationDescription": "Der Link in der E-Mail funktioniert dann nicht mehr.",
+    "removeTitle": "{name} entfernen?",
+    "removeDescription": "Das Konto bleibt bestehen, gehört aber nicht mehr zu dieser Organisation.",
+    "removeImpact": "Sie verlieren jeden Zugriff auf {name}.",
+    "removed": "Das Mitglied wurde entfernt.",
+    "deactivateTitle": "{name} deaktivieren?",
+    "deactivateDescription": "Das Konto kann sich auf dieser Instanz nirgends mehr anmelden. Sitzungen enden sofort.",
+    "deactivateImpact": "Sie verlieren den Zugriff auf alle Organisationen dieser Instanz.",
+    "deactivated": "Das Konto wurde deaktiviert.",
+    "expiryTitle": "Ablauf für {name}",
+    "expiryHint": "Der Zugang endet am Ende dieses Tages. Vorher gehen Erinnerungen hinaus.",
+    "expiryImpact": "Sie verlieren nach dem {date} den Zugriff auf {name}.",
+    "responsibleTitle": "Verantwortliche Person für {name}",
+    "permissionsTitle": "Berechtigungen von {name}",
+    "permissionsDescription": "Jede Aktion in der Organisation und warum sie erlaubt ist oder nicht.",
+    "permission": "Berechtigung",
+    "allowed": "Erlaubt",
+    "why": "Warum"
+  },
+  "roles": {
+    "title": "Rollen",
+    "description": "Wer was in der Organisation verwalten darf.",
+    "builtInTitle": "Eingebaute Rollen",
+    "customTitle": "Eigene Rollen",
+    "assignmentsTitle": "Zuweisungen",
+    "name": "Name",
+    "grants": "Erlaubt",
+    "role": "Rolle",
+    "principal": "Vergeben an",
+    "person": "Person",
+    "group": "Gruppe",
+    "expires": "Läuft ab",
+    "expiresHint": "Optional. Die Rolle endet am Ende dieses Tages.",
+    "assign": "Rolle vergeben",
+    "assignTo": "Rolle an {name} vergeben",
+    "assignAction": "Rolle vergeben",
+    "assigned": "Die Rolle wurde vergeben.",
+    "unassign": "Entfernen",
+    "unassignTitle": "Diese Rolle entfernen?",
+    "unassigned": "Die Rolle wurde entfernt.",
+    "createRole": "Rolle anlegen",
+    "editRole": "{name} bearbeiten",
+    "deleteTitle": "{name} löschen?",
+    "deleteDescription": "Alle, die die Rolle haben, verlieren sie.",
+    "deleteImpact": "Alle mit {name} verlieren deren Berechtigungen.",
+    "editImpact": "Alle mit dieser Rolle erhalten die geänderten Berechtigungen sofort.",
+    "actionsFor": "Aktionen für {name}",
+    "areas": "Bereiche",
+    "areasHint": "Ansehen erlaubt das Lesen, Verwalten auch das Ändern.",
+    "noAreas": "Nichts",
+    "noCustomRoles": "Noch keine eigenen Rollen.",
+    "noAssignments": "Es sind keine Rollen vergeben.",
+    "noSelfExtension": "Niemand kann mehr vergeben, als er selbst hat.",
+    "chooseGroup": "Gruppe wählen",
+    "choosePerson": "Person wählen",
+    "choosePrincipal": "Wähle, wer die Rolle erhält.",
+    "groupNamed": "Gruppe {name}",
+    "builtInGroup": "Eingebaut",
+    "customGroup": "Eigene",
+    "gainsWhat": "Sie erhalten {role} in {name}: {areas}.",
+    "losesWhat": "Sie verlieren {role} in {name}.",
+    "builtIn": {
+      "owner": "Owner",
+      "administrator": "Administrator",
+      "member": "Mitglied",
+      "securityAuditor": "Sicherheitsprüfer"
+    },
+    "builtInDescriptions": {
+      "owner": "Alles, auch andere Owner. Eine Organisation hat immer einen.",
+      "administrator": "Alles außer der Verwaltung von Ownern.",
+      "member": "Sieht Mitglieder und Gruppen. Jedes Mitglied hat diese Rolle."
+    },
+    "instanceDescriptions": {
+      "owner": "Alles auf der Instanz. Zugleich das Notfallkonto.",
+      "administrator": "Verwaltet Organisationen, Konten, Einstellungen und Betrieb.",
+      "securityAuditor": "Sieht alles auf der Instanz, ohne etwas zu ändern."
+    },
+    "principals": {
+      "account": "Eine Person",
+      "group": "Eine Gruppe",
+      "organizationMembers": "Alle Mitglieder der Organisation",
+      "instanceUsers": "Alle internen Benutzer der Instanz"
+    }
+  },
+  "areas": {
+    "levels": {
+      "none": "Kein Zugriff",
+      "view": "Ansehen",
+      "manage": "Verwalten"
+    },
+    "organization": {
+      "membersAndGroups": "Mitglieder und Gruppen",
+      "spaces": "Spaces",
+      "settings": "Einstellungen",
+      "signInAndSecurity": "Anmeldung und Sicherheit",
+      "integrationsAndApi": "Integrationen und API",
+      "auditLog": "Audit-Log"
+    },
+    "instance": {
+      "organizations": "Organisationen",
+      "accounts": "Konten",
+      "signInAndSecurity": "Anmeldung und Sicherheit",
+      "settings": "Einstellungen",
+      "operations": "Betrieb",
+      "auditLog": "Audit-Log"
+    },
+    "descriptions": {
+      "organization": {
+        "membersAndGroups": "Einladungen, Mitglieder, Gruppen und Rollen.",
+        "spaces": "Spaces anlegen und verwalten.",
+        "settings": "Einstellungen und Standards der Organisation.",
+        "signInAndSecurity": "Anmelderegeln und Domains.",
+        "integrationsAndApi": "Dienstkonten und API-Tokens.",
+        "auditLog": "Audit-Log lesen und exportieren."
+      },
+      "instance": {
+        "organizations": "Organisationen anlegen und Notfallzugriff.",
+        "accounts": "Alle Konten und Instanzrollen.",
+        "signInAndSecurity": "Anmelderegeln für alle.",
+        "settings": "Einstellungen der Instanz und Mailserver.",
+        "operations": "Systemstatus, Backups und Updates.",
+        "auditLog": "Audit-Log der Instanz lesen und exportieren."
+      }
+    }
+  },
+  "groups": {
+    "title": "Gruppen",
+    "description": "Gruppen geben mehreren Personen auf einmal Rollen und Zugriff.",
+    "create": "Gruppe anlegen",
+    "created": "Die Gruppe wurde angelegt.",
+    "creatorManages": "Du wirst der erste Gruppenverwalter.",
+    "name": "Name",
+    "descriptionLabel": "Beschreibung",
+    "noDescription": "Keine Beschreibung",
+    "details": "Details",
+    "none": "Noch keine Gruppen",
+    "noneDescription": "Lege eine Gruppe an, um mehreren Personen denselben Zugriff zu geben.",
+    "access": "Wo diese Gruppe Zugriff hat",
+    "noAccess": "Die Gruppe hat noch keine Rollen.",
+    "roleExpires": "Rolle in der Organisation bis {date}",
+    "roleInOrganization": "Rolle in der Organisation",
+    "managers": "Gruppenverwalter",
+    "addManager": "Gruppenverwalter hinzufügen",
+    "managerHint": "Gruppenverwalter fügen Mitglieder der Gruppe hinzu und entfernen sie.",
+    "managerAdded": "Der Gruppenverwalter wurde hinzugefügt.",
+    "managerRemoved": "Der Gruppenverwalter wurde entfernt.",
+    "members": "{count, plural, one {Mitglieder (#)} other {Mitglieder (#)}}",
+    "noMembers": "Noch keine Mitglieder.",
+    "addMember": "Mitglied hinzufügen",
+    "memberAdded": "Das Mitglied wurde hinzugefügt.",
+    "memberRemoved": "Das Mitglied wurde entfernt.",
+    "expires": "Mitgliedschaft läuft ab",
+    "until": "bis {date}",
+    "removeMemberTitle": "{name} aus der Gruppe entfernen?",
+    "removeManagerTitle": "{name} als Gruppenverwalter entfernen?",
+    "delete": "Gruppe löschen",
+    "deleteTitle": "{name} löschen?",
+    "deleteDescription": "Die Gruppe und ihre Rollenzuweisungen werden entfernt.",
+    "gainsRoles": "Sie treten {name} bei und erhalten deren Rollen: {roles}.",
+    "gainsMembership": "Sie treten {name} bei.",
+    "losesRoles": "Sie verlassen {name} und verlieren deren Rollen: {roles}.",
+    "losesMembership": "Sie verlassen {name}."
+  },
+  "serviceAccounts": {
+    "title": "Dienstkonten",
+    "description": "Konten für Skripte und Integrationen. Sie handeln nur über API-Tokens.",
+    "create": "Dienstkonto anlegen",
+    "createHint": "Du wirst die verantwortliche Person.",
+    "none": "Noch keine Dienstkonten",
+    "noneDescription": "Lege für jedes Skript und jede Integration ein Dienstkonto an.",
+    "name": "Name",
+    "descriptionLabel": "Beschreibung",
+    "details": "Details",
+    "responsible": "Verantwortliche Personen",
+    "responsibleHint": "Sie werden vor dem Ablauf von Tokens erinnert. Sie vergeben keine Berechtigungen.",
+    "addResponsible": "Verantwortliche Person hinzufügen",
+    "unattended": "Keine verantwortliche Person",
+    "unattendedNotice": "Niemand ist für dieses Dienstkonto verantwortlich. Füge eine verantwortliche Person hinzu oder deaktiviere es.",
+    "state": "Zustand",
+    "states": {
+      "active": "Aktiv",
+      "deactivated": "Deaktiviert"
+    },
+    "tokens": "Tokens",
+    "tokenHint": "Das Token darf höchstens, was die Rollen des Dienstkontos erlauben.",
+    "deactivate": "Deaktivieren",
+    "deactivateTitle": "{name} deaktivieren?",
+    "deactivateDescription": "Alle Tokens werden widerrufen. Das lässt sich nicht rückgängig machen.",
+    "deactivateImpact": "{count, plural, one {Sein Token funktioniert nicht mehr.} other {Seine # Tokens funktionieren nicht mehr.}}",
+    "deactivatedNotice": "Dieses Dienstkonto ist deaktiviert."
+  },
+  "breakGlass": {
+    "title": "Notfallzugriff",
+    "description": "Befristeter Administratorzugriff auf Organisationen, denen du nicht angehörst, für Notfälle.",
+    "request": "Notfallzugriff anfordern",
+    "requestFor": "Notfallzugriff auf {name}",
+    "requestDescription": "Du wirst für begrenzte Zeit Administrator der Organisation.",
+    "audited": "Jede Aktion wird aufgezeichnet",
+    "ownersNotified": "Die Owner der Organisation werden sofort benachrichtigt.",
+    "reason": "Begründung",
+    "reasonHint": "Mindestens 10 Zeichen. Die Owner sehen sie.",
+    "organization": "Organisation",
+    "chooseOrganization": "Organisation wählen",
+    "continue": "Weiter",
+    "noCandidates": "Du gehörst jeder Organisation an.",
+    "recent": "Letzte 90 Tage",
+    "none": "Kein Notfallzugriff in den letzten 90 Tagen.",
+    "requestedBy": "Angefordert von",
+    "time": "Zeit",
+    "status": "Status",
+    "statuses": {
+      "active": "Aktiv",
+      "ended": "Beendet",
+      "expired": "Abgelaufen"
+    },
+    "end": "Zugriff beenden"
+  },
+  "instance": {
+    "general": {
+      "title": "Allgemein",
+      "description": "Name, Adresse und Standards der Instanz.",
+      "identity": "Instanz",
+      "localeDefaults": "Sprache und Region",
+      "organizations": "Organisationen",
+      "retention": "Aufbewahrung und API"
+    },
+    "organizations": {
+      "title": "Organisationen",
+      "description": "Alle Organisationen auf dieser Instanz.",
+      "create": "Organisation anlegen",
+      "name": "Name",
+      "language": "Sprache",
+      "created": "Angelegt",
+      "owner": "Owner",
+      "ownerHint": "Der Owner verwaltet die Organisation.",
+      "ownerImpact": "Sie werden Owner der neuen Organisation.",
+      "slugHint": "Optional. Wird aus dem Namen abgeleitet, wenn leer.",
+      "open": "Einstellungen öffnen",
+      "domains": "Domains",
+      "actionsFor": "Aktionen für {name}"
+    },
+    "accounts": {
+      "title": "Konten",
+      "description": "Alle Konten auf dieser Instanz.",
+      "type": "Art",
+      "state": "Zustand",
+      "home": "Heimatorganisation",
+      "created": "Angelegt",
+      "types": {
+        "standard": "Standardkonto",
+        "guest": "Gastkonto",
+        "portal": "Portalkonto",
+        "service": "Dienstkonto"
+      },
+      "states": {
+        "invited": "Eingeladen",
+        "active": "Aktiv",
+        "deactivated": "Deaktiviert",
+        "anonymized": "Anonymisiert",
+        "placeholder": "Platzhalter"
+      },
+      "transferOwnership": "Zum Owner der Instanz machen",
+      "transferTitle": "{name} zum Owner der Instanz machen?",
+      "transferDescription": "Du bleibst Administrator. Nur der Owner kann die Rolle wieder übertragen.",
+      "transferImpact": "Sie werden Owner der Instanz und Notfallkonto."
+    },
+    "roles": {
+      "title": "Instanzrollen",
+      "description": "Wer die Instanz verwaltet.",
+      "noContent": "Instanzrollen geben nie Zugriff auf Inhalte von Organisationen.",
+      "gainsWhat": "Sie erhalten {role} auf der Instanz: {areas}.",
+      "losesWhat": "Sie verlieren {role} auf der Instanz."
+    },
+    "security": {
+      "title": "Sicherheit",
+      "description": "Anmelderegeln für die ganze Instanz. Gesperrte Werte gelten für jede Organisation.",
+      "signIn": "Anmeldung",
+      "protection": "Schutz vor Rateversuchen",
+      "apiTokens": "API-Tokens"
+    }
+  },
+  "audit": {
+    "title": "Audit-Log",
+    "organizationDescription": "Sicherheitsrelevante Änderungen in dieser Organisation.",
+    "instanceDescription": "Sicherheitsrelevante Änderungen auf der Instanz.",
+    "events": "Ereignisse",
+    "export": "Als CSV exportieren",
+    "from": "Von",
+    "to": "Bis",
+    "event": "Ereignis",
+    "allEvents": "Alle Ereignisse",
+    "actor": "Von wem",
+    "everyone": "Alle",
+    "resetFilters": "Filter zurücksetzen",
+    "none": "Keine Ereignisse passen zu den Filtern.",
+    "time": "Zeit",
+    "details": "Details",
+    "actorTypes": {
+      "account": "Konto",
+      "system": "System",
+      "anonymous": "Anonym",
+      "group": "Gruppe"
+    }
+  },
+  "auditEvents": {
+    "auth_signedIn": "Angemeldet",
+    "auth_signInFailed": "Anmeldung fehlgeschlagen",
+    "auth_lockedOut": "Gesperrt",
+    "auth_signedOut": "Abgemeldet",
+    "auth_sessionEnded": "Sitzung beendet",
+    "auth_reauthenticated": "Identität bestätigt",
+    "auth_reauthenticationFailed": "Bestätigung der Identität fehlgeschlagen",
+    "account_created": "Konto angelegt",
+    "account_passwordChanged": "Passwort geändert",
+    "account_passwordResetRequested": "Passwort-Zurücksetzung angefordert",
+    "account_passwordReset": "Passwort zurückgesetzt",
+    "account_emailChangeRequested": "Änderung der E-Mail-Adresse angefordert",
+    "account_emailChanged": "E-Mail-Adresse geändert",
+    "account_deactivated": "Konto deaktiviert",
+    "twoFactor_totpAdded": "Authenticator-App hinzugefügt",
+    "twoFactor_totpRemoved": "Authenticator-App entfernt",
+    "twoFactor_passkeyAdded": "Passkey hinzugefügt",
+    "twoFactor_passkeyRemoved": "Passkey entfernt",
+    "twoFactor_recoveryCodesGenerated": "Wiederherstellungscodes erstellt",
+    "twoFactor_recoveryCodeUsed": "Wiederherstellungscode verwendet",
+    "setup_sessionStarted": "Einrichtung begonnen",
+    "setup_stepCompleted": "Schritt der Einrichtung abgeschlossen",
+    "setup_keyBackupDownloaded": "Schlüssel heruntergeladen",
+    "setup_completed": "Einrichtung abgeschlossen",
+    "mail_smtpChanged": "Mailserver geändert",
+    "mail_testSent": "Testmail gesendet",
+    "settings_changed": "Einstellung geändert",
+    "organization_created": "Organisation angelegt",
+    "organization_updated": "Organisation geändert",
+    "organization_domainAdded": "Domain hinzugefügt",
+    "organization_domainRemoved": "Domain entfernt",
+    "membership_added": "Mitglied hinzugefügt",
+    "membership_updated": "Mitgliedschaft geändert",
+    "membership_removed": "Mitglied entfernt",
+    "role_created": "Rolle angelegt",
+    "role_updated": "Rolle geändert",
+    "role_deleted": "Rolle gelöscht",
+    "role_assigned": "Rolle vergeben",
+    "role_unassigned": "Rolle entfernt",
+    "group_created": "Gruppe angelegt",
+    "group_updated": "Gruppe geändert",
+    "group_deleted": "Gruppe gelöscht",
+    "group_memberAdded": "Gruppenmitglied hinzugefügt",
+    "group_memberRemoved": "Gruppenmitglied entfernt",
+    "group_managerAdded": "Gruppenverwalter hinzugefügt",
+    "group_managerRemoved": "Gruppenverwalter entfernt",
+    "invitation_created": "Einladung gesendet",
+    "invitation_accepted": "Einladung angenommen",
+    "invitation_revoked": "Einladung widerrufen",
+    "guest_responsibleChanged": "Verantwortliche Person geändert",
+    "instance_ownershipTransferred": "Owner der Instanz übertragen",
+    "breakGlass_started": "Notfallzugriff begonnen",
+    "breakGlass_actionAuthorized": "Aktion mit Notfallzugriff",
+    "breakGlass_ended": "Notfallzugriff beendet",
+    "serviceAccount_created": "Dienstkonto angelegt",
+    "serviceAccount_updated": "Dienstkonto geändert",
+    "serviceAccount_responsiblesChanged": "Verantwortliche Personen geändert",
+    "serviceAccount_unattended": "Dienstkonto ohne verantwortliche Person",
+    "serviceAccount_deactivated": "Dienstkonto deaktiviert",
+    "apiToken_created": "API-Token erstellt",
+    "apiToken_updated": "API-Token geändert",
+    "apiToken_revoked": "API-Token widerrufen",
+    "apiToken_expired": "API-Token abgelaufen",
+    "apiToken_rejected": "API-Token abgewiesen",
+    "audit_exported": "Audit-Log exportiert"
+  },
+  "actions": {
+    "instance_organizations_view": "Organisationen ansehen",
+    "instance_organizations_manage": "Organisationen verwalten",
+    "instance_organizations_create": "Organisationen anlegen",
+    "instance_accounts_view": "Konten ansehen",
+    "instance_accounts_manage": "Konten verwalten",
+    "instance_roles_view": "Instanzrollen ansehen",
+    "instance_roles_manage": "Instanzrollen verwalten",
+    "instance_ownership_transfer": "Owner der Instanz übertragen",
+    "instance_signIn_view": "Anmeldeeinstellungen ansehen",
+    "instance_signIn_manage": "Anmeldeeinstellungen verwalten",
+    "instance_settings_view": "Einstellungen der Instanz ansehen",
+    "instance_settings_manage": "Einstellungen der Instanz verwalten",
+    "instance_operations_view": "Betrieb ansehen",
+    "instance_operations_manage": "Betrieb verwalten",
+    "instance_audit_view": "Audit-Log der Instanz ansehen",
+    "instance_audit_manage": "Audit-Log der Instanz verwalten",
+    "instance_breakGlass_request": "Notfallzugriff anfordern",
+    "organization_view": "Organisation ansehen",
+    "organization_leave": "Organisation verlassen",
+    "organization_update": "Name und Logo ändern",
+    "organization_settings_view": "Einstellungen ansehen",
+    "organization_settings_manage": "Einstellungen verwalten",
+    "organization_members_view": "Mitglieder ansehen",
+    "organization_members_manage": "Mitglieder verwalten",
+    "organization_roles_view": "Rollen ansehen",
+    "organization_roles_manage": "Rollen verwalten",
+    "organization_groups_view": "Gruppen ansehen",
+    "organization_groups_create": "Gruppen anlegen",
+    "organization_spaces_view": "Spaces ansehen",
+    "organization_spaces_manage": "Spaces verwalten",
+    "organization_signIn_view": "Anmeldeeinstellungen ansehen",
+    "organization_signIn_manage": "Anmeldeeinstellungen verwalten",
+    "organization_integrations_view": "Integrationen und API ansehen",
+    "organization_integrations_manage": "Integrationen und API verwalten",
+    "organization_audit_view": "Audit-Log ansehen"
+  },
+  "denials": {
+    "anonymous": "Nicht angemeldet",
+    "accountInactive": "Das Konto ist nicht aktiv",
+    "resourceNotFound": "Das gibt es nicht",
+    "notMember": "Kein Mitglied",
+    "limitedMembership": "Mitwirkende und Gäste dürfen das nicht",
+    "noRoleGrantsArea": "Keine Rolle erlaubt diesen Bereich",
+    "ownerOnly": "Nur Owner dürfen das",
+    "instanceRolesDoNotGrantOrganizationAccess": "Instanzrollen geben keinen Zugriff auf Organisationen",
+    "roleExceedsOwnPermissions": "Die Rolle geht über die eigenen Berechtigungen hinaus",
+    "selfExtension": "Niemand kann die eigenen Berechtigungen erweitern",
+    "tokenScope": "Für dieses Token nicht erlaubt"
+  },
+  "grants": {
+    "system": "System",
+    "via": {
+      "account": "direkt",
+      "group": "über die Gruppe {name}",
+      "organizationMembers": "als Mitglied der Organisation",
+      "instanceUsers": "als interner Benutzer",
+      "membership": "über die Mitgliedschaft",
+      "instanceOwner": "als Owner der Instanz",
+      "breakGlass": "über Notfallzugriff"
+    },
+    "membership": {
+      "member": "Als Mitglied",
+      "collaborator": "Als Mitwirkender",
+      "guest": "Als Gast"
+    },
+    "rules": {
+      "selfService": "Organisationen selbst anzulegen ist erlaubt",
+      "membersCreateGroups": "Mitglieder dürfen Gruppen anlegen",
+      "manager": "Verwaltet die Gruppe",
+      "memberOrManager": "Mitglied oder Verwalter der Gruppe",
+      "homeOrganizationAdministrator": "Administrator der Heimatorganisation"
+    }
   }
 }

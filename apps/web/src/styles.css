@@ -11,11 +11,26 @@
   }
 
   body {
-    background-color: var(--color-bg);
-    color: var(--color-text);
-    font-family: var(--font-sans);
+    background-color: var(--ph-color-bg);
+    color: var(--ph-color-text);
+    font-family: var(--ph-font-sans);
     font-size: var(--text-base);
     line-height: var(--leading-ui);
     -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  a {
+    color: var(--ph-color-accent);
+  }
+
+  :focus-visible {
+    outline: var(--ph-focus-width) solid var(--ph-color-accent);
+    outline-offset: var(--ph-focus-offset);
   }
 }
