@@ -19,6 +19,7 @@ cleanup() {
   docker rm -f "$postgres" >/dev/null 2>&1 || true
   docker volume rm -f "$source_data" "$target_data" "$backups" >/dev/null 2>&1 || true
   docker network rm "$network" >/dev/null 2>&1 || true
+  rm -f "${TMPDIR:-/tmp}/roundtrip-source-${suffix}.txt" "${TMPDIR:-/tmp}/roundtrip-target-${suffix}.txt"
 }
 trap cleanup EXIT
 
@@ -74,8 +75,26 @@ docker run --rm -v "$target_data:/var/lib/pagehall" -v "$source_data:/source:ro"
 pagehall "$target_data" target backup restore --input /var/lib/pagehall/backups/roundtrip.phbak
 
 echo "Comparing"
-query="select level, scope_id, key, value, locked from setting_values order by id"
-diff <(psql_in source -c "$query") <(psql_in target -c "$query")
+# Every table in every schema, with its row count and a checksum of its content.
+database_summary() {
+  local database="$1" table
+  psql_in "$database" -c "select format('%I.%I', table_schema, table_name) from information_schema.tables
+    where table_type = 'BASE TABLE' and table_schema not in ('pg_catalog', 'information_schema')
+    order by table_schema, table_name" |
+    while read -r table; do
+      printf '%s ' "$table"
+      psql_in "$database" -c "select count(*), coalesce(md5(string_agg(t::text, E'\n' order by t::text)), '-')
+        from $table t" </dev/null
+    done
+}
+database_summary source > "${TMPDIR:-/tmp}/roundtrip-source-${suffix}.txt"
+database_summary target > "${TMPDIR:-/tmp}/roundtrip-target-${suffix}.txt"
+if [ "$(wc -l < "${TMPDIR:-/tmp}/roundtrip-source-${suffix}.txt")" -lt 5 ]; then
+  echo "The source database has fewer tables than expected" >&2
+  exit 1
+fi
+diff "${TMPDIR:-/tmp}/roundtrip-source-${suffix}.txt" "${TMPDIR:-/tmp}/roundtrip-target-${suffix}.txt"
+echo "Compared $(wc -l < "${TMPDIR:-/tmp}/roundtrip-source-${suffix}.txt") tables"
 checksums='cd /var/lib/pagehall/files && find . -type f -exec sha256sum {} + | sort'
 diff <(docker run --rm -v "$source_data:/var/lib/pagehall" --entrypoint sh "$image" -c "$checksums") \
   <(docker run --rm -v "$target_data:/var/lib/pagehall" --entrypoint sh "$image" -c "$checksums")
