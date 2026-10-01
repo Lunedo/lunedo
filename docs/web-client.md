@@ -24,7 +24,24 @@ Every changing request carries the header `X-Pagehall-Request: 1`. `request()` t
 
 ## Forms and errors
 
-Forms use React Hook Form with the Zod schemas from `@pagehall/shared`, which the server uses for the same fields. Validation messages come from the issue codes, not from the schema's English text, so they appear in the user's language; fields with special formats name their own message. Field errors reported by the server mark the matching fields. Other errors are shown through `problemMessage`, which translates the problem `code`.
+Forms use React Hook Form with the Zod schemas from `@pagehall/shared`, which the server uses for the same fields. Validation messages come from the issue codes, not from the schema's English text, so they appear in the user's language; fields with special formats name their own message. Field errors reported by the server mark the matching fields.
+
+Every other error answers three questions: what failed, the likely cause, and what to do. The title names the failed action (`failures.*`), the text comes from the problem `code` (`problems.*`) and says what to do next. `FailureNotice`, `LoadError` and `useFailureToast` in `src/errors/failure.tsx` show them, with a retry button unless retrying cannot help, for example for invalid input or missing permissions. A screen whose data cannot load shows the error in the content area, next to the navigation. Failed setup checks show the cause from the structured check result, a fix command to copy and a link to the documentation.
+
+## Saving settings
+
+All settings pages save the same way:
+
+- Switches, selects and segmented controls save as soon as they change.
+- Text, number and duration fields save when they lose focus or on Enter.
+- After saving, "Saved" appears next to the field for a moment. A failed save shows the error at the field with a retry button.
+- Only changes that affect other people ask first: locking a setting for lower levels, and changes of access. The dialog says who is affected.
+
+Durations are entered with a number, a unit and quick choices, and are always shown in words, such as "30 days". Automatic values name what they resolve to, for example "Automatic (Monday)", and format options show an example.
+
+## Live updates
+
+The notification event stream (`/api/v1/notifications/stream`) also carries a `settings` event with the changed key, its level and the organization. The client then reloads the preferences and the affected settings, so changes made in another tab, by an administrator or at a higher level apply without a reload. The user's own changes apply at once.
 
 ## Registration points
 
@@ -51,9 +68,9 @@ Dates, times and numbers are formatted in the user's time zone with the chosen f
 ## Tests
 
 - Unit tests run with Vitest and happy-dom: `pnpm --filter @pagehall/web test`.
-- End-to-end tests run with Playwright against the built API, worker and web client on a fresh database: `pnpm build`, `pnpm --filter @pagehall/web build:e2e`, then `pnpm --filter @pagehall/web test:e2e`. They need PostgreSQL and Mailpit from the development environment; `PAGEHALL_E2E_DATABASE_URL` and `PAGEHALL_E2E_MAILPIT_URL` override the defaults. The global setup starts the processes, reads the setup code from the log and drops the database afterwards.
-- The end-to-end tests run axe on the main screens and on `/dev/components` in light, dark and high-contrast mode and at the smallest and largest text size; any violation fails.
-- Screenshots of `/dev/components` are compared on Linux only. Record them in the same image CI uses:
+- End-to-end tests run with Playwright against the built API, worker and web client on a fresh database: `pnpm build`, `pnpm --filter @pagehall/web build:e2e`, then `pnpm --filter @pagehall/web test:e2e`. They need PostgreSQL and Mailpit from the development environment; `PAGEHALL_E2E_DATABASE_URL` and `PAGEHALL_E2E_MAILPIT_URL` override the defaults. The global setup starts the processes, reads the setup link from the log and drops the database afterwards.
+- The end-to-end tests run axe on the main screens and on `/dev/components` in light, dark and high-contrast mode, at the smallest and largest text size and in German; any violation fails. German runs also check that labels, which are often about 30 % longer, do not overflow on a phone or at desktop width.
+- Screenshots of `/dev/components` are compared on Linux only, in English and German (`?lang=de`). Record them in the same image CI uses:
 
 ```sh
 docker run --rm --network host -v "$PWD:/work" -w /work mcr.microsoft.com/playwright:v1.63.0-noble \
