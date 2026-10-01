@@ -1,0 +1,97 @@
+import { expect, type Page, test } from "@playwright/test";
+import { OWNER, OWNER_STORAGE, readState, writeState } from "../support/environment.js";
+import { addVirtualAuthenticator, freshTotp } from "../support/helpers.js";
+
+test.describe.configure({ mode: "serial" });
+
+async function enterPassword(page: Page) {
+  await page.goto("/sign-in");
+  await page.getByLabel("E-mail").fill(OWNER.email);
+  await page.getByLabel("Password", { exact: true }).fill(OWNER.password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Confirm it's you" })).toBeVisible();
+}
+
+test("refuses a wrong password", async ({ page }) => {
+  await page.goto("/sign-in");
+  await page.getByLabel("E-mail").fill(OWNER.email);
+  await page.getByLabel("Password", { exact: true }).fill("not the password");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.getByText("The e-mail address or the password is not correct.")).toBeVisible();
+});
+
+test("signs in with password and authenticator app", async ({ page }) => {
+  await enterPassword(page);
+  await page
+    .getByLabel("Code from your authenticator app")
+    .fill(await freshTotp(readState().ownerSecret ?? ""));
+  await page.getByRole("button", { name: "Verify" }).click();
+  await expect(page.getByRole("heading", { name: "Preferences" })).toBeVisible();
+});
+
+test("signs in with password and a recovery code", async ({ page }) => {
+  const [code, ...rest] = readState().ownerRecoveryCodes ?? [];
+  await enterPassword(page);
+  await page.getByRole("button", { name: "Use a recovery code" }).click();
+  await page.getByLabel("Recovery code").fill(code ?? "");
+  await page.getByRole("button", { name: "Verify" }).click();
+  await expect(page.getByRole("heading", { name: "Preferences" })).toBeVisible();
+  writeState({ ownerRecoveryCodes: rest });
+});
+
+test("adds a passkey and uses it as second factor and for sign-in", async ({ browser }) => {
+  const context = await browser.newContext({ storageState: OWNER_STORAGE });
+  const page = await context.newPage();
+  await page.goto("/settings/security");
+  const removeAuthenticator = await addVirtualAuthenticator(context, page);
+
+  await page.getByRole("button", { name: "Add passkey" }).first().click();
+  await page.getByLabel("Name", { exact: true }).fill("Test key");
+  await page.getByRole("dialog").getByRole("button", { name: "Add passkey" }).click();
+  const confirm = page.getByRole("dialog", { name: "Confirm your identity" });
+  if (await confirm.isVisible().catch(() => false)) {
+    await confirm.getByLabel("Password").fill(OWNER.password);
+    await confirm.getByRole("button", { name: "Confirm" }).click();
+  }
+  await expect(page.getByText("Test key")).toBeVisible();
+
+  await page.getByRole("button", { name: "Account" }).click();
+  await page.getByRole("menuitem", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/sign-in/);
+
+  await page.getByLabel("E-mail").fill(OWNER.email);
+  await page.getByLabel("Password", { exact: true }).fill(OWNER.password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.getByRole("button", { name: "Use a passkey" }).click();
+  await page.getByRole("button", { name: "Use passkey" }).click();
+  await expect(page.getByRole("heading", { name: "Preferences" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Account" }).click();
+  await page.getByRole("menuitem", { name: "Sign out" }).click();
+  await page.getByRole("button", { name: "Sign in with a passkey" }).click();
+  await expect(page.getByRole("heading", { name: "Preferences" })).toBeVisible();
+  await context.storageState({ path: OWNER_STORAGE });
+  await removeAuthenticator();
+  await context.close();
+});
+
+test("returns to the page that was open when the session ended", async ({ browser }) => {
+  const context = await browser.newContext({ storageState: OWNER_STORAGE });
+  const page = await context.newPage();
+  await page.goto("/settings/security");
+  await expect(page.getByRole("heading", { name: "Security", level: 1 })).toBeVisible();
+  await context.clearCookies({ name: "__Host-pagehall-session" });
+  await page.reload();
+  await expect(page).toHaveURL(/\/sign-in\?/);
+  expect(new URL(page.url()).searchParams.get("redirect")).toBe("/settings/security");
+  await page.getByLabel("E-mail").fill(OWNER.email);
+  await page.getByLabel("Password", { exact: true }).fill(OWNER.password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page
+    .getByLabel("Code from your authenticator app")
+    .fill(await freshTotp(readState().ownerSecret ?? ""));
+  await page.getByRole("button", { name: "Verify" }).click();
+  await expect(page).toHaveURL(/\/settings\/security$/);
+  await context.storageState({ path: OWNER_STORAGE });
+  await context.close();
+});
