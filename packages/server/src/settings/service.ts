@@ -1,9 +1,8 @@
 import { and, eq, or, sql } from "drizzle-orm";
-import type { Database } from "../database/database.js";
+import type { Database, Transaction } from "../database/database.js";
 import type { NotificationListener } from "../database/notifications.js";
 import type { Logger } from "../logging/logger.js";
-import type { SettingDefinition, SettingLevel } from "./definition.js";
-import { settingLevels } from "./definition.js";
+import { isAtLeastAsStrict, type SettingDefinition, type SettingLevel, settingLevels } from "./definition.js";
 import { settingValues } from "./schema.js";
 
 /** Scope ID of the instance level. */
@@ -59,6 +58,24 @@ export class SettingLockedError extends SettingError {
   }
 }
 
+/** A change written by the settings service, passed to `onChange` inside its transaction. */
+export interface SettingChange {
+  key: string;
+  scope: Scope;
+  action: "set" | "clear" | "lock" | "unlock";
+  /** The new value, for `set`. */
+  value?: unknown;
+}
+
+export type SettingChangeHandler = (tx: Transaction, change: SettingChange) => Promise<void>;
+
+export interface WriteOptions {
+  /** Writes as part of this transaction. */
+  tx?: Transaction;
+  /** False when the caller records its own, more specific audit event for the change. */
+  audit?: boolean;
+}
+
 interface StoredRow {
   value: unknown;
   locked: boolean;
@@ -80,6 +97,16 @@ export function scopesOf(chain: ScopeChain): Scope[] {
   return scopes;
 }
 
+/** The part of `chain` above `level`. */
+function chainAbove(chain: ScopeChain, level: SettingLevel): ScopeChain {
+  const above: ScopeChain = {};
+  for (const candidate of settingLevels) {
+    if (candidate === level) break;
+    if (candidate !== "instance" && chain[candidate]) above[candidate] = chain[candidate];
+  }
+  return above;
+}
+
 /**
  * Settings inheritance: instance → organization → space → user. Each level may
  * override the inherited value and, for lockable settings, lock it for the levels below.
@@ -88,11 +115,13 @@ export class SettingsService {
   readonly #database: Database;
   readonly #logger: Logger;
   readonly #cache = new Map<string, Promise<ScopeRows>>();
+  readonly #onChange: SettingChangeHandler | undefined;
   #caching = false;
 
-  constructor(options: { database: Database; logger: Logger }) {
+  constructor(options: { database: Database; logger: Logger; onChange?: SettingChangeHandler }) {
     this.#database = options.database;
     this.#logger = options.logger;
+    this.#onChange = options.onChange;
   }
 
   /**
@@ -171,7 +200,11 @@ export class SettingsService {
         else
           this.#logger.warn({ setting: definition.key, scope }, "Ignoring an invalid stored setting value");
       }
-      const effective = applies && lockedBy === null;
+      const weaker =
+        stored !== undefined &&
+        scope.level !== definition.levels[0] &&
+        !isAtLeastAsStrict(definition, stored, value);
+      const effective = applies && lockedBy === null && !weaker;
       if (effective && stored !== undefined) {
         value = stored;
         source = scope;
@@ -204,8 +237,14 @@ export class SettingsService {
     }
   }
 
-  async #write(target: Scope, key: string, values: { value?: unknown; locked?: boolean }) {
-    await this.#database.transaction(async (tx) => {
+  async #write(
+    target: Scope,
+    key: string,
+    values: { value?: unknown; locked?: boolean },
+    action: SettingChange["action"],
+    options: WriteOptions,
+  ) {
+    await (options.tx ?? this.#database).transaction(async (tx) => {
       await tx
         .insert(settingValues)
         .values({
@@ -220,6 +259,13 @@ export class SettingsService {
           set: { ...values, updatedAt: new Date() },
         });
       await tx.execute(sql`select pg_notify(${CHANNEL}, ${scopeKey(target)})`);
+      if (options.audit === false) return;
+      await this.#onChange?.(tx, {
+        key,
+        scope: target,
+        action,
+        ...(action === "set" ? { value: values.value } : {}),
+      });
     });
     this.#cache.delete(scopeKey(target));
   }
@@ -230,40 +276,60 @@ export class SettingsService {
     chain: ScopeChain,
     level: SettingLevel,
     value: T,
+    options: WriteOptions = {},
   ): Promise<void> {
     const target = this.#target(definition as SettingDefinition<unknown>, chain, level);
     const parsed = definition.schema.safeParse(value);
     if (!parsed.success) throw new SettingError(`Invalid value for setting ${definition.key}`);
     await this.#assertNotLockedAbove(definition as SettingDefinition<unknown>, chain, target);
-    await this.#write(target, definition.key, { value: parsed.data });
+    if (definition.stricterOnly && level !== definition.levels[0]) {
+      const inherited = await this.get(definition, chainAbove(chain, level));
+      if (!isAtLeastAsStrict(definition, parsed.data, inherited)) {
+        throw new SettingError(
+          `Setting ${definition.key} can only be made stricter than the inherited value at the ${level} level`,
+        );
+      }
+    }
+    await this.#write(target, definition.key, { value: parsed.data }, "set", options);
   }
 
   /** Removes the value stored at `level`, so the inherited value applies again. A lock stays. */
-  async clear(definition: SettingDefinition<unknown>, chain: ScopeChain, level: SettingLevel): Promise<void> {
+  async clear(
+    definition: SettingDefinition<unknown>,
+    chain: ScopeChain,
+    level: SettingLevel,
+    options: WriteOptions = {},
+  ): Promise<void> {
     const target = this.#target(definition, chain, level);
     await this.#assertNotLockedAbove(definition, chain, target);
-    await this.#write(target, definition.key, { value: null });
+    await this.#write(target, definition.key, { value: null }, "clear", options);
   }
 
   /** Locks the effective value at `level` for all levels below it. */
-  async lock(definition: SettingDefinition<unknown>, chain: ScopeChain, level: SettingLevel): Promise<void> {
+  async lock(
+    definition: SettingDefinition<unknown>,
+    chain: ScopeChain,
+    level: SettingLevel,
+    options: WriteOptions = {},
+  ): Promise<void> {
     if (!definition.lockable) throw new SettingError(`Setting ${definition.key} cannot be locked`);
     if (level === definition.levels.at(-1)) {
       throw new SettingError(`Setting ${definition.key} cannot be locked at its lowest level`);
     }
     const target = this.#target(definition, chain, level);
     await this.#assertNotLockedAbove(definition, chain, target);
-    await this.#write(target, definition.key, { locked: true });
+    await this.#write(target, definition.key, { locked: true }, "lock", options);
   }
 
   async unlock(
     definition: SettingDefinition<unknown>,
     chain: ScopeChain,
     level: SettingLevel,
+    options: WriteOptions = {},
   ): Promise<void> {
     const target = this.#target(definition, chain, level);
     await this.#assertNotLockedAbove(definition, chain, target);
-    await this.#write(target, definition.key, { locked: false });
+    await this.#write(target, definition.key, { locked: false }, "unlock", options);
   }
 
   /** Removes all values of a scope, e.g. when an organization or user is deleted. */

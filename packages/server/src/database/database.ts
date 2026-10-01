@@ -4,6 +4,12 @@ import * as schema from "./schema.js";
 
 export type Database = NodePgDatabase<typeof schema>;
 
+/** A transaction started with `database.transaction`. */
+export type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
+/** Something that runs queries: the database or an open transaction. */
+export type Executor = Database | Transaction;
+
 /** Drizzle client with the snake_case naming convention used by every table. */
 export function createDatabase(pool: DatabasePool): Database {
   return drizzle({ client: pool, schema, casing: "snake_case" });

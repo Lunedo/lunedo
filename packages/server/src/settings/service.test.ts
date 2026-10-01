@@ -7,10 +7,11 @@ import { NotificationListener } from "../database/notifications.js";
 import { createDatabasePool, type DatabasePool } from "../database/pool.js";
 import { createLogger } from "../logging/logger.js";
 import { languageSetting, timeZoneSetting } from "./builtin.js";
-import { defineSetting, type SettingDefinition, SettingsRegistry } from "./definition.js";
+import { defineSetting, isAtLeastAsStrict, type SettingDefinition, SettingsRegistry } from "./definition.js";
 import {
   INSTANCE_SCOPE_ID,
   type ScopeChain,
+  type SettingChange,
   SettingError,
   SettingLockedError,
   SettingsService,
@@ -39,6 +40,30 @@ describe("defineSetting", () => {
     expect(() => testSetting({ key: "nomodule" })).toThrow("<module>.<name>");
     expect(() => testSetting({ levels: [] })).toThrow("applies to no level");
     expect(() => testSetting({ default: "" })).toThrow("does not match its schema");
+  });
+
+  it("allows stricter-only settings for numbers and booleans only", () => {
+    expect(() => testSetting({ stricterOnly: "lower" })).toThrow("number or boolean");
+    const limit = defineSetting({
+      key: "test.limit",
+      schema: z.number(),
+      default: 10,
+      levels: ["instance"],
+      lockable: false,
+      stricterOnly: "lower",
+    });
+    expect(isAtLeastAsStrict(limit, 5, 10)).toBe(true);
+    expect(isAtLeastAsStrict(limit, 11, 10)).toBe(false);
+    const required = defineSetting({
+      key: "test.required",
+      schema: z.boolean(),
+      default: false,
+      levels: ["instance"],
+      lockable: false,
+      stricterOnly: "higher",
+    });
+    expect(isAtLeastAsStrict(required, true, false)).toBe(true);
+    expect(isAtLeastAsStrict(required, false, true)).toBe(false);
   });
 
   it("orders levels from instance to user", () => {
@@ -206,6 +231,68 @@ describe.skipIf(!databaseUrl)("SettingsService", () => {
       "cannot be locked",
     );
     await expect(settings.set(setting, {}, "user", "x")).rejects.toThrow("no user");
+  });
+
+  it("lets lower levels of a stricter-only setting only tighten the inherited value", async () => {
+    const limit = defineSetting({
+      key: `test.limit${randomBytes(4).toString("hex")}`,
+      schema: z.number().int().positive(),
+      default: 10,
+      levels: ["instance", "organization", "user"],
+      lockable: true,
+      stricterOnly: "lower",
+    });
+    const scopes = chain();
+    await settings.set(limit, scopes, "instance", 20);
+    await expect(settings.set(limit, scopes, "organization", 21)).rejects.toThrow("only be made stricter");
+    await settings.set(limit, scopes, "organization", 8);
+    await expect(settings.set(limit, scopes, "user", 9)).rejects.toThrow("only be made stricter");
+    await settings.set(limit, scopes, "user", 5);
+    expect(await settings.get(limit, scopes)).toBe(5);
+
+    await settings.set(limit, scopes, "instance", 4);
+    const explanation = await settings.explain(limit, scopes);
+    expect(explanation).toMatchObject({ value: 4, source: { level: "instance" } });
+    expect(explanation.levels.filter((level) => level.effective).map((level) => level.scope.level)).toEqual([
+      "instance",
+    ]);
+  });
+
+  it("reports changes to the change handler inside the transaction", async () => {
+    const changes: SettingChange[] = [];
+    const audited = new SettingsService({
+      database,
+      logger,
+      onChange: async (_tx, change) => {
+        changes.push(change);
+      },
+    });
+    const setting = testSetting();
+    const scopes = chain();
+    await audited.set(setting, scopes, "organization", "value");
+    await audited.lock(setting, scopes, "organization");
+    await audited.clear(setting, scopes, "organization");
+    expect(changes).toEqual([
+      {
+        key: setting.key,
+        scope: { level: "organization", id: scopes.organization },
+        action: "set",
+        value: "value",
+      },
+      { key: setting.key, scope: { level: "organization", id: scopes.organization }, action: "lock" },
+      { key: setting.key, scope: { level: "organization", id: scopes.organization }, action: "clear" },
+    ]);
+
+    const failing = new SettingsService({
+      database,
+      logger,
+      onChange: async () => {
+        throw new Error("audit failed");
+      },
+    });
+    const other = chain();
+    await expect(failing.set(setting, other, "user", "lost")).rejects.toThrow("audit failed");
+    expect(await settings.get(setting, other)).toBe("default");
   });
 
   it("removes all values of a scope", async () => {
