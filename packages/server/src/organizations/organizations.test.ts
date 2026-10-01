@@ -470,19 +470,19 @@ describe.skipIf(!baseUrl)("organizations", () => {
     const first = await organization();
     const second = await organization();
     const firstEvents = await test.services.auditReader.list(accountPrincipal(first.owner), {
-      type: "organization",
-      id: first.id,
+      scope: { type: "organization", id: first.id },
     });
-    expect(firstEvents.map((event) => event.name)).toEqual(
+    expect(firstEvents.items.map((event) => event.name)).toEqual(
       expect.arrayContaining(["organization.created", "membership.added", "role.assigned"]),
     );
     await expect(
-      test.services.auditReader.list(accountPrincipal(first.owner), { type: "organization", id: second.id }),
+      test.services.auditReader.list(accountPrincipal(first.owner), {
+        scope: { type: "organization", id: second.id },
+      }),
     ).rejects.toThrow(ForbiddenError);
     await expect(
       test.services.auditReader.list(accountPrincipal(first.owner), {
-        type: "instance",
-        id: "00000000-0000-0000-0000-000000000000",
+        scope: { type: "instance", id: "00000000-0000-0000-0000-000000000000" },
       }),
     ).rejects.toThrow(ForbiddenError);
     const auditor = await standard(null);
@@ -495,10 +495,9 @@ describe.skipIf(!baseUrl)("organizations", () => {
     expect(
       (
         await test.services.auditReader.list(accountPrincipal(auditor), {
-          type: "organization",
-          id: second.id,
+          scope: { type: "organization", id: second.id },
         })
-      ).length,
+      ).items.length,
     ).toBeGreaterThan(0);
     const results = await test.services.audit.verify();
     expect(results.filter((result) => result.scope.id === first.id)).toEqual([

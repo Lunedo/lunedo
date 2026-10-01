@@ -7,10 +7,17 @@ export {
   PasswordPolicyError,
 } from "./accounts/accounts.js";
 export { instanceNameSetting, instanceUrlSetting } from "./accounts/instance-settings.js";
-export { ANONYMOUS, accountPrincipal, type Principal, SYSTEM } from "./accounts/principal.js";
+export {
+  ANONYMOUS,
+  accountPrincipal,
+  type Principal,
+  SYSTEM,
+  type TokenGrant,
+  type TokenScopes,
+} from "./accounts/principal.js";
 export { AuditLog, type AuditScope, type AuditVerification } from "./audit/audit-log.js";
 export { type AuditEventName, auditCatalog, type SignInMethod } from "./audit/catalog.js";
-export type { AuditEntry } from "./audit/reader.js";
+export type { AuditCursor, AuditEntry, AuditFilter } from "./audit/reader.js";
 export { auditRetentionSetting } from "./audit/retention.js";
 export type { FactorAdded } from "./auth/account-security.js";
 export { BusyError } from "./auth/concurrency.js";
@@ -175,3 +182,17 @@ export {
 } from "./settings/service.js";
 export { applyConfiguredSetup } from "./setup/configured.js";
 export { SetupNotFoundError, type SetupStatus, SetupStepError } from "./setup/setup-service.js";
+export {
+  type ApiToken,
+  type AuthenticatedToken,
+  TokenRejectedError,
+  tokenNameSchema,
+  tokenScopesSchema,
+} from "./tokens/api-tokens.js";
+export { isValidApiTokenFormat } from "./tokens/format.js";
+export {
+  type ServiceAccount,
+  serviceAccountDescriptionSchema,
+  serviceAccountNameSchema,
+} from "./tokens/service-accounts.js";
+export * from "./tokens/settings.js";
