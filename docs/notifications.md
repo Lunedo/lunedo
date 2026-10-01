@@ -53,4 +53,6 @@ All endpoints are internal and need a signed-in session.
 | `GET /api/v1/notifications/unread-count` | Unread notifications the caller may see |
 | `POST /api/v1/notifications/{notificationId}/read` | Mark one as read |
 | `POST /api/v1/notifications/read-all` | Mark all as read, optionally only those changed before `before` |
-| `GET /api/v1/notifications/stream` | Server-sent events: `notifications` with `{ "unreadCount": n }` at the start and after every change, a comment every 25 seconds; the stream ends when the session ends |
+| `GET /api/v1/notifications/stream` | Server-sent events: `notifications` with `{ "unreadCount": n }` at the start and after every change; `settings` with `{ "key", "level", "organizationId" }` when a setting changes whose value may change for the caller; a comment every 25 seconds; the stream ends when the session ends |
+
+A setting change reaches every node through PostgreSQL notifications. A node sends `settings` to a connection when the change is at the user level of its account, at the instance level, or at the level of an organization the account belongs to, unless a lower level of the account (its home organization or the account itself) overrides the value. Locking and unlocking always count. Clients reload the named setting.

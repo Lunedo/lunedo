@@ -9,6 +9,32 @@ import { settingValues } from "./schema.js";
 export const INSTANCE_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 
 const CHANNEL = "pagehall_settings";
+export const SETTING_CHANGES_CHANNEL = "pagehall_setting_changes";
+
+export interface SettingChangeSignal {
+  level: SettingLevel;
+  id: string;
+  key: string;
+  action: SettingChange["action"];
+}
+
+export function parseSettingChangeSignal(payload: string): SettingChangeSignal | null {
+  try {
+    const parsed = JSON.parse(payload) as Partial<SettingChangeSignal>;
+    if (
+      typeof parsed.level === "string" &&
+      (settingLevels as readonly string[]).includes(parsed.level) &&
+      typeof parsed.id === "string" &&
+      typeof parsed.key === "string" &&
+      typeof parsed.action === "string"
+    ) {
+      return parsed as SettingChangeSignal;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
 
 /** The scopes a request belongs to. The instance is always part of the chain. */
 export interface ScopeChain {
@@ -275,6 +301,8 @@ export class SettingsService {
           set: { ...values, updatedAt: new Date() },
         });
       await tx.execute(sql`select pg_notify(${CHANNEL}, ${scopeKey(target)})`);
+      const signal: SettingChangeSignal = { level: target.level, id: target.id, key, action };
+      await tx.execute(sql`select pg_notify(${SETTING_CHANGES_CHANNEL}, ${JSON.stringify(signal)})`);
       if (options.audit === false) return;
       await this.#onChange?.(tx, {
         key,
@@ -348,6 +376,26 @@ export class SettingsService {
     const target = this.#target(definition, chain, level);
     await this.#assertNotLockedAbove(definition, chain, target);
     await this.#write(target, definition.key, { locked: false }, "unlock", options);
+  }
+
+  async affects(accountId: string, signal: SettingChangeSignal): Promise<boolean> {
+    if (signal.level === "user") return signal.id === accountId;
+    const locking = signal.action === "lock" || signal.action === "unlock";
+    const result = await this.#database.execute<{ reached: boolean; overridden: boolean }>(sql`
+      select
+        case when ${signal.level} = 'organization' then exists (
+          select 1 from memberships m where m.account_id = ${accountId} and m.organization_id = ${signal.id}::uuid
+            and (m.expires_at is null or m.expires_at > now())
+        ) else true end as reached,
+        exists (
+          select 1 from setting_values v where v.key = ${signal.key} and v.value is not null and (
+            (v.level = 'user' and v.scope_id = ${accountId})
+            or (${signal.level} = 'instance' and v.level = 'organization' and v.scope_id =
+              (select home_organization_id from accounts where id = ${accountId}))
+          )
+        ) as overridden`);
+    const row = result.rows[0];
+    return Boolean(row?.reached) && (locking || !row?.overridden);
   }
 
   /** Removes all values of a scope, e.g. when an organization or user is deleted. */

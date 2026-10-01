@@ -215,6 +215,7 @@ export {
   INSTANCE_SCOPE_ID,
   type Scope,
   type ScopeChain,
+  type SettingChangeSignal,
   SettingError,
   type SettingExplanation,
   SettingLockedError,

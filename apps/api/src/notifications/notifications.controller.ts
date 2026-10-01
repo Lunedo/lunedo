@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Inject, Param, Post, Query, Req, Res } from "@nestjs/common";
-import type { NotificationCursor } from "@pagehall/server";
+import type { NotificationCursor, SettingChangeSignal } from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, SessionRoute } from "../access/route-access.js";
@@ -112,8 +112,9 @@ export class NotificationsController {
     raw: {
       contentTypes: ["text/event-stream"],
       description:
-        "Server-sent events. The event `notifications` carries the unread count at the start and after every change.",
-      example: 'event: notifications\ndata: {"unreadCount":2}\n\n',
+        "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting.",
+      example:
+        'event: notifications\ndata: {"unreadCount":2}\n\nevent: settings\ndata: {"key":"branding.accentColor","level":"instance","organizationId":null}\n\n',
     },
   })
   async stream(@Req() request: FastifyRequest, @Res() reply: FastifyReply) {
@@ -134,7 +135,21 @@ export class NotificationsController {
         })
         .catch((error: unknown) => logger.warn({ err: error }, "Sending a notification event failed"));
     };
+    const sendSetting = (signal: SettingChangeSignal) => {
+      queue = queue
+        .then(async () => {
+          if (closed || !(await this.context.settings?.affects(session.accountId, signal))) return;
+          const data = {
+            key: signal.key,
+            level: signal.level,
+            organizationId: signal.level === "organization" ? signal.id : null,
+          };
+          if (!closed) raw.write(`event: settings\ndata: ${JSON.stringify(data)}\n\n`);
+        })
+        .catch((error: unknown) => logger.warn({ err: error }, "Sending a settings event failed"));
+    };
     const unsubscribe = await hub.subscribe(session.accountId, send);
+    const unsubscribeSettings = await hub.subscribeSettings(sendSetting);
     const heartbeat = setInterval(() => {
       services.sessions.isActive(session.id).then(
         (active) => {
@@ -151,6 +166,7 @@ export class NotificationsController {
       closed = true;
       clearInterval(heartbeat);
       unsubscribe();
+      unsubscribeSettings();
       raw.end();
     };
     reply.hijack();

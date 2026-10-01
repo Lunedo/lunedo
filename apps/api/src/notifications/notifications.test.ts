@@ -197,4 +197,64 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
       await secondRuntime.close();
     }
   });
+
+  it("tells a client of another node about settings whose value for it changed", async () => {
+    const secondRuntime = await createServerRuntime({ role: "api", env: test.env });
+    let second: NestFastifyApplication | undefined;
+    let response: IncomingMessage | undefined;
+    const other = await createAccount(test, "settings-other@pagehall.test");
+    const otherClient = await signedInClient(test, other.email, other.password);
+    try {
+      second = await createTestApp(apiContextOf(secondRuntime));
+      await second.listen(0, "127.0.0.1");
+      const { port } = second.getHttpServer().address() as AddressInfo;
+      const session = owner.cookies.get(SESSION_COOKIE);
+      const settings: { key: string; level: string; organizationId: string | null }[] = [];
+      let connected = false;
+      response = await new Promise<IncomingMessage>((resolve, reject) => {
+        get(
+          `http://127.0.0.1:${port}/api/v1/notifications/stream`,
+          { headers: { cookie: `${SESSION_COOKIE}=${session}` } },
+          resolve,
+        ).on("error", reject);
+      });
+      response.setEncoding("utf8");
+      response.on("data", (chunk: string) => {
+        if (chunk.includes("event: notifications")) connected = true;
+        for (const match of chunk.matchAll(/event: settings\ndata: (\{.*\})\n\n/g)) {
+          settings.push(JSON.parse(match[1] ?? "{}"));
+        }
+      });
+      await expect.poll(() => connected, { timeout: 5000 }).toBe(true);
+
+      const instanceUrl = "/api/v1/instance/settings/locale.firstDayOfWeek";
+      expect((await owner.put(instanceUrl, { value: "sunday" })).statusCode).toBe(204);
+      await expect
+        .poll(() => settings, { timeout: 5000 })
+        .toEqual([{ key: "locale.firstDayOfWeek", level: "instance", organizationId: null }]);
+
+      const ownPreference = "/api/v1/account/preferences/locale.firstDayOfWeek";
+      expect((await otherClient.put(ownPreference, { value: "monday" })).statusCode).toBe(204);
+      expect((await owner.put(ownPreference, { value: "saturday" })).statusCode).toBe(204);
+      await expect.poll(() => settings.length, { timeout: 5000 }).toBe(2);
+      expect(settings[1]).toEqual({ key: "locale.firstDayOfWeek", level: "user", organizationId: null });
+
+      expect((await owner.put(instanceUrl, { value: "monday" })).statusCode).toBe(204);
+      expect(
+        (
+          await owner.put(`/api/v1/organizations/${organizationId}/settings/branding.accentColor`, {
+            value: "violet",
+          })
+        ).statusCode,
+      ).toBe(204);
+      await expect.poll(() => settings.length, { timeout: 5000 }).toBe(3);
+      expect(settings[2]).toEqual({ key: "branding.accentColor", level: "organization", organizationId });
+    } finally {
+      await owner.put("/api/v1/account/preferences/locale.firstDayOfWeek", { clear: true });
+      await owner.put("/api/v1/instance/settings/locale.firstDayOfWeek", { clear: true });
+      response?.destroy();
+      await second?.close();
+      await secondRuntime.close();
+    }
+  });
 });
