@@ -17,6 +17,13 @@ import {
 } from "../crypto/stream.js";
 import type { Logger } from "../logging/logger.js";
 import type { DatabaseArchiver } from "./postgres.js";
+import {
+  hasRestoreMarker,
+  RESTORE_ENTRIES,
+  RESTORE_STAGING,
+  removeRestoreMarker,
+  writeRestoreMarker,
+} from "./restore-marker.js";
 
 /*
  * Backup file layout:
@@ -266,6 +273,7 @@ async function listFiles(root: string): Promise<string[]> {
       throw error;
     }
     for (const entry of entries) {
+      if (dir === root && RESTORE_ENTRIES.has(entry.name)) continue;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) await visit(full);
       else if (entry.isFile()) files.push(path.relative(root, full).split(path.sep).join("/"));
@@ -275,9 +283,10 @@ async function listFiles(root: string): Promise<string[]> {
   return files.sort();
 }
 
-async function isEmptyDirectory(dir: string): Promise<boolean> {
+/** True when the file store holds no files; entries of an earlier restore do not count. */
+async function isEmptyFileStore(dir: string): Promise<boolean> {
   try {
-    return (await readdir(dir)).length === 0;
+    return (await readdir(dir)).every((entry) => RESTORE_ENTRIES.has(entry));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return true;
     throw error;
@@ -383,36 +392,34 @@ async function readArchive(options: ReadOptions, handle: EntryHandler): Promise<
     createGunzip(),
     extract,
   );
+  // A failure also ends the current entry, so the handler rejects; until it does, the
+  // rejection of the pipeline must not count as unhandled.
+  reading.catch(() => {});
   const seen: BackupManifest["entries"] = [];
   let manifest: BackupManifest | undefined;
-  try {
-    for await (const entry of extract) {
-      const name = entry.header.name;
-      if (manifest) throw new BackupError("The backup contains data after its manifest");
-      if (entry.header.type !== "file") {
-        const kind = ENTRY_TYPE_NAMES[entry.header.type] ?? "an unsupported entry";
-        throw new BackupError(`Restore refused: the backup entry ${name} is ${kind}`);
-      }
-      if (name === MANIFEST_ENTRY) {
-        const chunks: Buffer[] = [];
-        for await (const chunk of entry) chunks.push(chunk as Buffer);
-        const parsed = manifestSchema.safeParse(JSON.parse(Buffer.concat(chunks).toString("utf8")));
-        if (!parsed.success) throw new BackupError("The backup manifest is invalid");
-        manifest = parsed.data;
-        continue;
-      }
-      if (!isKnownEntry(name)) {
-        throw new BackupError(`Restore refused: the backup entry ${name} is outside the restore targets`);
-      }
-      const hasher = new Hasher();
-      await handle(name, entry.pipe(hasher));
-      seen.push({ path: name, size: hasher.size, sha256: hasher.digest() });
+  for await (const entry of extract) {
+    const name = entry.header.name;
+    if (manifest) throw new BackupError("The backup contains data after its manifest");
+    if (entry.header.type !== "file") {
+      const kind = ENTRY_TYPE_NAMES[entry.header.type] ?? "an unsupported entry";
+      throw new BackupError(`Restore refused: the backup entry ${name} is ${kind}`);
     }
-    await reading;
-  } catch (error) {
-    reading.catch(() => {});
-    throw error;
+    if (name === MANIFEST_ENTRY) {
+      const chunks: Buffer[] = [];
+      for await (const chunk of entry) chunks.push(chunk as Buffer);
+      const parsed = manifestSchema.safeParse(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+      if (!parsed.success) throw new BackupError("The backup manifest is invalid");
+      manifest = parsed.data;
+      continue;
+    }
+    if (!isKnownEntry(name)) {
+      throw new BackupError(`Restore refused: the backup entry ${name} is outside the restore targets`);
+    }
+    const hasher = new Hasher();
+    await handle(name, entry.pipe(hasher));
+    seen.push({ path: name, size: hasher.size, sha256: hasher.digest() });
   }
+  await reading;
   if (!manifest) throw new BackupError("The backup has no manifest; it may be truncated");
   if (
     manifest.schemaVersion !== header.schemaVersion ||
@@ -456,45 +463,86 @@ export interface RestoreBackupOptions extends ReadOptions {
 }
 
 /**
- * Restores a backup into an empty instance. The whole backup is verified first; a
- * non-empty database or file store is only overwritten with `force`.
+ * Restores a backup into an empty instance, or with `force` over an existing one.
+ *
+ * The files are extracted into a staging directory first, which also verifies the whole
+ * backup. The database is then restored in a single transaction, and only after it has been
+ * committed are the staged files moved into the file store. A marker in the file store
+ * covers the time from the start of the database restore until the files are in place; the
+ * application does not start while it exists. A failure before the database commit leaves
+ * the instance as it was.
  */
 export async function restoreBackup(options: RestoreBackupOptions): Promise<BackupManifest> {
-  const manifest = await verifyBackup(options);
+  const { header } = await readBackupHeader(options.input);
+  checkBackupHeader(header, options);
 
   const databaseEmpty = await options.database.isEmpty();
-  const filesEmpty = await isEmptyDirectory(options.filesDir);
+  const filesEmpty = await isEmptyFileStore(options.filesDir);
   if (!options.force && (!databaseEmpty || !filesEmpty)) {
     throw new BackupError(
       `Restore refused: the ${!databaseEmpty ? "database" : "file store"} is not empty. Use --force to overwrite it`,
     );
   }
-  if (!databaseEmpty) await options.database.clear();
-  if (!filesEmpty) {
-    for (const entry of await readdir(options.filesDir)) {
-      await rm(path.join(options.filesDir, entry), { recursive: true, force: true });
-    }
-  }
-  await mkdir(options.filesDir, { recursive: true });
 
-  await readArchive(options, async (name, content) => {
-    if (name === DATABASE_ENTRY) {
-      await options.database.restore(content);
-    } else if (name.startsWith(FILES_PREFIX)) {
-      const target = path.join(options.filesDir, ...name.slice(FILES_PREFIX.length).split("/"));
+  const staging = path.join(options.filesDir, RESTORE_STAGING);
+  await rm(staging, { recursive: true, force: true });
+  await mkdir(staging, { recursive: true });
+  let manifest: BackupManifest;
+  try {
+    manifest = await readArchive(options, async (name, content) => {
+      if (!name.startsWith(FILES_PREFIX)) return drain(content);
+      const target = path.join(staging, ...name.slice(FILES_PREFIX.length).split("/"));
       await mkdir(path.dirname(target), { recursive: true });
       await pipeline(content, createWriteStream(target, { mode: 0o600 }));
-    } else if (name.startsWith(CONFIG_PREFIX) && options.configDir) {
-      const target = path.join(options.configDir, ...name.slice(CONFIG_PREFIX.length).split("/"));
-      await mkdir(path.dirname(target), { recursive: true });
-      await pipeline(content, createWriteStream(target, { mode: 0o600 }));
-    } else {
-      await drain(content);
+    });
+  } catch (error) {
+    await rm(staging, { recursive: true, force: true });
+    throw error;
+  }
+
+  const earlierRestoreIncomplete = await hasRestoreMarker(options.filesDir);
+  await writeRestoreMarker(options.filesDir, options.input);
+  let databaseRestored = false;
+  try {
+    await readArchive(options, async (name, content) => {
+      if (name === DATABASE_ENTRY) {
+        await options.database.restore(content, { replaceExisting: !databaseEmpty });
+        databaseRestored = true;
+      } else if (name.startsWith(CONFIG_PREFIX) && options.configDir) {
+        const target = path.join(options.configDir, ...name.slice(CONFIG_PREFIX.length).split("/"));
+        await mkdir(path.dirname(target), { recursive: true });
+        await pipeline(content, createWriteStream(target, { mode: 0o600 }));
+      } else {
+        await drain(content);
+      }
+    });
+    await replaceFiles(options.filesDir, staging);
+  } catch (error) {
+    if (databaseRestored) {
+      throw new BackupError(
+        `The database was restored, but the restore did not complete: ${(error as Error).message}. Pagehall does not start until the restore is run again with --force.`,
+        { cause: error },
+      );
     }
-  });
+    await rm(staging, { recursive: true, force: true });
+    if (!earlierRestoreIncomplete) await removeRestoreMarker(options.filesDir);
+    throw error;
+  }
+  await removeRestoreMarker(options.filesDir);
   options.logger.info(
     { schemaVersion: manifest.schemaVersion, entries: manifest.entries.length },
     "Backup restored",
   );
   return manifest;
+}
+
+/** Replaces the content of the file store with the staged files. */
+async function replaceFiles(filesDir: string, staging: string): Promise<void> {
+  for (const entry of await readdir(filesDir)) {
+    if (!RESTORE_ENTRIES.has(entry)) await rm(path.join(filesDir, entry), { recursive: true, force: true });
+  }
+  for (const entry of await readdir(staging)) {
+    await rename(path.join(staging, entry), path.join(filesDir, entry));
+  }
+  await rm(staging, { recursive: true, force: true });
 }

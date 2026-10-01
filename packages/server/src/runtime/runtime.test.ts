@@ -8,6 +8,7 @@ import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { z } from "zod";
+import { IncompleteRestoreError, writeRestoreMarker } from "../backup/restore-marker.js";
 import type { EncryptedColumn } from "../crypto/encrypted-column.js";
 import { Encryption } from "../crypto/envelope.js";
 import { formatKeyEntry, parseKeyRing } from "../crypto/key-ring.js";
@@ -83,6 +84,34 @@ describe("registerShutdown", () => {
     process.send("SIGINT");
     expect(await process.exited).toBe(0);
     expect(close).toHaveBeenCalledOnce();
+  });
+});
+
+describe("starting after an incomplete restore", () => {
+  it("refuses to start and names the next step", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "pagehall-runtime-"));
+    try {
+      const filesDir = path.join(dir, "files");
+      await mkdir(filesDir);
+      await writeRestoreMarker(filesDir, "/var/lib/pagehall/backups/pagehall.phbak");
+      const started = createServerRuntime({
+        role: "api",
+        env: {
+          PAGEHALL_DATABASE_URL: "postgres://pagehall:pagehall@127.0.0.1:1/unreachable",
+          PAGEHALL_SECRETS_DIR: path.join(dir, "secrets"),
+          PAGEHALL_FILES_DIR: filesDir,
+          PAGEHALL_LOG_LEVEL: "silent",
+        },
+      });
+      const error = await started.catch((caught: unknown) => caught);
+      expect(error).toBeInstanceOf(IncompleteRestoreError);
+      expect(error).toBeInstanceOf(StartupError);
+      expect((error as Error).message).toContain(
+        "Run the restore again with: pagehall backup restore --input /var/lib/pagehall/backups/pagehall.phbak --force.",
+      );
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });
 

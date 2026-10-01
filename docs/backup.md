@@ -14,7 +14,7 @@ docker compose run --rm pagehall backup restore --input /var/lib/pagehall/backup
 
 - `create` writes the backup. The output directory must be writable by the container user; `/var/lib/pagehall/backups` is.
 - `verify` checks the header, decrypts the whole backup and checks the manifest and every checksum without restoring anything.
-- `restore` restores into an empty instance: an empty database and an empty file store. It verifies the backup first. It refuses to overwrite existing data unless `--force` is given, which drops all database schemas and empties the file store first. `--config-dir <dir>` writes the configuration files from the backup to a directory for review; they are never applied automatically.
+- `restore` restores into an empty instance: an empty database and an empty file store. It verifies the backup first. It refuses to overwrite existing data unless `--force` is given, which replaces all database schemas and the content of the file store. See [How a restore changes the instance](#how-a-restore-changes-the-instance). `--config-dir <dir>` writes the configuration files from the backup to a directory for review; they are never applied automatically.
 
 Stop the application before restoring. After the restore, start Pagehall; it applies migrations if the backup is from an older version.
 
@@ -99,6 +99,22 @@ Verification and restore reject a backup when:
 - entries differ from the manifest, data follows the manifest, or the manifest does not match the header.
 
 Because the whole backup is verified before anything is written, a rejected backup leaves the target untouched.
+
+## How a restore changes the instance
+
+A restore runs in three phases, so that a failure leaves either the old instance or a clearly marked incomplete one, never a silent mix:
+
+1. **Staging.** The files of the backup are extracted into `.pagehall-restore-staging` in the file store. This pass also verifies the whole backup. The existing files and the database are not touched; on failure the staging directory is removed.
+2. **Database.** The marker file `.pagehall-restore-incomplete` is written to the file store. `pg_restore` turns the dump into SQL, which `psql` runs in a single transaction; with `--force`, the same transaction first drops all application schemas. Backups leave out large objects, which Pagehall does not use, so the script contains no transaction control of its own. The commit is sent only after the whole dump has been read without error. If anything fails before the commit, PostgreSQL rolls the transaction back, the staging directory and the marker are removed, and the instance is unchanged.
+3. **Files.** After the commit, the existing files are removed and the staged files are moved into the file store, which is a rename on the same file system. Then the marker is removed.
+
+If the restore stops between the commit and the removal of the marker, for example because the disk is full or the process is killed, the database already contains the backup while the file store may still hold the old files. The marker stays in that case, and the API, the collaboration server and the worker refuse to start:
+
+```
+The restore of the backup <file>, started at <time>, did not complete, so the database and the file store may not match. Run the restore again with: pagehall backup restore --input <file> --force. Pagehall does not start until a restore completes and removes <files>/.pagehall-restore-incomplete.
+```
+
+`backup create` refuses with the same message. Run the restore again with `--force`; a restore that completes removes the marker. The marker also stays when a process is killed during phase 2, although PostgreSQL has rolled the database back; the next step is the same. Backups never contain the marker or the staging directory, and a restore ignores both when it checks whether the file store is empty.
 
 ## Database connection
 

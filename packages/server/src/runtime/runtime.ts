@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import type { HealthCheck } from "@pagehall/shared";
+import { checkRestoreComplete } from "../backup/restore-marker.js";
 import { ensureSecretFile, generateToken } from "../config/generated-secrets.js";
 import { type Env, loadConfig, type ServerConfig } from "../config/load.js";
 import { Secret } from "../config/secret.js";
@@ -84,6 +85,7 @@ export async function createServerRuntime(options: {
   const { role } = options;
   const config = loadConfig(options.env);
   const logger = createLogger({ service: role, level: config.logLevel });
+  await checkRestoreComplete(config.paths.files);
   const { metricsToken } = resolveGeneratedSecrets(config);
 
   const connectionString = config.database.url.reveal();

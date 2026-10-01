@@ -18,12 +18,21 @@ import {
   verifyBackup,
 } from "./archive.js";
 import type { DatabaseArchiver } from "./postgres.js";
+import {
+  checkRestoreComplete,
+  IncompleteRestoreError,
+  RESTORE_MARKER,
+  RESTORE_STAGING,
+  writeRestoreMarker,
+} from "./restore-marker.js";
 
 const logger = createLogger({ service: "test", level: "silent" });
 
 class FakeDatabase implements DatabaseArchiver {
   restored: Buffer | undefined;
-  cleared = false;
+  replacedExisting: boolean | undefined;
+  /** Fails the restore after this many bytes, like a connection lost in the middle of it. */
+  failAfter: number | undefined;
 
   constructor(
     readonly content: Buffer,
@@ -34,19 +43,23 @@ class FakeDatabase implements DatabaseArchiver {
     return Readable.from([this.content]);
   }
 
-  async restore(dump: Readable): Promise<void> {
+  async restore(dump: Readable, options: { replaceExisting: boolean }): Promise<void> {
     const chunks: Buffer[] = [];
-    for await (const chunk of dump) chunks.push(chunk as Buffer);
+    let size = 0;
+    for await (const chunk of dump) {
+      chunks.push(chunk as Buffer);
+      size += (chunk as Buffer).length;
+      if (this.failAfter !== undefined && size > this.failAfter) {
+        throw new Error("connection to the database lost");
+      }
+    }
     this.restored = Buffer.concat(chunks);
+    this.replacedExisting = options.replaceExisting;
+    this.empty = false;
   }
 
   async isEmpty(): Promise<boolean> {
     return this.empty;
-  }
-
-  async clear(): Promise<void> {
-    this.cleared = true;
-    this.empty = true;
   }
 }
 
@@ -195,7 +208,7 @@ describe("backups", () => {
     await writeFile(path.join(target, "stale.txt"), "old");
     const database = new FakeDatabase(Buffer.alloc(0), false);
     await restoreInto(target, database, { force: true });
-    expect(database.cleared).toBe(true);
+    expect(database.replacedExisting).toBe(true);
     expect((await readdir(target)).sort()).toEqual(["attachments", "logo.png"]);
   });
 
@@ -286,6 +299,85 @@ describe("the backup header", () => {
     await expect(verifyBackup({ input: archivePath, backupKeys, knownSchemaVersions })).rejects.toThrow(
       /but the configured key version 1 has fingerprint/,
     );
+  });
+});
+
+describe("interrupted restores", () => {
+  let target: string;
+
+  beforeEach(async () => {
+    await create();
+    target = path.join(dir, "instance");
+    await mkdir(target);
+    await writeFile(path.join(target, "stale.txt"), "old");
+  });
+
+  function failingDatabase() {
+    const database = new FakeDatabase(Buffer.alloc(0), false);
+    database.failAfter = 10;
+    return database;
+  }
+
+  it("leave the instance unchanged when the database restore fails", async () => {
+    const database = failingDatabase();
+    await expect(restoreInto(target, database, { force: true })).rejects.toThrow(
+      "connection to the database lost",
+    );
+    expect(database.restored).toBeUndefined();
+    expect(await readdir(target)).toEqual(["stale.txt"]);
+    await expect(checkRestoreComplete(target)).resolves.toBeUndefined();
+  });
+
+  it("keep the marker when the restore fails after the database commit, until a restore completes", async () => {
+    const configDir = path.join(dir, "restored-config");
+    await writeFile(configDir, "a file where the configuration directory should be");
+    const database = new FakeDatabase(Buffer.alloc(0), false);
+    await expect(restoreInto(target, database, { force: true })).rejects.toThrow(
+      /^The database was restored, but the restore did not complete: .*run again with --force.$/,
+    );
+    expect(database.restored?.equals(databaseDump)).toBe(true);
+    expect((await readdir(target)).sort()).toEqual([RESTORE_MARKER, RESTORE_STAGING, "stale.txt"].sort());
+    const refused = await checkRestoreComplete(target).catch((error: unknown) => error);
+    expect(refused).toBeInstanceOf(IncompleteRestoreError);
+    expect((refused as Error).message).toContain(`The restore of the backup ${archivePath}, started at `);
+    expect((refused as Error).message).toContain(`pagehall backup restore --input ${archivePath} --force`);
+
+    await rm(configDir);
+    await restoreInto(target, database, { force: true });
+    expect((await readdir(target)).sort()).toEqual(["attachments", "logo.png"]);
+    await expect(checkRestoreComplete(target)).resolves.toBeUndefined();
+  });
+
+  it("keep the marker of an earlier incomplete restore when the next one fails early", async () => {
+    await writeRestoreMarker(target, "earlier.phbak");
+    await expect(restoreInto(target, failingDatabase(), { force: true })).rejects.toThrow(
+      "connection to the database lost",
+    );
+    await expect(checkRestoreComplete(target)).rejects.toThrow(IncompleteRestoreError);
+  });
+
+  it("ignore what an interrupted restore left in the file store", async () => {
+    await rm(path.join(target, "stale.txt"));
+    await writeRestoreMarker(target, "earlier.phbak");
+    await mkdir(path.join(target, RESTORE_STAGING, "attachments"), { recursive: true });
+    await writeFile(path.join(target, RESTORE_STAGING, "attachments", "partial.bin"), "partial");
+
+    await restoreInto(target, new FakeDatabase(Buffer.alloc(0)));
+    expect((await readdir(target)).sort()).toEqual(["attachments", "logo.png"]);
+    expect(await readdir(path.join(target, "attachments"))).toEqual(["2026"]);
+  });
+
+  it("are left out of backups", async () => {
+    await writeRestoreMarker(filesDir, "earlier.phbak");
+    await mkdir(path.join(filesDir, RESTORE_STAGING));
+    await writeFile(path.join(filesDir, RESTORE_STAGING, "partial.bin"), "partial");
+    const created = await create();
+    expect(created.entries.map((entry) => entry.path)).toEqual([
+      "database.dump",
+      "files/attachments/2026/report.pdf",
+      "files/logo.png",
+      "config/environment.json",
+    ]);
   });
 });
 
@@ -385,7 +477,7 @@ describe("archive entries", () => {
     ]);
     const target = path.join(dir, "target");
     await expect(restoreInto(target, new FakeDatabase(Buffer.alloc(0)))).rejects.toThrow(BackupError);
-    await expect(readdir(target)).rejects.toThrow();
+    expect(await readdir(target)).toEqual([]);
   });
 });
 

@@ -1,6 +1,7 @@
 import path from "node:path";
 import {
   ConfigError,
+  checkRestoreComplete,
   configurationForBackup,
   createBackup,
   createDatabase,
@@ -81,6 +82,7 @@ async function run(command: Command): Promise<void> {
 
   switch (command.name) {
     case "backup create": {
+      await checkRestoreComplete(config.paths.files);
       const { backupKeys } = resolveGeneratedSecrets(config);
       const manifest = await createBackup({
         output: path.resolve(command.output),

@@ -7,6 +7,7 @@ export {
   verifyBackup,
 } from "./backup/archive.js";
 export { BackupConfigurationError, type DatabaseArchiver, PostgresArchiver } from "./backup/postgres.js";
+export { checkRestoreComplete, IncompleteRestoreError } from "./backup/restore-marker.js";
 export { configurationForBackup } from "./config/backup-view.js";
 export { configSettings } from "./config/definitions.js";
 export { ConfigError, type Env, loadConfig, type ServerConfig } from "./config/load.js";

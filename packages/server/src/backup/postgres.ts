@@ -1,7 +1,7 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { PassThrough, type Readable } from "node:stream";
+import { PassThrough, type Readable, type Writable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import pg from "pg";
 
@@ -9,15 +9,31 @@ import pg from "pg";
 export interface DatabaseArchiver {
   /** Streams a dump of the whole database. */
   dump(): Readable;
-  /** Loads a dump produced by `dump` into the database. */
-  restore(dump: Readable): Promise<void>;
+  /**
+   * Loads a dump produced by `dump` in a single transaction. With `replaceExisting`, all
+   * application schemas are dropped first in the same transaction. Nothing is changed when
+   * the promise rejects.
+   */
+  restore(dump: Readable, options: { replaceExisting: boolean }): Promise<void>;
   /** True when the database contains no tables outside the system schemas. */
   isEmpty(): Promise<boolean>;
-  /** Drops all application schemas, for a forced restore. */
-  clear(): Promise<void>;
 }
 
 const SYSTEM_SCHEMAS = ["pg_catalog", "information_schema", "pg_toast"];
+const SYSTEM_SCHEMA_LIST = SYSTEM_SCHEMAS.map((schema) => `'${schema}'`).join(", ");
+
+const DROP_SCHEMAS = `do $$
+declare
+  name text;
+begin
+  for name in select nspname from pg_namespace
+    where nspname not in (${SYSTEM_SCHEMA_LIST}) and nspname not like 'pg\\_%'
+  loop
+    execute format('drop schema %I cascade', name);
+  end loop;
+end $$;
+create schema public;
+`;
 
 export class BackupConfigurationError extends Error {
   override name = "BackupConfigurationError";
@@ -89,6 +105,21 @@ export function libpqEnvironment(databaseUrl: string): NodeJS.ProcessEnv {
   return env;
 }
 
+/** True for errors of a stream whose other end has gone away. */
+function isBrokenPipe(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException).code;
+  return code === "EPIPE" || code === "ERR_STREAM_PREMATURE_CLOSE" || code === "ERR_STREAM_DESTROYED";
+}
+
+/** Collects the error output of a child process. */
+function collect(child: ChildProcess): () => string {
+  let stderr = "";
+  child.stderr?.on("data", (chunk: Buffer) => {
+    stderr += chunk.toString();
+  });
+  return () => stderr;
+}
+
 function waitForExit(child: ChildProcess, tool: string, stderr: () => string): Promise<void> {
   return new Promise((resolve, reject) => {
     child.once("error", reject);
@@ -104,10 +135,16 @@ function waitForExit(child: ChildProcess, tool: string, stderr: () => string): P
  * server; the image ships clients for every supported PostgreSQL version and the matching
  * one is chosen by the server's major version.
  */
+interface Tools {
+  dump: string;
+  restore: string;
+  psql: string;
+}
+
 export class PostgresArchiver implements DatabaseArchiver {
   readonly #databaseUrl: string;
   readonly #binDir: string | undefined;
-  #tools: Promise<{ dump: string; restore: string }> | undefined;
+  #tools: Promise<Tools> | undefined;
 
   constructor(options: { databaseUrl: string; binDir?: string | undefined }) {
     this.#databaseUrl = options.databaseUrl;
@@ -127,7 +164,7 @@ export class PostgresArchiver implements DatabaseArchiver {
     }
   }
 
-  async tools(): Promise<{ dump: string; restore: string }> {
+  async tools(): Promise<Tools> {
     this.#tools ??= (async () => {
       const [row] = await this.#query<{ version: string }>(
         "select current_setting('server_version_num') as version",
@@ -140,6 +177,7 @@ export class PostgresArchiver implements DatabaseArchiver {
       return {
         dump: dir ? path.join(dir, "pg_dump") : "pg_dump",
         restore: dir ? path.join(dir, "pg_restore") : "pg_restore",
+        psql: dir ? path.join(dir, "psql") : "psql",
       };
     })();
     return this.#tools;
@@ -150,7 +188,8 @@ export class PostgresArchiver implements DatabaseArchiver {
     this.tools().then(
       ({ dump }) => {
         let stderr = "";
-        const child = spawn(dump, ["--format=custom", "--no-owner", "--no-privileges"], {
+        // Large objects are not used; without them the restore script has no transaction control of its own.
+        const child = spawn(dump, ["--format=custom", "--no-owner", "--no-privileges", "-B"], {
           env: { ...process.env, ...libpqEnvironment(this.#databaseUrl) },
           stdio: ["ignore", "pipe", "pipe"],
         });
@@ -168,53 +207,66 @@ export class PostgresArchiver implements DatabaseArchiver {
     return output;
   }
 
-  async restore(dump: Readable): Promise<void> {
-    const { restore } = await this.tools();
-    const env = libpqEnvironment(this.#databaseUrl);
-    let stderr = "";
-    const child = spawn(
-      restore,
-      [
-        "--no-owner",
-        "--no-privileges",
-        "--exit-on-error",
-        "--single-transaction",
-        `--dbname=${env.PGDATABASE ?? ""}`,
-      ],
-      {
-        env: { ...process.env, ...env },
-        stdio: ["pipe", "ignore", "pipe"],
-      },
-    );
-    child.stderr?.on("data", (chunk: Buffer) => {
-      stderr += chunk.toString();
+  /**
+   * pg_restore turns the dump into SQL, which psql runs inside one transaction. The commit is
+   * sent only after pg_restore has succeeded; on any failure psql is stopped and PostgreSQL
+   * rolls the transaction back.
+   */
+  async restore(dump: Readable, options: { replaceExisting: boolean }): Promise<void> {
+    const tools = await this.tools();
+    const env = { ...process.env, ...libpqEnvironment(this.#databaseUrl) };
+    const psql = spawn(tools.psql, ["--no-psqlrc", "--quiet", "--set=ON_ERROR_STOP=1"], {
+      env,
+      stdio: ["pipe", "ignore", "pipe"],
     });
-    const exited = waitForExit(child, "pg_restore", () => stderr);
-    await Promise.all([pipeline(dump, child.stdin as NodeJS.WritableStream), exited]);
+    const restore = spawn(tools.restore, ["--no-owner", "--no-privileges", "--exit-on-error", "--file=-"], {
+      env,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    const psqlExited = waitForExit(psql, "psql", collect(psql));
+    const restoreExited = waitForExit(restore, "pg_restore", collect(restore));
+    psqlExited.catch(() => {});
+    restoreExited.catch(() => {});
+    const script = psql.stdin as Writable;
+    // Failures of psql surface through its exit code.
+    script.on("error", () => {});
+    let inputError: unknown;
+    try {
+      script.write(`begin;\n${options.replaceExisting ? DROP_SCHEMAS : ""}`);
+      await Promise.race([
+        Promise.all([
+          pipeline(
+            dump.on("error", (error) => {
+              inputError ??= error;
+            }),
+            restore.stdin as Writable,
+          ),
+          pipeline(restore.stdout as Readable, script, { end: false }),
+          restoreExited,
+        ]),
+        psqlExited.then(() => {
+          throw new Error("psql exited before the restore was complete");
+        }),
+      ]);
+      script.end("commit;\n");
+      await psqlExited;
+    } catch (error) {
+      restore.kill();
+      psql.kill();
+      const [restoreResult, psqlResult] = await Promise.allSettled([restoreExited, psqlExited]);
+      // A failing psql breaks the pipes of pg_restore, and a failing dump makes pg_restore fail;
+      // report the cause, not the consequence.
+      if (psql.exitCode && psqlResult.status === "rejected") throw psqlResult.reason;
+      if (inputError && !isBrokenPipe(inputError)) throw inputError;
+      if (restore.exitCode && restoreResult.status === "rejected") throw restoreResult.reason;
+      throw error;
+    }
   }
 
   async isEmpty(): Promise<boolean> {
     const [row] = await this.#query<{ count: string }>(
-      `select count(*) as count from pg_tables where schemaname not in (${SYSTEM_SCHEMAS.map((s) => `'${s}'`).join(", ")})`,
+      `select count(*) as count from pg_tables where schemaname not in (${SYSTEM_SCHEMA_LIST})`,
     );
     return Number(row?.count ?? 0) === 0;
-  }
-
-  async clear(): Promise<void> {
-    const schemas = await this.#query<{ name: string }>(
-      `select nspname as name from pg_namespace
-       where nspname not in (${SYSTEM_SCHEMAS.map((s) => `'${s}'`).join(", ")}) and nspname not like 'pg_%'`,
-    );
-    const client = new pg.Client({
-      connectionString: this.#databaseUrl,
-      application_name: "pagehall-backup",
-    });
-    await client.connect();
-    try {
-      for (const { name } of schemas) await client.query(`drop schema "${name.replace(/"/g, '""')}" cascade`);
-      await client.query("create schema public");
-    } finally {
-      await client.end();
-    }
   }
 }
