@@ -119,6 +119,25 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
     expect(confirmed.statusCode).toBe(200);
     expect(confirmed.json().recoveryCodes).toHaveLength(10);
 
+    const smtp = {
+      host: "smtp.pagehall.test",
+      port: 25,
+      from: "wiki@pagehall.test",
+      to: "operator@example.org",
+    };
+    const plainWithCredentials = await post("/api/v1/setup/steps/mail/test", {
+      ...smtp,
+      security: "none",
+      username: "wiki",
+      password: "smtp-secret",
+    });
+    expect(plainWithCredentials.statusCode).toBe(400);
+    expect(plainWithCredentials.json()).toMatchObject({ code: "invalidSmtpConfiguration" });
+    expect(test.mail.sent).toEqual([]);
+    const tested = await post("/api/v1/setup/steps/mail/test", { ...smtp, security: "none", username: null });
+    expect(tested.json()).toEqual({ delivered: true, error: null });
+    expect(test.mail.sent.map((mail) => mail.to)).toEqual(["operator@example.org"]);
+
     expect((await post("/api/v1/setup/steps/keyBackup/confirm")).json()).toMatchObject({
       code: "keysNotDownloaded",
     });
@@ -191,6 +210,17 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
       ]),
     );
     expect(JSON.stringify(events.rows)).not.toMatch(/violet tram umbrella/);
+    const tests = await test.runtime.pool.query(
+      "select actor_type, target_type, target_id, fields from audit_events where name = 'mail.testSent'",
+    );
+    expect(tests.rows).toEqual([
+      {
+        actor_type: "anonymous",
+        target_type: "instance",
+        target_id: null,
+        fields: { recipient: "operator@example.org", delivered: true },
+      },
+    ]);
   });
 
   it("lets the owner sign in with password and TOTP afterwards", async () => {

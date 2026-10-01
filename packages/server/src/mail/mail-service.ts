@@ -84,6 +84,13 @@ export class SmtpConfigurationError extends Error {
   override name = "SmtpConfigurationError";
 }
 
+/** Credentials are never sent over a plain-text connection, neither when saving nor when testing. */
+function checkSmtpCredentials(configuration: SmtpConfiguration, hasPassword: boolean): void {
+  if (configuration.security === "none" && (configuration.username !== null || hasPassword)) {
+    throw new SmtpConfigurationError("SMTP credentials require a TLS connection");
+  }
+}
+
 /**
  * Outgoing e-mail. Mails are written to an outbox in the transaction of the change that causes
  * them and delivered by jobs with retries; logs name the mail and template, never the content.
@@ -244,9 +251,7 @@ export class MailService {
         .select({ name: instanceSecrets.name })
         .from(instanceSecrets)
         .where(eq(instanceSecrets.name, SMTP_PASSWORD));
-      if (parsed.security === "none" && (parsed.username !== null || stored)) {
-        throw new SmtpConfigurationError("SMTP credentials require a TLS connection");
-      }
+      checkSmtpCredentials(parsed, stored !== undefined);
       await this.#settings.set(smtpSetting, {}, "instance", parsed, { tx, audit: false });
       await this.#audit.record(tx, {
         name: "mail.smtpChanged",
@@ -275,10 +280,12 @@ export class MailService {
   ): Promise<{ delivered: boolean; error: { code: string | null; responseCode: number | null } | null }> {
     const instanceName = await this.#settings.get(instanceNameSetting, {});
     const message: MailMessage = renderMail("smtpTest", language, { instanceName }, to);
+    const adHoc = smtp ? smtpConfigurationSchema.parse(smtp.configuration) : undefined;
+    if (adHoc) checkSmtpCredentials(adHoc, smtp?.password != null);
     let error: { code: string | null; responseCode: number | null } | null = null;
     try {
-      const transport = smtp
-        ? this.#transport({ ...smtp.configuration, password: smtp.password })
+      const transport = adHoc
+        ? this.#transport({ ...adHoc, password: smtp?.password ?? null })
         : await this.#transportOrThrow();
       await transport.send(message);
     } catch (failure) {
