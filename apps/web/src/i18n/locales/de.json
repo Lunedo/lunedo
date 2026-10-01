@@ -94,7 +94,7 @@
     "serviceAccounts": "Dienstkonten",
     "apiTokens": "API-Tokens",
     "domainsAndGuests": "Domains und Gäste",
-    "notificationDefaults": "Standards für Benachrichtigungen",
+    "notificationDefaults": "Benachrichtigungen",
     "auditLog": "Audit-Log",
     "organizations": "Organisationen",
     "accounts": "Konten",
@@ -831,7 +831,7 @@
     },
     "preferencesTitle": "Benachrichtigungen",
     "preferencesDescription": "Wähle, wie du von jeder Art von Ereignis erfährst.",
-    "defaultsTitle": "Standards für Benachrichtigungen",
+    "defaultsTitle": "Benachrichtigungen",
     "organizationDefaultsDescription": "Standards für Mitglieder. Alle können sie für sich ändern, solange du sie nicht sperrst.",
     "instanceDefaultsDescription": "Standards für alle auf dieser Instanz.",
     "eventTypes": "Ereignisse",
@@ -1270,7 +1270,7 @@
       "transferImpact": "Sie werden Owner der Instanz und Notfallkonto."
     },
     "roles": {
-      "title": "Instanzrollen",
+      "title": "Rollen",
       "description": "Wer die Instanz verwaltet.",
       "noContent": "Instanzrollen geben nie Zugriff auf Inhalte von Organisationen.",
       "gainsWhat": "Sie erhalten {role} auf der Instanz: {areas}.",

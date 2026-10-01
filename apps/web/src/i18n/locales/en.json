@@ -94,7 +94,7 @@
     "serviceAccounts": "Service accounts",
     "apiTokens": "API tokens",
     "domainsAndGuests": "Domains and guests",
-    "notificationDefaults": "Notification defaults",
+    "notificationDefaults": "Notifications",
     "auditLog": "Audit log",
     "organizations": "Organizations",
     "accounts": "Accounts",
@@ -831,7 +831,7 @@
     },
     "preferencesTitle": "Notifications",
     "preferencesDescription": "Choose how you learn about each kind of event.",
-    "defaultsTitle": "Notification defaults",
+    "defaultsTitle": "Notifications",
     "organizationDefaultsDescription": "Defaults for members. Everyone can change them for themselves unless you lock them.",
     "instanceDefaultsDescription": "Defaults for everyone on this instance.",
     "eventTypes": "Events",
@@ -1270,7 +1270,7 @@
       "transferImpact": "They become the owner of the instance and the break-glass account."
     },
     "roles": {
-      "title": "Instance roles",
+      "title": "Roles",
       "description": "Who administers the instance.",
       "noContent": "Instance roles never grant access to the content of organizations.",
       "gainsWhat": "They receive {role} on the instance: {areas}.",

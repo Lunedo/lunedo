@@ -36,6 +36,13 @@ describe("Table", () => {
     );
   });
 
+  it("keeps hidden sort labels inside its scroll area", () => {
+    renderTable({ sort: { key: "name", direction: "asc" }, onSortChange: () => {} });
+    const scroller = screen.getByRole("table", { name: "Members" }).parentElement as HTMLElement;
+    expect(scroller.className).toContain("relative");
+    expect(scroller.className).toContain("overflow-x-auto");
+  });
+
   it("opens a row when it is clicked", async () => {
     const onRowClick = vi.fn<(row: Person) => void>();
     renderTable({ onRowClick });

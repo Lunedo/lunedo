@@ -88,7 +88,12 @@ export async function expectAccessible(page: Page, label: string): Promise<void>
 
 export async function setAppearance(
   page: Page,
-  appearance: { colorMode?: "light" | "dark"; highContrast?: boolean; textSize?: number },
+  appearance: {
+    colorMode?: "light" | "dark";
+    highContrast?: boolean;
+    textSize?: number;
+    language?: "en" | "de";
+  },
 ): Promise<void> {
   const put = async (key: string, value: unknown) => {
     const response = await page.request.put(`/api/v1/account/preferences/${key}`, {
@@ -100,4 +105,5 @@ export async function setAppearance(
   if (appearance.colorMode) await put("appearance.colorMode", appearance.colorMode);
   if (appearance.highContrast !== undefined) await put("appearance.highContrast", appearance.highContrast);
   if (appearance.textSize !== undefined) await put("appearance.textSize", appearance.textSize);
+  if (appearance.language !== undefined) await put("locale.language", appearance.language);
 }
