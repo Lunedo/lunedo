@@ -17,7 +17,7 @@ The instance records its owner, the account created during setup. The owner alwa
 - The minimum length is the setting `auth.passwordMinLength` (default 12, at least 8). There are no composition rules. Passwords on a bundled list of about 38,000 common passwords are rejected; the check runs locally, nothing is sent anywhere.
 - A forgotten password is reset with a link sent by e-mail. The link holds a single-use token that is valid for 30 minutes; only its hash is stored. The request is answered the same way whether the address belongs to an account or not, because the lookup runs in a background job. A reset ends all sessions of the account and clears its failed sign-ins.
 - Changing the password requires a recent re-authentication and ends all other sessions.
-- Changing the e-mail address requires a recent re-authentication. The new address receives a confirmation link that is valid for 24 hours; the old address receives a notice once the change is confirmed. If the new address already belongs to another account, it receives a notice instead of a link, so the answer does not reveal the account.
+- Changing the e-mail address requires a recent re-authentication. The new address receives a confirmation link that is valid for 24 hours; the old address receives a notice once the change is confirmed. If the new address already belongs to another account, it receives a notice instead of a link, so the answer does not reveal the account. An account can request 5 changes per hour, and an address receives at most 3 such mails per hour.
 
 ## Second factors
 

@@ -42,6 +42,8 @@ const HOUR_SECONDS = 60 * 60;
 const PASSWORD_RESETS_PER_ADDRESS = 3;
 const PASSWORD_RESETS_PER_CLIENT = 20;
 const TOKEN_REDEMPTIONS_PER_CLIENT = 30;
+const EMAIL_CHANGES_PER_ACCOUNT = 5;
+const EMAIL_CHANGES_PER_ADDRESS = 3;
 
 /**
  * Handles a password reset request in the worker. Doing the lookup in a job gives the API the same
@@ -429,6 +431,13 @@ export class AccountSecurityService {
     const email = emailSchema.parse(newEmail.trim());
     const account = await this.#account(session.accountId);
     if (email.toLowerCase() === account.email.toLowerCase()) throw new SameEmailError();
+    for (const [key, limit] of [
+      [`emailChange:account:${account.id}`, EMAIL_CHANGES_PER_ACCOUNT],
+      [`emailChange:address:${accountSubject(email)}`, EMAIL_CHANGES_PER_ADDRESS],
+    ] as const) {
+      const result = await this.#rateLimiter.consume(key, limit, HOUR_SECONDS);
+      if (!result.allowed) throw new RateLimitedError(result.retryAfterSeconds);
+    }
     const taken = await this.#accounts.findByEmail(email);
     const language = await this.#mail.languageOf(account.id);
     const token = generateToken();
