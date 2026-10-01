@@ -3,6 +3,7 @@ import { Slot } from "radix-ui";
 import { type ComponentProps, type ReactNode, useId } from "react";
 import { classNames } from "./class-names.js";
 import { Icon } from "./icon.js";
+import { TruncatedText } from "./truncated-text.js";
 
 export function Sidebar({
   label,
@@ -75,7 +76,12 @@ export function SidebarItem({
     className,
   );
   const glyph = icon && <Icon icon={icon} className={current ? "text-selected-text" : "text-text-muted"} />;
-  const text = <span className="min-w-0 flex-1 truncate">{label}</span>;
+  const text =
+    typeof label === "string" ? (
+      <TruncatedText text={label} className="flex-1" />
+    ) : (
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+    );
   const count = badge !== undefined && badge !== null && (
     <span className="text-xs text-text-muted">{badge}</span>
   );

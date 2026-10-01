@@ -132,3 +132,4 @@ export {
 } from "./table.js";
 export { type ToastOptions, ToastProvider, type ToastVariant, useToast } from "./toast.js";
 export { Tooltip, TooltipProvider } from "./tooltip.js";
+export { isTruncated, TruncatedText, type TruncatedTextProps, useTruncated } from "./truncated-text.js";

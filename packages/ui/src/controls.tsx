@@ -7,11 +7,12 @@ import {
   Switch as SwitchPrimitive,
   ToggleGroup as ToggleGroupPrimitive,
 } from "radix-ui";
-import { type ReactNode, useId } from "react";
+import { type ReactNode, useId, useRef } from "react";
 import { classNames } from "./class-names.js";
 import { controlClassName, useFieldControl } from "./field.js";
 import { Icon } from "./icon.js";
 import { Tooltip } from "./tooltip.js";
+import { useTruncated } from "./truncated-text.js";
 
 export interface SelectOption {
   value: string;
@@ -48,27 +49,35 @@ export function Select({
   ...props
 }: SelectProps) {
   const field = useFieldControl();
+  const selected = options.find((option) => option.value === value);
+  const valueRef = useRef<HTMLSpanElement>(null);
+  const truncated = useTruncated(valueRef, selected?.label ?? "");
+  const trigger = (
+    <SelectPrimitive.Trigger
+      {...field}
+      {...(invalid ? { "aria-invalid": true } : {})}
+      {...(props["aria-label"] ? { "aria-label": props["aria-label"] } : {})}
+      className={classNames(
+        controlClassName,
+        "inline-flex h-control-field items-center justify-between gap-2 overflow-hidden text-left",
+        className,
+      )}
+    >
+      <span ref={valueRef} className="min-w-0 flex-1 truncate">
+        <SelectPrimitive.Value {...(placeholder !== undefined ? { placeholder } : {})} />
+      </span>
+      <SelectPrimitive.Icon>
+        <Icon icon={ChevronDown} className="text-text-muted" />
+      </SelectPrimitive.Icon>
+    </SelectPrimitive.Trigger>
+  );
   return (
     <SelectPrimitive.Root
       {...(value !== undefined ? { value } : {})}
       onValueChange={onValueChange}
       {...(disabled !== undefined ? { disabled } : {})}
     >
-      <SelectPrimitive.Trigger
-        {...field}
-        {...(invalid ? { "aria-invalid": true } : {})}
-        {...(props["aria-label"] ? { "aria-label": props["aria-label"] } : {})}
-        className={classNames(
-          controlClassName,
-          "inline-flex h-control-field items-center justify-between gap-2 text-left",
-          className,
-        )}
-      >
-        <SelectPrimitive.Value {...(placeholder !== undefined ? { placeholder } : {})} />
-        <SelectPrimitive.Icon>
-          <Icon icon={ChevronDown} className="text-text-muted" />
-        </SelectPrimitive.Icon>
-      </SelectPrimitive.Trigger>
+      {truncated && selected ? <Tooltip content={selected.label}>{trigger}</Tooltip> : trigger}
       <SelectPrimitive.Portal>
         <SelectPrimitive.Content
           position="popper"
