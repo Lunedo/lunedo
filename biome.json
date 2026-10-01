@@ -8,7 +8,14 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!**/generated", "!**/pnpm-lock.yaml", "!**/*.svg", "!**/drizzle/meta", "!apps/api/openapi.json"]
+    "includes": [
+      "**",
+      "!**/generated",
+      "!**/pnpm-lock.yaml",
+      "!**/*.svg",
+      "!**/drizzle/meta",
+      "!apps/api/openapi.json"
+    ]
   },
   "formatter": {
     "enabled": true,
