@@ -1,5 +1,6 @@
 import { DiscoveryService, MetadataScanner, Reflector } from "@nestjs/core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { apiControllers } from "../openapi/routes.js";
 import { type AuthTestApp, createAuthTestApp, databaseBaseUrl } from "../testing/auth-app.js";
 import { INTERNAL_ROUTE } from "./route-access.js";
 import { registeredRoutes } from "./route-access.verifier.js";
@@ -36,6 +37,23 @@ describe.skipIf(!databaseBaseUrl)("routes of the complete API", () => {
       }
       expect(reflector.get(INTERNAL_ROUTE, wrapper.metatype), wrapper.metatype.name).toBe(true);
     }
+  });
+
+  it("all appear in the OpenAPI generator with a route declaration", () => {
+    const routes = registeredRoutes(
+      test.app.get(DiscoveryService),
+      test.app.get(MetadataScanner),
+      test.app.get(Reflector),
+    );
+    const apiControllerNames = new Set(
+      routes.filter((route) => route.path.startsWith("/api/")).map((route) => route.controller),
+    );
+    expect([...apiControllerNames].sort()).toEqual(
+      apiControllers()
+        .map((controller) => controller.name)
+        .sort(),
+    );
+    expect(routes.filter((route) => route.path.startsWith("/api/") && !route.definition)).toEqual([]);
   });
 
   it("protect account routes with a session and setup routes with a setup session", async () => {

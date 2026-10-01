@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Inject, Post, Req, Res } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Post, Req, Res } from "@nestjs/common";
 import {
   type AccountServices,
   type AuthenticationResponseJSON,
@@ -12,6 +12,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import type { z } from "zod";
 import { InternalRoute, PublicRoute, SessionRoute } from "../access/route-access.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
+import { ApiRoute } from "../http/api-route.js";
 import {
   COOKIES,
   clearCookie,
@@ -21,13 +22,16 @@ import {
   setPendingCookie,
 } from "../http/cookies.js";
 import { clientOf, sessionOf } from "../http/request.js";
-import { ZodPipe } from "../http/zod.pipe.js";
 import {
   passkeySignInSchema,
   passwordResetRequestSchema,
   passwordResetSchema,
   reauthenticationSchema,
+  requestOptionsSchema,
   secondFactorSchema,
+  sessionInfoSchema,
+  signedInSchema,
+  signInResultSchema,
   signInSchema,
   tokenSchema,
 } from "./schemas.js";
@@ -65,9 +69,16 @@ export class AuthController {
 
   @Post("sign-in")
   @PublicRoute()
-  @HttpCode(200)
+  @ApiRoute({
+    summary: "Sign in with a password",
+    tags: ["Authentication"],
+    status: 200,
+    body: signInSchema,
+    response: { description: "The result.", schema: signInResultSchema },
+    errors: ["invalidCredentials", "locked", "rateLimited", "setupIncomplete"],
+  })
   async signIn(
-    @Body(new ZodPipe(signInSchema)) body: z.output<typeof signInSchema>,
+    @Body() body: z.output<typeof signInSchema>,
     @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
@@ -87,16 +98,29 @@ export class AuthController {
 
   @Post("sign-in/second-factor/passkey-options")
   @PublicRoute()
-  @HttpCode(200)
+  @ApiRoute({
+    summary: "Start the passkey second factor",
+    tags: ["Authentication"],
+    status: 200,
+    response: { description: "Options for the browser.", schema: requestOptionsSchema },
+    errors: ["challengeExpired"],
+  })
   async secondFactorPasskeyOptions(@Req() request: FastifyRequest) {
     return this.#services.signIn.secondFactorPasskeyOptions(this.#pendingToken(request));
   }
 
   @Post("sign-in/second-factor")
   @PublicRoute()
-  @HttpCode(200)
+  @ApiRoute({
+    summary: "Complete the second factor",
+    tags: ["Authentication"],
+    status: 200,
+    body: secondFactorSchema,
+    response: { description: "The session.", schema: signedInSchema },
+    errors: ["challengeExpired", "invalidSecondFactor", "locked", "rateLimited"],
+  })
   async secondFactor(
-    @Body(new ZodPipe(secondFactorSchema)) body: z.output<typeof secondFactorSchema>,
+    @Body() body: z.output<typeof secondFactorSchema>,
     @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
@@ -117,7 +141,13 @@ export class AuthController {
 
   @Post("sign-in/passkey-options")
   @PublicRoute()
-  @HttpCode(200)
+  @ApiRoute({
+    summary: "Start passkey sign-in",
+    tags: ["Authentication"],
+    status: 200,
+    response: { description: "Options for the browser.", schema: requestOptionsSchema },
+    errors: ["instanceUrlMissing", "rateLimited"],
+  })
   async passkeyOptions(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
     const { options, token } = await this.#services.signIn.passkeyOptions(request.ip);
     setPendingCookie(reply, token);
@@ -126,9 +156,16 @@ export class AuthController {
 
   @Post("sign-in/passkey")
   @PublicRoute()
-  @HttpCode(200)
+  @ApiRoute({
+    summary: "Sign in with a passkey",
+    tags: ["Authentication"],
+    status: 200,
+    body: passkeySignInSchema,
+    response: { description: "The session.", schema: signedInSchema },
+    errors: ["challengeExpired", "invalidSecondFactor", "rateLimited"],
+  })
   async passkeySignIn(
-    @Body(new ZodPipe(passkeySignInSchema)) body: z.output<typeof passkeySignInSchema>,
+    @Body() body: z.output<typeof passkeySignInSchema>,
     @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
@@ -145,6 +182,11 @@ export class AuthController {
 
   @Get("session")
   @SessionRoute({ secondFactorSetup: true })
+  @ApiRoute({
+    summary: "Get the current session",
+    tags: ["Authentication"],
+    response: { description: "The session.", schema: sessionInfoSchema },
+  })
   async session(@Req() request: FastifyRequest) {
     const session = sessionOf(request);
     return {
@@ -156,7 +198,7 @@ export class AuthController {
 
   @Post("sign-out")
   @SessionRoute({ secondFactorSetup: true })
-  @HttpCode(204)
+  @ApiRoute({ summary: "Sign out", tags: ["Authentication"] })
   async signOut(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
     const session = sessionOf(request);
     await this.#services.sessions.end(session.accountId, session.id, "signedOut");
@@ -165,16 +207,26 @@ export class AuthController {
 
   @Post("reauthenticate/passkey-options")
   @SessionRoute({ secondFactorSetup: true })
-  @HttpCode(200)
+  @ApiRoute({
+    summary: "Start passkey reauthentication",
+    tags: ["Authentication"],
+    status: 200,
+    response: { description: "Options for the browser.", schema: requestOptionsSchema },
+  })
   async reauthenticationPasskeyOptions(@Req() request: FastifyRequest) {
     return this.#services.signIn.reauthenticationPasskeyOptions(sessionOf(request));
   }
 
   @Post("reauthenticate")
   @SessionRoute({ secondFactorSetup: true })
-  @HttpCode(204)
+  @ApiRoute({
+    summary: "Confirm the identity",
+    tags: ["Authentication"],
+    body: reauthenticationSchema,
+    errors: ["invalidCredentials", "invalidSecondFactor", "challengeExpired", "rateLimited"],
+  })
   async reauthenticate(
-    @Body(new ZodPipe(reauthenticationSchema)) body: z.output<typeof reauthenticationSchema>,
+    @Body() body: z.output<typeof reauthenticationSchema>,
     @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
@@ -188,9 +240,15 @@ export class AuthController {
 
   @Post("password-reset")
   @PublicRoute()
-  @HttpCode(202)
+  @ApiRoute({
+    summary: "Request a password reset",
+    tags: ["Authentication"],
+    status: 202,
+    body: passwordResetRequestSchema,
+    errors: ["rateLimited"],
+  })
   async requestPasswordReset(
-    @Body(new ZodPipe(passwordResetRequestSchema)) body: z.output<typeof passwordResetRequestSchema>,
+    @Body() body: z.output<typeof passwordResetRequestSchema>,
     @Req() request: FastifyRequest,
   ) {
     await this.#services.security.requestPasswordReset(body.email, request.ip);
@@ -198,9 +256,14 @@ export class AuthController {
 
   @Post("password-reset/complete")
   @PublicRoute()
-  @HttpCode(204)
+  @ApiRoute({
+    summary: "Set a new password",
+    tags: ["Authentication"],
+    body: passwordResetSchema,
+    errors: ["invalidToken", "passwordPolicy", "rateLimited"],
+  })
   async completePasswordReset(
-    @Body(new ZodPipe(passwordResetSchema)) body: z.output<typeof passwordResetSchema>,
+    @Body() body: z.output<typeof passwordResetSchema>,
     @Req() request: FastifyRequest,
   ) {
     await this.#services.security.completePasswordReset(body.token, body.password, request.ip);
@@ -208,11 +271,13 @@ export class AuthController {
 
   @Post("email-change/confirm")
   @PublicRoute()
-  @HttpCode(204)
-  async confirmEmailChange(
-    @Body(new ZodPipe(tokenSchema)) body: z.output<typeof tokenSchema>,
-    @Req() request: FastifyRequest,
-  ) {
+  @ApiRoute({
+    summary: "Confirm an e-mail change",
+    tags: ["Authentication"],
+    body: tokenSchema,
+    errors: ["invalidToken", "emailInUse", "rateLimited"],
+  })
+  async confirmEmailChange(@Body() body: z.output<typeof tokenSchema>, @Req() request: FastifyRequest) {
     await this.#services.security.confirmEmailChange(body.token, request.ip);
   }
 

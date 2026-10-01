@@ -51,7 +51,13 @@ export {
   type RegistrationResponseJSON,
   RelyingPartyError,
 } from "./auth/webauthn.js";
-export { type Areas, areasSchema } from "./authorization/areas.js";
+export {
+  type Areas,
+  accessLevels,
+  areasSchema,
+  instanceAreas,
+  organizationAreas,
+} from "./authorization/areas.js";
 export type { Resource } from "./authorization/registry.js";
 export { type Decision, ForbiddenError, type Grant } from "./authorization/service.js";
 export {

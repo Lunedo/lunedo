@@ -14,6 +14,7 @@ import type { LightMyRequestResponse } from "fastify";
 import { apiContextOf } from "../context.js";
 import { CSRF_HEADER } from "../http/csrf.js";
 import { createTestApp } from "./create-test-app.js";
+import { openApiValidator } from "./openapi-validator.js";
 
 export const TEST_ORIGIN = "https://pagehall.test";
 
@@ -41,6 +42,7 @@ export async function createAuthTestApp(
     PAGEHALL_SECRETS_DIR: path.join(dataDir, "secrets"),
     PAGEHALL_FILES_DIR: dataDir,
     PAGEHALL_LOG_LEVEL: "silent",
+    PAGEHALL_DATABASE_POOL_SIZE: "4",
     ...env,
   };
   let runtime: ServerRuntime | undefined;
@@ -101,6 +103,10 @@ export class TestClient {
       },
       ...(body !== undefined ? { payload: body as object } : {}),
     });
+    const mismatches = openApiValidator().check(method, url, response);
+    if (mismatches.length > 0) {
+      throw new Error(["The response does not match the API description:", ...mismatches].join("\n"));
+    }
     const setCookie = response.headers["set-cookie"];
     for (const entry of Array.isArray(setCookie) ? setCookie : setCookie ? [setCookie] : []) {
       const [pair = ""] = entry.split(";");

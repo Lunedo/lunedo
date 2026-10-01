@@ -126,7 +126,7 @@ describe.skipIf(!databaseBaseUrl)("sessions", () => {
   it("records client address, browser and operating system", async () => {
     const account = await createAccount(test, "describe.client@example.org");
     const client = await signedInClient(test, account.email, account.password);
-    const [session] = (await client.get("/api/v1/account/sessions")).json();
+    const [session] = (await client.get("/api/v1/account/sessions")).json().items;
     expect(session).toMatchObject({
       current: true,
       clientIp: "198.51.100.10",
@@ -142,11 +142,11 @@ describe.skipIf(!databaseBaseUrl)("sessions", () => {
     const second = await signedInClient(test, account.email, account.password);
     const third = await signedInClient(test, account.email, account.password);
 
-    const listed = (await main.get("/api/v1/account/sessions")).json();
+    const listed = (await main.get("/api/v1/account/sessions")).json().items;
     expect(listed).toHaveLength(3);
     const secondId = (await second.get("/api/v1/account/sessions"))
       .json()
-      .find((s: { current: boolean }) => s.current).id;
+      .items.find((s: { current: boolean }) => s.current).id;
 
     expect((await main.delete(`/api/v1/account/sessions/${secondId}`)).statusCode).toBe(204);
     expect((await second.get("/api/v1/auth/session")).statusCode).toBe(401);
@@ -154,7 +154,7 @@ describe.skipIf(!databaseBaseUrl)("sessions", () => {
 
     const other = await createAccount(test, "other.owner@example.org");
     const foreign = await signedInClient(test, other.email, other.password);
-    const foreignId = (await foreign.get("/api/v1/account/sessions")).json()[0].id;
+    const foreignId = (await foreign.get("/api/v1/account/sessions")).json().items[0].id;
     expect((await main.delete(`/api/v1/account/sessions/${foreignId}`)).statusCode).toBe(404);
     expect((await foreign.get("/api/v1/auth/session")).statusCode).toBe(200);
 
@@ -530,13 +530,23 @@ describe.skipIf(!databaseBaseUrl)("request validation", () => {
         headers: { ...headers, ...extra },
         payload,
       });
-    expect((await send("{not json")).statusCode).toBe(400);
+    const malformed = await send("{not json");
+    expect(malformed.statusCode).toBe(400);
+    expect(malformed.headers["content-type"]).toContain("application/problem+json");
+    expect(malformed.json()).toEqual({
+      type: "urn:pagehall:problem:invalidInput",
+      title: "The request is not valid",
+      status: 400,
+      code: "invalidInput",
+    });
     const unknownField = await send(JSON.stringify({ email: "a@example.org", password: "b", admin: true }));
     expect(unknownField.statusCode).toBe(400);
     expect(unknownField.json()).toMatchObject({ code: "invalidInput" });
     const longPassword = await send(JSON.stringify({ email: "a@example.org", password: "x".repeat(257) }));
-    expect(longPassword.json()).toMatchObject({ code: "invalidInput", fields: ["password"] });
-    expect((await send("x".repeat(2_000_000))).statusCode).toBe(413);
+    expect(longPassword.json()).toMatchObject({ code: "invalidInput", fields: ["body.password"] });
+    const oversized = await send("x".repeat(2_000_000));
+    expect(oversized.statusCode).toBe(413);
+    expect(oversized.json()).toMatchObject({ type: "urn:pagehall:problem:payloadTooLarge" });
     expect((await send("hello", { "content-type": "text/plain" })).statusCode).toBe(400);
   });
 });

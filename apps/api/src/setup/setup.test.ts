@@ -113,7 +113,7 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
     ).toBe(200);
     const totp = (await post("/api/v1/setup/steps/owner/beginTotp")).json();
     expect(totp.uri).toMatch(/^otpauth:\/\/totp\/Test%20wiki:Owner%40Example\.org\?/);
-    expect((await post("/api/v1/setup/steps/owner/confirmTotp", { code: "000000" })).statusCode).toBe(400);
+    expect((await post("/api/v1/setup/steps/owner/confirmTotp", { code: "000000" })).statusCode).toBe(401);
     const confirmed = await post("/api/v1/setup/steps/owner/confirmTotp", {
       code: TOTP.generate({ secret: Secret.fromBase32(totp.secret) }),
     });
@@ -190,9 +190,10 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
 
   it("answers as if the setup endpoints did not exist afterwards", async () => {
     expect((await get("/api/v1/unknown")).json()).toEqual({
-      message: "Cannot GET /api/v1/unknown",
-      error: "Not Found",
-      statusCode: 404,
+      type: "urn:pagehall:problem:notFound",
+      title: "Not found",
+      status: 404,
+      code: "notFound",
     });
     for (const [method, url] of [
       ["GET", "/api/v1/setup"],
@@ -204,9 +205,10 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
       const response = method === "GET" ? await get(url) : await post(url, { code: "AAAA-AAAA-AAAA-AAAA" });
       expect(response.statusCode, url).toBe(404);
       expect(response.json(), url).toEqual({
-        message: `Cannot ${method} ${url}`,
-        error: "Not Found",
-        statusCode: 404,
+        type: "urn:pagehall:problem:notFound",
+        title: "Not found",
+        status: 404,
+        code: "notFound",
       });
     }
   });

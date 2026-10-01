@@ -1,4 +1,4 @@
-import { Controller, type ExecutionContext, ForbiddenException, Get, Module, Post } from "@nestjs/common";
+import { Controller, type ExecutionContext, Get, Module, Post } from "@nestjs/common";
 import { DiscoveryService, MetadataScanner, Reflector } from "@nestjs/core";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Test } from "@nestjs/testing";
@@ -39,6 +39,18 @@ class UndeclaredController {
 
 @Module({ controllers: [UndeclaredController] })
 class UndeclaredModule {}
+
+@Controller("api/v1/test")
+class UndescribedController {
+  @Get()
+  @PublicRoute()
+  undescribed() {
+    return { reached: true };
+  }
+}
+
+@Module({ controllers: [UndescribedController] })
+class UndescribedModule {}
 
 @Controller("test")
 class ContextController {
@@ -97,6 +109,15 @@ describe("route access declarations", () => {
   });
 });
 
+describe("route declarations", () => {
+  it("are required for API routes to start the API", async () => {
+    const created = await createApp(UndescribedModule);
+    await expect(created.init()).rejects.toThrow(
+      "API routes without a route declaration: GET /api/v1/test (UndescribedController.undescribed)",
+    );
+  });
+});
+
 describe("RouteAccessGuard", () => {
   function executionFor(handler: () => unknown): ExecutionContext {
     return {
@@ -112,9 +133,11 @@ describe("RouteAccessGuard", () => {
   const guard = new RouteAccessGuard(new Reflector(), context);
 
   it("denies a route without a declaration", async () => {
-    await expect(guard.canActivate(executionFor(UndeclaredController.prototype.undeclared))).rejects.toThrow(
-      ForbiddenException,
-    );
+    await expect(
+      guard.canActivate(executionFor(UndeclaredController.prototype.undeclared)),
+    ).rejects.toMatchObject({
+      code: "forbidden",
+    });
   });
 
   it("allows a public route", async () => {

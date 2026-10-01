@@ -1,4 +1,3 @@
-import { BadRequestException, NotFoundException } from "@nestjs/common";
 import type {
   ScopeChain,
   SettingDefinition,
@@ -7,11 +6,17 @@ import type {
   SettingsService,
 } from "@pagehall/server";
 import { z } from "zod";
+import { ProblemException } from "./problems.js";
 
 export const settingUpdateSchema = z
-  .object({ value: z.json().optional(), clear: z.literal(true).optional(), locked: z.boolean().optional() })
+  .object({
+    value: z.json().optional().describe("New value. Its type depends on the setting."),
+    clear: z.literal(true).optional().describe("Remove the value at this level, so the level above applies."),
+    locked: z.boolean().optional().describe("Lock or unlock the setting for the levels below."),
+  })
   .strict()
-  .refine((body) => body.value !== undefined || body.clear || body.locked !== undefined);
+  .refine((body) => body.value !== undefined || body.clear || body.locked !== undefined)
+  .describe("A change to a setting. Send at least one field.");
 
 export type SettingUpdate = z.output<typeof settingUpdateSchema>;
 
@@ -26,10 +31,10 @@ export function definitionFor(
   try {
     definition = registry.get(key);
   } catch {
-    throw new NotFoundException({ statusCode: 404, code: "notFound", message: "The setting does not exist" });
+    throw new ProblemException("notFound", "The setting does not exist");
   }
   if (!definition.levels.includes(level)) {
-    throw new NotFoundException({ statusCode: 404, code: "notFound", message: "The setting does not exist" });
+    throw new ProblemException("notFound", "The setting does not exist");
   }
   return definition;
 }
@@ -66,11 +71,7 @@ export async function updateSetting(
   update: SettingUpdate,
 ): Promise<void> {
   if (MANAGED_ELSEWHERE.has(definition.key)) {
-    throw new BadRequestException({
-      statusCode: 400,
-      code: "settingManagedElsewhere",
-      message: "Change this setting through its own endpoint",
-    });
+    throw new ProblemException("settingManagedElsewhere", "Change this setting through its own endpoint");
   }
   if (update.clear) await settings.clear(definition, chain, level);
   else if (update.value !== undefined) await settings.set(definition, chain, level, update.value);

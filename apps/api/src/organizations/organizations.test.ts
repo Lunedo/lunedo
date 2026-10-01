@@ -60,7 +60,7 @@ describe.skipIf(!databaseBaseUrl)("organizations through the API", () => {
     });
     organizationId = created.json().id;
 
-    const list = (await owner.get("/api/v1/organizations")).json();
+    const list = (await owner.get("/api/v1/organizations")).json().items;
     expect(list.map((entry: { name: string }) => entry.name)).toEqual(["Engineering", "Test organization"]);
 
     expect(
@@ -74,9 +74,10 @@ describe.skipIf(!databaseBaseUrl)("organizations through the API", () => {
     ).toMatchObject({
       code: "domainTaken",
     });
-    expect((await owner.get(`/api/v1/organizations/${organizationId}/domains`)).json()).toEqual([
-      "engineering.example",
-    ]);
+    expect((await owner.get(`/api/v1/organizations/${organizationId}/domains`)).json()).toEqual({
+      items: [{ domain: "engineering.example" }],
+      nextCursor: null,
+    });
     expect(
       (await owner.patch(`/api/v1/organizations/${organizationId}`, { name: "Engineering Team" })).json(),
     ).toMatchObject({
@@ -115,7 +116,9 @@ describe.skipIf(!databaseBaseUrl)("organizations through the API", () => {
     });
     expect(invited.statusCode).toBe(201);
     expect(invited.json()).not.toHaveProperty("token");
-    expect((await owner.get(`/api/v1/organizations/${organizationId}/invitations`)).json()).toHaveLength(1);
+    expect(
+      (await owner.get(`/api/v1/organizations/${organizationId}/invitations`)).json().items,
+    ).toHaveLength(1);
     const mail = await mailTo("new.member@engineering.example");
     expect(mail?.subject).toBe("Olivia Owner hat Sie zu Engineering Team auf Test wiki eingeladen");
 
@@ -127,7 +130,7 @@ describe.skipIf(!databaseBaseUrl)("organizations through the API", () => {
     expect(accepted.json()).toMatchObject({ organizationId, accountCreated: true });
     memberId = accepted.json().accountId;
     memberClient = await signedInClient(test, "new.member@engineering.example", "a member passphrase");
-    const members = (await memberClient.get(`/api/v1/organizations/${organizationId}/members`)).json();
+    const members = (await memberClient.get(`/api/v1/organizations/${organizationId}/members`)).json().items;
     expect(members.map((entry: { name: string }) => entry.name).sort()).toEqual([
       "New Member",
       "Olivia Owner",
@@ -168,7 +171,7 @@ describe.skipIf(!databaseBaseUrl)("organizations through the API", () => {
       expect(response.statusCode, url).toBe(404);
     }
     expect(
-      (await client.get("/api/v1/organizations")).json().map((entry: { id: string }) => entry.id),
+      (await client.get("/api/v1/organizations")).json().items.map((entry: { id: string }) => entry.id),
     ).toEqual([await firstOrganizationId(test)]);
   });
 
@@ -280,7 +283,7 @@ describe.skipIf(!databaseBaseUrl)("organizations through the API", () => {
   });
 
   it("transfers the instance ownership to an instance administrator", async () => {
-    const accounts = (await owner.get("/api/v1/instance/accounts")).json();
+    const accounts = (await owner.get("/api/v1/instance/accounts")).json().items;
     const administrator = accounts.find(
       (account: { email: string }) => account.email === "instance.admin@example.org",
     );

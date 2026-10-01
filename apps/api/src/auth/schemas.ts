@@ -83,3 +83,95 @@ export const passkeyRegistrationSchema = z
   .strict();
 export const idSchema = z.uuid();
 export const emptySchema = z.object({}).strict().optional();
+
+const descriptor = z.object({
+  id: z.string(),
+  type: z.string(),
+  transports: z.array(z.string()).optional(),
+});
+const extensions = z.record(z.string(), z.json());
+
+export const requestOptionsSchema = z.object({
+  challenge: z.string(),
+  timeout: z.number().optional(),
+  rpId: z.string().optional(),
+  allowCredentials: z.array(descriptor).optional(),
+  userVerification: z.string().optional(),
+  hints: z.array(z.string()).optional(),
+  extensions: extensions.optional(),
+});
+
+export const creationOptionsSchema = z.object({
+  rp: z.object({ name: z.string(), id: z.string().optional() }),
+  user: z.object({ id: z.string(), name: z.string(), displayName: z.string() }),
+  challenge: z.string(),
+  pubKeyCredParams: z.array(z.object({ alg: z.number(), type: z.string() })),
+  timeout: z.number().optional(),
+  excludeCredentials: z.array(descriptor).optional(),
+  authenticatorSelection: z
+    .object({
+      authenticatorAttachment: z.string().optional(),
+      requireResidentKey: z.boolean().optional(),
+      residentKey: z.string().optional(),
+      userVerification: z.string().optional(),
+    })
+    .optional(),
+  hints: z.array(z.string()).optional(),
+  attestation: z.string().optional(),
+  attestationFormats: z.array(z.string()).optional(),
+  extensions: extensions.optional(),
+});
+
+const sessionAccount = z.object({ id: z.uuid(), email: z.string().nullable(), name: z.string() }).nullable();
+
+export const signedInSchema = z.object({
+  status: z.literal("signedIn"),
+  sessionKind: z.string(),
+  account: sessionAccount,
+});
+
+export const signInResultSchema = z.union([
+  signedInSchema,
+  z.object({ status: z.literal("secondFactorRequired"), factors: z.array(z.string()) }),
+]);
+
+export const sessionInfoSchema = z.object({
+  sessionKind: z.string(),
+  account: sessionAccount,
+  methods: z.array(z.string()),
+  recentlyAuthenticated: z.boolean(),
+});
+
+const passkeySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  deviceType: z.string(),
+  backedUp: z.boolean(),
+  createdAt: z.iso.datetime(),
+  lastUsedAt: z.iso.datetime().nullable(),
+});
+
+export const securityOverviewSchema = z.object({
+  totp: z.boolean(),
+  passkeys: z.array(passkeySchema),
+  recoveryCodes: z.number().int(),
+  secondFactorRequired: z.boolean(),
+});
+
+export const totpSetupSchema = z.object({ secret: z.string(), uri: z.string() });
+export const recoveryCodesSchema = z.object({ recoveryCodes: z.array(z.string()).nullable() });
+export const passkeyAddedSchema = recoveryCodesSchema.extend({ passkey: passkeySchema });
+
+export const accountSessionSchema = z.object({
+  id: z.uuid(),
+  current: z.boolean(),
+  createdAt: z.iso.datetime(),
+  lastUsedAt: z.iso.datetime(),
+  clientIp: z.string().nullable(),
+  browser: z.string().nullable(),
+  operatingSystem: z.string().nullable(),
+  methods: z.array(z.string()),
+});
+
+export const endedSchema = z.object({ ended: z.number().int() });
+export const idParams = z.object({ id: idSchema }).strict();

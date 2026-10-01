@@ -7,6 +7,8 @@ import { AppModule } from "./app.module.js";
 import type { ApiContext } from "./context.js";
 import { COOKIES, readCookie } from "./http/cookies.js";
 import { changesState, isCsrfSafe, ownOrigin } from "./http/csrf.js";
+import { sendProblem } from "./http/error.filter.js";
+import { bearerToken, carriesCookieCredentials } from "./http/request.js";
 import { NestLogger } from "./nest-logger.js";
 import { registerWebClient } from "./web-client.js";
 
@@ -47,12 +49,18 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
     reply.header("x-request-id", request.id);
   });
   fastify.addHook("onRequest", async (request, reply) => {
+    if (bearerToken(request) !== undefined) {
+      if (readCookie(request, COOKIES.session) !== undefined) {
+        return sendProblem(reply, "ambiguousCredentials", "Send either a session cookie or an API token");
+      }
+      if (!carriesCookieCredentials(request)) return;
+    }
     if (!changesState(request) || isCsrfSafe(request, await allowedOrigins(request, context))) return;
-    await reply.status(403).send({
-      statusCode: 403,
-      code: "csrfRejected",
-      message: "State-changing requests need the X-Pagehall-Request header and a matching Origin",
-    });
+    return sendProblem(
+      reply,
+      "csrfRejected",
+      "State-changing requests need the X-Pagehall-Request header and a matching Origin",
+    );
   });
   fastify.addHook("onResponse", async (request, reply) => {
     const path = request.url.split("?")[0] ?? "";
