@@ -22,7 +22,7 @@ export {
 } from "./crypto/key-provider.js";
 export { KeyRing, KeyRingError, SecretKey } from "./crypto/key-ring.js";
 export { KEY_RING_CHANNEL, KeyRingHolder } from "./crypto/key-ring-holder.js";
-export { KeyRotation, type RotationStatus, rotateDataKeysJob } from "./crypto/rotation.js";
+export { KeyRotation, type RotationStatus, rotateDataKeysJob, rotateMasterKey } from "./crypto/rotation.js";
 export {
   backupStreamKeys,
   createDecryptStream,

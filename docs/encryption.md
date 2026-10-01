@@ -43,7 +43,7 @@ docker compose exec pagehall pagehall keys rotate
 docker compose exec pagehall pagehall keys status
 ```
 
-`rotate` adds a new version to the key ring file, tells all running nodes to reload it, and starts a background job in the worker. New data is encrypted with the new version immediately. Values that still use an older version stay readable until the job has re-wrapped them. `status` shows the current version and the progress of the latest rotation. Remove an old version from the key ring only after the rotation is completed.
+`rotate` adds a new version to the key ring file, tells all running nodes to reload it, and starts a background job in the worker. New data is encrypted with the new version immediately. Values that still use an older version stay readable until the job has re-wrapped them. `status` shows the current version and the progress of the latest rotation. Remove an old version from the key ring only after the rotation is completed. Rotations started at the same time are serialized: each adds its own version, and the background job always re-wraps to the newest one.
 
 With the env provider, add the new version to `PAGEHALL_MASTER_KEYS` (keep the old ones), restart all nodes, and then run `pagehall keys rotate`.
 

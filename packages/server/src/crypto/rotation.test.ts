@@ -14,7 +14,7 @@ import { Encryption } from "./envelope.js";
 import { FileKeyProvider } from "./key-provider.js";
 import { KeyRingError } from "./key-ring.js";
 import { KeyRingHolder } from "./key-ring-holder.js";
-import { KeyRotation, rotateDataKeysJob } from "./rotation.js";
+import { KeyRotation, rotateDataKeysJob, rotateMasterKey } from "./rotation.js";
 
 const databaseUrl = inject("databaseUrl");
 const logger = createLogger({ service: "test", level: "silent" });
@@ -116,6 +116,87 @@ describe.skipIf(!databaseUrl)("key rotation", () => {
     expect(() => holder.ring.get(1)).toThrow(KeyRingError);
     for (const row of await readAll()) {
       expect(encryption.decryptString(row.value, `${table}:${row.id}`)).toBe(values.get(row.id));
+    }
+  });
+});
+
+describe.skipIf(!databaseUrl)("concurrent key rotations", () => {
+  it("end with one consistent key ring and every value stays readable", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "pagehall-rotation-"));
+    const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    const database = createDatabase(pool);
+    const table = `test_secrets_${randomBytes(4).toString("hex")}`;
+    const columns: EncryptedColumn[] = [{ table, idColumn: "id", column: "value" }];
+    const queue = new PgBossQueue({
+      connectionString: databaseUrl,
+      database,
+      logger,
+      role: "worker",
+      pollingIntervalSeconds: 0.5,
+    });
+    try {
+      await database.execute(sql.raw(`create table "${table}" (id uuid primary key, value bytea)`));
+      const keyFile = path.join(dir, "master-keys");
+      const node = () => {
+        const keyRing = new KeyRingHolder(new FileKeyProvider(keyFile), logger);
+        const encryption = new Encryption(() => keyRing.ring);
+        const rotation = new KeyRotation({
+          database,
+          encryption,
+          keyRing,
+          jobs: queue,
+          columns: () => columns,
+        });
+        return { keyRing, encryption, rotation };
+      };
+      const [a, b, worker] = [node(), node(), node()];
+      for (const holder of [a, b, worker]) await holder.keyRing.reload();
+
+      const values = new Map<string, string>();
+      for (let i = 0; i < 50; i++) {
+        const id = uuidv7();
+        values.set(id, `secret ${i}`);
+        await database.execute(
+          sql`insert into ${sql.identifier(table)} (id, value) values (${id}, ${a.encryption.encrypt(`secret ${i}`, id)})`,
+        );
+      }
+      await queue.work(rotateDataKeysJob, worker.rotation.run);
+
+      const started = await Promise.all([
+        rotateMasterKey({ pool, keyRing: a.keyRing, rotation: a.rotation }),
+        rotateMasterKey({ pool, keyRing: b.keyRing, rotation: b.rotation }),
+      ]);
+      expect(started.map((rotation) => rotation.targetVersion).sort()).toEqual([2, 3]);
+
+      const fileVersions = readFileSync(keyFile, "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => line.split(":")[0]);
+      expect(fileVersions).toEqual(["1", "2", "3"]);
+      for (const holder of [a, b, worker]) await holder.keyRing.reload();
+      for (const version of [1, 2, 3]) {
+        expect(a.keyRing.ring.get(version).use().equals(b.keyRing.ring.get(version).use())).toBe(true);
+      }
+
+      await waitFor(async () => {
+        const rows = await database.execute<{ status: string }>(
+          sql`select status from key_rotations where id in (${started[0]?.id}, ${started[1]?.id})`,
+        );
+        return rows.rows.length === 2 && rows.rows.every((row) => row.status === "completed");
+      }, 30_000);
+      expect((await worker.rotation.status()).valuesByVersion).toMatchObject({ 3: 50 });
+
+      const rows = await database.execute<{ id: string; value: Buffer }>(
+        sql`select id, value from ${sql.identifier(table)}`,
+      );
+      for (const row of rows.rows) {
+        expect(b.encryption.decryptString(row.value, row.id)).toBe(values.get(row.id));
+      }
+    } finally {
+      await queue.stop({ timeoutSeconds: 1 });
+      await database.execute(sql.raw(`drop table if exists "${table}"`));
+      await pool.end();
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 });

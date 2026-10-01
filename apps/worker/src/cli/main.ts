@@ -19,6 +19,7 @@ import {
   resolveGeneratedSecrets,
   restoreBackup,
   rotateDataKeysJob,
+  rotateMasterKey,
   verifyBackup,
 } from "@pagehall/server";
 import { type Command, parseCommand, UsageError, usage } from "./parse.js";
@@ -107,11 +108,8 @@ async function run(command: Command): Promise<void> {
           }
           return;
         }
-        if (keyRing.provider.name === "file") await keyRing.provider.addVersion();
-        await keyRing.reload();
-        await keyRing.announce(pool);
         await jobs.register(rotateDataKeysJob);
-        const started = await rotation.start();
+        const started = await rotateMasterKey({ pool, keyRing, rotation });
         write(
           `Key rotation to version ${started.targetVersion} started (${started.id}). The worker re-wraps all data keys.`,
         );

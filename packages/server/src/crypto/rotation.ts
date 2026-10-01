@@ -1,6 +1,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Database } from "../database/database.js";
+import type { DatabasePool } from "../database/pool.js";
 import type { JobContext, JobQueue } from "../jobs/job-queue.js";
 import { defineJob } from "../jobs/job-queue.js";
 import type { EncryptedColumn } from "./encrypted-column.js";
@@ -76,13 +77,15 @@ export class KeyRotation {
 
   /** Job handler; safe to run again after an interruption. */
   readonly run = async (job: JobContext<z.infer<typeof rotateDataKeysJob.payload>>): Promise<void> => {
-    const { rotationId, targetVersion } = job.payload;
+    const { rotationId } = job.payload;
     const ring = await this.#keyRing.reload();
-    if (ring.currentVersion !== targetVersion) {
+    if (ring.currentVersion < job.payload.targetVersion) {
       throw new Error(
-        `This node's current master key version is ${ring.currentVersion}, the rotation targets ${targetVersion}`,
+        `This node's master key ring ends at version ${ring.currentVersion}; the rotation needs version ${job.payload.targetVersion}`,
       );
     }
+    // A newer version may have been added since the rotation started; it is re-wrapped to that one.
+    const targetVersion = ring.currentVersion;
     const total = await this.#countOutdated(targetVersion);
     let done = 0;
     await job.reportProgress(done, total);
@@ -105,7 +108,7 @@ export class KeyRotation {
     if (remaining > 0) throw new Error(`${remaining} values still use an older master key version`);
     await this.#database
       .update(keyRotations)
-      .set({ status: "completed", completedAt: new Date() })
+      .set({ status: "completed", completedAt: new Date(), targetVersion })
       .where(eq(keyRotations.id, rotationId));
     job.logger.info({ targetVersion, rewrapped: done }, "Key rotation completed");
   };
@@ -169,5 +172,33 @@ export class KeyRotation {
       valuesByVersion: await this.#valuesByVersion(),
       latest: latest ?? null,
     };
+  }
+}
+
+const ROTATION_LOCK = "pagehall.key-rotation";
+
+/**
+ * Adds a master key version (where the provider manages keys) and starts the rotation to it.
+ * An advisory lock serializes concurrent calls, and the key ring is read again while it is
+ * held, so two rotations can never write diverging versions.
+ */
+export async function rotateMasterKey(options: {
+  pool: DatabasePool;
+  keyRing: KeyRingHolder;
+  rotation: KeyRotation;
+}): Promise<{ id: string; targetVersion: number }> {
+  const client = await options.pool.connect();
+  try {
+    await client.query("select pg_advisory_lock(hashtext($1))", [ROTATION_LOCK]);
+    try {
+      if (options.keyRing.provider.name === "file") await options.keyRing.provider.addVersion();
+      await options.keyRing.reload();
+      await options.keyRing.announce(client);
+      return await options.rotation.start();
+    } finally {
+      await client.query("select pg_advisory_unlock(hashtext($1))", [ROTATION_LOCK]);
+    }
+  } finally {
+    client.release();
   }
 }
