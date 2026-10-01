@@ -36,11 +36,19 @@ class IncompleteController {
   create() {}
 }
 
+@Controller("api/v1/json")
+class JsonController {
+  @Post()
+  @PublicRoute()
+  @ApiRoute({ summary: "Store any JSON", tags: ["Demo"], body: z.json() })
+  store() {}
+}
+
 describe("the OpenAPI description", () => {
   const document = generateOpenApi();
 
-  it("is committed in its current form", () => {
-    const expected = serializeOpenApi(document);
+  it("is committed in its current form, with the internal routes", () => {
+    const expected = serializeOpenApi(generateOpenApi({ includeInternal: true }));
     const actual = readFileSync(committed, "utf8").replaceAll("\r\n", "\n");
     expect(actual === expected, "openapi.json is outdated; run `pnpm --filter @pagehall/api openapi`").toBe(
       true,
@@ -63,6 +71,28 @@ describe("the OpenAPI description", () => {
     expect(operations).not.toContain("POST /api/v1/auth/sign-in");
     expect(operations).not.toContain("POST /api/v1/account/tokens");
     expect(Object.keys(document.paths).every((path) => path.startsWith("/api/v1/"))).toBe(true);
+  });
+
+  it("marks internal routes so that their changes are not reported as breaking", () => {
+    const full = generateOpenApi({ includeInternal: true });
+    const signIn = full.paths["/api/v1/auth/sign-in"]?.post;
+    expect(signIn?.["x-pagehall-internal"]).toBe(true);
+    expect(signIn?.["x-stability-level"]).toBe("alpha");
+    const members = full.paths["/api/v1/organizations/{organizationId}/members"]?.get;
+    expect(members?.["x-pagehall-internal"]).toBeUndefined();
+    expect(members?.["x-stability-level"]).toBeUndefined();
+    expect(full.tags.map((tag) => tag.name)).toEqual(document.tags.map((tag) => tag.name));
+  });
+
+  it("moves a recursive root schema into a component instead of pointing at the document", () => {
+    const json = generateOpenApi({ routes: routesOf(JsonController) });
+    const serialized = JSON.stringify(json);
+    expect(serialized).not.toContain('"$ref":"#"');
+    const body = json.paths["/api/v1/json"]?.post?.requestBody?.content["application/json"]?.schema;
+    const reference = String(body?.$ref);
+    expect(reference).toMatch(/^#\/components\/schemas\/Schema[0-9a-f]{12}$/);
+    const component = json.components.schemas[reference.split("/").at(-1) ?? ""];
+    expect(JSON.stringify(component)).toContain(reference);
   });
 
   it("names the required permission of each route", () => {
