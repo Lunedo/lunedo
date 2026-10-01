@@ -20,9 +20,12 @@ import { jobProgress } from "./schema.js";
 
 const SCHEMA = "pgboss";
 
+/** The job payload and the context of the request that enqueued it, for logs and audit events. */
 interface StoredData {
   payload: unknown;
   requestId?: string;
+  clientIp?: string;
+  userAgent?: string;
 }
 
 type JobRow = {
@@ -123,8 +126,10 @@ export class PgBossQueue implements JobQueue {
   ): Promise<string> {
     await this.register(definition);
     const data: StoredData = { payload: definition.payload.parse(payload) };
-    const requestId = currentRequestContext()?.requestId;
-    if (requestId) data.requestId = requestId;
+    const request = currentRequestContext();
+    if (request?.requestId) data.requestId = request.requestId;
+    if (request?.clientIp) data.clientIp = request.clientIp;
+    if (request?.userAgent) data.userAgent = request.userAgent;
     const singletonKey = options.idempotencyKey
       ? `${IDEMPOTENCY_PREFIX}${options.idempotencyKey}`
       : `${UNIQUE_PREFIX}${randomUUID()}`;
@@ -196,34 +201,38 @@ export class PgBossQueue implements JobQueue {
     const requestId = job.data.requestId ?? job.id;
     const started = performance.now();
     const logger = this.#options.logger.child({ job: definition.name, jobId: job.id });
-    await runWithRequestContext({ requestId }, async () => {
-      const controller = new AbortController();
-      const abort = () => controller.abort(job.signal.reason);
-      job.signal.addEventListener("abort", abort, { once: true });
-      try {
-        const payload = definition.payload.parse(job.data.payload);
-        const context: JobContext<TPayload> = {
-          id: job.id,
-          name: definition.name,
-          payload,
-          retryCount: job.retryCount,
-          signal: controller.signal,
-          logger,
-          reportProgress: async (done, total, message) => {
-            await this.#saveProgress(definition.name, job.id, done, total, message);
-            if ((await this.#state(job.id)) === "cancelled") controller.abort(new Error("Job cancelled"));
-          },
-        };
-        await handler(context);
-        this.#finished(definition.name, "completed", started);
-      } catch (error) {
-        logger.warn({ err: error, retryCount: job.retryCount }, "Job attempt failed");
-        this.#finished(definition.name, "failed", started);
-        throw error;
-      } finally {
-        job.signal.removeEventListener("abort", abort);
-      }
-    });
+    const { clientIp, userAgent } = job.data;
+    await runWithRequestContext(
+      { requestId, ...(clientIp ? { clientIp } : {}), ...(userAgent ? { userAgent } : {}) },
+      async () => {
+        const controller = new AbortController();
+        const abort = () => controller.abort(job.signal.reason);
+        job.signal.addEventListener("abort", abort, { once: true });
+        try {
+          const payload = definition.payload.parse(job.data.payload);
+          const context: JobContext<TPayload> = {
+            id: job.id,
+            name: definition.name,
+            payload,
+            retryCount: job.retryCount,
+            signal: controller.signal,
+            logger,
+            reportProgress: async (done, total, message) => {
+              await this.#saveProgress(definition.name, job.id, done, total, message);
+              if ((await this.#state(job.id)) === "cancelled") controller.abort(new Error("Job cancelled"));
+            },
+          };
+          await handler(context);
+          this.#finished(definition.name, "completed", started);
+        } catch (error) {
+          logger.warn({ err: error, retryCount: job.retryCount }, "Job attempt failed");
+          this.#finished(definition.name, "failed", started);
+          throw error;
+        } finally {
+          job.signal.removeEventListener("abort", abort);
+        }
+      },
+    );
   }
 
   #finished(name: string, state: "completed" | "failed", started: number) {
