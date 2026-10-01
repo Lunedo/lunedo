@@ -25564,6 +25564,31 @@
                                               "error"
                                             ]
                                           },
+                                          "cause": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string",
+                                                "enum": [
+                                                  "unreachable",
+                                                  "migrationsPending"
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "fixCommand": {
+                                            "description": "A shell command that fixes the cause, when one exists.",
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "docs": {
+                                            "type": "string",
+                                            "description": "Documentation page and anchor that explains the check, relative to docs/."
+                                          },
                                           "version": {
                                             "type": [
                                               "string",
@@ -25576,6 +25601,9 @@
                                         },
                                         "required": [
                                           "status",
+                                          "cause",
+                                          "fixCommand",
+                                          "docs",
                                           "version",
                                           "migrationsUpToDate"
                                         ],
@@ -25592,16 +25620,48 @@
                                               "error"
                                             ]
                                           },
+                                          "cause": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string",
+                                                "enum": [
+                                                  "offset",
+                                                  "unknown"
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "fixCommand": {
+                                            "description": "A shell command that fixes the cause, when one exists.",
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "docs": {
+                                            "type": "string",
+                                            "description": "Documentation page and anchor that explains the check, relative to docs/."
+                                          },
                                           "offsetMs": {
                                             "type": [
                                               "number",
                                               "null"
                                             ]
+                                          },
+                                          "toleranceMs": {
+                                            "type": "number"
                                           }
                                         },
                                         "required": [
                                           "status",
-                                          "offsetMs"
+                                          "cause",
+                                          "fixCommand",
+                                          "docs",
+                                          "offsetMs",
+                                          "toleranceMs"
                                         ],
                                         "additionalProperties": false
                                       },
@@ -25616,6 +25676,38 @@
                                               "error"
                                             ]
                                           },
+                                          "cause": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string",
+                                                "enum": [
+                                                  "missing",
+                                                  "notWritable",
+                                                  "lowSpace"
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "fixCommand": {
+                                            "description": "A shell command that fixes the cause, when one exists.",
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "docs": {
+                                            "type": "string",
+                                            "description": "Documentation page and anchor that explains the check, relative to docs/."
+                                          },
+                                          "path": {
+                                            "type": "string"
+                                          },
+                                          "exists": {
+                                            "type": "boolean"
+                                          },
                                           "writable": {
                                             "type": "boolean"
                                           },
@@ -25624,12 +25716,73 @@
                                               "number",
                                               "null"
                                             ]
+                                          },
+                                          "minimumFreeBytes": {
+                                            "type": "number"
+                                          },
+                                          "processUid": {
+                                            "anyOf": [
+                                              {
+                                                "type": "integer",
+                                                "minimum": -9007199254740991,
+                                                "maximum": 9007199254740991
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "processGid": {
+                                            "anyOf": [
+                                              {
+                                                "type": "integer",
+                                                "minimum": -9007199254740991,
+                                                "maximum": 9007199254740991
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "ownerUid": {
+                                            "anyOf": [
+                                              {
+                                                "type": "integer",
+                                                "minimum": -9007199254740991,
+                                                "maximum": 9007199254740991
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "ownerGid": {
+                                            "anyOf": [
+                                              {
+                                                "type": "integer",
+                                                "minimum": -9007199254740991,
+                                                "maximum": 9007199254740991
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
                                           }
                                         },
                                         "required": [
                                           "status",
+                                          "cause",
+                                          "fixCommand",
+                                          "docs",
+                                          "path",
+                                          "exists",
                                           "writable",
-                                          "freeBytes"
+                                          "freeBytes",
+                                          "minimumFreeBytes",
+                                          "processUid",
+                                          "processGid",
+                                          "ownerUid",
+                                          "ownerGid"
                                         ],
                                         "additionalProperties": false
                                       },
@@ -25644,12 +25797,39 @@
                                               "error"
                                             ]
                                           },
+                                          "cause": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string",
+                                                "enum": [
+                                                  "notSet"
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "fixCommand": {
+                                            "description": "A shell command that fixes the cause, when one exists.",
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "docs": {
+                                            "type": "string",
+                                            "description": "Documentation page and anchor that explains the check, relative to docs/."
+                                          },
                                           "configured": {
                                             "type": "boolean"
                                           }
                                         },
                                         "required": [
                                           "status",
+                                          "cause",
+                                          "fixCommand",
+                                          "docs",
                                           "configured"
                                         ],
                                         "additionalProperties": false
@@ -25665,6 +25845,31 @@
                                               "error"
                                             ]
                                           },
+                                          "cause": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string",
+                                                "enum": [
+                                                  "instanceUrlNotHttps",
+                                                  "requestNotHttps"
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "fixCommand": {
+                                            "description": "A shell command that fixes the cause, when one exists.",
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "docs": {
+                                            "type": "string",
+                                            "description": "Documentation page and anchor that explains the check, relative to docs/."
+                                          },
                                           "instanceUrl": {
                                             "type": "boolean"
                                           },
@@ -25674,6 +25879,9 @@
                                         },
                                         "required": [
                                           "status",
+                                          "cause",
+                                          "fixCommand",
+                                          "docs",
                                           "instanceUrl",
                                           "request"
                                         ],

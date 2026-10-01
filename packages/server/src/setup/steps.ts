@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { statfs, unlink, writeFile } from "node:fs/promises";
+import { stat, statfs, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { setupStepSchemas } from "@pagehall/shared";
 import { eq } from "drizzle-orm";
@@ -30,6 +30,126 @@ const LOW_DISK_BYTES = 1024 ** 3;
 
 type CheckStatus = "ok" | "warning" | "error";
 
+interface CheckHelp {
+  status: CheckStatus;
+  cause: string | null;
+  fixCommand: string | null;
+  docs: string;
+}
+
+async function checkDatabaseAndClock(
+  pool: DatabasePool,
+): Promise<[CheckHelp & Record<string, unknown>, CheckHelp & Record<string, unknown>]> {
+  try {
+    const [row] = (
+      await pool.query<{ version: string; now: Date }>(
+        "select current_setting('server_version') as version, now() as now",
+      )
+    ).rows;
+    const migrations = await migrationStatus(pool);
+    const offsetMs = row ? Math.abs(new Date(row.now).getTime() - Date.now()) : null;
+    const clockOk = offsetMs !== null && offsetMs <= CLOCK_TOLERANCE_MS;
+    return [
+      {
+        status: migrations.upToDate ? "ok" : "error",
+        cause: migrations.upToDate ? null : "migrationsPending",
+        fixCommand: null,
+        docs: "setup.md#database",
+        version: row?.version ?? null,
+        migrationsUpToDate: migrations.upToDate,
+      },
+      {
+        status: clockOk ? "ok" : "warning",
+        cause: clockOk ? null : offsetMs === null ? "unknown" : "offset",
+        fixCommand: null,
+        docs: "setup.md#clock",
+        offsetMs,
+        toleranceMs: CLOCK_TOLERANCE_MS,
+      },
+    ];
+  } catch {
+    return [
+      {
+        status: "error",
+        cause: "unreachable",
+        fixCommand: null,
+        docs: "setup.md#database",
+        version: null,
+        migrationsUpToDate: false,
+      },
+      {
+        status: "warning",
+        cause: "unknown",
+        fixCommand: null,
+        docs: "setup.md#clock",
+        offsetMs: null,
+        toleranceMs: CLOCK_TOLERANCE_MS,
+      },
+    ];
+  }
+}
+
+export async function checkFileStorage(directory: string): Promise<CheckHelp & Record<string, unknown>> {
+  const processUid = process.getuid?.() ?? null;
+  const processGid = process.getgid?.() ?? null;
+  const owner = processUid !== null && processGid !== null ? `${processUid}:${processGid}` : null;
+  const facts = {
+    docs: "setup.md#file-storage",
+    path: directory,
+    minimumFreeBytes: LOW_DISK_BYTES,
+    processUid,
+    processGid,
+  };
+  const info = await stat(directory).catch(() => null);
+  if (!info?.isDirectory()) {
+    return {
+      status: "error",
+      cause: "missing",
+      fixCommand: owner
+        ? `mkdir -p ${shellQuote(directory)} && chown ${owner} ${shellQuote(directory)}`
+        : `mkdir -p ${shellQuote(directory)}`,
+      ...facts,
+      exists: false,
+      writable: false,
+      freeBytes: null,
+      ownerUid: null,
+      ownerGid: null,
+    };
+  }
+  const ownership = { exists: true, ownerUid: info.uid, ownerGid: info.gid };
+  try {
+    const probe = path.join(directory, `.setup-check-${randomUUID()}`);
+    await writeFile(probe, "");
+    await unlink(probe);
+  } catch {
+    return {
+      status: "error",
+      cause: "notWritable",
+      fixCommand: owner ? `chown -R ${owner} ${shellQuote(directory)}` : null,
+      ...facts,
+      ...ownership,
+      writable: false,
+      freeBytes: null,
+    };
+  }
+  const stats = await statfs(directory);
+  const freeBytes = stats.bavail * stats.bsize;
+  const low = freeBytes < LOW_DISK_BYTES;
+  return {
+    status: low ? "warning" : "ok",
+    cause: low ? "lowSpace" : null,
+    fixCommand: null,
+    ...facts,
+    ...ownership,
+    writable: true,
+    freeBytes,
+  };
+}
+
+function shellQuote(value: string): string {
+  return /^[\w./-]+$/.test(value) ? value : `'${value.replaceAll("'", `'\\''`)}'`;
+}
+
 export interface SetupStepDependencies {
   organizations: OrganizationService;
   database: Database;
@@ -52,54 +172,32 @@ export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
     order: 10,
     required: true,
     async describe({ request }) {
-      const checks: Record<string, { status: CheckStatus } & Record<string, unknown>> = {};
-
-      try {
-        const [row] = (
-          await deps.pool.query<{ version: string; now: Date }>(
-            "select current_setting('server_version') as version, now() as now",
-          )
-        ).rows;
-        const migrations = await migrationStatus(deps.pool);
-        checks.database = {
-          status: migrations.upToDate ? "ok" : "error",
-          version: row?.version ?? null,
-          migrationsUpToDate: migrations.upToDate,
-        };
-        const offsetMs = row ? Math.abs(new Date(row.now).getTime() - Date.now()) : null;
-        checks.clock = {
-          status: offsetMs !== null && offsetMs <= CLOCK_TOLERANCE_MS ? "ok" : "warning",
-          offsetMs,
-        };
-      } catch {
-        checks.database = { status: "error", version: null, migrationsUpToDate: false };
-        checks.clock = { status: "warning", offsetMs: null };
-      }
-
-      try {
-        const probe = path.join(deps.filesDir, `.setup-check-${randomUUID()}`);
-        await writeFile(probe, "");
-        await unlink(probe);
-        const stats = await statfs(deps.filesDir);
-        const freeBytes = stats.bavail * stats.bsize;
-        checks.fileStorage = {
-          status: freeBytes < LOW_DISK_BYTES ? "warning" : "ok",
-          writable: true,
-          freeBytes,
-        };
-      } catch {
-        checks.fileStorage = { status: "error", writable: false, freeBytes: null };
-      }
-
+      const [database, clock] = await checkDatabaseAndClock(deps.pool);
       const url = await deps.settings.get(instanceUrlSetting, {});
-      checks.instanceUrl = { status: url ? "ok" : "warning", configured: url !== "" };
-      const https = url.startsWith("https:") && request.protocol === "https";
-      checks.https = {
-        status: https ? "ok" : "warning",
-        instanceUrl: url.startsWith("https:"),
-        request: request.protocol === "https",
+      const httpsUrl = url.startsWith("https:");
+      const httpsRequest = request.protocol === "https";
+      return {
+        checks: {
+          database,
+          clock,
+          fileStorage: await checkFileStorage(deps.filesDir),
+          instanceUrl: {
+            status: url ? "ok" : "warning",
+            cause: url ? null : "notSet",
+            fixCommand: null,
+            docs: "setup.md#instance-url",
+            configured: url !== "",
+          },
+          https: {
+            status: httpsUrl && httpsRequest ? "ok" : "warning",
+            cause: !httpsUrl ? "instanceUrlNotHttps" : httpsRequest ? null : "requestNotHttps",
+            fixCommand: null,
+            docs: "setup.md#https",
+            instanceUrl: httpsUrl,
+            request: httpsRequest,
+          },
+        },
       };
-      return { checks };
     },
     actions: {
       acknowledge: defineSetupAction({

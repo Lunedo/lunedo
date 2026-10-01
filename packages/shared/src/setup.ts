@@ -16,6 +16,11 @@ import {
 
 const empty = z.object({}).strict();
 const checkStatus = z.enum(["ok", "warning", "error"]);
+const checkHelp = {
+  cause: z.string().nullable().describe("Why the check did not pass, as a stable code. Null when it passed."),
+  fixCommand: z.string().nullable().describe("A shell command that fixes the cause, when one exists."),
+  docs: z.string().describe("Documentation page and anchor that explains the check, relative to docs/."),
+};
 
 export const setupOrganizationSchema = z.object({
   id: z.uuid(),
@@ -43,17 +48,45 @@ export const setupStepSchemas = {
       checks: z.object({
         database: z.object({
           status: checkStatus,
+          ...checkHelp,
+          cause: z.enum(["unreachable", "migrationsPending"]).nullable(),
           version: z.string().nullable(),
           migrationsUpToDate: z.boolean(),
         }),
-        clock: z.object({ status: checkStatus, offsetMs: z.number().nullable() }),
+        clock: z.object({
+          status: checkStatus,
+          ...checkHelp,
+          cause: z.enum(["offset", "unknown"]).nullable(),
+          offsetMs: z.number().nullable(),
+          toleranceMs: z.number(),
+        }),
         fileStorage: z.object({
           status: checkStatus,
+          ...checkHelp,
+          cause: z.enum(["missing", "notWritable", "lowSpace"]).nullable(),
+          path: z.string(),
+          exists: z.boolean(),
           writable: z.boolean(),
           freeBytes: z.number().nullable(),
+          minimumFreeBytes: z.number(),
+          processUid: z.number().int().nullable(),
+          processGid: z.number().int().nullable(),
+          ownerUid: z.number().int().nullable(),
+          ownerGid: z.number().int().nullable(),
         }),
-        instanceUrl: z.object({ status: checkStatus, configured: z.boolean() }),
-        https: z.object({ status: checkStatus, instanceUrl: z.boolean(), request: z.boolean() }),
+        instanceUrl: z.object({
+          status: checkStatus,
+          ...checkHelp,
+          cause: z.enum(["notSet"]).nullable(),
+          configured: z.boolean(),
+        }),
+        https: z.object({
+          status: checkStatus,
+          ...checkHelp,
+          cause: z.enum(["instanceUrlNotHttps", "requestNotHttps"]).nullable(),
+          instanceUrl: z.boolean(),
+          request: z.boolean(),
+        }),
       }),
     }),
     actions: { acknowledge: { input: empty, result: empty } },

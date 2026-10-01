@@ -33,6 +33,34 @@ Steps are registered by the modules; the assistant shows them in order:
 
 The setup state is stored in the database, so all nodes agree on it.
 
+## System check
+
+Every `GET /api/v1/setup/steps` runs all checks again. Each check reports a `status` (`ok`, `warning` or `error`), a `cause` code when it did not pass, a `fixCommand` when a shell command fixes the cause, and `docs`, the section below that explains it. Errors block the setup; warnings do not.
+
+### Database
+
+`unreachable`: the database did not answer. Check `PAGEHALL_DATABASE_URL` and that PostgreSQL runs. `migrationsPending`: the schema is older than this version of Pagehall. Restart the API; it applies migrations at start.
+
+### Clock
+
+`offset`: the clocks of Pagehall and the database differ by more than `toleranceMs` (5 seconds). Time-based codes and session expiry depend on matching clocks; synchronize both hosts with NTP. `unknown`: the database could not be asked for its time.
+
+### File storage
+
+The check writes and removes a file in `PAGEHALL_FILES_DIR` and reports the `path`, whether it `exists`, the user and group Pagehall runs as (`processUid`, `processGid`) and the owner of the directory (`ownerUid`, `ownerGid`).
+
+- `missing`: the directory does not exist. Create it and give it to the user Pagehall runs as, for example `mkdir -p /var/lib/pagehall/files && chown 1000:1000 /var/lib/pagehall/files`.
+- `notWritable`: the user Pagehall runs as cannot write to it, usually because a mounted volume belongs to another user. Change the owner, for example `chown -R 1000:1000 /var/lib/pagehall/files`, on the host for a bind mount or with `docker compose exec -u root pagehall` for a volume.
+- `lowSpace`: less than 1 GiB is free.
+
+### Instance URL
+
+`notSet`: the address of the instance is not stored yet. The instance step sets it; `PAGEHALL_INSTANCE_URL` prefills it.
+
+### HTTPS
+
+`instanceUrlNotHttps`: the instance URL does not start with `https:`. `requestNotHttps`: the request reached Pagehall without TLS, or a reverse proxy is not listed in `PAGEHALL_TRUSTED_PROXIES` and its `X-Forwarded-Proto` header is ignored. Run Pagehall behind a reverse proxy with TLS before inviting people.
+
 ## Endpoints
 
 All endpoints are internal. After setup they answer `404` like routes that do not exist.
