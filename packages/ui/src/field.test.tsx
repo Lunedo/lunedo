@@ -80,4 +80,39 @@ describe("Checkbox and Switch", () => {
     await userEvent.keyboard(" ");
     expect(toggle.getAttribute("aria-checked")).toBe("true");
   });
+
+  it("keeps a switch with a reason focusable, explains it and ignores changes", async () => {
+    const changes: boolean[] = [];
+    renderUi(
+      <Switch
+        checked={false}
+        onCheckedChange={(next) => changes.push(next)}
+        label="Two-factor authentication"
+        disabled
+        disabledReason="Locked by the instance"
+      />,
+    );
+    const toggle = screen.getByRole("switch", { name: "Two-factor authentication" });
+    expect(toggle.hasAttribute("disabled")).toBe(false);
+    expect(toggle.getAttribute("aria-disabled")).toBe("true");
+    expect(toggle.hasAttribute("data-disabled")).toBe(true);
+    const described = document.getElementById(toggle.getAttribute("aria-describedby") ?? "");
+    expect(described?.textContent).toBe("Locked by the instance");
+    await userEvent.tab();
+    expect(document.activeElement).toBe(toggle);
+    expect((await screen.findAllByText("Locked by the instance")).length).toBeGreaterThan(1);
+    await userEvent.keyboard(" ");
+    await userEvent.click(toggle);
+    expect(changes).toEqual([]);
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("disables a switch without a reason natively and marks the off state with a visible border", () => {
+    renderUi(<Switch checked={false} onCheckedChange={() => {}} label="Locked" disabled />);
+    const toggle = screen.getByRole("switch", { name: "Locked" });
+    expect(toggle.hasAttribute("disabled")).toBe(true);
+    expect(toggle.className).toContain("border-control-border");
+    expect(toggle.className).toContain("data-disabled:opacity-50");
+    expect(toggle.className).toContain("data-disabled:cursor-not-allowed");
+  });
 });

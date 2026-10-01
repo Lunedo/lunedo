@@ -11,6 +11,7 @@ import { type ReactNode, useId } from "react";
 import { classNames } from "./class-names.js";
 import { controlClassName, useFieldControl } from "./field.js";
 import { Icon } from "./icon.js";
+import { Tooltip } from "./tooltip.js";
 
 export interface SelectOption {
   value: string;
@@ -165,24 +166,43 @@ export interface SwitchProps {
   label: string;
   labelHidden?: boolean;
   disabled?: boolean;
+  disabledReason?: string;
 }
 
-export function Switch({ checked, onCheckedChange, label, labelHidden = false, disabled }: SwitchProps) {
+export function Switch({
+  checked,
+  onCheckedChange,
+  label,
+  labelHidden = false,
+  disabled = false,
+  disabledReason,
+}: SwitchProps) {
   const id = useId();
+  const reasonId = `${id}-reason`;
+  const explained = disabled && disabledReason !== undefined;
+  const root = (
+    <SwitchPrimitive.Root
+      id={id}
+      checked={checked}
+      onCheckedChange={explained ? () => {} : onCheckedChange}
+      {...(disabled && !explained ? { disabled: true } : {})}
+      {...(explained ? { "aria-disabled": true, "aria-describedby": reasonId, "data-disabled": "" } : {})}
+      {...(labelHidden ? { "aria-label": label } : {})}
+      className="group relative inline-flex h-5 w-10 shrink-0 items-center rounded-full border border-control-border bg-surface px-1 transition-colors focus-visible:focus-ring aria-checked:border-accent aria-checked:bg-accent data-disabled:cursor-not-allowed data-disabled:border-dashed data-disabled:opacity-50 motion-reduce:transition-none"
+    >
+      <SwitchPrimitive.Thumb className="block size-3 rounded-full bg-control-border transition-transform group-aria-checked:translate-x-5 group-aria-checked:bg-on-accent motion-reduce:transition-none" />
+    </SwitchPrimitive.Root>
+  );
   return (
     <div className="inline-flex items-center gap-2">
-      <SwitchPrimitive.Root
-        id={id}
-        checked={checked}
-        onCheckedChange={onCheckedChange}
-        {...(disabled !== undefined ? { disabled } : {})}
-        {...(labelHidden ? { "aria-label": label } : {})}
-        className="group relative inline-flex h-5 w-10 shrink-0 items-center rounded-full bg-border px-1 transition-colors focus-visible:focus-ring disabled:cursor-not-allowed disabled:opacity-60 aria-checked:bg-accent motion-reduce:transition-none"
-      >
-        <SwitchPrimitive.Thumb className="block size-3 rounded-full bg-surface transition-transform group-aria-checked:translate-x-5 motion-reduce:transition-none" />
-      </SwitchPrimitive.Root>
+      {explained ? <Tooltip content={disabledReason}>{root}</Tooltip> : root}
+      {explained && (
+        <span id={reasonId} hidden>
+          {disabledReason}
+        </span>
+      )}
       {!labelHidden && (
-        <label htmlFor={id} className="text-text">
+        <label htmlFor={id} className={classNames("text-text", disabled && "text-text-muted")}>
           {label}
         </label>
       )}

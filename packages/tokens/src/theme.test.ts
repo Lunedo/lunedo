@@ -56,6 +56,15 @@ describe("design tokens", () => {
     }
   });
 
+  it("give control boundaries at least 3:1 contrast against every surface", () => {
+    for (const set of colorSets) {
+      const colors = tokens.color[set];
+      for (const surface of [colors.bg, colors.surface, colors.sidebar, colors.surfaceSunken, colors.hover]) {
+        expect(contrast(colors.controlBorder, surface), set).toBeGreaterThanOrEqual(3);
+      }
+    }
+  });
+
   it("offer accent colors that work as text and behind text in both modes", () => {
     for (const key of accentKeys) {
       for (const mode of ["light", "dark"] as const) {
