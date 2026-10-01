@@ -1,22 +1,25 @@
 import { type DynamicModule, Global, Module } from "@nestjs/common";
-import type { Logger } from "@pagehall/shared/node";
-import { API_CONFIG, type ApiConfig } from "./config.js";
-import { DatabaseModule } from "./database/database.module.js";
+import { APP_GUARD, DiscoveryModule } from "@nestjs/core";
+import { RouteAccessGuard } from "./access/route-access.guard.js";
+import { RouteAccessVerifier } from "./access/route-access.verifier.js";
+import { API_CONTEXT, type ApiContext } from "./context.js";
 import { HealthModule } from "./health/health.module.js";
-import { APP_LOGGER } from "./logger.js";
+import { MetricsController } from "./metrics/metrics.controller.js";
 
 @Global()
 @Module({})
 export class AppModule {
-  static forRoot(config: ApiConfig, logger: Logger): DynamicModule {
+  static forRoot(context: ApiContext): DynamicModule {
     return {
       module: AppModule,
-      imports: [DatabaseModule, HealthModule],
+      imports: [DiscoveryModule, HealthModule],
+      controllers: [MetricsController],
       providers: [
-        { provide: API_CONFIG, useValue: config },
-        { provide: APP_LOGGER, useValue: logger },
+        { provide: API_CONTEXT, useValue: context },
+        { provide: APP_GUARD, useClass: RouteAccessGuard },
+        RouteAccessVerifier,
       ],
-      exports: [API_CONFIG, APP_LOGGER],
+      exports: [API_CONTEXT],
     };
   }
 }

@@ -9,11 +9,6 @@
       "@pagehall/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    },
-    "./node": {
-      "@pagehall/source": "./src/node/index.ts",
-      "types": "./dist/node/index.d.ts",
-      "default": "./dist/node/index.js"
     }
   },
   "scripts": {
@@ -21,10 +16,6 @@
     "dev": "pagehall-dev",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
-  },
-  "dependencies": {
-    "pg": "^8.23.0",
-    "pino": "^10.3.1"
   },
   "devDependencies": {
     "@pagehall/config": "workspace:*",

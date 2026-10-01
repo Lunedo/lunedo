@@ -13,10 +13,7 @@ beforeAll(async () => {
   mkdirSync(path.join(webRoot, "assets"));
   writeFileSync(path.join(webRoot, "index.html"), "<!doctype html><title>Pagehall</title>");
   writeFileSync(path.join(webRoot, "assets", "app-1234.js"), "console.log(1)");
-  app = await createTestApp({
-    config: { webRoot },
-    pool: { query: async () => ({}), end: async () => {} } as never,
-  });
+  app = await createTestApp({ webRoot });
 });
 
 afterAll(async () => {

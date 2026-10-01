@@ -31,8 +31,23 @@ LABEL org.opencontainers.image.title="Pagehall" \
       org.opencontainers.image.description="Self-hosted wiki, knowledge base and project planning tool" \
       org.opencontainers.image.licenses="AGPL-3.0-only" \
       org.opencontainers.image.version="${VERSION}"
+# PostgreSQL clients for backups. pg_dump must be at least as new as the server,
+# so every supported major version is installed and the matching one is chosen at runtime.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && install -d /usr/share/postgresql-common/pgdg \
+    && curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+    && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends postgresql-client-16 postgresql-client-17 postgresql-client-18 \
+    && apt-get purge -y curl \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production \
+    PAGEHALL_VERSION=${VERSION} \
     PAGEHALL_WEB_ROOT=/app/web
+RUN install -d -o node -g node -m 700 /var/lib/pagehall /var/lib/pagehall/files /var/lib/pagehall/secrets \
+    /var/lib/pagehall/backups
 WORKDIR /app
 COPY --from=build --chown=root:root /out/api ./api
 COPY --from=build --chown=root:root /out/collab ./collab
@@ -40,6 +55,7 @@ COPY --from=build --chown=root:root /out/worker ./worker
 COPY --from=build --chown=root:root /repo/apps/web/dist ./web
 COPY --chmod=755 docker/start.sh /usr/local/bin/pagehall
 USER node
+VOLUME /var/lib/pagehall
 EXPOSE 3000 3001 3002
 ENTRYPOINT ["pagehall"]
 CMD ["all"]

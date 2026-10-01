@@ -1,30 +1,41 @@
 import {
   ConfigError,
-  createDatabasePool,
   createLogger,
-  readServiceConfig,
+  createServerRuntime,
   registerShutdown,
-  type ServiceConfig,
-} from "@pagehall/shared/node";
-import { createWorker } from "./worker.js";
+  StartupError,
+} from "@pagehall/server";
+import { createOperationsServer } from "./worker.js";
 
-let config: ServiceConfig;
+let runtime: Awaited<ReturnType<typeof createServerRuntime>>;
 try {
-  config = readServiceConfig(process.env, "PAGEHALL_WORKER_PORT", 3002);
+  runtime = await createServerRuntime({ role: "worker", env: process.env });
 } catch (error) {
-  if (!(error instanceof ConfigError)) throw error;
+  if (!(error instanceof ConfigError) && !(error instanceof StartupError)) throw error;
   createLogger({ service: "worker", level: "info" }).fatal(error.message);
-  process.exit(1);
+  process.exit(error instanceof ConfigError ? 78 : 1);
 }
 
-const logger = createLogger({ service: "worker", level: config.logLevel });
-const pool = createDatabasePool({ connectionString: config.databaseUrl, applicationName: "pagehall-worker" });
-const worker = createWorker({ config, logger, pool });
+const { config, logger } = runtime;
+const server = createOperationsServer({
+  host: config.host,
+  port: config.ports.worker,
+  endpoints: {
+    ready: runtime.readiness,
+    logger,
+    metrics: runtime.metrics,
+    metricsToken: runtime.metricsToken.reveal(),
+  },
+});
 
-const address = await worker.start();
+const address = await server.start();
 logger.info({ port: address.port }, "Worker listening");
 
-registerShutdown(logger, async () => {
-  await worker.stop();
-  await pool.end();
-});
+registerShutdown(
+  logger,
+  async () => {
+    await server.stop();
+    await runtime.close();
+  },
+  { timeoutSeconds: config.shutdownTimeoutSeconds },
+);

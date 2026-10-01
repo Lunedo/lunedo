@@ -1,5 +1,5 @@
 import type { LoggerService } from "@nestjs/common";
-import type { Logger } from "@pagehall/shared/node";
+import type { Logger } from "@pagehall/server";
 
 /** Routes NestJS framework logs into the structured application logger. */
 export class NestLogger implements LoggerService {
