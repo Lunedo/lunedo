@@ -105,6 +105,12 @@ describe("loadConfig", () => {
     );
     expect(message).not.toContain("hidden");
     expectConfigError(
+      () => loadConfig({ PAGEHALL_DATABASE_URL: databaseUrl, PAGEHALL_SETUP_CODE: "ab cd ef gh ij k" }),
+      "PAGEHALL_SETUP_CODE: must have at least 12 characters",
+    );
+    const counted = loadConfig({ PAGEHALL_DATABASE_URL: databaseUrl, PAGEHALL_SETUP_CODE: "ssss-ssss-ssss" });
+    expect(counted.setupCode?.reveal()).toBe("ssss-ssss-ssss");
+    expectConfigError(
       () => loadConfig({ PAGEHALL_DATABASE_URL: databaseUrl, PAGEHALL_SETUP_CODE: "x".repeat(65) }),
       "PAGEHALL_SETUP_CODE: must have at most 64 characters",
     );

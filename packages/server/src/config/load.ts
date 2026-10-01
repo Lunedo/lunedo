@@ -204,7 +204,7 @@ const SETUP_CODE_MAX_LENGTH = 64;
 
 function checkSetupCode(code: string | undefined, problems: string[]): void {
   if (code === undefined) return;
-  if (code.replace(/[s-]/g, "").length < SETUP_CODE_MIN_LENGTH) {
+  if (code.replace(/[\s-]/g, "").length < SETUP_CODE_MIN_LENGTH) {
     problems.push(
       `PAGEHALL_SETUP_CODE: must have at least ${SETUP_CODE_MIN_LENGTH} characters, not counting spaces and hyphens`,
     );
