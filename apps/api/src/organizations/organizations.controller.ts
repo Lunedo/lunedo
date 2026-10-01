@@ -89,7 +89,9 @@ const createSchema = z
     timeZone: timeZoneSchema
       .optional()
       .describe("Default IANA time zone. The instance default when left out."),
-    ownerAccountId: uuid("Account that becomes owner. The caller when left out.").optional(),
+    ownerAccountId: uuid(
+      "Account that becomes owner. The caller when left out. Naming another account needs the permission `instance.organizations.manage`.",
+    ).optional(),
   })
   .strict()
   .describe("A new organization.");
@@ -283,6 +285,11 @@ export class OrganizationsController {
   })
   async create(@Body() body: z.output<typeof createSchema>, @Req() request: FastifyRequest) {
     const actor = actorOf(request);
+    if (body.ownerAccountId !== undefined && body.ownerAccountId !== actor.id) {
+      await this.#services.authorization.require(actor, "instance.organizations.manage", {
+        type: "instance",
+      });
+    }
     const created = await this.#services.organizations.createAsActor(actor, {
       ...body,
       ownerAccountId: body.ownerAccountId ?? actor.id,
