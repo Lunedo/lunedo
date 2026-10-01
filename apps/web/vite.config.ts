@@ -15,7 +15,7 @@ export default defineConfig({
     strictPort: true,
     watch: polling ? { usePolling: true, interval: 300 } : undefined,
     proxy: {
-      "/api": process.env.PAGEHALL_DEV_API_URL ?? "http://localhost:3000",
+      "/api": { target: process.env.PAGEHALL_DEV_API_URL ?? "http://localhost:3000", changeOrigin: false },
     },
   },
   preview: {
