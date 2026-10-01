@@ -126,7 +126,7 @@ export function accentDeclarations(tokens: DesignTokens, key: PaletteKey, mode: 
     [`--${PREFIX}-color-on-accent`, tokens.color[mode].onAccent],
     [`--${PREFIX}-color-accent-soft`, `color-mix(in oklab, ${color} 9%, ${variable("bg")})`],
     [`--${PREFIX}-color-selected`, `color-mix(in oklab, ${color} 14%, ${variable("bg")})`],
-    [`--${PREFIX}-color-selected-text`, mode === "light" ? hover : variable("text")],
+    [`--${PREFIX}-color-selected-text`, hover],
   ];
 }
 

@@ -158,6 +158,8 @@ describe("SegmentedControl and Slider", () => {
     renderUi(<ChoiceProbe />);
     expect(screen.getByRole("radiogroup", { name: "Color mode" })).toBeDefined();
     await userEvent.click(screen.getByRole("radio", { name: "Dark" }));
+    expect(screen.getByRole("radio", { name: "Dark" }).className).toContain("aria-checked:bg-accent");
+    expect(screen.getByRole("radio", { name: "Dark" }).className).toContain("aria-checked:text-on-accent");
     const thumb = screen.getByRole("slider", { name: "Text size" });
     expect(thumb.getAttribute("aria-valuetext")).toBe("100 %");
     thumb.focus();

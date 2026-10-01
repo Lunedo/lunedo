@@ -75,7 +75,7 @@ export function SidebarItem({
     current ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover",
     className,
   );
-  const glyph = icon && <Icon icon={icon} className={current ? "text-selected-text" : "text-text-muted"} />;
+  const glyph = icon && <Icon icon={icon} className={current ? "text-accent" : "text-text-muted"} />;
   const text =
     typeof label === "string" ? (
       <TruncatedText text={label} className="flex-1" />

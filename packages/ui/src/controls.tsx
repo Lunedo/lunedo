@@ -294,7 +294,7 @@ export function SegmentedControl({ value, onValueChange, options, label }: Segme
         <ToggleGroupPrimitive.Item
           key={option.value}
           value={option.value}
-          className="h-control-sm rounded-sm px-3 font-medium text-text-muted focus-visible:focus-ring aria-checked:bg-surface aria-checked:text-text aria-checked:shadow-card"
+          className="h-control-sm rounded-sm px-3 font-medium text-text-muted hover:bg-hover hover:text-text focus-visible:focus-ring aria-checked:bg-accent aria-checked:text-on-accent aria-checked:hover:bg-accent-hover"
         >
           {option.label}
         </ToggleGroupPrimitive.Item>

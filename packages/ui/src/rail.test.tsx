@@ -67,7 +67,10 @@ describe("Sidebar", () => {
     );
     expect(screen.getByRole("navigation", { name: "Settings" })).toBeDefined();
     expect(screen.getByRole("list", { name: "My account" })).toBeDefined();
-    expect(screen.getByRole("link", { name: "Preferences" }).getAttribute("aria-current")).toBe("page");
+    const current = screen.getByRole("link", { name: "Preferences" });
+    expect(current.getAttribute("aria-current")).toBe("page");
+    expect(current.className).toContain("text-selected-text");
+    expect(current.querySelector("svg")?.getAttribute("class")).toContain("text-accent");
     expect(screen.getByRole("link", { name: "Security" }).getAttribute("href")).toBe("/settings/security");
   });
 

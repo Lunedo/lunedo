@@ -23,6 +23,57 @@ function contrast(left: string, right: string): number {
 
 const colorSets = ["light", "dark", "highContrastLight", "highContrastDark"] as const;
 
+type Triple = [number, number, number];
+
+function toLinear(hex: string): Triple {
+  return [1, 3, 5].map((start) => {
+    const value = Number.parseInt(hex.slice(start, start + 2), 16) / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  }) as Triple;
+}
+
+function toHex(linear: Triple): string {
+  return `#${linear
+    .map((value) => {
+      const clamped = Math.min(1, Math.max(0, value));
+      const encoded = clamped <= 0.0031308 ? clamped * 12.92 : 1.055 * clamped ** (1 / 2.4) - 0.055;
+      return Math.round(encoded * 255)
+        .toString(16)
+        .padStart(2, "0");
+    })
+    .join("")}`;
+}
+
+function linearToOklab([r, g, b]: Triple): Triple {
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
+}
+
+function oklabToLinear([lightness, a, b]: Triple): Triple {
+  const l = (lightness + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (lightness - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (lightness - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  return [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+  ];
+}
+
+function mixOklab(first: string, second: string, share: number): string {
+  const left = linearToOklab(toLinear(first));
+  const right = linearToOklab(toLinear(second));
+  return toHex(
+    oklabToLinear(left.map((value, index) => value * share + (right[index] ?? 0) * (1 - share)) as Triple),
+  );
+}
+
 describe("design tokens", () => {
   it("define the same color keys in every set and mode", () => {
     for (const set of colorSets) {
@@ -61,6 +112,29 @@ describe("design tokens", () => {
       const colors = tokens.color[set];
       for (const surface of [colors.bg, colors.surface, colors.sidebar, colors.surfaceSunken, colors.hover]) {
         expect(contrast(colors.controlBorder, surface), set).toBeGreaterThanOrEqual(3);
+      }
+    }
+  });
+
+  it("keep the selected item readable and marked with the accent in every set", () => {
+    for (const set of colorSets) {
+      const colors = tokens.color[set];
+      expect(contrast(colors.selectedText, colors.selected), set).toBeGreaterThanOrEqual(4.5);
+      expect(colors.selectedText, set).not.toBe(colors.text);
+    }
+  });
+
+  it("keep derived accent colors readable for every palette color", () => {
+    for (const key of accentKeys) {
+      for (const mode of ["light", "dark"] as const) {
+        const accent = tokens.color.palette[mode][key];
+        const colors = tokens.color[mode];
+        const selected = mixOklab(accent, colors.bg, 0.14);
+        const selectedText = mixOklab(accent, colors.text, 0.82);
+        expect(contrast(selectedText, selected), `${key} ${mode} selected`).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(colors.onAccent, accent), `${key} ${mode} on accent`).toBeGreaterThanOrEqual(4.5);
+        const soft = mixOklab(accent, colors.bg, 0.09);
+        expect(contrast(accent, soft), `${key} ${mode} icon on soft`).toBeGreaterThanOrEqual(3);
       }
     }
   });
