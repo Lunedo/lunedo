@@ -13,6 +13,12 @@ export { ConfigError, type Env, loadConfig, type ServerConfig } from "./config/l
 export { Secret } from "./config/secret.js";
 export { secretsEqual } from "./crypto/constant-time.js";
 export { type EncryptedColumn, encrypted, encryptedColumns } from "./crypto/encrypted-column.js";
+export {
+  type EncryptedStream,
+  type EncryptedStreamContext,
+  type EncryptedStreamOwner,
+  encryptedStreamOwners,
+} from "./crypto/encrypted-stream.js";
 export { DecryptionError, Encryption } from "./crypto/envelope.js";
 export {
   createKeyProvider,
@@ -22,13 +28,17 @@ export {
 } from "./crypto/key-provider.js";
 export { KeyRing, KeyRingError, SecretKey } from "./crypto/key-ring.js";
 export { KEY_RING_CHANNEL, KeyRingHolder } from "./crypto/key-ring-holder.js";
+export { type EncryptedStreams, masterKeyVersionsInUse } from "./crypto/key-usage.js";
 export { KeyRotation, type RotationStatus, rotateDataKeysJob, rotateMasterKey } from "./crypto/rotation.js";
 export {
   backupStreamKeys,
   createDecryptStream,
   createEncryptStream,
   masterStreamKeys,
+  rewrapStreamHeader,
+  STREAM_HEADER_LENGTH,
   type StreamKeys,
+  streamMasterKeyVersion,
 } from "./crypto/stream.js";
 export { primaryId, timestamps } from "./database/columns.js";
 export { createDatabase, type Database } from "./database/database.js";

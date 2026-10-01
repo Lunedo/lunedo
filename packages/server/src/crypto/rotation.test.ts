@@ -1,7 +1,19 @@
 import { randomBytes } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  createWriteStream,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { open } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { Readable } from "node:stream";
+import { buffer } from "node:stream/consumers";
+import { pipeline } from "node:stream/promises";
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
@@ -10,11 +22,18 @@ import { createDatabasePool, type DatabasePool } from "../database/pool.js";
 import { PgBossQueue } from "../jobs/pg-boss-queue.js";
 import { createLogger } from "../logging/logger.js";
 import type { EncryptedColumn } from "./encrypted-column.js";
+import type { EncryptedStreamOwner } from "./encrypted-stream.js";
 import { Encryption } from "./envelope.js";
 import { FileKeyProvider } from "./key-provider.js";
 import { KeyRingError } from "./key-ring.js";
 import { KeyRingHolder } from "./key-ring-holder.js";
 import { KeyRotation, rotateDataKeysJob, rotateMasterKey } from "./rotation.js";
+import {
+  createDecryptStream,
+  createEncryptStream,
+  masterStreamKeys,
+  STREAM_HEADER_LENGTH,
+} from "./stream.js";
 
 const databaseUrl = inject("databaseUrl");
 const logger = createLogger({ service: "test", level: "silent" });
@@ -195,6 +214,99 @@ describe.skipIf(!databaseUrl)("concurrent key rotations", () => {
     } finally {
       await queue.stop({ timeoutSeconds: 1 });
       await database.execute(sql.raw(`drop table if exists "${table}"`));
+      await pool.end();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe.skipIf(!databaseUrl)("key rotation of streams", () => {
+  it("re-wraps registered streams and completes only when they are done", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "pagehall-stream-rotation-"));
+    const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    const database = createDatabase(pool);
+    const queue = new PgBossQueue({
+      connectionString: databaseUrl,
+      database,
+      logger,
+      role: "worker",
+      pollingIntervalSeconds: 0.5,
+    });
+    try {
+      const keyFile = path.join(dir, "master-keys");
+      const keyRing = new KeyRingHolder(new FileKeyProvider(keyFile), logger);
+      await keyRing.reload();
+      const streamsDir = path.join(dir, "streams");
+      mkdirSync(streamsDir);
+
+      const contents = new Map<string, Buffer>();
+      for (let i = 0; i < 5; i++) {
+        const data = randomBytes(1000 + i);
+        const file = path.join(streamsDir, `stream-${i}`);
+        await pipeline(
+          Readable.from([data]),
+          createEncryptStream(masterStreamKeys(() => keyRing.ring)),
+          createWriteStream(file),
+        );
+        contents.set(file, data);
+      }
+
+      const owner: EncryptedStreamOwner = {
+        name: "test-files",
+        async *streams() {
+          for (const name of readdirSync(streamsDir)) {
+            const file = path.join(streamsDir, name);
+            yield {
+              id: name,
+              readHeader: async () => readFileSync(file).subarray(0, STREAM_HEADER_LENGTH),
+              writeHeader: async (header: Buffer) => {
+                const handle = await open(file, "r+");
+                try {
+                  await handle.write(header, 0, header.length, 0);
+                } finally {
+                  await handle.close();
+                }
+              },
+            };
+          }
+        },
+      };
+      const rotation = new KeyRotation({
+        database,
+        encryption: new Encryption(() => keyRing.ring),
+        keyRing,
+        jobs: queue,
+        columns: () => [],
+        streams: { owners: () => [owner], context: { database, filesDir: dir } },
+      });
+      await queue.work(rotateDataKeysJob, rotation.run);
+      expect((await rotation.status()).valuesByVersion).toEqual({ 1: 5 });
+
+      const started = await rotateMasterKey({ pool, keyRing, rotation });
+      await waitFor(async () => {
+        const rows = await database.execute<{ status: string }>(
+          sql`select status from key_rotations where id = ${started.id}`,
+        );
+        return rows.rows[0]?.status === "completed";
+      });
+      expect((await rotation.status()).valuesByVersion).toEqual({ 2: 5 });
+
+      writeFileSync(
+        keyFile,
+        readFileSync(keyFile, "utf8")
+          .split("\n")
+          .filter((line) => !line.startsWith("1:"))
+          .join("\n"),
+      );
+      await keyRing.reload();
+      for (const [file, data] of contents) {
+        const decrypted = await buffer(
+          Readable.from([readFileSync(file)]).pipe(createDecryptStream(masterStreamKeys(() => keyRing.ring))),
+        );
+        expect(decrypted.equals(data)).toBe(true);
+      }
+    } finally {
+      await queue.stop({ timeoutSeconds: 1 });
       await pool.end();
       rmSync(dir, { recursive: true, force: true });
     }

@@ -23,14 +23,21 @@ import { KEY_LENGTH, type KeyRing, KeyRingError, type SecretKey } from "./key-ri
  *     ciphertext and tag
  *
  * Each chunk is encrypted with the data key; its nonce is prefix, chunk counter (uint32)
- * and final flag, and it authenticates the caller's associated data followed by the whole
- * header. Reordering, dropping, truncating or appending chunks fails authentication, and so
- * does any change to the associated data, such as an unencrypted file header.
+ * and final flag. It authenticates the caller's associated data, header bytes 0-4 and header
+ * bytes 73-83. Reordering, dropping, truncating or appending chunks fails authentication, and
+ * so does any change to the associated data, such as an unencrypted file header.
+ *
+ * Bytes 5-72 (key ID and wrapped data key) have a fixed size and are authenticated by the
+ * wrap itself, so key rotation can re-wrap the data key in place without touching the chunks.
+ * Replacing them with another stream's wrapped key yields a different data key, which fails
+ * authentication of every chunk.
  */
 const MAGIC = Buffer.from("PHS");
 const FORMAT_VERSION = 1;
 const HEADER_LENGTH = 84;
 const WRAP_AAD_LENGTH = 13;
+const WRAP_END = 73;
+export const STREAM_HEADER_LENGTH = HEADER_LENGTH;
 const IV_LENGTH = 12;
 const TAG_LENGTH = 16;
 const NONCE_PREFIX_LENGTH = 7;
@@ -106,6 +113,66 @@ export function backupStreamKeys(ring: KeyRing): StreamKeys {
   };
 }
 
+function chunkAad(associatedData: Buffer, head: Buffer): Buffer {
+  return Buffer.concat([associatedData, head.subarray(0, 5), head.subarray(WRAP_END, HEADER_LENGTH)]);
+}
+
+function kindOf(head: Buffer): StreamKeyKind {
+  if (head.length < HEADER_LENGTH || !head.subarray(0, 3).equals(MAGIC) || head[3] !== FORMAT_VERSION) {
+    throw new DecryptionError();
+  }
+  if (head[4] === 1) return "master";
+  if (head[4] === 2) return "backup";
+  throw new DecryptionError();
+}
+
+function unwrapDataKey(head: Buffer, key: SecretKey): Buffer {
+  try {
+    const decipher = createDecipheriv("aes-256-gcm", key.use(), head.subarray(13, 25));
+    decipher.setAAD(head.subarray(0, WRAP_AAD_LENGTH));
+    decipher.setAuthTag(head.subarray(57, WRAP_END));
+    return Buffer.concat([decipher.update(head.subarray(25, 57)), decipher.final()]);
+  } catch {
+    throw new DecryptionError();
+  }
+}
+
+/** Writes key kind, key ID and the data key wrapped with `key` into bytes 4-72 of a header. */
+function wrapDataKey(head: Buffer, dataKey: Buffer, { kind, id, key }: StreamKey): void {
+  head[4] = KIND_CODES[kind];
+  id.copy(head, 5, 0, 8);
+  const wrapIv = randomBytes(IV_LENGTH);
+  const cipher = createCipheriv("aes-256-gcm", key.use(), wrapIv);
+  cipher.setAAD(head.subarray(0, WRAP_AAD_LENGTH));
+  const wrapped = Buffer.concat([cipher.update(dataKey), cipher.final()]);
+  wrapIv.copy(head, 13);
+  wrapped.copy(head, 25);
+  cipher.getAuthTag().copy(head, 57);
+}
+
+/** Master key version that protects a stream, or undefined for streams under a backup key. */
+export function streamMasterKeyVersion(head: Buffer): number | undefined {
+  return kindOf(head) === "master" ? head.readUInt32BE(9) : undefined;
+}
+
+/**
+ * Re-wraps the data key of a stream header with the current key of `keys`. Returns a new
+ * header of the same length; the encrypted chunks stay valid.
+ */
+export function rewrapStreamHeader(head: Buffer, keys: StreamKeys): Buffer {
+  const kind = kindOf(head);
+  const dataKey = unwrapDataKey(head, keys.resolve(kind, head.subarray(5, 13)));
+  try {
+    const current = keys.current();
+    if (current.kind !== kind) throw new KeyRingError("Re-wrapping cannot change the key kind of a stream");
+    const rewrapped = Buffer.from(head.subarray(0, HEADER_LENGTH));
+    wrapDataKey(rewrapped, dataKey, current);
+    return rewrapped;
+  } finally {
+    dataKey.fill(0);
+  }
+}
+
 function nonce(prefix: Buffer, counter: number, final: boolean): Buffer {
   const bytes = Buffer.alloc(IV_LENGTH);
   prefix.copy(bytes, 0);
@@ -130,7 +197,7 @@ class EncryptStream extends Transform {
     if (!Number.isInteger(chunkSize) || chunkSize < 1 || chunkSize > MAX_CHUNK_SIZE) {
       throw new RangeError("Invalid chunk size");
     }
-    const { kind, id, key } = keys.current();
+    const current = keys.current();
     this.#chunkSize = chunkSize;
     this.#dataKey = randomBytes(KEY_LENGTH);
     this.#prefix = randomBytes(NONCE_PREFIX_LENGTH);
@@ -138,19 +205,11 @@ class EncryptStream extends Transform {
     const head = Buffer.alloc(HEADER_LENGTH);
     MAGIC.copy(head, 0);
     head[3] = FORMAT_VERSION;
-    head[4] = KIND_CODES[kind];
-    id.copy(head, 5, 0, 8);
-    const wrapIv = randomBytes(IV_LENGTH);
-    const cipher = createCipheriv("aes-256-gcm", key.use(), wrapIv);
-    cipher.setAAD(head.subarray(0, WRAP_AAD_LENGTH));
-    const wrapped = Buffer.concat([cipher.update(this.#dataKey), cipher.final()]);
-    wrapIv.copy(head, 13);
-    wrapped.copy(head, 25);
-    cipher.getAuthTag().copy(head, 57);
-    this.#prefix.copy(head, 73);
+    wrapDataKey(head, this.#dataKey, current);
+    this.#prefix.copy(head, WRAP_END);
     head.writeUInt32BE(chunkSize, 80);
     this.#header = head;
-    this.#aad = Buffer.concat([associatedData, head]);
+    this.#aad = chunkAad(associatedData, head);
   }
 
   #sendHeader() {
@@ -224,23 +283,13 @@ class DecryptStream extends Transform {
     if (this.#buffer.length < HEADER_LENGTH) return false;
     const head = Buffer.from(this.#buffer.subarray(0, HEADER_LENGTH));
     this.#buffer = this.#buffer.subarray(HEADER_LENGTH);
-    if (!head.subarray(0, 3).equals(MAGIC) || head[3] !== FORMAT_VERSION) throw new DecryptionError();
-    const kind = head[4] === 1 ? "master" : head[4] === 2 ? "backup" : undefined;
-    if (!kind) throw new DecryptionError();
-    const key = this.#keys.resolve(kind, head.subarray(5, 13));
-    try {
-      const decipher = createDecipheriv("aes-256-gcm", key.use(), head.subarray(13, 25));
-      decipher.setAAD(head.subarray(0, WRAP_AAD_LENGTH));
-      decipher.setAuthTag(head.subarray(57, 73));
-      this.#dataKey = Buffer.concat([decipher.update(head.subarray(25, 57)), decipher.final()]);
-    } catch {
-      throw new DecryptionError();
-    }
-    this.#prefix = head.subarray(73, 80);
+    const kind = kindOf(head);
+    this.#dataKey = unwrapDataKey(head, this.#keys.resolve(kind, head.subarray(5, 13)));
+    this.#prefix = head.subarray(WRAP_END, 80);
     this.#chunkSize = head.readUInt32BE(80);
     if (this.#chunkSize < 1 || this.#chunkSize > MAX_CHUNK_SIZE) throw new DecryptionError();
     this.#header = head;
-    this.#aad = Buffer.concat([this.#associatedData, head]);
+    this.#aad = chunkAad(this.#associatedData, head);
     return true;
   }
 

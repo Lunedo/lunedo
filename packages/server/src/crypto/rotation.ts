@@ -7,7 +7,9 @@ import { defineJob } from "../jobs/job-queue.js";
 import type { EncryptedColumn } from "./encrypted-column.js";
 import type { Encryption } from "./envelope.js";
 import type { KeyRingHolder } from "./key-ring-holder.js";
+import { type EncryptedStreams, masterKeyVersionsInUse } from "./key-usage.js";
 import { keyRotations } from "./schema.js";
+import { masterStreamKeys, rewrapStreamHeader, streamMasterKeyVersion } from "./stream.js";
 
 export const rotateDataKeysJob = defineJob({
   name: "encryption.rotate-data-keys",
@@ -21,7 +23,7 @@ const BATCH_SIZE = 200;
 
 export interface RotationStatus {
   currentVersion: number;
-  /** Encrypted values per master key version, over all registered columns. */
+  /** Encrypted values per master key version, over all registered columns and streams. */
   valuesByVersion: Record<number, number>;
   latest: { id: string; targetVersion: number; status: "running" | "completed"; rewrapped: number } | null;
 }
@@ -34,8 +36,9 @@ function versionBytes(version: number): Buffer {
 
 /**
  * Key rotation: after a new master key version is added, a background job
- * re-wraps the data key of every encrypted value with it. The encrypted data itself is
- * not touched. Values stay readable with their old version until they are re-wrapped.
+ * re-wraps the data key of every encrypted value and every registered stream with it. The
+ * encrypted data itself is not touched. Values stay readable with their old version until
+ * they are re-wrapped; the rotation completes only when nothing uses an older version.
  */
 export class KeyRotation {
   readonly #database: Database;
@@ -43,6 +46,7 @@ export class KeyRotation {
   readonly #keyRing: KeyRingHolder;
   readonly #jobs: JobQueue;
   readonly #columns: () => readonly EncryptedColumn[];
+  readonly #streams: EncryptedStreams | undefined;
 
   constructor(options: {
     database: Database;
@@ -50,12 +54,14 @@ export class KeyRotation {
     keyRing: KeyRingHolder;
     jobs: JobQueue;
     columns: () => readonly EncryptedColumn[];
+    streams?: EncryptedStreams;
   }) {
     this.#database = options.database;
     this.#encryption = options.encryption;
     this.#keyRing = options.keyRing;
     this.#jobs = options.jobs;
     this.#columns = options.columns;
+    this.#streams = options.streams;
   }
 
   /** Starts re-wrapping for the current key version; returns the running rotation if there is one. */
@@ -104,6 +110,24 @@ export class KeyRotation {
       }
     }
 
+    const keys = masterStreamKeys(() => ring);
+    const streams = this.#streams;
+    for (const owner of streams?.owners() ?? []) {
+      for await (const stream of owner.streams((streams as EncryptedStreams).context)) {
+        if (job.signal.aborted) throw new Error("Key rotation interrupted");
+        const header = await stream.readHeader();
+        const version = streamMasterKeyVersion(header);
+        if (version === undefined || version === targetVersion) continue;
+        await stream.writeHeader(rewrapStreamHeader(header, keys));
+        done += 1;
+        await this.#database
+          .update(keyRotations)
+          .set({ rewrapped: sql`${keyRotations.rewrapped} + 1` })
+          .where(eq(keyRotations.id, rotationId));
+        await job.reportProgress(done, Math.max(total, done));
+      }
+    }
+
     const remaining = await this.#countOutdated(targetVersion);
     if (remaining > 0) throw new Error(`${remaining} values still use an older master key version`);
     await this.#database
@@ -140,20 +164,12 @@ export class KeyRotation {
     return count;
   }
 
-  async #valuesByVersion(): Promise<Record<number, number>> {
-    const counts: Record<number, number> = {};
-    for (const column of this.#columns()) {
-      const value = sql.identifier(column.column);
-      const result = await this.#database.execute<{ version: Buffer; count: string }>(
-        sql`select substring(${value} from 5 for 4) as version, count(*) as count
-            from ${sql.identifier(column.table)} where ${value} is not null group by 1`,
-      );
-      for (const row of result.rows) {
-        const version = row.version.readUInt32BE(0);
-        counts[version] = (counts[version] ?? 0) + Number(row.count);
-      }
-    }
-    return counts;
+  #valuesByVersion(): Promise<Record<number, number>> {
+    return masterKeyVersionsInUse({
+      database: this.#database,
+      columns: this.#columns(),
+      streams: this.#streams,
+    });
   }
 
   async status(): Promise<RotationStatus> {

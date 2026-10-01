@@ -10,7 +10,10 @@ import {
   createDecryptStream,
   createEncryptStream,
   masterStreamKeys,
+  rewrapStreamHeader,
+  STREAM_HEADER_LENGTH,
   type StreamKeys,
+  streamMasterKeyVersion,
 } from "./stream.js";
 
 const HEADER = 84;
@@ -190,5 +193,80 @@ describe("associated data", () => {
     expect(await roundTrip(Buffer.from("header"), Buffer.from("header"))).toHaveLength(100);
     await expect(roundTrip(Buffer.from("header"), Buffer.from("headex"))).rejects.toThrow(DecryptionError);
     await expect(roundTrip(Buffer.from("header"), Buffer.alloc(0))).rejects.toThrow(DecryptionError);
+  });
+});
+
+describe("rewrapStreamHeader", () => {
+  const key1 = randomBytes(32);
+  const key2 = randomBytes(32);
+  const before = parseKeyRing(formatKeyEntry(1, key1));
+  const after = parseKeyRing(`${formatKeyEntry(1, key1)}\n${formatKeyEntry(2, key2)}`);
+  const onlyNew = parseKeyRing(formatKeyEntry(2, key2));
+
+  async function encryptWith(ring: typeof before, data: Buffer) {
+    return buffer(
+      Readable.from([data]).pipe(
+        createEncryptStream(
+          masterStreamKeys(() => ring),
+          { chunkSize: 16 },
+        ),
+      ),
+    );
+  }
+
+  it("moves a stream to the current key version without touching its chunks", async () => {
+    const data = randomBytes(100);
+    const ciphertext = await encryptWith(before, data);
+    expect(streamMasterKeyVersion(ciphertext)).toBe(1);
+
+    const header = rewrapStreamHeader(
+      ciphertext.subarray(0, STREAM_HEADER_LENGTH),
+      masterStreamKeys(() => after),
+    );
+    expect(header).toHaveLength(STREAM_HEADER_LENGTH);
+    expect(streamMasterKeyVersion(header)).toBe(2);
+    const rotated = Buffer.concat([header, ciphertext.subarray(STREAM_HEADER_LENGTH)]);
+    expect(rotated.subarray(STREAM_HEADER_LENGTH).equals(ciphertext.subarray(STREAM_HEADER_LENGTH))).toBe(
+      true,
+    );
+    expect(
+      (
+        await decrypt(
+          rotated,
+          masterStreamKeys(() => onlyNew),
+        )
+      ).equals(data),
+    ).toBe(true);
+  });
+
+  it("rejects a tampered header", async () => {
+    const ciphertext = await encryptWith(before, randomBytes(20));
+    const header = Buffer.from(ciphertext.subarray(0, STREAM_HEADER_LENGTH));
+    header[40] = (header[40] ?? 0) ^ 0x01;
+    expect(() =>
+      rewrapStreamHeader(
+        header,
+        masterStreamKeys(() => after),
+      ),
+    ).toThrow(DecryptionError);
+  });
+
+  it("rejects a wrapped key taken from another stream", async () => {
+    const first = await encryptWith(before, randomBytes(40));
+    const second = await encryptWith(before, randomBytes(40));
+    const mixed = Buffer.from(second);
+    first.copy(mixed, 5, 5, 73);
+    await expect(
+      decrypt(
+        mixed,
+        masterStreamKeys(() => before),
+      ),
+    ).rejects.toThrow(DecryptionError);
+  });
+
+  it("reports no master key version for backup streams", async () => {
+    const backupRing = parseKeyRing(formatKeyEntry(1, key1));
+    const ciphertext = await encrypt(randomBytes(20), backupStreamKeys(backupRing));
+    expect(streamMasterKeyVersion(ciphertext)).toBeUndefined();
   });
 });

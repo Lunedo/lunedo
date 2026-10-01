@@ -30,11 +30,27 @@ The context names the place of the value, for example table, column and row. A v
 
 ## Stream format
 
-Large data is encrypted in chunks of 64 KiB, so it never has to fit in memory. The header names the key kind (1 master key, 2 backup key) and the key ID (master key version or backup key fingerprint), and carries the wrapped data key and a random nonce prefix. Each chunk is encrypted with AES-256-GCM; its nonce combines the prefix, a chunk counter and a final-chunk flag, and its authentication covers the whole header. Reordered, missing, truncated or appended chunks are detected.
+Large data is encrypted in chunks of 64 KiB, so it never has to fit in memory. Every stream starts with an 84-byte header:
+
+| Offset | Length | Content |
+|---|---|---|
+| 0 | 3 | Magic `PHS` |
+| 3 | 1 | Format version, 1 |
+| 4 | 1 | Key kind: 1 master key, 2 backup key |
+| 5 | 8 | Key ID: the master key version in bytes 4–7, or the backup key version in bytes 0–3 and the first 4 bytes of its fingerprint |
+| 13 | 12 | IV for wrapping the data key |
+| 25 | 32 | Data key, encrypted with the key named by the key ID (AES-256-GCM); the wrap authenticates bytes 0–12 |
+| 57 | 16 | Authentication tag of the wrapped key |
+| 73 | 7 | Random nonce prefix |
+| 80 | 4 | Chunk size, big endian |
+
+Each chunk is encrypted with AES-256-GCM under the data key. Its nonce combines the prefix, a chunk counter and a final-chunk flag, and its authentication covers the caller's associated data (for backups, the unencrypted backup header) and bytes 0–4 and 73–83 of the stream header. Reordered, missing, truncated or appended chunks are detected.
+
+Bytes 5–72 have a fixed size and are protected by the wrap itself. Rotation replaces them in place without touching the chunks. Putting another stream's wrapped key there yields a different data key, so every chunk fails to decrypt.
 
 ## Rotation
 
-Rotating the master key re-wraps every data key with a new master key version. The encrypted data itself is not touched, so rotation is fast and safe to interrupt.
+Rotating the master key re-wraps every data key with a new master key version: in encrypted database columns and in the headers of registered streams. The encrypted data itself is not touched, so rotation is fast and safe to interrupt. The rotation is reported as completed only when no column value and no stream uses an older version.
 
 With the file provider:
 
@@ -58,3 +74,26 @@ export const encryptedColumns: readonly EncryptedColumn[] = [
 ```
 
 A test fails when a column of the schema is missing from the list.
+
+## Encrypted streams
+
+Modules that store data with the stream format under a master key, such as attachments, add an owner to `encryptedStreamOwners` in `packages/server/src/crypto/encrypted-stream.ts`. An owner lists its streams and gives rotation access to their headers:
+
+```ts
+export const encryptedStreamOwners: readonly EncryptedStreamOwner[] = [
+  {
+    name: "attachments",
+    async *streams({ database, filesDir }) {
+      for (const attachment of await listAttachments(database)) {
+        yield {
+          id: attachment.id,
+          readHeader: () => readFirstBytes(path.join(filesDir, attachment.path), STREAM_HEADER_LENGTH),
+          writeHeader: (header) => writeAt(path.join(filesDir, attachment.path), 0, header),
+        };
+      }
+    },
+  },
+];
+```
+
+Rotation, `keys status` and the master key checks of backups and startup include these streams.

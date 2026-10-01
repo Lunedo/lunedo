@@ -10,6 +10,7 @@ import {
   currentSchemaVersion,
   Encryption,
   encryptedColumns,
+  encryptedStreamOwners,
   KeyRingHolder,
   KeyRotation,
   knownSchemaVersions,
@@ -96,6 +97,10 @@ async function run(command: Command): Promise<void> {
           keyRing,
           jobs,
           columns: () => encryptedColumns,
+          streams: {
+            owners: () => encryptedStreamOwners,
+            context: { database, filesDir: config.paths.files },
+          },
         });
         if (command.name === "keys status") {
           const status = await rotation.status();

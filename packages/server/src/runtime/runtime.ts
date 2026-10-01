@@ -4,6 +4,7 @@ import { ensureSecretFile, generateToken } from "../config/generated-secrets.js"
 import { type Env, loadConfig, type ServerConfig } from "../config/load.js";
 import { Secret } from "../config/secret.js";
 import { encryptedColumns } from "../crypto/encrypted-column.js";
+import { encryptedStreamOwners } from "../crypto/encrypted-stream.js";
 import { Encryption } from "../crypto/envelope.js";
 import { createKeyProvider } from "../crypto/key-provider.js";
 import { formatKeyEntry, KEY_LENGTH, type KeyRing, KeyRingError, parseKeyRing } from "../crypto/key-ring.js";
@@ -120,7 +121,14 @@ export async function createServerRuntime(options: {
         onJobFinished: metrics.observeJob,
       });
       await jobs.start();
-      keyRotation = new KeyRotation({ database, encryption, keyRing, jobs, columns: () => encryptedColumns });
+      keyRotation = new KeyRotation({
+        database,
+        encryption,
+        keyRing,
+        jobs,
+        columns: () => encryptedColumns,
+        streams: { owners: () => encryptedStreamOwners, context: { database, filesDir: config.paths.files } },
+      });
       if (role === "worker") {
         metrics.observeJobQueue(jobs);
         await jobs.work(rotateDataKeysJob, keyRotation.run);
