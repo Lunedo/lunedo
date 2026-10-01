@@ -1,5 +1,5 @@
-import { Controller, Get, Module } from "@nestjs/common";
-import { MODULE_METADATA, PATH_METADATA } from "@nestjs/common/constants.js";
+import { Controller, type ExecutionContext, ForbiddenException, Get, Module, Post } from "@nestjs/common";
+import { DiscoveryService, MetadataScanner, Reflector } from "@nestjs/core";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Test } from "@nestjs/testing";
 import { createLogger, currentRequestContext, Metrics, Secret } from "@pagehall/server";
@@ -7,34 +7,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import { configureApp, createFastifyAdapter } from "../app.js";
 import { AppModule } from "../app.module.js";
 import type { ApiContext } from "../context.js";
-import { PublicRoute, ROUTE_ACCESS } from "./route-access.js";
-
-type Constructor = abstract new (...args: never[]) => unknown;
-
-/** Collects the controllers of a module and of all modules it imports. */
-function controllersOf(module: unknown, seen = new Set<unknown>()): Constructor[] {
-  if (!module || seen.has(module)) return [];
-  seen.add(module);
-  const definition = module as { module?: unknown; controllers?: Constructor[]; imports?: unknown[] };
-  const type = (definition.module ?? module) as object;
-  const controllers = [
-    ...(definition.controllers ?? []),
-    ...((Reflect.getMetadata(MODULE_METADATA.CONTROLLERS, type) as Constructor[] | undefined) ?? []),
-  ];
-  const imports = [
-    ...(definition.imports ?? []),
-    ...((Reflect.getMetadata(MODULE_METADATA.IMPORTS, type) as unknown[] | undefined) ?? []),
-  ];
-  return [...controllers, ...imports.flatMap((imported) => controllersOf(imported, seen))];
-}
-
-function routeHandlers(controller: Constructor): { name: string; handler: object }[] {
-  const prototype = controller.prototype as Record<string, unknown>;
-  return Object.getOwnPropertyNames(prototype)
-    .filter((name) => name !== "constructor" && typeof prototype[name] === "function")
-    .map((name) => ({ name, handler: prototype[name] as object }))
-    .filter(({ handler }) => Reflect.getMetadata(PATH_METADATA, handler) !== undefined);
-}
+import { PublicRoute } from "./route-access.js";
+import { RouteAccessGuard } from "./route-access.guard.js";
+import { registeredRoutes } from "./route-access.verifier.js";
 
 const context: ApiContext = {
   logger: createLogger({ service: "api", level: "silent" }),
@@ -44,29 +19,25 @@ const context: ApiContext = {
   webRoot: undefined,
 };
 
-describe("route access declarations", () => {
-  it("exist on every API route", () => {
-    const controllers = controllersOf(AppModule.forRoot(context));
-    const routes = controllers.flatMap((controller) =>
-      routeHandlers(controller).map(({ name, handler }) => ({
-        route: `${controller.name}.${name}`,
-        declared:
-          Reflect.getMetadata(ROUTE_ACCESS, handler) !== undefined ||
-          Reflect.getMetadata(ROUTE_ACCESS, controller) !== undefined,
-      })),
-    );
-    expect(routes.length).toBeGreaterThan(0);
-    expect(routes.filter((route) => !route.declared).map((route) => route.route)).toEqual([]);
-  });
-});
-
 @Controller("test")
-class TestController {
-  @Get("undeclared")
-  undeclared() {
+class UndeclaredController {
+  @Get("declared")
+  @PublicRoute()
+  declared() {
     return { reached: true };
   }
 
+  @Post("undeclared")
+  undeclared() {
+    return { reached: true };
+  }
+}
+
+@Module({ controllers: [UndeclaredController] })
+class UndeclaredModule {}
+
+@Controller("test")
+class ContextController {
   @Get("context")
   @PublicRoute()
   context() {
@@ -74,42 +45,85 @@ class TestController {
   }
 }
 
-@Module({ controllers: [TestController] })
-class TestModule {}
+@Module({ controllers: [ContextController] })
+class ContextModule {}
+
+let app: NestFastifyApplication | undefined;
+
+afterEach(async () => {
+  await app?.close().catch(() => {});
+  app = undefined;
+});
+
+async function createApp(...modules: unknown[]): Promise<NestFastifyApplication> {
+  const moduleRef = await Test.createTestingModule({
+    imports: [AppModule.forRoot(context), ...(modules as never[])],
+  }).compile();
+  app = moduleRef.createNestApplication<NestFastifyApplication>(createFastifyAdapter(context.logger), {
+    logger: false,
+  });
+  await configureApp(app, context);
+  return app;
+}
+
+describe("route access declarations", () => {
+  it("exist on every registered route of the API", async () => {
+    const created = await createApp();
+    await created.init();
+    const routes = registeredRoutes(
+      created.get(DiscoveryService),
+      created.get(MetadataScanner),
+      created.get(Reflector),
+    );
+    expect(routes.map((route) => route.route)).toEqual(
+      expect.arrayContaining([
+        "GET /health/live (HealthController.live)",
+        "GET /health/ready (HealthController.ready)",
+        "GET /metrics (MetricsController.metrics)",
+      ]),
+    );
+    expect(routes.filter((route) => route.access === undefined)).toEqual([]);
+  });
+
+  it("are required to start the API, and the error names the route", async () => {
+    const created = await createApp(UndeclaredModule);
+    await expect(created.init()).rejects.toThrow(
+      "Routes without an access declaration: POST /test/undeclared (UndeclaredController.undeclared)",
+    );
+  });
+});
 
 describe("RouteAccessGuard", () => {
-  let app: NestFastifyApplication | undefined;
-
-  afterEach(async () => {
-    await app?.close();
-    app = undefined;
-  });
-
-  async function start(): Promise<NestFastifyApplication> {
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule.forRoot(context), TestModule],
-    }).compile();
-    const created = moduleRef.createNestApplication<NestFastifyApplication>(
-      createFastifyAdapter(context.logger),
-      {
-        logger: false,
-      },
-    );
-    await configureApp(created, context);
-    await created.init();
-    await created.getHttpAdapter().getInstance().ready();
-    app = created;
-    return created;
+  function executionFor(handler: () => unknown): ExecutionContext {
+    return {
+      getHandler: () => handler,
+      getClass: () => UndeclaredController,
+      switchToHttp: () => ({
+        getRequest: () => ({ headers: {} }),
+        getResponse: () => ({ header: () => {} }),
+      }),
+    } as unknown as ExecutionContext;
   }
 
-  it("rejects routes without a declaration", async () => {
-    const response = await (await start()).inject({ method: "GET", url: "/test/undeclared" });
-    expect(response.statusCode).toBe(403);
-    expect(response.body).not.toContain("reached");
+  const guard = new RouteAccessGuard(new Reflector(), context);
+
+  it("denies a route without a declaration", () => {
+    expect(() => guard.canActivate(executionFor(UndeclaredController.prototype.undeclared))).toThrow(
+      ForbiddenException,
+    );
   });
 
-  it("runs handlers in the context of their request", async () => {
-    const response = await (await start()).inject({ method: "GET", url: "/test/context" });
+  it("allows a public route", () => {
+    expect(guard.canActivate(executionFor(UndeclaredController.prototype.declared))).toBe(true);
+  });
+});
+
+describe("request context", () => {
+  it("is available in route handlers", async () => {
+    const created = await createApp(ContextModule);
+    await created.init();
+    await created.getHttpAdapter().getInstance().ready();
+    const response = await created.inject({ method: "GET", url: "/test/context" });
     expect(response.json().requestId).toBe(response.headers["x-request-id"]);
   });
 });

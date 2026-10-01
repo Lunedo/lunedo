@@ -38,7 +38,7 @@ All settings are described in [configuration.md](configuration.md). The database
 
 Every process exposes `GET /health/live`, `GET /health/ready` and `GET /metrics`. Readiness covers the database, the migration state and the master key; metrics require the metrics token. Logs are JSON lines on stdout and carry the request ID, also in jobs enqueued by a request.
 
-Every API route declares how it may be accessed (`@PublicRoute()`, `@MetricsTokenRoute()`); a global guard rejects routes without a declaration and a test checks that every route has one.
+Every API route declares how it may be accessed (`@PublicRoute()`, `@MetricsTokenRoute()`); the API refuses to start when a route has none, and the global guard rejects such routes as well.
 
 ## Container image
 
