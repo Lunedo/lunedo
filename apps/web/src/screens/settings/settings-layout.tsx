@@ -55,15 +55,16 @@ export function SettingsLayout() {
       {shell.sidebarCollapsed ? null : (
         <div className="hidden md:flex">
           <Sidebar label={t("navigation.settings")}>
-            <SidebarHeader>
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="font-semibold text-content">{t("navigation.settings")}</h2>
+            <SidebarHeader
+              actions={
                 <IconButton
                   label={t("navigation.collapseSidebar")}
                   icon={PanelLeftClose}
                   onClick={shell.toggleSidebar}
                 />
-              </div>
+              }
+            >
+              {t("navigation.settings")}
             </SidebarHeader>
             {sections.map((section) => (
               <SidebarGroup key={section.section} label={section.label}>

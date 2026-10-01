@@ -47,7 +47,8 @@ export function useSchemaForm<TInput extends FieldValues, TOutput>(
   );
   return useForm<TInput, unknown, TOutput>({
     resolver: schemaResolver(schema, message),
-    mode: "onTouched",
+    mode: "onSubmit",
+    reValidateMode: "onChange",
     ...(options.defaultValues ? { defaultValues: options.defaultValues } : {}),
   });
 }
