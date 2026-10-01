@@ -17,6 +17,7 @@ export async function createTestApp(context: Partial<ApiContext> = {}): Promise<
     trustedProxies: [],
     services: undefined,
     settings: undefined,
+    settingsRegistry: undefined,
     ...context,
   };
   const moduleRef = await Test.createTestingModule({ imports: [AppModule.forRoot(full)] }).compile();

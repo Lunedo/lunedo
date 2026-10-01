@@ -81,7 +81,7 @@ export class TestClient {
   ) {}
 
   async request(
-    method: "GET" | "POST" | "DELETE",
+    method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
     url: string,
     body?: unknown,
     headers: Record<string, string> = {},
@@ -119,6 +119,10 @@ export class TestClient {
 
   post(url: string, body?: unknown, headers?: Record<string, string>) {
     return this.request("POST", url, body ?? {}, headers);
+  }
+
+  patch(url: string, body?: unknown, headers?: Record<string, string>) {
+    return this.request("PATCH", url, body ?? {}, headers);
   }
 
   delete(url: string, headers?: Record<string, string>) {

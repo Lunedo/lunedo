@@ -2,8 +2,7 @@ import { applyDecorators, SetMetadata } from "@nestjs/common";
 
 /**
  * How a route may be accessed. Every route declares exactly one; the global guard rejects
- * routes without a declaration. Permission-based access is added with the authorization
- * service.
+ * routes without a declaration.
  */
 export type RouteAccess =
   | { kind: "public" }
@@ -14,7 +13,15 @@ export type RouteAccess =
       recentAuthentication: boolean;
     }
   | { kind: "setupCode" }
-  | { kind: "setupSession" };
+  | { kind: "setupSession" }
+  | {
+      kind: "permission";
+      action: string;
+      resource: ResourceSource;
+      recentAuthentication: boolean;
+    };
+
+export type ResourceSource = { type: "instance" } | { type: string; param: string };
 
 export const ROUTE_ACCESS = "pagehall:route-access";
 
@@ -37,5 +44,17 @@ export const SetupCodeRoute = () => SetMetadata(ROUTE_ACCESS, { kind: "setupCode
 
 export const SetupSessionRoute = () =>
   SetMetadata(ROUTE_ACCESS, { kind: "setupSession" } satisfies RouteAccess);
+
+export const Permission = (
+  action: string,
+  resource: ResourceSource = { type: "instance" },
+  options: { recentAuthentication?: boolean } = {},
+) =>
+  SetMetadata(ROUTE_ACCESS, {
+    kind: "permission",
+    action,
+    resource,
+    recentAuthentication: options.recentAuthentication ?? false,
+  } satisfies RouteAccess);
 
 export const InternalRoute = () => applyDecorators(SetMetadata(INTERNAL_ROUTE, true));

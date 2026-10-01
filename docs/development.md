@@ -39,7 +39,7 @@ All settings are described in [configuration.md](configuration.md). The database
 
 Every process exposes `GET /health/live`, `GET /health/ready` and `GET /metrics`. Readiness covers the database, the migration state and the master key; metrics require the metrics token. Logs are JSON lines on stdout and carry the request ID, also in jobs enqueued by a request.
 
-Every API route declares how it may be accessed (`@PublicRoute()`, `@MetricsTokenRoute()`, `@SessionRoute()`, `@SetupCodeRoute()`, `@SetupSessionRoute()`); the API refuses to start when a route has none, and the global guard rejects such routes as well. Routes that only the web client uses are marked with `@InternalRoute()`.
+Every API route declares how it may be accessed (`@PublicRoute()`, `@MetricsTokenRoute()`, `@SessionRoute()`, `@SetupCodeRoute()`, `@SetupSessionRoute()`, or `@Permission(action, resource)` for routes that act on instance or organization resources, see [organizations.md](organizations.md)); the API refuses to start when a route has none, and the global guard rejects such routes as well. Routes that only the web client uses are marked with `@InternalRoute()`.
 
 ## Container image
 

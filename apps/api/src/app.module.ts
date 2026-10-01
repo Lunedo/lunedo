@@ -7,6 +7,7 @@ import { API_CONTEXT, type ApiContext } from "./context.js";
 import { HealthModule } from "./health/health.module.js";
 import { ErrorFilter } from "./http/error.filter.js";
 import { MetricsController } from "./metrics/metrics.controller.js";
+import { OrganizationsModule } from "./organizations/organizations.module.js";
 import { SetupModule } from "./setup/setup.module.js";
 
 @Global()
@@ -15,7 +16,11 @@ export class AppModule {
   static forRoot(context: ApiContext): DynamicModule {
     return {
       module: AppModule,
-      imports: [DiscoveryModule, HealthModule, ...(context.services ? [AuthModule, SetupModule] : [])],
+      imports: [
+        DiscoveryModule,
+        HealthModule,
+        ...(context.services ? [AuthModule, SetupModule, OrganizationsModule] : []),
+      ],
       controllers: [MetricsController],
       providers: [
         { provide: API_CONTEXT, useValue: context },

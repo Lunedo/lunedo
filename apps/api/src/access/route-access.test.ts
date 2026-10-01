@@ -20,6 +20,7 @@ const context: ApiContext = {
   trustedProxies: [],
   services: undefined,
   settings: undefined,
+  settingsRegistry: undefined,
 };
 
 @Controller("test")

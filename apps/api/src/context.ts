@@ -1,4 +1,4 @@
-import type { AccountServices, ServerRuntime, SettingsService } from "@pagehall/server";
+import type { AccountServices, ServerRuntime, SettingsRegistry, SettingsService } from "@pagehall/server";
 
 export const API_CONTEXT = Symbol("API_CONTEXT");
 
@@ -8,6 +8,7 @@ export type ApiContext = Pick<ServerRuntime, "logger" | "metrics" | "metricsToke
   trustedProxies: string[];
   services: AccountServices | undefined;
   settings: SettingsService | undefined;
+  settingsRegistry: SettingsRegistry | undefined;
 };
 
 export function apiContextOf(runtime: ServerRuntime): ApiContext {
@@ -20,5 +21,6 @@ export function apiContextOf(runtime: ServerRuntime): ApiContext {
     trustedProxies: runtime.config.trustedProxies,
     services: runtime.services,
     settings: runtime.settings,
+    settingsRegistry: runtime.settingsRegistry,
   };
 }

@@ -3,14 +3,19 @@ import {
   AuthError,
   BusyError,
   EmailInUseError,
+  ForbiddenError,
+  OrganizationError,
   PasswordPolicyError,
   RelyingPartyError,
   SessionGoneError,
+  SettingError,
+  SettingLockedError,
   SetupNotFoundError,
   SetupStepError,
   SmtpConfigurationError,
 } from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
+import { ZodError } from "zod";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 
 const AUTH_STATUS: Record<string, number> = {
@@ -33,6 +38,22 @@ const SETUP_STATUS: Record<string, number> = {
   invalidInput: 400,
   setupNotReady: 409,
   invalidSecondFactor: 400,
+};
+
+const ORGANIZATION_STATUS: Record<string, number> = {
+  notFound: 404,
+  roleNotFound: 404,
+  groupNotFound: 404,
+  slugTaken: 409,
+  domainTaken: 409,
+  roleNameTaken: 409,
+  groupNameTaken: 409,
+  alreadyMember: 409,
+  alreadyAssigned: 409,
+  lastOwner: 409,
+  homeOrganization: 409,
+  deactivateSelf: 409,
+  instanceOwner: 409,
 };
 
 interface ErrorBody {
@@ -109,6 +130,30 @@ export class ErrorFilter implements ExceptionFilter {
     }
     if (error instanceof SmtpConfigurationError) {
       return { statusCode: 400, code: "invalidSmtpConfiguration", message: error.message };
+    }
+    if (error instanceof ForbiddenError) {
+      return { statusCode: 403, code: "forbidden", message: "Not allowed", denials: error.decision.denials };
+    }
+    if (error instanceof OrganizationError) {
+      return { statusCode: ORGANIZATION_STATUS[error.code] ?? 400, code: error.code, message: error.message };
+    }
+    if (error instanceof SettingLockedError) {
+      return {
+        statusCode: 409,
+        code: "settingLocked",
+        message: error.message,
+        lockedBy: error.lockedBy.level,
+      };
+    }
+    if (error instanceof SettingError)
+      return { statusCode: 400, code: "invalidSetting", message: error.message };
+    if (error instanceof ZodError) {
+      return {
+        statusCode: 400,
+        code: "invalidInput",
+        message: "The request is not valid",
+        fields: error.issues.map((issue) => issue.path.join(".")),
+      };
     }
     if (error instanceof SetupStepError) {
       return { statusCode: SETUP_STATUS[error.code] ?? 409, code: error.code, message: error.message };
