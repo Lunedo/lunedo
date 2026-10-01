@@ -205,6 +205,28 @@ describe.skipIf(!databaseBaseUrl)("sign-in", () => {
       expect(expired.json()).toMatchObject({ code: "challengeExpired" });
     });
 
+    it("keeps counting wrong codes after each correct password and locks the account", async () => {
+      const account = await createAccount(test, "totp.bruteforce@example.org");
+      await addTotp(await signedInClient(test, account.email, account.password));
+      const attacker = new TestClient(test.app);
+      await attacker.post("/api/v1/auth/sign-in", { email: account.email, password: account.password });
+      for (let attempt = 0; attempt < 4; attempt++) {
+        await attacker.post("/api/v1/auth/sign-in/second-factor", { type: "totp", code: "000000" });
+      }
+      expect((await attacker.post("/api/v1/auth/sign-in", { email: account.email, password: account.password })).json()).toMatchObject({
+        status: "secondFactorRequired",
+      });
+      await attacker.post("/api/v1/auth/sign-in/second-factor", { type: "totp", code: "000000" });
+
+      const locked = await attacker.post("/api/v1/auth/sign-in", { email: account.email, password: account.password });
+      expect(locked.json()).toMatchObject({ code: "locked" });
+      const lockouts = await test.runtime.pool.query(
+        "select fields from audit_events where name = 'auth.lockedOut' and target_id = $1",
+        [account.id],
+      );
+      expect(lockouts.rows).toEqual([{ fields: expect.objectContaining({ subject: "account", failures: 5 }) }]);
+    });
+
     it("ends the pending sign-in after five wrong codes", async () => {
       const account = await createAccount(test, "five.wrong@example.org");
       const { secret } = await addTotp(await signedInClient(test, account.email, account.password));

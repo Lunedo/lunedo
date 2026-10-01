@@ -236,8 +236,9 @@ export class SignInService {
       await this.#recordFailure(subjects, account?.id ?? null, "password", "invalidCredentials");
       throw new InvalidCredentialsError();
     }
-    await this.#throttle.recordSuccess(account.email);
 
+    // Failures are cleared only once a session exists, so that wrong second factors keep counting
+    // after each correct password.
     const factors = await secondFactorsOf(this.#database, account.id);
     if (hasSecondFactor(factors)) {
       const pending = await this.#challenges.create(this.#database, {
@@ -254,6 +255,7 @@ export class SignInService {
       };
     }
     const kind = (await this.secondFactorRequired(account.id)) ? "secondFactorSetup" : "full";
+    await this.#throttle.recordSuccess(account.email);
     return this.#database.transaction((tx) =>
       this.#createSession(tx, account, ["password"], kind, input.client),
     );
