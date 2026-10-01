@@ -67,9 +67,9 @@ describe.skipIf(!baseUrl)("cleanup of authentication data", () => {
       [account.id],
     );
     await pool.query(
-      `insert into setup_sessions (id, token_hash, expires_at) values
-        (gen_random_uuid(), '\\x04', now() + interval '1 hour'),
-        (gen_random_uuid(), '\\x05', now() - interval '1 second')`,
+      `insert into setup_sessions (id, token_hash, origin, expires_at) values
+        (gen_random_uuid(), '\\x04', 'https://wiki.example.org', now() + interval '1 hour'),
+        (gen_random_uuid(), '\\x05', 'https://wiki.example.org', now() - interval '1 second')`,
     );
 
     expect(await services.sessions.cleanup()).toBe(2);
