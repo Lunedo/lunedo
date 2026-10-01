@@ -62,7 +62,7 @@ Every change comes with tests.
 
 - Unit tests use Vitest: `pnpm test`.
 - End-to-end tests use Playwright: `pnpm test:e2e`.
-- Integration tests run against a real PostgreSQL. Set `PAGEHALL_TEST_DATABASE_URL`, for example to the database of the development environment, to include them locally. CI always runs them.
+- Integration tests run against a real PostgreSQL. Set `PAGEHALL_TEST_DATABASE_URL`, for example to the database of the development environment, to include them locally. Mail tests also need `PAGEHALL_TEST_MAILPIT_URL=http://localhost:8025`. CI always runs them.
 - Authentication, permissions, encryption and imports require thorough tests of both allowed and denied cases.
 
 `pnpm lint`, `pnpm typecheck` and `pnpm test` must pass before a pull request is reviewed.

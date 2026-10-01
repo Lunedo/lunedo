@@ -8,6 +8,20 @@
       "when": 1790800975117,
       "tag": "0000_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790849771167,
+      "tag": "0001_accounts_and_sign_in",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790849771929,
+      "tag": "0002_audit_append_only",
+      "breakpoints": true
     }
   ]
 }

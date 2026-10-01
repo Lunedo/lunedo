@@ -1,4 +1,49 @@
 export {
+  type Account,
+  AccountService,
+  accountNameSchema,
+  EmailInUseError,
+  emailSchema,
+  PasswordPolicyError,
+} from "./accounts/accounts.js";
+export { instanceNameSetting, instanceUrlSetting } from "./accounts/instance-settings.js";
+export { ANONYMOUS, accountPrincipal, type Principal, SYSTEM } from "./accounts/principal.js";
+export { AuditLog, type AuditScope, type AuditVerification } from "./audit/audit-log.js";
+export { type AuditEventName, auditCatalog, type SignInMethod } from "./audit/catalog.js";
+export { auditRetentionSetting } from "./audit/retention.js";
+export type { FactorAdded } from "./auth/account-security.js";
+export { BusyError } from "./auth/concurrency.js";
+export {
+  AuthError,
+  ChallengeExpiredError,
+  InvalidCredentialsError,
+  InvalidSecondFactorError,
+  InvalidTokenError,
+  LastFactorError,
+  LockedError,
+  RateLimitedError,
+  SetupIncompleteError,
+} from "./auth/errors.js";
+export { ARGON2_PARAMETERS, PASSWORD_MAX_LENGTH, PasswordHasher } from "./auth/passwords.js";
+export {
+  type ClientInfo,
+  type Session,
+  SessionGoneError,
+  type SessionKind,
+  SessionService,
+} from "./auth/sessions.js";
+export * from "./auth/settings.js";
+export type { ReauthenticationInput, SecondFactorInput, SecondFactorType } from "./auth/sign-in.js";
+export { clientSubject } from "./auth/throttle.js";
+export { generateToken } from "./auth/tokens.js";
+export type { TotpSetup } from "./auth/two-factor.js";
+export {
+  type AuthenticationResponseJSON,
+  type Passkey,
+  type RegistrationResponseJSON,
+  RelyingPartyError,
+} from "./auth/webauthn.js";
+export {
   BACKUP_FORMAT_VERSION,
   BackupError,
   type BackupManifest,
@@ -9,7 +54,8 @@ export {
 export { BackupConfigurationError, type DatabaseArchiver, PostgresArchiver } from "./backup/postgres.js";
 export { checkRestoreComplete, IncompleteRestoreError } from "./backup/restore-marker.js";
 export { configurationForBackup } from "./config/backup-view.js";
-export { configSettings } from "./config/definitions.js";
+export { configSettings, isAddressOrRange } from "./config/definitions.js";
+export type { ConfiguredSetup } from "./config/load.js";
 export { ConfigError, type Env, loadConfig, type ServerConfig } from "./config/load.js";
 export { Secret } from "./config/secret.js";
 export { secretsEqual } from "./crypto/constant-time.js";
@@ -71,6 +117,8 @@ export {
 } from "./jobs/job-queue.js";
 export { PgBossQueue } from "./jobs/pg-boss-queue.js";
 export { createLogger, type Logger, type LogLevel, logLevels } from "./logging/logger.js";
+export { MailNotConfiguredError, SmtpConfigurationError, smtpSetting } from "./mail/mail-service.js";
+export type { MailMessage, MailTransport, SmtpOptions } from "./mail/transport.js";
 export { isAuthorizedMetricsRequest, Metrics } from "./observability/metrics.js";
 export {
   currentRequestContext,
@@ -86,7 +134,8 @@ export {
 } from "./runtime/runtime.js";
 export { registerShutdown, SHUTDOWN_MARGIN_SECONDS } from "./runtime/shutdown.js";
 export { StartupError } from "./runtime/startup-error.js";
-export { builtinSettings, languageSetting, timeZoneSetting } from "./settings/builtin.js";
+export { type AccountServices, createAccountServices } from "./services.js";
+export { builtinSettings, languageSetting, supportedLanguages, timeZoneSetting } from "./settings/builtin.js";
 export {
   defineSetting,
   type SettingDefinition,
@@ -102,3 +151,5 @@ export {
   SettingLockedError,
   SettingsService,
 } from "./settings/service.js";
+export { applyConfiguredSetup } from "./setup/configured.js";
+export { SetupNotFoundError, type SetupStatus, SetupStepError } from "./setup/setup-service.js";

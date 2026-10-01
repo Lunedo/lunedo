@@ -20,12 +20,14 @@
     "@pagehall/shared": "workspace:*",
     "fastify": "^5.12.5",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@nestjs/testing": "^12.1.1",
     "@pagehall/config": "workspace:*",
     "@types/node": "^24.19.0",
+    "otpauth": "^9.5.2",
     "typescript": "^7.0.2",
     "vitest": "^5.0.2"
   },

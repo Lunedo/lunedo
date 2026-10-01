@@ -1,4 +1,4 @@
-# Development environment: PostgreSQL and all Pagehall processes with hot reload.
+# Development environment: PostgreSQL, a mail catcher and all Pagehall processes with hot reload.
 # Start with `pnpm dev` from the repository root.
 name: pagehall-dev
 
@@ -34,6 +34,16 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  # Catches all outgoing e-mail. Web interface on http://localhost:8025; in the setup assistant,
+  # use host mailpit, port 1025 and no connection security.
+  mailpit:
+    image: axllent/mailpit:v1.31.3
+    environment:
+      MP_DISABLE_VERSION_CHECK: "true"
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
 
   app:
     build:

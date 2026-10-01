@@ -29,6 +29,7 @@ import {
   type ServerConfig,
   verifyBackup,
 } from "@pagehall/server";
+import { verifyAuditLog } from "./audit.js";
 import { type Command, parseCommand, UsageError, usage } from "./parse.js";
 
 const write = (text: string) => process.stdout.write(`${text}\n`);
@@ -127,6 +128,10 @@ async function run(command: Command): Promise<void> {
       write(
         `Backup restored (schema ${manifest.schemaVersion}). Start Pagehall to apply pending migrations.`,
       );
+      return;
+    }
+    case "audit verify": {
+      process.exitCode = await verifyAuditLog(databaseUrl, write);
       return;
     }
     case "keys rotate":

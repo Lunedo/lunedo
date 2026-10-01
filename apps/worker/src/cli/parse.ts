@@ -6,6 +6,7 @@ export type Command =
   | { name: "backup restore"; input: string; force: boolean; configDir: string | undefined }
   | { name: "keys rotate" }
   | { name: "keys status" }
+  | { name: "audit verify" }
   | { name: "help" };
 
 export class UsageError extends Error {
@@ -18,6 +19,7 @@ export const usage = `Usage:
   pagehall backup restore --input <file> [--force] [--config-dir <dir>]
   pagehall keys rotate
   pagehall keys status
+  pagehall audit verify
 `;
 
 export function parseCommand(argv: readonly string[]): Command {
@@ -56,6 +58,8 @@ export function parseCommand(argv: readonly string[]): Command {
       return { name: "keys rotate" };
     case "keys status":
       return { name: "keys status" };
+    case "audit verify":
+      return { name: "audit verify" };
     default:
       throw new UsageError(`Unknown command: ${[group, action].filter(Boolean).join(" ")}`);
   }

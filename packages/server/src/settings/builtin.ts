@@ -13,7 +13,7 @@ function isTimeZone(value: string): boolean {
 }
 
 /** Interface language. */
-export const languageSetting = defineSetting({
+export const languageSetting = defineSetting<(typeof supportedLanguages)[number]>({
   key: "locale.language",
   schema: z.enum(supportedLanguages),
   default: "en",

@@ -1,8 +1,9 @@
 import { is } from "drizzle-orm";
 import { getTableConfig, PgTable, pgTable, uuid } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
+import { bytes } from "../database/columns.js";
 import * as schema from "../database/schema.js";
-import { type EncryptedColumn, encrypted, encryptedColumns } from "./encrypted-column.js";
+import { type EncryptedColumn, encrypted, encryptedColumns, encryptedToDriver } from "./encrypted-column.js";
 
 /** All `encrypted()` columns of the given tables, with the snake_case names Drizzle uses. */
 function encryptedColumnsOf(tables: unknown[]): string[] {
@@ -11,7 +12,7 @@ function encryptedColumnsOf(tables: unknown[]): string[] {
     if (!is(table, PgTable)) continue;
     const config = getTableConfig(table);
     for (const column of config.columns) {
-      if (column.getSQLType() === "bytea" && column.columnType === "PgCustomColumn") {
+      if ((column as unknown as { mapTo?: unknown }).mapTo === encryptedToDriver) {
         const name = column.keyAsName
           ? column.name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)
           : column.name;
@@ -32,7 +33,11 @@ describe("encryptedColumns", () => {
   });
 
   it("detects encrypted columns", () => {
-    const example = pgTable("smtp_settings", { id: uuid().primaryKey(), clientSecret: encrypted() });
+    const example = pgTable("smtp_settings", {
+      id: uuid().primaryKey(),
+      clientSecret: encrypted(),
+      digest: bytes(),
+    });
     expect(encryptedColumnsOf([example])).toEqual(["smtp_settings.client_secret"]);
   });
 });
