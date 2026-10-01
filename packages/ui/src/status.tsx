@@ -14,9 +14,10 @@ export interface SaveStatusProps {
   state: SaveState;
   error?: ReactNode;
   onRetry?: () => void;
+  hideSavedAfter?: number | null;
 }
 
-export function SaveStatus({ state, error, onRetry }: SaveStatusProps) {
+export function SaveStatus({ state, error, onRetry, hideSavedAfter = SAVED_VISIBLE_MS }: SaveStatusProps) {
   const labels = useUiLabels();
   const [savedVisible, setSavedVisible] = useState(false);
 
@@ -26,9 +27,10 @@ export function SaveStatus({ state, error, onRetry }: SaveStatusProps) {
       return;
     }
     setSavedVisible(true);
-    const timer = setTimeout(() => setSavedVisible(false), SAVED_VISIBLE_MS);
+    if (hideSavedAfter === null) return;
+    const timer = setTimeout(() => setSavedVisible(false), hideSavedAfter);
     return () => clearTimeout(timer);
-  }, [state]);
+  }, [state, hideSavedAfter]);
 
   return (
     <span className="inline-flex min-h-control-sm flex-wrap items-center gap-2 text-sm">

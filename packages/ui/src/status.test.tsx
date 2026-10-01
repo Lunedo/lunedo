@@ -26,6 +26,15 @@ describe("SaveStatus", () => {
     expect(screen.getByRole("status").textContent).toBe("");
   });
 
+  it("keeps the confirmation when asked to", () => {
+    vi.useFakeTimers();
+    renderUi(<SaveStatus state="saved" hideSavedAfter={null} />);
+    act(() => {
+      vi.advanceTimersByTime(SAVED_VISIBLE_MS * 4);
+    });
+    expect(screen.getByRole("status").textContent).toBe("Saved");
+  });
+
   it("shows an error with a retry", async () => {
     const retry = vi.fn();
     renderUi(<SaveStatus state="error" error="The value could not be saved." onRetry={retry} />);

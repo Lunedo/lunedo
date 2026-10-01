@@ -26,6 +26,7 @@ describe("optionsFromSearch", () => {
         accent: "violet",
       },
       overlay: "palette",
+      language: "en",
     });
   });
 
@@ -40,6 +41,7 @@ describe("optionsFromSearch", () => {
         accent: null,
       },
       overlay: null,
+      language: "en",
     });
   });
 });
@@ -63,6 +65,16 @@ describe("ComponentsPage", () => {
     expect(document.documentElement.dataset.theme).toBe("dark");
     expect(document.documentElement.dataset.density).toBe("compact");
     expect(document.documentElement.style.getPropertyValue("--ph-text-scale")).toBe("0.875");
+  });
+
+  it("reads the language and shows the page in German", () => {
+    expect(optionsFromSearch("?lang=de").language).toBe("de");
+    render(<ComponentsPage search="?lang=de&mode=light" />);
+    expect(screen.getByRole("heading", { level: 1, name: "Komponenten" })).toBeDefined();
+    expect(screen.getByRole("region", { name: "Eingabeelemente" })).toBeDefined();
+    expect(screen.getByRole("group", { name: "Textgröße" })).toBeDefined();
+    expect(screen.getAllByRole("button", { name: "Erhöhen" }).length).toBeGreaterThan(0);
+    expect(document.documentElement.lang).toBe("de");
   });
 
   it("opens an overlay named in the address", () => {

@@ -9,6 +9,9 @@ const VARIANTS = [
   { name: "light-small-compact", query: "mode=light&size=0.875&density=compact" },
   { name: "dark-large", query: "mode=dark&size=1.25" },
   { name: "light-accent-violet", query: "mode=light&accent=violet" },
+  { name: "light-de", query: "mode=light&lang=de" },
+  { name: "dark-de", query: "mode=dark&lang=de" },
+  { name: "light-large-de", query: "mode=light&size=1.25&lang=de" },
 ];
 
 for (const variant of VARIANTS) {
