@@ -1,5 +1,6 @@
 import { AccountService } from "./accounts/accounts.js";
 import { AuditLog } from "./audit/audit-log.js";
+import { AuditReader } from "./audit/reader.js";
 import { AUDIT_RETENTION_SCHEDULE, applyAuditRetention, auditRetentionJob } from "./audit/retention.js";
 import { AccountSecurityService, passwordResetRequestJob } from "./auth/account-security.js";
 import { ChallengeStore } from "./auth/challenges.js";
@@ -10,6 +11,9 @@ import { SignInService } from "./auth/sign-in.js";
 import { RateLimiter, SignInThrottle } from "./auth/throttle.js";
 import { RecoveryCodeService, TotpService } from "./auth/two-factor.js";
 import { WebAuthnService } from "./auth/webauthn.js";
+import { AuthorizationRegistry } from "./authorization/registry.js";
+import { resourceTypes } from "./authorization/resources.js";
+import { AuthorizationService } from "./authorization/service.js";
 import type { Encryption } from "./crypto/envelope.js";
 import type { KeyRing } from "./crypto/key-ring.js";
 import type { KeyRingHolder } from "./crypto/key-ring-holder.js";
@@ -24,6 +28,19 @@ import {
   MailService,
 } from "./mail/mail-service.js";
 import type { MailTransport, SmtpOptions } from "./mail/transport.js";
+import { BreakGlassService } from "./organizations/break-glass.js";
+import { GroupService } from "./organizations/groups.js";
+import { InvitationService, registrationRequestJob } from "./organizations/invitations.js";
+import {
+  ORGANIZATION_EXPIRY_SCHEDULE,
+  ORGANIZATION_REMINDERS_SCHEDULE,
+  OrganizationLifecycle,
+  organizationExpiryJob,
+  organizationRemindersJob,
+} from "./organizations/lifecycle.js";
+import { MembershipService } from "./organizations/memberships.js";
+import { OrganizationService } from "./organizations/organizations.js";
+import { RoleService } from "./organizations/roles.js";
 import type { SettingsService } from "./settings/service.js";
 import { SetupRegistry } from "./setup/framework.js";
 import { SetupService } from "./setup/setup-service.js";
@@ -45,6 +62,15 @@ export interface AccountServices {
   security: AccountSecurityService;
   setup: SetupService;
   setupRegistry: SetupRegistry;
+  authorization: AuthorizationService;
+  organizations: OrganizationService;
+  memberships: MembershipService;
+  roles: RoleService;
+  groups: GroupService;
+  invitations: InvitationService;
+  breakGlass: BreakGlassService;
+  lifecycle: OrganizationLifecycle;
+  auditReader: AuditReader;
 }
 
 export function createAccountServices(options: {
@@ -83,6 +109,30 @@ export function createAccountServices(options: {
     logger,
     ...(options.mailTransport ? { transport: options.mailTransport } : {}),
   });
+  const authorization = new AuthorizationService({
+    database,
+    registry: new AuthorizationRegistry().register(...resourceTypes(settings)),
+    audit,
+  });
+  const organizations = new OrganizationService({ database, settings, audit });
+  const memberships = new MembershipService({ database, audit, authorization });
+  const roles = new RoleService({ database, audit, authorization });
+  const groups = new GroupService({ database, audit, authorization });
+  const breakGlass = new BreakGlassService({ database, audit, mail, settings });
+  const lifecycle = new OrganizationLifecycle({ database, audit, memberships, breakGlass, mail, settings });
+  const invitations = new InvitationService({
+    database,
+    audit,
+    accounts,
+    memberships,
+    roles,
+    organizations,
+    mail,
+    settings,
+    rateLimiter,
+    jobs,
+  });
+  const auditReader = new AuditReader({ database, authorization });
   const setupRegistry = new SetupRegistry();
   const setup = new SetupService({ database, registry: setupRegistry, audit, rateLimiter });
   const signIn = new SignInService({
@@ -127,6 +177,7 @@ export function createAccountServices(options: {
       recoveryCodes,
       mail,
       audit,
+      organizations,
       keyRing: options.keyRing,
       backupKeys: options.backupKeys,
       filesDir: options.filesDir,
@@ -148,6 +199,15 @@ export function createAccountServices(options: {
     security,
     setup,
     setupRegistry,
+    authorization,
+    organizations,
+    memberships,
+    roles,
+    groups,
+    invitations,
+    breakGlass,
+    lifecycle,
+    auditReader,
   };
 }
 
@@ -161,6 +221,15 @@ export async function workAccountJobs(
     await services.mail.dispatchPending();
   });
   await jobs.work(passwordResetRequestJob, services.security.handlePasswordResetRequest);
+  await jobs.work(registrationRequestJob, services.invitations.handleRegistrationRequest);
+  await jobs.work(organizationExpiryJob, async (job) => {
+    const processed = await services.lifecycle.processExpiry();
+    if (processed > 0) job.logger.info({ processed }, "Expired access removed");
+  });
+  await jobs.work(organizationRemindersJob, async (job) => {
+    const sent = await services.lifecycle.sendReminders();
+    if (sent > 0) job.logger.info({ sent }, "Expiry reminders sent");
+  });
   await jobs.work(authCleanupJob, async (job) => {
     const removed = {
       sessions: await services.sessions.cleanup(),
@@ -170,6 +239,7 @@ export async function workAccountJobs(
       signInFailures: await services.throttle.cleanup(),
       setupSessions: await services.setup.cleanup(),
       failedMails: await services.mail.cleanup(),
+      invitations: await services.invitations.cleanup(),
     };
     job.logger.debug(removed, "Authentication data cleaned up");
   });
@@ -180,4 +250,6 @@ export async function workAccountJobs(
   await jobs.schedule(dispatchPendingMailJob, DISPATCH_PENDING_MAIL_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(authCleanupJob, AUTH_CLEANUP_SCHEDULE, {}, { key: "regular" });
   await jobs.schedule(auditRetentionJob, AUDIT_RETENTION_SCHEDULE, {}, { key: "daily" });
+  await jobs.schedule(organizationExpiryJob, ORGANIZATION_EXPIRY_SCHEDULE, {}, { key: "minutely" });
+  await jobs.schedule(organizationRemindersJob, ORGANIZATION_REMINDERS_SCHEDULE, {}, { key: "hourly" });
 }

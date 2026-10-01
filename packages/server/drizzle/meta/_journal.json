@@ -29,6 +29,13 @@
       "when": 1790853434428,
       "tag": "0003_setup_session_origin",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790855095418,
+      "tag": "0004_organizations_and_permissions",
+      "breakpoints": true
     }
   ]
 }

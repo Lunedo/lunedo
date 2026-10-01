@@ -33,6 +33,7 @@ import { createLogger, type Logger } from "../logging/logger.js";
 import { smtpSetting } from "../mail/mail-service.js";
 import type { MailTransport, SmtpOptions } from "../mail/transport.js";
 import { Metrics } from "../observability/metrics.js";
+import { organizationSettings } from "../organizations/settings.js";
 import { type AccountServices, createAccountServices, workAccountJobs } from "../services.js";
 import { builtinSettings } from "../settings/builtin.js";
 import { type SettingDefinition, SettingsRegistry } from "../settings/definition.js";
@@ -129,6 +130,7 @@ export async function createServerRuntime(options: {
         ...builtinSettings,
         ...instanceSettings,
         ...authSettings,
+        ...organizationSettings,
         auditRetentionSetting,
         smtpSetting,
       ] as SettingDefinition<never>[]),

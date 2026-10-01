@@ -11,6 +11,7 @@ export const configuredSetupEnv = {
   PAGEHALL_OWNER_EMAIL: OWNER.email,
   PAGEHALL_OWNER_NAME: "Olivia Owner",
   PAGEHALL_OWNER_PASSWORD: OWNER.password,
+  PAGEHALL_ORGANIZATION_NAME: "Test organization",
   PAGEHALL_SMTP_HOST: "smtp.pagehall.test",
   PAGEHALL_SMTP_SECURITY: "none",
   PAGEHALL_SMTP_FROM: "wiki@pagehall.test",
@@ -25,14 +26,35 @@ export async function completeConfiguredSetup(test: AuthTestApp): Promise<void> 
     accounts: services.accounts,
     settings,
     mail: services.mail,
+    organizations: services.organizations,
     logger: createLogger({ service: "test", level: "silent" }),
   });
 }
 
-export async function createAccount(test: AuthTestApp, email: string, password = "a long enough passphrase") {
+export async function firstOrganizationId(test: AuthTestApp): Promise<string> {
+  const result = await test.runtime.pool.query<{ id: string }>(
+    "select id from organizations order by created_at limit 1",
+  );
+  const id = result.rows[0]?.id;
+  if (!id) throw new Error("The test instance has no organization");
+  return id;
+}
+
+export async function createAccount(
+  test: AuthTestApp,
+  email: string,
+  password = "a long enough passphrase",
+  homeOrganizationId?: string,
+) {
   const { database, services } = test.runtime;
+  const home = homeOrganizationId ?? (await firstOrganizationId(test));
   const account = await database.transaction((tx) =>
-    services.accounts.createStandard(tx, { email, name: email.split("@")[0] ?? email, password }),
+    services.accounts.createStandard(tx, {
+      email,
+      name: email.split("@")[0] ?? email,
+      password,
+      homeOrganizationId: home,
+    }),
   );
   return { ...account, email, password };
 }

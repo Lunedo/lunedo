@@ -27,6 +27,7 @@ describe.skipIf(!baseUrl)("cleanup of authentication data", () => {
         email: "cleanup@example.org",
         name: "Cleanup",
         password: "a long cleanup passphrase",
+        homeOrganizationId: null,
       }),
     );
     for (let i = 0; i < 4; i++) {
@@ -89,6 +90,7 @@ describe.skipIf(!baseUrl)("cleanup of authentication data", () => {
         email: "gone@example.org",
         name: "Gone",
         password: "a long cleanup passphrase",
+        homeOrganizationId: null,
       }),
     );
     await database.transaction((tx) =>

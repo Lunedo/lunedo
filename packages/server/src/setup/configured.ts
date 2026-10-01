@@ -7,6 +7,7 @@ import type { ConfiguredSetup } from "../config/load.js";
 import type { Logger } from "../logging/logger.js";
 import type { MailService } from "../mail/mail-service.js";
 import { runWithRequestContext } from "../observability/request-context.js";
+import type { OrganizationService } from "../organizations/organizations.js";
 import { StartupError } from "../runtime/startup-error.js";
 import type { SettingsService } from "../settings/service.js";
 import type { SetupService } from "./setup-service.js";
@@ -17,6 +18,7 @@ export async function applyConfiguredSetup(options: {
   accounts: AccountService;
   settings: SettingsService;
   mail: MailService;
+  organizations: OrganizationService;
   logger: Logger;
 }): Promise<boolean> {
   const { setup, service } = options;
@@ -34,6 +36,7 @@ export async function applyConfiguredSetup(options: {
           email: setup.owner.email,
           name: setup.owner.name,
           password: setup.owner.password.reveal(),
+          homeOrganizationId: null,
         })
         .catch((error: unknown) => {
           if (error instanceof PasswordPolicyError) {
@@ -45,7 +48,13 @@ export async function applyConfiguredSetup(options: {
         });
       await tx.insert(instance).values({ id: 1 }).onConflictDoNothing();
       await tx.update(instance).set({ ownerAccountId: owner.id }).where(eq(instance.id, 1));
-      const steps = ["systemCheck", "instance", "owner", "keyBackup"];
+      await options.organizations.create(tx, SYSTEM, {
+        name: setup.organization.name,
+        ...(setup.organization.language ? { language: setup.organization.language } : {}),
+        ...(setup.organization.timeZone ? { timeZone: setup.organization.timeZone } : {}),
+        ownerAccountId: owner.id,
+      });
+      const steps = ["systemCheck", "instance", "owner", "keyBackup", "organization"];
       if (setup.smtp) {
         const { password, ...configuration } = setup.smtp;
         await options.mail.configureSmtp(configuration, password?.reveal() ?? null, { tx });

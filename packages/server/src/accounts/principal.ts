@@ -7,6 +7,6 @@ export const principalTypes = ["account", "anonymous", "system"] as const satisf
 export const ANONYMOUS: Principal = { type: "anonymous" };
 export const SYSTEM: Principal = { type: "system" };
 
-export function accountPrincipal(id: string): Principal {
+export function accountPrincipal(id: string): { type: "account"; id: string } {
   return { type: "account", id };
 }

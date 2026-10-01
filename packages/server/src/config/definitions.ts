@@ -107,6 +107,21 @@ export const configSettings = [
     "Password of the owner for setup through configuration.",
     true,
   ),
+  setting(
+    "PAGEHALL_ORGANIZATION_NAME",
+    nonEmpty.optional(),
+    "Name of the first organization for setup through configuration.",
+  ),
+  setting(
+    "PAGEHALL_ORGANIZATION_LANGUAGE",
+    z.enum(["en", "de"]).optional(),
+    "Language of the first organization for setup through configuration.",
+  ),
+  setting(
+    "PAGEHALL_ORGANIZATION_TIME_ZONE",
+    nonEmpty.optional(),
+    "Time zone of the first organization for setup through configuration.",
+  ),
   setting("PAGEHALL_SMTP_HOST", nonEmpty.optional(), "SMTP server for setup through configuration."),
   setting("PAGEHALL_SMTP_PORT", port.optional(), "SMTP port for setup through configuration."),
   setting(

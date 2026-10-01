@@ -56,6 +56,9 @@ The master keys and the backup keys are needed to read encrypted data and backup
 | `PAGEHALL_OWNER_EMAIL` | none | | Setup through configuration: e-mail address of the owner account. |
 | `PAGEHALL_OWNER_NAME` | none | | Setup through configuration: name of the owner account. |
 | `PAGEHALL_OWNER_PASSWORD` | none | yes | Setup through configuration: password of the owner account. |
+| `PAGEHALL_ORGANIZATION_NAME` | none | | Setup through configuration: name of the first organization. |
+| `PAGEHALL_ORGANIZATION_LANGUAGE` | `en` | | Setup through configuration: language of the first organization, `en` or `de`. |
+| `PAGEHALL_ORGANIZATION_TIME_ZONE` | `UTC` | | Setup through configuration: IANA time zone of the first organization. |
 | `PAGEHALL_SMTP_HOST` | none | | Setup through configuration: SMTP server for outgoing e-mail. |
 | `PAGEHALL_SMTP_PORT` | `587`, `465` with `tls` | | Setup through configuration: SMTP port. |
 | `PAGEHALL_SMTP_SECURITY` | `starttls` | | Setup through configuration: `tls`, `starttls` or `none`. `none` cannot be combined with credentials. |
@@ -65,7 +68,7 @@ The master keys and the backup keys are needed to read encrypted data and backup
 
 ## Setup through configuration
 
-On the first start, Pagehall opens a setup assistant that is protected by a one-time setup code from the container log (see [setup.md](setup.md)). For automated deployments, the setup values can be given through configuration instead: `PAGEHALL_INSTANCE_URL`, `PAGEHALL_OWNER_EMAIL`, `PAGEHALL_OWNER_NAME` and `PAGEHALL_OWNER_PASSWORD` are required together, the instance name and the SMTP settings are optional. When they are set, the first API node that starts applies them, the assistant is skipped and no setup code is printed.
+On the first start, Pagehall opens a setup assistant that is protected by a one-time setup code from the container log (see [setup.md](setup.md)). For automated deployments, the setup values can be given through configuration instead: `PAGEHALL_INSTANCE_URL`, `PAGEHALL_OWNER_EMAIL`, `PAGEHALL_OWNER_NAME`, `PAGEHALL_OWNER_PASSWORD` and `PAGEHALL_ORGANIZATION_NAME` are required together, the instance name and the SMTP settings are optional. When they are set, the first API node that starts applies them, the assistant is skipped and no setup code is printed.
 
 The values are applied once. Later changes to these settings have no effect; change the instance in its settings instead. The owner must set up a second factor at the first sign-in. Back up the master keys and the backup keys yourself, because the assistant's key backup step is skipped.
 

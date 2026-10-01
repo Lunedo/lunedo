@@ -8,7 +8,7 @@ Every event is defined in `packages/server/src/audit/catalog.ts` with its name, 
 
 Each entry records the actor (an account, anonymous or system), the target, the time, the request ID, the client address and the user agent. Events caused by background jobs carry the request context of the request that queued the job. An event that belongs to a database change is written in the same transaction, so either both are stored or neither.
 
-Events belong to a scope. This release uses the instance scope; organizations get their own scope.
+Events belong to a scope: the instance or an organization. Each scope has its own hash chain. Organization administrators with the audit log area read the events of their organization; instance administrators and security auditors read all events. A transaction that writes events of several scopes writes them in a fixed order, so that concurrent writers cannot block each other.
 
 ## Integrity
 

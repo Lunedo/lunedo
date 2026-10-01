@@ -136,7 +136,7 @@ export class SignInService {
 
   async secondFactorRequired(accountId: string): Promise<boolean> {
     if ((await this.#accounts.ownerId()) === accountId) return true;
-    return this.#settings.get(twoFactorRequiredSetting, accountScopeChain(accountId));
+    return this.#settings.get(twoFactorRequiredSetting, await accountScopeChain(this.#database, accountId));
   }
 
   async #checkAttempt(subjects: ThrottleSubjects, accountId: string | null, method: SignInMethod) {

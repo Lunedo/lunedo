@@ -10,6 +10,30 @@ export interface MailTemplates {
   emailChangeNotice: { instanceName: string; newEmail: string };
   recoveryCodeUsed: { instanceName: string; remaining: number };
   smtpTest: { instanceName: string };
+  invitation: {
+    instanceName: string;
+    organizationName: string;
+    inviterName: string;
+    link: string;
+    days: number;
+  };
+  registration: { instanceName: string; organizationName: string; link: string; hours: number };
+  breakGlassStarted: {
+    instanceName: string;
+    organizationName: string;
+    requesterName: string;
+    reason: string;
+    minutes: number;
+  };
+  guestExpiring: { instanceName: string; organizationName: string; guestName: string; date: string };
+  guestInactive: { instanceName: string; organizationName: string; guestName: string; days: number };
+  accessExpiring: {
+    instanceName: string;
+    organizationName: string;
+    kind: "role" | "group" | "membership";
+    name: string;
+    date: string;
+  };
 }
 
 export type MailTemplate = keyof MailTemplates;
@@ -72,6 +96,50 @@ const catalogs: Record<Language, Catalog> = {
       subject: `Test e-mail from ${instanceName}`,
       paragraphs: [`${instanceName} can send e-mail with these settings.`],
     }),
+    invitation: ({ instanceName, organizationName, inviterName, link, days }) => ({
+      subject: `${inviterName} invited you to ${organizationName} on ${instanceName}`,
+      paragraphs: [
+        `${inviterName} invited you to join ${organizationName} on ${instanceName}.`,
+        `The link works once and expires in ${days} days.`,
+        IGNORE_EN,
+      ],
+      action: { label: "Accept invitation", url: link },
+    }),
+    registration: ({ instanceName, organizationName, link, hours }) => ({
+      subject: `Confirm your registration for ${organizationName} on ${instanceName}`,
+      paragraphs: [
+        `Confirm this address to create your account in ${organizationName} on ${instanceName}.`,
+        `The link works once and expires in ${hours} hours.`,
+        IGNORE_EN,
+      ],
+      action: { label: "Create account", url: link },
+    }),
+    breakGlassStarted: ({ instanceName, organizationName, requesterName, reason, minutes }) => ({
+      subject: `Emergency access to ${organizationName} on ${instanceName}`,
+      paragraphs: [
+        `${requesterName} started emergency access to ${organizationName} with administrator rights for ${minutes} minutes.`,
+        `Reason: ${reason}`,
+        "Every action during the access is recorded in the audit log.",
+      ],
+    }),
+    guestExpiring: ({ instanceName, organizationName, guestName, date }) => ({
+      subject: `Guest access of ${guestName} to ${organizationName} expires soon`,
+      paragraphs: [
+        `The guest access of ${guestName} to ${organizationName} on ${instanceName} expires on ${date}. You are responsible for this guest.`,
+      ],
+    }),
+    guestInactive: ({ instanceName, organizationName, guestName, days }) => ({
+      subject: `Guest ${guestName} has been inactive in ${organizationName}`,
+      paragraphs: [
+        `${guestName} has not used ${instanceName} for ${days} days. You are responsible for this guest in ${organizationName}; remove the guest if the access is no longer needed.`,
+      ],
+    }),
+    accessExpiring: ({ instanceName, organizationName, kind, name, date }) => ({
+      subject: `Access in ${organizationName} expires soon`,
+      paragraphs: [
+        `${kind === "role" ? `The role ${name}` : kind === "group" ? `The membership in the group ${name}` : "The membership"} in ${organizationName} on ${instanceName} expires on ${date}.`,
+      ],
+    }),
   },
   de: {
     passwordReset: ({ instanceName, link, minutes }) => ({
@@ -116,6 +184,50 @@ const catalogs: Record<Language, Catalog> = {
     smtpTest: ({ instanceName }) => ({
       subject: `Test-E-Mail von ${instanceName}`,
       paragraphs: [`${instanceName} kann mit diesen Einstellungen E-Mails versenden.`],
+    }),
+    invitation: ({ instanceName, organizationName, inviterName, link, days }) => ({
+      subject: `${inviterName} hat Sie zu ${organizationName} auf ${instanceName} eingeladen`,
+      paragraphs: [
+        `${inviterName} hat Sie eingeladen, ${organizationName} auf ${instanceName} beizutreten.`,
+        `Der Link funktioniert einmal und läuft in ${days} Tagen ab.`,
+        IGNORE_DE,
+      ],
+      action: { label: "Einladung annehmen", url: link },
+    }),
+    registration: ({ instanceName, organizationName, link, hours }) => ({
+      subject: `Registrierung für ${organizationName} auf ${instanceName} bestätigen`,
+      paragraphs: [
+        `Bestätigen Sie diese Adresse, um Ihr Konto in ${organizationName} auf ${instanceName} anzulegen.`,
+        `Der Link funktioniert einmal und läuft in ${hours} Stunden ab.`,
+        IGNORE_DE,
+      ],
+      action: { label: "Konto anlegen", url: link },
+    }),
+    breakGlassStarted: ({ instanceName, organizationName, requesterName, reason, minutes }) => ({
+      subject: `Notfallzugriff auf ${organizationName} auf ${instanceName}`,
+      paragraphs: [
+        `${requesterName} hat einen Notfallzugriff auf ${organizationName} mit Administrationsrechten für ${minutes} Minuten gestartet.`,
+        `Begründung: ${reason}`,
+        "Jede Aktion während des Zugriffs wird im Audit-Log festgehalten.",
+      ],
+    }),
+    guestExpiring: ({ instanceName, organizationName, guestName, date }) => ({
+      subject: `Gastzugang von ${guestName} zu ${organizationName} läuft bald ab`,
+      paragraphs: [
+        `Der Gastzugang von ${guestName} zu ${organizationName} auf ${instanceName} läuft am ${date} ab. Sie sind für diesen Gast verantwortlich.`,
+      ],
+    }),
+    guestInactive: ({ instanceName, organizationName, guestName, days }) => ({
+      subject: `Gast ${guestName} ist in ${organizationName} inaktiv`,
+      paragraphs: [
+        `${guestName} hat ${instanceName} seit ${days} Tagen nicht verwendet. Sie sind für diesen Gast in ${organizationName} verantwortlich; entfernen Sie den Gast, wenn der Zugang nicht mehr gebraucht wird.`,
+      ],
+    }),
+    accessExpiring: ({ instanceName, organizationName, kind, name, date }) => ({
+      subject: `Zugang in ${organizationName} läuft bald ab`,
+      paragraphs: [
+        `${kind === "role" ? `Die Rolle ${name}` : kind === "group" ? `Die Mitgliedschaft in der Gruppe ${name}` : "Die Mitgliedschaft"} in ${organizationName} auf ${instanceName} läuft am ${date} ab.`,
+      ],
     }),
   },
 };

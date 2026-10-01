@@ -1,0 +1,82 @@
+import type { Executor } from "../database/database.js";
+import type { MembershipKind } from "../organizations/access-schema.js";
+import type { AccessLevel, Area } from "./areas.js";
+import type { OrganizationFacts } from "./facts.js";
+
+export interface Resource {
+  type: string;
+  id?: string;
+}
+
+export interface ActionDefinition {
+  scope: "instance" | "organization";
+  area?: Area;
+  level?: AccessLevel;
+  membership?: readonly MembershipKind[];
+  breakGlass?: boolean;
+  ownerOnly?: boolean;
+  rule?: string;
+}
+
+export interface RuleContext {
+  accountId: string;
+  resource: Resource;
+  organizationId: string | null;
+  executor: Executor;
+  organizationFacts(organizationId: string): Promise<OrganizationFacts>;
+}
+
+export type Rule = (context: RuleContext) => Promise<boolean>;
+
+export interface ResourceType {
+  type: string;
+  actions: Record<string, ActionDefinition>;
+  organizationOf?: (executor: Executor, id: string) => Promise<string | null>;
+  rules?: Record<string, Rule>;
+}
+
+export interface RegisteredAction extends ActionDefinition {
+  name: string;
+  resourceType: ResourceType;
+}
+
+export class AuthorizationRegistry {
+  readonly #types = new Map<string, ResourceType>();
+  readonly #actions = new Map<string, RegisteredAction>();
+
+  register(...types: ResourceType[]): this {
+    for (const type of types) {
+      if (this.#types.has(type.type)) throw new Error(`Resource type ${type.type} is registered twice`);
+      if (
+        Object.values(type.actions).some((action) => action.scope === "organization") &&
+        type.type !== "organization" &&
+        !type.organizationOf
+      ) {
+        throw new Error(`Resource type ${type.type} has organization actions but no organization`);
+      }
+      for (const [name, action] of Object.entries(type.actions)) {
+        if (!name.startsWith(`${type.type}.`))
+          throw new Error(`Action ${name} must start with ${type.type}.`);
+        if (this.#actions.has(name)) throw new Error(`Action ${name} is registered twice`);
+        if (action.rule && !type.rules?.[action.rule])
+          throw new Error(`Action ${name} uses the unknown rule ${action.rule}`);
+        if ((action.area === undefined) !== (action.level === undefined)) {
+          throw new Error(`Action ${name} needs both an area and a level`);
+        }
+        this.#actions.set(name, { ...action, name, resourceType: type });
+      }
+      this.#types.set(type.type, type);
+    }
+    return this;
+  }
+
+  action(name: string): RegisteredAction {
+    const action = this.#actions.get(name);
+    if (!action) throw new Error(`Unknown action ${name}`);
+    return action;
+  }
+
+  actions(): RegisteredAction[] {
+    return [...this.#actions.values()];
+  }
+}

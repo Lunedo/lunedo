@@ -1,6 +1,6 @@
 # E-mail
 
-Pagehall sends e-mail for password resets, e-mail address changes, recovery code use and setup tests. Notification mails follow with the notification center.
+Pagehall sends e-mail for password resets, e-mail address changes, recovery code use, setup tests, invitations, self-registration, break-glass access and reminders before access expires. Notification mails follow with the notification center.
 
 ## SMTP
 
@@ -20,7 +20,7 @@ A mail is written to the outbox in the same transaction as the change that cause
 
 Logs name the mail ID, template and error code, never recipients or content.
 
-Mails are written in the language of the account, English or German, as plain text with a simple HTML version.
+Mails are written in the language of the account, inherited from its home organization unless the account chose one, in English or German, as plain text with a simple HTML version. Mails to people without an account use the language of the organization.
 
 ## Development
 

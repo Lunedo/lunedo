@@ -24,6 +24,7 @@ Steps are registered by the modules; the assistant shows them in order:
 | `instance` | yes | Instance URL and name. |
 | `owner` | yes | Owner account with password and TOTP, then ten recovery codes. The step can be repeated until setup is complete. |
 | `keyBackup` | yes | One-time download of the master keys and backup keys, then a confirmation that they are stored safely. |
+| `organization` | yes | The first organization with name, language and time zone. The owner becomes its owner and has it as home organization. |
 | `mail` | no | SMTP settings with a test mail. |
 
 The setup state is stored in the database, so all nodes agree on it.
@@ -40,7 +41,7 @@ All endpoints are internal. After setup they answer `404` like routes that do no
 | `POST /api/v1/setup/steps/{step}/{action}` | setup session |
 | `POST /api/v1/setup/complete` | setup session |
 
-Actions: `systemCheck/acknowledge`, `instance/save`, `owner/createAccount`, `owner/beginTotp`, `owner/confirmTotp`, `keyBackup/download`, `keyBackup/confirm`, `mail/save`, `mail/test`.
+Actions: `systemCheck/acknowledge`, `instance/save`, `owner/createAccount`, `owner/beginTotp`, `owner/confirmTotp`, `keyBackup/download`, `keyBackup/confirm`, `organization/save`, `mail/save`, `mail/test`.
 
 ## Setup through configuration
 

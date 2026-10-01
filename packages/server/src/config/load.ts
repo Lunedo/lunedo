@@ -3,6 +3,16 @@ import path from "node:path";
 import { z } from "zod";
 import { instanceUrlSchema } from "../accounts/instance-settings.js";
 import type { LogLevel } from "../logging/logger.js";
+
+function isTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 import { type ConfigSettingName, configSettings } from "./definitions.js";
 import { Secret } from "./secret.js";
 
@@ -46,6 +56,7 @@ export interface ConfiguredSetup {
   instanceUrl: string;
   instanceName: string | undefined;
   owner: { email: string; name: string; password: Secret };
+  organization: { name: string; language: "en" | "de" | undefined; timeZone: string | undefined };
   smtp: ConfiguredSmtp | undefined;
 }
 
@@ -191,6 +202,9 @@ const SETUP_SETTINGS = [
   "PAGEHALL_OWNER_EMAIL",
   "PAGEHALL_OWNER_NAME",
   "PAGEHALL_OWNER_PASSWORD",
+  "PAGEHALL_ORGANIZATION_NAME",
+  "PAGEHALL_ORGANIZATION_LANGUAGE",
+  "PAGEHALL_ORGANIZATION_TIME_ZONE",
 ] as const;
 
 const SMTP_SETTINGS = [
@@ -218,12 +232,17 @@ function configuredSetup(
     "PAGEHALL_OWNER_EMAIL",
     "PAGEHALL_OWNER_NAME",
     "PAGEHALL_OWNER_PASSWORD",
+    "PAGEHALL_ORGANIZATION_NAME",
   ] as const) {
     if (values[name] === undefined) problems.push(`${name}: is required for setup through configuration`);
   }
   const url = instanceUrlSchema.safeParse(values.PAGEHALL_INSTANCE_URL);
   if (values.PAGEHALL_INSTANCE_URL !== undefined && !url.success) {
     problems.push(`PAGEHALL_INSTANCE_URL: ${url.error.issues[0]?.message ?? "is invalid"}`);
+  }
+  const timeZone = values.PAGEHALL_ORGANIZATION_TIME_ZONE as string | undefined;
+  if (timeZone !== undefined && !isTimeZone(timeZone)) {
+    problems.push("PAGEHALL_ORGANIZATION_TIME_ZONE: must be an IANA time zone");
   }
   if (
     values.PAGEHALL_OWNER_EMAIL !== undefined &&
@@ -266,6 +285,11 @@ function configuredSetup(
       email: values.PAGEHALL_OWNER_EMAIL as string,
       name: values.PAGEHALL_OWNER_NAME as string,
       password: new Secret((values.PAGEHALL_OWNER_PASSWORD as string | undefined) ?? ""),
+    },
+    organization: {
+      name: values.PAGEHALL_ORGANIZATION_NAME as string,
+      language: values.PAGEHALL_ORGANIZATION_LANGUAGE as "en" | "de" | undefined,
+      timeZone: values.PAGEHALL_ORGANIZATION_TIME_ZONE as string | undefined,
     },
     smtp,
   };

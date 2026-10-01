@@ -1,10 +1,11 @@
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import type { AuditLog } from "../audit/audit-log.js";
+import type { AuditEvents, AuditLog } from "../audit/audit-log.js";
 import type { PasswordHasher, PasswordProblem } from "../auth/passwords.js";
 import { passwordProblem } from "../auth/passwords.js";
 import { passwordMinLengthSetting } from "../auth/settings.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
+import { memberships } from "../organizations/access-schema.js";
 import type { SettingsService } from "../settings/service.js";
 import { type AccountState, type AccountType, accounts, instance } from "./schema.js";
 import { accountScopeChain } from "./scope.js";
@@ -20,6 +21,7 @@ export interface Account {
   name: string;
   passwordHash: string | null;
   passwordChangedAt: Date | null;
+  homeOrganizationId: string | null;
   createdAt: Date;
 }
 
@@ -31,6 +33,7 @@ const accountColumns = {
   name: accounts.name,
   passwordHash: accounts.passwordHash,
   passwordChangedAt: accounts.passwordChangedAt,
+  homeOrganizationId: accounts.homeOrganizationId,
   createdAt: accounts.createdAt,
 };
 
@@ -86,6 +89,11 @@ export class AccountService {
     this.#hasher = options.hasher;
   }
 
+  async list(): Promise<Omit<Account, "passwordHash">[]> {
+    const { passwordHash: _passwordHash, ...columns } = accountColumns;
+    return this.#database.select(columns).from(accounts).orderBy(accounts.name);
+  }
+
   async get(id: string, executor: Executor = this.#database): Promise<Account | null> {
     const [row] = await executor.select(accountColumns).from(accounts).where(eq(accounts.id, id));
     return row ?? null;
@@ -102,7 +110,7 @@ export class AccountService {
   async checkPassword(password: string, accountId?: string): Promise<void> {
     const minLength = await this.#settings.get(
       passwordMinLengthSetting,
-      accountId ? accountScopeChain(accountId) : {},
+      accountId ? await accountScopeChain(this.#database, accountId) : {},
     );
     const problem = passwordProblem(password, minLength);
     if (problem) throw new PasswordPolicyError(problem, minLength);
@@ -113,33 +121,76 @@ export class AccountService {
     return this.#hasher.hash(password);
   }
 
-  async createStandard(
+  async create(
     tx: Transaction,
-    input: { email: string; name: string; password: string },
+    input: {
+      type: "standard" | "guest";
+      email: string;
+      name: string;
+      password: string;
+      homeOrganizationId: string | null;
+      emailVerified?: boolean;
+    },
+    options: { collect?: AuditEvents } = {},
   ): Promise<Account> {
     const email = emailSchema.parse(input.email.trim());
     const name = accountNameSchema.parse(input.name);
     const passwordHash = await this.hashPassword(input.password);
+    const now = new Date();
     const [row] = await withUniqueEmail(() =>
       tx
         .insert(accounts)
         .values({
-          type: "standard",
+          type: input.type,
           state: "active",
           email,
           name,
           passwordHash,
-          passwordChangedAt: new Date(),
+          passwordChangedAt: now,
+          emailVerifiedAt: input.emailVerified ? now : null,
+          homeOrganizationId: input.type === "standard" ? input.homeOrganizationId : null,
         })
         .returning(accountColumns),
     );
     if (!row) throw new Error("The account was not created");
-    await this.#audit.record(tx, {
-      name: "account.created",
-      targetId: row.id,
-      fields: { type: row.type, email },
-    });
+    const home = input.type === "standard" ? input.homeOrganizationId : null;
+    if (home) {
+      await tx.insert(memberships).values({ organizationId: home, accountId: row.id, kind: "member" });
+    }
+    const scope = home ? ({ type: "organization", id: home } as const) : undefined;
+    const events: AuditEvents = [
+      {
+        name: "account.created",
+        targetId: row.id,
+        fields: { type: row.type, email, homeOrganizationId: home },
+        ...(scope ? { scope } : {}),
+      },
+    ];
+    if (scope) {
+      events.push({
+        name: "membership.added",
+        targetId: row.id,
+        fields: { kind: "member", expiresAt: null },
+        scope,
+      });
+    }
+    if (options.collect) options.collect.push(...events);
+    else await this.#audit.recordMany(tx, events);
     return row;
+  }
+
+  async createStandard(
+    tx: Transaction,
+    input: {
+      email: string;
+      name: string;
+      password: string;
+      homeOrganizationId: string | null;
+      emailVerified?: boolean;
+    },
+    options: { collect?: AuditEvents } = {},
+  ): Promise<Account> {
+    return this.create(tx, { ...input, type: "standard" }, options);
   }
 
   async lock(tx: Transaction, id: string): Promise<Account | null> {

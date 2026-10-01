@@ -117,8 +117,9 @@ export class SessionService {
       })
       .returning(sessionColumns);
     if (!session) throw new Error("The session was not created");
+    await tx.update(accounts).set({ lastActiveAt: now }).where(eq(accounts.id, accountId));
 
-    const limit = await this.#settings.get(maxSessionsSetting, accountScopeChain(accountId));
+    const limit = await this.#settings.get(maxSessionsSetting, await accountScopeChain(tx, accountId));
     const surplus = await tx
       .select({ id: sessions.id })
       .from(sessions)
@@ -161,19 +162,26 @@ export class SessionService {
       return null;
     }
     if (now.getTime() - session.lastUsedAt.getTime() >= TOUCH_INTERVAL) {
-      await this.#database
+      const touched = await this.#database
         .update(sessions)
         .set({ lastUsedAt: now })
         .where(
           and(eq(sessions.id, session.id), lt(sessions.lastUsedAt, new Date(now.getTime() - TOUCH_INTERVAL))),
-        );
+        )
+        .returning({ id: sessions.id });
+      if (touched.length > 0) {
+        await this.#database
+          .update(accounts)
+          .set({ lastActiveAt: now })
+          .where(eq(accounts.id, session.accountId));
+      }
       session.lastUsedAt = now;
     }
     return session;
   }
 
   async #expired(session: Session, now: Date): Promise<boolean> {
-    const chain = accountScopeChain(session.accountId);
+    const chain = await accountScopeChain(this.#database, session.accountId);
     const idle = await this.#settings.get(sessionIdleTimeoutSetting, chain);
     const lifetime = await this.#settings.get(sessionLifetimeSetting, chain);
     return (
@@ -184,7 +192,10 @@ export class SessionService {
 
   async isRecentlyAuthenticated(session: Session): Promise<boolean> {
     if (!session.reauthenticatedAt) return false;
-    const minutes = await this.#settings.get(reauthenticationSetting, accountScopeChain(session.accountId));
+    const minutes = await this.#settings.get(
+      reauthenticationSetting,
+      await accountScopeChain(this.#database, session.accountId),
+    );
     return this.#clock().getTime() - session.reauthenticatedAt.getTime() <= minutes * MINUTE;
   }
 

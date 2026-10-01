@@ -15,6 +15,8 @@ export interface AuditScope {
 
 export const INSTANCE_AUDIT_SCOPE: AuditScope = { type: "instance", id: INSTANCE_SCOPE_ID };
 
+export type AuditEvents = AuditEventInput<AuditEventName>[];
+
 export interface AuditEventInput<TName extends AuditEventName> {
   name: TName;
   actor?: Principal;
@@ -145,6 +147,19 @@ export class AuditLog {
       .where(chain);
   }
 
+  async recordMany(tx: Transaction, inputs: AuditEventInput<AuditEventName>[]): Promise<void> {
+    const key = (input: AuditEventInput<AuditEventName>) => {
+      const scope = input.scope ?? INSTANCE_AUDIT_SCOPE;
+      return `${scope.type}:${scope.id}`;
+    };
+    const ordered = inputs
+      .map((input, index) => ({ input, index }))
+      .sort((a, b) =>
+        key(a.input) === key(b.input) ? a.index - b.index : key(a.input) < key(b.input) ? -1 : 1,
+      );
+    for (const { input } of ordered) await this.record(tx, input);
+  }
+
   async recordAlone<TName extends AuditEventName>(input: AuditEventInput<TName>): Promise<void> {
     await this.#database.transaction((tx) => this.record(tx, input));
   }
@@ -264,6 +279,9 @@ export function auditSettingChanges(audit: AuditLog): SettingChangeHandler {
     audit.record(tx, {
       name: "settings.changed",
       targetId: change.key,
+      ...(change.scope.level === "organization"
+        ? { scope: { type: "organization" as const, id: change.scope.id } }
+        : {}),
       fields: {
         level: change.scope.level,
         scopeId: change.scope.id,

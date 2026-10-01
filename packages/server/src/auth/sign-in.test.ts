@@ -29,6 +29,7 @@ describe.skipIf(!baseUrl)("SignInService", () => {
         email,
         name: "Recovery",
         password: "a long recovery passphrase",
+        homeOrganizationId: null,
       }),
     );
     const setup = await services.totp.begin(account.id, { issuer: "Test", account: email });

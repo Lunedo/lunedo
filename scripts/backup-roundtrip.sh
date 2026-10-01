@@ -54,7 +54,7 @@ echo "Setting up the source instance through configuration and creating sample d
 docker run -d --name "${postgres}-api" --network "$network" \
   -e PAGEHALL_DATABASE_URL="$(url source)" -e PAGEHALL_INSTANCE_URL=https://wiki.example.org \
   -e PAGEHALL_OWNER_EMAIL=owner@example.org -e PAGEHALL_OWNER_NAME=Owner \
-  -e PAGEHALL_OWNER_PASSWORD="roundtrip owner ${suffix}" \
+  -e PAGEHALL_OWNER_PASSWORD="roundtrip owner ${suffix}" -e PAGEHALL_ORGANIZATION_NAME=Roundtrip \
   -v "$source_data:/var/lib/pagehall" "$image" api >/dev/null
 for _ in $(seq 1 60); do
   if [ "$(psql_in source -c "select to_regclass('public.instance') is not null

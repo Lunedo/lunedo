@@ -1,0 +1,356 @@
+import { sql } from "drizzle-orm";
+import type { Principal } from "../accounts/principal.js";
+import type { AuditLog } from "../audit/audit-log.js";
+import type { Database, Executor } from "../database/database.js";
+import type { PrincipalKind, RoleScope } from "../organizations/access-schema.js";
+import { type Areas, coversAreas, grantsLevel, mergeAreas } from "./areas.js";
+import {
+  type HeldRole,
+  type InstanceFacts,
+  instanceFacts,
+  type OrganizationFacts,
+  organizationFacts,
+  type RoleReference,
+  type Via,
+} from "./facts.js";
+import type { AuthorizationRegistry, RegisteredAction, Resource } from "./registry.js";
+
+export type Grant =
+  | { kind: "system" }
+  | { kind: "role"; role: RoleReference; via: Via; expiresAt: Date | null }
+  | { kind: "membership"; membershipKind: string }
+  | { kind: "rule"; rule: string };
+
+export type Denial =
+  | "anonymous"
+  | "accountInactive"
+  | "resourceNotFound"
+  | "notMember"
+  | "limitedMembership"
+  | "noRoleGrantsArea"
+  | "ownerOnly"
+  | "instanceRolesDoNotGrantOrganizationAccess"
+  | "roleExceedsOwnPermissions"
+  | "selfExtension";
+
+export interface RoleTarget {
+  scope: RoleScope;
+  organizationId: string | null;
+  role: RoleReference;
+  areas: Areas;
+  principal: { kind: PrincipalKind; id: string | null };
+}
+
+export interface Decision {
+  action: string;
+  resource: Resource;
+  allowed: boolean;
+  grants: Grant[];
+  denials: Denial[];
+}
+
+export class ForbiddenError extends Error {
+  override name = "ForbiddenError";
+
+  constructor(readonly decision: Decision) {
+    super(`Not allowed: ${decision.action}`);
+  }
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function roleGrant(role: HeldRole): Grant {
+  return { kind: "role", role: role.role, via: role.via, expiresAt: role.expiresAt };
+}
+
+function ownerRole(role: HeldRole): boolean {
+  return "builtIn" in role.role && role.role.builtIn === "owner";
+}
+
+export class AuthorizationService {
+  readonly #database: Database;
+  readonly #registry: AuthorizationRegistry;
+  readonly #audit: AuditLog;
+
+  constructor(options: { database: Database; registry: AuthorizationRegistry; audit: AuditLog }) {
+    this.#database = options.database;
+    this.#registry = options.registry;
+    this.#audit = options.audit;
+  }
+
+  get registry(): AuthorizationRegistry {
+    return this.#registry;
+  }
+
+  async explain(
+    principal: Principal,
+    actionName: string,
+    resource: Resource,
+    options: { executor?: Executor; fresh?: boolean } = {},
+  ): Promise<Decision> {
+    const action = this.#registry.action(actionName);
+    const decision = (grants: Grant[], denials: Denial[]): Decision => ({
+      action: actionName,
+      resource,
+      allowed: grants.length > 0,
+      grants,
+      denials: grants.length > 0 ? [] : denials,
+    });
+    if (principal.type === "system") return decision([{ kind: "system" }], []);
+    if (principal.type === "anonymous") return decision([], ["anonymous"]);
+    const executor = options.executor ?? this.#database;
+    const fresh = options.fresh ?? false;
+    const accountId = principal.id;
+
+    if (action.scope === "instance") {
+      const facts = await instanceFacts(executor, accountId, { fresh });
+      if (facts.account?.state !== "active") return decision([], ["accountInactive"]);
+      const grants = this.#roleGrants(action, facts.roles);
+      const denials: Denial[] = [action.ownerOnly ? "ownerOnly" : "noRoleGrantsArea"];
+      if (action.rule) {
+        const allowed = await this.#rule(action, accountId, resource, null, executor, fresh);
+        if (allowed) grants.push({ kind: "rule", rule: action.rule });
+      }
+      return decision(grants, denials);
+    }
+
+    const organizationId = await this.#organizationOf(action, resource, executor);
+    if (!organizationId) return decision([], ["resourceNotFound"]);
+    const facts = await organizationFacts(executor, accountId, organizationId, { fresh });
+    if (facts.account?.state !== "active") return decision([], ["accountInactive"]);
+    const grants = this.#roleGrants(action, facts.roles);
+    if (facts.membership && action.membership?.includes(facts.membership.kind)) {
+      grants.push({ kind: "membership", membershipKind: facts.membership.kind });
+    }
+    if (action.breakGlass) {
+      for (const role of facts.roles) if (role.via.type === "breakGlass") grants.push(roleGrant(role));
+    }
+    if (action.rule && (await this.#rule(action, accountId, resource, organizationId, executor, fresh))) {
+      grants.push({ kind: "rule", rule: action.rule });
+    }
+    return decision(grants, await this.#organizationDenials(action, facts, accountId, executor, fresh));
+  }
+
+  async decide(
+    principal: Principal,
+    actionName: string,
+    resource: Resource,
+    options: { executor?: Executor } = {},
+  ): Promise<Decision> {
+    const decision = await this.explain(principal, actionName, resource, options);
+    if (decision.allowed && principal.type === "account")
+      await this.#recordBreakGlassUse(decision, principal.id);
+    return decision;
+  }
+
+  async authorize(
+    principal: Principal,
+    actionName: string,
+    resource: Resource,
+    options: { executor?: Executor } = {},
+  ): Promise<boolean> {
+    return (await this.decide(principal, actionName, resource, options)).allowed;
+  }
+
+  async require(
+    principal: Principal,
+    actionName: string,
+    resource: Resource,
+    options: { executor?: Executor } = {},
+  ): Promise<void> {
+    const decision = await this.explain(principal, actionName, resource, options);
+    if (!decision.allowed) throw new ForbiddenError(decision);
+    if (principal.type === "account") await this.#recordBreakGlassUse(decision, principal.id);
+  }
+
+  async #heldRoles(
+    accountId: string,
+    scope: RoleScope,
+    organizationId: string | null,
+    executor: Executor,
+  ): Promise<{ roles: HeldRole[]; facts: InstanceFacts | OrganizationFacts }> {
+    if (scope === "instance") {
+      const facts = await instanceFacts(executor, accountId, { fresh: true });
+      return { roles: facts.account?.state === "active" ? facts.roles : [], facts };
+    }
+    const facts = await organizationFacts(executor, accountId, organizationId ?? "", { fresh: true });
+    return { roles: facts.account?.state === "active" ? facts.roles : [], facts };
+  }
+
+  #covers(
+    principal: RoleTarget["principal"],
+    accountId: string,
+    facts: InstanceFacts | OrganizationFacts,
+  ): boolean {
+    switch (principal.kind) {
+      case "account":
+        return principal.id === accountId;
+      case "group":
+        return "groups" in facts && facts.groups.some((group) => group.id === principal.id);
+      case "organizationMembers":
+        return "membership" in facts && facts.membership?.kind === "member";
+      case "instanceUsers":
+        return facts.account?.type === "standard";
+    }
+  }
+
+  async checkRoleChange(
+    actor: Principal,
+    target: RoleTarget,
+    options: { executor?: Executor; removal?: boolean } = {},
+  ): Promise<void> {
+    if (actor.type === "system") return;
+    const action = target.scope === "instance" ? "instance.roles.manage" : "organization.roles.manage";
+    const resource: Resource =
+      target.scope === "instance"
+        ? { type: "instance" }
+        : { type: "organization", id: target.organizationId ?? "" };
+    const deny = (denial: Denial): never => {
+      throw new ForbiddenError({ action, resource, allowed: false, grants: [], denials: [denial] });
+    };
+    if (actor.type === "anonymous") return deny("anonymous");
+    const executor = options.executor ?? this.#database;
+    const { roles, facts } = await this.#heldRoles(actor.id, target.scope, target.organizationId, executor);
+    const isOwnerRole = "builtIn" in target.role && target.role.builtIn === "owner";
+    if (isOwnerRole) {
+      if (!roles.some((role) => ownerRole(role) && role.via.type !== "breakGlass")) deny("ownerOnly");
+      return;
+    }
+    if (!coversAreas(mergeAreas(...roles.map((role) => role.areas)), target.areas))
+      deny("roleExceedsOwnPermissions");
+    if (options.removal || !this.#covers(target.principal, actor.id, facts)) return;
+    const permanent = roles.filter((role) => role.expiresAt === null && role.via.type !== "breakGlass");
+    if (!coversAreas(mergeAreas(...permanent.map((role) => role.areas)), target.areas)) deny("selfExtension");
+  }
+
+  async checkRoleDefinition(
+    actor: Principal,
+    scope: RoleScope,
+    organizationId: string | null,
+    areas: Areas,
+    options: { executor?: Executor } = {},
+  ): Promise<void> {
+    if (actor.type === "system") return;
+    const action = scope === "instance" ? "instance.roles.manage" : "organization.roles.manage";
+    const resource: Resource =
+      scope === "instance" ? { type: "instance" } : { type: "organization", id: organizationId ?? "" };
+    if (actor.type === "anonymous") {
+      throw new ForbiddenError({ action, resource, allowed: false, grants: [], denials: ["anonymous"] });
+    }
+    const { roles } = await this.#heldRoles(
+      actor.id,
+      scope,
+      organizationId,
+      options.executor ?? this.#database,
+    );
+    if (!coversAreas(mergeAreas(...roles.map((role) => role.areas)), areas)) {
+      throw new ForbiddenError({
+        action,
+        resource,
+        allowed: false,
+        grants: [],
+        denials: ["roleExceedsOwnPermissions"],
+      });
+    }
+  }
+
+  async isOrganizationOwner(accountId: string, organizationId: string, executor: Executor = this.#database) {
+    const { roles } = await this.#heldRoles(accountId, "organization", organizationId, executor);
+    return roles.some((role) => ownerRole(role) && role.via.type !== "breakGlass");
+  }
+
+  async heldAreas(
+    accountId: string,
+    scope: RoleScope,
+    organizationId: string | null,
+    executor: Executor = this.#database,
+  ) {
+    const { roles } = await this.#heldRoles(accountId, scope, organizationId, executor);
+    return mergeAreas(...roles.map((role) => role.areas));
+  }
+
+  #roleGrants(action: RegisteredAction, roles: HeldRole[]): Grant[] {
+    if (action.ownerOnly) return roles.filter(ownerRole).map(roleGrant);
+    if (!action.area || !action.level) return [];
+    const { area, level } = action;
+    return roles.filter((role) => grantsLevel(role.areas[area], level)).map(roleGrant);
+  }
+
+  async #organizationOf(
+    action: RegisteredAction,
+    resource: Resource,
+    executor: Executor,
+  ): Promise<string | null> {
+    if (!resource.id || !UUID.test(resource.id)) return null;
+    if (action.resourceType.type === "organization") {
+      const exists = await executor.execute<{ id: string }>(sqlOrganizationExists(resource.id));
+      return exists.rows[0]?.id ?? null;
+    }
+    return action.resourceType.organizationOf?.(executor, resource.id) ?? null;
+  }
+
+  async #rule(
+    action: RegisteredAction,
+    accountId: string,
+    resource: Resource,
+    organizationId: string | null,
+    executor: Executor,
+    fresh: boolean,
+  ): Promise<boolean> {
+    const rule = action.rule ? action.resourceType.rules?.[action.rule] : undefined;
+    if (!rule) return false;
+    return rule({
+      accountId,
+      resource,
+      organizationId,
+      executor,
+      organizationFacts: (id) => organizationFacts(executor, accountId, id, { fresh }),
+    });
+  }
+
+  async #organizationDenials(
+    action: RegisteredAction,
+    facts: OrganizationFacts,
+    accountId: string,
+    executor: Executor,
+    fresh: boolean,
+  ): Promise<Denial[]> {
+    const denials: Denial[] = [];
+    if (!facts.membership && facts.roles.length === 0) denials.push("notMember");
+    else if (facts.membership && facts.membership.kind !== "member") denials.push("limitedMembership");
+    else denials.push(action.ownerOnly ? "ownerOnly" : "noRoleGrantsArea");
+    if (!facts.membership && action.area && action.level) {
+      const instance: InstanceFacts = await instanceFacts(executor, accountId, { fresh });
+      if (instance.roles.length > 0) denials.push("instanceRolesDoNotGrantOrganizationAccess");
+    }
+    return denials;
+  }
+
+  async #recordBreakGlassUse(decision: Decision, accountId: string): Promise<void> {
+    const roleGrants = decision.grants.filter((grant) => grant.kind === "role");
+    if (roleGrants.length === 0 || decision.grants.length !== roleGrants.length) return;
+    const breakGlass = roleGrants.map((grant) => grant.via).filter((via) => via.type === "breakGlass");
+    if (breakGlass.length !== roleGrants.length) return;
+    const action = this.#registry.action(decision.action);
+    const organizationId =
+      action.resourceType.type === "organization"
+        ? (decision.resource.id ?? null)
+        : await this.#organizationOf(action, decision.resource, this.#database);
+    if (!organizationId) return;
+    await this.#audit.recordAlone({
+      name: "breakGlass.actionAuthorized",
+      actor: { type: "account", id: accountId },
+      targetId: breakGlass[0]?.type === "breakGlass" ? breakGlass[0].accessId : null,
+      fields: {
+        action: decision.action,
+        resourceType: decision.resource.type,
+        resourceId: decision.resource.id ?? null,
+      },
+      scope: { type: "organization", id: organizationId },
+    });
+  }
+}
+
+function sqlOrganizationExists(id: string) {
+  return sql`select id from organizations where id = ${id}`;
+}

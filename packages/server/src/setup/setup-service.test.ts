@@ -24,6 +24,7 @@ const configured = {
   instanceUrl: "https://wiki.example.org",
   instanceName: "Docs",
   owner: { email: "owner@example.org", name: "Owner", password: new Secret("a configured passphrase") },
+  organization: { name: "Docs team", language: "de" as const, timeZone: "Europe/Vienna" },
   smtp: undefined,
 };
 
@@ -115,6 +116,7 @@ describe.skipIf(!baseUrl)("SetupService", () => {
         accounts: accountServices.accounts,
         settings,
         mail: accountServices.mail,
+        organizations: accountServices.organizations,
         logger,
       });
     const results = await Promise.all([apply(), apply(), apply()]);
@@ -145,6 +147,7 @@ describe.skipIf(!baseUrl)("SetupService", () => {
         accounts: accountServices.accounts,
         settings,
         mail: accountServices.mail,
+        organizations: accountServices.organizations,
         logger: createLogger({ service: "test", level: "silent" }),
       }),
     ).rejects.toThrow(StartupError);

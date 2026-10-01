@@ -69,6 +69,7 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
       "instance",
       "owner",
       "keyBackup",
+      "organization",
       "mail",
     ]);
     expect(status.ready).toBe(false);
@@ -150,6 +151,37 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
       code: "keysAlreadyDownloaded",
     });
     expect((await post("/api/v1/setup/steps/keyBackup/confirm")).statusCode).toBe(200);
+    expect((await get("/api/v1/setup/steps")).json().ready).toBe(false);
+
+    const organization = await post("/api/v1/setup/steps/organization/save", {
+      name: "Platform Team",
+      language: "de",
+      timeZone: "Europe/Vienna",
+    });
+    expect(organization.statusCode).toBe(200);
+    const organizationId = organization.json().organizationId;
+    expect(
+      (
+        await post("/api/v1/setup/steps/organization/save", {
+          name: "Platform",
+          language: "de",
+          timeZone: "Mars/Olympus",
+        })
+      ).statusCode,
+    ).toBe(400);
+    expect(
+      (
+        await post("/api/v1/setup/steps/organization/save", {
+          name: "Platform",
+          language: "de",
+          timeZone: "Europe/Vienna",
+        })
+      ).json(),
+    ).toEqual({ organizationId });
+    const ownerRow = await test.runtime.pool.query(
+      "select a.home_organization_id, ra.built_in_role from accounts a join role_assignments ra on ra.principal_id = a.id where lower(a.email) = 'owner@example.org'",
+    );
+    expect(ownerRow.rows).toEqual([{ home_organization_id: organizationId, built_in_role: "owner" }]);
     expect((await get("/api/v1/setup/steps")).json().ready).toBe(true);
 
     expect((await post("/api/v1/setup/complete")).statusCode).toBe(204);
@@ -207,6 +239,7 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
         "twoFactor.recoveryCodesGenerated",
         "setup.keyBackupDownloaded",
         "setup.completed",
+        "organization.created",
       ]),
     );
     expect(JSON.stringify(events.rows)).not.toMatch(/violet tram umbrella/);

@@ -6,6 +6,7 @@ export interface RequestContext {
   clientIp?: string;
   userAgent?: string;
   actor?: Principal;
+  cache?: Map<string, unknown>;
 }
 
 const storage = new AsyncLocalStorage<RequestContext>();

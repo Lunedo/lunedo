@@ -22,6 +22,7 @@ async function main() {
         accounts: services.accounts,
         settings,
         mail: services.mail,
+        organizations: services.organizations,
         logger,
       });
     }

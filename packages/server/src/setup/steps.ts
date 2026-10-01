@@ -27,7 +27,15 @@ import type { Database } from "../database/database.js";
 import { migrationStatus } from "../database/migrate.js";
 import type { DatabasePool } from "../database/pool.js";
 import { type MailService, smtpConfigurationSchema } from "../mail/mail-service.js";
-import { languageSetting, supportedLanguages } from "../settings/builtin.js";
+import {
+  type OrganizationService,
+  organizationNameSchema,
+  slugSchema,
+  timeZoneSchema,
+} from "../organizations/organizations.js";
+import { organizations } from "../organizations/schema.js";
+import { organizationSettingsChain } from "../organizations/settings.js";
+import { languageSetting, supportedLanguages, timeZoneSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import { defineSetupAction, type SetupActionContext, type SetupStep } from "./framework.js";
 import { SetupStepError } from "./setup-service.js";
@@ -38,6 +46,7 @@ const LOW_DISK_BYTES = 1024 ** 3;
 type CheckStatus = "ok" | "warning" | "error";
 
 export interface SetupStepDependencies {
+  organizations: OrganizationService;
   database: Database;
   pool: DatabasePool;
   settings: SettingsService;
@@ -195,7 +204,12 @@ export function ownerStep(deps: SetupStepDependencies): SetupStep {
             }
             accountId = existing.id;
           } else {
-            const account = await deps.accounts.createStandard(context.tx, input);
+            const account = await deps.accounts.createStandard(context.tx, {
+              email: input.email,
+              name: input.name,
+              password: input.password,
+              homeOrganizationId: null,
+            });
             await context.tx.insert(instance).values({ id: 1 }).onConflictDoNothing();
             await context.tx.update(instance).set({ ownerAccountId: account.id }).where(eq(instance.id, 1));
             accountId = account.id;
@@ -340,6 +354,68 @@ export function mailStep(deps: SetupStepDependencies): SetupStep {
   };
 }
 
+export function organizationStep(deps: SetupStepDependencies): SetupStep {
+  return {
+    id: "organization",
+    order: 50,
+    required: true,
+    async describe({ state }) {
+      const id = typeof state.organizationId === "string" ? state.organizationId : null;
+      return { organization: id ? await deps.organizations.get(id) : null };
+    },
+    actions: {
+      save: defineSetupAction({
+        input: z
+          .object({
+            name: organizationNameSchema,
+            slug: slugSchema.optional(),
+            language: z.enum(supportedLanguages),
+            timeZone: timeZoneSchema,
+          })
+          .strict(),
+        async run(context, input) {
+          const existing =
+            typeof context.state.organizationId === "string" ? context.state.organizationId : null;
+          if (existing) {
+            const chain = organizationSettingsChain(existing);
+            await context.tx
+              .update(organizations)
+              .set({ name: input.name, ...(input.slug ? { slug: input.slug } : {}), updatedAt: new Date() })
+              .where(eq(organizations.id, existing));
+            await deps.settings.set(languageSetting, chain, "organization", input.language, {
+              tx: context.tx,
+            });
+            await deps.settings.set(timeZoneSetting, chain, "organization", input.timeZone, {
+              tx: context.tx,
+            });
+            await context.complete();
+            return { body: { organizationId: existing } };
+          }
+          const owner = await ownerOf(context);
+          if (!owner) throw new SetupStepError("ownerMissing", "Create the owner account first");
+          const organization = await deps.organizations.create(context.tx, ANONYMOUS, {
+            name: input.name,
+            ...(input.slug ? { slug: input.slug } : {}),
+            language: input.language,
+            timeZone: input.timeZone,
+            ownerAccountId: owner.id,
+          });
+          await context.setState({ organizationId: organization.id });
+          await context.complete();
+          return { body: { organizationId: organization.id } };
+        },
+      }),
+    },
+  };
+}
+
 export function builtinSetupSteps(deps: SetupStepDependencies): SetupStep[] {
-  return [systemCheckStep(deps), instanceStep(deps), ownerStep(deps), keyBackupStep(deps), mailStep(deps)];
+  return [
+    systemCheckStep(deps),
+    instanceStep(deps),
+    ownerStep(deps),
+    keyBackupStep(deps),
+    organizationStep(deps),
+    mailStep(deps),
+  ];
 }

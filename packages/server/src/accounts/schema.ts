@@ -11,6 +11,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { bytes, primaryId, timestamps } from "../database/columns.js";
+import { organizations } from "../organizations/schema.js";
 
 export const accountTypes = ["standard", "guest", "portal", "service"] as const;
 export type AccountType = (typeof accountTypes)[number];
@@ -31,9 +32,16 @@ export const accounts = pgTable(
     name: text().notNull(),
     passwordHash: text(),
     passwordChangedAt: timestamp({ withTimezone: true, mode: "date" }),
+    emailVerifiedAt: timestamp({ withTimezone: true, mode: "date" }),
+    homeOrganizationId: uuid().references(() => organizations.id),
+    lastActiveAt: timestamp({ withTimezone: true, mode: "date" }),
+    inactivityNotifiedAt: timestamp({ withTimezone: true, mode: "date" }),
     ...timestamps(),
   },
-  (table) => [uniqueIndex("accounts_email_unique").on(sql`lower(${table.email})`)],
+  (table) => [
+    uniqueIndex("accounts_email_unique").on(sql`lower(${table.email})`),
+    index().on(table.homeOrganizationId),
+  ],
 );
 
 export const setupCompletedThrough = pgEnum("setup_completed_through", ["assistant", "configuration"]);

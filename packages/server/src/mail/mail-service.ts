@@ -2,6 +2,7 @@ import { uuidv7 } from "@pagehall/shared";
 import { and, eq, lt } from "drizzle-orm";
 import { z } from "zod";
 import { instanceNameSetting } from "../accounts/instance-settings.js";
+import { accountScopeChain } from "../accounts/scope.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Encryption } from "../crypto/envelope.js";
 import type { Database, Transaction } from "../database/database.js";
@@ -116,7 +117,8 @@ export class MailService {
   }
 
   async languageOf(accountId: string): Promise<Language> {
-    return this.#settings.get(languageSetting, { user: accountId });
+    const chain = await accountScopeChain(this.#database, accountId);
+    return this.#settings.get(languageSetting, { ...chain, user: accountId });
   }
 
   async queue<T extends MailTemplate>(

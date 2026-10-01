@@ -10,6 +10,7 @@ export { instanceNameSetting, instanceUrlSetting } from "./accounts/instance-set
 export { ANONYMOUS, accountPrincipal, type Principal, SYSTEM } from "./accounts/principal.js";
 export { AuditLog, type AuditScope, type AuditVerification } from "./audit/audit-log.js";
 export { type AuditEventName, auditCatalog, type SignInMethod } from "./audit/catalog.js";
+export type { AuditEntry } from "./audit/reader.js";
 export { auditRetentionSetting } from "./audit/retention.js";
 export type { FactorAdded } from "./auth/account-security.js";
 export { BusyError } from "./auth/concurrency.js";
@@ -43,6 +44,9 @@ export {
   type RegistrationResponseJSON,
   RelyingPartyError,
 } from "./auth/webauthn.js";
+export { type Areas, areasSchema } from "./authorization/areas.js";
+export type { Resource } from "./authorization/registry.js";
+export { type Decision, ForbiddenError, type Grant } from "./authorization/service.js";
 export {
   BACKUP_FORMAT_VERSION,
   BackupError,
@@ -126,6 +130,24 @@ export {
   type RequestContext,
   runWithRequestContext,
 } from "./observability/request-context.js";
+export type { BreakGlassAccess } from "./organizations/break-glass.js";
+export { breakGlassReasonSchema } from "./organizations/break-glass.js";
+export type { Group, GroupDetails } from "./organizations/groups.js";
+export { groupDescriptionSchema, groupNameSchema } from "./organizations/groups.js";
+export type { Invitation } from "./organizations/invitations.js";
+export type { Member } from "./organizations/memberships.js";
+export { LastOwnerError } from "./organizations/memberships.js";
+export type { Organization } from "./organizations/organizations.js";
+export {
+  domainSchema,
+  OrganizationError,
+  organizationNameSchema,
+  slugSchema,
+  timeZoneSchema,
+} from "./organizations/organizations.js";
+export type { CustomRole, RoleAssignment } from "./organizations/roles.js";
+export { roleNameSchema } from "./organizations/roles.js";
+export * from "./organizations/settings.js";
 export {
   createServerRuntime,
   type ProcessRole,

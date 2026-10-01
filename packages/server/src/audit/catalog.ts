@@ -1,7 +1,18 @@
 import { z } from "zod";
 import type { PrincipalType } from "../accounts/principal.js";
 
-export const auditTargetTypes = ["account", "instance", "setting", "setupStep"] as const;
+export const auditTargetTypes = [
+  "account",
+  "instance",
+  "setting",
+  "setupStep",
+  "organization",
+  "group",
+  "role",
+  "roleAssignment",
+  "invitation",
+  "breakGlassAccess",
+] as const;
 export type AuditTargetType = (typeof auditTargetTypes)[number];
 
 export type AuditVisibility = "instance" | "organization";
@@ -81,7 +92,11 @@ export const auditCatalog = {
   "account.created": event({
     actor: ["account", "anonymous", "system"],
     target: "account",
-    fields: z.object({ type: z.string(), email: z.string() }),
+    fields: z.object({
+      type: z.string(),
+      email: z.string(),
+      homeOrganizationId: z.uuid().nullable().optional(),
+    }),
     visibility: "organization",
   }),
   "account.passwordChanged": event({
@@ -205,6 +220,186 @@ export const auditCatalog = {
       action: z.enum(["set", "clear", "lock", "unlock"]),
       value: z.json().optional(),
     }),
+    visibility: "organization",
+  }),
+
+  "organization.created": event({
+    actor: ["account", "anonymous", "system"],
+    target: "organization",
+    fields: z.object({ name: z.string(), slug: z.string(), language: z.string(), timeZone: z.string() }),
+    visibility: "organization",
+  }),
+  "organization.updated": event({
+    actor: ["account", "system"],
+    target: "organization",
+    fields: z.object({ name: z.string(), slug: z.string(), logoRef: z.string().nullable() }),
+    visibility: "organization",
+  }),
+  "organization.domainAdded": event({
+    actor: ["account", "system"],
+    target: "organization",
+    fields: z.object({ domain: z.string() }),
+    visibility: "organization",
+  }),
+  "organization.domainRemoved": event({
+    actor: ["account", "system"],
+    target: "organization",
+    fields: z.object({ domain: z.string() }),
+    visibility: "organization",
+  }),
+  "membership.added": event({
+    actor: ["account", "anonymous", "system"],
+    target: "account",
+    fields: z.object({ kind: z.string(), expiresAt: z.iso.datetime().nullable() }),
+    visibility: "organization",
+  }),
+  "membership.updated": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({ expiresAt: z.iso.datetime().nullable(), responsibleAccountId: z.uuid().nullable() }),
+    visibility: "organization",
+  }),
+  "membership.removed": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({ kind: z.string(), reason: z.enum(["removed", "left", "expired"]) }),
+    visibility: "organization",
+  }),
+  "role.created": event({
+    actor: ["account", "system"],
+    target: "role",
+    fields: z.object({ name: z.string(), areas: z.record(z.string(), z.string()) }),
+    visibility: "organization",
+  }),
+  "role.updated": event({
+    actor: ["account", "system"],
+    target: "role",
+    fields: z.object({ name: z.string(), areas: z.record(z.string(), z.string()) }),
+    visibility: "organization",
+  }),
+  "role.deleted": event({
+    actor: ["account", "system"],
+    target: "role",
+    fields: z.object({ name: z.string() }),
+    visibility: "organization",
+  }),
+  "role.assigned": event({
+    actor: ["account", "anonymous", "system"],
+    target: "roleAssignment",
+    fields: z.object({
+      role: z.string(),
+      customRoleId: z.uuid().nullable(),
+      principalKind: z.string(),
+      principalId: z.uuid().nullable(),
+      expiresAt: z.iso.datetime().nullable(),
+    }),
+    visibility: "organization",
+  }),
+  "role.unassigned": event({
+    actor: ["account", "system"],
+    target: "roleAssignment",
+    fields: z.object({
+      role: z.string(),
+      principalKind: z.string(),
+      principalId: z.uuid().nullable(),
+      reason: z.enum(["removed", "expired"]),
+    }),
+    visibility: "organization",
+  }),
+  "group.created": event({
+    actor: ["account", "system"],
+    target: "group",
+    fields: z.object({ name: z.string() }),
+    visibility: "organization",
+  }),
+  "group.updated": event({
+    actor: ["account", "system"],
+    target: "group",
+    fields: z.object({ name: z.string(), description: z.string() }),
+    visibility: "organization",
+  }),
+  "group.deleted": event({
+    actor: ["account", "system"],
+    target: "group",
+    fields: z.object({ name: z.string() }),
+    visibility: "organization",
+  }),
+  "group.memberAdded": event({
+    actor: ["account", "system"],
+    target: "group",
+    fields: z.object({ accountId: z.uuid(), expiresAt: z.iso.datetime().nullable() }),
+    visibility: "organization",
+  }),
+  "group.memberRemoved": event({
+    actor: ["account", "system"],
+    target: "group",
+    fields: z.object({ accountId: z.uuid(), reason: z.enum(["removed", "expired"]) }),
+    visibility: "organization",
+  }),
+  "group.managerAdded": event({
+    actor: ["account", "system"],
+    target: "group",
+    fields: z.object({ accountId: z.uuid() }),
+    visibility: "organization",
+  }),
+  "group.managerRemoved": event({
+    actor: ["account", "system"],
+    target: "group",
+    fields: z.object({ accountId: z.uuid() }),
+    visibility: "organization",
+  }),
+  "invitation.created": event({
+    actor: ["account", "system"],
+    target: "invitation",
+    fields: z.object({ email: z.string(), kind: z.string(), expiresAt: z.iso.datetime() }),
+    visibility: "organization",
+  }),
+  "invitation.accepted": event({
+    actor: ["anonymous", "account"],
+    target: "invitation",
+    fields: z.object({ accountId: z.uuid(), accountCreated: z.boolean() }),
+    visibility: "organization",
+  }),
+  "invitation.revoked": event({
+    actor: ["account", "system"],
+    target: "invitation",
+    fields: z.object({}),
+    visibility: "organization",
+  }),
+  "guest.responsibleChanged": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({ responsibleAccountId: z.uuid().nullable() }),
+    visibility: "organization",
+  }),
+  "account.deactivated": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({ endedSessions: z.number().int().nonnegative() }),
+    visibility: "organization",
+  }),
+  "instance.ownershipTransferred": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({ previousOwnerId: z.uuid() }),
+    visibility: "instance",
+  }),
+  "breakGlass.started": event({
+    actor: ["account"],
+    target: "breakGlassAccess",
+    fields: z.object({ accountId: z.uuid(), reason: z.string(), expiresAt: z.iso.datetime() }),
+    visibility: "organization",
+  }),
+  "breakGlass.actionAuthorized": event({
+    actor: ["account"],
+    target: "breakGlassAccess",
+    fields: z.object({ action: z.string(), resourceType: z.string(), resourceId: z.string().nullable() }),
+    visibility: "organization",
+  }),
+  "breakGlass.ended": event({
+    actor: ["account", "system"],
+    target: "breakGlassAccess",
+    fields: z.object({ reason: z.enum(["endedByAccount", "expired"]) }),
     visibility: "organization",
   }),
 } as const satisfies Record<string, AuditEventDefinition>;

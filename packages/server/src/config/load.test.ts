@@ -176,6 +176,7 @@ describe("loadConfig for sign-in and setup", () => {
       PAGEHALL_OWNER_EMAIL: "owner@example.org",
       PAGEHALL_OWNER_NAME: "Owner",
       PAGEHALL_OWNER_PASSWORD: "owner-password-value",
+      PAGEHALL_ORGANIZATION_NAME: "Docs team",
       PAGEHALL_SMTP_HOST: "smtp.example.org",
       PAGEHALL_SMTP_USERNAME: "wiki",
       PAGEHALL_SMTP_PASSWORD: "smtp-password-value",
@@ -226,6 +227,37 @@ describe("loadConfig for sign-in and setup", () => {
     );
   });
 
+  it("reads and validates the first organization", () => {
+    const setup = {
+      ...base,
+      PAGEHALL_INSTANCE_URL: "https://wiki.example.org",
+      PAGEHALL_OWNER_EMAIL: "owner@example.org",
+      PAGEHALL_OWNER_NAME: "Owner",
+      PAGEHALL_OWNER_PASSWORD: "owner-password-value",
+    };
+    expectConfigError(
+      () => loadConfig(setup),
+      "PAGEHALL_ORGANIZATION_NAME: is required for setup through configuration",
+    );
+    expect(
+      loadConfig({
+        ...setup,
+        PAGEHALL_ORGANIZATION_NAME: "Docs team",
+        PAGEHALL_ORGANIZATION_LANGUAGE: "de",
+        PAGEHALL_ORGANIZATION_TIME_ZONE: "Europe/Vienna",
+      }).setup?.organization,
+    ).toEqual({ name: "Docs team", language: "de", timeZone: "Europe/Vienna" });
+    expectConfigError(
+      () =>
+        loadConfig({
+          ...setup,
+          PAGEHALL_ORGANIZATION_NAME: "Docs",
+          PAGEHALL_ORGANIZATION_TIME_ZONE: "Mars/Olympus",
+        }),
+      "PAGEHALL_ORGANIZATION_TIME_ZONE: must be an IANA time zone",
+    );
+  });
+
   it("rejects SMTP credentials without TLS and a password without a user name", () => {
     const setup = {
       ...base,
@@ -233,6 +265,7 @@ describe("loadConfig for sign-in and setup", () => {
       PAGEHALL_OWNER_EMAIL: "owner@example.org",
       PAGEHALL_OWNER_NAME: "Owner",
       PAGEHALL_OWNER_PASSWORD: "owner-password-value",
+      PAGEHALL_ORGANIZATION_NAME: "Docs team",
       PAGEHALL_SMTP_HOST: "smtp.example.org",
       PAGEHALL_SMTP_FROM: "wiki@example.org",
     };
