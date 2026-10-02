@@ -37,6 +37,7 @@ export const accounts = pgTable(
     lastActiveAt: timestamp({ withTimezone: true, mode: "date" }),
     inactivityNotifiedAt: timestamp({ withTimezone: true, mode: "date" }),
     secondFactorResetAt: timestamp({ withTimezone: true, mode: "date" }),
+    lastSignInAt: timestamp({ withTimezone: true, mode: "date" }),
     ...timestamps(),
   },
   (table) => [

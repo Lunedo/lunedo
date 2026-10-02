@@ -1,5 +1,6 @@
 import { AccountService } from "./accounts/accounts.js";
 import { AccountAdministrationService } from "./accounts/administration.js";
+import { AccountOverviewService } from "./accounts/overview.js";
 import { AuditLog } from "./audit/audit-log.js";
 import { AuditReader } from "./audit/reader.js";
 import { AUDIT_RETENTION_SCHEDULE, applyAuditRetention, auditRetentionJob } from "./audit/retention.js";
@@ -73,6 +74,7 @@ export interface AccountServices {
   organizations: OrganizationService;
   memberships: MembershipService;
   administration: AccountAdministrationService;
+  overview: AccountOverviewService;
   roles: RoleService;
   groups: GroupService;
   invitations: InvitationService;
@@ -129,6 +131,7 @@ export function createAccountServices(options: {
   const organizations = new OrganizationService({ database, settings, audit });
   const memberships = new MembershipService({ database, audit, authorization });
   const administration = new AccountAdministrationService({ database, authorization, audit, mail });
+  const overview = new AccountOverviewService({ database, accounts });
   const roles = new RoleService({ database, audit, authorization });
   const groups = new GroupService({ database, audit, authorization });
   const notifications = new NotificationService({
@@ -241,6 +244,7 @@ export function createAccountServices(options: {
     organizations,
     memberships,
     administration,
+    overview,
     roles,
     groups,
     invitations,

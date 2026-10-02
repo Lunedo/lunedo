@@ -5,6 +5,7 @@ export type KeysetKey = string[];
 export interface PageRequest {
   after?: KeysetKey | undefined;
   limit: number;
+  search?: string | undefined;
 }
 
 export interface Page<T> {
@@ -22,6 +23,16 @@ export function afterKey(columns: SQLWrapper[], after: KeysetKey | undefined): S
   return sql`(${sql.join(columns, sql`, `)}) > (${sql.join(
     after.map((value) => sql`${value}`),
     sql`, `,
+  )})`;
+}
+
+export function matchesSearch(columns: SQLWrapper[], search: string | undefined): SQL | undefined {
+  const term = search?.trim();
+  if (!term) return undefined;
+  const pattern = `%${term.replace(/[\\%_]/g, (character) => `\\${character}`)}%`;
+  return sql`(${sql.join(
+    columns.map((column) => sql`${column} ilike ${pattern}`),
+    sql` or `,
   )})`;
 }
 

@@ -61,6 +61,35 @@ export class AccountsController {
     return { endedSessions };
   }
 
+  @Post("accounts/:accountId/reactivate")
+  @Permission("account.reactivate", { type: "account", param: "accountId" }, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "Reactivate an account",
+    description:
+      "Lets a deactivated account sign in again. Its revoked tokens and ended memberships stay as they are.",
+    tags: ["Accounts"],
+    params: z.object({ accountId: z.uuid() }).strict(),
+    errors: ["notFound"],
+  })
+  async reactivate(@Param("accountId") accountId: string, @Req() request: FastifyRequest) {
+    await this.#services.administration.reactivate(actorOf(request), accountId);
+  }
+
+  @Post("accounts/:accountId/sessions/end")
+  @Permission("account.sessions.end", { type: "account", param: "accountId" }, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "End all sessions of another account",
+    description: "Signs the account out everywhere. Owners can only be signed out by owners.",
+    tags: ["Accounts"],
+    status: 200,
+    params: z.object({ accountId: z.uuid() }).strict(),
+    response: { description: "Sessions that ended.", schema: z.object({ endedSessions: z.number().int() }) },
+    errors: ["endOwnSessions", "notFound"],
+  })
+  async endSessions(@Param("accountId") accountId: string, @Req() request: FastifyRequest) {
+    return this.#services.administration.endSessions(actorOf(request), accountId);
+  }
+
   @Post("accounts/:accountId/second-factor/reset")
   @Permission(
     "account.secondFactor.reset",

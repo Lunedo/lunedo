@@ -1,11 +1,19 @@
 import { accountNameSchema, emailSchema } from "@pagehall/shared";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { AuditEvents, AuditLog } from "../audit/audit-log.js";
 import type { PasswordHasher, PasswordProblem } from "../auth/passwords.js";
 import { passwordProblem } from "../auth/passwords.js";
 import { passwordMinLengthSetting } from "../auth/settings.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
-import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
+import {
+  afterKey,
+  FIRST_PAGE,
+  matchesSearch,
+  type Page,
+  type PageRequest,
+  pageLimit,
+  toPage,
+} from "../database/keyset.js";
 import { memberships } from "../organizations/access-schema.js";
 import type { ScopeChain, SettingsService } from "../settings/service.js";
 import { type AccountState, type AccountType, accounts, instance } from "./schema.js";
@@ -98,7 +106,12 @@ export class AccountService {
     const rows = await this.#database
       .select({ ...columns, sortName })
       .from(accounts)
-      .where(afterKey([sortName, accounts.id], page.after))
+      .where(
+        and(
+          afterKey([sortName, accounts.id], page.after),
+          matchesSearch([accounts.name, accounts.email], page.search),
+        ),
+      )
       .orderBy(sortName, accounts.id)
       .limit(pageLimit(page));
     return toPage(

@@ -24,6 +24,20 @@ export const pageQuery = {
 
 export const pageQuerySchema = z.object(pageQuery).strict();
 
+export const searchQuerySchema = z
+  .object({
+    ...pageQuery,
+    q: z
+      .string()
+      .trim()
+      .max(200)
+      .optional()
+      .describe(
+        "Only items that contain this text, ignoring case: in the name and e-mail address of accounts and members, the name and short name of organizations, and the name and description of groups.",
+      ),
+  })
+  .strict();
+
 export function pageSchema<T extends z.ZodType>(item: T, description: string) {
   return z
     .object({
@@ -61,11 +75,15 @@ export const nameCursor = z.tuple([z.string().max(1000), z.uuid()]);
 export const idCursor = z.tuple([z.uuid()]);
 
 export function pageRequest(
-  query: { cursor?: string | undefined; limit: number },
+  query: { cursor?: string | undefined; limit: number; q?: string | undefined },
   cursor: typeof nameCursor | typeof idCursor,
 ): PageRequest {
   const after = decodeCursor(query.cursor, cursor);
-  return { limit: query.limit, ...(after ? { after: [...after] } : {}) };
+  return {
+    limit: query.limit,
+    ...(after ? { after: [...after] } : {}),
+    ...(query.q ? { search: query.q } : {}),
+  };
 }
 
 export function toApiPage<T>(page: ServerPage<T>): Page<T> {

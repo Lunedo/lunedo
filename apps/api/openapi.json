@@ -4396,6 +4396,148 @@
         }
       }
     },
+    "/api/v1/accounts/{accountId}/reactivate": {
+      "post": {
+        "operationId": "accounts.reactivate",
+        "summary": "Reactivate an account",
+        "description": "Lets a deactivated account sign in again. Its revoked tokens and ended memberships stay as they are.\n\nRequires the permission `account.reactivate` on the account in `accountId`. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Accounts"
+        ],
+        "x-pagehall-permission": {
+          "action": "account.reactivate",
+          "resource": "account",
+          "parameter": "accountId"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "reauthenticationRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:reauthenticationRequired",
+                      "title": "Confirm your identity first",
+                      "status": 403,
+                      "code": "reauthenticationRequired"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/accounts/{accountId}/second-factor/reset": {
       "post": {
         "operationId": "accounts.resetSecondFactor",
@@ -5117,6 +5259,186 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{accountId}/sessions/end": {
+      "post": {
+        "operationId": "accounts.endSessions",
+        "summary": "End all sessions of another account",
+        "description": "Signs the account out everywhere. Owners can only be signed out by owners.\n\nRequires the permission `account.sessions.end` on the account in `accountId`. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Accounts"
+        ],
+        "x-pagehall-permission": {
+          "action": "account.sessions.end",
+          "resource": "account",
+          "parameter": "accountId"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sessions that ended.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "endedSessions": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "endedSessions"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "reauthenticationRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:reauthenticationRequired",
+                      "title": "Confirm your identity first",
+                      "status": 403,
+                      "code": "reauthenticationRequired"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`endOwnSessions`: Own sessions are ended on the security page.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "endOwnSessions": {
+                    "value": {
+                      "type": "urn:pagehall:problem:endOwnSessions",
+                      "title": "Own sessions are ended on the security page",
+                      "status": 409,
+                      "code": "endOwnSessions"
                     }
                   }
                 }
@@ -8778,7 +9100,7 @@
       "get": {
         "operationId": "instance.accounts",
         "summary": "List all accounts",
-        "description": "Lists every account of the instance, including service accounts.\n\nRequires the permission `instance.accounts.view` on the instance.",
+        "description": "Lists every account of the instance, including service accounts, with instance roles, second-factor state and last sign-in. `q` searches name and e-mail address.\n\nRequires the permission `instance.accounts.view` on the instance.",
         "tags": [
           "Instance"
         ],
@@ -8815,6 +9137,16 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 200
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Only items that contain this text, ignoring case: in the name and e-mail address of accounts and members, the name and short name of organizations, and the name and description of groups.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
             }
           }
         ],
@@ -8884,6 +9216,74 @@
                             "type": "string",
                             "format": "date-time",
                             "description": "When the account was created. ISO 8601 timestamp in UTC."
+                          },
+                          "lastSignInAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When the account signed in last, or null. ISO 8601 timestamp in UTC."
+                          },
+                          "twoFactorActive": {
+                            "type": "boolean",
+                            "description": "Whether the account has an authenticator app or a passkey."
+                          },
+                          "instanceRoles": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "builtInRole": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "owner",
+                                        "administrator",
+                                        "member",
+                                        "securityAuditor"
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Key of the built-in role, or null for a custom role."
+                                },
+                                "customRoleId": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "ID of the custom instance role, or null."
+                                },
+                                "name": {
+                                  "description": "Name of the custom role, or null for a built-in role.",
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "builtInRole",
+                                "customRoleId",
+                                "name"
+                              ],
+                              "additionalProperties": false,
+                              "description": "An instance role the account holds."
+                            },
+                            "description": "Instance roles of the account, the instance owner first."
                           }
                         },
                         "required": [
@@ -8893,10 +9293,13 @@
                           "email",
                           "name",
                           "homeOrganizationId",
-                          "createdAt"
+                          "createdAt",
+                          "lastSignInAt",
+                          "twoFactorActive",
+                          "instanceRoles"
                         ],
                         "additionalProperties": false,
-                        "description": "An account of the instance."
+                        "description": "An account of the instance with what administrators need to see."
                       },
                       "description": "Accounts, ordered by name."
                     },
@@ -8924,7 +9327,16 @@
                       "email": "ada@example.org",
                       "name": "Ada Lovelace",
                       "homeOrganizationId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a6b",
-                      "createdAt": "2026-10-01T08:00:00.000Z"
+                      "createdAt": "2026-10-01T08:00:00.000Z",
+                      "lastSignInAt": "2026-10-01T09:30:00.000Z",
+                      "twoFactorActive": true,
+                      "instanceRoles": [
+                        {
+                          "builtInRole": "securityAuditor",
+                          "customRoleId": null,
+                          "name": null
+                        }
+                      ]
                     }
                   ],
                   "nextCursor": null
@@ -9002,6 +9414,648 @@
                       "title": "Not allowed",
                       "status": 403,
                       "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/accounts/{accountId}": {
+      "get": {
+        "operationId": "instance.account",
+        "summary": "Show an account",
+        "description": "Shows an account with its memberships and roles per organization, active sessions, tokens and second factors.\n\nRequires the permission `instance.accounts.view` on the instance.",
+        "tags": [
+          "Instance"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.accounts.view",
+          "resource": "instance"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the account.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "account": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of the account."
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "standard",
+                            "guest",
+                            "portal",
+                            "service"
+                          ],
+                          "description": "Kind of account."
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "invited",
+                            "active",
+                            "deactivated",
+                            "anonymized",
+                            "placeholder"
+                          ],
+                          "description": "Lifecycle state of the account."
+                        },
+                        "email": {
+                          "description": "E-mail address, or null.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "Display name."
+                        },
+                        "homeOrganizationId": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Organization the account belongs to, or null."
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "When the account was created. ISO 8601 timestamp in UTC."
+                        },
+                        "lastSignInAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "When the account signed in last, or null. ISO 8601 timestamp in UTC."
+                        },
+                        "twoFactorActive": {
+                          "type": "boolean",
+                          "description": "Whether the account has an authenticator app or a passkey."
+                        },
+                        "instanceRoles": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "builtInRole": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "owner",
+                                      "administrator",
+                                      "member",
+                                      "securityAuditor"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Key of the built-in role, or null for a custom role."
+                              },
+                              "customRoleId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "ID of the custom instance role, or null."
+                              },
+                              "name": {
+                                "description": "Name of the custom role, or null for a built-in role.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "builtInRole",
+                              "customRoleId",
+                              "name"
+                            ],
+                            "additionalProperties": false,
+                            "description": "An instance role the account holds."
+                          },
+                          "description": "Instance roles of the account, the instance owner first."
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "state",
+                        "email",
+                        "name",
+                        "homeOrganizationId",
+                        "createdAt",
+                        "lastSignInAt",
+                        "twoFactorActive",
+                        "instanceRoles"
+                      ],
+                      "additionalProperties": false,
+                      "description": "An account of the instance with what administrators need to see."
+                    },
+                    "memberships": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the organization."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Name of the organization."
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "member",
+                              "collaborator",
+                              "guest"
+                            ],
+                            "description": "Kind of membership."
+                          },
+                          "expiresAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When the membership ends, or null. ISO 8601 timestamp in UTC."
+                          },
+                          "home": {
+                            "type": "boolean",
+                            "description": "Whether this is the home organization of the account."
+                          },
+                          "roles": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "assignmentId": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "ID of the assignment, or null when the role comes from the membership."
+                                },
+                                "builtInRole": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "owner",
+                                        "administrator",
+                                        "member",
+                                        "securityAuditor"
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Key of the built-in role, or null for a custom role."
+                                },
+                                "customRoleId": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "ID of the custom role, or null."
+                                },
+                                "name": {
+                                  "description": "Name of the custom role, or null.",
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "via": {
+                                  "type": "string",
+                                  "enum": [
+                                    "account",
+                                    "group",
+                                    "organizationMembers",
+                                    "instanceUsers",
+                                    "membership",
+                                    "breakGlass"
+                                  ],
+                                  "description": "How the account holds the role."
+                                },
+                                "groupName": {
+                                  "description": "Name of the group the role comes through, or null.",
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "expiresAt": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "date-time"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "When the role ends, or null. ISO 8601 timestamp in UTC."
+                                }
+                              },
+                              "required": [
+                                "assignmentId",
+                                "builtInRole",
+                                "customRoleId",
+                                "name",
+                                "via",
+                                "groupName",
+                                "expiresAt"
+                              ],
+                              "additionalProperties": false,
+                              "description": "A role in the organization."
+                            },
+                            "description": "Roles the account holds in the organization."
+                          }
+                        },
+                        "required": [
+                          "organizationId",
+                          "name",
+                          "kind",
+                          "expiresAt",
+                          "home",
+                          "roles"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A membership."
+                      },
+                      "description": "Organizations of the account, by name."
+                    },
+                    "sessions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the session."
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "full",
+                              "secondFactorSetup"
+                            ],
+                            "description": "Full session, or one that can only set up a second factor."
+                          },
+                          "methods": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "How the session signed in."
+                          },
+                          "browser": {
+                            "description": "Browser, or null.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "operatingSystem": {
+                            "description": "Operating system, or null.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "clientIp": {
+                            "description": "IP address at sign-in, or null.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When the session started. ISO 8601 timestamp in UTC."
+                          },
+                          "lastUsedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When the session was used last. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "methods",
+                          "browser",
+                          "operatingSystem",
+                          "clientIp",
+                          "createdAt",
+                          "lastUsedAt"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An active session."
+                      },
+                      "description": "Active sessions, most recently used first."
+                    },
+                    "tokens": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the token."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Name of the token."
+                          },
+                          "prefix": {
+                            "type": "string",
+                            "description": "Visible start of the token."
+                          },
+                          "organizationId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Organization the token is limited to, or null."
+                          },
+                          "expiresAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When the token expires, or null. ISO 8601 timestamp in UTC."
+                          },
+                          "lastUsedAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When the token was used last, or null. ISO 8601 timestamp in UTC."
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When the token was created. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "prefix",
+                          "organizationId",
+                          "expiresAt",
+                          "lastUsedAt",
+                          "createdAt"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An active API token."
+                      },
+                      "description": "Active personal API tokens of the account."
+                    },
+                    "twoFactor": {
+                      "type": "object",
+                      "properties": {
+                        "totp": {
+                          "type": "boolean",
+                          "description": "Whether an authenticator app is set up."
+                        },
+                        "passkeys": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Number of passkeys."
+                        },
+                        "recoveryCodes": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Number of unused recovery codes."
+                        }
+                      },
+                      "required": [
+                        "totp",
+                        "passkeys",
+                        "recoveryCodes"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Second factors of the account."
+                    }
+                  },
+                  "required": [
+                    "account",
+                    "memberships",
+                    "sessions",
+                    "tokens",
+                    "twoFactor"
+                  ],
+                  "additionalProperties": false,
+                  "description": "An account with its memberships, roles, sessions, tokens and second factors."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
                     }
                   }
                 }
@@ -10788,7 +11842,7 @@
       "get": {
         "operationId": "instance.organizations",
         "summary": "List all organizations",
-        "description": "Lists every organization of the instance.\n\nRequires the permission `instance.organizations.view` on the instance.",
+        "description": "Lists every organization of the instance with its owners, number of members and domains. `q` searches name and short name.\n\nRequires the permission `instance.organizations.view` on the instance.",
         "tags": [
           "Instance"
         ],
@@ -10825,6 +11879,16 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 200
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Only items that contain this text, ignoring case: in the name and e-mail address of accounts and members, the name and short name of organizations, and the name and description of groups.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
             }
           }
         ],
@@ -10890,6 +11954,42 @@
                             "type": "string",
                             "format": "date-time",
                             "description": "When the organization was created. ISO 8601 timestamp in UTC."
+                          },
+                          "owners": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the owner."
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "description": "Name of the owner."
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "Owners of the organization, by name."
+                          },
+                          "memberCount": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Number of active members, collaborators and guests."
+                          },
+                          "domains": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "E-mail domains of the organization."
                           }
                         },
                         "required": [
@@ -10900,10 +12000,13 @@
                           "language",
                           "timeZone",
                           "accentColor",
-                          "createdAt"
+                          "createdAt",
+                          "owners",
+                          "memberCount",
+                          "domains"
                         ],
                         "additionalProperties": false,
-                        "description": "An organization."
+                        "description": "An organization with what instance administrators need to see."
                       },
                       "description": "Organizations, ordered by name."
                     },
@@ -10932,7 +12035,17 @@
                       "language": "en",
                       "timeZone": "Europe/Vienna",
                       "accentColor": "petrol",
-                      "createdAt": "2026-10-01T08:00:00.000Z"
+                      "createdAt": "2026-10-01T08:00:00.000Z",
+                      "owners": [
+                        {
+                          "id": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
+                          "name": "Ada Lovelace"
+                        }
+                      ],
+                      "memberCount": 42,
+                      "domains": [
+                        "example.com"
+                      ]
                     }
                   ],
                   "nextCursor": null
@@ -18369,6 +19482,16 @@
               "minimum": 1,
               "maximum": 200
             }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Only items that contain this text, ignoring case: in the name and e-mail address of accounts and members, the name and short name of organizations, and the name and description of groups.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
           }
         ],
         "responses": {
@@ -20344,6 +21467,16 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 200
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Only items that contain this text, ignoring case: in the name and e-mail address of accounts and members, the name and short name of organizations, and the name and description of groups.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
             }
           }
         ],

@@ -188,6 +188,8 @@ const EXPECTED: Record<string, Expectation> = {
   "group.delete": organization("membersAndGroups", "manage", "manager"),
   "account.deactivate": instance("accounts", "manage", "homeOrganizationAdministrator"),
   "account.activity.view": { scope: "instance", rule: "self" },
+  "account.reactivate": instance("accounts", "manage", "homeOrganizationAdministrator"),
+  "account.sessions.end": instance("accounts", "manage", "homeOrganizationAdministrator"),
   "account.secondFactor.reset": instance("accounts", "manage", "homeOrganizationAdministrator"),
   "serviceAccount.view": organization("integrationsAndApi", "view"),
   "serviceAccount.manage": organization("integrationsAndApi", "manage"),

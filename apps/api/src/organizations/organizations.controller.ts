@@ -40,6 +40,7 @@ import {
   pageRequest,
   pageSchema,
   paginate,
+  searchQuerySchema,
   toApiPage,
 } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
@@ -540,7 +541,7 @@ export class OrganizationsController {
     description: "Lists members, collaborators and guests with their directly assigned roles.",
     tags: [MEMBERS],
     params: organizationIdParams,
-    query: pageQuerySchema,
+    query: searchQuerySchema,
     response: {
       description: "Members of the organization.",
       schema: pageSchema(memberSchema, "Members, ordered by name."),
@@ -549,7 +550,7 @@ export class OrganizationsController {
   })
   async members(
     @Param("organizationId") organizationId: string,
-    @Query() query: z.output<typeof pageQuerySchema>,
+    @Query() query: z.output<typeof searchQuerySchema>,
   ) {
     return toApiPage(await this.#services.memberships.list(organizationId, pageRequest(query, nameCursor)));
   }
@@ -855,7 +856,7 @@ export class OrganizationsController {
     description: "Lists the groups of the organization.",
     tags: [GROUPS],
     params: organizationIdParams,
-    query: pageQuerySchema,
+    query: searchQuerySchema,
     response: {
       description: "Groups of the organization.",
       schema: pageSchema(groupSchema, "Groups, ordered by name."),
@@ -864,7 +865,7 @@ export class OrganizationsController {
   })
   async groups(
     @Param("organizationId") organizationId: string,
-    @Query() query: z.output<typeof pageQuerySchema>,
+    @Query() query: z.output<typeof searchQuerySchema>,
   ) {
     return toApiPage(await this.#services.groups.list(organizationId, pageRequest(query, nameCursor)));
   }

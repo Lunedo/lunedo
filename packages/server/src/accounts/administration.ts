@@ -16,6 +16,8 @@ import type { Principal } from "./principal.js";
 import { accounts, instance } from "./schema.js";
 
 export const SECOND_FACTOR_RESET_ACTION = "account.secondFactor.reset";
+const END_SESSIONS_ACTION = "account.sessions.end";
+const REACTIVATE_ACTION = "account.reactivate";
 
 interface Target {
   id: string;
@@ -101,6 +103,73 @@ export class AccountAdministrationService {
     });
     if (mailId) await this.#mail.dispatch([mailId]);
     return result;
+  }
+
+  async endSessions(actor: Principal, accountId: string): Promise<{ endedSessions: number }> {
+    if (actor.type === "account" && actor.id === accountId) {
+      throw new OrganizationError("endOwnSessions", "Own sessions are ended on the security page");
+    }
+    return this.#database.transaction(async (tx) => {
+      const target = await this.#lockActive(tx, accountId);
+      await this.#authorization.require(
+        actor,
+        END_SESSIONS_ACTION,
+        { type: "account", id: accountId },
+        { executor: tx },
+      );
+      await this.#checkRank(tx, actor, target, END_SESSIONS_ACTION);
+      const ended = await tx
+        .delete(sessions)
+        .where(eq(sessions.accountId, accountId))
+        .returning({ id: sessions.id });
+      await tx.delete(authChallenges).where(eq(authChallenges.accountId, accountId));
+      await this.#audit.record(tx, {
+        name: "account.sessionsEnded",
+        actor,
+        targetId: accountId,
+        fields: { endedSessions: ended.length },
+        ...(target.home ? { scope: { type: "organization" as const, id: target.home } } : {}),
+      });
+      return { endedSessions: ended.length };
+    });
+  }
+
+  async reactivate(actor: Principal, accountId: string): Promise<void> {
+    await this.#database.transaction(async (tx) => {
+      const [row] = await tx
+        .select({
+          id: accounts.id,
+          type: accounts.type,
+          state: accounts.state,
+          home: accounts.homeOrganizationId,
+          email: accounts.email,
+        })
+        .from(accounts)
+        .where(eq(accounts.id, accountId))
+        .for("update");
+      if (!row || row.state !== "deactivated" || row.type === "service") {
+        throw new OrganizationError("notFound", "The account does not exist or is not deactivated");
+      }
+      const target = { id: row.id, home: row.home, email: row.email };
+      await this.#authorization.require(
+        actor,
+        REACTIVATE_ACTION,
+        { type: "account", id: accountId },
+        { executor: tx },
+      );
+      await tx
+        .update(accounts)
+        .set({ state: "active", updatedAt: new Date() })
+        .where(eq(accounts.id, accountId));
+      await this.#checkRank(tx, actor, target, REACTIVATE_ACTION);
+      await this.#audit.record(tx, {
+        name: "account.reactivated",
+        actor,
+        targetId: accountId,
+        fields: {},
+        ...(target.home ? { scope: { type: "organization" as const, id: target.home } } : {}),
+      });
+    });
   }
 
   async #lockActive(tx: Transaction, accountId: string): Promise<Target> {

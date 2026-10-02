@@ -7,7 +7,15 @@ import type { Principal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
-import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
+import {
+  afterKey,
+  FIRST_PAGE,
+  matchesSearch,
+  type Page,
+  type PageRequest,
+  pageLimit,
+  toPage,
+} from "../database/keyset.js";
 import { languageSetting, supportedLanguages, timeZoneSetting } from "../settings/builtin.js";
 import { accentColorSetting } from "../settings/preferences.js";
 import type { SettingsService } from "../settings/service.js";
@@ -120,7 +128,12 @@ export class OrganizationService {
     const rows = await this.#database
       .select({ organization: organizations, sortName })
       .from(organizations)
-      .where(afterKey([sortName, organizations.id], page.after))
+      .where(
+        and(
+          afterKey([sortName, organizations.id], page.after),
+          matchesSearch([organizations.name, organizations.slug], page.search),
+        ),
+      )
       .orderBy(sortName, organizations.id)
       .limit(pageLimit(page));
     const result = toPage(

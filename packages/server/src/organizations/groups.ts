@@ -5,7 +5,15 @@ import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Transaction } from "../database/database.js";
-import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
+import {
+  afterKey,
+  FIRST_PAGE,
+  matchesSearch,
+  type Page,
+  type PageRequest,
+  pageLimit,
+  toPage,
+} from "../database/keyset.js";
 import { groupManagers, groupMembers, groups, memberships, roleAssignments } from "./access-schema.js";
 import { lockOrganization } from "./memberships.js";
 import { OrganizationError } from "./organizations.js";
@@ -65,7 +73,13 @@ export class GroupService {
         sortName,
       })
       .from(groups)
-      .where(and(eq(groups.organizationId, organizationId), afterKey([sortName, groups.id], page.after)))
+      .where(
+        and(
+          eq(groups.organizationId, organizationId),
+          afterKey([sortName, groups.id], page.after),
+          matchesSearch([groups.name, groups.description], page.search),
+        ),
+      )
       .orderBy(sortName, groups.id)
       .limit(pageLimit(page));
     return toPage(

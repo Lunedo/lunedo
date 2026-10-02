@@ -129,6 +129,11 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     actions: {
       "account.deactivate": { ...instanceArea("accounts", "manage"), rule: "homeOrganizationAdministrator" },
       "account.activity.view": { scope: "instance", rule: "self" },
+      "account.reactivate": { ...instanceArea("accounts", "manage"), rule: "homeOrganizationAdministrator" },
+      "account.sessions.end": {
+        ...instanceArea("accounts", "manage"),
+        rule: "homeOrganizationAdministrator",
+      },
       "account.secondFactor.reset": {
         ...instanceArea("accounts", "manage"),
         rule: "homeOrganizationAdministrator",

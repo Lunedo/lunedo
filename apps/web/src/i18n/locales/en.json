@@ -1334,7 +1334,9 @@
         "emailChangeRequested": "E-mail change requested",
         "emailChanged": "E-mail address changed",
         "deactivated": "Account deactivated",
-        "secondFactorReset": "Second factor reset"
+        "secondFactorReset": "Second factor reset",
+        "reactivated": "Account reactivated",
+        "sessionsEnded": "All sessions ended"
       },
       "twoFactor": {
         "totpAdded": "Authenticator app added",

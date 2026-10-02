@@ -6,7 +6,15 @@ import type { AuditEventName } from "../audit/catalog.js";
 import { authChallenges, sessions } from "../auth/schema.js";
 import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
 import type { Database, Transaction } from "../database/database.js";
-import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
+import {
+  afterKey,
+  FIRST_PAGE,
+  matchesSearch,
+  type Page,
+  type PageRequest,
+  pageLimit,
+  toPage,
+} from "../database/keyset.js";
 import { responsiblesOf } from "../tokens/service-accounts.js";
 import {
   customRoles,
@@ -103,6 +111,7 @@ export class MembershipService {
           eq(accounts.state, "active"),
           or(isNull(memberships.expiresAt), sql`${memberships.expiresAt} > now()`),
           afterKey([sortName, accounts.id], page.after),
+          matchesSearch([accounts.name, accounts.email], page.search),
         ),
       )
       .orderBy(sortName, accounts.id)

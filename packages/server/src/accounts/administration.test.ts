@@ -231,6 +231,43 @@ describe.skipIf(!baseUrl)("resetting another account's second factor", () => {
     ).rejects.toThrow(ForbiddenError);
   });
 
+  it("ends sessions and reactivates accounts only with the rank over the account", async () => {
+    const org = await organization();
+    const admin = await standard(org.id);
+    await role(admin, "organization", "administrator", org.id);
+    await withFactors(org.owner);
+    await expect(
+      test.services.administration.endSessions(accountPrincipal(admin), org.owner),
+    ).rejects.toThrow(ForbiddenError);
+    const person = await standard(org.id);
+    await withFactors(person);
+    await expect(test.services.administration.endSessions(accountPrincipal(admin), person)).resolves.toEqual({
+      endedSessions: 1,
+    });
+    await expect(
+      test.services.administration.endSessions(accountPrincipal(admin), admin),
+    ).rejects.toMatchObject({ code: "endOwnSessions" });
+
+    await test.pool.query("update accounts set state = 'deactivated' where id = any($1)", [
+      [org.owner, person],
+    ]);
+    await expect(test.services.administration.reactivate(accountPrincipal(admin), org.owner)).rejects.toThrow(
+      ForbiddenError,
+    );
+    await test.services.administration.reactivate(accountPrincipal(admin), person);
+    const states = await test.pool.query("select id, state from accounts where id = any($1)", [
+      [org.owner, person],
+    ]);
+    expect(Object.fromEntries(states.rows.map((row) => [row.id, row.state]))).toEqual({
+      [org.owner]: "deactivated",
+      [person]: "active",
+    });
+    const outsider = await standard(null);
+    await expect(
+      test.services.administration.reactivate(accountPrincipal(outsider), org.owner),
+    ).rejects.toThrow(ForbiddenError);
+  });
+
   it("ignores service accounts and inactive accounts", async () => {
     const org = await organization();
     const service = await test.services.serviceAccounts.create(SYSTEM, org.id, { name: "Bot" });

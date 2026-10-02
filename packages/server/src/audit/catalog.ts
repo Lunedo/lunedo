@@ -387,6 +387,18 @@ export const auditCatalog = {
     fields: z.object({ endedSessions: z.number().int().nonnegative() }),
     visibility: "organization",
   }),
+  "account.reactivated": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({}),
+    visibility: "organization",
+  }),
+  "account.sessionsEnded": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({ endedSessions: z.number().int().nonnegative() }),
+    visibility: "organization",
+  }),
   "account.secondFactorReset": event({
     actor: ["account", "system"],
     target: "account",

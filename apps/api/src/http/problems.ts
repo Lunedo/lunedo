@@ -56,6 +56,7 @@ export const problems = {
   lastOwner: { status: 409, title: "The last owner cannot leave" },
   homeOrganization: { status: 409, title: "An account cannot leave its home organization" },
   deactivateSelf: { status: 409, title: "An account cannot deactivate itself" },
+  endOwnSessions: { status: 409, title: "Own sessions are ended on the security page" },
   resetOwnSecondFactor: { status: 409, title: "An account cannot reset its own second factor this way" },
   instanceOwner: { status: 409, title: "The instance owner cannot be changed this way" },
   settingLocked: { status: 409, title: "A higher level locked the setting" },

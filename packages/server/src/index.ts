@@ -6,7 +6,16 @@ export {
   emailSchema,
   PasswordPolicyError,
 } from "./accounts/accounts.js";
+export { AccountAdministrationService } from "./accounts/administration.js";
 export { instanceNameSetting, instanceUrlSetting } from "./accounts/instance-settings.js";
+export {
+  type AccountDetail,
+  type AccountMembership,
+  AccountOverviewService,
+  type AdministeredAccount,
+  type InstanceRoleSummary,
+  type OrganizationOverview,
+} from "./accounts/overview.js";
 export {
   ANONYMOUS,
   accountPrincipal,

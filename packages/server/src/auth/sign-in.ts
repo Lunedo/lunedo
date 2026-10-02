@@ -217,6 +217,7 @@ export class SignInService {
       methods,
       client,
     });
+    await tx.update(accounts).set({ lastSignInAt: new Date() }).where(eq(accounts.id, account.id));
     await this.#audit.record(tx, {
       name: "auth.signedIn",
       actor: accountPrincipal(account.id),

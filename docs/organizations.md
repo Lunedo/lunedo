@@ -89,6 +89,12 @@ Principals are accounts, including service accounts, groups, all members of an o
 
 A permission matrix test generates every combination of account kind, principal kind, built-in role, a custom role per area and registered action, and compares each decision with a model of the rules. New actions and roles are covered without changing the test; an action with a rule the model does not know fails it.
 
+## Account administration
+
+`GET /api/v1/instance/accounts` lists accounts with their instance roles, whether a second factor is set up and the last sign-in; `GET /api/v1/instance/accounts/{id}` adds the memberships and roles per organization, active sessions, active personal API tokens and the second factors. `GET /api/v1/instance/organizations` lists organizations with their owners, number of members and domains. These lists, the members and the groups of an organization accept `q` to search names, e-mail addresses, short names and group descriptions on the server, page by page.
+
+Administrators deactivate and reactivate accounts, end all sessions of an account and reset its second factor. Instance administrators with the accounts area may do this for every account, administrators of an organization for accounts whose home organization it is. The same rank rules apply to all four actions: holders of instance roles need someone with at least the same instance areas, owners of the home organization need an owner of it or the instance owner, the instance owner needs an owner, and nobody acts on their own account this way. Ending sessions and reactivating are audited as `account.sessionsEnded` and `account.reactivated`.
+
 ## Endpoints
 
 Each endpoint declares the action it requires. Endpoints marked internal serve the web client and are left out of the public API reference; the others are described at `/api/docs`, see [api.md](api.md).
@@ -108,6 +114,7 @@ Each endpoint declares the action it requires. Endpoints marked internal serve t
 | `DELETE /api/v1/organizations/{id}/membership` | `organization.leave`; internal |
 | `GET, POST, PATCH, DELETE /api/v1/organizations/{id}/roles` | `organization.roles.view`, `organization.roles.manage` |
 | `GET, POST, DELETE /api/v1/organizations/{id}/role-assignments` | `organization.roles.view`, `organization.roles.manage` |
+| `POST /api/v1/organizations/{id}/role-assignments/batch` | `organization.roles.manage`; internal |
 | `GET, POST /api/v1/organizations/{id}/groups` | `organization.groups.view`, `organization.groups.create` |
 | `GET, PATCH, DELETE /api/v1/groups/{id}`, members and managers | `group.view`, `group.manage`, `group.delete` |
 | `GET, POST, DELETE /api/v1/organizations/{id}/invitations` | `organization.members.manage` |
@@ -116,6 +123,8 @@ Each endpoint declares the action it requires. Endpoints marked internal serve t
 | `POST, DELETE /api/v1/organizations/{id}/break-glass` | `instance.breakGlass.request`, session only; internal |
 | `GET /api/v1/instance/organizations`, `.../accounts` | `instance.organizations.view`, `instance.accounts.view` |
 | `GET, POST, PATCH, DELETE /api/v1/instance/roles`, `.../role-assignments` | `instance.roles.view`, `instance.roles.manage` |
+| `POST /api/v1/instance/role-assignments/batch` | `instance.roles.manage`; internal |
+| `GET /api/v1/instance/accounts/{id}` | `instance.accounts.view`; internal |
 | `POST /api/v1/instance/ownership` | `instance.ownership.transfer`, recent authentication; internal |
 | `GET /api/v1/instance/info` | public: instance name, defaults and the only organization; internal |
 | `GET /api/v1/instance/break-glass` | `instance.organizations.view`; internal |
@@ -127,5 +136,9 @@ Each endpoint declares the action it requires. Endpoints marked internal serve t
 | `GET /api/v1/account/permissions` | session: the actions the caller may perform on the instance and one organization; internal |
 | `GET, PUT /api/v1/account/preferences` | session: the caller's settings at the user level; internal |
 | `POST /api/v1/accounts/{id}/deactivate` | `account.deactivate`, recent authentication; internal |
+| `POST /api/v1/accounts/{id}/reactivate` | `account.reactivate`, recent authentication; internal |
+| `POST /api/v1/accounts/{id}/sessions/end` | `account.sessions.end`, recent authentication; internal |
+| `POST /api/v1/accounts/{id}/second-factor/reset` | `account.secondFactor.reset`, recent authentication; internal |
+| `GET /api/v1/accounts/{id}/security-activity` | `account.activity.view`, only the own account; internal |
 | `POST /api/v1/invitations/accept` | public, with the token from the mail; internal |
 | `POST /api/v1/registrations`, `.../complete` | public; internal |

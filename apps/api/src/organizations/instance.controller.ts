@@ -20,6 +20,13 @@ import { z } from "zod";
 import { InternalRoute, Permission, PublicRoute } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
+import {
+  accountDetailSchema,
+  administeredAccountSchema,
+  administeredOrganizationSchema,
+  exampleAdministeredAccount,
+  exampleAdministeredOrganization,
+} from "../http/administration-schemas.js";
 import { ApiRoute } from "../http/api-route.js";
 import {
   idCursor,
@@ -28,19 +35,17 @@ import {
   pageRequest,
   pageSchema,
   paginate,
+  searchQuerySchema,
   toApiPage,
 } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import {
-  accountSchema,
   customRoleSchema,
   exampleAccount,
-  exampleOrganization,
   exampleSetting,
   instanceAreasSchema,
   optionalExpiry,
-  organizationSchema,
   roleAssignmentSchema,
   settingSchema,
   uuid,
@@ -294,34 +299,62 @@ export class InstanceController {
   @Permission("instance.organizations.view")
   @ApiRoute({
     summary: "List all organizations",
-    description: "Lists every organization of the instance.",
+    description:
+      "Lists every organization of the instance with its owners, number of members and domains. `q` searches name and short name.",
     tags: [TAG],
-    query: pageQuerySchema,
+    query: searchQuerySchema,
     response: {
       description: "Organizations of the instance.",
-      schema: pageSchema(organizationSchema, "Organizations, ordered by name."),
-      example: { items: [exampleOrganization], nextCursor: null },
+      schema: pageSchema(administeredOrganizationSchema, "Organizations, ordered by name."),
+      example: { items: [exampleAdministeredOrganization], nextCursor: null },
     },
   })
-  async organizations(@Query() query: z.output<typeof pageQuerySchema>) {
-    return toApiPage(await this.#services.organizations.list(pageRequest(query, nameCursor)));
+  async organizations(@Query() query: z.output<typeof searchQuerySchema>) {
+    const page = await this.#services.organizations.list(pageRequest(query, nameCursor));
+    const overview = await this.#services.overview.describeOrganizations(page.items.map((item) => item.id));
+    return toApiPage({
+      ...page,
+      items: page.items.map((item) => ({
+        ...item,
+        ...(overview.get(item.id) ?? { owners: [], memberCount: 0, domains: [] }),
+      })),
+    });
   }
 
   @Get("accounts")
   @Permission("instance.accounts.view")
   @ApiRoute({
     summary: "List all accounts",
-    description: "Lists every account of the instance, including service accounts.",
+    description:
+      "Lists every account of the instance, including service accounts, with instance roles, second-factor state and last sign-in. `q` searches name and e-mail address.",
     tags: [TAG],
-    query: pageQuerySchema,
+    query: searchQuerySchema,
     response: {
       description: "Accounts of the instance.",
-      schema: pageSchema(accountSchema, "Accounts, ordered by name."),
-      example: { items: [exampleAccount], nextCursor: null },
+      schema: pageSchema(administeredAccountSchema, "Accounts, ordered by name."),
+      example: { items: [exampleAdministeredAccount], nextCursor: null },
     },
   })
-  async accounts(@Query() query: z.output<typeof pageQuerySchema>) {
-    return toApiPage(await this.#services.accounts.list(pageRequest(query, nameCursor)));
+  async accounts(@Query() query: z.output<typeof searchQuerySchema>) {
+    return toApiPage(await this.#services.overview.listAccounts(pageRequest(query, nameCursor)));
+  }
+
+  @Get("accounts/:accountId")
+  @Permission("instance.accounts.view")
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Show an account",
+    description:
+      "Shows an account with its memberships and roles per organization, active sessions, tokens and second factors.",
+    tags: [TAG],
+    params: z.object({ accountId: uuid("ID of the account.") }).strict(),
+    response: { description: "The account.", schema: accountDetailSchema },
+    errors: ["notFound"],
+  })
+  async account(@Param("accountId") accountId: string) {
+    const detail = await this.#services.overview.accountDetail(accountId);
+    if (!detail) throw notFound();
+    return detail;
   }
 
   @Get("roles")

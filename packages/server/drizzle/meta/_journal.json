@@ -99,6 +99,13 @@
       "when": 1790932648321,
       "tag": "0013_second_factor_reset",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790933565329,
+      "tag": "0014_account_last_sign_in",
+      "breakpoints": true
     }
   ]
 }
