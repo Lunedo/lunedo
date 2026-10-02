@@ -743,6 +743,12 @@
     "lockImpactOrganization": "All members of {organization} will use {value} for {name} and can no longer change it."
   },
   "security": {
+    "activity": {
+      "title": "Recent security activity",
+      "none": "No security events yet.",
+      "more": "Show older events",
+      "on": " on "
+    },
     "title": "Security",
     "description": "Sign-in, second factors, sessions and API tokens.",
     "signIn": "Sign-in",

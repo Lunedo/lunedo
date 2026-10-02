@@ -740,6 +740,12 @@
     "lockImpactOrganization": "Alle Mitglieder von {organization} verwenden dann {value} für {name} und können es nicht mehr ändern."
   },
   "security": {
+    "activity": {
+      "title": "Letzte Sicherheitsereignisse",
+      "none": "Noch keine Sicherheitsereignisse.",
+      "more": "Ältere Ereignisse anzeigen",
+      "on": " unter "
+    },
     "title": "Sicherheit",
     "description": "Anmeldung, zweite Faktoren, Sitzungen und API-Tokens.",
     "signIn": "Anmeldung",

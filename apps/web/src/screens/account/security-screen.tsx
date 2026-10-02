@@ -32,6 +32,7 @@ import { api } from "../../api/client.js";
 import { instanceInfoQuery } from "../../api/queries.js";
 import { request } from "../../api/request.js";
 import { RecoveryCodes } from "../../components/recovery-codes.js";
+import { SecurityActivitySection } from "../../components/security-activity.js";
 import { CreateTokenDialog, RevokeTokenDialog, scopeSummary } from "../../components/token-dialogs.js";
 import { TotpEnrollment } from "../../components/totp-enrollment.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
@@ -44,12 +45,14 @@ import { SettingsPage } from "../settings/settings-page.js";
 
 export function SecurityScreen() {
   const { t } = useTranslation();
+  const session = useSession();
   return (
     <SettingsPage title={t("security.title")} description={t("security.description")} icon={LockKeyhole}>
       <SignInSection />
       <TwoFactorSection />
       <SessionsSection />
       <TokensSection />
+      {session.account ? <SecurityActivitySection accountId={session.account.id} /> : null}
     </SettingsPage>
   );
 }
