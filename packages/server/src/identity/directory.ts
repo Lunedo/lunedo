@@ -1,6 +1,12 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { OidcConfig } from "@pagehall/shared";
-import { googleServiceAccountKeySchema } from "@pagehall/shared";
+import {
+  ENTRA_AUTHORITY,
+  GOOGLE_DIRECTORY,
+  GOOGLE_TOKEN_URL,
+  googleServiceAccountKeySchema,
+  MICROSOFT_GRAPH,
+} from "@pagehall/shared";
 import { importPKCS8, SignJWT } from "jose";
 import { type ProviderCredential, type ProviderGroup, ProviderResponseError } from "./adapter.js";
 
@@ -31,6 +37,28 @@ interface CachedToken {
   expiresAt: number;
 }
 
+const GRAPH_ENDPOINTS: Readonly<Record<string, readonly string[]>> = {
+  [ENTRA_AUTHORITY]: [MICROSOFT_GRAPH],
+  "https://login.microsoftonline.us": ["https://graph.microsoft.us", "https://dod-graph.microsoft.us"],
+  "https://login.partner.microsoftonline.cn": ["https://microsoftgraph.chinacloudapi.cn"],
+};
+
+function withoutTrailingSlash(url: string): string {
+  return url.replace(/\/+$/, "");
+}
+
+export function foreignDirectoryEndpoint(config: OidcConfig): string | null {
+  if (config.preset === "entraId") {
+    const allowed = GRAPH_ENDPOINTS[withoutTrailingSlash(config.authority)] ?? [];
+    return allowed.includes(withoutTrailingSlash(config.graphUrl)) ? null : "graphUrl";
+  }
+  if (config.preset === "google" && config.directory) {
+    if (withoutTrailingSlash(config.directory.url) !== GOOGLE_DIRECTORY) return "directory.url";
+    if (config.directory.tokenUrl !== GOOGLE_TOKEN_URL) return "directory.tokenUrl";
+  }
+  return null;
+}
+
 function stringValue(value: unknown): string | null {
   return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
 }
@@ -48,6 +76,13 @@ export class DirectoryClients {
   #checkTransport(url: string): void {
     if (new URL(url).protocol !== "https:" && !this.#allowInsecure) {
       throw new ProviderResponseError("Directories must be reached through HTTPS");
+    }
+  }
+
+  #checkEndpoints(config: OidcConfig): void {
+    if (this.#allowInsecure) return;
+    if (foreignDirectoryEndpoint(config)) {
+      throw new ProviderResponseError("The directory endpoint is not one of the provider's own endpoints");
     }
   }
 
@@ -73,7 +108,17 @@ export class DirectoryClients {
     config: EntraConfig,
     credentials: readonly ProviderCredential[],
   ): Promise<string> {
-    return this.#cachedToken(`graph:${providerId}:${credentials[0]?.id ?? ""}`, async () => {
+    this.#checkEndpoints(config);
+    const key = JSON.stringify([
+      "graph",
+      providerId,
+      config.authority,
+      config.tenantId,
+      config.clientId,
+      config.graphUrl,
+      credentials.map((credential) => credential.id),
+    ]);
+    return this.#cachedToken(key, async () => {
       const endpoint = `${config.authority}/${config.tenantId}/oauth2/v2.0/token`;
       let lastStatus = 0;
       for (const credential of credentials) {
@@ -123,6 +168,9 @@ export class DirectoryClients {
     url: string,
     headers: Record<string, string> = {},
   ): Promise<{ status: number; body: Record<string, unknown> }> {
+    if (new URL(url).origin !== new URL(config.graphUrl).origin) {
+      throw new ProviderResponseError("Microsoft Graph pointed to another host");
+    }
     const token = await this.#graphToken(providerId, config, credentials);
     const response = await this.#request(url, { headers: { authorization: `Bearer ${token}`, ...headers } });
     if (response.status === 404) return { status: 404, body: {} };
@@ -255,7 +303,16 @@ export class DirectoryClients {
   async #googleToken(providerId: string, config: GoogleConfig, keyJson: string): Promise<string> {
     const directory = config.directory;
     if (!directory) throw new ProviderResponseError("The Google directory is not configured");
-    return this.#cachedToken(`google:${providerId}`, async () => {
+    this.#checkEndpoints(config);
+    const key = JSON.stringify([
+      "google",
+      providerId,
+      directory.adminEmail,
+      directory.url,
+      directory.tokenUrl,
+      createHash("sha256").update(keyJson).digest("hex"),
+    ]);
+    return this.#cachedToken(key, async () => {
       let key: { client_email: string; private_key: string };
       try {
         key = googleServiceAccountKeySchema.parse(JSON.parse(keyJson));

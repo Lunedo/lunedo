@@ -23,6 +23,7 @@ import type { BuiltInRoleKey } from "../organizations/access-schema.js";
 import { LOGO_MAX_BYTES, logoContentType, OrganizationError } from "../organizations/organizations.js";
 import type { ProviderCredential, ProviderDefinition } from "./adapter.js";
 import { generateCertificate } from "./certificates.js";
+import { foreignDirectoryEndpoint } from "./directory.js";
 import { oidcIssuer } from "./oidc.js";
 import {
   identityProviderCredentials,
@@ -167,6 +168,14 @@ export class IdentityProviderService {
       throw new OrganizationError("invalidProviderConfiguration", "The authority is not a Microsoft cloud", {
         fields: ["authority"],
       });
+    }
+    const foreign = foreignDirectoryEndpoint(config);
+    if (foreign) {
+      throw new OrganizationError(
+        "invalidProviderConfiguration",
+        "The directory endpoint is not one of the provider's own endpoints",
+        { fields: [foreign] },
+      );
     }
     if (config.preset === "google" && config.issuer !== GOOGLE_ISSUER) {
       throw new OrganizationError(

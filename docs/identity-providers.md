@@ -59,7 +59,7 @@ Presets:
 | Google Workspace | `https://accounts.google.com` | `sub` | The `hd` claim must be one of the configured domains. |
 | Other providers | configured | `sub` | Claim names for e-mail address, sign-in name, display name and groups are configurable. |
 
-Providers must be reached through HTTPS. `PAGEHALL_INSECURE_IDENTITY_PROVIDERS=true` allows HTTP and other issuers for the presets, for development and tests only.
+Providers must be reached through HTTPS. Microsoft Graph and the Google Directory API are only called on their own hosts: the Graph endpoint of the Microsoft cloud of the provider's authority, `admin.googleapis.com` and `oauth2.googleapis.com`. `PAGEHALL_INSECURE_IDENTITY_PROVIDERS=true` allows HTTP, other issuers for the presets and other directory hosts, for development and tests only.
 
 ## Identities
 

@@ -231,6 +231,30 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
         credential,
       }),
     ).rejects.toMatchObject({ code: "invalidProviderConfiguration" });
+    await expect(
+      strict.create(SYSTEM, {
+        name: "Entra",
+        config: {
+          preset: "entraId",
+          tenantId: randomUUID(),
+          clientId: "c",
+          graphUrl: "https://collector.example",
+        },
+        credential,
+      }),
+    ).rejects.toMatchObject({ code: "invalidProviderConfiguration" });
+    for (const directory of [
+      { adminEmail: "admin@example.org", url: "https://collector.example" },
+      { adminEmail: "admin@example.org", tokenUrl: "https://collector.example/token" },
+    ]) {
+      await expect(
+        strict.create(SYSTEM, {
+          name: "Google",
+          config: { preset: "google", clientId: "c", domains: [uniqueDomain()], directory },
+          credential,
+        }),
+      ).rejects.toMatchObject({ code: "invalidProviderConfiguration" });
+    }
     const google = await strict.create(SYSTEM, {
       name: "Google",
       config: { preset: "google", clientId: "c", domains: [uniqueDomain()] },
