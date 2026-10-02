@@ -1,22 +1,51 @@
-import { type APIRequestContext, type Browser, expect, type Page, test } from "@playwright/test";
+import {
+  type APIRequestContext,
+  type Browser,
+  type BrowserContext,
+  expect,
+  type Page,
+  test,
+} from "@playwright/test";
 import { BASE_URL, OWNER, OWNER_STORAGE, readState } from "../support/environment.js";
 import { freshTotp, linkFrom, waitForMail } from "../support/helpers.js";
-import { type IdentityProviderFixture, identityProviders, TEST_DOMAIN, TEST_USERS } from "../support/idp.js";
+import {
+  type IdentityProviderFixture,
+  identityProviders,
+  TEST_DOMAIN,
+  TEST_USERS,
+  type TestUserName,
+} from "../support/idp.js";
 
 const HOST_FROM_PROVIDER = BASE_URL.replace("localhost", "host.docker.internal");
 
 const headers = { "X-Pagehall-Request": "1", origin: BASE_URL };
 
+let reauthenticated = false;
+
 async function ownerApi(
   browser: Browser,
 ): Promise<{ request: APIRequestContext; close: () => Promise<void> }> {
   const context = await browser.newContext({ storageState: OWNER_STORAGE });
-  const reauthenticated = await context.request.post("/api/v1/auth/reauthenticate", {
-    data: { method: "password", password: OWNER.password },
-    headers,
-  });
-  expect(reauthenticated.status()).toBeLessThan(300);
+  if (!reauthenticated) {
+    const response = await context.request.post("/api/v1/auth/reauthenticate", {
+      data: { method: "password", password: OWNER.password },
+      headers,
+    });
+    expect(response.status(), await response.text()).toBeLessThan(300);
+    await context.storageState({ path: OWNER_STORAGE });
+    reauthenticated = true;
+  }
   return { request: context.request, close: () => context.close() };
+}
+
+async function firstOrganization(request: APIRequestContext): Promise<string> {
+  const response = await request.get("/api/v1/organizations");
+  return ((await response.json()) as { items: { id: string }[] }).items[0]?.id ?? "";
+}
+
+async function organizationIds(context: BrowserContext): Promise<string[]> {
+  const response = await context.request.get("/api/v1/organizations");
+  return ((await response.json()) as { items: { id: string }[] }).items.map((item) => item.id);
 }
 
 async function createProvider(
@@ -35,6 +64,13 @@ async function createProvider(
         domains: [TEST_DOMAIN],
         scopes: provider.scopes.split(" "),
         accountCreation: { enabled: accountCreation, requiredGroups: [] },
+        claims: {
+          email: "email",
+          signInName: "preferred_username",
+          displayName: "name",
+          groups: "groups",
+          groupNames: "group_names",
+        },
       },
       credential: { kind: "clientSecret", secret: provider.clientSecret, expiresAt: null },
     },
@@ -72,6 +108,7 @@ for (const provider of identityProviders) {
   test.describe(`sign-in through ${provider.name}`, () => {
     test.describe.configure({ mode: "serial" });
     let providerId = "";
+    const user: TestUserName = provider.name === "keycloak" ? "alice" : "carol";
 
     test.beforeAll(async ({ browser }) => {
       const owner = await ownerApi(browser);
@@ -91,12 +128,13 @@ for (const provider of identityProviders) {
     test("chooses the provider by domain and creates the account at first sign-in", async ({ browser }) => {
       const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
       const page = await context.newPage();
-      await signInThroughProvider(page, provider, "alice");
+      await signInThroughProvider(page, provider, user);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       const session = await context.request.get("/api/v1/auth/session");
       expect(((await session.json()) as { account: { email: string } }).account.email).toBe(
-        TEST_USERS.alice.email,
+        TEST_USERS[user].email,
       );
+      await context.clearCookies({ name: "__Host-pagehall-session" });
       await page.goto("/sign-in");
       await expect(page.getByRole("button", { name: `E2E ${provider.name}` })).toBeVisible();
       await context.close();
@@ -116,16 +154,65 @@ for (const provider of identityProviders) {
     });
 
     test("ends the Pagehall session when the provider signs the person out", async ({ browser }) => {
-      test.skip(!provider.endSessions, "The provider fixture cannot end sessions");
       const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
       const page = await context.newPage();
-      await signInThroughProvider(page, provider, "alice");
+      await signInThroughProvider(page, provider, user);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-      await provider.endSessions?.("alice");
+      await provider.endSessions(user);
       await expect
         .poll(async () => (await context.request.get("/api/v1/auth/session")).status(), { timeout: 20_000 })
         .toBe(401);
       await context.close();
+    });
+
+    test("grants organization access through a group and removes it when the person leaves the group", async ({
+      browser,
+    }) => {
+      const synchronize = provider.name === "keycloak";
+      const owner = await ownerApi(browser);
+      const organizationId = await firstOrganization(owner.request);
+      const groupId = await provider.groupId("engineering");
+      const created = await owner.request.post(
+        `/api/v1/instance/identity-providers/${providerId}/mapping-rules`,
+        {
+          headers,
+          data: {
+            target: "organization",
+            group: { id: groupId, name: "engineering" },
+            organizationId,
+            role: null,
+            synchronizedGroup: synchronize,
+            homeOrganization: false,
+          },
+        },
+      );
+      expect(created.status(), await created.text()).toBe(201);
+      await owner.close();
+      await provider.addToGroup(user, "engineering");
+
+      const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+      const page = await context.newPage();
+      await signInThroughProvider(page, provider, user);
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      expect(await organizationIds(context)).toContain(organizationId);
+
+      if (synchronize) {
+        const admin = await browser.newContext({ storageState: OWNER_STORAGE });
+        const groups = await admin.newPage();
+        await groups.goto(`/settings/organizations/${organizationId}/groups`);
+        const row = groups.getByRole("row", { name: /engineering/ });
+        await expect(row.getByText(`E2E ${provider.name}`)).toBeVisible();
+        await admin.close();
+      }
+      await context.close();
+
+      await provider.removeFromGroup(user, "engineering");
+      const again = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+      const second = await again.newPage();
+      await signInThroughProvider(second, provider, user);
+      await expect(second.getByRole("heading", { level: 1 })).toBeVisible();
+      expect(await organizationIds(again)).not.toContain(organizationId);
+      await again.close();
     });
 
     test("shows the only provider directly when password sign-in is off, and keeps the emergency sign-in", async ({
@@ -143,7 +230,7 @@ for (const provider of identityProviders) {
       await page.getByRole("button", { name: "Emergency sign-in for the instance owner" }).click();
       const dialog = page.getByRole("dialog", { name: "Emergency sign-in" });
       await dialog.getByLabel("E-mail").fill(OWNER.email);
-      await dialog.getByLabel("Password").fill(OWNER.password);
+      await dialog.getByLabel("Password", { exact: true }).fill(OWNER.password);
       await dialog.getByRole("button", { name: "Continue" }).click();
       await page
         .getByLabel("Code from your authenticator app")
@@ -164,7 +251,7 @@ test.describe("linking an existing account", () => {
   test.beforeAll(async ({ browser }) => {
     const owner = await ownerApi(browser);
     providerId = await createProvider(owner.request, provider, true);
-    const organizationId = readState().organizationId ?? "";
+    const organizationId = await firstOrganization(owner.request);
     const invited = await owner.request.post(`/api/v1/organizations/${organizationId}/invitations`, {
       headers,
       data: { email: TEST_USERS.bob.email, kind: "member" },

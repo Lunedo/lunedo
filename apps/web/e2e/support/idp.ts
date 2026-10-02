@@ -32,7 +32,7 @@ export interface IdentityProviderFixture {
   setBackchannelLogoutUrl(url: string): Promise<void>;
   reset(): Promise<void>;
   signIn(page: Page, user: TestUserName, password?: string): Promise<void>;
-  endSessions?(user: TestUserName): Promise<void>;
+  endSessions(user: TestUserName): Promise<void>;
 }
 
 const env = (name: string, fallback: string) => process.env[name] || fallback;
@@ -234,6 +234,15 @@ export const authentik: IdentityProviderFixture = {
   },
   async renameGroup(group, name) {
     await authentikApi("PATCH", `/core/groups/${await authentikGroupId(group)}/`, { name });
+  },
+  async endSessions(user) {
+    const sessions = await authentikApi<{ results: { uuid: string }[] }>(
+      "GET",
+      `/core/authenticated_sessions/?user__username=${user}`,
+    );
+    for (const session of sessions.results) {
+      await authentikApi("DELETE", `/core/authenticated_sessions/${session.uuid}/`);
+    }
   },
   async setBackchannelLogoutUrl(url) {
     const page = await authentikApi<{ results: { pk: number }[] }>("GET", "/providers/oauth2/?name=Pagehall");
