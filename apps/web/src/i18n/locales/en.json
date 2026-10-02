@@ -515,7 +515,7 @@
     "actions": "Actions",
     "useDefault": "Use the default",
     "useDefaultOption": "Use default ({value})",
-    "useInstanceValue": "Use the instance value",
+    "resetToDefault": "Reset to default",
     "inherit": "Inherit",
     "lockForOrganizations": "Lock for organizations",
     "lockForMembers": "Lock for members",

@@ -1,4 +1,5 @@
-import { Button, Section, Skeleton, Switch, Table } from "@pagehall/ui";
+import { IconButton, Menu, Section, Skeleton, Switch, Table } from "@pagehall/ui";
+import { MoreHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { SettingEntry } from "../api/organization-queries.js";
 import { translateKey } from "../i18n/translate.js";
@@ -105,9 +106,18 @@ export function NotificationPreferences({
               align: "end" as const,
               cell: (entry: SettingEntry) =>
                 entry.source === level && editable ? (
-                  <Button variant="secondary" size="sm" onClick={() => save(entry.key, undefined)}>
-                    {level === "user" ? t("settings.useDefault") : t("settings.inherit")}
-                  </Button>
+                  <Menu
+                    align="end"
+                    trigger={
+                      <IconButton
+                        label={t("settings.moreFor", { name: label(entry) })}
+                        icon={MoreHorizontal}
+                      />
+                    }
+                    items={[
+                      { label: t("settings.resetToDefault"), onSelect: () => save(entry.key, undefined) },
+                    ]}
+                  />
                 ) : null,
             },
           ]}

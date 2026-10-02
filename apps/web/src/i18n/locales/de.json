@@ -515,7 +515,7 @@
     "actions": "Aktionen",
     "useDefault": "Standard verwenden",
     "useDefaultOption": "Standard verwenden ({value})",
-    "useInstanceValue": "Wert der Instanz verwenden",
+    "resetToDefault": "Auf Standard zurücksetzen",
     "inherit": "Erben",
     "lockForOrganizations": "Für Organisationen sperren",
     "lockForMembers": "Für Mitglieder sperren",

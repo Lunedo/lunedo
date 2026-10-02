@@ -119,25 +119,45 @@ describe("SettingsList", () => {
     );
   }
 
-  it("overrides an inherited duration and saves it on Enter", async () => {
+  it("follows an inherited duration and overrides it from the common values", async () => {
     const onChange = vi.fn(async () => undefined);
     await renderList([entry({})], onChange);
-    expect(screen.getByText("Inactive guests")).toBeTruthy();
-    expect(screen.getByText("30 days")).toBeTruthy();
+    const select = screen.getByRole("combobox", { name: "Inactive guests" });
+    expect(select.textContent).toContain("30 days");
+    expect(select.hasAttribute("data-muted")).toBe(true);
     expect(screen.queryByRole("button", { name: "Override" })).toBeNull();
-    const input = screen.getByRole("textbox", { name: "Inactive guests" });
-    await userEvent.clear(input);
-    await userEvent.type(input, "500{Enter}");
+    await userEvent.click(select);
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "30 daysDefault",
+      "90 days",
+      "180 days",
+      "Custom…",
+    ]);
+    await userEvent.click(screen.getByRole("option", { name: "90 days" }));
+    await waitFor(() =>
+      expect(onChange).toHaveBeenCalledWith("organizations.guestInactivityDays", { value: 90 }),
+    );
+  });
+
+  it("sets a custom duration within the range of the setting", async () => {
+    const onChange = vi.fn(async () => undefined);
+    await renderList([entry({})], onChange);
+    await userEvent.click(screen.getByRole("combobox", { name: "Inactive guests" }));
+    await userEvent.click(screen.getByRole("option", { name: "Custom…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Inactive guests" });
+    const amount = await waitFor(() => dialog.querySelector("input") as HTMLInputElement);
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "500{Enter}");
     expect(screen.getByRole("alert").textContent).toBe("Choose a duration from 1 day to 365 days.");
     expect(onChange).not.toHaveBeenCalled();
-    await userEvent.clear(input);
-    await userEvent.type(input, "14{Enter}");
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "14{Enter}");
     await waitFor(() =>
       expect(onChange).toHaveBeenCalledWith("organizations.guestInactivityDays", { value: 14 }),
     );
   });
 
-  it("shows minute settings readably and offers quick choices", async () => {
+  it("shows minute settings readably and offers common values", async () => {
     const onChange = vi.fn(async () => undefined);
     await renderList(
       [
@@ -150,10 +170,10 @@ describe("SettingsList", () => {
       ],
       onChange,
     );
-    expect((screen.getByRole("textbox", { name: "Maximum session length" }) as HTMLInputElement).value).toBe(
-      "7",
-    );
-    await userEvent.click(screen.getByRole("button", { name: "30 days" }));
+    const select = screen.getByRole("combobox", { name: "Maximum session length" });
+    expect(select.textContent).toContain("7 days");
+    await userEvent.click(select);
+    await userEvent.click(screen.getByRole("option", { name: "30 days" }));
     await waitFor(() =>
       expect(onChange).toHaveBeenCalledWith("auth.sessionLifetimeMinutes", { value: 43_200 }),
     );
@@ -164,26 +184,29 @@ describe("SettingsList", () => {
     expect(screen.getByText("Default: No limit")).toBeTruthy();
   });
 
-  it("lets a maximum token lifetime be removed or set", async () => {
+  it("lets a maximum token lifetime be set and removed", async () => {
     const onChange = vi.fn(async () => undefined);
     await renderList(
       [
         entry({
           key: "apiTokens.maxLifetimeDays",
-          value: null,
+          value: 90,
           defaultValue: null,
           source: "organization",
           levelsBelow: [],
+          levels: [
+            { level: "instance", value: null, locked: false, effective: true },
+            { level: "organization", value: 90, locked: false, effective: true },
+          ],
         }),
       ],
       onChange,
     );
-    const limit = screen.getByRole("checkbox", { name: "Set a limit" });
-    expect(limit.getAttribute("aria-checked")).toBe("false");
-    expect(screen.queryByRole("textbox", { name: "Maximum lifetime of API tokens" })).toBeNull();
-    await userEvent.click(limit);
-    await userEvent.click(screen.getByRole("button", { name: "90 days" }));
-    await waitFor(() => expect(onChange).toHaveBeenCalledWith("apiTokens.maxLifetimeDays", { value: 90 }));
+    const select = screen.getByRole("combobox", { name: "Maximum lifetime of API tokens" });
+    expect(select.textContent).toContain("90 days");
+    await userEvent.click(select);
+    await userEvent.click(screen.getByRole("option", { name: "365 days" }));
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith("apiTokens.maxLifetimeDays", { value: 365 }));
   });
 
   it("toggles booleans directly and offers a lock only when lower levels exist", async () => {
@@ -288,12 +311,12 @@ describe("SettingsList", () => {
   it("only shows values to people who may not change them", async () => {
     await renderList([entry({})], vi.fn(), false);
     expect(screen.queryByRole("button", { name: "Override" })).toBeNull();
-    expect((screen.getByRole("textbox", { name: "Inactive guests" }) as HTMLInputElement).disabled).toBe(
+    expect((screen.getByRole("combobox", { name: "Inactive guests" }) as HTMLButtonElement).disabled).toBe(
       true,
     );
   });
 
-  it("offers the inherited value as the first option and overrides it by choosing another", async () => {
+  it("marks the inherited option as the default and overrides it by choosing another", async () => {
     const onChange = vi.fn(async () => undefined);
     await renderList(
       [
@@ -311,13 +334,18 @@ describe("SettingsList", () => {
       onChange,
     );
     const select = screen.getByRole("combobox", { name: "Time format" });
-    expect(select.textContent).toMatch(/^Use default \(/);
+    expect(select.textContent).toContain("24-hour");
+    expect(select.hasAttribute("data-muted")).toBe(true);
     await userEvent.click(select);
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "24-hour (14:30)Default",
+      "12-hour (2:30 PM)",
+    ]);
     await userEvent.click(screen.getByRole("option", { name: /^12-hour/ }));
     await waitFor(() => expect(onChange).toHaveBeenCalledWith("locale.timeFormat", { value: "12h" }));
   });
 
-  it("resets an own value when the default option is chosen", async () => {
+  it("follows the default again when the marked option is chosen, and resets from the menu", async () => {
     const onChange = vi.fn(async () => undefined);
     await renderList(
       [
@@ -335,7 +363,11 @@ describe("SettingsList", () => {
       onChange,
     );
     await userEvent.click(screen.getByRole("combobox", { name: "Time format" }));
-    await userEvent.click(screen.getByRole("option", { name: /^Use default/ }));
+    await userEvent.click(screen.getByRole("option", { name: /^24-hour/ }));
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith("locale.timeFormat", { clear: true }));
+    onChange.mockClear();
+    await userEvent.click(screen.getByRole("button", { name: "More options for Time format" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Reset to default" }));
     await waitFor(() => expect(onChange).toHaveBeenCalledWith("locale.timeFormat", { clear: true }));
   });
 });
