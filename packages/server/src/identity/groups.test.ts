@@ -198,6 +198,32 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
     expect(await roles(person)).toEqual([]);
   });
 
+  it("applies rules when an existing account is linked with its password", async () => {
+    const org = await organization();
+    const group = `group-${randomUUID()}`;
+    await test.services.mappingRules.create(accountPrincipal(org.owner), generic, {
+      target: "organization",
+      group: { id: group, name: "Linked" },
+      organizationId: org.id,
+      role: { builtIn: "administrator" },
+      synchronizedGroup: false,
+      homeOrganization: false,
+    });
+    const existing = await account(null, `${randomUUID().slice(0, 8)}@generic.example`);
+    const result = await signIn({ sub: randomUUID(), email: existing.email, groups: [group] });
+    if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
+    expect(await membership(org.id, existing.id)).toBeNull();
+
+    await test.services.signIn.confirmIdentityLink({
+      pendingToken: result.pendingToken,
+      password: "a long test passphrase",
+      factor: null,
+      client: {},
+    });
+    expect(await membership(org.id, existing.id)).toBe("member");
+    expect(await roles(existing.id)).toEqual([{ scope: "organization", role: "administrator" }]);
+  });
+
   it("refuses a rule that would grant more than its creator may grant", async () => {
     const org = await organization();
     const administrator = await account(org.id);
