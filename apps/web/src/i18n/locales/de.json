@@ -449,7 +449,9 @@
       "description": "Organisationen haben eigene Mitglieder, Gruppen und Einstellungen. Weitere kannst du später anlegen.",
       "name": "Name",
       "language": "Standardsprache",
-      "timeZone": "Standardzeitzone"
+      "timeZone": "Standardzeitzone",
+      "formats": "Formate",
+      "formatsHint": "Passend zu Sprache und Zeitzone vorgeschlagen. Alle können sie später für sich ändern."
     },
     "mail": {
       "title": "E-Mail",
@@ -494,10 +496,7 @@
       "monday": "Montag",
       "sunday": "Sonntag",
       "saturday": "Samstag"
-    },
-    "automaticResolved": "Automatisch ({value})",
-    "hours24": "24-Stunden-Format",
-    "hours12": "12-Stunden-Format"
+    }
   },
   "settings": {
     "actions": "Aktionen",

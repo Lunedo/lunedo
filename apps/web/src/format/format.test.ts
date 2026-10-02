@@ -4,10 +4,10 @@ import { createFormatter, type FormatSettings } from "./format.js";
 const base: FormatSettings = {
   language: "en",
   timeZone: "Europe/Vienna",
-  dateFormat: "auto",
-  timeFormat: "auto",
-  numberFormat: "auto",
-  firstDayOfWeek: "auto",
+  dateFormat: "MM/DD/YYYY",
+  timeFormat: "12h",
+  numberFormat: "en-US",
+  firstDayOfWeek: "sunday",
 };
 
 const moment = "2026-09-30T22:30:00.000Z";
@@ -22,9 +22,12 @@ describe("createFormatter", () => {
     );
   });
 
-  it("follows the language when the date format is automatic", () => {
-    expect(createFormatter({ ...base, language: "de" }).date(moment)).toBe("01.10.2026");
-    expect(createFormatter(base).date(moment)).toMatch(/2026/);
+  it("keeps every format when the language changes", () => {
+    const german = createFormatter({ ...base, language: "de" });
+    expect(german.date(moment)).toBe("10/01/2026");
+    expect(german.number(1234.5)).toBe("1,234.5");
+    expect(german.firstDayOfWeek).toBe("sunday");
+    expect(german.time(moment)).toMatch(/12:30\s?AM/i);
   });
 
   it("uses the chosen clock", () => {
@@ -52,6 +55,6 @@ describe("createFormatter", () => {
 
   it("uses the chosen first day of the week", () => {
     expect(createFormatter({ ...base, firstDayOfWeek: "sunday" }).firstDayOfWeek).toBe("sunday");
-    expect(["monday", "sunday", "saturday"]).toContain(createFormatter(base).firstDayOfWeek);
+    expect(createFormatter({ ...base, firstDayOfWeek: "monday" }).firstDayOfWeek).toBe("monday");
   });
 });

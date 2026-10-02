@@ -26766,10 +26766,63 @@
                                         "type": "null"
                                       }
                                     ]
+                                  },
+                                  "formats": {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "dateFormat": {
+                                            "type": "string",
+                                            "enum": [
+                                              "DD.MM.YYYY",
+                                              "DD/MM/YYYY",
+                                              "MM/DD/YYYY",
+                                              "YYYY-MM-DD"
+                                            ]
+                                          },
+                                          "timeFormat": {
+                                            "type": "string",
+                                            "enum": [
+                                              "24h",
+                                              "12h"
+                                            ]
+                                          },
+                                          "numberFormat": {
+                                            "type": "string",
+                                            "enum": [
+                                              "en-US",
+                                              "de-DE",
+                                              "de-CH",
+                                              "fr-FR"
+                                            ]
+                                          },
+                                          "firstDayOfWeek": {
+                                            "type": "string",
+                                            "enum": [
+                                              "monday",
+                                              "sunday",
+                                              "saturday"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "dateFormat",
+                                          "timeFormat",
+                                          "numberFormat",
+                                          "firstDayOfWeek"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
                                   }
                                 },
                                 "required": [
-                                  "organization"
+                                  "organization",
+                                  "formats"
                                 ],
                                 "additionalProperties": false
                               }

@@ -6,8 +6,10 @@ import {
   type DateFormat,
   type Density,
   dateFormats,
+  defaultFormats,
   densities,
   type Font,
+  type Formats,
   fonts,
   type NumberFormat,
   numberFormats,
@@ -19,14 +21,15 @@ import {
   weekStarts,
 } from "@pagehall/shared";
 import { z } from "zod";
-import { defineSetting } from "./definition.js";
+import { defineSetting, type SettingLevel } from "./definition.js";
+import type { ScopeChain, SettingsService, WriteOptions } from "./service.js";
 
 const localeLevels = ["instance", "organization", "user"] as const;
 
 export const dateFormatSetting = defineSetting<DateFormat>({
   key: "locale.dateFormat",
   schema: z.enum(dateFormats),
-  default: "auto",
+  default: defaultFormats.dateFormat,
   levels: localeLevels,
   lockable: false,
 });
@@ -34,7 +37,7 @@ export const dateFormatSetting = defineSetting<DateFormat>({
 export const timeFormatSetting = defineSetting<TimeFormat>({
   key: "locale.timeFormat",
   schema: z.enum(timeFormats),
-  default: "auto",
+  default: defaultFormats.timeFormat,
   levels: localeLevels,
   lockable: false,
 });
@@ -42,7 +45,7 @@ export const timeFormatSetting = defineSetting<TimeFormat>({
 export const numberFormatSetting = defineSetting<NumberFormat>({
   key: "locale.numberFormat",
   schema: z.enum(numberFormats),
-  default: "auto",
+  default: defaultFormats.numberFormat,
   levels: localeLevels,
   lockable: false,
 });
@@ -50,7 +53,7 @@ export const numberFormatSetting = defineSetting<NumberFormat>({
 export const firstDayOfWeekSetting = defineSetting<WeekStart>({
   key: "locale.firstDayOfWeek",
   schema: z.enum(weekStarts),
-  default: "auto",
+  default: defaultFormats.firstDayOfWeek,
   levels: localeLevels,
   lockable: false,
 });
@@ -110,6 +113,26 @@ export const accentColorSetting = defineSetting<AccentColor>({
   levels: ["instance", "organization"],
   lockable: false,
 });
+
+export const formatSettings = {
+  dateFormat: dateFormatSetting,
+  timeFormat: timeFormatSetting,
+  numberFormat: numberFormatSetting,
+  firstDayOfWeek: firstDayOfWeekSetting,
+} as const;
+
+export async function applyFormats(
+  settings: SettingsService,
+  chain: ScopeChain,
+  level: SettingLevel,
+  formats: Formats,
+  options: WriteOptions = {},
+): Promise<void> {
+  await settings.set(formatSettings.dateFormat, chain, level, formats.dateFormat, options);
+  await settings.set(formatSettings.timeFormat, chain, level, formats.timeFormat, options);
+  await settings.set(formatSettings.numberFormat, chain, level, formats.numberFormat, options);
+  await settings.set(formatSettings.firstDayOfWeek, chain, level, formats.firstDayOfWeek, options);
+}
 
 export const preferenceSettings = [
   dateFormatSetting,

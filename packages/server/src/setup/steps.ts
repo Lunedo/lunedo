@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { stat, statfs, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { setupStepSchemas } from "@pagehall/shared";
+import { proposeFormats, setupStepSchemas } from "@pagehall/shared";
 import { eq } from "drizzle-orm";
 import { type AccountService, withUniqueEmail } from "../accounts/accounts.js";
 import { instanceNameSetting, instanceUrlSetting } from "../accounts/instance-settings.js";
@@ -21,6 +21,7 @@ import { type OrganizationService } from "../organizations/organizations.js";
 import { organizations } from "../organizations/schema.js";
 import { organizationSettingsChain } from "../organizations/settings.js";
 import { languageSetting, timeZoneSetting } from "../settings/builtin.js";
+import { applyFormats, formatSettings } from "../settings/preferences.js";
 import type { SettingsService } from "../settings/service.js";
 import { defineSetupAction, type SetupActionContext, type SetupStep } from "./framework.js";
 import { SetupStepError } from "./setup-service.js";
@@ -435,7 +436,17 @@ export function organizationStep(deps: SetupStepDependencies): SetupStep {
     required: true,
     async describe({ state }) {
       const id = typeof state.organizationId === "string" ? state.organizationId : null;
-      return { organization: id ? await deps.organizations.get(id) : null };
+      if (!id) return { organization: null, formats: null };
+      const chain = organizationSettingsChain(id);
+      return {
+        organization: await deps.organizations.get(id),
+        formats: {
+          dateFormat: await deps.settings.get(formatSettings.dateFormat, chain),
+          timeFormat: await deps.settings.get(formatSettings.timeFormat, chain),
+          numberFormat: await deps.settings.get(formatSettings.numberFormat, chain),
+          firstDayOfWeek: await deps.settings.get(formatSettings.firstDayOfWeek, chain),
+        },
+      };
     },
     actions: {
       save: defineSetupAction({
@@ -455,6 +466,13 @@ export function organizationStep(deps: SetupStepDependencies): SetupStep {
             await deps.settings.set(timeZoneSetting, chain, "organization", input.timeZone, {
               tx: context.tx,
             });
+            await applyFormats(
+              deps.settings,
+              chain,
+              "organization",
+              input.formats ?? proposeFormats(input.language, input.timeZone),
+              { tx: context.tx },
+            );
             await context.complete();
             return { body: { organizationId: existing } };
           }
@@ -467,6 +485,13 @@ export function organizationStep(deps: SetupStepDependencies): SetupStep {
             timeZone: input.timeZone,
             ownerAccountId: owner.id,
           });
+          await applyFormats(
+            deps.settings,
+            organizationSettingsChain(organization.id),
+            "organization",
+            input.formats ?? proposeFormats(input.language, input.timeZone),
+            { tx: context.tx },
+          );
           await context.setState({ organizationId: organization.id });
           await context.complete();
           return { body: { organizationId: organization.id } };

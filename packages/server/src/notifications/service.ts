@@ -158,6 +158,7 @@ export class NotificationService {
         const locale = {
           language: await this.#mail.languageOf(recipientId, tx),
           timeZone: await this.#mail.timeZoneOf(recipientId, tx),
+          dateFormat: await this.#mail.dateFormatOf(recipientId, tx),
         };
         const mail = definition.mail(params, locale);
         mailIds.push(

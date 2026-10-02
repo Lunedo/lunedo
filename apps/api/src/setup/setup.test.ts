@@ -160,6 +160,60 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
     });
     expect(organization.statusCode).toBe(200);
     const organizationId = organization.json().organizationId;
+    const formats = async () =>
+      (
+        await test.runtime.pool.query(
+          "select key, value from setting_values where level = 'organization' and scope_id = $1 and key in ('locale.dateFormat', 'locale.timeFormat', 'locale.numberFormat', 'locale.firstDayOfWeek') order by key",
+          [organizationId],
+        )
+      ).rows;
+    expect(await formats()).toEqual([
+      { key: "locale.dateFormat", value: "DD.MM.YYYY" },
+      { key: "locale.firstDayOfWeek", value: "monday" },
+      { key: "locale.numberFormat", value: "de-DE" },
+      { key: "locale.timeFormat", value: "24h" },
+    ]);
+    expect(
+      (await get("/api/v1/setup/steps"))
+        .json()
+        .steps.find((step: { id: string }) => step.id === "organization").details.formats,
+    ).toEqual({
+      dateFormat: "DD.MM.YYYY",
+      timeFormat: "24h",
+      numberFormat: "de-DE",
+      firstDayOfWeek: "monday",
+    });
+    expect(
+      (
+        await post("/api/v1/setup/steps/organization/save", {
+          name: "Platform Team",
+          language: "de",
+          timeZone: "Europe/Vienna",
+          formats: {
+            dateFormat: "YYYY-MM-DD",
+            timeFormat: "24h",
+            numberFormat: "de-CH",
+            firstDayOfWeek: "monday",
+          },
+        })
+      ).statusCode,
+    ).toBe(200);
+    expect(await formats()).toEqual([
+      { key: "locale.dateFormat", value: "YYYY-MM-DD" },
+      { key: "locale.firstDayOfWeek", value: "monday" },
+      { key: "locale.numberFormat", value: "de-CH" },
+      { key: "locale.timeFormat", value: "24h" },
+    ]);
+    expect(
+      (
+        await post("/api/v1/setup/steps/organization/save", {
+          name: "Platform Team",
+          language: "de",
+          timeZone: "Europe/Vienna",
+          formats: { dateFormat: "auto", timeFormat: "24h", numberFormat: "de-CH", firstDayOfWeek: "monday" },
+        })
+      ).statusCode,
+    ).toBe(400);
     expect(
       (
         await post("/api/v1/setup/steps/organization/save", {

@@ -69,7 +69,7 @@ The master keys and the backup keys are needed to read encrypted data and backup
 
 ## Setup through configuration
 
-On the first start, Pagehall opens a setup assistant that is protected by a one-time setup code, either from `PAGEHALL_SETUP_CODE` or from the container log (see [setup.md](setup.md)). For automated deployments, the setup values can be given through configuration instead: `PAGEHALL_INSTANCE_URL`, `PAGEHALL_OWNER_EMAIL`, `PAGEHALL_OWNER_NAME`, `PAGEHALL_OWNER_PASSWORD` and `PAGEHALL_ORGANIZATION_NAME` are required together, the instance name and the SMTP settings are optional. When they are set, the first API node that starts applies them, the assistant is skipped and no setup code is printed.
+On the first start, Pagehall opens a setup assistant that is protected by a one-time setup code, either from `PAGEHALL_SETUP_CODE` or from the container log (see [setup.md](setup.md)). For automated deployments, the setup values can be given through configuration instead: `PAGEHALL_INSTANCE_URL`, `PAGEHALL_OWNER_EMAIL`, `PAGEHALL_OWNER_NAME`, `PAGEHALL_OWNER_PASSWORD` and `PAGEHALL_ORGANIZATION_NAME` are required together, the instance name and the SMTP settings are optional. When they are set, the first API node that starts applies them, the assistant is skipped and no setup code is printed. The organization gets the formats the assistant would propose for its language and time zone (see [setup.md](setup.md)).
 
 `PAGEHALL_INSTANCE_URL` can also be set on its own. Then it only defines the address: the setup link in the log uses it and the assistant suggests it in the instance step, but setup still runs through the assistant.
 

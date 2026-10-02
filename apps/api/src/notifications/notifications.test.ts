@@ -210,6 +210,8 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
       const { port } = second.getHttpServer().address() as AddressInfo;
       const session = owner.cookies.get(SESSION_COOKIE);
       const settings: { key: string; level: string; organizationId: string | null }[] = [];
+      const organizationValue = `/api/v1/organizations/${organizationId}/settings/locale.firstDayOfWeek`;
+      expect((await owner.put(organizationValue, { clear: true })).statusCode).toBe(204);
       let connected = false;
       response = await new Promise<IncomingMessage>((resolve, reject) => {
         get(

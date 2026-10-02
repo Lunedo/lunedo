@@ -93,10 +93,10 @@ describe("notificationText", () => {
     const format = createFormatter({
       language: "en",
       timeZone: "UTC",
-      dateFormat: "auto",
-      timeFormat: "auto",
-      numberFormat: "auto",
-      firstDayOfWeek: "auto",
+      dateFormat: "DD/MM/YYYY",
+      timeFormat: "24h",
+      numberFormat: "en-US",
+      firstDayOfWeek: "monday",
     });
     expect(
       notificationText(
@@ -174,7 +174,7 @@ describe("the notification panel", () => {
     await userEvent.click(screen.getByRole("button", { name: "Notifications, 4 unread" }));
     const panel = screen.getByRole("complementary", { name: "Notifications" });
     expect(
-      await within(panel).findByText("The guest access of Gina Guest to Platform Team ends on Oct 8, 2026."),
+      await within(panel).findByText("The guest access of Gina Guest to Platform Team ends on 10/08/2026."),
     ).toBeTruthy();
     expect(within(panel).getByText(/3 times/)).toBeTruthy();
     expect(

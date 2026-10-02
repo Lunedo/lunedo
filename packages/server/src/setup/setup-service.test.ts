@@ -197,6 +197,17 @@ describe.skipIf(!baseUrl)("SetupService", () => {
     );
     expect(completed.rows).toEqual([{ setup_completed_through: "configuration", owner: true }]);
     expect((await accountServices.audit.verify()).every((result) => result.broken === null)).toBe(true);
+    const formats = await pool.query(
+      "select v.key, v.value from setting_values v join organizations o on o.id = v.scope_id where v.level = 'organization' and v.key like 'locale.%' order by v.key",
+    );
+    expect(formats.rows).toEqual([
+      { key: "locale.dateFormat", value: "DD.MM.YYYY" },
+      { key: "locale.firstDayOfWeek", value: "monday" },
+      { key: "locale.language", value: "de" },
+      { key: "locale.numberFormat", value: "de-DE" },
+      { key: "locale.timeFormat", value: "24h" },
+      { key: "locale.timeZone", value: "Europe/Vienna" },
+    ]);
   });
 
   it("refuses to start with an owner password that does not meet the policy", async () => {

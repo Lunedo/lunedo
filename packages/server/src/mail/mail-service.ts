@@ -1,4 +1,4 @@
-import { smtpConfigurationSchema, uuidv7 } from "@pagehall/shared";
+import { type DateFormat, smtpConfigurationSchema, uuidv7 } from "@pagehall/shared";
 import designTokens from "@pagehall/tokens/design-tokens.json" with { type: "json" };
 import { and, eq, lt } from "drizzle-orm";
 import { z } from "zod";
@@ -12,7 +12,7 @@ import type { Logger } from "../logging/logger.js";
 import { organizations } from "../organizations/schema.js";
 import { languageSetting, timeZoneSetting } from "../settings/builtin.js";
 import { defineSetting } from "../settings/definition.js";
-import { accentColorSetting } from "../settings/preferences.js";
+import { accentColorSetting, dateFormatSetting } from "../settings/preferences.js";
 import type { SettingsService } from "../settings/service.js";
 import { instanceSecrets, mailOutbox } from "./schema.js";
 import {
@@ -119,6 +119,11 @@ export class MailService {
   async languageOf(accountId: string, executor: Executor = this.#database): Promise<Language> {
     const chain = await accountScopeChain(executor, accountId);
     return this.#settings.get(languageSetting, { ...chain, user: accountId }, { executor });
+  }
+
+  async dateFormatOf(accountId: string, executor: Executor = this.#database): Promise<DateFormat> {
+    const chain = await accountScopeChain(executor, accountId);
+    return this.#settings.get(dateFormatSetting, { ...chain, user: accountId }, { executor });
   }
 
   async timeZoneOf(accountId: string, executor: Executor = this.#database): Promise<string> {

@@ -449,7 +449,9 @@
       "description": "Organizations have their own members, groups and settings. You can add more later.",
       "name": "Name",
       "language": "Default language",
-      "timeZone": "Default time zone"
+      "timeZone": "Default time zone",
+      "formats": "Formats",
+      "formatsHint": "Proposed for the language and time zone. Everyone can change them for themselves later."
     },
     "mail": {
       "title": "E-mail",
@@ -494,10 +496,7 @@
       "monday": "Monday",
       "sunday": "Sunday",
       "saturday": "Saturday"
-    },
-    "automaticResolved": "Automatic ({value})",
-    "hours24": "24-hour",
-    "hours12": "12-hour"
+    }
   },
   "settings": {
     "actions": "Actions",

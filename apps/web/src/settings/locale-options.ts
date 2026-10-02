@@ -8,7 +8,7 @@ import {
   weekStarts,
 } from "@pagehall/shared";
 import type { TFunction } from "i18next";
-import { createFormatter, type Formatter, regionalLocale } from "../format/format.js";
+import { createFormatter, defaultFormatSettings, type Formatter } from "../format/format.js";
 import { timeZoneOptions } from "../format/time-zones.js";
 import { supportedLanguages } from "../i18n/index.js";
 import { translateKey } from "../i18n/translate.js";
@@ -16,52 +16,24 @@ import { translateKey } from "../i18n/translate.js";
 const SAMPLE = new Date(Date.UTC(2026, 8, 30, 14, 30));
 const SAMPLE_NUMBER = 1234567.89;
 
-function formatterFor(language: string, dateFormat: DateFormat = "auto"): Formatter {
-  return createFormatter({
-    language,
-    timeZone: "UTC",
-    dateFormat,
-    timeFormat: "auto",
-    numberFormat: "auto",
-    firstDayOfWeek: "auto",
-  });
+function formatterFor(language: string, dateFormat: DateFormat): Formatter {
+  return createFormatter({ ...defaultFormatSettings, language, timeZone: "UTC", dateFormat });
 }
 
-export function automaticHourCycle(language: string): "24h" | "12h" {
-  const cycle = new Intl.DateTimeFormat(regionalLocale(language), { hour: "numeric" }).resolvedOptions()
-    .hourCycle;
-  return cycle === "h11" || cycle === "h12" ? "12h" : "24h";
-}
-
-function automatic(t: TFunction, resolved: string): string {
-  return t("preferences.automaticResolved", { value: resolved });
-}
-
-export function dateFormatLabel(t: TFunction, value: string, language: string): string {
-  if (value === "auto") return automatic(t, formatterFor(language).date(SAMPLE));
+export function dateFormatLabel(_t: TFunction, value: string, language: string): string {
   return `${value} (${formatterFor(language, value as DateFormat).date(SAMPLE)})`;
 }
 
-export function timeFormatLabel(t: TFunction, value: string, language: string): string {
-  if (value === "auto") {
-    return automatic(
-      t,
-      automaticHourCycle(language) === "24h" ? t("preferences.hours24") : t("preferences.hours12"),
-    );
-  }
+export function timeFormatLabel(t: TFunction, value: string): string {
   return value === "24h" ? t("preferences.time24") : t("preferences.time12");
 }
 
-export function numberFormatLabel(t: TFunction, value: string, language: string): string {
-  const locale = value === "auto" ? regionalLocale(language) : value;
-  const example = new Intl.NumberFormat(locale, { minimumFractionDigits: 2 }).format(SAMPLE_NUMBER);
-  return value === "auto" ? automatic(t, example) : example;
+export function numberFormatLabel(_t: TFunction, value: string): string {
+  return new Intl.NumberFormat(value, { minimumFractionDigits: 2 }).format(SAMPLE_NUMBER);
 }
 
-export function weekStartLabel(t: TFunction, value: string, language: string): string {
-  const day = value === "auto" ? formatterFor(language).firstDayOfWeek : value;
-  const name = translateKey(t, `preferences.weekdays.${day}`);
-  return value === "auto" ? automatic(t, name) : name;
+export function weekStartLabel(t: TFunction, value: string): string {
+  return translateKey(t, `preferences.weekdays.${value}`);
 }
 
 export function languageLabel(t: TFunction, value: unknown): string {
@@ -99,23 +71,20 @@ export const localeOptionSets: PreferenceOptionSet[] = [
   {
     key: "locale.timeFormat",
     labelKey: "preferences.timeFormat",
-    options: (t, language) =>
-      timeFormats.map((value: TimeFormat) => ({ value, label: timeFormatLabel(t, value, language) })),
-    formatValue: (t, value, language) => timeFormatLabel(t, String(value), language),
+    options: (t) => timeFormats.map((value: TimeFormat) => ({ value, label: timeFormatLabel(t, value) })),
+    formatValue: (t, value) => timeFormatLabel(t, String(value)),
   },
   {
     key: "locale.numberFormat",
     labelKey: "preferences.numberFormat",
-    options: (t, language) =>
-      numberFormats.map((value) => ({ value, label: numberFormatLabel(t, value, language) })),
-    formatValue: (t, value, language) => numberFormatLabel(t, String(value), language),
+    options: (t) => numberFormats.map((value) => ({ value, label: numberFormatLabel(t, value) })),
+    formatValue: (t, value) => numberFormatLabel(t, String(value)),
   },
   {
     key: "locale.firstDayOfWeek",
     labelKey: "preferences.firstDayOfWeek",
-    options: (t, language) =>
-      weekStarts.map((value: WeekStart) => ({ value, label: weekStartLabel(t, value, language) })),
-    formatValue: (t, value, language) => weekStartLabel(t, String(value), language),
+    options: (t) => weekStarts.map((value: WeekStart) => ({ value, label: weekStartLabel(t, value) })),
+    formatValue: (t, value) => weekStartLabel(t, String(value)),
   },
 ];
 

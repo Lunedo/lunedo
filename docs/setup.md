@@ -28,8 +28,10 @@ Steps are registered by the modules; the assistant shows them in order:
 | `instance` | yes | Instance URL and name. |
 | `owner` | yes | Owner account with password and TOTP, then ten recovery codes. The step can be repeated until setup is complete. |
 | `keyBackup` | yes | One-time download of the master keys and backup keys, then a confirmation that they are stored safely. |
-| `organization` | yes | The first organization with name, language and time zone. The owner becomes its owner and has it as home organization. |
+| `organization` | yes | The first organization with name, language, time zone and formats. The owner becomes its owner and has it as home organization. |
 | `mail` | no | SMTP settings with a test mail. |
+
+The organization step proposes date format, time format, number format and first day of the week from the chosen language and time zone: German gets `DD.MM.YYYY`, 24-hour time, `de-DE` numbers (`de-CH` in Swiss time zones) and Monday; English in time zones of the Americas gets `MM/DD/YYYY`, 12-hour time, `en-US` and Sunday, otherwise `DD/MM/YYYY`, 24-hour time, `en-US` and Monday. The proposal is shown for confirmation and stored at the organization level. It is made once: changing the language later changes only texts.
 
 The setup state is stored in the database, so all nodes agree on it.
 

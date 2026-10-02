@@ -1,4 +1,11 @@
-import type { DateFormat, NumberFormat, TimeFormat, WeekStart } from "@pagehall/shared";
+import {
+  type DateFormat,
+  defaultFormats,
+  formatDate,
+  type NumberFormat,
+  type TimeFormat,
+  type WeekStart,
+} from "@pagehall/shared";
 
 export interface FormatSettings {
   language: string;
@@ -23,72 +30,23 @@ export interface Formatter {
   firstDayOfWeek: Weekday;
 }
 
-const WEEKDAYS: Record<number, Weekday> = { 1: "monday", 6: "saturday", 7: "sunday" };
-
 function toDate(value: Date | string): Date {
   return value instanceof Date ? value : new Date(value);
 }
 
-function weekStartOf(locale: string): Weekday {
-  try {
-    const info = new Intl.Locale(locale) as Intl.Locale & {
-      getWeekInfo?: () => { firstDay: number };
-      weekInfo?: { firstDay: number };
-    };
-    const firstDay = info.getWeekInfo?.().firstDay ?? info.weekInfo?.firstDay;
-    if (firstDay !== undefined) return WEEKDAYS[firstDay] ?? "monday";
-  } catch {
-    return "monday";
-  }
-  return locale.startsWith("en-US") ? "sunday" : "monday";
-}
-
-export function regionalLocale(language: string): string {
-  const browser = globalThis.navigator?.language ?? "";
-  return browser.toLowerCase().startsWith(`${language}-`) ? browser : language;
-}
-
-function dateParts(date: Date, timeZone: string): { day: string; month: string; year: string } {
-  const parts = new Intl.DateTimeFormat("en", {
-    timeZone,
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).formatToParts(date);
-  const part = (type: string) => parts.find((entry) => entry.type === type)?.value ?? "";
-  return { day: part("day"), month: part("month"), year: part("year") };
-}
-
-const PATTERNS: Record<
-  Exclude<DateFormat, "auto">,
-  (parts: { day: string; month: string; year: string }) => string
-> = {
-  "DD.MM.YYYY": ({ day, month, year }) => `${day}.${month}.${year}`,
-  "DD/MM/YYYY": ({ day, month, year }) => `${day}/${month}/${year}`,
-  "MM/DD/YYYY": ({ day, month, year }) => `${month}/${day}/${year}`,
-  "YYYY-MM-DD": ({ day, month, year }) => `${year}-${month}-${day}`,
-};
-
 export function createFormatter(settings: FormatSettings): Formatter {
-  const locale = regionalLocale(settings.language);
-  const numberLocale = settings.numberFormat === "auto" ? locale : settings.numberFormat;
-  const hour12 = settings.timeFormat === "auto" ? undefined : settings.timeFormat === "12h";
-  const timeFormatter = new Intl.DateTimeFormat(locale, {
+  const numberLocale = settings.numberFormat;
+  const timeFormatter = new Intl.DateTimeFormat(settings.language, {
     timeZone: settings.timeZone,
     hour: "2-digit",
     minute: "2-digit",
-    ...(hour12 === undefined ? {} : { hour12 }),
+    hour12: settings.timeFormat === "12h",
   });
-  const autoDate = new Intl.DateTimeFormat(locale, { timeZone: settings.timeZone, dateStyle: "medium" });
   const numbers = new Intl.NumberFormat(numberLocale);
   const percent = new Intl.NumberFormat(numberLocale, { style: "percent", maximumFractionDigits: 1 });
   const relative = new Intl.RelativeTimeFormat(settings.language, { numeric: "auto" });
 
-  const date = (value: Date | string) => {
-    const parsed = toDate(value);
-    if (settings.dateFormat === "auto") return autoDate.format(parsed);
-    return PATTERNS[settings.dateFormat](dateParts(parsed, settings.timeZone));
-  };
+  const date = (value: Date | string) => formatDate(toDate(value), settings.dateFormat, settings.timeZone);
   const time = (value: Date | string) => timeFormatter.format(toDate(value));
 
   return {
@@ -122,15 +80,12 @@ export function createFormatter(settings: FormatSettings): Formatter {
         maximumFractionDigits: unit === 0 ? 0 : 1,
       }).format(size);
     },
-    firstDayOfWeek: settings.firstDayOfWeek === "auto" ? weekStartOf(locale) : settings.firstDayOfWeek,
+    firstDayOfWeek: settings.firstDayOfWeek,
   };
 }
 
 export const defaultFormatSettings: FormatSettings = {
   language: "en",
   timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
-  dateFormat: "auto",
-  timeFormat: "auto",
-  numberFormat: "auto",
-  firstDayOfWeek: "auto",
+  ...defaultFormats,
 };

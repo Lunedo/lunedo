@@ -1,4 +1,4 @@
-import type { NotificationPreference } from "@pagehall/shared";
+import type { DateFormat, NotificationPreference } from "@pagehall/shared";
 import type { z } from "zod";
 import type { Executor } from "../database/database.js";
 import type { Language, MailTemplate, MailTemplates } from "../mail/templates.js";
@@ -16,6 +16,7 @@ export interface VisibilityContext<P> {
 export interface MailLocale {
   language: Language;
   timeZone: string;
+  dateFormat: DateFormat;
 }
 
 export interface NotificationMail {

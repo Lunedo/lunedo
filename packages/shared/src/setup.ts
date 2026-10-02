@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { formatsSchema } from "./preferences.js";
 import {
   accountNameSchema,
   emailSchema,
@@ -130,7 +131,10 @@ export const setupStepSchemas = {
     actions: { download: { input: empty, result: z.string() }, confirm: { input: empty, result: empty } },
   },
   organization: {
-    details: z.object({ organization: setupOrganizationSchema.nullable() }),
+    details: z.object({
+      organization: setupOrganizationSchema.nullable(),
+      formats: formatsSchema.nullable(),
+    }),
     actions: {
       save: {
         input: z
@@ -139,6 +143,7 @@ export const setupStepSchemas = {
             slug: slugSchema.optional(),
             language: languageSchema,
             timeZone: timeZoneSchema,
+            formats: formatsSchema.optional(),
           })
           .strict(),
         result: z.object({ organizationId: z.uuid() }),

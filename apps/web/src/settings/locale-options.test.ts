@@ -18,12 +18,26 @@ beforeAll(async () => {
 });
 
 describe("locale options", () => {
-  it("show what an automatic value resolves to", () => {
-    expect(dateFormatLabel(de, "auto", "de")).toBe("Automatisch (30.09.2026)");
-    expect(timeFormatLabel(de, "auto", "de")).toBe("Automatisch (24-Stunden-Format)");
-    expect(numberFormatLabel(de, "auto", "de")).toBe("Automatisch (1.234.567,89)");
-    expect(weekStartLabel(de, "auto", "de")).toBe("Automatisch (Montag)");
-    expect(weekStartLabel(en, "auto", "en")).toMatch(/^Automatic \((Sunday|Monday)\)$/);
+  it("keep a format when the language changes", () => {
+    expect(dateFormatLabel(de, "MM/DD/YYYY", "de")).toBe("MM/DD/YYYY (09/30/2026)");
+    expect(dateFormatLabel(en, "DD.MM.YYYY", "en")).toBe("DD.MM.YYYY (30.09.2026)");
+    expect(timeFormatLabel(de, "12h")).toBe("12-Stunden-Format (2:30 PM)");
+    expect(numberFormatLabel(de, "en-US")).toBe("1,234,567.89");
+    expect(weekStartLabel(de, "sunday")).toBe("Sonntag");
+  });
+
+  it("offer only concrete values", () => {
+    for (const key of [
+      "locale.dateFormat",
+      "locale.timeFormat",
+      "locale.numberFormat",
+      "locale.firstDayOfWeek",
+    ]) {
+      const options = localeOptionSet(key)?.options(en, "en") ?? [];
+      expect(options.length).toBeGreaterThan(1);
+      expect(options.map((option) => option.value)).not.toContain("auto");
+      expect(options.map((option) => option.label).join(" ")).not.toMatch(/Automatic/);
+    }
   });
 
   it("show an example of the result in every format option", () => {

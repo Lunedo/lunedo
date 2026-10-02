@@ -1,3 +1,4 @@
+import { proposeFormats } from "@pagehall/shared";
 import { eq } from "drizzle-orm";
 import { type AccountService, PasswordPolicyError } from "../accounts/accounts.js";
 import { instanceNameSetting, instanceUrlSetting } from "../accounts/instance-settings.js";
@@ -8,7 +9,9 @@ import type { Logger } from "../logging/logger.js";
 import type { MailService } from "../mail/mail-service.js";
 import { runWithRequestContext } from "../observability/request-context.js";
 import type { OrganizationService } from "../organizations/organizations.js";
+import { organizationSettingsChain } from "../organizations/settings.js";
 import { StartupError } from "../runtime/startup-error.js";
+import { applyFormats } from "../settings/preferences.js";
 import type { SettingsService } from "../settings/service.js";
 import type { SetupService } from "./setup-service.js";
 
@@ -48,12 +51,19 @@ export async function applyConfiguredSetup(options: {
         });
       await tx.insert(instance).values({ id: 1 }).onConflictDoNothing();
       await tx.update(instance).set({ ownerAccountId: owner.id }).where(eq(instance.id, 1));
-      await options.organizations.create(tx, SYSTEM, {
+      const organization = await options.organizations.create(tx, SYSTEM, {
         name: setup.organization.name,
         ...(setup.organization.language ? { language: setup.organization.language } : {}),
         ...(setup.organization.timeZone ? { timeZone: setup.organization.timeZone } : {}),
         ownerAccountId: owner.id,
       });
+      await applyFormats(
+        options.settings,
+        organizationSettingsChain(organization.id),
+        "organization",
+        proposeFormats(organization.language, organization.timeZone),
+        { tx },
+      );
       const steps = ["systemCheck", "instance", "owner", "keyBackup", "organization"];
       if (setup.smtp) {
         const { password, ...configuration } = setup.smtp;

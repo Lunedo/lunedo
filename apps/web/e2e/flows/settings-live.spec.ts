@@ -70,9 +70,9 @@ test("switches the whole interface at once when the own language changes", async
   await expect(
     page.getByRole("navigation", { name: "Einstellungen" }).getByRole("link", { name: "Sicherheit" }).first(),
   ).toBeVisible();
-  await expect(page.getByRole("group", { name: "Textgröße" })).toContainText(/100\s%/);
-  await expect(combobox(page, "Datumsformat")).not.toHaveText(englishDate ?? "");
-  await expect(combobox(page, "Datumsformat")).toContainText(/Automatisch/);
+  await expect(page.getByRole("group", { name: "Textgröße" })).toContainText("100%");
+  const sample = /\d{2}[./-]\d{2}[./-]\d{4}/.exec(englishDate ?? "")?.[0] ?? "missing";
+  await expect(combobox(page, "Datumsformat")).toContainText(sample);
   await expect(page.locator("html")).toHaveAttribute("lang", "de");
 
   await combobox(page, "Sprache").click();
@@ -154,28 +154,72 @@ for (const level of ["instance", "organization"] as const) {
   });
 }
 
-const FORMATS = [
-  { key: "locale.dateFormat", value: "YYYY-MM-DD", field: "Date format", expected: /\d{4}-\d{2}-\d{2}/ },
-  { key: "locale.timeFormat", value: "12h", field: "Time format", expected: /AM|PM/ },
-  { key: "locale.numberFormat", value: "de-CH", field: "Number format", expected: /1'234'567/ },
-  { key: "locale.firstDayOfWeek", value: "saturday", field: "First day of the week", expected: /Saturday/ },
-  { key: "locale.timeZone", value: "Pacific/Auckland", field: "Time zone", expected: /Auckland/ },
+const FORMATS: { key: string; field: string; choices: [string, RegExp][] }[] = [
+  {
+    key: "locale.dateFormat",
+    field: "Date format",
+    choices: [
+      ["YYYY-MM-DD", /\d{4}-\d{2}-\d{2}/],
+      ["DD.MM.YYYY", /\d{2}\.\d{2}\.\d{4}/],
+    ],
+  },
+  {
+    key: "locale.timeFormat",
+    field: "Time format",
+    choices: [
+      ["24h", /24-hour/],
+      ["12h", /12-hour/],
+    ],
+  },
+  {
+    key: "locale.numberFormat",
+    field: "Number format",
+    choices: [
+      ["de-CH", /1'234'567/],
+      ["fr-FR", /567,89/],
+    ],
+  },
+  {
+    key: "locale.firstDayOfWeek",
+    field: "First day of the week",
+    choices: [
+      ["saturday", /Saturday/],
+      ["sunday", /Sunday/],
+    ],
+  },
+  {
+    key: "locale.timeZone",
+    field: "Time zone",
+    choices: [
+      ["Pacific/Auckland", /Auckland/],
+      ["Asia/Tokyo", /Tokyo/],
+    ],
+  },
 ];
 
 for (const level of ["instance", "organization"] as const) {
   test(`applies ${level} formats, time zone and accent color to open sessions`, async ({ browser }) => {
     const owner = await ownerPage(browser);
+    const organizationValues = new Map<string, unknown>();
+    for (const format of FORMATS) {
+      organizationValues.set(format.key, await setting(owner.page, "organization", format.key));
+      if (level === "instance") await change(owner.page, "organization", format.key, undefined);
+    }
     const member = await memberPage(browser);
     try {
       for (const format of FORMATS) {
-        await expect(combobox(member.page, format.field)).not.toContainText(format.expected);
-        await change(owner.page, level, format.key, format.value);
-        await expect(combobox(member.page, format.field), format.key).toContainText(format.expected);
+        const shown = (await combobox(member.page, format.field).textContent()) ?? "";
+        const [value, expected] = format.choices.find(([, pattern]) => !pattern.test(shown)) ?? [];
+        await change(owner.page, level, format.key, value);
+        await expect(combobox(member.page, format.field), format.key).toContainText(expected ?? /.^/);
       }
       await change(owner.page, level, "branding.accentColor", "violet");
       await expect(member.page.locator("html")).toHaveAttribute("data-accent", "violet");
     } finally {
-      for (const format of FORMATS) await change(owner.page, level, format.key, undefined);
+      for (const format of FORMATS) {
+        if (level === "instance") await change(owner.page, level, format.key, undefined);
+        await change(owner.page, "organization", format.key, organizationValues.get(format.key));
+      }
       await change(owner.page, level, "branding.accentColor", undefined);
       await member.context.close();
       await owner.context.close();

@@ -37,7 +37,7 @@ All settings pages save the same way:
 - After saving, "Saved" appears next to the field for a moment. A failed save shows the error at the field with a retry button.
 - Only changes that affect other people ask first: locking a setting for lower levels, and changes of access. The dialog says who is affected.
 
-Durations are entered with a number, a unit and quick choices, and are always shown in words, such as "30 days". Automatic values name what they resolve to, for example "Automatic (Monday)", and format options show an example.
+Durations are entered with a number, a unit and quick choices, and are always shown in words, such as "30 days". Format options show an example of the result.
 
 ## Live updates
 
@@ -59,7 +59,7 @@ Navigation entries name the permission they need. The shell asks `GET /api/v1/ac
 
 ## Appearance and language
 
-Preferences are user-level settings (`GET` and `PUT /api/v1/account/preferences`) and inherit from the organization and the instance. Color mode, high contrast, text size, density and the reading-friendly font are applied as attributes on the root element; all sizes are in `rem`, so the text size scales spacing and icons. The accent color comes from the current organization. Before sign-in, the last appearance and the language chosen on the sign-in page are kept in local storage.
+Preferences are user-level settings (`GET` and `PUT /api/v1/account/preferences`) and inherit from the organization and the instance. Date format, time format, number format and first day of the week always hold a concrete value; one setting never changes another, so changing the language changes only texts. Color mode, high contrast, text size, density and the reading-friendly font are applied as attributes on the root element; all sizes are in `rem`, so the text size scales spacing and icons. The accent color comes from the current organization. Before sign-in, the last appearance and the language chosen on the sign-in page are kept in local storage.
 
 Messages use the ICU message format. Keys are English identifiers grouped by area. `pnpm i18n:check` fails when a key exists in one language only, when a message is empty, or when a component in `apps/web` or `packages/ui` contains text that does not come from the messages. A unit test checks that every key the code uses exists.
 

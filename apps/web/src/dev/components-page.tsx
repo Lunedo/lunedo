@@ -345,16 +345,11 @@ function Forms() {
         </Field>
         <Field label={t("Date format", "Datumsformat")}>
           <Select
-            value="automatic"
+            value="DD.MM.YYYY"
             onValueChange={() => {}}
             options={[
-              {
-                value: "automatic",
-                label: t(
-                  "Automatic from the language (Wednesday, October 1, 2026)",
-                  "Automatisch aus der Sprache (Mittwoch, 1. Oktober 2026)",
-                ),
-              },
+              { value: "DD.MM.YYYY", label: "DD.MM.YYYY (01.10.2026)" },
+              { value: "YYYY-MM-DD", label: "YYYY-MM-DD (2026-10-01)" },
             ]}
           />
         </Field>

@@ -6,7 +6,7 @@ import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { NotificationListener } from "../database/notifications.js";
 import { createLogger } from "../logging/logger.js";
 import { smtpSetting } from "../mail/mail-service.js";
-import { accentColorSetting } from "../settings/preferences.js";
+import { accentColorSetting, dateFormatSetting } from "../settings/preferences.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { deliverPendingMail } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
@@ -220,7 +220,13 @@ describe.skipIf(!baseUrl)("notifications", () => {
     expect(mail?.html).toContain("#6B4FB3");
     expect(mail?.html).toContain('href="https://wiki.example.org/settings/notifications"');
     expect(mail?.text).toContain("https://wiki.example.org/settings/notifications");
-    expect(mail?.text).toContain("20 October 2026");
+    expect(mail?.text).toContain("10/20/2026");
+
+    await test.settings.set(dateFormatSetting, { user: org.owner.id }, "user", "DD.MM.YYYY");
+    await notify(guestNotice(org.id, [org.owner.id]));
+    await deliverPendingMail(test.services, test.database);
+    const own = test.mail.sent.filter((entry) => entry.to === org.owner.email).at(-1);
+    expect(own?.text).toContain("20.10.2026");
     await test.settings.set(smtpSetting, {}, "instance", null);
   });
 
