@@ -381,7 +381,12 @@ export class SettingsService {
   async affects(accountId: string, signal: SettingChangeSignal): Promise<boolean> {
     if (signal.level === "user") return signal.id === accountId;
     const locking = signal.action === "lock" || signal.action === "unlock";
-    const result = await this.#database.execute<{ reached: boolean; overridden: boolean }>(sql`
+    const scopeId = signal.level === "instance" ? INSTANCE_SCOPE_ID : signal.id;
+    const result = await this.#database.execute<{
+      reached: boolean;
+      overridden: boolean;
+      locked: boolean;
+    }>(sql`
       select
         case when ${signal.level} = 'organization' then exists (
           select 1 from memberships m where m.account_id = ${accountId} and m.organization_id = ${signal.id}::uuid
@@ -393,9 +398,13 @@ export class SettingsService {
             or (${signal.level} = 'instance' and v.level = 'organization' and v.scope_id =
               (select home_organization_id from accounts where id = ${accountId}))
           )
-        ) as overridden`);
+        ) as overridden,
+        exists (
+          select 1 from setting_values l where l.key = ${signal.key} and l.level = ${signal.level}
+            and l.scope_id = ${scopeId}::uuid and l.locked
+        ) as locked`);
     const row = result.rows[0];
-    return Boolean(row?.reached) && (locking || !row?.overridden);
+    return Boolean(row?.reached) && (locking || Boolean(row?.locked) || !row?.overridden);
   }
 
   /** Removes all values of a scope, e.g. when an organization or user is deleted. */

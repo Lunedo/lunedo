@@ -249,7 +249,26 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
       ).toBe(204);
       await expect.poll(() => settings.length, { timeout: 5000 }).toBe(3);
       expect(settings[2]).toEqual({ key: "branding.accentColor", level: "organization", organizationId });
+
+      const language = "/api/v1/instance/settings/locale.language";
+      expect(
+        (await owner.put("/api/v1/account/preferences/locale.language", { value: "en" })).statusCode,
+      ).toBe(204);
+      await expect.poll(() => settings.length, { timeout: 5000 }).toBe(4);
+      expect((await owner.put(language, { value: "de" })).statusCode).toBe(204);
+      expect((await owner.put(language, { locked: true })).statusCode).toBe(204);
+      await expect.poll(() => settings.length, { timeout: 5000 }).toBe(5);
+      expect((await owner.put(language, { value: "en" })).statusCode).toBe(204);
+      await expect.poll(() => settings.length, { timeout: 5000 }).toBe(6);
+      expect(settings.slice(3)).toEqual([
+        { key: "locale.language", level: "user", organizationId: null },
+        { key: "locale.language", level: "instance", organizationId: null },
+        { key: "locale.language", level: "instance", organizationId: null },
+      ]);
     } finally {
+      await owner.put("/api/v1/instance/settings/locale.language", { locked: false });
+      await owner.put("/api/v1/instance/settings/locale.language", { clear: true });
+      await owner.put("/api/v1/account/preferences/locale.language", { clear: true });
       await owner.put("/api/v1/account/preferences/locale.firstDayOfWeek", { clear: true });
       await owner.put("/api/v1/instance/settings/locale.firstDayOfWeek", { clear: true });
       response?.destroy();
