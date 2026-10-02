@@ -191,6 +191,8 @@ const EXPECTED: Record<string, Expectation> = {
   "account.reactivate": instance("accounts", "manage", "homeOrganizationAdministrator"),
   "account.sessions.end": instance("accounts", "manage", "homeOrganizationAdministrator"),
   "account.secondFactor.reset": instance("accounts", "manage", "homeOrganizationAdministrator"),
+  "account.identities.view": instance("accounts", "view", "homeOrganizationAdministrator"),
+  "account.identities.manage": instance("accounts", "manage", "homeOrganizationAdministrator"),
   "serviceAccount.view": organization("integrationsAndApi", "view"),
   "serviceAccount.manage": organization("integrationsAndApi", "manage"),
 };

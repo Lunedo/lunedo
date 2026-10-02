@@ -20,6 +20,7 @@ const TARGET_NAMES: Partial<Record<AuditTargetType, (id: string) => SQL>> = {
   role: (id) => sql`select name from custom_roles where id = ${id}`,
   apiToken: (id) => sql`select name from api_tokens where id = ${id}`,
   invitation: (id) => sql`select email as name from invitations where id = ${id}`,
+  identityProvider: (id) => sql`select name from identity_providers where id = ${id}`,
 };
 
 function referencedIds(fields: unknown): string[] {

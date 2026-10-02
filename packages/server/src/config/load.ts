@@ -40,6 +40,7 @@ export interface ServerConfig {
   shutdownTimeoutSeconds: number;
   trustedProxies: string[];
   passwordHashConcurrency: number;
+  insecureIdentityProviders: boolean;
   setup: ConfiguredSetup | undefined;
   setupCode: Secret | undefined;
   instanceUrl: string | undefined;
@@ -195,6 +196,7 @@ export function loadConfig(env: Env): ServerConfig {
     shutdownTimeoutSeconds: values.PAGEHALL_SHUTDOWN_TIMEOUT_SECONDS as number,
     trustedProxies: values.PAGEHALL_TRUSTED_PROXIES as string[],
     passwordHashConcurrency: values.PAGEHALL_PASSWORD_HASH_CONCURRENCY as number,
+    insecureIdentityProviders: values.PAGEHALL_INSECURE_IDENTITY_PROVIDERS as boolean,
     setup,
     setupCode: secret("PAGEHALL_SETUP_CODE"),
     instanceUrl: instanceUrlSchema.safeParse(values.PAGEHALL_INSTANCE_URL).data,

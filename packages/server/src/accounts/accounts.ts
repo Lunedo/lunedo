@@ -155,7 +155,7 @@ export class AccountService {
       type: "standard" | "guest";
       email: string;
       name: string;
-      password: string;
+      password: string | null;
       homeOrganizationId: string | null;
       emailVerified?: boolean;
     },
@@ -163,7 +163,7 @@ export class AccountService {
   ): Promise<Account> {
     const email = emailSchema.parse(input.email.trim());
     const name = accountNameSchema.parse(input.name);
-    const passwordHash = await this.hashPassword(input.password);
+    const passwordHash = input.password === null ? null : await this.hashPassword(input.password);
     const now = new Date();
     const [row] = await withUniqueEmail(() =>
       tx
@@ -174,7 +174,7 @@ export class AccountService {
           email,
           name,
           passwordHash,
-          passwordChangedAt: now,
+          passwordChangedAt: passwordHash ? now : null,
           emailVerifiedAt: input.emailVerified ? now : null,
           homeOrganizationId: input.type === "standard" ? input.homeOrganizationId : null,
         })
@@ -219,6 +219,14 @@ export class AccountService {
     options: { collect?: AuditEvents } = {},
   ): Promise<Account> {
     return this.create(tx, { ...input, type: "standard" }, options);
+  }
+
+  async createFromProvider(
+    tx: Transaction,
+    input: { email: string; name: string; homeOrganizationId: string | null },
+    options: { collect?: AuditEvents } = {},
+  ): Promise<Account> {
+    return this.create(tx, { ...input, type: "standard", password: null, emailVerified: true }, options);
   }
 
   async lock(tx: Transaction, id: string): Promise<Account | null> {

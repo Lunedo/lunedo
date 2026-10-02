@@ -181,6 +181,7 @@ export async function createServerRuntime(options: {
       filesDir: config.paths.files,
       configuredInstanceUrl: config.instanceUrl,
       passwordHashConcurrency: config.passwordHashConcurrency,
+      insecureIdentityProviders: config.insecureIdentityProviders,
       ...(options.mailTransport ? { mailTransport: options.mailTransport } : {}),
     });
 

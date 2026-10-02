@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import type { AuditLog } from "../audit/audit-log.js";
 import {
   authChallenges,
@@ -10,6 +10,8 @@ import {
 import { secondFactorsOf } from "../auth/two-factor.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Transaction } from "../database/database.js";
+import type { IdentityProviderService } from "../identity/providers.js";
+import { identities, identityProviders } from "../identity/schema.js";
 import type { MailService } from "../mail/mail-service.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import type { Principal } from "./principal.js";
@@ -18,6 +20,19 @@ import { accounts, instance } from "./schema.js";
 export const SECOND_FACTOR_RESET_ACTION = "account.secondFactor.reset";
 const END_SESSIONS_ACTION = "account.sessions.end";
 const REACTIVATE_ACTION = "account.reactivate";
+const IDENTITIES_ACTION = "account.identities.manage";
+
+export interface IdentitySummary {
+  id: string;
+  providerId: string;
+  providerName: string;
+  subject: string;
+  email: string | null;
+  signInName: string | null;
+  displayName: string | null;
+  lastSignInAt: Date | null;
+  createdAt: Date;
+}
 
 interface Target {
   id: string;
@@ -30,17 +45,147 @@ export class AccountAdministrationService {
   readonly #authorization: AuthorizationService;
   readonly #audit: AuditLog;
   readonly #mail: MailService;
+  readonly #providers: IdentityProviderService;
 
   constructor(options: {
     database: Database;
     authorization: AuthorizationService;
     audit: AuditLog;
     mail: MailService;
+    providers: IdentityProviderService;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
     this.#audit = options.audit;
     this.#mail = options.mail;
+    this.#providers = options.providers;
+  }
+
+  async identities(accountId: string): Promise<IdentitySummary[]> {
+    return this.#database
+      .select({
+        id: identities.id,
+        providerId: identities.providerId,
+        providerName: identityProviders.name,
+        subject: identities.subject,
+        email: identities.email,
+        signInName: identities.signInName,
+        displayName: identities.displayName,
+        lastSignInAt: identities.lastSignInAt,
+        createdAt: identities.createdAt,
+      })
+      .from(identities)
+      .innerJoin(identityProviders, eq(identityProviders.id, identities.providerId))
+      .where(eq(identities.accountId, accountId))
+      .orderBy(asc(identityProviders.name), asc(identities.id));
+  }
+
+  async linkIdentity(
+    actor: Principal,
+    accountId: string,
+    input: { providerId: string; subject: string },
+  ): Promise<IdentitySummary> {
+    const subject = input.subject.trim();
+    if (subject === "" || subject.length > 500) {
+      throw new OrganizationError("invalidInput", "The identifier is not valid");
+    }
+    const loaded = await this.#providers.definition(input.providerId);
+    if (!loaded) throw new OrganizationError("notFound", "The identity provider does not exist");
+    const provider = loaded.provider;
+    const linkedId = await this.#database.transaction(async (tx) => {
+      const target = await this.#lockActive(tx, accountId);
+      await this.#authorization.require(
+        actor,
+        IDENTITIES_ACTION,
+        { type: "account", id: target.id },
+        { executor: tx },
+      );
+      await this.#checkRank(tx, actor, target, IDENTITIES_ACTION);
+      if (provider.level === "organization" && target.home !== provider.organizationId) {
+        throw new OrganizationError(
+          "otherOrganization",
+          "This provider signs in only members of its organization",
+        );
+      }
+      if (
+        provider.level === "instance" &&
+        !(target.home
+          ? await this.#providers.enabledFor(provider.id, target.home)
+          : await this.#providers.enabledAnywhere(provider.id))
+      ) {
+        throw new OrganizationError("providerNotEnabled", "The provider is not turned on for the account");
+      }
+      const [linked] = await tx
+        .insert(identities)
+        .values({ accountId: target.id, providerId: provider.id, subject })
+        .onConflictDoNothing()
+        .returning({ id: identities.id });
+      if (!linked)
+        throw new OrganizationError("identityInUse", "This identity is linked to an account already");
+      await this.#audit.record(tx, {
+        name: "identity.linked",
+        actor,
+        targetId: target.id,
+        fields: { providerId: provider.id, via: "administrator" },
+        ...(target.home ? { scope: { type: "organization" as const, id: target.home } } : {}),
+      });
+      return linked.id;
+    });
+    const linked = (await this.identities(accountId)).find((identity) => identity.id === linkedId);
+    if (!linked) throw new OrganizationError("notFound", "The identity does not exist");
+    return linked;
+  }
+
+  async unlinkIdentity(
+    actor: Principal,
+    accountId: string,
+    identityId: string,
+  ): Promise<{ endedSessions: number }> {
+    return this.#database.transaction(async (tx) => {
+      const [row] = await tx
+        .select({
+          id: accounts.id,
+          home: accounts.homeOrganizationId,
+          email: accounts.email,
+          passwordHash: accounts.passwordHash,
+        })
+        .from(accounts)
+        .where(eq(accounts.id, accountId))
+        .for("update");
+      if (!row) throw new OrganizationError("notFound", "The account does not exist");
+      const target = { id: row.id, home: row.home, email: row.email };
+      await this.#authorization.require(
+        actor,
+        IDENTITIES_ACTION,
+        { type: "account", id: target.id },
+        { executor: tx },
+      );
+      await this.#checkRank(tx, actor, target, IDENTITIES_ACTION);
+      const [identity] = await tx
+        .select({ id: identities.id, providerId: identities.providerId })
+        .from(identities)
+        .where(and(eq(identities.id, identityId), eq(identities.accountId, target.id)));
+      if (!identity) throw new OrganizationError("notFound", "The identity does not exist");
+      const others = await tx.execute<{ count: number }>(sql`
+        select (select count(*) from identities where account_id = ${target.id} and id <> ${identity.id})
+          + (select count(*) from webauthn_credentials where account_id = ${target.id}) as count`);
+      if (!row.passwordHash && Number(others.rows[0]?.count ?? 0) === 0) {
+        throw new OrganizationError("lastSignInMethod", "The account would have no way to sign in");
+      }
+      const ended = await tx
+        .delete(sessions)
+        .where(eq(sessions.identityId, identity.id))
+        .returning({ id: sessions.id });
+      await tx.delete(identities).where(eq(identities.id, identity.id));
+      await this.#audit.record(tx, {
+        name: "identity.unlinked",
+        actor,
+        targetId: target.id,
+        fields: { providerId: identity.providerId, endedSessions: ended.length },
+        ...(target.home ? { scope: { type: "organization" as const, id: target.home } } : {}),
+      });
+      return { endedSessions: ended.length };
+    });
   }
 
   async resetSecondFactor(
@@ -147,7 +292,7 @@ export class AccountAdministrationService {
         .from(accounts)
         .where(eq(accounts.id, accountId))
         .for("update");
-      if (!row || row.state !== "deactivated" || row.type === "service") {
+      if (row?.state !== "deactivated" || row.type === "service") {
         throw new OrganizationError("notFound", "The account does not exist or is not deactivated");
       }
       const target = { id: row.id, home: row.home, email: row.email };
@@ -184,7 +329,7 @@ export class AccountAdministrationService {
       .from(accounts)
       .where(eq(accounts.id, accountId))
       .for("update");
-    if (!target || target.state !== "active" || target.type === "service") {
+    if (target?.state !== "active" || target.type === "service") {
       throw new OrganizationError("notFound", "The account does not exist or is not active");
     }
     return { id: target.id, home: target.home, email: target.email };

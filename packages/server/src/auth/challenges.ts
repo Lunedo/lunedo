@@ -15,6 +15,7 @@ export interface Challenge {
   methods: SignInMethod[];
   failedAttempts: number;
   deviceHash: Buffer | null;
+  payload: unknown;
   expiresAt: Date;
 }
 
@@ -27,6 +28,7 @@ const columns = {
   methods: authChallenges.methods,
   failedAttempts: authChallenges.failedAttempts,
   deviceHash: authChallenges.deviceHash,
+  payload: authChallenges.payload,
   expiresAt: authChallenges.expiresAt,
 };
 
@@ -52,6 +54,7 @@ export class ChallengeStore {
       challenge?: string;
       methods?: SignInMethod[];
       deviceHash?: Buffer | null;
+      payload?: unknown;
       withToken: boolean;
     },
   ): Promise<{ id: string; token: string | null }> {
@@ -66,6 +69,7 @@ export class ChallengeStore {
         challenge: options.challenge ?? null,
         methods: options.methods ?? [],
         deviceHash: options.deviceHash ?? null,
+        payload: options.payload ?? null,
         expiresAt: new Date(this.#clock().getTime() + CHALLENGE_LIFETIME_MS),
       })
       .returning({ id: authChallenges.id });

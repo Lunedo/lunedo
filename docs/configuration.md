@@ -51,6 +51,7 @@ The master keys and the backup keys are needed to read encrypted data and backup
 | `PAGEHALL_SHUTDOWN_TIMEOUT_SECONDS` | `30` | | Time running requests and jobs get to finish on shutdown. |
 | `PAGEHALL_TRUSTED_PROXIES` | none | | Comma-separated IP addresses and CIDR ranges of reverse proxies. Only requests from them may set the client address and protocol through `X-Forwarded-For` and `X-Forwarded-Proto`. |
 | `PAGEHALL_PASSWORD_HASH_CONCURRENCY` | `4` | | Password hashes computed at once per process. Each needs about 19 MiB of memory; further sign-ins wait, and beyond a queue of 25 per slot they are rejected with 503. |
+| `PAGEHALL_INSECURE_IDENTITY_PROVIDERS` | `false` | | `true` allows identity providers reached without HTTPS, such as a local Keycloak. Only for development and tests; never set it in production. |
 | `PAGEHALL_SETUP_CODE` | generated | yes | Setup code for the setup assistant, at least 12 characters not counting spaces and hyphens, at most 64. When set, Pagehall uses it instead of a generated code and does not print it. Ignored once setup is complete. |
 | `PAGEHALL_INSTANCE_URL` | none | | Address of the instance, for example `https://wiki.example.org`. Alone, it is used for the setup link in the log and prefills the instance step of the setup assistant. Together with the owner and organization settings, it is part of setup through configuration. |
 | `PAGEHALL_INSTANCE_NAME` | `Pagehall` | | Setup through configuration: name of the instance. |

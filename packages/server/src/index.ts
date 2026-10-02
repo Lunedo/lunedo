@@ -6,7 +6,7 @@ export {
   emailSchema,
   PasswordPolicyError,
 } from "./accounts/accounts.js";
-export { AccountAdministrationService } from "./accounts/administration.js";
+export { AccountAdministrationService, type IdentitySummary } from "./accounts/administration.js";
 export { instanceNameSetting, instanceUrlSetting } from "./accounts/instance-settings.js";
 export {
   type AccountDetail,
@@ -140,6 +140,25 @@ export { NotificationListener, notify } from "./database/notifications.js";
 export { createDatabasePool, type DatabasePool, pingDatabase } from "./database/pool.js";
 export { handleOperationsRequest, type OperationsEndpoints, operationsPaths } from "./health/health-http.js";
 export { readinessChecks } from "./health/readiness.js";
+export type { ProviderProfile } from "./identity/adapter.js";
+export {
+  type AddedCredential,
+  type CredentialInput,
+  type CredentialSummary,
+  callbackPath,
+  type OrganizationProvider,
+  type ProviderScope,
+  type ProviderSummary,
+  type ProviderWarning,
+} from "./identity/providers.js";
+export { signInRefusalReasons } from "./identity/schema.js";
+export type {
+  CallbackResult,
+  LinkInfo,
+  SignInOptions,
+  SignInRefusal,
+  TestResult,
+} from "./identity/sign-in.js";
 export {
   defineJob,
   type EnqueueOptions,

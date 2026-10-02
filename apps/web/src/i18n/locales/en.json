@@ -1406,7 +1406,24 @@
     },
     "eventsTitle": "Events",
     "events": {
+      "identity": {
+        "linked": "Identity linked",
+        "unlinked": "Identity unlinked"
+      },
+      "identityProvider": {
+        "created": "Identity provider set up",
+        "updated": "Identity provider changed",
+        "removed": "Identity provider removed",
+        "availabilityChanged": "Identity provider offered to organizations",
+        "enabledChanged": "Identity provider turned on or off",
+        "credentialAdded": "Provider credential added",
+        "credentialRemoved": "Provider credential removed",
+        "logoChanged": "Provider logo changed"
+      },
       "auth": {
+        "emergencySignIn": "Emergency sign-in",
+        "signInRefused": "Sign-in through a provider refused",
+        "providerSignedOut": "Signed out by the provider",
         "signedIn": "Signed in",
         "signInFailed": "Sign-in failed",
         "lockedOut": "Locked out",
@@ -1416,6 +1433,7 @@
         "reauthenticationFailed": "Identity confirmation failed"
       },
       "account": {
+        "createdAtSignIn": "Account created at the first sign-in",
         "created": "Account created",
         "passwordChanged": "Password changed",
         "passwordResetRequested": "Password reset requested",

@@ -94,6 +94,14 @@ export const configSettings = [
     "Password hashes computed at once per process; each needs about 19 MiB of memory.",
   ),
   setting(
+    "PAGEHALL_INSECURE_IDENTITY_PROVIDERS",
+    z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
+    "Allows identity providers without HTTPS. Only for development and tests.",
+  ),
+  setting(
     "PAGEHALL_SETUP_CODE",
     nonEmpty.optional(),
     "Setup code for the setup assistant, used instead of a generated one.",

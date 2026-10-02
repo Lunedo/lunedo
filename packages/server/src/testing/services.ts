@@ -18,6 +18,7 @@ import { createTemporaryDatabase, type TemporaryDatabase } from "./database.js";
 import { CapturingTransport } from "./jobs.js";
 
 export interface TestServices {
+  encryption: Encryption;
   url: string;
   pool: DatabasePool;
   database: Database;
@@ -44,18 +45,20 @@ export async function createTestServices(
   );
   await keyRing.reload();
   const mail = new CapturingTransport();
+  const encryption = new Encryption(() => keyRing.ring);
   const services = createAccountServices({
     database,
     pool,
     settings,
     audit,
-    encryption: new Encryption(() => keyRing.ring),
+    encryption,
     keyRing,
     backupKeys: parseKeyRing(formatKeyEntry(1, randomBytes(32))),
     jobs: undefined,
     logger,
     filesDir: mkdtempSync(path.join(tmpdir(), "pagehall-files-")),
     passwordHashConcurrency: 2,
+    insecureIdentityProviders: true,
     configuredInstanceUrl: options.configuredInstanceUrl,
     mailTransport: () => mail,
   });
@@ -66,6 +69,7 @@ export async function createTestServices(
     settings,
     services,
     mail,
+    encryption,
     async close() {
       await pool.end();
       await temporary.drop();

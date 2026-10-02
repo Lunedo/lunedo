@@ -32,6 +32,14 @@ export interface MailTemplates {
   tokenExpiring: { instanceName: string; tokenName: string; date: string };
   tokenUnused: { instanceName: string; tokenName: string; days: number };
   serviceAccountUnattended: { instanceName: string; serviceAccountName: string; organizationName: string };
+  emergencySignIn: {
+    instanceName: string;
+    accountName: string;
+    browser: string | null;
+    operatingSystem: string | null;
+    clientIp: string | null;
+  };
+  providerCredentialExpiring: { instanceName: string; providerName: string; date: string };
   signInNewBrowser: {
     instanceName: string;
     browser: string | null;
@@ -181,6 +189,19 @@ const catalogs: Record<Language, Catalog> = {
         `The API token ${tokenName} on ${instanceName} expires on ${date}. Create a new token before then, or scripts using it will stop working.`,
       ],
     }),
+    emergencySignIn: ({ instanceName, accountName, browser, operatingSystem, clientIp }) => ({
+      subject: `Emergency sign-in to ${instanceName}`,
+      paragraphs: [
+        `${accountName}, the owner of ${instanceName}, signed in with a password while password sign-in is turned off: ${describeBrowser(browser, operatingSystem, "an unknown browser", "on")}${clientIp ? `, address ${clientIp}` : ""}.`,
+        "This sign-in is meant for emergencies, for example when the identity provider fails. Check the audit log if you did not expect it.",
+      ],
+    }),
+    providerCredentialExpiring: ({ instanceName, providerName, date }) => ({
+      subject: `Credential of ${providerName} on ${instanceName} expires soon`,
+      paragraphs: [
+        `A client secret or certificate of the sign-in provider ${providerName} on ${instanceName} expires on ${date}. Add a new credential in the provider settings and register it with the provider before then, or sign-in through ${providerName} stops working.`,
+      ],
+    }),
     signInNewBrowser: ({ instanceName, browser, operatingSystem, clientIp }) => ({
       subject: `New sign-in to ${instanceName}`,
       paragraphs: [
@@ -301,6 +322,19 @@ const catalogs: Record<Language, Catalog> = {
       subject: `API-Token ${tokenName} auf ${instanceName} läuft bald ab`,
       paragraphs: [
         `Das API-Token ${tokenName} auf ${instanceName} läuft am ${date} ab. Erstellen Sie vorher ein neues Token, sonst funktionieren Skripte, die es verwenden, nicht mehr.`,
+      ],
+    }),
+    emergencySignIn: ({ instanceName, accountName, browser, operatingSystem, clientIp }) => ({
+      subject: `Notfallanmeldung bei ${instanceName}`,
+      paragraphs: [
+        `${accountName}, Eigentümer von ${instanceName}, hat sich mit Passwort angemeldet, obwohl die Anmeldung mit Passwort ausgeschaltet ist: ${describeBrowser(browser, operatingSystem, "ein unbekannter Browser", "unter")}${clientIp ? `, Adresse ${clientIp}` : ""}.`,
+        "Diese Anmeldung ist für Notfälle gedacht, zum Beispiel wenn der Identitätsanbieter ausfällt. Prüfen Sie das Audit-Log, wenn Sie sie nicht erwartet haben.",
+      ],
+    }),
+    providerCredentialExpiring: ({ instanceName, providerName, date }) => ({
+      subject: `Zugangsdaten von ${providerName} auf ${instanceName} laufen bald ab`,
+      paragraphs: [
+        `Ein Client-Secret oder Zertifikat des Anmeldeanbieters ${providerName} auf ${instanceName} läuft am ${date} ab. Fügen Sie vorher in den Einstellungen des Anbieters neue Zugangsdaten hinzu und hinterlegen Sie sie beim Anbieter, sonst funktioniert die Anmeldung über ${providerName} nicht mehr.`,
       ],
     }),
     signInNewBrowser: ({ instanceName, browser, operatingSystem, clientIp }) => ({

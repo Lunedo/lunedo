@@ -1,0 +1,368 @@
+import { randomUUID } from "node:crypto";
+import "reflect-metadata";
+import * as x509 from "@peculiar/x509";
+import { Secret, TOTP } from "otpauth";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { instanceUrlSetting } from "../accounts/instance-settings.js";
+import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
+import { PasswordSignInDisabledError } from "../auth/errors.js";
+import { passwordSignInSetting } from "../auth/settings.js";
+import { ForbiddenError } from "../authorization/service.js";
+import { testDatabaseBaseUrl } from "../testing/database.js";
+import { createTestServices, type TestServices } from "../testing/services.js";
+import { IdentityProviderService } from "./providers.js";
+
+const baseUrl = testDatabaseBaseUrl();
+const PASSWORD = "a long test passphrase";
+const DAY = 24 * 60 * 60 * 1000;
+
+const GENERIC = {
+  preset: "generic",
+  issuer: "https://idp.example.org",
+  clientId: "pagehall",
+  domains: ["example.org"],
+};
+
+describe.skipIf(!baseUrl)("IdentityProviderService", () => {
+  let test: TestServices;
+
+  beforeAll(async () => {
+    test = await createTestServices(baseUrl ?? "");
+    await test.pool.query("insert into instance (id, setup_completed_at) values (1, now())");
+    await test.settings.set(instanceUrlSetting, {}, "instance", "https://wiki.example.org");
+  });
+
+  afterAll(async () => {
+    await test?.close();
+  });
+
+  async function account(home: string | null, email = `${randomUUID()}@example.org`) {
+    return test.database.transaction((tx) =>
+      test.services.accounts.createStandard(tx, {
+        email,
+        name: "Person",
+        password: PASSWORD,
+        homeOrganizationId: home,
+      }),
+    );
+  }
+
+  async function organization() {
+    const owner = await account(null);
+    const created = await test.services.organizations.createAsActor(SYSTEM, {
+      name: `Organization ${randomUUID().slice(0, 8)}`,
+      ownerAccountId: owner.id,
+    });
+    await test.pool.query("update accounts set home_organization_id = $1 where id = $2", [
+      created.id,
+      owner.id,
+    ]);
+    return { id: created.id, owner: owner.id };
+  }
+
+  async function instanceProvider(secretExpiresAt: Date | null = null) {
+    const { provider } = await test.services.identityProviders.create(
+      SYSTEM,
+      { level: "instance" },
+      {
+        name: `Provider ${randomUUID().slice(0, 6)}`,
+        config: GENERIC,
+        credential: { kind: "clientSecret", secret: "s3cret-value", expiresAt: secretExpiresAt },
+      },
+    );
+    return provider;
+  }
+
+  it("stores secrets encrypted and never returns them", async () => {
+    const provider = await instanceProvider();
+    const stored = await test.pool.query<{ secret: Buffer }>(
+      "select secret from identity_provider_credentials where provider_id = $1",
+      [provider.id],
+    );
+    expect(stored.rows[0]?.secret.toString("latin1")).not.toContain("s3cret-value");
+    expect(JSON.stringify(provider)).not.toContain("s3cret-value");
+    expect(provider.callbackPath).toBe(`/api/v1/auth/providers/${provider.id}/callback`);
+    const loaded = await test.services.identityProviders.definition(provider.id);
+    expect(loaded?.credentials.map((credential) => credential.secret)).toEqual(["s3cret-value"]);
+  });
+
+  it("generates a certificate whose private key stays inside and keeps old credentials until removed", async () => {
+    const provider = await instanceProvider();
+    const added = await test.services.identityProviders.addCredential(
+      SYSTEM,
+      { level: "instance" },
+      provider.id,
+      {
+        kind: "certificate",
+        validDays: 365,
+      },
+    );
+    const certificate = new x509.X509Certificate(added.certificate ?? "");
+    expect(certificate.subject).toContain("Pagehall");
+    expect(added.keyId).toMatch(/^[\w-]{27}$/);
+    expect(
+      await test.services.identityProviders.certificate({ level: "instance" }, provider.id, added.id),
+    ).toBe(added.certificate);
+    const summary = await test.services.identityProviders.get({ level: "instance" }, provider.id);
+    expect(summary.credentials.map((credential) => credential.kind)).toEqual(["certificate", "clientSecret"]);
+    expect(JSON.stringify(summary)).not.toContain("PRIVATE KEY");
+    const loaded = await test.services.identityProviders.definition(provider.id);
+    expect(loaded?.credentials.map((credential) => credential.kind)).toEqual(["certificate", "clientSecret"]);
+
+    const secret = summary.credentials.find((credential) => credential.kind === "clientSecret");
+    await test.services.identityProviders.removeCredential(
+      SYSTEM,
+      { level: "instance" },
+      provider.id,
+      secret?.id ?? "",
+    );
+    await expect(
+      test.services.identityProviders.removeCredential(SYSTEM, { level: "instance" }, provider.id, added.id),
+    ).rejects.toMatchObject({ code: "lastCredential" });
+  });
+
+  it("warns about expiring credentials and reminds the owners once at 30 and 7 days", async () => {
+    const { owner } = await organization();
+    await test.pool.query("update instance set owner_account_id = $1", [owner]);
+    try {
+      const provider = await instanceProvider(new Date(Date.now() + 20 * DAY));
+      expect(provider.warnings).toEqual(["credentialExpiring"]);
+      const count = async () =>
+        Number(
+          (
+            await test.pool.query<{ count: string }>(
+              "select count(*) from notifications where type = 'identityProvider.credentialExpiring' and target_id = $1",
+              [provider.id],
+            )
+          ).rows[0]?.count,
+        );
+      await test.services.identityProviders.sendCredentialReminders();
+      await test.services.identityProviders.sendCredentialReminders();
+      expect(await count()).toBe(1);
+      await test.pool.query(
+        "update identity_provider_credentials set expires_at = now() + interval '5 days' where provider_id = $1",
+        [provider.id],
+      );
+      await test.services.identityProviders.sendCredentialReminders();
+      expect(await count()).toBe(1);
+      const sent = await test.pool.query(
+        "select notified_thirty_days_at is not null as thirty, notified_seven_days_at is not null as seven from identity_provider_credentials where provider_id = $1",
+        [provider.id],
+      );
+      expect(sent.rows).toEqual([{ thirty: true, seven: true }]);
+    } finally {
+      await test.pool.query("update instance set owner_account_id = null");
+    }
+  });
+
+  it("keeps instance and organization providers apart and lets organizations turn on what they were offered", async () => {
+    const first = await organization();
+    const second = await organization();
+    const provider = await instanceProvider();
+    const { provider: own } = await test.services.identityProviders.create(
+      SYSTEM,
+      { level: "organization", organizationId: first.id },
+      { name: "Own", config: GENERIC, credential: { kind: "clientSecret", secret: "x", expiresAt: null } },
+    );
+    await expect(test.services.identityProviders.get({ level: "instance" }, own.id)).rejects.toMatchObject({
+      code: "notFound",
+    });
+    await expect(
+      test.services.identityProviders.get({ level: "organization", organizationId: second.id }, own.id),
+    ).rejects.toMatchObject({ code: "notFound" });
+    await expect(
+      test.services.identityProviders.setEnabled(SYSTEM, first.id, provider.id, true),
+    ).rejects.toMatchObject({ code: "notFound" });
+    await test.services.identityProviders.setAvailability(SYSTEM, provider.id, [first.id, second.id]);
+    expect(await test.services.identityProviders.organizationProviders(first.id)).toEqual([
+      expect.objectContaining({ id: provider.id, level: "instance", enabled: false }),
+      expect.objectContaining({ id: own.id, level: "organization", enabled: true }),
+    ]);
+    await test.services.identityProviders.setEnabled(SYSTEM, first.id, provider.id, true);
+    expect(await test.services.identityProviders.enabledFor(provider.id, first.id)).toBe(true);
+    expect(await test.services.identityProviders.enabledFor(provider.id, second.id)).toBe(false);
+    await test.services.identityProviders.setAvailability(SYSTEM, provider.id, [second.id]);
+    expect(await test.services.identityProviders.enabledFor(provider.id, first.id)).toBe(false);
+  });
+
+  it("refuses multi-tenant Entra ID endpoints, providers without HTTPS and foreign issuers for the presets", async () => {
+    const strict = new IdentityProviderService({
+      database: test.database,
+      audit: test.services.audit,
+      encryption: test.encryption,
+      notifications: test.services.notifications,
+      allowInsecure: false,
+    });
+    const credential = { kind: "clientSecret" as const, secret: "x", expiresAt: null };
+    for (const tenantId of ["common", "organizations", "consumers"]) {
+      await expect(
+        strict.create(
+          SYSTEM,
+          { level: "instance" },
+          {
+            name: "Entra",
+            config: { preset: "entraId", tenantId, clientId: "c" },
+            credential,
+          },
+        ),
+      ).rejects.toMatchObject({ code: "invalidProviderConfiguration" });
+    }
+    await expect(
+      strict.create(
+        SYSTEM,
+        { level: "instance" },
+        {
+          name: "Plain",
+          config: { ...GENERIC, issuer: "http://idp.example.org" },
+          credential,
+        },
+      ),
+    ).rejects.toMatchObject({ code: "invalidProviderConfiguration" });
+    await expect(
+      strict.create(
+        SYSTEM,
+        { level: "instance" },
+        {
+          name: "Entra",
+          config: {
+            preset: "entraId",
+            tenantId: randomUUID(),
+            clientId: "c",
+            authority: "https://login.attacker.example",
+          },
+          credential,
+        },
+      ),
+    ).rejects.toMatchObject({ code: "invalidProviderConfiguration" });
+    await expect(
+      strict.create(
+        SYSTEM,
+        { level: "instance" },
+        {
+          name: "Google",
+          config: {
+            preset: "google",
+            clientId: "c",
+            domains: ["example.org"],
+            issuer: "https://accounts.attacker.example",
+          },
+          credential,
+        },
+      ),
+    ).rejects.toMatchObject({ code: "invalidProviderConfiguration" });
+    const google = await strict.create(
+      SYSTEM,
+      { level: "instance" },
+      {
+        name: "Google",
+        config: { preset: "google", clientId: "c", domains: ["example.org"] },
+        credential,
+      },
+    );
+    expect(google.provider.issuer).toBe("https://accounts.google.com");
+  });
+
+  it("turns password sign-in off per organization, but always lets the instance owner in and tells the administrators", async () => {
+    const org = await organization();
+    const member = await account(org.id);
+    await test.database.transaction((tx) =>
+      test.services.memberships
+        .add(tx, SYSTEM, { organizationId: org.id, accountId: member.id, kind: "member" })
+        .catch(() => undefined),
+    );
+    await test.settings.set(passwordSignInSetting, { organization: org.id }, "organization", false);
+    await expect(
+      test.services.signIn.signInWithPassword({ email: member.email ?? "", password: PASSWORD, client: {} }),
+    ).rejects.toThrow(PasswordSignInDisabledError);
+
+    const administrator = await account(null);
+    await test.services.roles.assign(SYSTEM, {
+      scope: "instance",
+      organizationId: null,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: administrator.id },
+    });
+    await test.pool.query("update instance set owner_account_id = $1", [org.owner]);
+    try {
+      const setup = await test.services.totp.begin(org.owner, { issuer: "Test", account: "owner" });
+      if (!setup) throw new Error("TOTP was not started");
+      const secret = Secret.fromBase32(setup.secret);
+      await test.services.totp.verify(test.database, org.owner, TOTP.generate({ secret }), {
+        confirming: true,
+      });
+      const owner = await test.services.accounts.get(org.owner);
+      const first = await test.services.signIn.signInWithPassword({
+        email: owner?.email ?? "",
+        password: PASSWORD,
+        client: { ip: "203.0.113.9" },
+      });
+      if (first.status !== "secondFactorRequired") throw new Error("A second factor was expected");
+      await test.services.signIn.completeSecondFactor({
+        pendingToken: first.pendingToken,
+        factor: { type: "totp", code: TOTP.generate({ secret, timestamp: Date.now() + 30_000 }) },
+        client: { ip: "203.0.113.9" },
+      });
+      const audited = await test.pool.query(
+        "select actor_id from audit_events where name = 'auth.emergencySignIn'",
+      );
+      expect(audited.rows).toEqual([{ actor_id: org.owner }]);
+      const notified = await test.pool.query(
+        "select recipient_id from notifications where type = 'auth.emergencySignIn' order by recipient_id",
+      );
+      expect(notified.rows.map((row) => row.recipient_id).sort()).toEqual(
+        [administrator.id, org.owner].sort(),
+      );
+    } finally {
+      await test.pool.query("update instance set owner_account_id = null");
+    }
+  });
+
+  it("lets administrators link and unlink identities but never the last way to sign in", async () => {
+    const org = await organization();
+    const provider = await instanceProvider();
+    await test.services.identityProviders.setAvailability(SYSTEM, provider.id, [org.id]);
+    const target = await account(org.id);
+    const admin = await account(org.id);
+    await test.services.roles.assign(SYSTEM, {
+      scope: "organization",
+      organizationId: org.id,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: admin.id },
+    });
+    await expect(
+      test.services.administration.linkIdentity(accountPrincipal(admin.id), target.id, {
+        providerId: provider.id,
+        subject: "abc",
+      }),
+    ).rejects.toMatchObject({ code: "providerNotEnabled" });
+    await test.services.identityProviders.setEnabled(SYSTEM, org.id, provider.id, true);
+    const outsider = await account(null);
+    await expect(
+      test.services.administration.linkIdentity(accountPrincipal(outsider.id), target.id, {
+        providerId: provider.id,
+        subject: "abc",
+      }),
+    ).rejects.toThrow(ForbiddenError);
+    const linked = await test.services.administration.linkIdentity(accountPrincipal(admin.id), target.id, {
+      providerId: provider.id,
+      subject: "abc",
+    });
+    expect(linked).toMatchObject({ providerId: provider.id, subject: "abc" });
+    await expect(
+      test.services.administration.linkIdentity(accountPrincipal(admin.id), admin.id, {
+        providerId: provider.id,
+        subject: "abc",
+      }),
+    ).rejects.toMatchObject({ code: "identityInUse" });
+
+    await test.pool.query("update accounts set password_hash = null where id = $1", [target.id]);
+    await expect(
+      test.services.administration.unlinkIdentity(accountPrincipal(admin.id), target.id, linked.id),
+    ).rejects.toMatchObject({ code: "lastSignInMethod" });
+    await test.pool.query("update accounts set password_hash = 'x' where id = $1", [target.id]);
+    await expect(
+      test.services.administration.unlinkIdentity(accountPrincipal(admin.id), target.id, linked.id),
+    ).resolves.toEqual({ endedSessions: 0 });
+    expect(await test.services.administration.identities(target.id)).toEqual([]);
+  });
+});

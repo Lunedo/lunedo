@@ -21,6 +21,22 @@ export {
   webauthnCredentials,
 } from "../auth/schema.js";
 export { keyRotationStatus, keyRotations } from "../crypto/schema.js";
+export {
+  identities,
+  identityCredentialKind,
+  identityProviderCredentials,
+  identityProviderLevel,
+  identityProviderLogos,
+  identityProviderOrganizations,
+  identityProviderPreset,
+  identityProviders,
+  identityProviderType,
+  providerFlowPurpose,
+  providerFlows,
+  providerLogoutTokens,
+  signInRefusalReason,
+  signInRefusals,
+} from "../identity/schema.js";
 export { jobProgress } from "../jobs/schema.js";
 export { instanceSecrets, mailOutbox, mailStatus } from "../mail/schema.js";
 export { knownDevices, notifications } from "../notifications/schema.js";

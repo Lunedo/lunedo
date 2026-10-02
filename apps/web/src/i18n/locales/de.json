@@ -1403,7 +1403,24 @@
     },
     "eventsTitle": "Ereignisse",
     "events": {
+      "identity": {
+        "linked": "Identität verknüpft",
+        "unlinked": "Identitätsverknüpfung entfernt"
+      },
+      "identityProvider": {
+        "created": "Identitätsanbieter eingerichtet",
+        "updated": "Identitätsanbieter geändert",
+        "removed": "Identitätsanbieter entfernt",
+        "availabilityChanged": "Identitätsanbieter für Organisationen freigegeben",
+        "enabledChanged": "Identitätsanbieter ein- oder ausgeschaltet",
+        "credentialAdded": "Zugangsdaten des Anbieters hinzugefügt",
+        "credentialRemoved": "Zugangsdaten des Anbieters entfernt",
+        "logoChanged": "Logo des Anbieters geändert"
+      },
       "auth": {
+        "emergencySignIn": "Notfallanmeldung",
+        "signInRefused": "Anmeldung über Anbieter abgelehnt",
+        "providerSignedOut": "Vom Anbieter abgemeldet",
         "signedIn": "Angemeldet",
         "signInFailed": "Anmeldung fehlgeschlagen",
         "lockedOut": "Gesperrt",
@@ -1413,6 +1430,7 @@
         "reauthenticationFailed": "Bestätigung der Identität fehlgeschlagen"
       },
       "account": {
+        "createdAtSignIn": "Konto bei der ersten Anmeldung angelegt",
         "created": "Konto angelegt",
         "passwordChanged": "Passwort geändert",
         "passwordResetRequested": "Passwort-Zurücksetzung angefordert",

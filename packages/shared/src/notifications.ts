@@ -37,6 +37,17 @@ export const notificationParamSchemas = {
     reason: z.string(),
     minutes: z.number().int(),
   }),
+  "auth.emergencySignIn": z.object({
+    accountName: z.string(),
+    browser: z.string().nullable(),
+    operatingSystem: z.string().nullable(),
+    clientIp: z.string().nullable(),
+  }),
+  "identityProvider.credentialExpiring": z.object({
+    providerName: z.string(),
+    expiresAt: instant,
+    providerId: idSchema,
+  }),
   "signIn.newBrowser": z.object({
     browser: z.string().nullable(),
     operatingSystem: z.string().nullable(),

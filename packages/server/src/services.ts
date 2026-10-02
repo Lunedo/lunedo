@@ -21,6 +21,13 @@ import type { KeyRing } from "./crypto/key-ring.js";
 import type { KeyRingHolder } from "./crypto/key-ring-holder.js";
 import type { Database } from "./database/database.js";
 import type { DatabasePool } from "./database/pool.js";
+import { OidcAdapter } from "./identity/oidc.js";
+import {
+  IdentityProviderService,
+  PROVIDER_CREDENTIAL_REMINDER_SCHEDULE,
+  providerCredentialReminderJob,
+} from "./identity/providers.js";
+import { ProviderSignInService } from "./identity/sign-in.js";
 import type { JobQueue } from "./jobs/job-queue.js";
 import type { Logger } from "./logging/logger.js";
 import {
@@ -84,6 +91,8 @@ export interface AccountServices {
   serviceAccounts: ServiceAccountService;
   apiTokens: ApiTokenService;
   notifications: NotificationService;
+  identityProviders: IdentityProviderService;
+  providerSignIn: ProviderSignInService;
 }
 
 export function createAccountServices(options: {
@@ -99,6 +108,7 @@ export function createAccountServices(options: {
   filesDir: string;
   configuredInstanceUrl?: string | undefined;
   passwordHashConcurrency: number;
+  insecureIdentityProviders?: boolean;
   mailTransport?: (options: SmtpOptions) => MailTransport;
 }): AccountServices {
   const { database, settings, audit, encryption, jobs, logger } = options;
@@ -130,7 +140,6 @@ export function createAccountServices(options: {
   });
   const organizations = new OrganizationService({ database, settings, audit });
   const memberships = new MembershipService({ database, audit, authorization });
-  const administration = new AccountAdministrationService({ database, authorization, audit, mail });
   const overview = new AccountOverviewService({ database, accounts });
   const roles = new RoleService({ database, audit, authorization });
   const groups = new GroupService({ database, audit, authorization });
@@ -140,6 +149,20 @@ export function createAccountServices(options: {
     mail,
     authorization,
     registry: new NotificationRegistry().register(...builtinNotificationTypes),
+  });
+  const identityProviders = new IdentityProviderService({
+    database,
+    audit,
+    encryption,
+    notifications,
+    allowInsecure: options.insecureIdentityProviders ?? false,
+  });
+  const administration = new AccountAdministrationService({
+    database,
+    authorization,
+    audit,
+    mail,
+    providers: identityProviders,
   });
   const breakGlass = new BreakGlassService({ database, audit, notifications, settings });
   const lifecycle = new OrganizationLifecycle({
@@ -190,6 +213,18 @@ export function createAccountServices(options: {
     notifications,
     settings,
     setupComplete: () => setup.isComplete(),
+  });
+  const providerSignIn = new ProviderSignInService({
+    database,
+    providers: identityProviders,
+    adapters: [new OidcAdapter({ allowInsecure: options.insecureIdentityProviders ?? false })],
+    accounts,
+    signIn,
+    sessions,
+    challenges,
+    audit,
+    notifications,
+    settings,
   });
   const security = new AccountSecurityService({
     database,
@@ -254,6 +289,8 @@ export function createAccountServices(options: {
     serviceAccounts,
     apiTokens,
     notifications,
+    identityProviders,
+    providerSignIn,
   };
 }
 
@@ -297,8 +334,13 @@ export async function workAccountJobs(
       setupSessions: await services.setup.cleanup(),
       failedMails: await services.mail.cleanup(),
       invitations: await services.invitations.cleanup(),
+      providerFlows: await services.providerSignIn.cleanup(),
     };
     job.logger.debug(removed, "Authentication data cleaned up");
+  });
+  await jobs.work(providerCredentialReminderJob, async (job) => {
+    const sent = await services.identityProviders.sendCredentialReminders();
+    if (sent > 0) job.logger.info({ sent }, "Provider credential reminders sent");
   });
   await jobs.work(notificationRetentionJob, async (job) => {
     const removed = await services.notifications.applyRetention();
@@ -315,4 +357,10 @@ export async function workAccountJobs(
   await jobs.schedule(organizationExpiryJob, ORGANIZATION_EXPIRY_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(apiTokenExpiryJob, API_TOKEN_EXPIRY_SCHEDULE, {}, { key: "regular" });
   await jobs.schedule(organizationRemindersJob, ORGANIZATION_REMINDERS_SCHEDULE, {}, { key: "hourly" });
+  await jobs.schedule(
+    providerCredentialReminderJob,
+    PROVIDER_CREDENTIAL_REMINDER_SCHEDULE,
+    {},
+    { key: "hourly" },
+  );
 }

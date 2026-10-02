@@ -180,6 +180,30 @@ const signInNewBrowser = defineNotificationType({
   mail: (params) => ({ template: "signInNewBrowser", params }),
 });
 
+const emergencySignIn = defineNotificationType({
+  type: "auth.emergencySignIn",
+  targetType: "account",
+  params: notificationParamSchemas["auth.emergencySignIn"],
+  setting: settingOf("auth.emergencySignIn"),
+  visible: async (context) => context.can("instance.signIn.view", { type: "instance" }),
+  mail: (params) => ({ template: "emergencySignIn", params }),
+});
+
+const providerCredentialExpiring = defineNotificationType({
+  type: "identityProvider.credentialExpiring",
+  targetType: "identityProvider",
+  params: notificationParamSchemas["identityProvider.credentialExpiring"],
+  setting: settingOf("identityProvider.credentialExpiring"),
+  visible: async (context) =>
+    context.organizationId === null
+      ? context.can("instance.signIn.view", { type: "instance" })
+      : context.can("organization.signIn.view", { type: "organization", id: context.organizationId }),
+  mail: (params, locale) => ({
+    template: "providerCredentialExpiring",
+    params: { providerName: params.providerName, date: formatDay(params.expiresAt, locale) },
+  }),
+});
+
 export const builtinNotificationTypes = [
   apiTokenExpiring,
   apiTokenUnused,
@@ -189,4 +213,6 @@ export const builtinNotificationTypes = [
   serviceAccountUnattended,
   breakGlassStarted,
   signInNewBrowser,
+  emergencySignIn,
+  providerCredentialExpiring,
 ];
