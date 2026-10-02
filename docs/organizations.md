@@ -62,7 +62,8 @@ Rules:
 - Every operation that gives or widens access passes one check: assigning a role, adding a member to a group that holds roles, widening a custom role, and creating a token for a service account. What the target gains must be covered by the actor's own permanent permissions; temporary roles and break-glass access never count. A refusal is `selfExtension` when the actor would gain the access, directly, through a group, through a role they hold or through a token they receive, and `roleExceedsOwnPermissions` otherwise.
 - Every operation that removes or disables a principal holding a role checks the actor's rank: removing a role or a member, deleting a group or a custom role, deactivating an account or a service account. The actor must hold the areas of what is removed, and only owners remove owners.
 - Only owners appoint owners. Owners are individual standard accounts and never expire; service accounts and guests cannot be owners, and the last owner cannot leave or be removed.
-- Roles are assigned to accounts, groups, all members of an organization or all internal users of the instance.
+- Roles at the instance and organization level, built-in and custom, are assigned only to individual accounts and to groups; instance roles only to accounts. The server refuses all members of an organization and all internal users of the instance with `roleNeedsAccountOrGroup`. These principals remain for content permissions. Assignments made earlier to them stay in effect until they are removed.
+- One role can be given to several accounts and groups at once through `POST /api/v1/organizations/{organizationId}/role-assignments/batch` and `POST /api/v1/instance/role-assignments/batch`. Either all assignments are made or none.
 
 ## Groups
 

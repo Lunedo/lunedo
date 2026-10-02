@@ -197,19 +197,52 @@ const assignmentBody = z
         z
           .object({ kind: z.literal("organizationMembers").describe("Every member of the organization.") })
           .strict()
-          .describe("All members."),
+          .describe(
+            "All members. Refused with `roleNeedsAccountOrGroup`: roles go to individual accounts and groups only.",
+          ),
         z
           .object({
             kind: z.literal("instanceUsers").describe("Every internal user of the instance who is a member."),
           })
           .strict()
-          .describe("All internal users."),
+          .describe(
+            "All internal users. Refused with `roleNeedsAccountOrGroup`: roles go to individual accounts and groups only.",
+          ),
       ])
       .describe("Who receives the role."),
     expiresAt: optionalExpiry("When the assignment ends."),
   })
   .strict()
   .describe("A role assignment. Nobody can give more than they hold themselves.");
+
+const batchAssignmentBody = z
+  .object({
+    role: roleInput,
+    principals: z
+      .array(
+        z
+          .discriminatedUnion("kind", [
+            z
+              .object({ kind: z.literal("account").describe("One account."), id: uuid("ID of the account.") })
+              .strict()
+              .describe("An account, including service accounts."),
+            z
+              .object({
+                kind: z.literal("group").describe("All members of a group."),
+                id: uuid("ID of the group."),
+              })
+              .strict()
+              .describe("A group."),
+          ])
+          .describe("An account or a group."),
+      )
+      .min(1)
+      .max(50)
+      .describe("Accounts and groups that receive the role, 1 to 50."),
+    expiresAt: optionalExpiry("When the assignments end."),
+  })
+  .strict()
+  .describe("One role for several accounts and groups. Either all assignments are made or none.");
 
 const assignmentParams = organizationIdParams.extend({ assignmentId: uuid("ID of the role assignment.") });
 
@@ -717,7 +750,7 @@ export class OrganizationsController {
   @Permission("organization.roles.manage", organization)
   @ApiRoute({
     summary: "Assign a role",
-    description: "Gives a role to an account, a group, all members or all internal users.",
+    description: "Gives a role to an account or a group. Roles go to individual accounts and groups only.",
     tags: [ROLES],
     status: 201,
     params: organizationIdParams,
@@ -734,6 +767,7 @@ export class OrganizationsController {
     errors: [
       "alreadyAssigned",
       "invalidPrincipal",
+      "roleNeedsAccountOrGroup",
       "roleNotAssignable",
       "roleNotFound",
       "expiryInPast",
@@ -752,6 +786,45 @@ export class OrganizationsController {
       principal: { kind: body.principal.kind, id: "id" in body.principal ? body.principal.id : null },
       expiresAt: body.expiresAt ?? null,
     });
+  }
+
+  @Post(":organizationId/role-assignments/batch")
+  @Permission("organization.roles.manage", organization)
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Assign a role to several accounts and groups",
+    description:
+      "Gives one role to several accounts and groups at once. Either all assignments are made or none.",
+    tags: [ROLES],
+    status: 201,
+    params: organizationIdParams,
+    body: batchAssignmentBody,
+    response: {
+      description: "The new assignments.",
+      schema: z.object({ items: z.array(roleAssignmentSchema).describe("The new assignments.") }),
+    },
+    errors: [
+      "alreadyAssigned",
+      "invalidPrincipal",
+      "roleNotAssignable",
+      "roleNotFound",
+      "expiryInPast",
+      "ownerExpiry",
+    ],
+  })
+  async assignMany(
+    @Param("organizationId") organizationId: string,
+    @Body() body: z.output<typeof batchAssignmentBody>,
+    @Req() request: FastifyRequest,
+  ) {
+    const items = await this.#services.roles.assignMany(actorOf(request), {
+      scope: "organization",
+      organizationId,
+      role: body.role,
+      principals: body.principals,
+      expiresAt: body.expiresAt ?? null,
+    });
+    return { items };
   }
 
   @Delete(":organizationId/role-assignments/:assignmentId")

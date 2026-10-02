@@ -125,13 +125,33 @@ const assignmentBody = z
         z
           .object({ kind: z.literal("instanceUsers").describe("Every internal user.") })
           .strict()
-          .describe("All internal users."),
+          .describe(
+            "All internal users. Refused with `roleNeedsAccountOrGroup`: instance roles go to individual accounts only.",
+          ),
       ])
       .describe("Who receives the role."),
     expiresAt: optionalExpiry("When the assignment ends."),
   })
   .strict()
   .describe("An instance role assignment.");
+
+const batchAssignmentBody = z
+  .object({
+    role: assignmentBody.shape.role,
+    principals: z
+      .array(
+        z
+          .object({ kind: z.literal("account").describe("One account."), id: uuid("ID of the account.") })
+          .strict()
+          .describe("An internal account."),
+      )
+      .min(1)
+      .max(50)
+      .describe("Accounts that receive the role, 1 to 50."),
+    expiresAt: optionalExpiry("When the assignments end."),
+  })
+  .strict()
+  .describe("One instance role for several accounts. Either all assignments are made or none.");
 
 const ownershipSchema = z
   .object({ accountId: uuid("Account that becomes the instance owner.") })
@@ -393,7 +413,8 @@ export class InstanceController {
   @Permission("instance.roles.manage")
   @ApiRoute({
     summary: "Assign an instance role",
-    description: "Gives an instance role to an internal account or to all internal users.",
+    description:
+      "Gives an instance role to an internal account. Instance roles go to individual accounts only.",
     tags: [TAG],
     status: 201,
     body: assignmentBody,
@@ -406,7 +427,14 @@ export class InstanceController {
       schema: roleAssignmentSchema,
       example: exampleInstanceAssignment,
     },
-    errors: ["alreadyAssigned", "invalidPrincipal", "roleNotAssignable", "roleNotFound", "expiryInPast"],
+    errors: [
+      "alreadyAssigned",
+      "invalidPrincipal",
+      "roleNeedsAccountOrGroup",
+      "roleNotAssignable",
+      "roleNotFound",
+      "expiryInPast",
+    ],
   })
   async assign(@Body() body: z.output<typeof assignmentBody>, @Req() request: FastifyRequest) {
     return this.#services.roles.assign(actorOf(request), {
@@ -416,6 +444,33 @@ export class InstanceController {
       principal: { kind: body.principal.kind, id: "id" in body.principal ? body.principal.id : null },
       expiresAt: body.expiresAt ?? null,
     });
+  }
+
+  @Post("role-assignments/batch")
+  @Permission("instance.roles.manage")
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Assign an instance role to several accounts",
+    description:
+      "Gives one instance role to several accounts at once. Either all assignments are made or none.",
+    tags: [TAG],
+    status: 201,
+    body: batchAssignmentBody,
+    response: {
+      description: "The new assignments.",
+      schema: z.object({ items: z.array(roleAssignmentSchema).describe("The new assignments.") }),
+    },
+    errors: ["alreadyAssigned", "invalidPrincipal", "roleNotAssignable", "roleNotFound", "expiryInPast"],
+  })
+  async assignMany(@Body() body: z.output<typeof batchAssignmentBody>, @Req() request: FastifyRequest) {
+    const items = await this.#services.roles.assignMany(actorOf(request), {
+      scope: "instance",
+      organizationId: null,
+      role: body.role,
+      principals: body.principals,
+      expiresAt: body.expiresAt ?? null,
+    });
+    return { items };
   }
 
   @Delete("role-assignments/:assignmentId")

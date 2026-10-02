@@ -163,7 +163,7 @@ describe.skipIf(!baseUrl)("authorization rules", () => {
           scope: "organization",
           organizationId: org.id,
           role: { builtIn: "administrator" },
-          principal: { kind: "organizationMembers", id: null },
+          principal: { kind: "account", id: accountId },
         });
       expect(await denial(selfAssign(temporary))).toBe("selfExtension");
 

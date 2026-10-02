@@ -71,12 +71,13 @@ const SUBJECT_FACTS: Record<Subject, SubjectFacts> = {
 
 function assignmentValid(subject: Subject, via: PrincipalKind, role: RoleCase): boolean {
   const facts = SUBJECT_FACTS[subject];
+  if (via === "organizationMembers" || via === "instanceUsers") return false;
   if (role.scope === "instance" && role.builtIn === "owner")
     return via === "account" && facts.type === "standard";
   if (role.builtIn && !ASSIGNABLE[role.scope].includes(role.builtIn)) return false;
   if (role.builtIn === "owner" && facts.type !== "standard") return false;
   if (role.builtIn === "owner" && via !== "account") return false;
-  if (role.scope === "instance" && (via === "group" || via === "organizationMembers")) return false;
+  if (role.scope === "instance" && via === "group") return false;
   if (via !== "account") return true;
   if (role.scope === "instance") return facts.type === "standard";
   return facts.membership === "member";

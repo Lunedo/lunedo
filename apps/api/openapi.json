@@ -10962,7 +10962,7 @@
       "post": {
         "operationId": "instance.assign",
         "summary": "Assign an instance role",
-        "description": "Gives an instance role to an internal account or to all internal users.\n\nRequires the permission `instance.roles.manage` on the instance.",
+        "description": "Gives an instance role to an internal account. Instance roles go to individual accounts only.\n\nRequires the permission `instance.roles.manage` on the instance.",
         "tags": [
           "Instance"
         ],
@@ -11059,7 +11059,7 @@
                           "kind"
                         ],
                         "additionalProperties": false,
-                        "description": "All internal users."
+                        "description": "All internal users. Refused with `roleNeedsAccountOrGroup`: instance roles go to individual accounts only."
                       }
                     ],
                     "description": "Who receives the role."
@@ -11227,7 +11227,7 @@
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `expiryInPast`: The expiry lies in the past. `invalidInput`: The request is not valid. `invalidPrincipal`: The role cannot go to this principal. `roleNotAssignable`: The role cannot be assigned.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `expiryInPast`: The expiry lies in the past. `invalidInput`: The request is not valid. `invalidPrincipal`: The role cannot go to this principal. `roleNeedsAccountOrGroup`: The role can only go to individual accounts and groups. `roleNotAssignable`: The role cannot be assigned.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -11264,6 +11264,14 @@
                       "title": "The role cannot go to this principal",
                       "status": 400,
                       "code": "invalidPrincipal"
+                    }
+                  },
+                  "roleNeedsAccountOrGroup": {
+                    "value": {
+                      "type": "urn:pagehall:problem:roleNeedsAccountOrGroup",
+                      "title": "The role can only go to individual accounts and groups",
+                      "status": 400,
+                      "code": "roleNeedsAccountOrGroup"
                     }
                   },
                   "roleNotAssignable": {
@@ -11531,6 +11539,426 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/role-assignments/batch": {
+      "post": {
+        "operationId": "instance.assignMany",
+        "summary": "Assign an instance role to several accounts",
+        "description": "Gives one instance role to several accounts at once. Either all assignments are made or none.\n\nRequires the permission `instance.roles.manage` on the instance.",
+        "tags": [
+          "Instance"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.roles.manage",
+          "resource": "instance"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "builtIn": {
+                            "type": "string",
+                            "enum": [
+                              "administrator",
+                              "securityAuditor"
+                            ],
+                            "description": "Key of the built-in instance role."
+                          }
+                        },
+                        "required": [
+                          "builtIn"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A built-in role."
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "customRoleId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of an instance role."
+                          }
+                        },
+                        "required": [
+                          "customRoleId"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A custom role."
+                      }
+                    ],
+                    "description": "The role to give."
+                  },
+                  "principals": {
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "account",
+                          "description": "One account."
+                        },
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of the account."
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "id"
+                      ],
+                      "additionalProperties": false,
+                      "description": "An internal account."
+                    },
+                    "description": "Accounts that receive the role, 1 to 50."
+                  },
+                  "expiresAt": {
+                    "description": "When the assignments end. ISO 8601 timestamp, or null for no expiry. Leave it out to keep the default.",
+                    "anyOf": [
+                      {
+                        "description": "When the assignments end. ISO 8601 timestamp; an offset is allowed.",
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "role",
+                  "principals"
+                ],
+                "additionalProperties": false,
+                "description": "One instance role for several accounts. Either all assignments are made or none."
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new assignments.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the assignment."
+                          },
+                          "scope": {
+                            "type": "string",
+                            "enum": [
+                              "instance",
+                              "organization"
+                            ],
+                            "description": "Level of the assignment."
+                          },
+                          "organizationId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "ID of the organization, or null for instance assignments."
+                          },
+                          "role": {
+                            "type": "string",
+                            "description": "Name of the role."
+                          },
+                          "builtInRole": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "owner",
+                                  "administrator",
+                                  "member",
+                                  "securityAuditor"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Key of the built-in role, or null for a custom role."
+                          },
+                          "customRoleId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "ID of the custom role, or null for a built-in role."
+                          },
+                          "principalKind": {
+                            "type": "string",
+                            "enum": [
+                              "account",
+                              "group",
+                              "organizationMembers",
+                              "instanceUsers"
+                            ],
+                            "description": "Who receives the role."
+                          },
+                          "principalId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "ID of the account or group, or null for all members or all users."
+                          },
+                          "expiresAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When the assignment ends, or null. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "scope",
+                          "organizationId",
+                          "role",
+                          "builtInRole",
+                          "customRoleId",
+                          "principalKind",
+                          "principalId",
+                          "expiresAt"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A role given to a principal."
+                      },
+                      "description": "The new assignments."
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `expiryInPast`: The expiry lies in the past. `invalidInput`: The request is not valid. `invalidPrincipal`: The role cannot go to this principal. `roleNotAssignable`: The role cannot be assigned.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "expiryInPast": {
+                    "value": {
+                      "type": "urn:pagehall:problem:expiryInPast",
+                      "title": "The expiry lies in the past",
+                      "status": 400,
+                      "code": "expiryInPast"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidPrincipal": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidPrincipal",
+                      "title": "The role cannot go to this principal",
+                      "status": 400,
+                      "code": "invalidPrincipal"
+                    }
+                  },
+                  "roleNotAssignable": {
+                    "value": {
+                      "type": "urn:pagehall:problem:roleNotAssignable",
+                      "title": "The role cannot be assigned",
+                      "status": 400,
+                      "code": "roleNotAssignable"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`roleNotFound`: The role does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "roleNotFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:roleNotFound",
+                      "title": "The role does not exist",
+                      "status": 404,
+                      "code": "roleNotFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`alreadyAssigned`: The role is already assigned.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "alreadyAssigned": {
+                    "value": {
+                      "type": "urn:pagehall:problem:alreadyAssigned",
+                      "title": "The role is already assigned",
+                      "status": 409,
+                      "code": "alreadyAssigned"
                     }
                   }
                 }
@@ -20867,7 +21295,7 @@
       "post": {
         "operationId": "organizations.assign",
         "summary": "Assign a role",
-        "description": "Gives a role to an account, a group, all members or all internal users.\n\nRequires the permission `organization.roles.manage` on the organization in `organizationId`.",
+        "description": "Gives a role to an account or a group. Roles go to individual accounts and groups only.\n\nRequires the permission `organization.roles.manage` on the organization in `organizationId`.",
         "tags": [
           "Roles"
         ],
@@ -20998,7 +21426,7 @@
                           "kind"
                         ],
                         "additionalProperties": false,
-                        "description": "All members."
+                        "description": "All members. Refused with `roleNeedsAccountOrGroup`: roles go to individual accounts and groups only."
                       },
                       {
                         "type": "object",
@@ -21013,7 +21441,7 @@
                           "kind"
                         ],
                         "additionalProperties": false,
-                        "description": "All internal users."
+                        "description": "All internal users. Refused with `roleNeedsAccountOrGroup`: roles go to individual accounts and groups only."
                       }
                     ],
                     "description": "Who receives the role."
@@ -21181,7 +21609,7 @@
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `expiryInPast`: The expiry lies in the past. `invalidInput`: The request is not valid. `invalidPrincipal`: The role cannot go to this principal. `ownerExpiry`: The owner role cannot expire. `roleNotAssignable`: The role cannot be assigned.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `expiryInPast`: The expiry lies in the past. `invalidInput`: The request is not valid. `invalidPrincipal`: The role cannot go to this principal. `ownerExpiry`: The owner role cannot expire. `roleNeedsAccountOrGroup`: The role can only go to individual accounts and groups. `roleNotAssignable`: The role cannot be assigned.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -21226,6 +21654,14 @@
                       "title": "The owner role cannot expire",
                       "status": 400,
                       "code": "ownerExpiry"
+                    }
+                  },
+                  "roleNeedsAccountOrGroup": {
+                    "value": {
+                      "type": "urn:pagehall:problem:roleNeedsAccountOrGroup",
+                      "title": "The role can only go to individual accounts and groups",
+                      "status": 400,
+                      "code": "roleNeedsAccountOrGroup"
                     }
                   },
                   "roleNotAssignable": {
@@ -21532,6 +21968,481 @@
                       "title": "The last owner cannot leave",
                       "status": 409,
                       "code": "lastOwner"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{organizationId}/role-assignments/batch": {
+      "post": {
+        "operationId": "organizations.assignMany",
+        "summary": "Assign a role to several accounts and groups",
+        "description": "Gives one role to several accounts and groups at once. Either all assignments are made or none.\n\nRequires the permission `organization.roles.manage` on the organization in `organizationId`.",
+        "tags": [
+          "Roles"
+        ],
+        "x-pagehall-permission": {
+          "action": "organization.roles.manage",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "builtIn": {
+                            "type": "string",
+                            "enum": [
+                              "owner",
+                              "administrator"
+                            ],
+                            "description": "Key of the built-in role."
+                          }
+                        },
+                        "required": [
+                          "builtIn"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A built-in role."
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "customRoleId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of a custom role of the organization."
+                          }
+                        },
+                        "required": [
+                          "customRoleId"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A custom role."
+                      }
+                    ],
+                    "description": "The role to give."
+                  },
+                  "principals": {
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "account",
+                              "description": "One account."
+                            },
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the account."
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "id"
+                          ],
+                          "additionalProperties": false,
+                          "description": "An account, including service accounts."
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "group",
+                              "description": "All members of a group."
+                            },
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the group."
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "id"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A group."
+                        }
+                      ],
+                      "description": "An account or a group."
+                    },
+                    "description": "Accounts and groups that receive the role, 1 to 50."
+                  },
+                  "expiresAt": {
+                    "description": "When the assignments end. ISO 8601 timestamp, or null for no expiry. Leave it out to keep the default.",
+                    "anyOf": [
+                      {
+                        "description": "When the assignments end. ISO 8601 timestamp; an offset is allowed.",
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "role",
+                  "principals"
+                ],
+                "additionalProperties": false,
+                "description": "One role for several accounts and groups. Either all assignments are made or none."
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new assignments.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the assignment."
+                          },
+                          "scope": {
+                            "type": "string",
+                            "enum": [
+                              "instance",
+                              "organization"
+                            ],
+                            "description": "Level of the assignment."
+                          },
+                          "organizationId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "ID of the organization, or null for instance assignments."
+                          },
+                          "role": {
+                            "type": "string",
+                            "description": "Name of the role."
+                          },
+                          "builtInRole": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "owner",
+                                  "administrator",
+                                  "member",
+                                  "securityAuditor"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Key of the built-in role, or null for a custom role."
+                          },
+                          "customRoleId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "ID of the custom role, or null for a built-in role."
+                          },
+                          "principalKind": {
+                            "type": "string",
+                            "enum": [
+                              "account",
+                              "group",
+                              "organizationMembers",
+                              "instanceUsers"
+                            ],
+                            "description": "Who receives the role."
+                          },
+                          "principalId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "ID of the account or group, or null for all members or all users."
+                          },
+                          "expiresAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When the assignment ends, or null. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "scope",
+                          "organizationId",
+                          "role",
+                          "builtInRole",
+                          "customRoleId",
+                          "principalKind",
+                          "principalId",
+                          "expiresAt"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A role given to a principal."
+                      },
+                      "description": "The new assignments."
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `expiryInPast`: The expiry lies in the past. `invalidInput`: The request is not valid. `invalidPrincipal`: The role cannot go to this principal. `ownerExpiry`: The owner role cannot expire. `roleNotAssignable`: The role cannot be assigned.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "expiryInPast": {
+                    "value": {
+                      "type": "urn:pagehall:problem:expiryInPast",
+                      "title": "The expiry lies in the past",
+                      "status": 400,
+                      "code": "expiryInPast"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidPrincipal": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidPrincipal",
+                      "title": "The role cannot go to this principal",
+                      "status": 400,
+                      "code": "invalidPrincipal"
+                    }
+                  },
+                  "ownerExpiry": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ownerExpiry",
+                      "title": "The owner role cannot expire",
+                      "status": 400,
+                      "code": "ownerExpiry"
+                    }
+                  },
+                  "roleNotAssignable": {
+                    "value": {
+                      "type": "urn:pagehall:problem:roleNotAssignable",
+                      "title": "The role cannot be assigned",
+                      "status": 400,
+                      "code": "roleNotAssignable"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found. `roleNotFound`: The role does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  },
+                  "roleNotFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:roleNotFound",
+                      "title": "The role does not exist",
+                      "status": 404,
+                      "code": "roleNotFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`alreadyAssigned`: The role is already assigned.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "alreadyAssigned": {
+                    "value": {
+                      "type": "urn:pagehall:problem:alreadyAssigned",
+                      "title": "The role is already assigned",
+                      "status": 409,
+                      "code": "alreadyAssigned"
                     }
                   }
                 }

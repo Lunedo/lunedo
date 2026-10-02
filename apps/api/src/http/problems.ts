@@ -13,6 +13,7 @@ export const problems = {
   settingManagedElsewhere: { status: 400, title: "The setting is changed through another endpoint" },
   ambiguousCredentials: { status: 400, title: "The request carries both a session and an API token" },
   invalidPrincipal: { status: 400, title: "The role cannot go to this principal" },
+  roleNeedsAccountOrGroup: { status: 400, title: "The role can only go to individual accounts and groups" },
   roleNotAssignable: { status: 400, title: "The role cannot be assigned" },
   ownerExpiry: { status: 400, title: "The owner role cannot expire" },
   expiryInPast: { status: 400, title: "The expiry lies in the past" },
