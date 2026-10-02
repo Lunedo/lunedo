@@ -76,7 +76,7 @@ test("switches the whole interface at once when the own language changes", async
   await expect(page.locator("html")).toHaveAttribute("lang", "de");
 
   await combobox(page, "Sprache").click();
-  await page.getByRole("option", { name: /^Standard verwenden/ }).click();
+  await page.getByRole("option", { name: /Standard/ }).click();
   await expect(page.getByRole("heading", { name: "Preferences", level: 1 })).toBeVisible();
   await expect(settings.getByRole("link", { name: "Security" }).first()).toBeVisible();
   await context.close();
@@ -130,7 +130,7 @@ for (const level of ["instance", "organization"] as const) {
       await expect(
         member.page.getByRole("heading", { name: "Darstellung und Sprache", level: 1 }),
       ).toBeVisible();
-      await expect(combobox(member.page, "Zeitzone")).toContainText(/Auckland/);
+      await expect(combobox(member.page, "Zeitzone")).toHaveValue(/Auckland/);
       await expect(
         owner.page.getByRole("heading", { name: "Darstellung und Sprache", level: 1 }),
       ).toBeVisible();
@@ -208,10 +208,22 @@ for (const level of ["instance", "organization"] as const) {
     const member = await memberPage(browser);
     try {
       for (const format of FORMATS) {
-        const shown = (await combobox(member.page, format.field).textContent()) ?? "";
+        const control = combobox(member.page, format.field);
+        const shown =
+          (await control.evaluate((element) =>
+            element instanceof HTMLInputElement ? element.value : (element.textContent ?? ""),
+          )) ?? "";
         const [value, expected] = format.choices.find(([, pattern]) => !pattern.test(shown)) ?? [];
         await change(owner.page, level, format.key, value);
-        await expect(combobox(member.page, format.field), format.key).toContainText(expected ?? /.^/);
+        await expect
+          .poll(
+            () =>
+              control.evaluate((element) =>
+                element instanceof HTMLInputElement ? element.value : (element.textContent ?? ""),
+              ),
+            { message: format.key },
+          )
+          .toMatch(expected ?? /.^/);
       }
       await change(owner.page, level, "branding.accentColor", "violet");
       await expect(member.page.locator("html")).toHaveAttribute("data-accent", "violet");

@@ -37,7 +37,13 @@ All settings pages save the same way:
 - After saving, "Saved" appears next to the field for a moment. A failed save shows the error at the field with a retry button.
 - Only changes that affect other people ask first: locking a setting for lower levels, and changes of access. The dialog says who is affected.
 
-Durations are entered with a number, a unit and quick choices, and are always shown in words, such as "30 days". Format options show an example of the result.
+Every settings row has the same three columns: label, description and source on the left, exactly one control of fixed width in the middle, and the "…" menu with "Reset to default" and locking on the right (`SettingControl` in `src/components/setting-control.tsx`). While a value is inherited, the control shows it muted, and the option equal to it carries a "Default" marker; choosing that option follows the default again.
+
+Durations use a select with the common values of the setting plus "Custom…", which opens a number and a unit, and are always shown in words, such as "30 days". Format options show an example of the result.
+
+## Choosing and tables
+
+Choices follow the rule in [development.md](development.md): segmented controls for up to four fixed options, selects for five to ten, and searchable comboboxes for more or for data. People, groups and organizations are searched on the server with `q` and a cursor (`src/components/pickers.ts`). Table pages use the full width with one toolbar row; clicking a row opens the object, and the "…" menu holds only secondary actions. Server-side tables use `useServerTable` from `src/components/table-state.ts`.
 
 ## Live updates
 

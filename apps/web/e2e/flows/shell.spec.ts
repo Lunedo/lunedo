@@ -49,7 +49,7 @@ test("opens the command palette with the keyboard and navigates", async ({ page 
   await page.keyboard.type("Security");
   await page.keyboard.press("Enter");
   await expect(palette).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Security" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Security", level: 1 })).toBeVisible();
 
   await page.keyboard.press("Control+k");
   await page.keyboard.press("Escape");
@@ -119,7 +119,7 @@ test("switches language, color mode and text size immediately", async ({ page })
   await expect(page.getByRole("heading", { name: "Darstellung und Sprache" })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "de");
   await page.getByRole("combobox", { name: "Sprache" }).click();
-  await page.getByRole("option", { name: /^Standard verwenden/ }).click();
+  await page.getByRole("option", { name: /Standard/ }).click();
   await expect(page.getByRole("heading", { name: "Preferences" })).toBeVisible();
   await setAppearance(page, { colorMode: "light", textSize: 1 });
 });

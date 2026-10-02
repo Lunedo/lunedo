@@ -66,7 +66,7 @@ test("creates a group, adds the member and gives the group a custom role", async
 
   await page.getByRole("button", { name: "Add member" }).click();
   const add = page.getByRole("dialog", { name: "Add member" });
-  await add.getByRole("combobox").first().click();
+  await add.getByRole("combobox", { name: "Person" }).fill(MEMBER.name.split(" ")[0] ?? "");
   await page.getByRole("option", { name: new RegExp(MEMBER.name) }).click();
   await expect(add.getByText("Who gains access")).toBeVisible();
   await add.getByRole("button", { name: "Add" }).click();
@@ -76,8 +76,7 @@ test("creates a group, adds the member and gives the group a custom role", async
   await page.getByRole("button", { name: "Create role" }).click();
   const role = page.getByRole("dialog", { name: "Create role" });
   await role.getByLabel("Name", { exact: true }).fill("Audit readers");
-  await role.getByRole("combobox", { name: "Audit log" }).click();
-  await page.getByRole("option", { name: "View" }).click();
+  await role.getByRole("radiogroup", { name: "Audit log" }).getByRole("radio", { name: "View" }).click();
   await role.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("cell", { name: "Audit readers", exact: true })).toBeVisible();
   await expectAccessible(page, "roles");
@@ -85,11 +84,9 @@ test("creates a group, adds the member and gives the group a custom role", async
   await page.getByRole("button", { name: "Give a role" }).first().click();
   const assign = page.getByRole("dialog", { name: "Give a role" });
   await assign.getByRole("combobox", { name: "Role" }).click();
-  await page.getByRole("option", { name: "Audit readers" }).click();
-  await assign.getByRole("combobox", { name: "Given to" }).click();
-  await page.getByRole("option", { name: "A group" }).click();
-  await assign.getByRole("combobox", { name: "Group" }).click();
-  await page.getByRole("option", { name: "Auditors" }).click();
+  await page.getByRole("option", { name: /Audit readers/ }).click();
+  await assign.getByRole("combobox", { name: "People and groups" }).fill("Audit");
+  await page.getByRole("option", { name: /Auditors/ }).click();
   await expect(assign.getByRole("list", { name: "People who gain access" })).toContainText(MEMBER.name);
   await assign.getByRole("button", { name: "Give role" }).click();
   await expect(page.getByRole("cell", { name: "Group Auditors", exact: true })).toBeVisible();
@@ -100,8 +97,10 @@ test("creates a personal API token and revokes it", async ({ page }) => {
   await page.getByRole("button", { name: "Create token" }).click();
   const dialog = page.getByRole("dialog", { name: "Create API token" });
   await dialog.getByLabel("Name", { exact: true }).fill("Reporting export");
-  await dialog.getByRole("combobox", { name: "Members and groups" }).click();
-  await page.getByRole("option", { name: "View" }).click();
+  await dialog
+    .getByRole("radiogroup", { name: "Members and groups" })
+    .getByRole("radio", { name: "View" })
+    .click();
   await dialog.getByRole("button", { name: "Create token" }).click();
   const secret =
     (await page.getByRole("dialog", { name: "Your new token" }).locator("code").textContent()) ?? "";

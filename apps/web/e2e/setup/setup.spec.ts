@@ -82,8 +82,7 @@ test("sets up a fresh instance and signs in the owner with a second factor", asy
   await expect(page.getByRole("heading", { name: "E-mail" })).toBeVisible();
   await page.getByLabel("Server").fill(SMTP_HOST);
   await page.getByLabel("Port").fill(String(SMTP_PORT));
-  await page.getByRole("combobox", { name: "Security" }).click();
-  await page.getByRole("option", { name: /None/ }).click();
+  await page.getByRole("radiogroup", { name: "Security" }).getByRole("radio", { name: /None/ }).click();
   await page.getByLabel("Sender address").fill("wiki@pagehall.test");
   await page.getByLabel("Send a test mail to").fill(OWNER.email);
   await page.getByRole("button", { name: "Send test mail" }).click();
