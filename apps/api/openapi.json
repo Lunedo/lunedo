@@ -4598,6 +4598,534 @@
         }
       }
     },
+    "/api/v1/accounts/{accountId}/security-activity": {
+      "get": {
+        "operationId": "audit.securityActivity",
+        "summary": "List the own recent security activity",
+        "description": "Lists the security events of the signed-in account, newest first: sign-ins and failed sign-ins with browser, IP address and time, password and second-factor changes, ended sessions, and personal API tokens created, revoked or expired. Each account can read only its own activity.\n\nRequires the permission `account.activity.view` on the account in `accountId`.",
+        "tags": [
+          "Audit log"
+        ],
+        "x-pagehall-permission": {
+          "action": "account.activity.view",
+          "resource": "account",
+          "parameter": "accountId"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the own account.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items in the page, from 1 to 200. Default 50.",
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Security events of the account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the event."
+                          },
+                          "scopeType": {
+                            "type": "string",
+                            "enum": [
+                              "instance",
+                              "organization"
+                            ],
+                            "description": "Whether the event belongs to the instance or to an organization."
+                          },
+                          "scopeId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the organization, or the instance ID of all zeros."
+                          },
+                          "sequence": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Position in the tamper-evident chain of the scope."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Event type, for example `role.assigned`."
+                          },
+                          "actorType": {
+                            "type": "string",
+                            "description": "`account`, `system` or `anonymous`."
+                          },
+                          "actorId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Account that acted, or null."
+                          },
+                          "targetType": {
+                            "type": "string",
+                            "description": "Kind of object the event is about."
+                          },
+                          "targetId": {
+                            "description": "ID of the object, or null.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "fields": {
+                            "description": "Event details. Their shape depends on the event type.",
+                            "$ref": "#/components/schemas/Schema113ae44d8375"
+                          },
+                          "occurredAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When the event happened. ISO 8601 timestamp in UTC."
+                          },
+                          "requestId": {
+                            "description": "ID of the HTTP request, or null.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "clientIp": {
+                            "description": "Client IP address, or null.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "userAgent": {
+                            "description": "User agent of the client, or null.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "labelKey": {
+                            "type": "string",
+                            "description": "Translation key of the action, `audit.events.` followed by the event type."
+                          },
+                          "changeKind": {
+                            "type": "string",
+                            "enum": [
+                              "setting",
+                              "fields"
+                            ],
+                            "description": "How `changes` reads: a setting value or lock, or changed fields."
+                          },
+                          "actor": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "`account`, `system` or `anonymous`."
+                              },
+                              "id": {
+                                "description": "ID of the account, or null.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "description": "Name of the account when the event happened, or null.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false,
+                            "description": "Who acted."
+                          },
+                          "target": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "Kind of object."
+                              },
+                              "id": {
+                                "description": "ID of the object, or for settings the setting key.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "description": "Name of the object when the event happened, or null.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false,
+                            "description": "What the event is about."
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "instance",
+                                  "organization",
+                                  "account"
+                                ],
+                                "description": "Instance, organization, or the account for events about one person's own account."
+                              },
+                              "id": {
+                                "description": "ID of the organization or account, null for the instance.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "description": "Name of the organization or account when the event happened, or null.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false,
+                            "description": "Where the event happened."
+                          },
+                          "changes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "property": {
+                                  "type": "string",
+                                  "description": "Changed property or field."
+                                },
+                                "old": {
+                                  "description": "Value before, or null when unknown or not set.",
+                                  "$ref": "#/components/schemas/Schemafbc378f59d82"
+                                },
+                                "new": {
+                                  "description": "Value after, or null when removed.",
+                                  "$ref": "#/components/schemas/Schema682d67ac39ef"
+                                }
+                              },
+                              "required": [
+                                "property",
+                                "old",
+                                "new"
+                              ],
+                              "additionalProperties": false,
+                              "description": "One change."
+                            },
+                            "description": "What changed, readable without the raw fields."
+                          },
+                          "references": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "description": "Names of accounts, organizations, groups and roles that the fields refer to, by ID."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "scopeType",
+                          "scopeId",
+                          "sequence",
+                          "name",
+                          "actorType",
+                          "actorId",
+                          "targetType",
+                          "targetId",
+                          "fields",
+                          "occurredAt",
+                          "requestId",
+                          "clientIp",
+                          "userAgent",
+                          "labelKey",
+                          "changeKind",
+                          "actor",
+                          "target",
+                          "scope",
+                          "changes",
+                          "references"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An entry of the audit log."
+                      },
+                      "description": "Events, newest first."
+                    },
+                    "nextCursor": {
+                      "description": "Cursor for the next page, or null on the last page. Pass it as `cursor`.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextCursor"
+                  ],
+                  "additionalProperties": false,
+                  "description": "One page of results."
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "01929b1f-5fc2-7fa6-97c3-bea0a18bd2e3",
+                      "scopeType": "organization",
+                      "scopeId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a6b",
+                      "sequence": 42,
+                      "name": "role.assigned",
+                      "actorType": "account",
+                      "actorId": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
+                      "targetType": "roleAssignment",
+                      "targetId": "01929b1e-9e5c-7f40-b16d-5e4f3a2b7c8d",
+                      "fields": {
+                        "role": "Handbook editors",
+                        "principalKind": "group",
+                        "principalId": "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9e"
+                      },
+                      "occurredAt": "2026-10-01T08:00:00.000Z",
+                      "requestId": "6f1c2b0e-5d4a-4c3b-9a2f-1e0d9c8b7a6f",
+                      "clientIp": "203.0.113.7",
+                      "userAgent": "curl/8.9.1",
+                      "labelKey": "audit.events.role.assigned",
+                      "changeKind": "fields",
+                      "actor": {
+                        "type": "account",
+                        "id": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
+                        "name": "Olivia Owner"
+                      },
+                      "target": {
+                        "type": "roleAssignment",
+                        "id": "01929b1e-9e5c-7f40-b16d-5e4f3a2b7c8d",
+                        "name": null
+                      },
+                      "scope": {
+                        "type": "organization",
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a6b",
+                        "name": "Platform Team"
+                      },
+                      "changes": [
+                        {
+                          "property": "role",
+                          "old": null,
+                          "new": "Handbook editors"
+                        },
+                        {
+                          "property": "principalKind",
+                          "old": null,
+                          "new": "group"
+                        },
+                        {
+                          "property": "principalId",
+                          "old": null,
+                          "new": "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9e"
+                        }
+                      ],
+                      "references": {
+                        "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9e": "Editors"
+                      }
+                    }
+                  ],
+                  "nextCursor": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/email-change/confirm": {
       "post": {
         "operationId": "auth.confirmEmailChange",
@@ -8794,19 +9322,20 @@
                                 "type": "string",
                                 "enum": [
                                   "instance",
-                                  "organization"
+                                  "organization",
+                                  "account"
                                 ],
-                                "description": "Instance or organization."
+                                "description": "Instance, organization, or the account for events about one person's own account."
                               },
                               "id": {
-                                "description": "ID of the organization, null for the instance.",
+                                "description": "ID of the organization or account, null for the instance.",
                                 "type": [
                                   "string",
                                   "null"
                                 ]
                               },
                               "name": {
-                                "description": "Name of the organization when the event happened, or null.",
+                                "description": "Name of the organization or account when the event happened, or null.",
                                 "type": [
                                   "string",
                                   "null"
@@ -16273,19 +16802,20 @@
                                 "type": "string",
                                 "enum": [
                                   "instance",
-                                  "organization"
+                                  "organization",
+                                  "account"
                                 ],
-                                "description": "Instance or organization."
+                                "description": "Instance, organization, or the account for events about one person's own account."
                               },
                               "id": {
-                                "description": "ID of the organization, null for the instance.",
+                                "description": "ID of the organization or account, null for the instance.",
                                 "type": [
                                   "string",
                                   "null"
                                 ]
                               },
                               "name": {
-                                "description": "Name of the organization when the event happened, or null.",
+                                "description": "Name of the organization or account when the event happened, or null.",
                                 "type": [
                                   "string",
                                   "null"

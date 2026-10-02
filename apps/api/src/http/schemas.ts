@@ -412,9 +412,14 @@ export const auditEntrySchema = z
       .describe("What the event is about."),
     scope: z
       .object({
-        type: z.enum(["instance", "organization"]).describe("Instance or organization."),
-        id: z.string().nullable().describe("ID of the organization, null for the instance."),
-        name: z.string().nullable().describe("Name of the organization when the event happened, or null."),
+        type: z
+          .enum(["instance", "organization", "account"])
+          .describe("Instance, organization, or the account for events about one person's own account."),
+        id: z.string().nullable().describe("ID of the organization or account, null for the instance."),
+        name: z
+          .string()
+          .nullable()
+          .describe("Name of the organization or account when the event happened, or null."),
       })
       .describe("Where the event happened."),
     changes: z

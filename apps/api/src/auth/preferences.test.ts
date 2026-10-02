@@ -44,6 +44,36 @@ describe.skipIf(!databaseBaseUrl)("own preferences and permissions", () => {
     return response.json();
   }
 
+  it("does not audit personal preferences but keeps auditing everything else", async () => {
+    const person = await createAccount(test, "quiet-preferences@example.org");
+    const client = await signedInClient(test, person.email, person.password);
+    const audited = async () =>
+      (
+        await test.runtime.pool.query<{ target_id: string }>(
+          "select target_id from audit_events where name = 'settings.changed' and fields->>'scopeId' = $1 order by sequence",
+          [person.id],
+        )
+      ).rows.map((row) => row.target_id);
+    for (const [key, value] of [
+      ["appearance.colorMode", "dark"],
+      ["appearance.textSize", 1.125],
+      ["locale.language", "de"],
+      ["locale.dateFormat", "YYYY-MM-DD"],
+      ["locale.timeZone", "Europe/Vienna"],
+    ] as const) {
+      expect((await client.put(`/api/v1/account/preferences/${key}`, { value })).statusCode, key).toBe(204);
+    }
+    expect(await audited()).toEqual([]);
+    expect(
+      (
+        await client.put("/api/v1/account/preferences/notifications.guestExpiring", {
+          value: { inApp: true, email: false },
+        })
+      ).statusCode,
+    ).toBe(204);
+    expect(await audited()).toEqual(["notifications.guestExpiring"]);
+  });
+
   it("lists the settings of the user level with their source", async () => {
     const list = await preferences(owner);
     expect(list.map((entry) => entry.key)).toEqual(

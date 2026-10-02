@@ -285,9 +285,16 @@ export class AuditLog {
   }
 }
 
+const PERSONAL_PREFERENCE_PREFIXES = ["appearance.", "locale."];
+
+export function isPersonalPreference(level: string, key: string): boolean {
+  return level === "user" && PERSONAL_PREFERENCE_PREFIXES.some((prefix) => key.startsWith(prefix));
+}
+
 export function auditSettingChanges(audit: AuditLog): SettingChangeHandler {
-  return (tx, change) =>
-    audit.record(tx, {
+  return async (tx, change) => {
+    if (isPersonalPreference(change.scope.level, change.key)) return;
+    await audit.record(tx, {
       name: "settings.changed",
       targetId: change.key,
       ...(change.scope.level === "organization"
@@ -302,4 +309,5 @@ export function auditSettingChanges(audit: AuditLog): SettingChangeHandler {
         previousLocked: change.previousLocked,
       },
     });
+  };
 }

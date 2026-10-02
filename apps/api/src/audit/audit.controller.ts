@@ -3,7 +3,7 @@ import { Controller, Get, Inject, Param, Query, Req, Res } from "@nestjs/common"
 import { type AuditEntry, type AuditFilter, presentAuditEntry } from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
-import { Permission } from "../access/route-access.js";
+import { InternalRoute, Permission } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
@@ -165,6 +165,36 @@ export class AuditController {
         for await (const entry of entries) yield csvRow(entry);
       })(),
     );
+  }
+
+  @Get("accounts/:accountId/security-activity")
+  @Permission("account.activity.view", { type: "account", param: "accountId" })
+  @InternalRoute()
+  @ApiRoute({
+    summary: "List the own recent security activity",
+    description:
+      "Lists the security events of the signed-in account, newest first: sign-ins and failed sign-ins with browser, IP address and time, password and second-factor changes, ended sessions, and personal API tokens created, revoked or expired. Each account can read only its own activity.",
+    tags: [TAG],
+    params: z.object({ accountId: uuid("ID of the own account.") }).strict(),
+    query: z.object(pageQuery).strict(),
+    response: { description: "Security events of the account.", schema: auditPage, example: pageExample },
+  })
+  async securityActivity(
+    @Param("accountId") accountId: string,
+    @Query() query: { cursor?: string | undefined; limit: number },
+    @Req() request: FastifyRequest,
+  ) {
+    const cursor = decodeCursor(query.cursor, cursorSchema);
+    const page = await this.#services.auditReader.securityActivity(actorOf(request), accountId, {
+      limit: query.limit,
+      ...(cursor ? { cursor: { occurredAt: new Date(cursor.occurredAt), id: cursor.id } } : {}),
+    });
+    return {
+      items: page.items.map(withPresentation),
+      nextCursor: page.next
+        ? encodeCursor({ occurredAt: page.next.occurredAt.toISOString(), id: page.next.id })
+        : null,
+    };
   }
 
   @Get("instance/audit-events")

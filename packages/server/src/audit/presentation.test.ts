@@ -44,6 +44,51 @@ describe("presentAuditEntry", () => {
     });
   });
 
+  it("shows the account as the scope of personal events instead of the instance", () => {
+    const signIn = presentAuditEntry(
+      entry({
+        name: "auth.signedIn",
+        targetType: "account",
+        targetId: ACCOUNT,
+        fields: { sessionId: ORGANIZATION, methods: ["password"] },
+        labels: { actor: "Olivia Owner", target: "Olivia Owner" },
+      }),
+    );
+    expect(signIn.scope).toEqual({ type: "account", id: ACCOUNT, name: "Olivia Owner" });
+
+    const preference = presentAuditEntry(
+      entry({
+        targetId: "notifications.guestExpiring",
+        fields: { level: "user", scopeId: ACCOUNT, action: "set", value: {}, previousValue: null },
+      }),
+    );
+    expect(preference.scope).toEqual({ type: "account", id: ACCOUNT, name: "Olivia Owner" });
+
+    const token = presentAuditEntry(
+      entry({
+        name: "apiToken.created",
+        targetType: "apiToken",
+        targetId: ORGANIZATION,
+        fields: { accountId: ACCOUNT, name: "Backup script" },
+        labels: { actor: "Olivia Owner", references: { [ACCOUNT]: "Olivia Owner" } },
+      }),
+    );
+    expect(token.scope).toEqual({ type: "account", id: ACCOUNT, name: "Olivia Owner" });
+
+    const organization = presentAuditEntry(
+      entry({
+        scopeType: "organization",
+        scopeId: ORGANIZATION,
+        name: "account.deactivated",
+        targetType: "account",
+        targetId: ACCOUNT,
+        fields: { endedSessions: 1 },
+        labels: { scope: "Platform Team" },
+      }),
+    );
+    expect(organization.scope).toEqual({ type: "organization", id: ORGANIZATION, name: "Platform Team" });
+  });
+
   it("shows clearing, locking and unlocking a setting", () => {
     const changes = (fields: object) => presentAuditEntry(entry({ fields })).changes;
     expect(changes({ action: "clear", previousValue: 30 })).toEqual([

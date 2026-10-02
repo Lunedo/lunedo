@@ -120,7 +120,8 @@ type Rule =
   | "membersCreateGroups"
   | "homeOrganizationAdministrator"
   | "manager"
-  | "memberOrManager";
+  | "memberOrManager"
+  | "self";
 
 interface Expectation {
   scope: RoleScope;
@@ -186,6 +187,7 @@ const EXPECTED: Record<string, Expectation> = {
   "group.manage": organization("membersAndGroups", "manage", "manager"),
   "group.delete": organization("membersAndGroups", "manage", "manager"),
   "account.deactivate": instance("accounts", "manage", "homeOrganizationAdministrator"),
+  "account.activity.view": { scope: "instance", rule: "self" },
   "account.secondFactor.reset": instance("accounts", "manage", "homeOrganizationAdministrator"),
   "serviceAccount.view": organization("integrationsAndApi", "view"),
   "serviceAccount.manage": organization("integrationsAndApi", "manage"),
@@ -203,6 +205,7 @@ function expectedAllowed(held: Held, actionName: string): boolean {
     selfService: () => false,
     membersCreateGroups: () => false,
     homeOrganizationAdministrator: () => grantsLevel(organizationAreas.membersAndGroups, "manage"),
+    self: () => false,
     manager: () => false,
     memberOrManager: () => facts.membership !== null && held.via === "group",
   };

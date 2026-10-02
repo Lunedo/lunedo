@@ -13,7 +13,7 @@ export interface AuditPresentation {
   changeKind: AuditChangeKind;
   actor: { type: string; id: string | null; name: string | null };
   target: { type: string; id: string | null; name: string | null };
-  scope: { type: "instance" | "organization"; id: string | null; name: string | null };
+  scope: { type: "instance" | "organization" | "account"; id: string | null; name: string | null };
   changes: AuditChange[];
   references: Record<string, string>;
 }
@@ -74,6 +74,29 @@ function fieldChanges(fields: Record<string, unknown>): AuditChange[] {
   return changes;
 }
 
+const ACCOUNT_EVENT = /^(auth|account|twoFactor)./;
+
+function accountScope(
+  entry: PresentableAuditEntry,
+  fields: Record<string, unknown>,
+  labels: AuditLabels,
+): { id: string; name: string | null } | null {
+  if (entry.scopeType !== "instance") return null;
+  const references = labels.references ?? {};
+  if (entry.name === "settings.changed") {
+    if (fields.level !== "user" || typeof fields.scopeId !== "string") return null;
+    const name = entry.actorId === fields.scopeId ? labels.actor : references[fields.scopeId];
+    return { id: fields.scopeId, name: name ?? null };
+  }
+  if (entry.targetType === "account" && entry.targetId && ACCOUNT_EVENT.test(entry.name)) {
+    return { id: entry.targetId, name: labels.target ?? null };
+  }
+  if (entry.name.startsWith("apiToken.") && typeof fields.accountId === "string") {
+    return { id: fields.accountId, name: references[fields.accountId] ?? null };
+  }
+  return null;
+}
+
 export function presentAuditEntry(entry: PresentableAuditEntry): AuditPresentation {
   const definition = (auditCatalog as Record<string, { change?: AuditChangeKind }>)[entry.name];
   const changeKind = definition?.change ?? "fields";
@@ -82,16 +105,19 @@ export function presentAuditEntry(entry: PresentableAuditEntry): AuditPresentati
     entry.fields !== null && typeof entry.fields === "object"
       ? (entry.fields as Record<string, unknown>)
       : {};
+  const account = accountScope(entry, fields, labels);
   return {
     labelKey: `audit.events.${entry.name}`,
     changeKind,
     actor: { type: entry.actorType, id: entry.actorId, name: labels.actor ?? null },
     target: { type: entry.targetType, id: entry.targetId, name: labels.target ?? null },
-    scope: {
-      type: entry.scopeType,
-      id: entry.scopeType === "instance" ? null : entry.scopeId,
-      name: labels.scope ?? null,
-    },
+    scope: account
+      ? { type: "account", id: account.id, name: account.name }
+      : {
+          type: entry.scopeType,
+          id: entry.scopeType === "instance" ? null : entry.scopeId,
+          name: labels.scope ?? null,
+        },
     changes: changeKind === "setting" ? settingChanges(fields) : fieldChanges(fields),
     references: labels.references ?? {},
   };

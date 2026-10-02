@@ -128,12 +128,14 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     type: "account",
     actions: {
       "account.deactivate": { ...instanceArea("accounts", "manage"), rule: "homeOrganizationAdministrator" },
+      "account.activity.view": { scope: "instance", rule: "self" },
       "account.secondFactor.reset": {
         ...instanceArea("accounts", "manage"),
         rule: "homeOrganizationAdministrator",
       },
     },
     rules: {
+      self: async (context) => context.resource.id === context.accountId,
       homeOrganizationAdministrator: async (context) => {
         if (!context.resource.id) return false;
         const target = await context.executor.execute<{ home_organization_id: string | null }>(
