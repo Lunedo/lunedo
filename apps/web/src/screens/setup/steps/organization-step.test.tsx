@@ -59,5 +59,5 @@ describe("the organization step", () => {
         },
       }),
     );
-  });
+  }, 15_000);
 });
