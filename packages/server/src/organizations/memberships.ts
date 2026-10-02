@@ -488,8 +488,12 @@ export class MembershipService {
             denials: ["ownerOnly"],
           });
         }
-        if (instanceAreas.accounts !== "manage" && target.home)
-          await this.#checkRank(tx, actor, target.home, accountId);
+        if (target.home) {
+          const homeOwner = await this.#authorization.isOrganizationOwner(accountId, target.home, tx);
+          const instanceAdministrator = instanceAreas.accounts === "manage";
+          if (!instanceAdministrator || (homeOwner && owner?.id !== actor.id))
+            await this.#checkRank(tx, actor, target.home, accountId);
+        }
       }
       const owned = await tx
         .selectDistinct({ organizationId: roleAssignments.organizationId })

@@ -220,6 +220,31 @@ describe.skipIf(!baseUrl)("resetting another account's second factor", () => {
     await test.pool.query("update instance set owner_account_id = null");
   });
 
+  it("lets only owners deactivate owners of the home organization", async () => {
+    const org = await organization();
+    const secondOwner = await standard(org.id);
+    await role(secondOwner, "organization", "owner", org.id);
+    const instanceAdmin = await standard(null);
+    await role(instanceAdmin, "instance", "administrator");
+    await expect(
+      test.services.memberships.deactivate(accountPrincipal(instanceAdmin), secondOwner),
+    ).rejects.toThrow(ForbiddenError);
+    const member = await standard(org.id);
+    await expect(test.services.memberships.deactivate(accountPrincipal(instanceAdmin), member)).resolves.toBe(
+      0,
+    );
+
+    const instanceOwner = await standard(null);
+    await test.pool.query("update instance set owner_account_id = $1", [instanceOwner]);
+    try {
+      await expect(
+        test.services.memberships.deactivate(accountPrincipal(instanceOwner), secondOwner),
+      ).resolves.toBe(0);
+    } finally {
+      await test.pool.query("update instance set owner_account_id = null");
+    }
+  });
+
   it("does not let organization administrators reset holders of instance roles", async () => {
     const org = await organization();
     const admin = await standard(org.id);
