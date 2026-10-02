@@ -36,6 +36,7 @@ export const accounts = pgTable(
     homeOrganizationId: uuid().references(() => organizations.id),
     lastActiveAt: timestamp({ withTimezone: true, mode: "date" }),
     inactivityNotifiedAt: timestamp({ withTimezone: true, mode: "date" }),
+    secondFactorResetAt: timestamp({ withTimezone: true, mode: "date" }),
     ...timestamps(),
   },
   (table) => [

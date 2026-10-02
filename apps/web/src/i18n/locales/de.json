@@ -1333,7 +1333,8 @@
         "passwordReset": "Passwort zurückgesetzt",
         "emailChangeRequested": "Änderung der E-Mail-Adresse angefordert",
         "emailChanged": "E-Mail-Adresse geändert",
-        "deactivated": "Konto deaktiviert"
+        "deactivated": "Konto deaktiviert",
+        "secondFactorReset": "Zweiter Faktor zurückgesetzt"
       },
       "twoFactor": {
         "totpAdded": "Authenticator-App hinzugefügt",

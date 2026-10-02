@@ -387,6 +387,18 @@ export const auditCatalog = {
     fields: z.object({ endedSessions: z.number().int().nonnegative() }),
     visibility: "organization",
   }),
+  "account.secondFactorReset": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({
+      reason: z.string().min(1).max(500),
+      endedSessions: z.number().int().nonnegative(),
+      authenticatorApp: z.boolean(),
+      passkeys: z.number().int().nonnegative(),
+      recoveryLeft: z.number().int().nonnegative(),
+    }),
+    visibility: "organization",
+  }),
   "instance.ownershipTransferred": event({
     actor: ["account", "system"],
     target: "account",

@@ -185,6 +185,7 @@ const EXPECTED: Record<string, Expectation> = {
   "group.manage": organization("membersAndGroups", "manage", "manager"),
   "group.delete": organization("membersAndGroups", "manage", "manager"),
   "account.deactivate": instance("accounts", "manage", "homeOrganizationAdministrator"),
+  "account.secondFactor.reset": instance("accounts", "manage", "homeOrganizationAdministrator"),
   "serviceAccount.view": organization("integrationsAndApi", "view"),
   "serviceAccount.manage": organization("integrationsAndApi", "manage"),
 };

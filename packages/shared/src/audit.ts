@@ -13,6 +13,7 @@ export const auditEventNames = [
   "account.emailChangeRequested",
   "account.emailChanged",
   "account.deactivated",
+  "account.secondFactorReset",
   "twoFactor.totpAdded",
   "twoFactor.totpRemoved",
   "twoFactor.passkeyAdded",

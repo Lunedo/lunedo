@@ -24,6 +24,18 @@ const completeSchema = z
   })
   .strict();
 const joinedSchema = z.object({ accountId: z.uuid(), organizationId: z.uuid() });
+const secondFactorResetSchema = z
+  .object({
+    reason: z
+      .string()
+      .trim()
+      .min(1)
+      .max(500)
+      .describe(
+        "Why the second factor is reset, 1 to 500 characters. Recorded in the audit log and sent to the account.",
+      ),
+  })
+  .strict();
 
 @Controller("api/v1")
 @InternalRoute()
@@ -47,6 +59,31 @@ export class AccountsController {
   async deactivate(@Param("accountId") accountId: string, @Req() request: FastifyRequest) {
     const endedSessions = await this.#services.memberships.deactivate(actorOf(request), accountId);
     return { endedSessions };
+  }
+
+  @Post("accounts/:accountId/second-factor/reset")
+  @Permission(
+    "account.secondFactor.reset",
+    { type: "account", param: "accountId" },
+    { recentAuthentication: true },
+  )
+  @ApiRoute({
+    summary: "Reset the second factor of another account",
+    description:
+      "Removes all authenticator apps, passkeys and recovery codes of the account and ends its sessions. At the next sign-in the account must set up a new second factor. The account receives an e-mail. Owners can only be reset by owners, and nobody can reset their own second factor this way.",
+    tags: ["Accounts"],
+    status: 200,
+    params: z.object({ accountId: z.uuid() }).strict(),
+    body: secondFactorResetSchema,
+    response: { description: "Sessions that ended.", schema: z.object({ endedSessions: z.number().int() }) },
+    errors: ["resetOwnSecondFactor", "notFound"],
+  })
+  async resetSecondFactor(
+    @Param("accountId") accountId: string,
+    @Body() body: z.output<typeof secondFactorResetSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.administration.resetSecondFactor(actorOf(request), accountId, body.reason);
   }
 
   @Post("invitations/accept")

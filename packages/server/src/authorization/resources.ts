@@ -128,6 +128,10 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     type: "account",
     actions: {
       "account.deactivate": { ...instanceArea("accounts", "manage"), rule: "homeOrganizationAdministrator" },
+      "account.secondFactor.reset": {
+        ...instanceArea("accounts", "manage"),
+        rule: "homeOrganizationAdministrator",
+      },
     },
     rules: {
       homeOrganizationAdministrator: async (context) => {

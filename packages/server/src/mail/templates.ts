@@ -10,6 +10,7 @@ export interface MailTemplates {
   emailChangeAddressInUse: { instanceName: string };
   emailChangeNotice: { instanceName: string; newEmail: string };
   recoveryCodeUsed: { instanceName: string; remaining: number };
+  secondFactorReset: { instanceName: string; reason: string };
   smtpTest: { instanceName: string };
   invitation: {
     instanceName: string;
@@ -103,6 +104,14 @@ const catalogs: Record<Language, Catalog> = {
       paragraphs: [
         `The e-mail address of your account on ${instanceName} was changed to ${newEmail}. This address no longer receives e-mails for the account.`,
         NOT_YOU_EN,
+      ],
+    }),
+    secondFactorReset: ({ instanceName, reason }) => ({
+      subject: `Your second factor on ${instanceName} was reset`,
+      paragraphs: [
+        `An administrator reset the second factor of your account on ${instanceName} and ended all your sessions. Reason: ${reason}`,
+        "When you sign in next time, set up an authenticator app or a passkey before you continue.",
+        "If you did not ask for this, contact your administrator at once.",
       ],
     }),
     recoveryCodeUsed: ({ instanceName, remaining }) => ({
@@ -217,6 +226,14 @@ const catalogs: Record<Language, Catalog> = {
       paragraphs: [
         `Die E-Mail-Adresse Ihres Kontos auf ${instanceName} wurde in ${newEmail} geändert. Diese Adresse erhält keine E-Mails für das Konto mehr.`,
         NOT_YOU_DE,
+      ],
+    }),
+    secondFactorReset: ({ instanceName, reason }) => ({
+      subject: `Ihr zweiter Faktor auf ${instanceName} wurde zurückgesetzt`,
+      paragraphs: [
+        `Eine Administratorin oder ein Administrator hat den zweiten Faktor Ihres Kontos auf ${instanceName} zurückgesetzt und alle Ihre Sitzungen beendet. Grund: ${reason}`,
+        "Richten Sie bei der nächsten Anmeldung eine Authenticator-App oder einen Passkey ein, bevor Sie fortfahren.",
+        "Wenn Sie das nicht veranlasst haben, wenden Sie sich sofort an Ihre Administration.",
       ],
     }),
     recoveryCodeUsed: ({ instanceName, remaining }) => ({

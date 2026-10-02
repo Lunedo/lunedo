@@ -1,6 +1,7 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { Account, AccountService } from "../accounts/accounts.js";
 import { ANONYMOUS, accountPrincipal } from "../accounts/principal.js";
+import { accounts } from "../accounts/schema.js";
 import { accountScopeChain } from "../accounts/scope.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { SignInMethod } from "../audit/catalog.js";
@@ -148,6 +149,11 @@ export class SignInService {
 
   async secondFactorRequired(accountId: string): Promise<boolean> {
     if ((await this.#accounts.ownerId()) === accountId) return true;
+    const [reset] = await this.#database
+      .select({ at: accounts.secondFactorResetAt })
+      .from(accounts)
+      .where(eq(accounts.id, accountId));
+    if (reset?.at) return true;
     return this.#settings.get(twoFactorRequiredSetting, await accountScopeChain(this.#database, accountId));
   }
 
