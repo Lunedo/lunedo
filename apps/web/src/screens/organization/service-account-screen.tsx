@@ -1,9 +1,19 @@
 import { serviceAccountDescriptionSchema, serviceAccountNameSchema } from "@pagehall/shared";
-import { Button, ConfirmDialog, List, ListRow, Notice, Section, Select, Skeleton } from "@pagehall/ui";
+import {
+  Button,
+  Combobox,
+  type ComboboxItem,
+  ConfirmDialog,
+  List,
+  ListRow,
+  Notice,
+  Section,
+  Skeleton,
+} from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { Bot, KeyRound, Plus, PowerOff, UserRound } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import type { ApiToken } from "../../api/account-queries.js";
@@ -18,6 +28,7 @@ import {
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
 import { AutoSaveTextField } from "../../components/auto-save.js";
+import { memberLoader } from "../../components/pickers.js";
 import { CreateTokenDialog, RevokeTokenDialog, scopeSummary } from "../../components/token-dialogs.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
@@ -50,7 +61,7 @@ export function ServiceAccountScreen() {
   const manage = state.can("organization.integrations.manage");
   const [revoking, setRevoking] = useState<ApiToken | null>(null);
   const [deactivating, setDeactivating] = useState(false);
-  const [adding, setAdding] = useState("");
+  const [adding, setAdding] = useState<ComboboxItem | null>(null);
   const names = new Map((members.data ?? []).map((member) => [member.accountId, member.name]));
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: organizationKeys.serviceAccount(serviceAccountId) });
@@ -73,6 +84,11 @@ export function ServiceAccountScreen() {
     }
   };
 
+  const responsibleIds = (account.data?.responsibleAccountIds ?? []).join(",");
+  const responsibleLoader = useMemo(
+    () => memberLoader(organizationId, { exclude: responsibleIds.split(",") }),
+    [organizationId, responsibleIds],
+  );
   if (account.isError)
     return (
       <LoadError
@@ -137,15 +153,13 @@ export function ServiceAccountScreen() {
           {manage && active ? (
             <div className="flex flex-wrap items-center gap-2 p-4">
               <div className="w-field max-w-full">
-                <Select
+                <Combobox
                   aria-label={t("serviceAccounts.addResponsible")}
-                  value={adding}
-                  onValueChange={setAdding}
-                  placeholder={t("roles.choosePerson")}
-                  options={(members.data ?? [])
-                    .filter((member) => member.kind === "member" && member.accountType === "standard")
-                    .filter((member) => !data.responsibleAccountIds.includes(member.accountId))
-                    .map((member) => ({ value: member.accountId, label: member.name }))}
+                  placeholder={t("roles.choosePeople")}
+                  value={adding?.value ?? null}
+                  selectedItem={adding}
+                  load={responsibleLoader}
+                  onValueChange={(_value, item) => setAdding(item)}
                 />
               </div>
               <Button
@@ -153,8 +167,8 @@ export function ServiceAccountScreen() {
                 icon={Plus}
                 disabled={!adding}
                 onClick={() => {
-                  void updateResponsible([...data.responsibleAccountIds, adding]);
-                  setAdding("");
+                  if (adding) void updateResponsible([...data.responsibleAccountIds, adding.value]);
+                  setAdding(null);
                 }}
               >
                 {t("serviceAccounts.addResponsible")}

@@ -1,4 +1,12 @@
-import { IconButton, Select, Sidebar, SidebarGroup, SidebarHeader, SidebarItem } from "@pagehall/ui";
+import {
+  Combobox,
+  IconButton,
+  Select,
+  Sidebar,
+  SidebarGroup,
+  SidebarHeader,
+  SidebarItem,
+} from "@pagehall/ui";
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -70,11 +78,13 @@ export function SettingsLayout() {
               <SidebarGroup key={section.section} label={section.label}>
                 {section.section === "organization" && organization.multipleOrganizations ? (
                   <div className="px-2 pb-2">
-                    <Select
+                    <Combobox
                       aria-label={t("navigation.switchOrganization")}
-                      value={organization.organizationId ?? ""}
-                      onValueChange={switchOrganization}
-                      options={organization.organizations.map((entry) => ({
+                      value={organization.organizationId}
+                      onValueChange={(value) => {
+                        if (value) switchOrganization(value);
+                      }}
+                      items={organization.organizations.map((entry) => ({
                         value: entry.id,
                         label: entry.name,
                       }))}

@@ -38,8 +38,11 @@ describe("token expiry", () => {
       "true",
     );
     await userEvent.type(screen.getByLabelText("Name"), "Deploy");
-    await userEvent.click(screen.getByRole("combobox", { name: "Members and groups" }));
-    await userEvent.click(await screen.findByRole("option", { name: "View" }));
+    await userEvent.click(
+      within(screen.getByRole("radiogroup", { name: "Members and groups" })).getByRole("radio", {
+        name: "View",
+      }),
+    );
     await userEvent.click(screen.getByRole("button", { name: "Create token" }));
     await waitFor(() => expect(onCreate).toHaveBeenCalled());
     expect(onCreate.mock.calls[0]?.[0].expiresAt).toBeNull();

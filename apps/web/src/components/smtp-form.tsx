@@ -5,7 +5,7 @@ import {
   smtpConfigurationSchema,
   smtpSecurityModes,
 } from "@pagehall/shared";
-import { Button, ErrorState, Field, Input, Notice, PasswordInput, Select } from "@pagehall/ui";
+import { Button, ErrorState, Field, Input, Notice, PasswordInput, SegmentedControl } from "@pagehall/ui";
 import { Send } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Controller } from "react-hook-form";
@@ -146,7 +146,8 @@ export function SmtpForm({
           control={form.control}
           name="security"
           render={({ field }) => (
-            <Select
+            <SegmentedControl
+              label={t("mail.security")}
               value={field.value}
               onValueChange={field.onChange}
               options={smtpSecurityModes.map((mode) => ({

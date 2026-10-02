@@ -1,4 +1,4 @@
-import { Badge, Button, Field, Notice, Section, Select, Table } from "@pagehall/ui";
+import { Badge, Button, Combobox, Field, Notice, Section, Table } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShieldAlert } from "lucide-react";
 import { useState } from "react";
@@ -55,11 +55,12 @@ export function BreakGlassScreen() {
           <div className="flex flex-wrap items-end gap-3 p-4">
             <div className="w-field max-w-full">
               <Field label={t("breakGlass.organization")}>
-                <Select
-                  value={organizationId}
-                  onValueChange={setOrganizationId}
+                <Combobox
+                  aria-label={t("breakGlass.organization")}
+                  value={organizationId || null}
+                  onValueChange={(value) => setOrganizationId(value ?? "")}
                   placeholder={t("breakGlass.chooseOrganization")}
-                  options={candidates.map((entry) => ({ value: entry.id, label: entry.name }))}
+                  items={candidates.map((entry) => ({ value: entry.id, label: entry.name }))}
                 />
               </Field>
             </div>

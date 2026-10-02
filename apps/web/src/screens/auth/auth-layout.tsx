@@ -1,10 +1,11 @@
-import { Select } from "@pagehall/ui";
+import { Combobox } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Outlet } from "@tanstack/react-router";
 import { type ReactNode, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { instanceInfoQuery } from "../../api/queries.js";
-import { isLanguage, rememberLanguage, supportedLanguages } from "../../i18n/index.js";
+import { languageItems } from "../../components/pickers.js";
+import { isLanguage, rememberLanguage } from "../../i18n/index.js";
 import { isAccentColor } from "../../preferences/preferences.js";
 import { setAccentColor } from "../../preferences/preferences-provider.js";
 import { BrandMark } from "../../shell/brand.js";
@@ -27,7 +28,7 @@ export function AuthLayout() {
         <span>{info.data?.name ?? ""}</span>
         <span aria-hidden="true">·</span>
         <div className="w-field max-w-full">
-          <Select
+          <Combobox
             aria-label={t("auth.language")}
             value={i18n.language}
             onValueChange={(language) => {
@@ -35,10 +36,7 @@ export function AuthLayout() {
               rememberLanguage(language);
               void i18n.changeLanguage(language);
             }}
-            options={supportedLanguages.map((language) => ({
-              value: language,
-              label: t(`languages.${language}`),
-            }))}
+            items={languageItems(t)}
           />
         </div>
       </footer>

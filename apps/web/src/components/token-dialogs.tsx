@@ -13,7 +13,7 @@ import {
   Input,
   Notice,
   RadioGroup,
-  Select,
+  SegmentedControl,
   useToast,
 } from "@pagehall/ui";
 import { Copy } from "lucide-react";
@@ -225,8 +225,8 @@ export function CreateTokenDialog({
                     control={form.control}
                     name={`organization.${area}`}
                     render={({ field }) => (
-                      <Select
-                        aria-label={translateKey(t, `areas.organization.${area}`)}
+                      <SegmentedControl
+                        label={translateKey(t, `areas.organization.${area}`)}
                         value={field.value}
                         onValueChange={field.onChange}
                         options={levelOptions}
@@ -246,8 +246,8 @@ export function CreateTokenDialog({
                     control={form.control}
                     name={`instance.${area}`}
                     render={({ field }) => (
-                      <Select
-                        aria-label={translateKey(t, `areas.instance.${area}`)}
+                      <SegmentedControl
+                        label={translateKey(t, `areas.instance.${area}`)}
                         value={field.value}
                         onValueChange={field.onChange}
                         options={levelOptions}

@@ -7,15 +7,16 @@ import {
   proposeFormats,
   timeZoneSchema,
 } from "@pagehall/shared";
-import { Button, Field, Input, Notice, Select } from "@pagehall/ui";
+import { Button, Combobox, Field, Input, Notice, Select, TimeZoneCombobox } from "@pagehall/ui";
 import { useEffect, useRef, useState } from "react";
 import { Controller } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
+import { languageItems } from "../../../components/pickers.js";
 import { problemMessage } from "../../../errors/problem-message.js";
-import { browserTimeZone, timeZoneOptions } from "../../../format/time-zones.js";
+import { browserTimeZone } from "../../../format/time-zones.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../../forms/use-schema-form.js";
-import { isLanguage, supportedLanguages } from "../../../i18n/index.js";
+import { isLanguage } from "../../../i18n/index.js";
 import { translateKey } from "../../../i18n/translate.js";
 import { localeOptionSet } from "../../../settings/locale-options.js";
 import { runSetupAction } from "../setup-api.js";
@@ -81,13 +82,13 @@ export function OrganizationStep({ details, back, onDone }: StepProps<"organizat
             control={form.control}
             name="language"
             render={({ field }) => (
-              <Select
+              <Combobox
+                aria-label={t("setup.organization.language")}
                 value={field.value}
-                onValueChange={(value) => field.onChange(value as Language)}
-                options={supportedLanguages.map((language) => ({
-                  value: language,
-                  label: t(`languages.${language}`),
-                }))}
+                onValueChange={(value) => {
+                  if (value) field.onChange(value as Language);
+                }}
+                items={languageItems(t)}
               />
             )}
           />
@@ -97,7 +98,14 @@ export function OrganizationStep({ details, back, onDone }: StepProps<"organizat
             control={form.control}
             name="timeZone"
             render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange} options={timeZoneOptions()} />
+              <TimeZoneCombobox
+                aria-label={t("setup.organization.timeZone")}
+                value={field.value}
+                locale={i18n.language}
+                onValueChange={(value) => {
+                  if (value) field.onChange(value);
+                }}
+              />
             )}
           />
         </Field>

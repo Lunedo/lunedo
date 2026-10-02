@@ -3,6 +3,8 @@ import {
   Avatar,
   Badge,
   Button,
+  Combobox,
+  type ComboboxItem,
   ConfirmDialog,
   Dialog,
   Field,
@@ -11,26 +13,25 @@ import {
   ListRow,
   Notice,
   Section,
-  Select,
   Skeleton,
   useToast,
 } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { Plus, ShieldCheck, Trash2, UserMinus, UsersRound } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import {
   assignmentsQuery,
   groupMembersQuery,
   groupQuery,
-  membersQuery,
   organizationKeys,
 } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
 import { AutoSaveTextField } from "../../components/auto-save.js";
+import { memberLoader } from "../../components/pickers.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
@@ -388,14 +389,16 @@ function AddPersonDialog({
   onAdd: (accountId: string, expiry: string) => Promise<void>;
 }) {
   const { t } = useTranslation();
-  const members = useQuery(membersQuery(organizationId));
-  const [person, setPerson] = useState("");
+  const excluded = exclude.join(",");
+  const loader = useMemo(
+    () => memberLoader(organizationId, { exclude: excluded.split(",") }),
+    [organizationId, excluded],
+  );
+  const [selected, setSelected] = useState<ComboboxItem | null>(null);
+  const person = selected?.value ?? "";
   const [expiry, setExpiry] = useState("");
   const [busy, setBusy] = useState(false);
-  const candidates = (members.data ?? []).filter(
-    (member) => !exclude.includes(member.accountId) && member.accountType !== "service",
-  );
-  const name = candidates.find((member) => member.accountId === person)?.name;
+  const name = selected?.label;
   return (
     <Dialog
       open
@@ -407,14 +410,13 @@ function AddPersonDialog({
     >
       <div className="flex flex-col gap-4">
         <Field label={t("roles.person")}>
-          <Select
-            value={person}
-            onValueChange={setPerson}
-            placeholder={t("roles.choosePerson")}
-            options={candidates.map((member) => ({
-              value: member.accountId,
-              label: member.email ? `${member.name} (${member.email})` : member.name,
-            }))}
+          <Combobox
+            aria-label={t("roles.person")}
+            placeholder={t("roles.choosePeople")}
+            value={selected?.value ?? null}
+            selectedItem={selected}
+            load={loader}
+            onValueChange={(_value, item) => setSelected(item)}
           />
         </Field>
         {manager ? null : (

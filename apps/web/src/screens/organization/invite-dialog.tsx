@@ -1,15 +1,28 @@
 import { emailSchema } from "@pagehall/shared";
-import { Button, Dialog, Field, Input, Notice, Select, Textarea, useToast } from "@pagehall/ui";
+import {
+  Button,
+  Combobox,
+  type ComboboxItem,
+  Dialog,
+  Field,
+  Input,
+  Notice,
+  SegmentedControl,
+  Textarea,
+  useToast,
+} from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
-import { membersQuery, organizationKeys, rolesQuery } from "../../api/organization-queries.js";
+import { organizationKeys, rolesQuery } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
+import { memberLoader } from "../../components/pickers.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { translateKey } from "../../i18n/translate.js";
 import { useSession } from "../../shell/shell-context.js";
+import { roleItems } from "./roles.js";
 
 type Kind = "member" | "collaborator" | "guest";
 
@@ -41,12 +54,14 @@ export function InviteDialog({
   const session = useSession();
   const queryClient = useQueryClient();
   const roles = useQuery({ ...rolesQuery(organizationId), enabled: open });
-  const members = useQuery({ ...membersQuery(organizationId), enabled: open });
+  const responsibleLoader = useMemo(() => memberLoader(organizationId), [organizationId]);
   const [emails, setEmails] = useState("");
   const [kind, setKind] = useState<Kind>("member");
   const [role, setRole] = useState("none");
   const [expiry, setExpiry] = useState("");
-  const [responsible, setResponsible] = useState(session.account?.id ?? "");
+  const [responsible, setResponsible] = useState<ComboboxItem | null>(
+    session.account ? { value: session.account.id, label: session.account.name } : null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const parsed = parseEmails(emails);
@@ -85,7 +100,7 @@ export function InviteDialog({
                   }
                 : {}),
               ...(expiry ? { membershipExpiresAt: new Date(`${expiry}T23:59:59`).toISOString() } : {}),
-              ...(kind === "guest" && responsible ? { responsibleAccountId: responsible } : {}),
+              ...(kind === "guest" && responsible ? { responsibleAccountId: responsible.value } : {}),
             },
           }),
         );
@@ -117,7 +132,8 @@ export function InviteDialog({
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t("members.kind")}>
-            <Select
+            <SegmentedControl
+              label={t("members.kind")}
               value={kind}
               onValueChange={(value) => setKind(value as Kind)}
               options={(["member", "collaborator", "guest"] as const).map((value) => ({
@@ -128,14 +144,13 @@ export function InviteDialog({
           </Field>
           {kind === "member" ? (
             <Field label={t("roles.role")}>
-              <Select
+              <Combobox
+                aria-label={t("roles.role")}
                 value={role}
-                onValueChange={setRole}
-                options={[
+                onValueChange={(value) => setRole(value ?? "none")}
+                items={[
                   { value: "none", label: t("members.noExtraRole") },
-                  { value: "builtIn:administrator", label: t("roles.builtIn.administrator") },
-                  { value: "builtIn:owner", label: t("roles.builtIn.owner") },
-                  ...(roles.data ?? []).map((entry) => ({ value: `custom:${entry.id}`, label: entry.name })),
+                  ...roleItems(t, roles.data ?? []),
                 ]}
               />
             </Field>
@@ -147,12 +162,12 @@ export function InviteDialog({
         </div>
         {kind === "guest" ? (
           <Field label={t("members.responsible")} hint={t("members.responsibleHint")}>
-            <Select
-              value={responsible}
-              onValueChange={setResponsible}
-              options={(members.data ?? [])
-                .filter((entry) => entry.kind === "member" && entry.accountType === "standard")
-                .map((entry) => ({ value: entry.accountId, label: entry.name }))}
+            <Combobox
+              aria-label={t("members.responsible")}
+              value={responsible?.value ?? null}
+              selectedItem={responsible}
+              load={responsibleLoader}
+              onValueChange={(_value, item) => setResponsible(item)}
             />
           </Field>
         ) : null}

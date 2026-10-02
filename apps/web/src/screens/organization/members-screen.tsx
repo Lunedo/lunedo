@@ -2,13 +2,14 @@ import {
   Avatar,
   Badge,
   Button,
+  Combobox,
+  type ComboboxItem,
   ConfirmDialog,
   Dialog,
   Field,
   IconButton,
   Input,
   Menu,
-  Select,
   Table,
   Tabs,
   useToast,
@@ -29,6 +30,7 @@ import {
 } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
+import { memberLoader } from "../../components/pickers.js";
 import { usePaged, useSorted } from "../../components/table-state.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { translateKey } from "../../i18n/translate.js";
@@ -324,7 +326,8 @@ function MemberActionDialogs({
   const session = useSession();
   const queryClient = useQueryClient();
   const [expiry, setExpiry] = useState("");
-  const [responsible, setResponsible] = useState("");
+  const [responsible, setResponsible] = useState<ComboboxItem | null>(null);
+  const responsibleLoader = useMemo(() => memberLoader(organizationId), [organizationId]);
   const refresh = () => queryClient.invalidateQueries({ queryKey: organizationKeys.members(organizationId) });
   const run = async (call: () => Promise<unknown>, success: string) => {
     try {
@@ -489,16 +492,20 @@ function MemberActionDialogs({
     );
   }
 
+  const currentId = member.responsibleAccountId ?? session.account?.id ?? null;
+  const current = people.find((entry) => entry.accountId === currentId);
+  const chosen: ComboboxItem | null =
+    responsible ?? (current ? { value: current.accountId, label: current.name } : null);
   return (
     <Dialog open onOpenChange={close} title={t("members.responsibleTitle", { name: member.name })} size="sm">
       <div className="flex flex-col gap-4">
         <Field label={t("members.responsible")} hint={t("members.responsibleHint")}>
-          <Select
-            value={responsible || member.responsibleAccountId || session.account?.id || ""}
-            onValueChange={setResponsible}
-            options={people
-              .filter((entry) => entry.kind === "member" && entry.accountType === "standard")
-              .map((entry) => ({ value: entry.accountId, label: entry.name }))}
+          <Combobox
+            aria-label={t("members.responsible")}
+            value={chosen?.value ?? null}
+            selectedItem={chosen}
+            load={responsibleLoader}
+            onValueChange={(_value, item) => setResponsible(item)}
           />
         </Field>
         <div className="flex justify-end gap-2">
@@ -514,8 +521,7 @@ function MemberActionDialogs({
                     api.PATCH("/api/v1/organizations/{organizationId}/members/{accountId}", {
                       params: { path: { organizationId, accountId: member.accountId } },
                       body: {
-                        responsibleAccountId:
-                          responsible || member.responsibleAccountId || session.account?.id || null,
+                        responsibleAccountId: chosen?.value ?? null,
                       },
                     }),
                   ),

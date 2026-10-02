@@ -1,13 +1,14 @@
 import type { SetupStepDetails } from "@pagehall/shared";
-import { Badge, Button, ErrorState, Field, List, ListRow, Notice, Select } from "@pagehall/ui";
+import { Badge, Button, Combobox, ErrorState, Field, List, ListRow, Notice } from "@pagehall/ui";
 import type { TFunction } from "i18next";
 import { CircleAlert, CircleCheck, CircleX, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { languageItems } from "../../../components/pickers.js";
 import { docsUrl } from "../../../docs/docs-url.js";
 import { FailureNotice } from "../../../errors/failure.js";
 import type { Formatter } from "../../../format/format.js";
-import { isLanguage, rememberLanguage, supportedLanguages } from "../../../i18n/index.js";
+import { isLanguage, rememberLanguage } from "../../../i18n/index.js";
 import { translateKey } from "../../../i18n/translate.js";
 import { useFormat } from "../../../preferences/preferences-provider.js";
 import { runSetupAction } from "../setup-api.js";
@@ -99,17 +100,15 @@ export function SystemCheckStep({ details, back, onDone, refresh }: StepProps<"s
   return (
     <div className="flex flex-col gap-4">
       <Field label={t("setup.systemCheck.language")}>
-        <Select
+        <Combobox
+          aria-label={t("setup.systemCheck.language")}
           value={i18n.language}
           onValueChange={(language) => {
             if (!isLanguage(language)) return;
             rememberLanguage(language);
             void i18n.changeLanguage(language);
           }}
-          options={supportedLanguages.map((language) => ({
-            value: language,
-            label: t(`languages.${language}`),
-          }))}
+          items={languageItems(t)}
         />
       </Field>
       <List>
