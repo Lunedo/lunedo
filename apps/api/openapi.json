@@ -13845,7 +13845,10 @@
                                 "additionalProperties": false
                               },
                               "issuer": {
-                                "default": "https://accounts.google.com"
+                                "default": "https://accounts.google.com",
+                                "type": "string",
+                                "maxLength": 2048,
+                                "format": "uri"
                               },
                               "directory": {
                                 "default": null,
@@ -13973,7 +13976,11 @@
                                 ],
                                 "additionalProperties": false
                               },
-                              "issuer": {},
+                              "issuer": {
+                                "type": "string",
+                                "maxLength": 2048,
+                                "format": "uri"
+                              },
                               "scopes": {
                                 "default": [
                                   "openid",
@@ -14507,6 +14514,7 @@
                             "additionalProperties": false
                           },
                           "issuer": {
+                            "default": "https://accounts.google.com",
                             "type": "string",
                             "maxLength": 2048,
                             "format": "uri"
@@ -15026,7 +15034,10 @@
                                   "additionalProperties": false
                                 },
                                 "issuer": {
-                                  "default": "https://accounts.google.com"
+                                  "default": "https://accounts.google.com",
+                                  "type": "string",
+                                  "maxLength": 2048,
+                                  "format": "uri"
                                 },
                                 "directory": {
                                   "default": null,
@@ -15154,7 +15165,11 @@
                                   ],
                                   "additionalProperties": false
                                 },
-                                "issuer": {},
+                                "issuer": {
+                                  "type": "string",
+                                  "maxLength": 2048,
+                                  "format": "uri"
+                                },
                                 "scopes": {
                                   "default": [
                                     "openid",
@@ -15962,7 +15977,10 @@
                               "additionalProperties": false
                             },
                             "issuer": {
-                              "default": "https://accounts.google.com"
+                              "default": "https://accounts.google.com",
+                              "type": "string",
+                              "maxLength": 2048,
+                              "format": "uri"
                             },
                             "directory": {
                               "default": null,
@@ -16090,7 +16108,11 @@
                               ],
                               "additionalProperties": false
                             },
-                            "issuer": {},
+                            "issuer": {
+                              "type": "string",
+                              "maxLength": 2048,
+                              "format": "uri"
+                            },
                             "scopes": {
                               "default": [
                                 "openid",
@@ -16664,6 +16686,7 @@
                             "additionalProperties": false
                           },
                           "issuer": {
+                            "default": "https://accounts.google.com",
                             "type": "string",
                             "maxLength": 2048,
                             "format": "uri"
@@ -17116,7 +17139,10 @@
                               "additionalProperties": false
                             },
                             "issuer": {
-                              "default": "https://accounts.google.com"
+                              "default": "https://accounts.google.com",
+                              "type": "string",
+                              "maxLength": 2048,
+                              "format": "uri"
                             },
                             "directory": {
                               "default": null,
@@ -17244,7 +17270,11 @@
                               ],
                               "additionalProperties": false
                             },
-                            "issuer": {},
+                            "issuer": {
+                              "type": "string",
+                              "maxLength": 2048,
+                              "format": "uri"
+                            },
                             "scopes": {
                               "default": [
                                 "openid",
@@ -19466,7 +19496,10 @@
                               "additionalProperties": false
                             },
                             "issuer": {
-                              "default": "https://accounts.google.com"
+                              "default": "https://accounts.google.com",
+                              "type": "string",
+                              "maxLength": 2048,
+                              "format": "uri"
                             },
                             "directory": {
                               "default": null,
@@ -19594,7 +19627,11 @@
                               ],
                               "additionalProperties": false
                             },
-                            "issuer": {},
+                            "issuer": {
+                              "type": "string",
+                              "maxLength": 2048,
+                              "format": "uri"
+                            },
                             "scopes": {
                               "default": [
                                 "openid",

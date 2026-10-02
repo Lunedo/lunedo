@@ -47,6 +47,8 @@ const httpUrl = z
   .max(2048)
   .transform((value) => value.replace(/\/+$/, ""));
 
+const issuerUrl = z.url({ protocol: /^https?$/ }).max(2048);
+
 const accountCreationSchema = z
   .object({
     enabled: z.boolean().default(false),
@@ -90,7 +92,7 @@ export const googleConfigSchema = z
     preset: z.literal("google"),
     ...commonShape,
     domains: z.array(domainSchema).min(1).max(50),
-    issuer: httpUrl.default(GOOGLE_ISSUER),
+    issuer: issuerUrl.default(GOOGLE_ISSUER),
     directory: z
       .object({
         adminEmail: emailSchema,
@@ -107,7 +109,7 @@ export const genericOidcConfigSchema = z
   .object({
     preset: z.literal("generic"),
     ...commonShape,
-    issuer: httpUrl,
+    issuer: issuerUrl,
     scopes: z.array(z.string().trim().min(1).max(100)).max(20).default(["openid", "profile", "email"]),
     claims: z
       .object({
