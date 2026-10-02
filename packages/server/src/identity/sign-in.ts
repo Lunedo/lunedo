@@ -6,17 +6,18 @@ import { EmailInUseError } from "../accounts/accounts.js";
 import { ANONYMOUS, accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { ChallengeStore } from "../auth/challenges.js";
-import { ChallengeExpiredError } from "../auth/errors.js";
+import { ChallengeExpiredError, RateLimitedError } from "../auth/errors.js";
 import { sessions } from "../auth/schema.js";
 import type { ClientInfo, SessionService } from "../auth/sessions.js";
 import { passwordSignInSetting } from "../auth/settings.js";
 import type { PendingIdentity, SignedIn, SignInService } from "../auth/sign-in.js";
+import { clientSubject, type RateLimiter } from "../auth/throttle.js";
 import { secondFactorsOf } from "../auth/two-factor.js";
 import { secretsEqual } from "../crypto/constant-time.js";
 import type { Database, Transaction } from "../database/database.js";
 import type { NotificationService } from "../notifications/service.js";
 import { OrganizationError } from "../organizations/organizations.js";
-import { organizationDomains, organizations } from "../organizations/schema.js";
+import { organizationDomains } from "../organizations/schema.js";
 import type { SettingsService } from "../settings/service.js";
 import {
   type IdentityProviderAdapter,
@@ -25,7 +26,7 @@ import {
   type ProviderProfile,
   ProviderResponseError,
 } from "./adapter.js";
-import type { IdentityProviderService, OrganizationProvider } from "./providers.js";
+import type { IdentityProviderService, SignInProvider } from "./providers.js";
 import { callbackPath } from "./providers.js";
 import {
   identities,
@@ -38,6 +39,7 @@ import {
 const FLOW_LIFETIME_MS = 10 * 60 * 1000;
 const AUTH_TIME_TOLERANCE_MS = 60 * 1000;
 const REFUSAL_RETENTION_DAYS = 90;
+const DISCOVERIES_PER_CLIENT = 30;
 const REFERENCE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
 export type ProviderFlowPurpose = "signIn" | "reauthentication" | "test";
@@ -65,16 +67,22 @@ export interface TestResult {
 }
 
 export interface SignInOptions {
-  organization: { id: string; name: string; slug: string; logoRef: string | null } | null;
-  providers: OrganizationProvider[];
+  emailStep: boolean;
+  directProvider: SignInProvider | null;
+  lastProvider: SignInProvider | null;
   passwordSignIn: boolean;
+  passkeys: true;
 }
+
+export type SignInStep =
+  | { step: "provider"; providerId: string; name: string; preset: SignInProvider["preset"] }
+  | { step: "password" }
+  | { step: "none" };
 
 export interface SignInRefusal {
   reference: string;
   reason: SignInRefusalReason;
   providerId: string | null;
-  organizationId: string | null;
   subject: string | null;
   email: string | null;
   displayName: string | null;
@@ -134,6 +142,7 @@ export class ProviderSignInService {
   readonly #audit: AuditLog;
   readonly #notifications: NotificationService;
   readonly #settings: SettingsService;
+  readonly #rateLimiter: RateLimiter;
   readonly #clock: () => Date;
 
   constructor(options: {
@@ -147,6 +156,7 @@ export class ProviderSignInService {
     audit: AuditLog;
     notifications: NotificationService;
     settings: SettingsService;
+    rateLimiter: RateLimiter;
     clock?: () => Date;
   }) {
     this.#database = options.database;
@@ -159,6 +169,7 @@ export class ProviderSignInService {
     this.#audit = options.audit;
     this.#notifications = options.notifications;
     this.#settings = options.settings;
+    this.#rateLimiter = options.rateLimiter;
     this.#clock = options.clock ?? (() => new Date());
   }
 
@@ -178,27 +189,17 @@ export class ProviderSignInService {
     providerId: string;
     purpose: ProviderFlowPurpose;
     baseUrl: string;
-    organizationId?: string | null;
     returnTo?: string | null;
     sessionId?: string | null;
     accountId?: string | null;
   }): Promise<StartedFlow> {
     const { provider, credentials } = await this.#load(input.providerId);
-    let organizationId =
-      provider.level === "organization" ? provider.organizationId : (input.organizationId ?? null);
-    if (input.purpose === "signIn" && provider.level === "instance") {
-      const usable = organizationId
-        ? await this.#providers.enabledFor(provider.id, organizationId)
-        : await this.#providers.enabledAnywhere(provider.id);
-      if (!usable) throw new OrganizationError("notFound", "The identity provider is not available here");
-    }
     if (input.purpose === "reauthentication") {
       const [identity] = await this.#database
         .select({ id: identities.id })
         .from(identities)
         .where(and(eq(identities.providerId, provider.id), eq(identities.accountId, input.accountId ?? "")));
       if (!identity) throw new OrganizationError("notFound", "The account is not linked to this provider");
-      organizationId = null;
     }
     const browserToken = client.randomState();
     const state = client.randomState();
@@ -220,7 +221,6 @@ export class ProviderSignInService {
       nonce,
       codeVerifier,
       redirectUri,
-      organizationId,
       sessionId: input.sessionId ?? null,
       returnTo: input.returnTo ?? null,
       expiresAt: new Date(this.#clock().getTime() + FLOW_LIFETIME_MS),
@@ -256,7 +256,6 @@ export class ProviderSignInService {
       throw new ChallengeExpiredError();
     }
     const { provider, credentials } = await this.#load(flow.providerId);
-    const organizationId = provider.level === "organization" ? provider.organizationId : flow.organizationId;
     const callbackUrl = new URL(flow.redirectUri);
     callbackUrl.search = input.query.toString();
 
@@ -271,7 +270,7 @@ export class ProviderSignInService {
       });
     } catch (error) {
       if (error instanceof ProviderPolicyError && error.reason === "domainNotAllowed") {
-        return this.#refuse({ providerId: provider.id, organizationId, reason: "domainNotAllowed" });
+        return this.#refuse({ providerId: provider.id, reason: "domainNotAllowed" });
       }
       if (error instanceof ProviderPolicyError || error instanceof ProviderResponseError) {
         if (flow.purpose === "test") {
@@ -281,7 +280,7 @@ export class ProviderSignInService {
             .where(eq(providerFlows.id, flow.id));
           return { kind: "tested", flowId: flow.id, returnTo: flow.returnTo };
         }
-        return this.#refuse({ providerId: provider.id, organizationId, reason: "invalidResponse" });
+        return this.#refuse({ providerId: provider.id, reason: "invalidResponse" });
       }
       throw error;
     }
@@ -310,7 +309,6 @@ export class ProviderSignInService {
       try {
         return await this.#signInWith({
           provider,
-          organizationId,
           profile,
           emailVerified,
           providerSessionId: result.providerSessionId,
@@ -322,7 +320,6 @@ export class ProviderSignInService {
         if (error instanceof Refused) {
           return this.#refuse({
             providerId: provider.id,
-            organizationId,
             reason: error.reason,
             profile,
           });
@@ -343,24 +340,8 @@ export class ProviderSignInService {
     return new Date(result.rows[0]?.now ?? Date.now());
   }
 
-  async #allowedFor(
-    provider: { id: string; level: string; organizationId: string | null },
-    account: Account,
-  ): Promise<SignInRefusalReason | null> {
-    if (provider.level === "organization") {
-      return account.homeOrganizationId === provider.organizationId ? null : "otherOrganization";
-    }
-    if (account.homeOrganizationId) {
-      return (await this.#providers.enabledFor(provider.id, account.homeOrganizationId))
-        ? null
-        : "providerNotEnabled";
-    }
-    return (await this.#providers.enabledAnywhere(provider.id)) ? null : "providerNotEnabled";
-  }
-
   async #signInWith(input: {
     provider: ProviderDefinition;
-    organizationId: string | null;
     profile: ProviderProfile;
     emailVerified: boolean;
     providerSessionId: string | null;
@@ -376,8 +357,6 @@ export class ProviderSignInService {
     if (identity) {
       const account = await this.#accounts.get(identity.accountId);
       if (!canSignIn(account)) throw new Refused("accountInactive");
-      const refusal = await this.#allowedFor(provider, account);
-      if (refusal) throw new Refused(refusal);
       return this.#withSession(
         account,
         async (tx) => {
@@ -401,8 +380,6 @@ export class ProviderSignInService {
       const existing = await this.#accounts.findByEmail(profile.email);
       if (existing) {
         if (!canSignIn(existing)) throw new Refused("accountInactive");
-        const refusal = await this.#allowedFor(provider, existing);
-        if (refusal) throw new Refused(refusal);
         if (!existing.passwordHash) throw new Refused("linkUnavailable");
         const payload: PendingIdentity = {
           providerId: provider.id,
@@ -430,7 +407,7 @@ export class ProviderSignInService {
       if (!creation.requiredGroups.some((group) => held.has(group))) throw new Refused("groupRequired");
     }
     const email = profile.email;
-    const home = await this.#homeOrganization(provider, input.organizationId, email);
+    const home = await this.#homeOrganization(email);
     return this.#withSession(
       null,
       async (tx) => {
@@ -474,26 +451,14 @@ export class ProviderSignInService {
     );
   }
 
-  async #homeOrganization(
-    provider: { id: string; level: string; organizationId: string | null },
-    contextOrganizationId: string | null,
-    email: string,
-  ): Promise<string | null> {
-    if (provider.level === "organization") return provider.organizationId;
+  async #homeOrganization(email: string): Promise<string | null> {
     const domain = domainOf(email);
-    if (domain) {
-      const [owner] = await this.#database
-        .select({ organizationId: organizationDomains.organizationId })
-        .from(organizationDomains)
-        .where(eq(organizationDomains.domain, domain));
-      if (owner && (await this.#providers.enabledFor(provider.id, owner.organizationId))) {
-        return owner.organizationId;
-      }
-    }
-    if (contextOrganizationId && (await this.#providers.enabledFor(provider.id, contextOrganizationId))) {
-      return contextOrganizationId;
-    }
-    return null;
+    if (!domain) return null;
+    const [owner] = await this.#database
+      .select({ organizationId: organizationDomains.organizationId })
+      .from(organizationDomains)
+      .where(eq(organizationDomains.domain, domain));
+    return owner?.organizationId ?? null;
   }
 
   async #withSession(
@@ -567,7 +532,6 @@ export class ProviderSignInService {
 
   async #refuse(input: {
     providerId: string;
-    organizationId: string | null;
     reason: SignInRefusalReason;
     profile?: ProviderProfile;
     accountId?: string | null;
@@ -577,7 +541,6 @@ export class ProviderSignInService {
       await tx.insert(signInRefusals).values({
         reference: code,
         providerId: input.providerId,
-        organizationId: input.organizationId,
         reason: input.reason,
         subject: input.profile?.subject ?? null,
         email: input.profile?.email ?? null,
@@ -589,9 +552,6 @@ export class ProviderSignInService {
         actor: ANONYMOUS,
         targetId: input.providerId,
         fields: { reason: input.reason, reference: code },
-        ...(input.organizationId
-          ? { scope: { type: "organization" as const, id: input.organizationId } }
-          : {}),
       });
     });
     return { kind: "refused", reference: code, reason: input.reason };
@@ -623,10 +583,8 @@ export class ProviderSignInService {
     if (!pending || !identity) throw new ChallengeExpiredError();
     const consumed = await this.#challenges.consume(this.#database, pending.id);
     if (!consumed) throw new ChallengeExpiredError();
-    const loaded = await this.#providers.definition(identity.providerId);
     const result = await this.#refuse({
       providerId: identity.providerId,
-      organizationId: loaded?.provider.organizationId ?? null,
       reason: "linkDeclined",
       profile: {
         subject: identity.subject,
@@ -654,55 +612,44 @@ export class ProviderSignInService {
     return (flow?.result as TestResult | { error: string } | null | undefined) ?? null;
   }
 
-  async signInOptions(organizationSlug: string | null): Promise<SignInOptions> {
-    let organization: SignInOptions["organization"] = null;
-    if (organizationSlug) {
-      const [row] = await this.#database
-        .select({
-          id: organizations.id,
-          name: organizations.name,
-          slug: organizations.slug,
-          logoRef: organizations.logoRef,
-        })
-        .from(organizations)
-        .where(eq(organizations.slug, organizationSlug.toLowerCase()));
-      organization = row ? { ...row, logoRef: null } : null;
-    } else {
-      const rows = await this.#database
-        .select({
-          id: organizations.id,
-          name: organizations.name,
-          slug: organizations.slug,
-          logoRef: organizations.logoRef,
-        })
-        .from(organizations)
-        .limit(2);
-      organization = rows.length === 1 ? (rows[0] ?? null) : null;
-    }
-    const providers = await this.#providers.enabledProviders(organization?.id ?? null);
-    const passwordSignIn = await this.#settings.get(
-      passwordSignInSetting,
-      organization ? { organization: organization.id } : {},
-    );
-    return { organization, providers, passwordSignIn };
+  async signInOptions(lastProviderId: string | null): Promise<SignInOptions> {
+    const providers = await this.#providers.signInProviders();
+    const passwordSignIn = await this.#settings.get(passwordSignInSetting, {});
+    const directProvider = providers.length === 1 && !passwordSignIn ? (providers[0] ?? null) : null;
+    return {
+      emailStep: directProvider === null,
+      directProvider,
+      lastProvider: providers.find((provider) => provider.id === lastProviderId) ?? null,
+      passwordSignIn,
+      passkeys: true,
+    };
   }
 
-  async refusal(code: string, organizationId: string | null): Promise<SignInRefusal | null> {
+  async discover(email: string, clientIp?: string): Promise<SignInStep> {
+    const limit = await this.#rateLimiter.consume(
+      `signInDiscovery:client:${clientSubject(clientIp ?? "unknown")}`,
+      DISCOVERIES_PER_CLIENT,
+      60,
+    );
+    if (!limit.allowed) throw new RateLimitedError(limit.retryAfterSeconds);
+    const domain = domainOf(email);
+    const provider = domain ? await this.#providers.providerForDomain(domain) : null;
+    if (provider) {
+      return { step: "provider", providerId: provider.id, name: provider.name, preset: provider.preset };
+    }
+    return (await this.#settings.get(passwordSignInSetting, {})) ? { step: "password" } : { step: "none" };
+  }
+
+  async refusal(code: string): Promise<SignInRefusal | null> {
     const [row] = await this.#database
       .select()
       .from(signInRefusals)
-      .where(
-        and(
-          eq(signInRefusals.reference, code),
-          organizationId ? eq(signInRefusals.organizationId, organizationId) : undefined,
-        ),
-      );
+      .where(eq(signInRefusals.reference, code));
     if (!row) return null;
     return {
       reference: row.reference,
       reason: row.reason,
       providerId: row.providerId,
-      organizationId: row.organizationId,
       subject: row.subject,
       email: row.email,
       displayName: row.displayName,
@@ -742,9 +689,6 @@ export class ProviderSignInService {
         actor: SYSTEM,
         targetId: providerId,
         fields: { endedSessions: ended.length },
-        ...(provider.organizationId
-          ? { scope: { type: "organization" as const, id: provider.organizationId } }
-          : {}),
       });
       return ended.length;
     });

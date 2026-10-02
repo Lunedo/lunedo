@@ -50,24 +50,21 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
   }
 
   async function provider(options: {
-    organizationId?: string;
-    enableFor?: string[];
     accountCreation?: boolean;
     requiredGroups?: string[];
     domains?: string[];
     issuer?: FakeOidcProvider;
   }) {
     const source = options.issuer ?? idp;
-    const scope = options.organizationId
-      ? { level: "organization" as const, organizationId: options.organizationId }
-      : { level: "instance" as const };
-    const { provider: created } = await test.services.identityProviders.create(SYSTEM, scope, {
+    const domains = options.domains ?? ["example.org"];
+    await releaseDomains(domains);
+    const { provider: created } = await test.services.identityProviders.create(SYSTEM, {
       name: "Test provider",
       config: {
         preset: "generic",
         issuer: source.issuer,
         clientId: source.clientId,
-        domains: options.domains ?? ["example.org"],
+        domains,
         accountCreation: {
           enabled: options.accountCreation ?? false,
           requiredGroups: options.requiredGroups ?? [],
@@ -76,25 +73,22 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
       },
       credential: { kind: "clientSecret", secret: source.clientSecret, expiresAt: null },
     });
-    if (options.enableFor) {
-      await test.services.identityProviders.setAvailability(SYSTEM, created.id, options.enableFor);
-      for (const organizationId of options.enableFor) {
-        await test.services.identityProviders.setEnabled(SYSTEM, organizationId, created.id, true);
-      }
-    }
     return created.id;
+  }
+
+  async function releaseDomains(domains: string[]) {
+    await test.pool.query("delete from identity_provider_domains where domain = any($1)", [domains]);
   }
 
   async function signIn(
     providerId: string,
     claims: Record<string, unknown>,
-    options: { organizationId?: string; overrides?: TokenOverrides; issuer?: FakeOidcProvider } = {},
+    options: { overrides?: TokenOverrides; issuer?: FakeOidcProvider } = {},
   ): Promise<CallbackResult> {
     const started = await test.services.providerSignIn.start({
       providerId,
       purpose: "signIn",
       baseUrl: BASE,
-      organizationId: options.organizationId ?? null,
     });
     const callback = await (options.issuer ?? idp).authorize(started.url, claims, options.overrides);
     return test.services.providerSignIn.callback({
@@ -107,16 +101,15 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
 
   it("creates an account at the first sign-in and signs it in again by its identifier", async () => {
     const org = await organization();
-    const id = await provider({ enableFor: [org], accountCreation: true });
+    const home = `${randomUUID().slice(0, 8)}.example.org`;
+    await test.pool.query("insert into organization_domains (domain, organization_id) values ($1, $2)", [
+      home,
+      org,
+    ]);
+    const id = await provider({ accountCreation: true, domains: ["example.org", home] });
     const subject = randomUUID();
-    const email = `new.${subject.slice(0, 8)}@example.org`;
-    const first = await signIn(
-      id,
-      { sub: subject, email, name: "New Person", preferred_username: "new" },
-      {
-        organizationId: org,
-      },
-    );
+    const email = `new.${subject.slice(0, 8)}@${home}`;
+    const first = await signIn(id, { sub: subject, email, name: "New Person", preferred_username: "new" });
     if (first.kind !== "signedIn") throw new Error(`Signed in expected, got ${first.kind}`);
     const created = await test.services.accounts.get(first.signedIn.session.accountId);
     expect(created).toMatchObject({ email, name: "New Person", homeOrganizationId: org, passwordHash: null });
@@ -138,13 +131,11 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
   });
 
   it("uses PKCE, a single-use state bound to the browser and a single-use nonce", async () => {
-    const org = await organization();
-    const id = await provider({ enableFor: [org], accountCreation: true });
+    const id = await provider({ accountCreation: true });
     const started = await test.services.providerSignIn.start({
       providerId: id,
       purpose: "signIn",
       baseUrl: BASE,
-      organizationId: org,
     });
     const authorization = new URL(started.url).searchParams;
     expect(authorization.get("code_challenge_method")).toBe("S256");
@@ -176,7 +167,6 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
       providerId: id,
       purpose: "signIn",
       baseUrl: BASE,
-      organizationId: org,
     });
     const replayed = await idp.authorize(again.url, {
       sub: randomUUID(),
@@ -209,20 +199,17 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     ["a signature with the client secret", { algorithm: "HS256" }],
     ["an expired token", { expiresInSeconds: -600 }],
   ])("refuses an ID token with %s", async (_name, overrides) => {
-    const org = await organization();
-    const id = await provider({ enableFor: [org], accountCreation: true });
+    const id = await provider({ accountCreation: true });
     const result = await signIn(
       id,
       { sub: randomUUID(), email: `x.${randomUUID()}@example.org` },
       {
-        organizationId: org,
         overrides,
       },
     );
     expect(result).toMatchObject({ kind: "refused", reason: "invalidResponse" });
     const refusal = await test.services.providerSignIn.refusal(
       result.kind === "refused" ? result.reference : "",
-      null,
     );
     expect(refusal).toMatchObject({ reason: "invalidResponse", providerId: id });
   });
@@ -230,12 +217,12 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
   it("never links or creates accounts through an e-mail address outside the configured domains", async () => {
     const org = await organization();
     const existing = await account(org, `owner.${randomUUID().slice(0, 8)}@other.example`);
-    const closed = await provider({ enableFor: [org] });
+    const closed = await provider({});
     expect(await signIn(closed, { sub: randomUUID(), email: existing.email })).toMatchObject({
       kind: "refused",
       reason: "accountCreationDisabled",
     });
-    const open = await provider({ enableFor: [org], accountCreation: true });
+    const open = await provider({ accountCreation: true });
     expect(await signIn(open, { sub: randomUUID(), email: existing.email })).toMatchObject({
       kind: "refused",
       reason: "domainNotAllowed",
@@ -256,7 +243,7 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     await test.services.totp.verify(test.database, existing.id, TOTP.generate({ secret }), {
       confirming: true,
     });
-    const id = await provider({ enableFor: [org] });
+    const id = await provider({});
     const subject = randomUUID();
     const result = await signIn(id, { sub: subject, email: existing.email });
     if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
@@ -299,11 +286,11 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
   it("records a reference when the person says the account is not theirs", async () => {
     const org = await organization();
     const existing = await account(org);
-    const id = await provider({ enableFor: [org] });
+    const id = await provider({});
     const result = await signIn(id, { sub: randomUUID(), email: existing.email, name: "Somebody" });
     if (result.kind !== "linkRequired") throw new Error("Linking expected");
     const { reference } = await test.services.providerSignIn.declineLink(result.pendingToken);
-    expect(await test.services.providerSignIn.refusal(reference, null)).toMatchObject({
+    expect(await test.services.providerSignIn.refusal(reference)).toMatchObject({
       reason: "linkDeclined",
       accountId: existing.id,
       email: existing.email,
@@ -314,81 +301,30 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     );
   });
 
-  it("lets an organization provider sign in and create only accounts of its own organization", async () => {
-    const own = await organization();
-    const other = await organization();
-    const id = await provider({ organizationId: own, accountCreation: true });
-    const outsider = await account(other);
-    const subject = randomUUID();
-    await test.pool.query(
-      "insert into identities (id, account_id, provider_id, subject) values (gen_random_uuid(), $1, $2, $3)",
-      [outsider.id, id, subject],
-    );
-    expect(await signIn(id, { sub: subject, email: outsider.email })).toMatchObject({
-      kind: "refused",
-      reason: "otherOrganization",
-    });
-    const linkTarget = await account(other);
-    expect(await signIn(id, { sub: randomUUID(), email: linkTarget.email })).toMatchObject({
-      kind: "refused",
-      reason: "otherOrganization",
-    });
-    const created = await signIn(
-      id,
-      { sub: randomUUID(), email: `jit.${randomUUID().slice(0, 8)}@example.org` },
-      {
-        organizationId: other,
-      },
-    );
-    if (created.kind !== "signedIn") throw new Error("Signed in expected");
-    expect((await test.services.accounts.get(created.signedIn.session.accountId))?.homeOrganizationId).toBe(
-      own,
-    );
-    const roles = await test.pool.query("select 1 from role_assignments where principal_id = $1", [
-      created.signedIn.session.accountId,
-    ]);
-    expect(roles.rows).toEqual([]);
-  });
-
   it("requires one of the configured groups when accounts are created", async () => {
-    const org = await organization();
-    const id = await provider({ enableFor: [org], accountCreation: true, requiredGroups: ["wiki-users"] });
+    const id = await provider({ accountCreation: true, requiredGroups: ["wiki-users"] });
     expect(
-      await signIn(
-        id,
-        { sub: randomUUID(), email: `g.${randomUUID()}@example.org`, groups: ["others"] },
-        { organizationId: org },
-      ),
+      await signIn(id, { sub: randomUUID(), email: `g.${randomUUID()}@example.org`, groups: ["others"] }),
     ).toMatchObject({ kind: "refused", reason: "groupRequired" });
     expect(
       (
-        await signIn(
-          id,
-          { sub: randomUUID(), email: `h.${randomUUID()}@example.org`, groups: ["wiki-users"] },
-          { organizationId: org },
-        )
+        await signIn(id, {
+          sub: randomUUID(),
+          email: `h.${randomUUID()}@example.org`,
+          groups: ["wiki-users"],
+        })
       ).kind,
     ).toBe("signedIn");
   });
 
-  it("does not start a sign-in through an instance provider no organization turned on", async () => {
-    const id = await provider({});
-    await expect(
-      test.services.providerSignIn.start({ providerId: id, purpose: "signIn", baseUrl: BASE }),
-    ).rejects.toMatchObject({ code: "notFound" });
-  });
-
   it("ends the sessions of a person when the provider signs them out", async () => {
-    const org = await organization();
-    const id = await provider({ enableFor: [org], accountCreation: true });
+    const id = await provider({ accountCreation: true });
     const subject = randomUUID();
-    const first = await signIn(
-      id,
-      { sub: subject, sid: "provider-session", email: `l.${randomUUID()}@example.org` },
-      {
-        organizationId: org,
-      },
-    );
+    const first = await signIn(id, {
+      sub: subject,
+      sid: "provider-session",
+      email: `l.${randomUUID()}@example.org`,
+    });
     if (first.kind !== "signedIn") throw new Error("Signed in expected");
     const accountId = first.signedIn.session.accountId;
     await expect(
@@ -415,14 +351,9 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
   });
 
   it("confirms the identity again through the provider only with a fresh sign-in", async () => {
-    const org = await organization();
-    const id = await provider({ enableFor: [org], accountCreation: true });
+    const id = await provider({ accountCreation: true });
     const subject = randomUUID();
-    const first = await signIn(
-      id,
-      { sub: subject, email: `r.${randomUUID()}@example.org` },
-      { organizationId: org },
-    );
+    const first = await signIn(id, { sub: subject, email: `r.${randomUUID()}@example.org` });
     if (first.kind !== "signedIn") throw new Error("Signed in expected");
     const session = first.signedIn.session;
     const reauthenticate = async (authTime: number) => {
@@ -452,25 +383,19 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     const tenant = randomUUID();
     const entra = await startFakeOidcProvider({ path: `/${tenant}/v2.0` });
     try {
-      const org = await organization();
-      const { provider: created } = await test.services.identityProviders.create(
-        SYSTEM,
-        { level: "instance" },
-        {
-          name: "Microsoft",
-          config: {
-            preset: "entraId",
-            tenantId: tenant,
-            authority: entra.issuer.slice(0, -`/${tenant}/v2.0`.length),
-            clientId: entra.clientId,
-            domains: ["example.org"],
-            accountCreation: { enabled: true, requiredGroups: [] },
-          },
-          credential: { kind: "clientSecret", secret: entra.clientSecret, expiresAt: null },
+      await releaseDomains(["example.org"]);
+      const { provider: created } = await test.services.identityProviders.create(SYSTEM, {
+        name: "Microsoft",
+        config: {
+          preset: "entraId",
+          tenantId: tenant,
+          authority: entra.issuer.slice(0, -`/${tenant}/v2.0`.length),
+          clientId: entra.clientId,
+          domains: ["example.org"],
+          accountCreation: { enabled: true, requiredGroups: [] },
         },
-      );
-      await test.services.identityProviders.setAvailability(SYSTEM, created.id, [org]);
-      await test.services.identityProviders.setEnabled(SYSTEM, org, created.id, true);
+        credential: { kind: "clientSecret", secret: entra.clientSecret, expiresAt: null },
+      });
       const objectId = randomUUID();
       const email = `entra.${objectId.slice(0, 8)}@example.org`;
       const result = await signIn(
@@ -483,7 +408,7 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
           preferred_username: email,
           name: "Entra Person",
         },
-        { organizationId: org, issuer: entra },
+        { issuer: entra },
       );
       expect(result.kind).toBe("signedIn");
       const identity = await test.pool.query(
@@ -492,11 +417,7 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
       );
       expect(identity.rows).toEqual([{ subject: `${tenant}:${objectId}`, sign_in_name: email }]);
       expect(
-        await signIn(
-          created.id,
-          { sub: "x", tid: randomUUID(), oid: objectId, email },
-          { organizationId: org, issuer: entra },
-        ),
+        await signIn(created.id, { sub: "x", tid: randomUUID(), oid: objectId, email }, { issuer: entra }),
       ).toMatchObject({ kind: "refused", reason: "invalidResponse" });
     } finally {
       await entra.close();
@@ -506,29 +427,22 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
   it("refuses Google accounts outside the configured Workspace domains", async () => {
     const google = await startFakeOidcProvider();
     try {
-      const org = await organization();
-      const { provider: created } = await test.services.identityProviders.create(
-        SYSTEM,
-        { level: "instance" },
-        {
-          name: "Google",
-          config: {
-            preset: "google",
-            issuer: google.issuer,
-            clientId: google.clientId,
-            domains: ["example.org"],
-            accountCreation: { enabled: true, requiredGroups: [] },
-          },
-          credential: { kind: "clientSecret", secret: google.clientSecret, expiresAt: null },
+      await releaseDomains(["example.org"]);
+      const { provider: created } = await test.services.identityProviders.create(SYSTEM, {
+        name: "Google",
+        config: {
+          preset: "google",
+          issuer: google.issuer,
+          clientId: google.clientId,
+          domains: ["example.org"],
+          accountCreation: { enabled: true, requiredGroups: [] },
         },
-      );
-      await test.services.identityProviders.setAvailability(SYSTEM, created.id, [org]);
-      await test.services.identityProviders.setEnabled(SYSTEM, org, created.id, true);
+        credential: { kind: "clientSecret", secret: google.clientSecret, expiresAt: null },
+      });
       const started = await test.services.providerSignIn.start({
         providerId: created.id,
         purpose: "signIn",
         baseUrl: BASE,
-        organizationId: org,
       });
       expect(new URL(started.url).searchParams.get("hd")).toBe("example.org");
       const outside = await google.authorize(started.url, { sub: randomUUID(), email: "someone@gmail.com" });
@@ -545,7 +459,7 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
           await signIn(
             created.id,
             { sub: randomUUID(), email: `g.${randomUUID().slice(0, 8)}@example.org`, hd: "example.org" },
-            { organizationId: org, issuer: google },
+            { issuer: google },
           )
         ).kind,
       ).toBe("signedIn");

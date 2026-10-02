@@ -217,6 +217,7 @@
     "emailInUse": "Diese E-Mail-Adresse verwendet bereits ein anderes Konto. Verwende eine andere.",
     "slugTaken": "Eine andere Organisation verwendet diesen Kurznamen. Wähle einen anderen.",
     "domainTaken": "Die Domain gehört zu einer anderen Organisation. Wende dich an die Administration der Instanz, wenn das nicht stimmt.",
+    "domainInUse": "Ein anderer Identitätsanbieter verwendet bereits eine dieser E-Mail-Domains. Entferne sie dort zuerst oder verwende eine andere Domain.",
     "roleNameTaken": "Eine Rolle mit diesem Namen gibt es bereits. Wähle einen anderen Namen.",
     "groupNameTaken": "Eine Gruppe mit diesem Namen gibt es bereits. Wähle einen anderen Namen.",
     "alreadyMember": "Diese Person ist bereits Mitglied. Eine Einladung ist nicht nötig.",
@@ -1411,8 +1412,6 @@
         "created": "Identitätsanbieter eingerichtet",
         "updated": "Identitätsanbieter geändert",
         "removed": "Identitätsanbieter entfernt",
-        "availabilityChanged": "Identitätsanbieter für Organisationen freigegeben",
-        "enabledChanged": "Identitätsanbieter ein- oder ausgeschaltet",
         "credentialAdded": "Zugangsdaten des Anbieters hinzugefügt",
         "credentialRemoved": "Zugangsdaten des Anbieters entfernt",
         "logoChanged": "Logo des Anbieters geändert"

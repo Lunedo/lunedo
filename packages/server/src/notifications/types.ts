@@ -194,10 +194,7 @@ const providerCredentialExpiring = defineNotificationType({
   targetType: "identityProvider",
   params: notificationParamSchemas["identityProvider.credentialExpiring"],
   setting: settingOf("identityProvider.credentialExpiring"),
-  visible: async (context) =>
-    context.organizationId === null
-      ? context.can("instance.signIn.view", { type: "instance" })
-      : context.can("organization.signIn.view", { type: "organization", id: context.organizationId }),
+  visible: async (context) => context.can("instance.signIn.view", { type: "instance" }),
   mail: (params, locale) => ({
     template: "providerCredentialExpiring",
     params: { providerName: params.providerName, date: formatDay(params.expiresAt, locale) },

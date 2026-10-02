@@ -146,10 +146,9 @@ export {
   type CredentialInput,
   type CredentialSummary,
   callbackPath,
-  type OrganizationProvider,
-  type ProviderScope,
   type ProviderSummary,
   type ProviderWarning,
+  type SignInProvider,
 } from "./identity/providers.js";
 export { signInRefusalReasons } from "./identity/schema.js";
 export type {
@@ -157,6 +156,7 @@ export type {
   LinkInfo,
   SignInOptions,
   SignInRefusal,
+  SignInStep,
   TestResult,
 } from "./identity/sign-in.js";
 export {

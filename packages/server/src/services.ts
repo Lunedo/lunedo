@@ -225,6 +225,7 @@ export function createAccountServices(options: {
     audit,
     notifications,
     settings,
+    rateLimiter,
   });
   const security = new AccountSecurityService({
     database,

@@ -1,15 +1,12 @@
 import type { OidcConfig } from "@pagehall/shared";
-import type { identityCredentialKinds, identityProviderLevels, identityProviderTypes } from "./schema.js";
+import type { identityCredentialKinds, identityProviderTypes } from "./schema.js";
 
 export type IdentityProviderType = (typeof identityProviderTypes)[number];
-export type IdentityProviderLevel = (typeof identityProviderLevels)[number];
 export type IdentityCredentialKind = (typeof identityCredentialKinds)[number];
 
 export interface ProviderDefinition {
   id: string;
   type: IdentityProviderType;
-  level: IdentityProviderLevel;
-  organizationId: string | null;
   name: string;
   config: OidcConfig;
 }

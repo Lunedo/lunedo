@@ -1,6 +1,6 @@
 # Authentication
 
-Local accounts sign in with e-mail address and password, followed by a second factor if the account has one, or without a password with a passkey. Identity providers (OIDC, SAML, LDAP) follow in a later release.
+Local accounts sign in with e-mail address and password, followed by a second factor if the account has one, or without a password with a passkey. People can also sign in through identity providers; the sign-in page asks for the e-mail address first and chooses the provider by its domain.
 
 ## Accounts
 
@@ -38,7 +38,7 @@ Passwordless sign-in: `POST /api/v1/auth/sign-in/passkey-options`, then `POST /a
 
 Unknown addresses take the same time and get the same answer as wrong passwords. Sign-in is not possible before setup is complete.
 
-Sign-in through identity providers, linking of identities and the emergency sign-in of the instance owner are described in [identity-providers.md](identity-providers.md). When `auth.passwordSignIn` is off for an account, a correct password is answered with `403` and the code `passwordSignInDisabled`, except for the instance owner.
+Sign-in through identity providers, linking of identities and the emergency sign-in of the instance owner are described in [identity-providers.md](identity-providers.md). When the instance turns `auth.passwordSignIn` off, a correct password is answered with `403` and the code `passwordSignInDisabled`, except for the instance owner.
 
 ### Rate limits and lockouts
 

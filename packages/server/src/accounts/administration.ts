@@ -101,20 +101,6 @@ export class AccountAdministrationService {
         { executor: tx },
       );
       await this.#checkRank(tx, actor, target, IDENTITIES_ACTION);
-      if (provider.level === "organization" && target.home !== provider.organizationId) {
-        throw new OrganizationError(
-          "otherOrganization",
-          "This provider signs in only members of its organization",
-        );
-      }
-      if (
-        provider.level === "instance" &&
-        !(target.home
-          ? await this.#providers.enabledFor(provider.id, target.home)
-          : await this.#providers.enabledAnywhere(provider.id))
-      ) {
-        throw new OrganizationError("providerNotEnabled", "The provider is not turned on for the account");
-      }
       const [linked] = await tx
         .insert(identities)
         .values({ accountId: target.id, providerId: provider.id, subject })

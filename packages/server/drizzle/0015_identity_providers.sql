@@ -1,9 +1,8 @@
 CREATE TYPE "public"."identity_credential_kind" AS ENUM('clientSecret', 'certificate');--> statement-breakpoint
-CREATE TYPE "public"."identity_provider_level" AS ENUM('instance', 'organization');--> statement-breakpoint
 CREATE TYPE "public"."identity_provider_preset" AS ENUM('entraId', 'google', 'generic');--> statement-breakpoint
 CREATE TYPE "public"."identity_provider_type" AS ENUM('oidc');--> statement-breakpoint
 CREATE TYPE "public"."provider_flow_purpose" AS ENUM('signIn', 'reauthentication', 'test');--> statement-breakpoint
-CREATE TYPE "public"."sign_in_refusal_reason" AS ENUM('accountCreationDisabled', 'domainNotAllowed', 'emailNotVerified', 'groupRequired', 'otherOrganization', 'accountInactive', 'providerNotEnabled', 'linkDeclined', 'linkUnavailable', 'invalidResponse');--> statement-breakpoint
+CREATE TYPE "public"."sign_in_refusal_reason" AS ENUM('accountCreationDisabled', 'domainNotAllowed', 'emailNotVerified', 'groupRequired', 'accountInactive', 'linkDeclined', 'linkUnavailable', 'invalidResponse');--> statement-breakpoint
 ALTER TYPE "public"."challenge_purpose" ADD VALUE 'identityLink';--> statement-breakpoint
 ALTER TYPE "public"."sign_in_method" ADD VALUE 'identityProvider';--> statement-breakpoint
 CREATE TABLE "identities" (
@@ -33,6 +32,12 @@ CREATE TABLE "identity_provider_credentials" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "identity_provider_domains" (
+	"domain" text PRIMARY KEY NOT NULL,
+	"provider_id" uuid NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "identity_provider_logos" (
 	"provider_id" uuid PRIMARY KEY NOT NULL,
 	"content_type" text NOT NULL,
@@ -42,26 +47,14 @@ CREATE TABLE "identity_provider_logos" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "identity_provider_organizations" (
-	"provider_id" uuid NOT NULL,
-	"organization_id" uuid NOT NULL,
-	"enabled" boolean DEFAULT false NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "identity_provider_organizations_provider_id_organization_id_pk" PRIMARY KEY("provider_id","organization_id")
-);
---> statement-breakpoint
 CREATE TABLE "identity_providers" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"type" "identity_provider_type" NOT NULL,
 	"preset" "identity_provider_preset" NOT NULL,
-	"level" "identity_provider_level" NOT NULL,
-	"organization_id" uuid,
 	"name" text NOT NULL,
 	"config" jsonb NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "identity_providers_level_organization" CHECK (("identity_providers"."level" = 'organization') = ("identity_providers"."organization_id" is not null))
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "provider_flows" (
@@ -74,7 +67,6 @@ CREATE TABLE "provider_flows" (
 	"code_verifier" text NOT NULL,
 	"redirect_uri" text NOT NULL,
 	"consumed_at" timestamp with time zone,
-	"organization_id" uuid,
 	"session_id" uuid,
 	"return_to" text,
 	"result" jsonb,
@@ -93,7 +85,6 @@ CREATE TABLE "sign_in_refusals" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"reference" text NOT NULL,
 	"provider_id" uuid,
-	"organization_id" uuid,
 	"reason" "sign_in_refusal_reason" NOT NULL,
 	"subject" text,
 	"email" text,
@@ -108,22 +99,17 @@ ALTER TABLE "sessions" ADD COLUMN "provider_session_id" text;--> statement-break
 ALTER TABLE "identities" ADD CONSTRAINT "identities_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "identities" ADD CONSTRAINT "identities_provider_id_identity_providers_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."identity_providers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "identity_provider_credentials" ADD CONSTRAINT "identity_provider_credentials_provider_id_identity_providers_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."identity_providers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "identity_provider_domains" ADD CONSTRAINT "identity_provider_domains_provider_id_identity_providers_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."identity_providers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "identity_provider_logos" ADD CONSTRAINT "identity_provider_logos_provider_id_identity_providers_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."identity_providers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "identity_provider_organizations" ADD CONSTRAINT "identity_provider_organizations_provider_id_identity_providers_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."identity_providers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "identity_provider_organizations" ADD CONSTRAINT "identity_provider_organizations_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "identity_providers" ADD CONSTRAINT "identity_providers_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "provider_flows" ADD CONSTRAINT "provider_flows_provider_id_identity_providers_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."identity_providers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "provider_flows" ADD CONSTRAINT "provider_flows_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "provider_logout_tokens" ADD CONSTRAINT "provider_logout_tokens_provider_id_identity_providers_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."identity_providers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sign_in_refusals" ADD CONSTRAINT "sign_in_refusals_provider_id_identity_providers_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."identity_providers"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "sign_in_refusals" ADD CONSTRAINT "sign_in_refusals_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sign_in_refusals" ADD CONSTRAINT "sign_in_refusals_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "identities_provider_id_subject_index" ON "identities" USING btree ("provider_id","subject");--> statement-breakpoint
 CREATE INDEX "identities_account_id_index" ON "identities" USING btree ("account_id");--> statement-breakpoint
 CREATE INDEX "identity_provider_credentials_provider_id_index" ON "identity_provider_credentials" USING btree ("provider_id");--> statement-breakpoint
 CREATE INDEX "identity_provider_credentials_expires_at_index" ON "identity_provider_credentials" USING btree ("expires_at");--> statement-breakpoint
-CREATE INDEX "identity_provider_organizations_organization_id_index" ON "identity_provider_organizations" USING btree ("organization_id");--> statement-breakpoint
-CREATE INDEX "identity_providers_organization_id_index" ON "identity_providers" USING btree ("organization_id");--> statement-breakpoint
+CREATE INDEX "identity_provider_domains_provider_id_index" ON "identity_provider_domains" USING btree ("provider_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "provider_flows_state_hash_index" ON "provider_flows" USING btree ("state_hash");--> statement-breakpoint
 CREATE INDEX "provider_flows_expires_at_index" ON "provider_flows" USING btree ("expires_at");--> statement-breakpoint
 CREATE INDEX "provider_logout_tokens_expires_at_index" ON "provider_logout_tokens" USING btree ("expires_at");--> statement-breakpoint

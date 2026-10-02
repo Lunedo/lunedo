@@ -2,10 +2,27 @@
 
 People can sign in through OpenID Connect providers such as Microsoft Entra ID, Google Workspace, Keycloak or Authentik, in addition to passwords and passkeys. SAML and LDAP follow on the same framework.
 
-## Levels
+## Configured for the whole instance
 
-- **Instance providers** are set up by holders of the instance area "sign-in and security". The instance offers them to chosen organizations, and each organization turns them on or off for itself (`PUT /api/v1/organizations/{id}/sign-in-providers/{providerId}`).
-- **Organization providers** are set up by holders of the organization area "sign-in and security". They belong to that organization only and sign in only accounts whose home organization it is. They never create accounts of other organizations and never grant instance roles.
+Providers are set up for the instance by holders of the instance area "sign-in and security". Organizations do not choose or configure sign-in methods; which organizations a person belongs to follows from group mapping after sign-in.
+
+Each provider has a list of e-mail domains. A domain belongs to at most one provider; assigning a domain another provider already has is refused with `domainInUse`. The domains choose the provider on the sign-in page, decide which addresses count as verified, and limit accounts at first sign-in.
+
+## Sign-in page
+
+The page asks for the e-mail address first (`POST /api/v1/auth/sign-in/discover`). The domain chooses the next step:
+
+- `provider`: the domain belongs to a provider, and the person continues there.
+- `password`: password sign-in is allowed, and the person enters a password. The form then answers like any password sign-in.
+- `none`: no sign-in method is set up for this address.
+
+The answer depends only on the domain and the settings, never on whether an account with the address exists, so the page cannot be used to find out who has an account. The questions are limited per client; too many answer `429` with `rateLimited`.
+
+`GET /api/v1/auth/sign-in-options` tells the page what to show:
+
+- With exactly one provider and password sign-in off, the page shows that provider's button directly, without the e-mail step (`directProvider`).
+- Passkeys are always offered and work without an address.
+- After a sign-in through a provider, the browser keeps the provider in the cookie `__Host-pagehall-last-provider`, which holds only the provider's ID. The options name it as `lastProvider`, offered as a shortcut, as long as the provider exists.
 
 ## Framework
 
@@ -26,7 +43,7 @@ A provider has one or more credentials:
 
 Secrets and private keys are stored with envelope encryption (see [encryption.md](encryption.md)) and are never returned by the API. During a renewal, add the new credential first: Pagehall uses the newest one and falls back to older ones when the provider rejects it, until the old one is removed. The last credential cannot be removed.
 
-The owners of the level (the instance owner, or the owners of the organization) get the notification `identityProvider.credentialExpiring` 30 and 7 days before the last valid credential expires, and the provider list shows a warning.
+The instance owner and the holders of the instance area "sign-in and security" get the notification `identityProvider.credentialExpiring` 30 and 7 days before the last valid credential expires, and the provider list shows a warning.
 
 ## OpenID Connect
 
@@ -53,12 +70,12 @@ An account can have several linked identities. An identity is unique per provide
 When nobody is linked to the identity yet:
 
 1. If the verified e-mail address belongs to an existing account, the person links the identity by confirming with that account's password and, if it has one, its second factor (`/sign-in/link`). Pagehall never links automatically. "This is not my account" ends the sign-in with a reference. Accounts without a password are linked by an administrator.
-2. Otherwise, when the provider allows accounts at first sign-in and the address lies in a configured domain, Pagehall creates a standard account without a password. Optionally, the token must carry one of a list of groups. The home organization is the provider's organization for organization providers; for instance providers it is the organization that owns the e-mail domain, or the organization whose sign-in page started the sign-in, if the provider is turned on there.
+2. Otherwise, when the provider allows accounts at first sign-in and the address lies in a configured domain, Pagehall creates a standard account without a password. Optionally, the token must carry one of a list of groups. The home organization is the organization that owns the e-mail domain, if one does; group mapping can set it as well.
 3. Otherwise the sign-in is refused.
 
-Every refusal gets a reference such as `7KQ2-M9XA`. The refusal page shows it, and administrators look it up at `GET /api/v1/instance/sign-in-refusals/{reference}` or `GET /api/v1/organizations/{id}/sign-in-refusals/{reference}`. Refusals are kept for 90 days.
+Every refusal gets a reference such as `7KQ2-M9XA`. The refusal page shows it, and administrators look it up at `GET /api/v1/instance/sign-in-refusals/{reference}`. Refusals are kept for 90 days.
 
-Reasons: `accountCreationDisabled`, `domainNotAllowed`, `emailNotVerified`, `groupRequired`, `otherOrganization`, `accountInactive`, `providerNotEnabled`, `linkDeclined`, `linkUnavailable`, `invalidResponse`.
+Reasons: `accountCreationDisabled`, `domainNotAllowed`, `emailNotVerified`, `groupRequired`, `accountInactive`, `linkDeclined`, `linkUnavailable`, `invalidResponse`.
 
 ## Sessions and sign-out
 
@@ -70,10 +87,10 @@ Administrators link and unlink identities in the account panel. Unlinking ends t
 
 ## Password sign-in and emergency sign-in
 
-`auth.passwordSignIn` (instance and organization, lockable, may only be turned off at lower levels) decides whether members sign in with a password. When it is off, they sign in through a provider or a passkey.
+`auth.passwordSignIn` is an instance setting and decides whether people sign in with a password. When it is off, they sign in through a provider or a passkey. Requiring a second factor stays a setting that organizations can make stricter for their members.
 
 The instance owner can always sign in with password and second factor. When password sign-in is off for the owner, this counts as emergency sign-in: it is audited as `auth.emergencySignIn` and all instance administrators get the notification `auth.emergencySignIn` at once.
 
 ## Audit events
 
-`identityProvider.created`, `.updated`, `.removed`, `.availabilityChanged`, `.enabledChanged`, `.credentialAdded`, `.credentialRemoved`, `.logoChanged`; `auth.signedIn` with `providerId`, `auth.signInRefused` with reason and reference, `auth.providerSignedOut`, `auth.emergencySignIn`; `identity.linked`, `identity.unlinked`; `account.createdAtSignIn`.
+`identityProvider.created`, `.updated`, `.removed`, `.credentialAdded`, `.credentialRemoved`, `.logoChanged`; `auth.signedIn` with `providerId`, `auth.signInRefused` with reason and reference, `auth.providerSignedOut`, `auth.emergencySignIn`; `identity.linked`, `identity.unlinked`; `account.createdAtSignIn`.

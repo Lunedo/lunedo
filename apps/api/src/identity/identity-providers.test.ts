@@ -49,12 +49,6 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
       `${TEST_ORIGIN}/api/v1/auth/providers/${providerId}/callback`,
     );
     expect(created.body).not.toContain(idp.clientSecret);
-    await owner.put(`/api/v1/instance/identity-providers/${providerId}/availability`, {
-      organizationIds: [organizationId],
-    });
-    await owner.put(`/api/v1/organizations/${organizationId}/sign-in-providers/${providerId}`, {
-      enabled: true,
-    });
   });
 
   afterAll(async () => {
@@ -63,19 +57,42 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
   });
 
   async function signInThroughProvider(client: TestClient, claims: Record<string, unknown>) {
-    const started = await client.post(`/api/v1/auth/providers/${providerId}/start`, { organizationId });
+    const started = await client.post(`/api/v1/auth/providers/${providerId}/start`, {});
     expect(started.statusCode).toBe(200);
     const callback = await idp.authorize(started.json().url, claims);
     return client.get(`${callback.pathname}${callback.search}`);
   }
 
-  it("offers the provider on the sign-in page and keeps its management to permitted people", async () => {
+  it("chooses the provider by e-mail domain and keeps its management to permitted people", async () => {
     const options = await new TestClient(test.app).get("/api/v1/auth/sign-in-options");
-    expect(options.json()).toMatchObject({
-      organization: { id: organizationId },
-      providers: [{ id: providerId, name: "Company login", enabled: true }],
+    expect(options.json()).toEqual({
+      emailStep: true,
+      directProvider: null,
+      lastProvider: null,
       passwordSignIn: true,
+      passkeys: true,
     });
+    const visitor = new TestClient(test.app, { remoteAddress: "198.51.100.40" });
+    expect(
+      (await visitor.post("/api/v1/auth/sign-in/discover", { email: "Anyone@PAGEHALL.test" })).json(),
+    ).toEqual({
+      step: "provider",
+      providerId,
+      name: "Company login",
+      preset: "generic",
+    });
+    expect(
+      (await visitor.post("/api/v1/auth/sign-in/discover", { email: "someone@other.test" })).json(),
+    ).toEqual({
+      step: "password",
+    });
+    const taken = await owner.post("/api/v1/instance/identity-providers", {
+      name: "Second login",
+      config: { preset: "generic", issuer: idp.issuer, clientId: "second", domains: ["pagehall.test"] },
+      credential: { kind: "clientSecret", secret: "second-secret", expiresAt: null },
+    });
+    expect(taken.statusCode).toBe(409);
+    expect(taken.json()).toMatchObject({ code: "domainInUse" });
     const member = await createAccount(test, "plain.member@pagehall.test");
     const client = await signedInClient(test, member.email, member.password);
     expect((await client.get("/api/v1/instance/identity-providers")).statusCode).toBe(403);
@@ -98,9 +115,15 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
       sessionKind: "full",
       account: { email: "new.person@pagehall.test" },
     });
+    expect(String(response.headers["set-cookie"])).toContain(
+      `__Host-pagehall-last-provider=${providerId}; Path=/; Max-Age=15552000; HttpOnly; Secure; SameSite=Lax`,
+    );
+    expect((await browser.get("/api/v1/auth/sign-in-options")).json()).toMatchObject({
+      lastProvider: { id: providerId, name: "Company login" },
+    });
 
     const withoutFlow = new TestClient(test.app);
-    const started = await browser.post(`/api/v1/auth/providers/${providerId}/start`, { organizationId });
+    const started = await browser.post(`/api/v1/auth/providers/${providerId}/start`, {});
     const callback = await idp.authorize(started.json().url, {
       sub: "new-person",
       email: "new.person@pagehall.test",
@@ -156,11 +179,37 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     expect(identities.json()).toHaveLength(1);
   });
 
-  it("turns password sign-in off for an organization, except for the instance owner", async () => {
+  it("answers the same for known and unknown addresses and limits the questions per client", async () => {
+    const known = await createAccount(test, "known.person@other.test");
+    const client = new TestClient(test.app, { remoteAddress: "198.51.100.41" });
+    for (const domain of ["other.test", "pagehall.test"]) {
+      const withAccount = await client.post("/api/v1/auth/sign-in/discover", {
+        email: `known.person@${domain}`,
+      });
+      const without = await client.post("/api/v1/auth/sign-in/discover", { email: `nobody.here@${domain}` });
+      expect(withAccount.statusCode).toBe(without.statusCode);
+      expect(withAccount.body).toBe(without.body);
+    }
+    expect(known.email).toBe("known.person@other.test");
+    const limited = new TestClient(test.app, { remoteAddress: "198.51.100.42" });
+    for (let attempt = 0; attempt < 30; attempt++) {
+      expect(
+        (await limited.post("/api/v1/auth/sign-in/discover", { email: "a@other.test" })).statusCode,
+      ).toBe(200);
+    }
+    const refused = await limited.post("/api/v1/auth/sign-in/discover", { email: "a@other.test" });
+    expect(refused.statusCode).toBe(429);
+    expect(refused.json()).toMatchObject({ code: "rateLimited" });
+  });
+
+  it("turns password sign-in off for the instance, except for the instance owner", async () => {
     const member = await createAccount(test, "password.member@pagehall.test");
-    const changed = await owner.put(`/api/v1/organizations/${organizationId}/settings/auth.passwordSignIn`, {
-      value: false,
-    });
+    const organizationLevel = await owner.put(
+      `/api/v1/organizations/${organizationId}/settings/auth.passwordSignIn`,
+      { value: false },
+    );
+    expect(organizationLevel.statusCode).toBeGreaterThanOrEqual(400);
+    const changed = await owner.put("/api/v1/instance/settings/auth.passwordSignIn", { value: false });
     expect(changed.statusCode).toBeLessThan(300);
     try {
       const refused = await new TestClient(test.app).post("/api/v1/auth/sign-in", {
@@ -170,13 +219,22 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
       expect(refused.statusCode).toBe(403);
       expect(refused.json()).toMatchObject({ code: "passwordSignInDisabled" });
       const options = await new TestClient(test.app).get("/api/v1/auth/sign-in-options");
-      expect(options.json()).toMatchObject({ passwordSignIn: false });
+      expect(options.json()).toMatchObject({
+        emailStep: false,
+        directProvider: { id: providerId, name: "Company login" },
+        passwordSignIn: false,
+        passkeys: true,
+      });
+      const visitor = new TestClient(test.app, { remoteAddress: "198.51.100.43" });
+      expect(
+        (await visitor.post("/api/v1/auth/sign-in/discover", { email: "someone@other.test" })).json(),
+      ).toEqual({
+        step: "none",
+      });
       const emergency = await new TestClient(test.app).post("/api/v1/auth/sign-in", OWNER);
       expect(emergency.json()).toMatchObject({ status: "secondFactorRequired" });
     } finally {
-      await owner.put(`/api/v1/organizations/${organizationId}/settings/auth.passwordSignIn`, {
-        clear: true,
-      });
+      await owner.put("/api/v1/instance/settings/auth.passwordSignIn", { clear: true });
     }
   });
 });

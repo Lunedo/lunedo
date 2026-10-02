@@ -43,6 +43,7 @@ const KNOWN = new Set([
   "emailInUse",
   "slugTaken",
   "domainTaken",
+  "domainInUse",
   "roleNameTaken",
   "groupNameTaken",
   "alreadyMember",

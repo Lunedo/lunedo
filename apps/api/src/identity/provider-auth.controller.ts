@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Inject, Param, Post, Query, Req, Res } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Inject, Param, Post, Req, Res } from "@nestjs/common";
 import {
   AuthError,
   type AuthenticationResponseJSON,
@@ -6,6 +6,7 @@ import {
   generateToken,
   OrganizationError,
 } from "@pagehall/server";
+import { idSchema } from "@pagehall/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission, PublicRoute, SessionRoute } from "../access/route-access.js";
@@ -17,6 +18,7 @@ import {
   COOKIES,
   clearCookie,
   ensureDeviceCookie,
+  LAST_PROVIDER_MAX_AGE_SECONDS,
   PROVIDER_FLOW_MAX_AGE_SECONDS,
   readCookie,
   setCookie,
@@ -25,6 +27,7 @@ import { ProblemException } from "../http/problems.js";
 import { actorOf, clientOf, sessionOf } from "../http/request.js";
 import { baseUrlOf } from "./identity-providers.controller.js";
 import {
+  discoverSchema,
   identityParams,
   identitySchema,
   linkConfirmationSchema,
@@ -34,8 +37,8 @@ import {
   providerIdParams,
   reauthenticateSchema,
   referenceSchema,
-  signInOptionsQuery,
   signInOptionsSchema,
+  signInStepSchema,
   startedSchema,
   startSchema,
 } from "./schemas.js";
@@ -75,13 +78,29 @@ export class ProviderAuthController {
   @ApiRoute({
     summary: "Ways to sign in",
     description:
-      "Providers the organization turned on and whether password sign-in is offered. Without `organization`, an instance with one organization answers for it.",
+      "Whether the page asks for the e-mail address first, the provider to show directly when it is the only way in, the provider this browser used last, and whether password sign-in is offered. Passkeys are always offered.",
     tags: [TAG],
-    query: signInOptionsQuery,
     response: { description: "Ways to sign in.", schema: signInOptionsSchema },
   })
-  async signInOptions(@Query() query: z.output<typeof signInOptionsQuery>) {
-    return this.#services.providerSignIn.signInOptions(query.organization ?? null);
+  async signInOptions(@Req() request: FastifyRequest) {
+    const last = idSchema.safeParse(readCookie(request, COOKIES.lastProvider) ?? "");
+    return this.#services.providerSignIn.signInOptions(last.success ? last.data : null);
+  }
+
+  @Post("auth/sign-in/discover")
+  @PublicRoute()
+  @ApiRoute({
+    summary: "Choose the sign-in method for an e-mail address",
+    description:
+      "The domain of the address chooses the provider. Other addresses continue to password sign-in when it is allowed. The answer is the same whether an account with the address exists or not.",
+    tags: [TAG],
+    status: 200,
+    body: discoverSchema,
+    response: { description: "The next step.", schema: signInStepSchema },
+    errors: ["rateLimited"],
+  })
+  async discover(@Body() body: z.output<typeof discoverSchema>, @Req() request: FastifyRequest) {
+    return this.#services.providerSignIn.discover(body.email, request.ip);
   }
 
   @Post("auth/providers/:providerId/start")
@@ -104,7 +123,6 @@ export class ProviderAuthController {
       providerId,
       purpose: "signIn",
       baseUrl: await baseUrlOf(this.context, request),
-      organizationId: body.organizationId ?? null,
       returnTo: body.returnTo ?? null,
     });
     setCookie(reply, COOKIES.providerFlow, started.browserToken, PROVIDER_FLOW_MAX_AGE_SECONDS);
@@ -149,6 +167,7 @@ export class ProviderAuthController {
     switch (result.kind) {
       case "signedIn":
         await setSessionCookie(this.context, reply, result.signedIn.token);
+        setCookie(reply, COOKIES.lastProvider, providerId, LAST_PROVIDER_MAX_AGE_SECONDS);
         location = result.returnTo ?? "/";
         break;
       case "reauthenticated":
@@ -335,7 +354,7 @@ export class ProviderAuthController {
     params: accountIdParams,
     body: linkIdentitySchema,
     response: { description: "The linked identity.", schema: identitySchema },
-    errors: ["identityInUse", "providerNotEnabled", "otherOrganization", "reauthenticationRequired"],
+    errors: ["identityInUse", "reauthenticationRequired"],
   })
   async linkIdentity(
     @Param("accountId") accountId: string,

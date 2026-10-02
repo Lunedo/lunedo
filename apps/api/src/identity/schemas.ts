@@ -12,13 +12,6 @@ import { inputTimestamp, timestamp, uuid } from "../http/schemas.js";
 
 export const providerIdParams = z.object({ providerId: uuid("ID of the identity provider.") }).strict();
 
-export const organizationProviderParams = z
-  .object({
-    organizationId: uuid("ID of the organization."),
-    providerId: uuid("ID of the identity provider."),
-  })
-  .strict();
-
 export const credentialParams = z
   .object({
     providerId: uuid("ID of the identity provider."),
@@ -26,20 +19,12 @@ export const credentialParams = z
   })
   .strict();
 
-export const organizationCredentialParams = organizationProviderParams.extend({
-  credentialId: uuid("ID of the credential."),
-});
-
 export const testResultParams = z
   .object({
     providerId: uuid("ID of the identity provider."),
     flowId: uuid("ID of the test sign-in."),
   })
   .strict();
-
-export const organizationTestResultParams = organizationProviderParams.extend({
-  flowId: uuid("ID of the test sign-in."),
-});
 
 const returnTo = z
   .string()
@@ -89,28 +74,10 @@ export const updateProviderSchema = z
   .strict()
   .describe("Changes to the provider.");
 
-export const availabilitySchema = z
-  .object({
-    organizationIds: z
-      .array(uuid("ID of an organization."))
-      .max(1000)
-      .describe("Organizations that may turn the provider on. Others lose it."),
-  })
-  .strict()
-  .describe("Organizations the provider is offered to.");
-
-export const enabledSchema = z
-  .object({ enabled: z.boolean().describe("Whether members of the organization can sign in through it.") })
-  .strict()
-  .describe("Turns the provider on or off for the organization.");
-
 export const startSchema = z
-  .object({
-    organizationId: uuid("Organization whose sign-in page started the sign-in.").nullable().optional(),
-    returnTo: returnTo.nullable().optional(),
-  })
+  .object({ returnTo: returnTo.nullable().optional() })
   .strict()
-  .describe("Where the sign-in started and where it returns.");
+  .describe("Where the sign-in returns.");
 
 export const testStartSchema = z
   .object({ returnTo: returnTo.nullable().optional() })
@@ -147,8 +114,6 @@ export const providerSchema = z
   .object({
     id: uuid("ID of the provider."),
     type: z.literal("oidc").describe("Protocol of the provider."),
-    level: z.enum(["instance", "organization"]).describe("Who set the provider up."),
-    organizationId: uuid("Organization that owns the provider.").nullable(),
     name: z.string().describe("Name shown on the sign-in page."),
     config: oidcConfigSchema.describe("Configuration of the provider."),
     issuer: z.string().describe("Issuer URL the provider is discovered at."),
@@ -158,9 +123,6 @@ export const providerSchema = z
     warnings: z
       .array(z.enum(["noCredential", "credentialExpiring", "credentialExpired"]))
       .describe("Problems that need attention."),
-    organizationIds: z
-      .array(uuid("ID of an organization."))
-      .describe("Organizations the provider is offered to, for instance providers."),
     createdAt: timestamp("When the provider was set up."),
     updatedAt: timestamp("When the provider was last changed."),
   })
@@ -170,38 +132,56 @@ export const createdProviderSchema = z
   .object({ provider: providerSchema, credential: addedCredentialSchema })
   .describe("The new provider with its first credential.");
 
-export const organizationProviderSchema = z
+export const signInProviderSchema = z
   .object({
     id: uuid("ID of the provider."),
     name: z.string().describe("Name shown on the sign-in page."),
     preset: z.enum(identityProviderPresets).describe("Kind of provider."),
-    level: z
-      .enum(["instance", "organization"])
-      .describe("Offered by the instance or owned by the organization."),
     logoRef: z.string().nullable().describe("Reference to the uploaded logo, or null."),
-    enabled: z.boolean().describe("Whether members can sign in through it."),
   })
-  .describe("A provider available to the organization.");
-
-export const signInOptionsQuery = z
-  .object({ organization: z.string().max(63).optional().describe("Short name of the organization.") })
-  .strict();
+  .describe("A provider people sign in through.");
 
 export const signInOptionsSchema = z
   .object({
-    organization: z
-      .object({
-        id: uuid("ID of the organization."),
-        name: z.string().describe("Name of the organization."),
-        slug: z.string().describe("Short name of the organization."),
-        logoRef: z.string().nullable().describe("Reference to the logo, or null."),
-      })
+    emailStep: z
+      .boolean()
+      .describe(
+        "Whether the page asks for the e-mail address first. False only when `directProvider` is set.",
+      ),
+    directProvider: signInProviderSchema
       .nullable()
-      .describe("The organization the sign-in page belongs to, or null when it is not known."),
-    providers: z.array(organizationProviderSchema).describe("Providers that can be used."),
+      .describe("The only provider, shown as a button right away, when password sign-in is off."),
+    lastProvider: signInProviderSchema
+      .nullable()
+      .describe("The provider this browser signed in with last, offered as a shortcut, or null."),
     passwordSignIn: z.boolean().describe("Whether sign-in with a password is offered."),
+    passkeys: z.literal(true).describe("Passkeys are always offered and need no e-mail address."),
   })
   .describe("Ways to sign in.");
+
+export const discoverSchema = z
+  .object({ email: z.string().trim().min(1).max(320).describe("E-mail address the person entered.") })
+  .strict()
+  .describe("The e-mail address to choose the sign-in method for.");
+
+export const signInStepSchema = z
+  .discriminatedUnion("step", [
+    z
+      .object({
+        step: z.literal("provider").describe("Continue with the provider of the e-mail domain."),
+        providerId: uuid("ID of the provider."),
+        name: z.string().describe("Name of the provider."),
+        preset: z.enum(identityProviderPresets).describe("Kind of provider."),
+      })
+      .describe("The domain belongs to a provider."),
+    z
+      .object({ step: z.literal("password").describe("Continue with the password form.") })
+      .describe("Password sign-in is offered for this address."),
+    z
+      .object({ step: z.literal("none").describe("No sign-in method is set up for this address.") })
+      .describe("No sign-in method is set up for this address."),
+  ])
+  .describe("The next step. The answer does not depend on whether an account with the address exists.");
 
 export const linkInfoSchema = z
   .object({
@@ -230,16 +210,11 @@ export const referenceParams = z
   .object({ reference: signInRefusalReferenceSchema.describe("Reference shown on the refusal page.") })
   .strict();
 
-export const organizationReferenceParams = referenceParams.extend({
-  organizationId: uuid("ID of the organization."),
-});
-
 export const refusalSchema = z
   .object({
     reference: z.string().describe("The reference."),
     reason: z.enum(signInRefusalReasons).describe("Why the sign-in was refused."),
     providerId: uuid("Provider of the sign-in.").nullable(),
-    organizationId: uuid("Organization the sign-in started in.").nullable(),
     subject: z.string().nullable().describe("Identifier the provider reported."),
     email: z.string().nullable().describe("E-mail address the provider reported."),
     displayName: z.string().nullable().describe("Name the provider reported."),

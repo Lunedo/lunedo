@@ -20,8 +20,12 @@ const GENERIC = {
   preset: "generic",
   issuer: "https://idp.example.org",
   clientId: "pagehall",
-  domains: ["example.org"],
+  domains: [] as string[],
 };
+
+function uniqueDomain(): string {
+  return `${randomUUID().slice(0, 8)}.example.net`;
+}
 
 describe.skipIf(!baseUrl)("IdentityProviderService", () => {
   let test: TestServices;
@@ -60,16 +64,12 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     return { id: created.id, owner: owner.id };
   }
 
-  async function instanceProvider(secretExpiresAt: Date | null = null) {
-    const { provider } = await test.services.identityProviders.create(
-      SYSTEM,
-      { level: "instance" },
-      {
-        name: `Provider ${randomUUID().slice(0, 6)}`,
-        config: GENERIC,
-        credential: { kind: "clientSecret", secret: "s3cret-value", expiresAt: secretExpiresAt },
-      },
-    );
+  async function instanceProvider(secretExpiresAt: Date | null = null, domains: string[] = []) {
+    const { provider } = await test.services.identityProviders.create(SYSTEM, {
+      name: `Provider ${randomUUID().slice(0, 6)}`,
+      config: { ...GENERIC, domains },
+      credential: { kind: "clientSecret", secret: "s3cret-value", expiresAt: secretExpiresAt },
+    });
     return provider;
   }
 
@@ -88,36 +88,24 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
 
   it("generates a certificate whose private key stays inside and keeps old credentials until removed", async () => {
     const provider = await instanceProvider();
-    const added = await test.services.identityProviders.addCredential(
-      SYSTEM,
-      { level: "instance" },
-      provider.id,
-      {
-        kind: "certificate",
-        validDays: 365,
-      },
-    );
+    const added = await test.services.identityProviders.addCredential(SYSTEM, provider.id, {
+      kind: "certificate",
+      validDays: 365,
+    });
     const certificate = new x509.X509Certificate(added.certificate ?? "");
     expect(certificate.subject).toContain("Pagehall");
     expect(added.keyId).toMatch(/^[\w-]{27}$/);
-    expect(
-      await test.services.identityProviders.certificate({ level: "instance" }, provider.id, added.id),
-    ).toBe(added.certificate);
-    const summary = await test.services.identityProviders.get({ level: "instance" }, provider.id);
+    expect(await test.services.identityProviders.certificate(provider.id, added.id)).toBe(added.certificate);
+    const summary = await test.services.identityProviders.get(provider.id);
     expect(summary.credentials.map((credential) => credential.kind)).toEqual(["certificate", "clientSecret"]);
     expect(JSON.stringify(summary)).not.toContain("PRIVATE KEY");
     const loaded = await test.services.identityProviders.definition(provider.id);
     expect(loaded?.credentials.map((credential) => credential.kind)).toEqual(["certificate", "clientSecret"]);
 
     const secret = summary.credentials.find((credential) => credential.kind === "clientSecret");
-    await test.services.identityProviders.removeCredential(
-      SYSTEM,
-      { level: "instance" },
-      provider.id,
-      secret?.id ?? "",
-    );
+    await test.services.identityProviders.removeCredential(SYSTEM, provider.id, secret?.id ?? "");
     await expect(
-      test.services.identityProviders.removeCredential(SYSTEM, { level: "instance" }, provider.id, added.id),
+      test.services.identityProviders.removeCredential(SYSTEM, provider.id, added.id),
     ).rejects.toMatchObject({ code: "lastCredential" });
   });
 
@@ -155,34 +143,43 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     }
   });
 
-  it("keeps instance and organization providers apart and lets organizations turn on what they were offered", async () => {
-    const first = await organization();
-    const second = await organization();
-    const provider = await instanceProvider();
-    const { provider: own } = await test.services.identityProviders.create(
-      SYSTEM,
-      { level: "organization", organizationId: first.id },
-      { name: "Own", config: GENERIC, credential: { kind: "clientSecret", secret: "x", expiresAt: null } },
-    );
-    await expect(test.services.identityProviders.get({ level: "instance" }, own.id)).rejects.toMatchObject({
-      code: "notFound",
+  it("assigns each e-mail domain to at most one provider, regardless of case", async () => {
+    const domain = uniqueDomain();
+    const first = await instanceProvider(null, [domain]);
+    await expect(instanceProvider(null, [domain.toUpperCase()])).rejects.toMatchObject({
+      code: "domainInUse",
     });
+    const second = await instanceProvider(null, [uniqueDomain()]);
     await expect(
-      test.services.identityProviders.get({ level: "organization", organizationId: second.id }, own.id),
-    ).rejects.toMatchObject({ code: "notFound" });
-    await expect(
-      test.services.identityProviders.setEnabled(SYSTEM, first.id, provider.id, true),
-    ).rejects.toMatchObject({ code: "notFound" });
-    await test.services.identityProviders.setAvailability(SYSTEM, provider.id, [first.id, second.id]);
-    expect(await test.services.identityProviders.organizationProviders(first.id)).toEqual([
-      expect.objectContaining({ id: provider.id, level: "instance", enabled: false }),
-      expect.objectContaining({ id: own.id, level: "organization", enabled: true }),
+      test.services.identityProviders.update(SYSTEM, second.id, {
+        config: { ...GENERIC, domains: [` ${domain.toUpperCase()} `] },
+      }),
+    ).rejects.toMatchObject({ code: "domainInUse" });
+    expect(await test.services.identityProviders.providerForDomain(domain.toUpperCase())).toMatchObject({
+      id: first.id,
+    });
+
+    await test.services.identityProviders.update(SYSTEM, first.id, {
+      config: { ...GENERIC, domains: [uniqueDomain()] },
+    });
+    await test.services.identityProviders.update(SYSTEM, second.id, {
+      config: { ...GENERIC, domains: [domain] },
+    });
+    expect(await test.services.identityProviders.providerForDomain(domain)).toMatchObject({ id: second.id });
+    await test.services.identityProviders.remove(SYSTEM, second.id);
+    expect(await test.services.identityProviders.providerForDomain(domain)).toBeNull();
+  });
+
+  it("does not let two providers claim the same domain at the same time", async () => {
+    const domain = uniqueDomain();
+    const results = await Promise.allSettled([
+      instanceProvider(null, [domain]),
+      instanceProvider(null, [domain]),
     ]);
-    await test.services.identityProviders.setEnabled(SYSTEM, first.id, provider.id, true);
-    expect(await test.services.identityProviders.enabledFor(provider.id, first.id)).toBe(true);
-    expect(await test.services.identityProviders.enabledFor(provider.id, second.id)).toBe(false);
-    await test.services.identityProviders.setAvailability(SYSTEM, provider.id, [second.id]);
-    expect(await test.services.identityProviders.enabledFor(provider.id, first.id)).toBe(false);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.find((result) => result.status === "rejected")).toMatchObject({
+      reason: expect.objectContaining({ code: "domainInUse" }),
+    });
   });
 
   it("refuses multi-tenant Entra ID endpoints, providers without HTTPS and foreign issuers for the presets", async () => {
@@ -196,73 +193,53 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     const credential = { kind: "clientSecret" as const, secret: "x", expiresAt: null };
     for (const tenantId of ["common", "organizations", "consumers"]) {
       await expect(
-        strict.create(
-          SYSTEM,
-          { level: "instance" },
-          {
-            name: "Entra",
-            config: { preset: "entraId", tenantId, clientId: "c" },
-            credential,
-          },
-        ),
+        strict.create(SYSTEM, {
+          name: "Entra",
+          config: { preset: "entraId", tenantId, clientId: "c" },
+          credential,
+        }),
       ).rejects.toMatchObject({ code: "invalidProviderConfiguration" });
     }
     await expect(
-      strict.create(
-        SYSTEM,
-        { level: "instance" },
-        {
-          name: "Plain",
-          config: { ...GENERIC, issuer: "http://idp.example.org" },
-          credential,
-        },
-      ),
-    ).rejects.toMatchObject({ code: "invalidProviderConfiguration" });
-    await expect(
-      strict.create(
-        SYSTEM,
-        { level: "instance" },
-        {
-          name: "Entra",
-          config: {
-            preset: "entraId",
-            tenantId: randomUUID(),
-            clientId: "c",
-            authority: "https://login.attacker.example",
-          },
-          credential,
-        },
-      ),
-    ).rejects.toMatchObject({ code: "invalidProviderConfiguration" });
-    await expect(
-      strict.create(
-        SYSTEM,
-        { level: "instance" },
-        {
-          name: "Google",
-          config: {
-            preset: "google",
-            clientId: "c",
-            domains: ["example.org"],
-            issuer: "https://accounts.attacker.example",
-          },
-          credential,
-        },
-      ),
-    ).rejects.toMatchObject({ code: "invalidProviderConfiguration" });
-    const google = await strict.create(
-      SYSTEM,
-      { level: "instance" },
-      {
-        name: "Google",
-        config: { preset: "google", clientId: "c", domains: ["example.org"] },
+      strict.create(SYSTEM, {
+        name: "Plain",
+        config: { ...GENERIC, issuer: "http://idp.example.org" },
         credential,
-      },
-    );
+      }),
+    ).rejects.toMatchObject({ code: "invalidProviderConfiguration" });
+    await expect(
+      strict.create(SYSTEM, {
+        name: "Entra",
+        config: {
+          preset: "entraId",
+          tenantId: randomUUID(),
+          clientId: "c",
+          authority: "https://login.attacker.example",
+        },
+        credential,
+      }),
+    ).rejects.toMatchObject({ code: "invalidProviderConfiguration" });
+    await expect(
+      strict.create(SYSTEM, {
+        name: "Google",
+        config: {
+          preset: "google",
+          clientId: "c",
+          domains: [uniqueDomain()],
+          issuer: "https://accounts.attacker.example",
+        },
+        credential,
+      }),
+    ).rejects.toMatchObject({ code: "invalidProviderConfiguration" });
+    const google = await strict.create(SYSTEM, {
+      name: "Google",
+      config: { preset: "google", clientId: "c", domains: [uniqueDomain()] },
+      credential,
+    });
     expect(google.provider.issuer).toBe("https://accounts.google.com");
   });
 
-  it("turns password sign-in off per organization, but always lets the instance owner in and tells the administrators", async () => {
+  it("turns password sign-in off for the instance, but always lets the instance owner in and tells the administrators", async () => {
     const org = await organization();
     const member = await account(org.id);
     await test.database.transaction((tx) =>
@@ -270,7 +247,7 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
         .add(tx, SYSTEM, { organizationId: org.id, accountId: member.id, kind: "member" })
         .catch(() => undefined),
     );
-    await test.settings.set(passwordSignInSetting, { organization: org.id }, "organization", false);
+    await test.settings.set(passwordSignInSetting, {}, "instance", false);
     await expect(
       test.services.signIn.signInWithPassword({ email: member.email ?? "", password: PASSWORD, client: {} }),
     ).rejects.toThrow(PasswordSignInDisabledError);
@@ -314,13 +291,13 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
       );
     } finally {
       await test.pool.query("update instance set owner_account_id = null");
+      await test.settings.set(passwordSignInSetting, {}, "instance", true);
     }
   });
 
   it("lets administrators link and unlink identities but never the last way to sign in", async () => {
     const org = await organization();
     const provider = await instanceProvider();
-    await test.services.identityProviders.setAvailability(SYSTEM, provider.id, [org.id]);
     const target = await account(org.id);
     const admin = await account(org.id);
     await test.services.roles.assign(SYSTEM, {
@@ -329,13 +306,6 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
       role: { builtIn: "administrator" },
       principal: { kind: "account", id: admin.id },
     });
-    await expect(
-      test.services.administration.linkIdentity(accountPrincipal(admin.id), target.id, {
-        providerId: provider.id,
-        subject: "abc",
-      }),
-    ).rejects.toMatchObject({ code: "providerNotEnabled" });
-    await test.services.identityProviders.setEnabled(SYSTEM, org.id, provider.id, true);
     const outsider = await account(null);
     await expect(
       test.services.administration.linkIdentity(accountPrincipal(outsider.id), target.id, {

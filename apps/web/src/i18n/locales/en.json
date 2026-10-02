@@ -217,6 +217,7 @@
     "emailInUse": "This e-mail address is already used by another account. Use a different one.",
     "slugTaken": "Another organization uses this short name. Choose a different one.",
     "domainTaken": "The domain belongs to another organization. Ask an administrator of the instance if this is wrong.",
+    "domainInUse": "Another identity provider already uses one of these e-mail domains. Remove it there first, or use a different domain.",
     "roleNameTaken": "A role with this name already exists. Choose a different name.",
     "groupNameTaken": "A group with this name already exists. Choose a different name.",
     "alreadyMember": "This person is already a member. No invitation is needed.",
@@ -1414,8 +1415,6 @@
         "created": "Identity provider set up",
         "updated": "Identity provider changed",
         "removed": "Identity provider removed",
-        "availabilityChanged": "Identity provider offered to organizations",
-        "enabledChanged": "Identity provider turned on or off",
         "credentialAdded": "Provider credential added",
         "credentialRemoved": "Provider credential removed",
         "logoChanged": "Provider logo changed"

@@ -219,8 +219,8 @@ export class SignInService {
     return new Date(result.rows[0]?.now ?? Date.now());
   }
 
-  async passwordSignInAllowed(accountId: string, executor: Executor = this.#database): Promise<boolean> {
-    return this.#settings.get(passwordSignInSetting, await accountScopeChain(executor, accountId));
+  async passwordSignInAllowed(executor: Executor = this.#database): Promise<boolean> {
+    return this.#settings.get(passwordSignInSetting, {}, { executor });
   }
 
   async #emergencySignIn(
@@ -319,7 +319,7 @@ export class SignInService {
       provider === null &&
       methods.includes("password") &&
       (await this.#accounts.ownerId(tx)) === account.id &&
-      !(await this.passwordSignInAllowed(account.id, tx))
+      !(await this.passwordSignInAllowed(tx))
     ) {
       await this.#emergencySignIn(tx, account, session.id, client, mailIds);
     }
@@ -395,7 +395,7 @@ export class SignInService {
       await this.#recordFailure(subjects, account?.id ?? null, "password", "invalidCredentials");
       throw new InvalidCredentialsError();
     }
-    if (!(await this.passwordSignInAllowed(account.id)) && (await this.#accounts.ownerId()) !== account.id) {
+    if (!(await this.passwordSignInAllowed()) && (await this.#accounts.ownerId()) !== account.id) {
       throw new PasswordSignInDisabledError();
     }
 

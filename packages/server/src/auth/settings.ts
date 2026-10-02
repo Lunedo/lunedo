@@ -119,9 +119,8 @@ export const passwordSignInSetting = defineSetting({
   key: "auth.passwordSignIn",
   schema: z.boolean(),
   default: true,
-  levels: ["instance", "organization"],
-  lockable: true,
-  stricterOnly: "lower",
+  levels: ["instance"],
+  lockable: false,
 });
 
 export const authSettings = [

@@ -1,7 +1,5 @@
-import { sql } from "drizzle-orm";
 import {
   boolean,
-  check,
   index,
   jsonb,
   pgEnum,
@@ -15,41 +13,38 @@ import {
 import { accounts } from "../accounts/schema.js";
 import { encrypted } from "../crypto/encrypted-column.js";
 import { bytes, primaryId, timestamps } from "../database/columns.js";
-import { organizations } from "../organizations/schema.js";
 
 const timestampColumn = () => timestamp({ withTimezone: true, mode: "date" });
 
 export const identityProviderTypes = ["oidc"] as const;
-export const identityProviderLevels = ["instance", "organization"] as const;
 export const identityProviderPresets = ["entraId", "google", "generic"] as const;
 export const identityCredentialKinds = ["clientSecret", "certificate"] as const;
 export const providerFlowPurposes = ["signIn", "reauthentication", "test"] as const;
 
 export const identityProviderType = pgEnum("identity_provider_type", identityProviderTypes);
-export const identityProviderLevel = pgEnum("identity_provider_level", identityProviderLevels);
 export const identityProviderPreset = pgEnum("identity_provider_preset", identityProviderPresets);
 export const identityCredentialKind = pgEnum("identity_credential_kind", identityCredentialKinds);
 export const providerFlowPurpose = pgEnum("provider_flow_purpose", providerFlowPurposes);
 
-export const identityProviders = pgTable(
-  "identity_providers",
+export const identityProviders = pgTable("identity_providers", {
+  id: primaryId(),
+  type: identityProviderType().notNull(),
+  preset: identityProviderPreset().notNull(),
+  name: text().notNull(),
+  config: jsonb().notNull(),
+  ...timestamps(),
+});
+
+export const identityProviderDomains = pgTable(
+  "identity_provider_domains",
   {
-    id: primaryId(),
-    type: identityProviderType().notNull(),
-    preset: identityProviderPreset().notNull(),
-    level: identityProviderLevel().notNull(),
-    organizationId: uuid().references(() => organizations.id, { onDelete: "cascade" }),
-    name: text().notNull(),
-    config: jsonb().notNull(),
-    ...timestamps(),
+    domain: text().primaryKey(),
+    providerId: uuid()
+      .notNull()
+      .references(() => identityProviders.id, { onDelete: "cascade" }),
+    createdAt: timestampColumn().notNull().defaultNow(),
   },
-  (table) => [
-    index().on(table.organizationId),
-    check(
-      "identity_providers_level_organization",
-      sql`(${table.level} = 'organization') = (${table.organizationId} is not null)`,
-    ),
-  ],
+  (table) => [index().on(table.providerId)],
 );
 
 export const identityProviderCredentials = pgTable(
@@ -69,24 +64,6 @@ export const identityProviderCredentials = pgTable(
     createdAt: timestampColumn().notNull().defaultNow(),
   },
   (table) => [index().on(table.providerId), index().on(table.expiresAt)],
-);
-
-export const identityProviderOrganizations = pgTable(
-  "identity_provider_organizations",
-  {
-    providerId: uuid()
-      .notNull()
-      .references(() => identityProviders.id, { onDelete: "cascade" }),
-    organizationId: uuid()
-      .notNull()
-      .references(() => organizations.id, { onDelete: "cascade" }),
-    enabled: boolean().notNull().default(false),
-    ...timestamps(),
-  },
-  (table) => [
-    primaryKey({ columns: [table.providerId, table.organizationId] }),
-    index().on(table.organizationId),
-  ],
 );
 
 export const identityProviderLogos = pgTable("identity_provider_logos", {
@@ -134,7 +111,6 @@ export const providerFlows = pgTable(
     codeVerifier: text().notNull(),
     redirectUri: text().notNull(),
     consumedAt: timestampColumn(),
-    organizationId: uuid().references(() => organizations.id, { onDelete: "cascade" }),
     sessionId: uuid(),
     returnTo: text(),
     result: jsonb(),
@@ -149,9 +125,7 @@ export const signInRefusalReasons = [
   "domainNotAllowed",
   "emailNotVerified",
   "groupRequired",
-  "otherOrganization",
   "accountInactive",
-  "providerNotEnabled",
   "linkDeclined",
   "linkUnavailable",
   "invalidResponse",
@@ -165,7 +139,6 @@ export const signInRefusals = pgTable(
     id: primaryId(),
     reference: text().notNull(),
     providerId: uuid().references(() => identityProviders.id, { onDelete: "set null" }),
-    organizationId: uuid().references(() => organizations.id, { onDelete: "set null" }),
     reason: signInRefusalReason().notNull(),
     subject: text(),
     email: text(),

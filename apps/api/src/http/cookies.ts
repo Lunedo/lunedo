@@ -7,6 +7,7 @@ export const COOKIES = {
   setup: "__Host-pagehall-setup",
   providerFlow: "__Host-pagehall-provider",
   link: "__Host-pagehall-link",
+  lastProvider: "__Host-pagehall-last-provider",
 } as const;
 
 export type CookieName = (typeof COOKIES)[keyof typeof COOKIES];
@@ -14,6 +15,7 @@ export type CookieName = (typeof COOKIES)[keyof typeof COOKIES];
 const DEVICE_MAX_AGE_SECONDS = 400 * 24 * 60 * 60;
 const PENDING_MAX_AGE_SECONDS = 5 * 60;
 export const PROVIDER_FLOW_MAX_AGE_SECONDS = 10 * 60;
+export const LAST_PROVIDER_MAX_AGE_SECONDS = 180 * 24 * 60 * 60;
 
 export function readCookie(request: FastifyRequest, name: CookieName): string | undefined {
   const header = request.headers.cookie;

@@ -22,8 +22,6 @@ export const problems = {
   invalidOwner: { status: 400, title: "The owner is not valid" },
   invalidLogo: { status: 400, title: "The logo is not a supported image" },
   invalidProviderConfiguration: { status: 400, title: "The identity provider configuration is not valid" },
-  providerNotEnabled: { status: 400, title: "The identity provider is not turned on for the account" },
-  otherOrganization: { status: 400, title: "The provider belongs to another organization" },
   invalidScopes: { status: 400, title: "The scopes are not valid" },
   invalidResponsible: { status: 400, title: "The responsible person is not valid" },
   invalidInvitation: { status: 400, title: "The invitation is not valid" },
@@ -58,6 +56,7 @@ export const problems = {
   alreadyMember: { status: 409, title: "The account is already a member" },
   alreadyAssigned: { status: 409, title: "The role is already assigned" },
   identityInUse: { status: 409, title: "The identity is linked to an account already" },
+  domainInUse: { status: 409, title: "A domain belongs to another identity provider" },
   lastCredential: { status: 409, title: "The last credential cannot be removed" },
   lastSignInMethod: { status: 409, title: "The last way to sign in cannot be removed" },
   lastOwner: { status: 409, title: "The last owner cannot leave" },
@@ -123,6 +122,10 @@ export const problemSchema = z
       .int()
       .optional()
       .describe("Maximum lifetime of API tokens in days, for `expiryRequired` and `expiryTooLate`."),
+    domains: z
+      .array(z.string().describe("A domain."))
+      .optional()
+      .describe("Domains that belong to another identity provider, for `domainInUse`."),
   })
   .describe("Error response following RFC 9457 Problem Details.");
 
