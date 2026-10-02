@@ -91,7 +91,7 @@ describe("RoleEditorDialog", () => {
     await renderWithProviders(
       <RoleEditorDialog
         scope="organization"
-        role={null}
+        existing={null}
         grantable={{ membersAndGroups: "manage", auditLog: "view" }}
         impact={[]}
         onClose={() => undefined}

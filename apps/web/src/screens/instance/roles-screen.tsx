@@ -200,7 +200,7 @@ export function InstanceRolesScreen() {
         <RoleEditorDialog
           grantable={state.grantableAreas("instance")}
           scope="instance"
-          role={editing === "new" ? null : editing}
+          existing={editing === "new" ? null : editing}
           onClose={() => setEditing(null)}
           impact={
             editing !== "new"

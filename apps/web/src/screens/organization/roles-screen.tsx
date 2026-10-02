@@ -203,7 +203,7 @@ export function OrganizationRolesScreen() {
         <RoleEditorDialog
           grantable={state.grantableAreas("organization")}
           scope="organization"
-          role={editing === "new" ? null : editing}
+          existing={editing === "new" ? null : editing}
           onClose={() => setEditing(null)}
           onSave={async (values) => {
             if (editing === "new") {
@@ -311,7 +311,7 @@ const roleForm = z.object({
 
 export function RoleEditorDialog({
   scope,
-  role,
+  existing,
   onClose,
   onSave,
   impact,
@@ -319,7 +319,7 @@ export function RoleEditorDialog({
 }: {
   scope: RoleScope;
   grantable: Areas;
-  role: { name: string; areas: Record<string, unknown> } | null;
+  existing: { name: string; areas: Record<string, unknown> } | null;
   onClose: () => void;
   onSave: (values: { name: string; areas: Areas }) => Promise<void>;
   impact: string[];
@@ -328,9 +328,9 @@ export function RoleEditorDialog({
   const [error, setError] = useState<string | null>(null);
   const form = useSchemaForm(roleForm, {
     defaultValues: {
-      name: role?.name ?? "",
+      name: existing?.name ?? "",
       areas: Object.fromEntries(
-        areasOf(scope).map((area) => [area, (role?.areas[area] as string | undefined) ?? "none"]),
+        areasOf(scope).map((area) => [area, (existing?.areas[area] as string | undefined) ?? "none"]),
       ),
     } as z.input<typeof roleForm>,
   });
@@ -353,7 +353,7 @@ export function RoleEditorDialog({
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      title={role ? t("roles.editRole", { name: role.name }) : t("roles.createRole")}
+      title={existing ? t("roles.editRole", { name: existing.name }) : t("roles.createRole")}
       size="md"
     >
       <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
@@ -398,7 +398,7 @@ export function RoleEditorDialog({
             };
           })}
         />
-        {role && impact.length > 0 ? (
+        {existing && impact.length > 0 ? (
           <AccessImpact change="gains" people={impact} what={t("roles.editImpact")} />
         ) : null}
         <p className="text-sm text-text-muted">{t("roles.noSelfExtension")}</p>
