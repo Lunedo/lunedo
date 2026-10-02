@@ -1,7 +1,16 @@
 import { auditEventNames } from "@pagehall/shared";
-import { Button, Drawer, Field, Input, Section, Select, Table, TruncatedText } from "@pagehall/ui";
+import {
+  Button,
+  Combobox,
+  type ComboboxItem,
+  Drawer,
+  Input,
+  Table,
+  TableToolbar,
+  TruncatedText,
+} from "@pagehall/ui";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { Download, FilterX } from "lucide-react";
+import { Download } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
@@ -24,6 +33,7 @@ import {
   targetTypeLabel,
 } from "./audit-presentation.js";
 import { downloadBlob } from "./download.js";
+import { accountLoader, memberLoader } from "./pickers.js";
 import { useSettingValueFormatter } from "./settings-list.js";
 
 export function auditEventKey(name: string): string {
@@ -61,12 +71,10 @@ function useAuditContext(): AuditContext {
 export function AuditLog({
   scope,
   organizationId,
-  people,
   canExport,
 }: {
   scope: "organization" | "instance";
   organizationId?: string;
-  people: { id: string; name: string }[];
   canExport: boolean;
 }) {
   const { t } = useTranslation();
@@ -77,6 +85,11 @@ export function AuditLog({
   const [cursors, setCursors] = useState<(string | undefined)[]>([undefined]);
   const [exporting, setExporting] = useState(false);
   const [selected, setSelected] = useState<AuditItem | null>(null);
+  const [actor, setActor] = useState<ComboboxItem | null>(null);
+  const actorLoader = useMemo(
+    () => (organizationId ? memberLoader(organizationId) : accountLoader()),
+    [organizationId],
+  );
   const cursor = cursors.at(-1);
   const query = toQuery(filters);
 
@@ -126,73 +139,74 @@ export function AuditLog({
   };
 
   return (
-    <Section
-      title={t("audit.eventsTitle")}
-      actions={
-        canExport ? (
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={Download}
-            loading={exporting}
-            onClick={() => void exportCsv()}
-          >
-            {t("audit.export")}
-          </Button>
-        ) : null
-      }
-    >
-      <div className="flex flex-wrap items-end gap-3 p-4">
-        <Field label={t("audit.from")}>
-          <Input
-            type="date"
-            value={filters.from}
-            onChange={(event) => update({ from: event.target.value })}
-          />
-        </Field>
-        <Field label={t("audit.to")}>
-          <Input type="date" value={filters.to} onChange={(event) => update({ to: event.target.value })} />
-        </Field>
-        <div className="w-field max-w-full">
-          <Field label={t("audit.action")}>
-            <Select
-              value={filters.name || "all"}
-              onValueChange={(value) => update({ name: value === "all" ? "" : value })}
-              options={[
-                { value: "all", label: t("audit.allEvents") },
-                ...auditEventNames.map((name) => ({
+    <div className="flex flex-col gap-4">
+      <TableToolbar
+        filters={
+          <>
+            <Input
+              type="date"
+              aria-label={t("audit.from")}
+              title={t("audit.from")}
+              className="w-auto"
+              value={filters.from}
+              onChange={(event) => update({ from: event.target.value })}
+            />
+            <Input
+              type="date"
+              aria-label={t("audit.to")}
+              title={t("audit.to")}
+              className="w-auto"
+              value={filters.to}
+              onChange={(event) => update({ to: event.target.value })}
+            />
+            <div className="w-field max-w-full">
+              <Combobox
+                aria-label={t("audit.action")}
+                placeholder={t("audit.allEvents")}
+                value={filters.name || null}
+                onValueChange={(value) => update({ name: value ?? "" })}
+                items={auditEventNames.map((name) => ({
                   value: name,
                   label: translateKey(t, auditEventKey(name)),
-                })),
-              ]}
-            />
-          </Field>
-        </div>
-        <div className="w-field max-w-full">
-          <Field label={t("audit.actor")}>
-            <Select
-              value={filters.actorId || "all"}
-              onValueChange={(value) => update({ actorId: value === "all" ? "" : value })}
-              options={[
-                { value: "all", label: t("audit.everyone") },
-                ...people.map((person) => ({ value: person.id, label: person.name })),
-              ]}
-            />
-          </Field>
-        </div>
-        <Button
-          variant="secondary"
-          icon={FilterX}
-          disabled={JSON.stringify(filters) === JSON.stringify(EMPTY)}
-          onClick={() => update(EMPTY)}
-        >
-          {t("audit.resetFilters")}
-        </Button>
-      </div>
+                }))}
+              />
+            </div>
+            <div className="w-field max-w-full">
+              <Combobox
+                aria-label={t("audit.actor")}
+                placeholder={t("audit.everyone")}
+                value={actor?.value ?? null}
+                selectedItem={actor}
+                load={actorLoader}
+                onValueChange={(value, item) => {
+                  setActor(item);
+                  update({ actorId: value ?? "" });
+                }}
+              />
+            </div>
+          </>
+        }
+        filtersActive={JSON.stringify(filters) !== JSON.stringify(EMPTY)}
+        onResetFilters={() => {
+          setActor(null);
+          update(EMPTY);
+        }}
+        actions={
+          canExport ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={Download}
+              loading={exporting}
+              onClick={() => void exportCsv()}
+            >
+              {t("audit.export")}
+            </Button>
+          ) : null
+        }
+      />
       {events.isError ? (
-        <div className="px-4 pb-4">
-          <LoadError what={t("failures.loadAudit")} error={events.error} onRetry={() => events.refetch()} />
-        </div>
+        <LoadError what={t("failures.loadAudit")} error={events.error} onRetry={() => events.refetch()} />
       ) : null}
       <Table
         caption={t("audit.eventsTitle")}
@@ -257,7 +271,9 @@ export function AuditLog({
             key: "change",
             header: t("audit.change"),
             hideBelow: "md",
-            cell: (event) => <span className="text-sm">{changeSummary(context, event)}</span>,
+            cell: (event) => (
+              <span className="block min-w-field text-sm">{changeSummary(context, event)}</span>
+            ),
           },
         ]}
       />
@@ -272,7 +288,7 @@ export function AuditLog({
       >
         {selected ? <AuditDetails item={selected} context={context} /> : null}
       </Drawer>
-    </Section>
+    </div>
   );
 }
 

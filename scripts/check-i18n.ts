@@ -1,6 +1,15 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { compareKeys, findEmptyMessages, findUntranslatedText } from "./i18n-check.ts";
+import { auditEventNames } from "../packages/shared/src/audit.ts";
+import * as preferenceValues from "../packages/shared/src/preferences.ts";
+import {
+  compareKeys,
+  findEmptyMessages,
+  findMissingKeys,
+  findUntranslatedText,
+  readSettingFields,
+  requiredCatalogKeys,
+} from "./i18n-check.ts";
 
 const root = path.resolve(import.meta.dirname, "..");
 const SOURCE_DIRECTORIES = ["apps/web/src", "packages/ui/src"];
@@ -40,6 +49,24 @@ for (const { language, missing } of compareKeys(languages)) {
 }
 for (const [language, messages] of Object.entries(languages)) {
   for (const key of findEmptyMessages(messages)) problems.push(`${language}.json: key ${key} is empty`);
+}
+
+const catalog = requiredCatalogKeys({
+  auditEvents: auditEventNames,
+  settingFields: readSettingFields(
+    readFileSync(path.join(root, "apps/web/src/settings/setting-fields.ts"), "utf8"),
+  ),
+  valueLists: Object.fromEntries(
+    Object.entries(preferenceValues as Record<string, unknown>).filter(
+      (entry): entry is [string, readonly (string | number)[]] => Array.isArray(entry[1]),
+    ),
+  ),
+});
+problems.push(...catalog.problems);
+for (const [language, messages] of Object.entries(languages)) {
+  for (const key of findMissingKeys(messages, catalog.keys)) {
+    problems.push(`${language}.json: key ${key} is missing for an audit event, a setting or a setting value`);
+  }
 }
 
 if (problems.length > 0) {

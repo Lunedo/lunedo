@@ -82,3 +82,45 @@ export function findEmptyMessages(messages: Messages, prefix = ""): string[] {
       : findEmptyMessages(value, `${prefix}${key}.`),
   );
 }
+
+export interface SettingFieldEntry {
+  key: string;
+  values?: { source: string; labelPrefix: string };
+}
+
+export function readSettingFields(source: string): SettingFieldEntry[] {
+  const entries: SettingFieldEntry[] = [];
+  for (const match of source.matchAll(/\{\s*key:\s*"([^"]+)",\s*type:\s*([^\n]*?)\s*\},?\n/g)) {
+    const [, key = "", type = ""] = match;
+    const values = /values:\s*(\w+),\s*labelPrefix:\s*"([^"]+)"/.exec(type);
+    entries.push(
+      values ? { key, values: { source: values[1] ?? "", labelPrefix: values[2] ?? "" } } : { key },
+    );
+  }
+  return entries;
+}
+
+export function requiredCatalogKeys(options: {
+  auditEvents: readonly string[];
+  settingFields: readonly SettingFieldEntry[];
+  valueLists: Record<string, readonly (string | number)[]>;
+}): { keys: string[]; problems: string[] } {
+  const keys = options.auditEvents.map((name) => `audit.events.${name}`);
+  const problems: string[] = [];
+  for (const field of options.settingFields) {
+    keys.push(`settings.keys.${field.key.replaceAll(".", "_")}.label`);
+    if (!field.values) continue;
+    const values = options.valueLists[field.values.source];
+    if (!values) {
+      problems.push(`setting ${field.key}: the value list ${field.values.source} is unknown`);
+      continue;
+    }
+    for (const value of values) keys.push(`${field.values.labelPrefix}.${value}`);
+  }
+  return { keys, problems };
+}
+
+export function findMissingKeys(messages: Messages, keys: readonly string[]): string[] {
+  const present = new Set(flatten(messages));
+  return [...new Set(keys)].filter((key) => !present.has(key)).sort();
+}

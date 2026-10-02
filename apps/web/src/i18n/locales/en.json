@@ -493,6 +493,7 @@
     "textSizeHint": "Scales text, spacing and icons together.",
     "density": "Density",
     "densityHint": "Compact fits more items on the screen.",
+    "fonts": { "default": "Default", "readable": "Reading-friendly" },
     "densities": {
       "default": "Default",
       "compact": "Compact"
@@ -570,6 +571,21 @@
       }
     },
     "keys": {
+      "appearance_colorMode": {
+        "label": "Color mode",
+        "description": "Light, dark or following the system."
+      },
+      "appearance_highContrast": { "label": "High contrast", "description": "Stronger borders and text." },
+      "appearance_textSize": { "label": "Text size", "description": "Size of text and controls." },
+      "appearance_density": { "label": "Density", "description": "Spacing in lists and tables." },
+      "appearance_font": {
+        "label": "Reading-friendly font",
+        "description": "A font designed for easier reading."
+      },
+      "appearance_sidebarCollapsed": {
+        "label": "Collapsed sidebar",
+        "description": "Whether the sidebar is collapsed."
+      },
       "instance_name": {
         "label": "Instance name",
         "description": "Shown on the sign-in page, in e-mails and in the browser."
@@ -1363,6 +1379,7 @@
     }
   },
   "audit": {
+    "notificationSetting": "Notifications · {event}",
     "title": "Audit log",
     "organizationDescription": "Security-relevant changes in this organization.",
     "instanceDescription": "Security-relevant changes on the instance.",

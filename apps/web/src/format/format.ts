@@ -43,7 +43,7 @@ export function createFormatter(settings: FormatSettings): Formatter {
     hour12: settings.timeFormat === "12h",
   });
   const numbers = new Intl.NumberFormat(numberLocale);
-  const percent = new Intl.NumberFormat(numberLocale, { style: "percent", maximumFractionDigits: 1 });
+  const percent = new Intl.NumberFormat(numberLocale, { style: "percent", maximumFractionDigits: 2 });
   const relative = new Intl.RelativeTimeFormat(settings.language, { numeric: "auto" });
 
   const date = (value: Date | string) => formatDate(toDate(value), settings.dateFormat, settings.timeZone);

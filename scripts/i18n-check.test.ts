@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { compareKeys, findEmptyMessages, findUntranslatedText } from "./i18n-check.ts";
+import {
+  compareKeys,
+  findEmptyMessages,
+  findMissingKeys,
+  findUntranslatedText,
+  readSettingFields,
+  requiredCatalogKeys,
+} from "./i18n-check.ts";
 
 describe("findUntranslatedText", () => {
   it("finds literal text in elements and user-facing attributes", () => {
@@ -56,5 +63,54 @@ describe("compareKeys", () => {
 describe("findEmptyMessages", () => {
   it("finds empty and blank messages", () => {
     assert.deepEqual(findEmptyMessages({ a: "", b: { c: "  ", d: "text" } }), ["a", "b.c"]);
+  });
+});
+
+describe("catalog keys", () => {
+  const source = [
+    "const fields: SettingField[] = [",
+    '  { key: "instance.name", type: { kind: "text" } },',
+    '  { key: "branding.accentColor", type: { kind: "enum", values: accentColors, labelPrefix: "settings.values.accentColor" } },',
+    "];",
+    "",
+  ].join("\n");
+
+  it("reads setting keys and the value lists behind their labels", () => {
+    assert.deepEqual(readSettingFields(source), [
+      { key: "instance.name" },
+      {
+        key: "branding.accentColor",
+        values: { source: "accentColors", labelPrefix: "settings.values.accentColor" },
+      },
+    ]);
+  });
+
+  it("requires a label for every audit event, setting and setting value", () => {
+    const { keys, problems } = requiredCatalogKeys({
+      auditEvents: ["settings.changed"],
+      settingFields: readSettingFields(source),
+      valueLists: { accentColors: ["petrol", "blue"] },
+    });
+    assert.deepEqual(problems, []);
+    const messages = {
+      audit: { events: { "settings.changed": "Setting changed" } },
+      settings: {
+        keys: { instance_name: { label: "Name" }, branding_accentColor: { label: "Accent color" } },
+        values: { accentColor: { petrol: "Petrol" } },
+      },
+    };
+    assert.deepEqual(findMissingKeys(messages, keys), ["settings.values.accentColor.blue"]);
+    assert.deepEqual(findMissingKeys({}, ["audit.events.settings.changed"]), [
+      "audit.events.settings.changed",
+    ]);
+  });
+
+  it("reports value lists it does not know", () => {
+    const { problems } = requiredCatalogKeys({
+      auditEvents: [],
+      settingFields: readSettingFields(source),
+      valueLists: {},
+    });
+    assert.deepEqual(problems, ["setting branding.accentColor: the value list accentColors is unknown"]);
   });
 });

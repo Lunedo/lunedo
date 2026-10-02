@@ -493,6 +493,7 @@
     "textSizeHint": "Skaliert Text, Abstände und Symbole gemeinsam.",
     "density": "Dichte",
     "densityHint": "Kompakt zeigt mehr Einträge auf dem Bildschirm.",
+    "fonts": { "default": "Standard", "readable": "Lesefreundlich" },
     "densities": {
       "default": "Standard",
       "compact": "Kompakt"
@@ -570,6 +571,18 @@
       }
     },
     "keys": {
+      "appearance_colorMode": { "label": "Farbmodus", "description": "Hell, dunkel oder wie das System." },
+      "appearance_highContrast": { "label": "Hoher Kontrast", "description": "Kräftigere Rahmen und Texte." },
+      "appearance_textSize": { "label": "Textgröße", "description": "Größe von Text und Steuerelementen." },
+      "appearance_density": { "label": "Dichte", "description": "Abstände in Listen und Tabellen." },
+      "appearance_font": {
+        "label": "Lesefreundliche Schrift",
+        "description": "Eine Schrift, die leichter zu lesen ist."
+      },
+      "appearance_sidebarCollapsed": {
+        "label": "Eingeklappte Seitenleiste",
+        "description": "Ob die Seitenleiste eingeklappt ist."
+      },
       "instance_name": {
         "label": "Name der Instanz",
         "description": "Erscheint auf der Anmeldeseite, in E-Mails und im Browser."
@@ -1363,6 +1376,7 @@
     }
   },
   "audit": {
+    "notificationSetting": "Benachrichtigungen · {event}",
     "title": "Audit-Log",
     "organizationDescription": "Sicherheitsrelevante Änderungen in dieser Organisation.",
     "instanceDescription": "Sicherheitsrelevante Änderungen auf der Instanz.",

@@ -1,4 +1,4 @@
-import { accentColors } from "@pagehall/shared";
+import { accentColors, colorModes, densities, fonts } from "@pagehall/shared";
 
 export type SettingFieldType =
   | { kind: "boolean" }
@@ -18,6 +18,7 @@ export type SettingFieldType =
     }
   | { kind: "enum"; values: readonly string[]; labelPrefix: string }
   | { kind: "locale" }
+  | { kind: "percent" }
   | { kind: "text"; inputType?: "url" | "text" };
 
 export interface SettingField {
@@ -82,6 +83,18 @@ const fields: SettingField[] = [
   { key: "organizations.breakGlassMinutes", type: minutes(5, DAY, [30, HOUR, 4 * HOUR]) },
   { key: "audit.retentionDays", type: days(1, 36_500, [90, 365, 3650]) },
   { key: "notifications.retentionDays", type: days(1, 3650, [30, 90, 365]) },
+  {
+    key: "appearance.colorMode",
+    type: { kind: "enum", values: colorModes, labelPrefix: "preferences.colorModes" },
+  },
+  { key: "appearance.highContrast", type: { kind: "boolean" } },
+  { key: "appearance.textSize", type: { kind: "percent" } },
+  {
+    key: "appearance.density",
+    type: { kind: "enum", values: densities, labelPrefix: "preferences.densities" },
+  },
+  { key: "appearance.font", type: { kind: "enum", values: fonts, labelPrefix: "preferences.fonts" } },
+  { key: "appearance.sidebarCollapsed", type: { kind: "boolean" } },
 ];
 
 const byKey = new Map(fields.map((field) => [field.key, field]));

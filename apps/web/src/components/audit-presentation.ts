@@ -5,6 +5,14 @@ import type { Formatter } from "../format/format.js";
 import { translateKey } from "../i18n/translate.js";
 import { settingLabelKey } from "../settings/setting-fields.js";
 
+export function settingLabel(t: TFunction, key: string): string {
+  if (key.startsWith("notifications.") && key !== "notifications.retentionDays")
+    return t("audit.notificationSetting", {
+      event: translateKey(t, `notifications.events.${key.slice("notifications.".length)}`),
+    });
+  return translateKey(t, settingLabelKey(key));
+}
+
 export type AuditItem =
   paths["/api/v1/instance/audit-events"]["get"]["responses"][200]["content"]["application/json"]["items"][number];
 
@@ -34,6 +42,7 @@ export function actorLabel(t: TFunction, item: AuditItem): string {
 
 export function scopeLabel(t: TFunction, item: AuditItem): string {
   if (item.scope.type === "instance") return t("audit.instanceScope");
+  if (item.scope.type === "account") return item.scope.name ?? t("audit.deletedAccount");
   return item.scope.name ?? t("audit.deletedOrganization");
 }
 
@@ -43,8 +52,7 @@ export function targetTypeLabel(t: TFunction, type: string): string {
 }
 
 export function targetLabel(t: TFunction, item: AuditItem): string {
-  if (item.changeKind === "setting" && item.target.id)
-    return translateKey(t, settingLabelKey(item.target.id));
+  if (item.changeKind === "setting" && item.target.id) return settingLabel(t, item.target.id);
   if (item.target.name) return item.target.name;
   return targetTypeLabel(t, item.target.type);
 }

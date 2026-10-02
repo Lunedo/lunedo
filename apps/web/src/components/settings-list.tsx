@@ -37,6 +37,14 @@ export function useSettingValueFormatter() {
     if (field?.type.kind === "duration" && field.type.nullable && value === null)
       return t("settings.noLimit");
     if (value === null || value === undefined || value === "") return t("settings.notSet");
+    if (typeof value === "object" && "inApp" in value && "email" in value) {
+      const channels = value as { inApp: unknown; email: unknown };
+      const enabled = [
+        channels.inApp === true ? t("notifications.channels.inApp") : null,
+        channels.email === true ? t("notifications.channels.email") : null,
+      ].filter(Boolean);
+      return enabled.length > 0 ? enabled.join(", ") : t("notifications.channels.none");
+    }
     if (!field) return typeof value === "object" ? JSON.stringify(value) : String(value);
     switch (field.type.kind) {
       case "boolean":
@@ -46,6 +54,8 @@ export function useSettingValueFormatter() {
           count: Number(value),
           value: format.number(Number(value)),
         });
+      case "percent":
+        return format.percent(Number(value));
       case "duration":
         return formatDuration(toMinutes(field.type, Number(value)), i18n.language);
       case "enum":

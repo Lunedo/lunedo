@@ -73,7 +73,7 @@ beforeEach(() => {
 async function renderLog() {
   await renderWithProviders(
     <PreferencesProvider>
-      <AuditLog scope="instance" people={[{ id: OLIVIA, name: "Olivia Owner" }]} canExport />
+      <AuditLog scope="instance" canExport />
     </PreferencesProvider>,
   );
   return screen.findByRole("table", { name: "Events" });
@@ -119,5 +119,55 @@ describe("the audit log", () => {
     await waitFor(() =>
       expect(requests.some((request) => request.path.includes("name=settings.changed"))).toBe(true),
     );
+  });
+});
+
+describe("audit presentation of personal and notification settings", () => {
+  it("translates setting keys and values and shows the account as scope", async () => {
+    mockApi({
+      "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
+      "GET /api/v1/instance/audit-events": () => ({
+        body: {
+          items: [
+            event({
+              id: "01929b1f-5fc2-7fa6-97c3-bea0a18bd2e5",
+              target: { type: "setting", id: "appearance.textSize", name: null },
+              scope: { type: "account", id: OLIVIA, name: "Olivia Owner" },
+              changes: [{ property: "value", old: 0.9375, new: 1 }],
+            }),
+            event({
+              id: "01929b1f-5fc2-7fa6-97c3-bea0a18bd2e6",
+              target: { type: "setting", id: "appearance.colorMode", name: null },
+              scope: { type: "account", id: OLIVIA, name: "Olivia Owner" },
+              changes: [{ property: "value", old: "dark", new: "light" }],
+            }),
+            event({
+              id: "01929b1f-5fc2-7fa6-97c3-bea0a18bd2e7",
+              target: { type: "setting", id: "notifications.guestExpiring", name: null },
+              changes: [
+                { property: "value", old: { inApp: true, email: true }, new: { inApp: true, email: false } },
+              ],
+            }),
+          ],
+          nextCursor: null,
+        },
+      }),
+    });
+    await renderWithProviders(
+      <PreferencesProvider>
+        <AuditLog scope="instance" canExport={false} />
+      </PreferencesProvider>,
+    );
+    const table = await screen.findByRole("table", { name: "Events" });
+    await within(table).findByText("Dark → Light");
+    const [, textSize, colorMode, notification] = within(table).getAllByRole("row") as HTMLElement[];
+    expect(within(textSize as HTMLElement).getByText("Text size")).toBeTruthy();
+    expect(within(textSize as HTMLElement).getByText(/94\s?% → 100\s?%|93\.75\s?% → 100\s?%/)).toBeTruthy();
+    expect(within(textSize as HTMLElement).getAllByText("Olivia Owner").length).toBe(2);
+    expect(within(colorMode as HTMLElement).getByText("Color mode")).toBeTruthy();
+    expect(within(colorMode as HTMLElement).getByText("Dark → Light")).toBeTruthy();
+    expect(within(notification as HTMLElement).getByText(/^Notifications · /)).toBeTruthy();
+    expect(within(notification as HTMLElement).getByText("In the app, E-mail → In the app")).toBeTruthy();
+    expect(table.textContent).not.toMatch(/appearance\.|notifications\.guest|\{/);
   });
 });
