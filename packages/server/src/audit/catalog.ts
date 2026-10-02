@@ -170,13 +170,19 @@ export const auditCatalog = {
     fields: mappingRuleFields,
     visibility: "organization",
   }),
+  "identityProvider.syncCancelled": event({
+    actor: ["account"],
+    target: "identityProvider",
+    fields: z.object({ runId: z.uuid() }),
+    visibility: "instance",
+  }),
   "identityProvider.synchronized": event({
     actor: ["account", "system"],
     target: "identityProvider",
     fields: z.object({
       runId: z.uuid(),
       trigger: z.enum(["schedule", "manual"]),
-      status: z.enum(["succeeded", "warnings", "failed"]),
+      status: z.enum(["succeeded", "warnings", "failed", "cancelled"]),
       changes: z.number().int().nonnegative(),
       warnings: z.number().int().nonnegative(),
       durationMs: z.number().int().nonnegative(),

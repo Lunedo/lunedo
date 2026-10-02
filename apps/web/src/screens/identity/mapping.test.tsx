@@ -291,6 +291,36 @@ describe("the sync log", () => {
     expect(within(panel).getByText("Group no longer exists")).toBeTruthy();
   });
 
+  it("cancels a running synchronization from its run", async () => {
+    const running = {
+      id: RUN,
+      providerId: PROVIDER,
+      trigger: "schedule",
+      status: "running",
+      startedAt: "2026-10-02T11:52:00.000Z",
+      finishedAt: null,
+      durationMs: null,
+      changeCount: 0,
+      warningCount: 0,
+      error: null,
+    };
+    const { requests } = adminApi({
+      [`GET ${BASE}/mapping-rules`]: () => ({ body: [] }),
+      [`GET ${BASE}/sync-runs`]: () => ({ body: { items: [running], nextCursor: null } }),
+      [`GET ${BASE}/sync-runs/${RUN}`]: () => ({
+        body: { ...running, changes: [], warnings: [], references: {} },
+      }),
+      [`POST ${BASE}/sync-runs/${RUN}/cancel`]: () => ({ status: 204 }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=sync`);
+    await userEvent.click(await screen.findByRole("row", { name: /Show the run of/ }));
+    const panel = await screen.findByRole("dialog", { name: "Synchronization run" });
+    await userEvent.click(await within(panel).findByRole("button", { name: "Cancel run" }));
+    await waitFor(() =>
+      expect(requests.some((entry) => entry.path === `${BASE}/sync-runs/${RUN}/cancel`)).toBe(true),
+    );
+  });
+
   it("explains that providers without a directory only update at sign-in", async () => {
     adminApi({
       [`GET ${BASE}`]: () => ({ body: provider("generic") }),

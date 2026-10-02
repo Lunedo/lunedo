@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNotNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { AccountAdministrationService } from "../accounts/administration.js";
 import { type Principal, SYSTEM } from "../accounts/principal.js";
@@ -57,10 +57,10 @@ export const providerSyncRetentionJob = defineJob({
 export const PROVIDER_SYNC_SCHEDULE = "*/5 * * * *";
 export const PROVIDER_SYNC_RETENTION_SCHEDULE = "23 3 * * *";
 
-const STALE_RUN_MINUTES = 120;
+const SILENT_RUN_MINUTES = 5;
 
 export type SyncTrigger = "schedule" | "manual";
-export type SyncStatus = "running" | "succeeded" | "warnings" | "failed";
+export type SyncStatus = "running" | "succeeded" | "warnings" | "failed" | "cancelled";
 
 export interface SyncRunSummary {
   id: string;
@@ -179,19 +179,55 @@ export class ProviderSyncService {
     return queued;
   }
 
+  async cancel(actor: Principal, providerId: string, runId: string): Promise<boolean> {
+    await this.#providers.get(providerId);
+    return this.#database.transaction(async (tx) => {
+      const [run] = await tx
+        .update(providerSyncRuns)
+        .set({ cancelRequestedAt: sql`now()` })
+        .where(
+          and(
+            eq(providerSyncRuns.id, runId),
+            eq(providerSyncRuns.providerId, providerId),
+            eq(providerSyncRuns.status, "running"),
+            isNull(providerSyncRuns.cancelRequestedAt),
+          ),
+        )
+        .returning({ id: providerSyncRuns.id });
+      if (!run) return false;
+      await this.#audit.record(tx, {
+        name: "identityProvider.syncCancelled",
+        actor,
+        targetId: providerId,
+        fields: { runId },
+      });
+      return true;
+    });
+  }
+
+  async #beat(runId: string): Promise<boolean> {
+    const [row] = await this.#database
+      .update(providerSyncRuns)
+      .set({ heartbeatAt: sql`now()` })
+      .where(eq(providerSyncRuns.id, runId))
+      .returning({ cancelRequestedAt: providerSyncRuns.cancelRequestedAt });
+    return row?.cancelRequestedAt != null;
+  }
+
   async run(
     providerId: string,
     trigger: SyncTrigger,
     actor: Principal = SYSTEM,
+    signal?: AbortSignal,
   ): Promise<SyncRunSummary | null> {
     await this.#database
       .update(providerSyncRuns)
-      .set({ status: "failed", finishedAt: new Date(), error: "The run was interrupted" })
+      .set({ status: "failed", finishedAt: new Date(), error: "The run stopped without a sign of life" })
       .where(
         and(
           eq(providerSyncRuns.providerId, providerId),
           eq(providerSyncRuns.status, "running"),
-          lt(providerSyncRuns.startedAt, sql`now() - make_interval(mins => ${STALE_RUN_MINUTES})`),
+          lt(providerSyncRuns.heartbeatAt, sql`now() - make_interval(mins => ${SILENT_RUN_MINUTES})`),
         ),
       );
     let runId: string;
@@ -209,6 +245,8 @@ export class ProviderSyncService {
     const started = Date.now();
     const report = emptyReport();
     let failure: string | null = null;
+    let cancelled = false;
+    const stopRequested = async (): Promise<boolean> => signal?.aborted === true || this.#beat(runId);
     try {
       const loaded = await this.#providers.definition(providerId);
       if (!loaded) throw new Error("The identity provider does not exist");
@@ -225,6 +263,10 @@ export class ProviderSyncService {
         loaded.credentials,
         linked.map((identity) => identity.subject),
       )) {
+        if (await stopRequested()) {
+          cancelled = true;
+          break;
+        }
         const identity = bySubject.get(result.subject);
         if (!identity) continue;
         try {
@@ -238,11 +280,17 @@ export class ProviderSyncService {
           });
         }
       }
-      await this.#refreshMappedGroups(provider, adapter, loaded.credentials, report);
+      if (!cancelled) await this.#refreshMappedGroups(provider, adapter, loaded.credentials, report);
     } catch (error) {
       failure = message(error);
     }
-    const status: SyncStatus = failure ? "failed" : report.warnings.length > 0 ? "warnings" : "succeeded";
+    const status: SyncStatus = cancelled
+      ? "cancelled"
+      : failure
+        ? "failed"
+        : report.warnings.length > 0
+          ? "warnings"
+          : "succeeded";
     const durationMs = Date.now() - started;
     await this.#database.transaction(async (tx) => {
       await tx

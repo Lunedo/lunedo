@@ -634,6 +634,52 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
     expect(runs.filter((run) => run !== null)).toHaveLength(1);
   });
 
+  it("lets a new run start once a running one sent no heartbeat for five minutes", async () => {
+    const stuck = await test.pool.query<{ id: string }>(
+      "insert into provider_sync_runs (id, provider_id, trigger, status, started_at, heartbeat_at) values (gen_random_uuid(), $1, 'manual', 'running', now() - interval '3 hours', now() - interval '1 minute') returning id",
+      [entra],
+    );
+    const stuckId = stuck.rows[0]?.id ?? "";
+    expect(await test.services.providerSync.run(entra, "manual")).toBeNull();
+    await test.pool.query(
+      "update provider_sync_runs set heartbeat_at = now() - interval '6 minutes' where id = $1",
+      [stuckId],
+    );
+    expect(await test.services.providerSync.run(entra, "manual")).not.toBeNull();
+    const after = await test.pool.query<{ status: string }>(
+      "select status from provider_sync_runs where id = $1",
+      [stuckId],
+    );
+    expect(after.rows[0]?.status).toBe("failed");
+  });
+
+  it("cancels a running synchronization before its next account", async () => {
+    const org = await organization();
+    const linked = await test.pool.query<{ count: number }>(
+      "select count(*)::int as count from identities where provider_id = $1",
+      [entra],
+    );
+    expect(linked.rows[0]?.count).toBeGreaterThan(1);
+    const held = graph.hold();
+    const running = test.services.providerSync.run(entra, "manual");
+    await held.reached;
+    const current = await test.pool.query<{ id: string }>(
+      "select id from provider_sync_runs where provider_id = $1 and status = 'running'",
+      [entra],
+    );
+    const runId = current.rows[0]?.id ?? "";
+    expect(await test.services.providerSync.cancel(accountPrincipal(org.owner), entra, runId)).toBe(true);
+    held.release();
+    const run = await running;
+    expect(run?.status).toBe("cancelled");
+    expect(await test.services.providerSync.cancel(accountPrincipal(org.owner), entra, runId)).toBe(false);
+    const audit = await test.pool.query(
+      "select 1 from audit_events where name = 'identityProvider.syncCancelled' and target_id = $1",
+      [entra],
+    );
+    expect(audit.rows).toHaveLength(1);
+  });
+
   it("deactivates accounts suspended in the Google directory", async () => {
     const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
     const provider = await test.services.identityProviders.create(SYSTEM, {

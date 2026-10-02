@@ -59,6 +59,7 @@ export const problems = {
   domainInUse: { status: 409, title: "A domain belongs to another identity provider" },
   invalidServiceAccountKey: { status: 400, title: "The service account key is not valid" },
   syncUnavailable: { status: 409, title: "The provider cannot be synchronized" },
+  syncNotRunning: { status: 409, title: "The run is not running anymore" },
   providerUnavailable: { status: 502, title: "The identity provider could not be reached" },
   groupManagedByProvider: { status: 409, title: "The group is managed by an identity provider" },
   lastCredential: { status: 409, title: "The last credential cannot be removed" },

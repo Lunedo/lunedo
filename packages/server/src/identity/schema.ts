@@ -283,7 +283,7 @@ export const providerDeactivations = pgTable("provider_deactivations", {
 
 export const syncTriggers = ["schedule", "manual"] as const;
 export const syncTrigger = pgEnum("provider_sync_trigger", syncTriggers);
-export const syncStatuses = ["running", "succeeded", "warnings", "failed"] as const;
+export const syncStatuses = ["running", "succeeded", "warnings", "failed", "cancelled"] as const;
 export const syncStatus = pgEnum("provider_sync_status", syncStatuses);
 
 export const providerSyncRuns = pgTable(
@@ -296,6 +296,8 @@ export const providerSyncRuns = pgTable(
     trigger: syncTrigger().notNull(),
     status: syncStatus().notNull().default("running"),
     startedAt: timestampColumn().notNull().defaultNow(),
+    heartbeatAt: timestampColumn().notNull().defaultNow(),
+    cancelRequestedAt: timestampColumn(),
     finishedAt: timestampColumn(),
     changes: jsonb().notNull().default([]),
     warnings: jsonb().notNull().default([]),

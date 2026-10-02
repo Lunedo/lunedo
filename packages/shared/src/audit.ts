@@ -14,6 +14,7 @@ export const auditEventNames = [
   "identityProvider.logoChanged",
   "identityProvider.directoryKeyChanged",
   "identityProvider.synchronized",
+  "identityProvider.syncCancelled",
   "mappingRule.created",
   "mappingRule.updated",
   "mappingRule.removed",

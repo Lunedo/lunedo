@@ -74,10 +74,14 @@
         "running": "Running",
         "succeeded": "Completed",
         "warnings": "Completed with warnings",
-        "failed": "Failed"
+        "failed": "Failed",
+        "cancelled": "Cancelled"
       },
       "noChanges": "No changes",
       "inProgress": "Running",
+      "cancelledSummary": "Stopped on request. Changes made until then stay.",
+      "cancel": "Cancel run",
+      "cancelRequested": "The run stops before the next account.",
       "failedWithoutReason": "The run failed without a reason. Check the connection and try again.",
       "changes": "{count, plural, one {# change} other {# changes}}",
       "warnings": "{count, plural, one {# warning} other {# warnings}}",
@@ -595,6 +599,7 @@
     "domainInUse": "Another identity provider already uses one of these e-mail domains. Remove it there first, or use a different domain.",
     "groupManagedByProvider": "The members of this group come from an identity provider. Change them there; they update at the next sign-in or synchronization.",
     "providerUnavailable": "The identity provider could not be reached or answered in an unexpected way. It may be down or its settings may have changed. Try again in a moment; if it keeps failing, ask your administrator to check the provider.",
+    "syncNotRunning": "The run has already finished, so there is nothing to cancel. Reload the sync log to see its result.",
     "syncUnavailable": "This provider has no directory Pagehall can read, so its accounts update when people sign in. Set up the directory in the provider settings to synchronize.",
     "invalidServiceAccountKey": "The service account key could not be read. Download a new JSON key for the service account in Google Cloud and upload it again.",
     "roleNameTaken": "A role with this name already exists. Choose a different name.",
@@ -1909,7 +1914,8 @@
         "credentialRemoved": "Provider credential removed",
         "logoChanged": "Provider logo changed",
         "directoryKeyChanged": "Directory key changed",
-        "synchronized": "Provider synchronized"
+        "synchronized": "Provider synchronized",
+        "syncCancelled": "Synchronization cancelled"
       },
       "mappingRule": {
         "created": "Mapping rule created",
@@ -2222,6 +2228,7 @@
     "loadSyncRuns": "The sync log could not be loaded",
     "loadSyncRun": "The run could not be loaded",
     "startSync": "The synchronization could not be started",
+    "cancelSync": "The run could not be cancelled",
     "saveDirectoryKey": "The service account key could not be saved",
     "removeDirectoryKey": "The service account key could not be removed",
     "unlinkIdentity": "The identity could not be unlinked",

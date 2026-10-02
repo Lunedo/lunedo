@@ -392,6 +392,7 @@ export async function workAccountJobs(
       providerId,
       trigger,
       actorId ? { type: "account", id: actorId } : undefined,
+      job.signal,
     );
     if (run) job.logger.info({ providerId, status: run.status }, "Identity provider synchronized");
   });

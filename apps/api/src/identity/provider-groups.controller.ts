@@ -6,7 +6,7 @@ import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { nameCursor, pageRequest, pageSchema, toApiPage } from "../http/pagination.js";
-import { notFound } from "../http/problems.js";
+import { notFound, ProblemException } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import {
   directoryKeySchema,
@@ -220,6 +220,27 @@ export class ProviderGroupsController {
     return toApiPage(
       await this.#services.providerSync.runs(providerId, query.filter, pageRequest(query, nameCursor)),
     );
+  }
+
+  @Post("sync-runs/:runId/cancel")
+  @Permission("instance.signIn.manage")
+  @ApiRoute({
+    summary: "Cancel a running synchronization",
+    description:
+      "The run stops before the next account and is recorded as cancelled. Changes made so far stay.",
+    tags: [TAG],
+    status: 204,
+    params: runParams,
+    errors: ["syncNotRunning"],
+  })
+  async cancelRun(
+    @Param("providerId") providerId: string,
+    @Param("runId") runId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    if (!(await this.#services.providerSync.cancel(actorOf(request), providerId, runId))) {
+      throw new ProblemException("syncNotRunning", "The run has finished already");
+    }
   }
 
   @Get("sync-runs/:runId")

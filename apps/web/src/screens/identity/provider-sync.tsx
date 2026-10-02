@@ -21,6 +21,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import {
+  cancelSync,
   hasDirectory,
   type IdentityProvider,
   identityKeys,
@@ -44,11 +45,13 @@ const STATUS_VARIANT: Record<SyncRun["status"], BadgeVariant> = {
   succeeded: "success",
   warnings: "warning",
   failed: "danger",
+  cancelled: "neutral",
 };
 
 export function syncSummary(t: TFunction, run: SyncRun): string {
   if (run.status === "failed") return run.error ?? t("identityProviders.sync.failedWithoutReason");
   if (run.status === "running") return t("identityProviders.sync.inProgress");
+  if (run.status === "cancelled") return t("identityProviders.sync.cancelledSummary");
   if (run.changeCount === 0 && run.warningCount === 0) return t("identityProviders.sync.noChanges");
   return [
     run.changeCount > 0 ? t("identityProviders.sync.changes", { count: run.changeCount }) : null,
@@ -178,7 +181,7 @@ export function SyncTab({ provider, canManage }: { provider: IdentityProvider; c
         title={t("identityProviders.sync.detailTitle")}
         size="panel"
       >
-        {open ? <RunDetail providerId={provider.id} runId={open} /> : null}
+        {open ? <RunDetail providerId={provider.id} runId={open} canManage={canManage} /> : null}
       </Drawer>
     </div>
   );
@@ -198,10 +201,34 @@ function name(detail: SyncRunDetail, id: string | null): string | null {
   return id ? (detail.references[id] ?? null) : null;
 }
 
-function RunDetail({ providerId, runId }: { providerId: string; runId: string }) {
+function RunDetail({
+  providerId,
+  runId,
+  canManage,
+}: {
+  providerId: string;
+  runId: string;
+  canManage: boolean;
+}) {
   const { t } = useTranslation();
   const format = useFormat();
+  const { toast } = useToast();
+  const showFailure = useFailureToast();
+  const queryClient = useQueryClient();
+  const [cancelling, setCancelling] = useState(false);
   const run = useQuery({ ...syncRunQuery(providerId, runId), throwOnError: false });
+  const cancel = async () => {
+    setCancelling(true);
+    try {
+      await cancelSync(providerId, runId);
+      toast({ title: t("identityProviders.sync.cancelRequested"), variant: "success" });
+      await queryClient.invalidateQueries({ queryKey: ["identityProviders", providerId, "syncRuns"] });
+    } catch (failure) {
+      showFailure(t("failures.cancelSync"), failure);
+    } finally {
+      setCancelling(false);
+    }
+  };
   if (run.isPending) return <Skeleton className="h-32 w-full" />;
   if (run.isError) {
     return (
@@ -221,6 +248,13 @@ function RunDetail({ providerId, runId }: { providerId: string; runId: string })
         <dt className="text-text-muted">{t("identityProviders.sync.duration")}</dt>
         <dd>{durationText(t, detail.durationMs)}</dd>
       </dl>
+      {detail.status === "running" && canManage ? (
+        <div>
+          <Button variant="secondary" loading={cancelling} onClick={() => void cancel()}>
+            {t("identityProviders.sync.cancel")}
+          </Button>
+        </div>
+      ) : null}
       {detail.error ? (
         <Notice variant="danger" title={t("identityProviders.sync.errorTitle")}>
           {detail.error}

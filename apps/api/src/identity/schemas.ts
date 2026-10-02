@@ -408,7 +408,7 @@ const syncRunShape = {
   id: uuid("ID of the run."),
   providerId: uuid("ID of the provider."),
   trigger: z.enum(["schedule", "manual"]).describe("What started the run."),
-  status: z.enum(["running", "succeeded", "warnings", "failed"]).describe("Result of the run."),
+  status: z.enum(["running", "succeeded", "warnings", "failed", "cancelled"]).describe("Result of the run."),
   startedAt: timestamp("When the run started."),
   finishedAt: timestamp("When the run finished.").nullable(),
   durationMs: z.number().int().nullable().describe("Duration in milliseconds, or null while running."),

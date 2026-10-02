@@ -120,6 +120,13 @@
       "when": 1790953131089,
       "tag": "0016_sync_and_mapping",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1790969386374,
+      "tag": "0017_sync_heartbeat",
+      "breakpoints": true
     }
   ]
 }

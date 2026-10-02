@@ -298,6 +298,14 @@ export function syncRunQuery(providerId: string, runId: string) {
   });
 }
 
+export async function cancelSync(providerId: string, runId: string): Promise<void> {
+  await request(() =>
+    api.POST("/api/v1/instance/identity-providers/{providerId}/sync-runs/{runId}/cancel", {
+      params: { path: { providerId, runId } },
+    }),
+  );
+}
+
 export function startSync(providerId: string) {
   return request(() =>
     api.POST("/api/v1/instance/identity-providers/{providerId}/sync", { params: { path: { providerId } } }),

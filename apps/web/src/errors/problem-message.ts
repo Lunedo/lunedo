@@ -51,6 +51,7 @@ const KNOWN = new Set([
   "domainInUse",
   "groupManagedByProvider",
   "syncUnavailable",
+  "syncNotRunning",
   "providerUnavailable",
   "invalidServiceAccountKey",
   "roleNameTaken",

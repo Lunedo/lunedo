@@ -104,6 +104,7 @@ export interface FakeGraph extends RunningFake {
   removeMember(groupId: string, memberId: string): void;
   renameGroup(groupId: string, displayName: string): void;
   deleteUser(userId: string): void;
+  hold(): { reached: Promise<void>; release(): void };
 }
 
 const DEFAULT_PAGE_SIZE = 100;
@@ -120,6 +121,7 @@ export async function startFakeGraph(
   const tokens = new Set<string>();
   const requests: string[] = [];
   let baseUrl = "";
+  let gate: { reached: () => void; released: Promise<void> } | null = null;
 
   const findUser = (key: string) =>
     data.users.find((user) => user.id === key || user.userPrincipalName.toLowerCase() === key.toLowerCase());
@@ -294,7 +296,14 @@ export async function startFakeGraph(
     ) {
       return token(request);
     }
-    if (request.segments[0] === "v1.0") return graph(request);
+    if (request.segments[0] === "v1.0") {
+      const held = gate;
+      if (held) {
+        held.reached();
+        return held.released.then(() => graph(request));
+      }
+      return graph(request);
+    }
     return graphError(404, "NotFound", "Unknown endpoint");
   }, options.port);
   baseUrl = running.url;
@@ -322,6 +331,24 @@ export async function startFakeGraph(
     deleteUser(userId) {
       data.users = data.users.filter((user) => user.id !== userId);
       for (const groupId of Object.keys(data.members)) fake.removeMember(groupId, userId);
+    },
+    hold() {
+      let reached = () => {};
+      let release = () => {};
+      const reachedPromise = new Promise<void>((resolve) => {
+        reached = resolve;
+      });
+      const released = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      gate = { reached, released };
+      return {
+        reached: reachedPromise,
+        release: () => {
+          gate = null;
+          release();
+        },
+      };
     },
   };
   return fake;

@@ -74,10 +74,14 @@
         "running": "Läuft",
         "succeeded": "Abgeschlossen",
         "warnings": "Abgeschlossen mit Warnungen",
-        "failed": "Fehlgeschlagen"
+        "failed": "Fehlgeschlagen",
+        "cancelled": "Abgebrochen"
       },
       "noChanges": "Keine Änderungen",
       "inProgress": "Läuft",
+      "cancelledSummary": "Auf Wunsch angehalten. Änderungen bis dahin bleiben bestehen.",
+      "cancel": "Lauf abbrechen",
+      "cancelRequested": "Der Lauf hält vor dem nächsten Konto an.",
       "failedWithoutReason": "Der Lauf ist ohne Angabe eines Grundes fehlgeschlagen. Prüfe die Verbindung und versuche es erneut.",
       "changes": "{count, plural, one {# Änderung} other {# Änderungen}}",
       "warnings": "{count, plural, one {# Warnung} other {# Warnungen}}",
@@ -595,6 +599,7 @@
     "domainInUse": "Ein anderer Identitätsanbieter verwendet bereits eine dieser E-Mail-Domains. Entferne sie dort zuerst oder verwende eine andere Domain.",
     "groupManagedByProvider": "Die Mitglieder dieser Gruppe kommen von einem Identitätsanbieter. Ändere sie dort; sie werden bei der nächsten Anmeldung oder Synchronisierung übernommen.",
     "providerUnavailable": "Der Identitätsanbieter war nicht erreichbar oder hat unerwartet geantwortet. Vielleicht ist er gerade nicht verfügbar oder seine Einstellungen haben sich geändert. Versuch es gleich noch einmal; wenn es weiter scheitert, bitte deine Administration, den Anbieter zu prüfen.",
+    "syncNotRunning": "Der Lauf ist schon beendet, es gibt nichts abzubrechen. Lade das Sync-Protokoll neu, um sein Ergebnis zu sehen.",
     "syncUnavailable": "Pagehall kann das Verzeichnis dieses Anbieters nicht lesen, deshalb werden Konten bei der Anmeldung aktualisiert. Richte das Verzeichnis in den Einstellungen des Anbieters ein, um zu synchronisieren.",
     "invalidServiceAccountKey": "Der Schlüssel des Dienstkontos konnte nicht gelesen werden. Lade in Google Cloud einen neuen JSON-Schlüssel für das Dienstkonto herunter und lade ihn erneut hoch.",
     "roleNameTaken": "Eine Rolle mit diesem Namen gibt es bereits. Wähle einen anderen Namen.",
@@ -1906,7 +1911,8 @@
         "credentialRemoved": "Zugangsdaten des Anbieters entfernt",
         "logoChanged": "Logo des Anbieters geändert",
         "directoryKeyChanged": "Directory-Schlüssel geändert",
-        "synchronized": "Anbieter synchronisiert"
+        "synchronized": "Anbieter synchronisiert",
+        "syncCancelled": "Synchronisierung abgebrochen"
       },
       "mappingRule": {
         "created": "Zuordnungsregel erstellt",
@@ -2219,6 +2225,7 @@
     "loadSyncRuns": "Das Sync-Protokoll konnte nicht geladen werden",
     "loadSyncRun": "Der Lauf konnte nicht geladen werden",
     "startSync": "Die Synchronisierung konnte nicht gestartet werden",
+    "cancelSync": "Der Lauf konnte nicht abgebrochen werden",
     "saveDirectoryKey": "Der Schlüssel des Dienstkontos konnte nicht gespeichert werden",
     "removeDirectoryKey": "Der Schlüssel des Dienstkontos konnte nicht entfernt werden",
     "unlinkIdentity": "Die Identität konnte nicht getrennt werden",
