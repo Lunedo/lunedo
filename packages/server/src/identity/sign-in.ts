@@ -277,20 +277,19 @@ export class ProviderSignInService {
         codeVerifier: flow.codeVerifier,
       });
     } catch (error) {
-      if (error instanceof ProviderPolicyError && error.reason === "domainNotAllowed") {
-        return this.#refuse({ providerId: provider.id, reason: "domainNotAllowed" });
+      if (!(error instanceof ProviderPolicyError) && !(error instanceof ProviderResponseError)) throw error;
+      if (flow.purpose === "test") {
+        await this.#database
+          .update(providerFlows)
+          .set({ result: { error: error.message } })
+          .where(eq(providerFlows.id, flow.id));
+        return { kind: "tested", flowId: flow.id, returnTo: flow.returnTo };
       }
-      if (error instanceof ProviderPolicyError || error instanceof ProviderResponseError) {
-        if (flow.purpose === "test") {
-          await this.#database
-            .update(providerFlows)
-            .set({ result: { error: error.message } })
-            .where(eq(providerFlows.id, flow.id));
-          return { kind: "tested", flowId: flow.id, returnTo: flow.returnTo };
-        }
-        return this.#refuse({ providerId: provider.id, reason: "invalidResponse" });
-      }
-      throw error;
+      const reason =
+        error instanceof ProviderPolicyError && error.reason === "domainNotAllowed"
+          ? "domainNotAllowed"
+          : "invalidResponse";
+      return this.#refuse({ providerId: provider.id, reason });
     }
     const profile = result.profile;
     const emailVerified = this.#emailVerified(provider.config.domains, profile.email);

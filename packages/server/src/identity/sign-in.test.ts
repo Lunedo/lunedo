@@ -497,6 +497,29 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
           client: {},
         }),
       ).toMatchObject({ kind: "refused", reason: "domainNotAllowed" });
+      const refusals = async () =>
+        Number(
+          (
+            await test.pool.query("select count(*) from sign_in_refusals where provider_id = $1", [
+              created.id,
+            ])
+          ).rows[0]?.count ?? 0,
+        );
+      const before = await refusals();
+      const testStart = await test.services.providerSignIn.start({
+        providerId: created.id,
+        purpose: "test",
+        baseUrl: BASE,
+      });
+      const tested = await google.authorize(testStart.url, { sub: randomUUID(), email: "someone@gmail.com" });
+      const result = await test.services.providerSignIn.callback({
+        providerId: created.id,
+        query: tested.searchParams,
+        browserToken: testStart.browserToken,
+        client: {},
+      });
+      expect(result.kind).toBe("tested");
+      expect(await refusals()).toBe(before);
       expect(
         (
           await signIn(
