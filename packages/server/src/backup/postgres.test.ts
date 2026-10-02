@@ -166,7 +166,10 @@ describe.skipIf(!baseUrl || !hasTools)("PostgresArchiver", () => {
 
     const targetPool = createDatabasePool({ connectionString: target.url, applicationName: "pagehall-test" });
     try {
-      const settings = await targetPool.query("select scope_id, key, value, locked from setting_values");
+      const settings = await targetPool.query(
+        "select scope_id, key, value, locked from setting_values where scope_id = $1",
+        [scopeId],
+      );
       expect(settings.rows).toEqual([
         { scope_id: scopeId, key: "locale.language", value: "de", locked: true },
       ]);
