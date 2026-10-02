@@ -735,6 +735,26 @@ describe.skipIf(!baseUrl)("API tokens and service accounts", () => {
       expect(await test.services.serviceAccounts.notifyUnattended()).toBe(1);
     });
 
+    it("remind the owners before a token expires when nobody is responsible", async () => {
+      const org = await organization();
+      const service = await test.services.serviceAccounts.create(SYSTEM, org.id, { name: "Lonely reporter" });
+      await test.pool.query(
+        "update service_accounts set unattended_notified_at = now() where account_id = $1",
+        [service.id],
+      );
+      await test.services.apiTokens.create(SYSTEM, {
+        accountId: service.id,
+        name: "Nightly export",
+        scopes: { organization: { membersAndGroups: "view" } },
+        expiresAt: new Date(Date.now() + 2 * DAY_MS),
+      });
+      expect(await test.services.apiTokens.sendReminders()).toBeGreaterThanOrEqual(1);
+      await deliverPendingMail(test.services, test.database);
+      const owner = await ownerEmail(org.id);
+      const mails = test.mail.sent.filter((mail) => mail.to === owner);
+      expect(mails.map((mail) => mail.subject)).toEqual([expect.stringContaining("Nightly export")]);
+    });
+
     it("remind every responsible person before a token expires", async () => {
       const org = await organization();
       const firstEmail = `${randomUUID()}@example.org`;

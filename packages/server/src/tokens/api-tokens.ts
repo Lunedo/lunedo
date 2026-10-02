@@ -495,14 +495,15 @@ export class ApiTokenService {
             s.account_id as service_account_id`);
         const token = marked.rows[0];
         if (!token) return null;
-        const recipients = await tx.execute<{ id: string }>(sql`
-          select a.id from accounts a
-          where a.state = 'active' and a.type <> 'service' and (
-            a.id = ${token.account_id}
-            or a.id in (select account_id from service_account_responsibles where service_account_id = ${token.account_id}))`);
+        const recipients = await this.#tokenRecipients(
+          tx,
+          token.account_id,
+          token.service_account_id,
+          token.organization_id,
+        );
         return this.#notifications.notify(tx, {
           type: "apiToken.expiring",
-          recipients: recipients.rows.map((recipient) => recipient.id),
+          recipients,
           organizationId: token.organization_id,
           targetId: id,
           params: {
@@ -550,7 +551,7 @@ export class ApiTokenService {
             s.account_id as service_account_id`);
         const token = marked.rows[0];
         if (!token) return null;
-        const recipients = await this.#unusedRecipients(
+        const recipients = await this.#tokenRecipients(
           tx,
           token.account_id,
           token.service_account_id,
@@ -577,13 +578,17 @@ export class ApiTokenService {
     return notified;
   }
 
-  async #unusedRecipients(
+  async #tokenRecipients(
     tx: Transaction,
     accountId: string,
     serviceAccountId: string | null,
     organizationId: string | null,
   ): Promise<string[]> {
-    if (!serviceAccountId) return [accountId];
+    if (!serviceAccountId) {
+      const owner = await tx.execute<{ id: string }>(sql`
+        select id from accounts where id = ${accountId} and state = 'active'`);
+      return owner.rows.map((row) => row.id);
+    }
     const responsible = await tx.execute<{ id: string }>(sql`
       select a.id from service_account_responsibles r join accounts a on a.id = r.account_id
       where r.service_account_id = ${serviceAccountId} and a.state = 'active'`);
