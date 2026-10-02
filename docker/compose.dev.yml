@@ -165,6 +165,8 @@ services:
     environment: *authentik-environment
     volumes:
       - ./idp/authentik:/blueprints/custom:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       authentik-postgres:
         condition: service_healthy
