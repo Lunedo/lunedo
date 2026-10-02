@@ -24,6 +24,7 @@ import {
   LinkFields,
   parseList,
   RedirectUriField,
+  SecondFactorFields,
 } from "./provider-config.js";
 import {
   type CredentialDraft,
@@ -504,6 +505,9 @@ function SavedProviderStep({
           </Section>
           <Section title={t("identityProviders.accounts.existing")}>
             <LinkFields />
+          </Section>
+          <Section title={t("identityProviders.secondFactor.title")}>
+            <SecondFactorFields provider={provider} canManage={canManage} />
           </Section>
         </>
       ) : null}

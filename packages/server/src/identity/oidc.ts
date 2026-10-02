@@ -343,6 +343,9 @@ export class OidcAdapter implements IdentityProviderAdapter {
         const profile = await this.#profile(provider, credentials, claims);
         return {
           profile,
+          methods: Array.isArray(claims.amr)
+            ? claims.amr.filter((value): value is string => typeof value === "string")
+            : [],
           authTime: typeof claims.auth_time === "number" ? claims.auth_time : null,
           providerSessionId: typeof claims.sid === "string" ? claims.sid : null,
           claimNames: Object.keys(claims).sort(),

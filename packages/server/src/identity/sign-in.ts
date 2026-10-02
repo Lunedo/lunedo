@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
+import type { OidcConfig } from "@pagehall/shared";
 import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import * as client from "openid-client";
 import { ZodError } from "zod";
@@ -11,7 +12,7 @@ import { ChallengeExpiredError, RateLimitedError } from "../auth/errors.js";
 import { sessions } from "../auth/schema.js";
 import type { ClientInfo, SessionService } from "../auth/sessions.js";
 import { passwordSignInSetting } from "../auth/settings.js";
-import type { PendingIdentity, SignedIn, SignInService } from "../auth/sign-in.js";
+import type { PendingIdentity, SecondFactorType, SignedIn, SignInService } from "../auth/sign-in.js";
 import { clientSubject, type RateLimiter } from "../auth/throttle.js";
 import { secondFactorsOf } from "../auth/two-factor.js";
 import { secretsEqual } from "../crypto/constant-time.js";
@@ -53,9 +54,24 @@ export interface StartedFlow {
   browserToken: string;
 }
 
+export function needsPagehallFactor(
+  setting: OidcConfig["secondFactor"],
+  methods: readonly string[],
+): boolean {
+  if (setting.mode === "pagehall") return true;
+  if (setting.mode === "provider") return false;
+  return !methods.some((method) => setting.proofValues.includes(method));
+}
+
 export type CallbackResult =
   | { kind: "signedIn"; signedIn: SignedIn; returnTo: string | null }
   | { kind: "linkRequired"; pendingToken: string }
+  | {
+      kind: "secondFactorRequired";
+      pendingToken: string;
+      factors: SecondFactorType[];
+      returnTo: string | null;
+    }
   | { kind: "refused"; reference: string; reason: SignInRefusalReason }
   | { kind: "reauthenticated"; token: string; returnTo: string | null }
   | { kind: "tested"; flowId: string; returnTo: string | null };
@@ -324,6 +340,7 @@ export class ProviderSignInService {
           profile,
           groups,
           emailVerified,
+          secondFactor: needsPagehallFactor(provider.config.secondFactor, result.methods),
           providerSessionId: result.providerSessionId,
           client: input.client,
           returnTo: flow.returnTo,
@@ -376,6 +393,7 @@ export class ProviderSignInService {
     profile: ProviderProfile;
     groups: ProviderProfile["groups"];
     emailVerified: boolean;
+    secondFactor: boolean;
     providerSessionId: string | null;
     client: ClientInfo;
     returnTo: string | null;
@@ -520,25 +538,39 @@ export class ProviderSignInService {
       client: ClientInfo;
       returnTo: string | null;
       started: Date;
+      secondFactor: boolean;
     },
   ): Promise<CallbackResult> {
     const mailIds: string[] = [];
-    const signedIn = await this.#database.transaction(async (tx) => {
+    const outcome = await this.#database.transaction(async (tx) => {
       const prepared = await prepare(tx);
       const identityId = typeof prepared === "string" ? prepared : prepared.identityId;
       const target = typeof prepared === "string" ? account : prepared.account;
       if (!target) throw new Error("No account to sign in");
+      const session = {
+        providerId: input.provider.id,
+        identityId,
+        providerSessionId: input.providerSessionId,
+      };
+      if (input.secondFactor) {
+        const pending = await this.#signIn.providerSecondFactor(tx, target, session, input.client);
+        if (pending) return pending;
+      }
       return this.#signIn.createProviderSession(
         tx,
         target,
-        { providerId: input.provider.id, identityId, providerSessionId: input.providerSessionId },
+        session,
         input.client,
         mailIds,
         input.started,
+        input.secondFactor ? "secondFactorSetup" : "full",
       );
     });
     await this.#notifications.dispatch(mailIds);
-    return { kind: "signedIn", signedIn, returnTo: input.returnTo };
+    if ("pendingToken" in outcome) {
+      return { kind: "secondFactorRequired", ...outcome, returnTo: input.returnTo };
+    }
+    return { kind: "signedIn", signedIn: outcome, returnTo: input.returnTo };
   }
 
   async #reauthenticate(

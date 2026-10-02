@@ -8,6 +8,7 @@ const common = {
   idTokenAlgorithm: "RS256" as const,
   accountCreation: { enabled: true, requiredGroups: [] },
   sync: { intervalMinutes: 240 },
+  secondFactor: { mode: "providerProof" as const, proofValues: ["hwk"] },
 };
 
 describe("toConfigInput", () => {

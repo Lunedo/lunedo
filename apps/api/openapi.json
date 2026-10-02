@@ -13921,6 +13921,44 @@
                                 ],
                                 "additionalProperties": false
                               },
+                              "secondFactor": {
+                                "default": {
+                                  "mode": "provider",
+                                  "proofValues": [
+                                    "mfa"
+                                  ]
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "default": "provider",
+                                    "type": "string",
+                                    "enum": [
+                                      "provider",
+                                      "providerProof",
+                                      "pagehall"
+                                    ]
+                                  },
+                                  "proofValues": {
+                                    "default": [
+                                      "mfa"
+                                    ],
+                                    "minItems": 1,
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 50
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "mode",
+                                  "proofValues"
+                                ],
+                                "additionalProperties": false
+                              },
                               "tenantId": {
                                 "type": "string",
                                 "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
@@ -13957,6 +13995,7 @@
                               "idTokenAlgorithm",
                               "accountCreation",
                               "sync",
+                              "secondFactor",
                               "tenantId",
                               "authority",
                               "graphUrl",
@@ -14048,6 +14087,44 @@
                                 ],
                                 "additionalProperties": false
                               },
+                              "secondFactor": {
+                                "default": {
+                                  "mode": "provider",
+                                  "proofValues": [
+                                    "mfa"
+                                  ]
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "default": "provider",
+                                    "type": "string",
+                                    "enum": [
+                                      "provider",
+                                      "providerProof",
+                                      "pagehall"
+                                    ]
+                                  },
+                                  "proofValues": {
+                                    "default": [
+                                      "mfa"
+                                    ],
+                                    "minItems": 1,
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 50
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "mode",
+                                  "proofValues"
+                                ],
+                                "additionalProperties": false
+                              },
                               "issuer": {
                                 "default": "https://accounts.google.com",
                                 "type": "string",
@@ -14114,6 +14191,7 @@
                               "idTokenAlgorithm",
                               "accountCreation",
                               "sync",
+                              "secondFactor",
                               "issuer",
                               "directory"
                             ],
@@ -14199,6 +14277,44 @@
                                 },
                                 "required": [
                                   "intervalMinutes"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "secondFactor": {
+                                "default": {
+                                  "mode": "provider",
+                                  "proofValues": [
+                                    "mfa"
+                                  ]
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "default": "provider",
+                                    "type": "string",
+                                    "enum": [
+                                      "provider",
+                                      "providerProof",
+                                      "pagehall"
+                                    ]
+                                  },
+                                  "proofValues": {
+                                    "default": [
+                                      "mfa"
+                                    ],
+                                    "minItems": 1,
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 50
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "mode",
+                                  "proofValues"
                                 ],
                                 "additionalProperties": false
                               },
@@ -14298,6 +14414,7 @@
                               "idTokenAlgorithm",
                               "accountCreation",
                               "sync",
+                              "secondFactor",
                               "issuer",
                               "scopes",
                               "claims"
@@ -14661,6 +14778,40 @@
                             },
                             "additionalProperties": false
                           },
+                          "secondFactor": {
+                            "default": {
+                              "mode": "provider",
+                              "proofValues": [
+                                "mfa"
+                              ]
+                            },
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "default": "provider",
+                                "type": "string",
+                                "enum": [
+                                  "provider",
+                                  "providerProof",
+                                  "pagehall"
+                                ]
+                              },
+                              "proofValues": {
+                                "default": [
+                                  "mfa"
+                                ],
+                                "minItems": 1,
+                                "maxItems": 20,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50
+                                }
+                              }
+                            },
+                            "additionalProperties": false
+                          },
                           "tenantId": {
                             "type": "string",
                             "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
@@ -14773,6 +14924,40 @@
                                 "type": "integer",
                                 "minimum": 15,
                                 "maximum": 1440
+                              }
+                            },
+                            "additionalProperties": false
+                          },
+                          "secondFactor": {
+                            "default": {
+                              "mode": "provider",
+                              "proofValues": [
+                                "mfa"
+                              ]
+                            },
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "default": "provider",
+                                "type": "string",
+                                "enum": [
+                                  "provider",
+                                  "providerProof",
+                                  "pagehall"
+                                ]
+                              },
+                              "proofValues": {
+                                "default": [
+                                  "mfa"
+                                ],
+                                "minItems": 1,
+                                "maxItems": 20,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50
+                                }
                               }
                             },
                             "additionalProperties": false
@@ -14911,6 +15096,40 @@
                                 "type": "integer",
                                 "minimum": 15,
                                 "maximum": 1440
+                              }
+                            },
+                            "additionalProperties": false
+                          },
+                          "secondFactor": {
+                            "default": {
+                              "mode": "provider",
+                              "proofValues": [
+                                "mfa"
+                              ]
+                            },
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "default": "provider",
+                                "type": "string",
+                                "enum": [
+                                  "provider",
+                                  "providerProof",
+                                  "pagehall"
+                                ]
+                              },
+                              "proofValues": {
+                                "default": [
+                                  "mfa"
+                                ],
+                                "minItems": 1,
+                                "maxItems": 20,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50
+                                }
                               }
                             },
                             "additionalProperties": false
@@ -15187,6 +15406,44 @@
                                   ],
                                   "additionalProperties": false
                                 },
+                                "secondFactor": {
+                                  "default": {
+                                    "mode": "provider",
+                                    "proofValues": [
+                                      "mfa"
+                                    ]
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "mode": {
+                                      "default": "provider",
+                                      "type": "string",
+                                      "enum": [
+                                        "provider",
+                                        "providerProof",
+                                        "pagehall"
+                                      ]
+                                    },
+                                    "proofValues": {
+                                      "default": [
+                                        "mfa"
+                                      ],
+                                      "minItems": 1,
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 50
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "mode",
+                                    "proofValues"
+                                  ],
+                                  "additionalProperties": false
+                                },
                                 "tenantId": {
                                   "type": "string",
                                   "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
@@ -15223,6 +15480,7 @@
                                 "idTokenAlgorithm",
                                 "accountCreation",
                                 "sync",
+                                "secondFactor",
                                 "tenantId",
                                 "authority",
                                 "graphUrl",
@@ -15314,6 +15572,44 @@
                                   ],
                                   "additionalProperties": false
                                 },
+                                "secondFactor": {
+                                  "default": {
+                                    "mode": "provider",
+                                    "proofValues": [
+                                      "mfa"
+                                    ]
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "mode": {
+                                      "default": "provider",
+                                      "type": "string",
+                                      "enum": [
+                                        "provider",
+                                        "providerProof",
+                                        "pagehall"
+                                      ]
+                                    },
+                                    "proofValues": {
+                                      "default": [
+                                        "mfa"
+                                      ],
+                                      "minItems": 1,
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 50
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "mode",
+                                    "proofValues"
+                                  ],
+                                  "additionalProperties": false
+                                },
                                 "issuer": {
                                   "default": "https://accounts.google.com",
                                   "type": "string",
@@ -15380,6 +15676,7 @@
                                 "idTokenAlgorithm",
                                 "accountCreation",
                                 "sync",
+                                "secondFactor",
                                 "issuer",
                                 "directory"
                               ],
@@ -15465,6 +15762,44 @@
                                   },
                                   "required": [
                                     "intervalMinutes"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "secondFactor": {
+                                  "default": {
+                                    "mode": "provider",
+                                    "proofValues": [
+                                      "mfa"
+                                    ]
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "mode": {
+                                      "default": "provider",
+                                      "type": "string",
+                                      "enum": [
+                                        "provider",
+                                        "providerProof",
+                                        "pagehall"
+                                      ]
+                                    },
+                                    "proofValues": {
+                                      "default": [
+                                        "mfa"
+                                      ],
+                                      "minItems": 1,
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 50
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "mode",
+                                    "proofValues"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -15564,6 +15899,7 @@
                                 "idTokenAlgorithm",
                                 "accountCreation",
                                 "sync",
+                                "secondFactor",
                                 "issuer",
                                 "scopes",
                                 "claims"
@@ -16190,6 +16526,44 @@
                               ],
                               "additionalProperties": false
                             },
+                            "secondFactor": {
+                              "default": {
+                                "mode": "provider",
+                                "proofValues": [
+                                  "mfa"
+                                ]
+                              },
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "default": "provider",
+                                  "type": "string",
+                                  "enum": [
+                                    "provider",
+                                    "providerProof",
+                                    "pagehall"
+                                  ]
+                                },
+                                "proofValues": {
+                                  "default": [
+                                    "mfa"
+                                  ],
+                                  "minItems": 1,
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 50
+                                  }
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "proofValues"
+                              ],
+                              "additionalProperties": false
+                            },
                             "tenantId": {
                               "type": "string",
                               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
@@ -16226,6 +16600,7 @@
                             "idTokenAlgorithm",
                             "accountCreation",
                             "sync",
+                            "secondFactor",
                             "tenantId",
                             "authority",
                             "graphUrl",
@@ -16317,6 +16692,44 @@
                               ],
                               "additionalProperties": false
                             },
+                            "secondFactor": {
+                              "default": {
+                                "mode": "provider",
+                                "proofValues": [
+                                  "mfa"
+                                ]
+                              },
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "default": "provider",
+                                  "type": "string",
+                                  "enum": [
+                                    "provider",
+                                    "providerProof",
+                                    "pagehall"
+                                  ]
+                                },
+                                "proofValues": {
+                                  "default": [
+                                    "mfa"
+                                  ],
+                                  "minItems": 1,
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 50
+                                  }
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "proofValues"
+                              ],
+                              "additionalProperties": false
+                            },
                             "issuer": {
                               "default": "https://accounts.google.com",
                               "type": "string",
@@ -16383,6 +16796,7 @@
                             "idTokenAlgorithm",
                             "accountCreation",
                             "sync",
+                            "secondFactor",
                             "issuer",
                             "directory"
                           ],
@@ -16468,6 +16882,44 @@
                               },
                               "required": [
                                 "intervalMinutes"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "secondFactor": {
+                              "default": {
+                                "mode": "provider",
+                                "proofValues": [
+                                  "mfa"
+                                ]
+                              },
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "default": "provider",
+                                  "type": "string",
+                                  "enum": [
+                                    "provider",
+                                    "providerProof",
+                                    "pagehall"
+                                  ]
+                                },
+                                "proofValues": {
+                                  "default": [
+                                    "mfa"
+                                  ],
+                                  "minItems": 1,
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 50
+                                  }
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "proofValues"
                               ],
                               "additionalProperties": false
                             },
@@ -16567,6 +17019,7 @@
                             "idTokenAlgorithm",
                             "accountCreation",
                             "sync",
+                            "secondFactor",
                             "issuer",
                             "scopes",
                             "claims"
@@ -16970,6 +17423,40 @@
                             },
                             "additionalProperties": false
                           },
+                          "secondFactor": {
+                            "default": {
+                              "mode": "provider",
+                              "proofValues": [
+                                "mfa"
+                              ]
+                            },
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "default": "provider",
+                                "type": "string",
+                                "enum": [
+                                  "provider",
+                                  "providerProof",
+                                  "pagehall"
+                                ]
+                              },
+                              "proofValues": {
+                                "default": [
+                                  "mfa"
+                                ],
+                                "minItems": 1,
+                                "maxItems": 20,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50
+                                }
+                              }
+                            },
+                            "additionalProperties": false
+                          },
                           "tenantId": {
                             "type": "string",
                             "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
@@ -17082,6 +17569,40 @@
                                 "type": "integer",
                                 "minimum": 15,
                                 "maximum": 1440
+                              }
+                            },
+                            "additionalProperties": false
+                          },
+                          "secondFactor": {
+                            "default": {
+                              "mode": "provider",
+                              "proofValues": [
+                                "mfa"
+                              ]
+                            },
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "default": "provider",
+                                "type": "string",
+                                "enum": [
+                                  "provider",
+                                  "providerProof",
+                                  "pagehall"
+                                ]
+                              },
+                              "proofValues": {
+                                "default": [
+                                  "mfa"
+                                ],
+                                "minItems": 1,
+                                "maxItems": 20,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50
+                                }
                               }
                             },
                             "additionalProperties": false
@@ -17220,6 +17741,40 @@
                                 "type": "integer",
                                 "minimum": 15,
                                 "maximum": 1440
+                              }
+                            },
+                            "additionalProperties": false
+                          },
+                          "secondFactor": {
+                            "default": {
+                              "mode": "provider",
+                              "proofValues": [
+                                "mfa"
+                              ]
+                            },
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "default": "provider",
+                                "type": "string",
+                                "enum": [
+                                  "provider",
+                                  "providerProof",
+                                  "pagehall"
+                                ]
+                              },
+                              "proofValues": {
+                                "default": [
+                                  "mfa"
+                                ],
+                                "minItems": 1,
+                                "maxItems": 20,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50
+                                }
                               }
                             },
                             "additionalProperties": false
@@ -17429,6 +17984,44 @@
                               ],
                               "additionalProperties": false
                             },
+                            "secondFactor": {
+                              "default": {
+                                "mode": "provider",
+                                "proofValues": [
+                                  "mfa"
+                                ]
+                              },
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "default": "provider",
+                                  "type": "string",
+                                  "enum": [
+                                    "provider",
+                                    "providerProof",
+                                    "pagehall"
+                                  ]
+                                },
+                                "proofValues": {
+                                  "default": [
+                                    "mfa"
+                                  ],
+                                  "minItems": 1,
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 50
+                                  }
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "proofValues"
+                              ],
+                              "additionalProperties": false
+                            },
                             "tenantId": {
                               "type": "string",
                               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
@@ -17465,6 +18058,7 @@
                             "idTokenAlgorithm",
                             "accountCreation",
                             "sync",
+                            "secondFactor",
                             "tenantId",
                             "authority",
                             "graphUrl",
@@ -17556,6 +18150,44 @@
                               ],
                               "additionalProperties": false
                             },
+                            "secondFactor": {
+                              "default": {
+                                "mode": "provider",
+                                "proofValues": [
+                                  "mfa"
+                                ]
+                              },
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "default": "provider",
+                                  "type": "string",
+                                  "enum": [
+                                    "provider",
+                                    "providerProof",
+                                    "pagehall"
+                                  ]
+                                },
+                                "proofValues": {
+                                  "default": [
+                                    "mfa"
+                                  ],
+                                  "minItems": 1,
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 50
+                                  }
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "proofValues"
+                              ],
+                              "additionalProperties": false
+                            },
                             "issuer": {
                               "default": "https://accounts.google.com",
                               "type": "string",
@@ -17622,6 +18254,7 @@
                             "idTokenAlgorithm",
                             "accountCreation",
                             "sync",
+                            "secondFactor",
                             "issuer",
                             "directory"
                           ],
@@ -17707,6 +18340,44 @@
                               },
                               "required": [
                                 "intervalMinutes"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "secondFactor": {
+                              "default": {
+                                "mode": "provider",
+                                "proofValues": [
+                                  "mfa"
+                                ]
+                              },
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "default": "provider",
+                                  "type": "string",
+                                  "enum": [
+                                    "provider",
+                                    "providerProof",
+                                    "pagehall"
+                                  ]
+                                },
+                                "proofValues": {
+                                  "default": [
+                                    "mfa"
+                                  ],
+                                  "minItems": 1,
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 50
+                                  }
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "proofValues"
                               ],
                               "additionalProperties": false
                             },
@@ -17806,6 +18477,7 @@
                             "idTokenAlgorithm",
                             "accountCreation",
                             "sync",
+                            "secondFactor",
                             "issuer",
                             "scopes",
                             "claims"
@@ -18242,6 +18914,44 @@
                               ],
                               "additionalProperties": false
                             },
+                            "secondFactor": {
+                              "default": {
+                                "mode": "provider",
+                                "proofValues": [
+                                  "mfa"
+                                ]
+                              },
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "default": "provider",
+                                  "type": "string",
+                                  "enum": [
+                                    "provider",
+                                    "providerProof",
+                                    "pagehall"
+                                  ]
+                                },
+                                "proofValues": {
+                                  "default": [
+                                    "mfa"
+                                  ],
+                                  "minItems": 1,
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 50
+                                  }
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "proofValues"
+                              ],
+                              "additionalProperties": false
+                            },
                             "tenantId": {
                               "type": "string",
                               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
@@ -18278,6 +18988,7 @@
                             "idTokenAlgorithm",
                             "accountCreation",
                             "sync",
+                            "secondFactor",
                             "tenantId",
                             "authority",
                             "graphUrl",
@@ -18369,6 +19080,44 @@
                               ],
                               "additionalProperties": false
                             },
+                            "secondFactor": {
+                              "default": {
+                                "mode": "provider",
+                                "proofValues": [
+                                  "mfa"
+                                ]
+                              },
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "default": "provider",
+                                  "type": "string",
+                                  "enum": [
+                                    "provider",
+                                    "providerProof",
+                                    "pagehall"
+                                  ]
+                                },
+                                "proofValues": {
+                                  "default": [
+                                    "mfa"
+                                  ],
+                                  "minItems": 1,
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 50
+                                  }
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "proofValues"
+                              ],
+                              "additionalProperties": false
+                            },
                             "issuer": {
                               "default": "https://accounts.google.com",
                               "type": "string",
@@ -18435,6 +19184,7 @@
                             "idTokenAlgorithm",
                             "accountCreation",
                             "sync",
+                            "secondFactor",
                             "issuer",
                             "directory"
                           ],
@@ -18520,6 +19270,44 @@
                               },
                               "required": [
                                 "intervalMinutes"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "secondFactor": {
+                              "default": {
+                                "mode": "provider",
+                                "proofValues": [
+                                  "mfa"
+                                ]
+                              },
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "default": "provider",
+                                  "type": "string",
+                                  "enum": [
+                                    "provider",
+                                    "providerProof",
+                                    "pagehall"
+                                  ]
+                                },
+                                "proofValues": {
+                                  "default": [
+                                    "mfa"
+                                  ],
+                                  "minItems": 1,
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 50
+                                  }
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "proofValues"
                               ],
                               "additionalProperties": false
                             },
@@ -18619,6 +19407,7 @@
                             "idTokenAlgorithm",
                             "accountCreation",
                             "sync",
+                            "secondFactor",
                             "issuer",
                             "scopes",
                             "claims"
@@ -19650,6 +20439,44 @@
                               ],
                               "additionalProperties": false
                             },
+                            "secondFactor": {
+                              "default": {
+                                "mode": "provider",
+                                "proofValues": [
+                                  "mfa"
+                                ]
+                              },
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "default": "provider",
+                                  "type": "string",
+                                  "enum": [
+                                    "provider",
+                                    "providerProof",
+                                    "pagehall"
+                                  ]
+                                },
+                                "proofValues": {
+                                  "default": [
+                                    "mfa"
+                                  ],
+                                  "minItems": 1,
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 50
+                                  }
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "proofValues"
+                              ],
+                              "additionalProperties": false
+                            },
                             "tenantId": {
                               "type": "string",
                               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
@@ -19686,6 +20513,7 @@
                             "idTokenAlgorithm",
                             "accountCreation",
                             "sync",
+                            "secondFactor",
                             "tenantId",
                             "authority",
                             "graphUrl",
@@ -19777,6 +20605,44 @@
                               ],
                               "additionalProperties": false
                             },
+                            "secondFactor": {
+                              "default": {
+                                "mode": "provider",
+                                "proofValues": [
+                                  "mfa"
+                                ]
+                              },
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "default": "provider",
+                                  "type": "string",
+                                  "enum": [
+                                    "provider",
+                                    "providerProof",
+                                    "pagehall"
+                                  ]
+                                },
+                                "proofValues": {
+                                  "default": [
+                                    "mfa"
+                                  ],
+                                  "minItems": 1,
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 50
+                                  }
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "proofValues"
+                              ],
+                              "additionalProperties": false
+                            },
                             "issuer": {
                               "default": "https://accounts.google.com",
                               "type": "string",
@@ -19843,6 +20709,7 @@
                             "idTokenAlgorithm",
                             "accountCreation",
                             "sync",
+                            "secondFactor",
                             "issuer",
                             "directory"
                           ],
@@ -19928,6 +20795,44 @@
                               },
                               "required": [
                                 "intervalMinutes"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "secondFactor": {
+                              "default": {
+                                "mode": "provider",
+                                "proofValues": [
+                                  "mfa"
+                                ]
+                              },
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "default": "provider",
+                                  "type": "string",
+                                  "enum": [
+                                    "provider",
+                                    "providerProof",
+                                    "pagehall"
+                                  ]
+                                },
+                                "proofValues": {
+                                  "default": [
+                                    "mfa"
+                                  ],
+                                  "minItems": 1,
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 50
+                                  }
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "proofValues"
                               ],
                               "additionalProperties": false
                             },
@@ -20027,6 +20932,7 @@
                             "idTokenAlgorithm",
                             "accountCreation",
                             "sync",
+                            "secondFactor",
                             "issuer",
                             "scopes",
                             "claims"
@@ -21437,6 +22343,44 @@
                               ],
                               "additionalProperties": false
                             },
+                            "secondFactor": {
+                              "default": {
+                                "mode": "provider",
+                                "proofValues": [
+                                  "mfa"
+                                ]
+                              },
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "default": "provider",
+                                  "type": "string",
+                                  "enum": [
+                                    "provider",
+                                    "providerProof",
+                                    "pagehall"
+                                  ]
+                                },
+                                "proofValues": {
+                                  "default": [
+                                    "mfa"
+                                  ],
+                                  "minItems": 1,
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 50
+                                  }
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "proofValues"
+                              ],
+                              "additionalProperties": false
+                            },
                             "tenantId": {
                               "type": "string",
                               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
@@ -21473,6 +22417,7 @@
                             "idTokenAlgorithm",
                             "accountCreation",
                             "sync",
+                            "secondFactor",
                             "tenantId",
                             "authority",
                             "graphUrl",
@@ -21564,6 +22509,44 @@
                               ],
                               "additionalProperties": false
                             },
+                            "secondFactor": {
+                              "default": {
+                                "mode": "provider",
+                                "proofValues": [
+                                  "mfa"
+                                ]
+                              },
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "default": "provider",
+                                  "type": "string",
+                                  "enum": [
+                                    "provider",
+                                    "providerProof",
+                                    "pagehall"
+                                  ]
+                                },
+                                "proofValues": {
+                                  "default": [
+                                    "mfa"
+                                  ],
+                                  "minItems": 1,
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 50
+                                  }
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "proofValues"
+                              ],
+                              "additionalProperties": false
+                            },
                             "issuer": {
                               "default": "https://accounts.google.com",
                               "type": "string",
@@ -21630,6 +22613,7 @@
                             "idTokenAlgorithm",
                             "accountCreation",
                             "sync",
+                            "secondFactor",
                             "issuer",
                             "directory"
                           ],
@@ -21715,6 +22699,44 @@
                               },
                               "required": [
                                 "intervalMinutes"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "secondFactor": {
+                              "default": {
+                                "mode": "provider",
+                                "proofValues": [
+                                  "mfa"
+                                ]
+                              },
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "default": "provider",
+                                  "type": "string",
+                                  "enum": [
+                                    "provider",
+                                    "providerProof",
+                                    "pagehall"
+                                  ]
+                                },
+                                "proofValues": {
+                                  "default": [
+                                    "mfa"
+                                  ],
+                                  "minItems": 1,
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 50
+                                  }
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "proofValues"
                               ],
                               "additionalProperties": false
                             },
@@ -21814,6 +22836,7 @@
                             "idTokenAlgorithm",
                             "accountCreation",
                             "sync",
+                            "secondFactor",
                             "issuer",
                             "scopes",
                             "claims"

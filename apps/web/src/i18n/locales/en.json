@@ -162,6 +162,23 @@
       "rules": "{count, plural, =0 {There are no mapping rules.} one {# mapping rule is removed.} other {# mapping rules are removed.}}",
       "groups": "{count, plural, =0 {There are no synchronized groups.} one {# synchronized group becomes an ordinary group and keeps its members and permissions.} other {# synchronized groups become ordinary groups and keep their members and permissions.}}"
     },
+    "secondFactor": {
+      "title": "Second factor",
+      "mode": "Second factor after a sign-in through this provider",
+      "modes": {
+        "provider": "Handled by the provider",
+        "providerProof": "Require proof from the provider",
+        "pagehall": "Always ask for a Pagehall second factor"
+      },
+      "hints": {
+        "provider": "A sign-in through this provider is complete. Set up multi-factor authentication in the provider.",
+        "providerProof": "The provider must report multi-factor authentication in its sign-in token. Without it, Pagehall asks for its own second factor; people without one set one up first.",
+        "pagehall": "After every sign-in through this provider, Pagehall asks for its own second factor; people without one set one up first."
+      },
+      "proofValues": "Accepted proof values",
+      "proofValuesHint": "Values of the amr claim that count as multi-factor authentication, separated by commas. Most providers send mfa.",
+      "proofValuesInvalid": "Enter 1 to 20 values of up to 50 characters, separated by commas."
+    },
     "status": {
       "title": "Status",
       "deactivatedBadge": "Deactivated",

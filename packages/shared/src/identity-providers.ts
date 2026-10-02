@@ -69,12 +69,23 @@ const syncSchema = z
   })
   .strict();
 
+export const secondFactorModes = ["provider", "providerProof", "pagehall"] as const;
+export type SecondFactorMode = (typeof secondFactorModes)[number];
+
+const secondFactorSchema = z
+  .object({
+    mode: z.enum(secondFactorModes).default("provider"),
+    proofValues: z.array(z.string().trim().min(1).max(50)).min(1).max(20).default(["mfa"]),
+  })
+  .strict();
+
 const commonShape = {
   clientId: z.string().trim().min(1).max(500),
   domains: z.array(domainSchema).max(50).default([]),
   idTokenAlgorithm: z.enum(idTokenAlgorithms).default("RS256"),
   accountCreation: accountCreationSchema.default({ enabled: false, requiredGroups: [] }),
   sync: syncSchema.default({ intervalMinutes: SYNC_INTERVAL_MINUTES.default }),
+  secondFactor: secondFactorSchema.default({ mode: "provider", proofValues: ["mfa"] }),
 };
 
 export const entraIdConfigSchema = z

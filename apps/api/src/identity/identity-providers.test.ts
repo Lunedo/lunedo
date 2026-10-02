@@ -132,6 +132,52 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     expect(stolen.headers.location).toBe("/sign-in?error=challengeExpired");
   });
 
+  it("sends people to the second factor of Pagehall when the provider asks for it", async () => {
+    const created = await owner.post("/api/v1/instance/identity-providers", {
+      name: "Second factor login",
+      config: {
+        preset: "generic",
+        issuer: idp.issuer,
+        clientId: idp.clientId,
+        domains: ["factor.pagehall.test"],
+        accountCreation: { enabled: true, requiredGroups: [] },
+        secondFactor: { mode: "pagehall" },
+      },
+      credential: { kind: "clientSecret", secret: idp.clientSecret, expiresAt: null },
+    });
+    expect(created.json().provider.config.secondFactor).toEqual({ mode: "pagehall", proofValues: ["mfa"] });
+    const factorProvider = created.json().provider.id;
+    const signInOnce = async (client: TestClient) => {
+      const started = await client.post(`/api/v1/auth/providers/${factorProvider}/start`, {
+        returnTo: "/settings/security",
+      });
+      const callback = await idp.authorize(started.json().url, {
+        sub: "factor-person",
+        email: "person@factor.pagehall.test",
+        amr: ["mfa"],
+      });
+      return client.get(`${callback.pathname}${callback.search}`);
+    };
+    const first = new TestClient(test.app);
+    expect((await signInOnce(first)).headers.location).toBe("/settings/security");
+    expect((await first.get("/api/v1/auth/session")).json()).toMatchObject({
+      sessionKind: "secondFactorSetup",
+    });
+    await addTotp(first);
+
+    const second = new TestClient(test.app);
+    const response = await signInOnce(second);
+    expect(response.statusCode).toBe(303);
+    expect(response.headers.location).toBe(
+      `/sign-in/verify?${new URLSearchParams({ factors: '["totp","recoveryCode"]', redirect: "/settings/security" })}`,
+    );
+    expect(String(response.headers["set-cookie"])).toContain("__Host-pagehall-pending=");
+    expect((await second.get("/api/v1/auth/session")).statusCode).toBe(401);
+    expect((await owner.delete(`/api/v1/instance/identity-providers/${factorProvider}`)).statusCode).toBe(
+      204,
+    );
+  });
+
   it("ends provider sessions through back-channel logout without a browser", async () => {
     const browser = new TestClient(test.app);
     await signInThroughProvider(browser, {

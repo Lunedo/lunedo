@@ -24,6 +24,7 @@ import {
   PROVIDER_FLOW_MAX_AGE_SECONDS,
   readCookie,
   setCookie,
+  setPendingCookie,
 } from "../http/cookies.js";
 import { ProblemException } from "../http/problems.js";
 import { actorOf, clientOf, sessionOf } from "../http/request.js";
@@ -184,6 +185,13 @@ export class ProviderAuthController {
       case "reauthenticated":
         await setSessionCookie(this.context, reply, result.token);
         location = result.returnTo ?? "/settings/security";
+        break;
+      case "secondFactorRequired":
+        setPendingCookie(reply, result.pendingToken);
+        location = withQuery("/sign-in/verify", {
+          factors: JSON.stringify(result.factors),
+          ...(result.returnTo ? { redirect: result.returnTo } : {}),
+        });
         break;
       case "linkRequired":
         setCookie(reply, COOKIES.link, result.pendingToken, LINK_MAX_AGE_SECONDS);

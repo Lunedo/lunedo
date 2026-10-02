@@ -45,6 +45,7 @@ function provider(preset: "entraId" | "generic" | "google" = "entraId") {
     idTokenAlgorithm: "RS256",
     accountCreation: { enabled: true, requiredGroups: [] },
     sync: { intervalMinutes: 60 },
+    secondFactor: { mode: "provider", proofValues: ["mfa"] },
   };
   return {
     id: PROVIDER,

@@ -3,6 +3,7 @@ import {
   emailSources,
   identityProviderNameSchema,
   idTokenAlgorithms,
+  secondFactorModes,
   signInNameSources,
 } from "@pagehall/shared";
 import { Badge, CopyButton, Input, Select, SettingRow, Switch } from "@pagehall/ui";
@@ -27,6 +28,7 @@ export function toConfigInput(config: ProviderConfig): ProviderConfigInput {
     idTokenAlgorithm: config.idTokenAlgorithm,
     accountCreation: config.accountCreation,
     sync: config.sync,
+    secondFactor: config.secondFactor,
   };
   if (config.preset === "entraId") {
     return {
@@ -395,6 +397,71 @@ export function AccountFields({ provider, canManage }: { provider: IdentityProvi
     </>
   );
 }
+
+export function SecondFactorFields({
+  provider,
+  canManage,
+}: {
+  provider: IdentityProvider;
+  canManage: boolean;
+}) {
+  const { t } = useTranslation();
+  const update = useProviderUpdate(provider);
+  const tracker = useSaveStates();
+  const setting = provider.config.secondFactor;
+  return (
+    <>
+      <SettingRow
+        label={t("identityProviders.secondFactor.mode")}
+        description={t(`identityProviders.secondFactor.hints.${setting.mode}`)}
+        control={
+          <Select
+            aria-label={t("identityProviders.secondFactor.mode")}
+            value={setting.mode}
+            disabled={!canManage}
+            onValueChange={(value) =>
+              void tracker("secondFactor").run(() =>
+                update.config((current) => ({
+                  ...current,
+                  secondFactor: { ...setting, mode: value as (typeof secondFactorModes)[number] },
+                })),
+              )
+            }
+            options={secondFactorModes.map((value) => ({
+              value,
+              label: t(`identityProviders.secondFactor.modes.${value}`),
+            }))}
+          />
+        }
+        status={<SaveIndicator tracker={tracker("secondFactor")} />}
+      />
+      {setting.mode === "providerProof" ? (
+        <div className="px-4 py-3">
+          <AutoSaveTextField
+            label={t("identityProviders.secondFactor.proofValues")}
+            hint={t("identityProviders.secondFactor.proofValuesHint")}
+            value={setting.proofValues.join(", ")}
+            schema={proofValueList}
+            invalidMessage={t("identityProviders.secondFactor.proofValuesInvalid")}
+            disabled={!canManage}
+            className="font-mono"
+            onSave={(value) =>
+              update.config((current) => ({
+                ...current,
+                secondFactor: { ...setting, proofValues: parseList(value) },
+              }))
+            }
+          />
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+const proofValueList = z.string().refine((value) => {
+  const values = parseList(value);
+  return values.length > 0 && values.length <= 20 && values.every((item) => item.length <= 50);
+});
 
 export function LinkFields() {
   const { t } = useTranslation();

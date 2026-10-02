@@ -162,6 +162,23 @@
       "rules": "{count, plural, =0 {Es gibt keine Zuordnungsregeln.} one {# Zuordnungsregel wird entfernt.} other {# Zuordnungsregeln werden entfernt.}}",
       "groups": "{count, plural, =0 {Es gibt keine synchronisierten Gruppen.} one {# synchronisierte Gruppe wird eine normale Gruppe und behält Mitglieder und Berechtigungen.} other {# synchronisierte Gruppen werden normale Gruppen und behalten Mitglieder und Berechtigungen.}}"
     },
+    "secondFactor": {
+      "title": "Zweiter Faktor",
+      "mode": "Zweiter Faktor nach einer Anmeldung über diesen Provider",
+      "modes": {
+        "provider": "Übernimmt der Provider",
+        "providerProof": "Nachweis vom Provider verlangen",
+        "pagehall": "Immer den zweiten Faktor von Pagehall abfragen"
+      },
+      "hints": {
+        "provider": "Eine Anmeldung über diesen Provider ist vollständig. Richte die Mehrfaktor-Authentifizierung im Provider ein.",
+        "providerProof": "Der Provider muss im Anmelde-Token eine Mehrfaktor-Authentifizierung melden. Fehlt sie, fragt Pagehall den eigenen zweiten Faktor ab; wer noch keinen hat, richtet zuerst einen ein.",
+        "pagehall": "Nach jeder Anmeldung über diesen Provider fragt Pagehall den eigenen zweiten Faktor ab; wer noch keinen hat, richtet zuerst einen ein."
+      },
+      "proofValues": "Anerkannte Nachweise",
+      "proofValuesHint": "Werte des amr-Claims, die als Mehrfaktor-Authentifizierung gelten, durch Kommas getrennt. Die meisten Provider senden mfa.",
+      "proofValuesInvalid": "Gib 1 bis 20 Werte mit höchstens 50 Zeichen ein, durch Kommas getrennt."
+    },
     "status": {
       "title": "Status",
       "deactivatedBadge": "Deaktiviert",

@@ -120,7 +120,7 @@ Removing a provider cannot be undone. Before the removal, Pagehall shows how man
 
 ## Sessions and sign-out
 
-Sessions created through a provider remember the identity and the provider's session ID (`sid`). Provider sign-ins satisfy the second-factor requirement; the provider is responsible for multi-factor authentication. The back-channel logout endpoint `POST /api/v1/auth/providers/{providerId}/backchannel-logout` accepts a signed logout token, refuses replayed tokens and tokens with a nonce, and ends the sessions from that provider sign-in.
+Sessions created through a provider remember the identity and the provider's session ID (`sid`). Each provider has a second-factor setting (`config.secondFactor.mode`). "Handled by the provider" (`provider`, the default) makes a provider sign-in complete. "Require proof from the provider" (`providerProof`) accepts the sign-in only when the `amr` claim of the ID token contains one of `config.secondFactor.proofValues` (default `mfa`). "Always ask for a Pagehall second factor" (`pagehall`) asks every time. When Pagehall asks, the person confirms with their TOTP code, passkey or recovery code; a person without a second factor gets a session that only allows setting one up. The back-channel logout endpoint `POST /api/v1/auth/providers/{providerId}/backchannel-logout` accepts a signed logout token, refuses replayed tokens and tokens with a nonce, and ends the sessions from that provider sign-in.
 
 Accounts without a password confirm sensitive actions through the provider (`POST /api/v1/auth/reauthenticate/provider`). Pagehall asks for a fresh sign-in (`prompt=login`, `max_age=0`) and checks `auth_time`.
 

@@ -55,6 +55,7 @@ export interface CallbackInput {
 
 export interface RedirectSignInResult {
   profile: ProviderProfile;
+  methods: string[];
   authTime: number | null;
   providerSessionId: string | null;
   claimNames: string[];

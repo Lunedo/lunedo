@@ -140,7 +140,11 @@ export { NotificationListener, notify } from "./database/notifications.js";
 export { createDatabasePool, type DatabasePool, pingDatabase } from "./database/pool.js";
 export { handleOperationsRequest, type OperationsEndpoints, operationsPaths } from "./health/health-http.js";
 export { readinessChecks } from "./health/readiness.js";
-export { type ProviderCapabilities, type ProviderProfile, ProviderResponseError } from "./identity/adapter.js";
+export {
+  type ProviderCapabilities,
+  type ProviderProfile,
+  ProviderResponseError,
+} from "./identity/adapter.js";
 export type { SyncChange, SyncReport, SyncWarning } from "./identity/groups.js";
 export type { MappingRule, ProviderGroupMatch, RulePreview } from "./identity/mapping.js";
 export {
@@ -149,8 +153,8 @@ export {
   type CredentialSummary,
   callbackPath,
   type ProviderSummary,
-  type RemovalPreview,
   type ProviderWarning,
+  type RemovalPreview,
   type SignInProvider,
 } from "./identity/providers.js";
 export { signInRefusalReasons } from "./identity/schema.js";

@@ -12,7 +12,7 @@ import {
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { type FakeOidcProvider, startFakeOidcProvider, type TokenOverrides } from "../testing/fake-oidc.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
-import type { CallbackResult } from "./sign-in.js";
+import { type CallbackResult, needsPagehallFactor } from "./sign-in.js";
 
 const baseUrl = testDatabaseBaseUrl();
 const BASE = "https://pagehall.test";
@@ -59,6 +59,7 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     requiredGroups?: string[];
     domains?: string[];
     issuer?: FakeOidcProvider;
+    secondFactor?: { mode: "provider" | "providerProof" | "pagehall"; proofValues?: string[] };
   }) {
     const source = options.issuer ?? idp;
     const domains = options.domains ?? ["example.org"];
@@ -74,6 +75,7 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
           enabled: options.accountCreation ?? false,
           requiredGroups: options.requiredGroups ?? [],
         },
+        ...(options.secondFactor ? { secondFactor: options.secondFactor } : {}),
         claims: {
           email: "email",
           signInName: "preferred_username",
@@ -240,6 +242,64 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     });
     const identities = await test.pool.query("select 1 from identities where account_id = $1", [existing.id]);
     expect(identities.rows).toEqual([]);
+  });
+
+  async function enableTotp(accountId: string) {
+    const setup = await test.services.totp.begin(accountId, { issuer: "Test", account: "person" });
+    if (!setup) throw new Error("TOTP was not started");
+    const secret = Secret.fromBase32(setup.secret);
+    await test.services.totp.verify(test.database, accountId, TOTP.generate({ secret }), {
+      confirming: true,
+    });
+    return secret;
+  }
+
+  it("asks for a Pagehall second factor when the provider shows no proof of one", async () => {
+    const id = await provider({ accountCreation: true, secondFactor: { mode: "providerProof" } });
+    const subject = randomUUID();
+    const claims = { sub: subject, email: `${subject.slice(0, 8)}@example.org` };
+    const first = await signIn(id, claims);
+    if (first.kind !== "signedIn") throw new Error(`Signed in expected, got ${first.kind}`);
+    expect(first.signedIn.session.kind).toBe("secondFactorSetup");
+    const accountId = first.signedIn.session.accountId;
+
+    const secret = await enableTotp(accountId);
+    const second = await signIn(id, claims);
+    if (second.kind !== "secondFactorRequired") throw new Error(`Second factor expected, got ${second.kind}`);
+    expect(second.factors).toEqual(["totp"]);
+    const completed = await test.services.signIn.completeSecondFactor({
+      pendingToken: second.pendingToken,
+      factor: { type: "totp", code: TOTP.generate({ secret, timestamp: Date.now() + 30_000 }) },
+      client: {},
+    });
+    expect(completed.session).toMatchObject({ accountId, kind: "full", methods: ["identityProvider", "totp"] });
+    const stored = await test.pool.query<{ identity_id: string | null }>(
+      "select identity_id from sessions where id = $1",
+      [completed.session.id],
+    );
+    expect(stored.rows[0]?.identity_id).not.toBeNull();
+
+    const proven = await signIn(id, { ...claims, amr: ["pwd", "mfa"] });
+    if (proven.kind !== "signedIn") throw new Error(`Signed in expected, got ${proven.kind}`);
+    expect(proven.signedIn.session).toMatchObject({ kind: "full", methods: ["identityProvider"] });
+  });
+
+  it("always asks for a Pagehall second factor when the provider is set to", async () => {
+    const id = await provider({ accountCreation: true, secondFactor: { mode: "pagehall" } });
+    const subject = randomUUID();
+    const claims = { sub: subject, email: `${subject.slice(0, 8)}@example.org`, amr: ["mfa"] };
+    const first = await signIn(id, claims);
+    if (first.kind !== "signedIn") throw new Error(`Signed in expected, got ${first.kind}`);
+    await enableTotp(first.signedIn.session.accountId);
+    expect((await signIn(id, claims)).kind).toBe("secondFactorRequired");
+  });
+
+  it("accepts the configured proof values of a provider", () => {
+    const setting = { mode: "providerProof" as const, proofValues: ["hwk", "otp"] };
+    expect(needsPagehallFactor(setting, ["pwd", "otp"])).toBe(false);
+    expect(needsPagehallFactor(setting, ["pwd", "mfa"])).toBe(true);
+    expect(needsPagehallFactor({ mode: "provider", proofValues: ["mfa"] }, [])).toBe(false);
+    expect(needsPagehallFactor({ mode: "pagehall", proofValues: ["mfa"] }, ["mfa"])).toBe(true);
   });
 
   it("links an existing account only after its password and second factor", async () => {

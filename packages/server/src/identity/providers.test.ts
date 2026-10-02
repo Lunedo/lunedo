@@ -447,9 +447,11 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
       code: "lastSignInMethod",
     });
     const stranger = await account(null);
-    await expect(test.services.administration.unlinkOwnIdentity(stranger.id, other.id)).rejects.toMatchObject({
-      code: "notFound",
-    });
+    await expect(test.services.administration.unlinkOwnIdentity(stranger.id, other.id)).rejects.toMatchObject(
+      {
+        code: "notFound",
+      },
+    );
     const audit = await test.pool.query<{ actor_id: string }>(
       "select actor_id from audit_events where name = 'identity.unlinked' and target_id = $1",
       [person.id],

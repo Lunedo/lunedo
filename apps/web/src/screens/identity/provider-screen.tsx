@@ -39,6 +39,7 @@ import {
   LinkFields,
   NameRow,
   RedirectUriField,
+  SecondFactorFields,
 } from "./provider-config.js";
 import { CredentialsList } from "./provider-credentials.js";
 import { credentialStatus, presetLabel } from "./provider-labels.js";
@@ -259,6 +260,9 @@ function Settings({ provider, canManage }: { provider: IdentityProvider; canMana
       </Section>
       <Section title={t("identityProviders.accounts.existing")}>
         <LinkFields />
+      </Section>
+      <Section title={t("identityProviders.secondFactor.title")}>
+        <SecondFactorFields provider={provider} canManage={canManage} />
       </Section>
       <SyncSettings provider={provider} canManage={canManage} />
       {canManage ? <StatusSection provider={provider} /> : null}

@@ -297,6 +297,7 @@ function provider(patch: Record<string, unknown> = {}) {
       emailSource: "email",
       signInNameSource: "userPrincipalName",
       sync: { intervalMinutes: 60 },
+      secondFactor: { mode: "provider", proofValues: ["mfa"] },
     },
     issuer: "https://login.microsoftonline.com/3f2a9c1e-7b4d-4e8a-9c21-5d6f0a8b2e17/v2.0",
     redirectUri: `https://wiki.example.org/api/v1/auth/providers/${PROVIDER}/callback`,
@@ -378,6 +379,27 @@ describe("the sign-in settings of the instance", () => {
     ]);
   });
 
+  it("saves the second factor setting of a provider at once", async () => {
+    const { requests } = adminApi({
+      [`GET /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({ body: provider() }),
+      "GET /api/v1/instance/identity-providers": () => ({ body: [provider()] }),
+      [`PATCH /api/v1/instance/identity-providers/${PROVIDER}`]: (request) => ({
+        body: provider({ config: (request.body as { config: unknown }).config }),
+      }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=settings`);
+    await userEvent.click(
+      await screen.findByRole("combobox", { name: "Second factor after a sign-in through this provider" }),
+    );
+    await userEvent.click(await screen.findByRole("option", { name: "Require proof from the provider" }));
+    expect(await screen.findByLabelText("Accepted proof values")).toBeTruthy();
+    const patch = requests.find((request) => request.method === "PATCH");
+    expect((patch?.body as { config: { secondFactor: unknown } }).config.secondFactor).toEqual({
+      mode: "providerProof",
+      proofValues: ["mfa"],
+    });
+  });
+
   it("shows what the removal changes before a provider is removed", async () => {
     const { requests } = adminApi({
       [`GET /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({ body: provider() }),
@@ -446,9 +468,7 @@ describe("linked identities", () => {
     await userEvent.click(screen.getByRole("button", { name: "Unlink" }));
     confirm = await screen.findByRole("dialog", { name: "Unlink Microsoft?" });
     await userEvent.click(within(confirm).getByRole("button", { name: "Unlink" }));
-    await waitFor(() =>
-      expect(requests.filter((request) => request.method === "DELETE")).toHaveLength(2),
-    );
+    await waitFor(() => expect(requests.filter((request) => request.method === "DELETE")).toHaveLength(2));
   });
 
   it("lets administrators unlink an identity in the account panel", { timeout: 15_000 }, async () => {

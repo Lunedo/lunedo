@@ -104,6 +104,25 @@ function canSignIn(account: Account | null): account is Account & { email: strin
 
 const PASSKEY_OPTIONS_PER_CLIENT_PER_MINUTE = 30;
 
+export interface PendingProviderSession {
+  providerId: string;
+  identityId: string;
+  providerSessionId: string | null;
+}
+
+function providerOfPending(payload: unknown): PendingProviderSession | null {
+  if (typeof payload !== "object" || payload === null || !("provider" in payload)) return null;
+  const provider = (payload as { provider: unknown }).provider;
+  if (typeof provider !== "object" || provider === null) return null;
+  const { providerId, identityId, providerSessionId } = provider as Record<string, unknown>;
+  if (typeof providerId !== "string" || typeof identityId !== "string") return null;
+  return {
+    providerId,
+    identityId,
+    providerSessionId: typeof providerSessionId === "string" ? providerSessionId : null,
+  };
+}
+
 function availableFactors(factors: SecondFactors): SecondFactorType[] {
   const available: SecondFactorType[] = [];
   if (factors.totp) available.push("totp");
@@ -284,17 +303,37 @@ export class SignInService {
     client: ClientInfo,
     mailIds: string[],
     verifiedSince: Date,
+    kind: SessionKind = "full",
   ): Promise<SignedIn> {
     return this.#createSession(
       tx,
       account,
       provider.methods ?? ["identityProvider"],
-      "full",
+      kind,
       client,
       mailIds,
       verifiedSince,
       provider,
     );
+  }
+
+  async providerSecondFactor(
+    tx: Transaction,
+    account: Account,
+    provider: PendingProviderSession,
+    client: ClientInfo,
+  ): Promise<{ pendingToken: string; factors: SecondFactorType[] } | null> {
+    const factors = await secondFactorsOf(tx, account.id);
+    if (!hasSecondFactor(factors)) return null;
+    const pending = await this.#challenges.create(tx, {
+      purpose: "secondFactor",
+      accountId: account.id,
+      methods: ["identityProvider"],
+      deviceHash: client.deviceToken ? hashToken(client.deviceToken) : null,
+      payload: { provider },
+      withToken: true,
+    });
+    return { pendingToken: pending.token ?? "", factors: availableFactors(factors) };
   }
 
   async #createSession(
@@ -504,6 +543,7 @@ export class SignInService {
           input.client,
           mailIds,
           started,
+          providerOfPending(pending.payload),
         );
         if (remaining !== null) {
           await this.#audit.record(tx, {
