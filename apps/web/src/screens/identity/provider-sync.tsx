@@ -6,9 +6,11 @@ import {
   DurationSelect,
   Notice,
   Section,
+  SegmentedControl,
   Select,
   SettingRow,
   Skeleton,
+  Switch,
   Table,
   TableToolbar,
   Textarea,
@@ -351,6 +353,12 @@ export function SyncSettings({ provider, canManage }: { provider: IdentityProvid
   );
 }
 
+interface GoogleDirectorySettings {
+  method: "adminRole" | "delegation";
+  adminEmail: string | null;
+  readUsers: boolean;
+}
+
 function GoogleDirectory({ provider, canManage }: { provider: IdentityProvider; canManage: boolean }) {
   const { t } = useTranslation();
   const update = useProviderUpdate(provider);
@@ -358,6 +366,7 @@ function GoogleDirectory({ provider, canManage }: { provider: IdentityProvider; 
   const showFailure = useFailureToast();
   const [key, setKey] = useState("");
   const [saving, setSaving] = useState(false);
+  const [chosenMethod, setChosenMethod] = useState<GoogleDirectorySettings["method"] | null>(null);
   const config = provider.config;
   if (config.preset !== "google") return null;
   const refresh = () => queryClient.invalidateQueries({ queryKey: identityKeys.provider(provider.id) });
@@ -381,22 +390,71 @@ function GoogleDirectory({ provider, canManage }: { provider: IdentityProvider; 
       showFailure(t("failures.removeDirectoryKey"), failure);
     }
   };
+  const directory = config.directory;
+  const method = chosenMethod ?? directory?.method ?? "adminRole";
+  const setDirectory = (next: GoogleDirectorySettings | null) =>
+    update.config((current) => (current.preset === "google" ? { ...current, directory: next } : current));
   return (
     <div className="flex flex-col gap-4 px-4 py-3">
-      <AutoSaveTextField
-        label={t("identityProviders.sync.adminEmail")}
-        hint={t("identityProviders.sync.adminEmailHint")}
-        value={config.directory?.adminEmail ?? ""}
-        schema={z.union([z.literal(""), z.email()])}
-        disabled={!canManage}
-        onSave={(adminEmail) =>
-          update.config((current) =>
-            current.preset === "google"
-              ? { ...current, directory: adminEmail ? { adminEmail } : null }
-              : current,
-          )
-        }
-      />
+      <div className="flex flex-col gap-1">
+        <Switch
+          label={t("identityProviders.sync.groupSync")}
+          checked={directory !== null}
+          disabled={!canManage}
+          onCheckedChange={(on) =>
+            void setDirectory(on ? { method: "adminRole", adminEmail: null, readUsers: false } : null)
+          }
+        />
+        <span className="text-sm text-text-muted">{t("identityProviders.sync.groupSyncHint")}</span>
+      </div>
+      {directory ? (
+        <>
+          <div className="flex flex-col gap-2">
+            <span className="font-medium">{t("identityProviders.sync.method")}</span>
+            <SegmentedControl
+              label={t("identityProviders.sync.method")}
+              value={method}
+              disabled={!canManage}
+              onValueChange={(next) => {
+                const chosen = next as GoogleDirectorySettings["method"];
+                setChosenMethod(chosen);
+                if (chosen === "adminRole" || directory.adminEmail) {
+                  void setDirectory({ ...directory, method: chosen });
+                }
+              }}
+              options={[
+                { value: "adminRole", label: t("identityProviders.sync.methods.adminRole") },
+                { value: "delegation", label: t("identityProviders.sync.methods.delegation") },
+              ]}
+            />
+            {method === "adminRole" ? (
+              <Notice variant="info">{t("identityProviders.sync.adminRoleSetup")}</Notice>
+            ) : (
+              <Notice variant="warning">{t("identityProviders.sync.delegationWarning")}</Notice>
+            )}
+          </div>
+          {method === "delegation" ? (
+            <AutoSaveTextField
+              label={t("identityProviders.sync.adminEmail")}
+              hint={t("identityProviders.sync.adminEmailHint")}
+              value={directory.adminEmail ?? ""}
+              schema={z.email()}
+              disabled={!canManage}
+              onSave={(adminEmail) => setDirectory({ ...directory, method: "delegation", adminEmail })}
+            />
+          ) : (
+            <div className="flex flex-col gap-1">
+              <Switch
+                label={t("identityProviders.sync.readUsers")}
+                checked={directory.readUsers}
+                disabled={!canManage}
+                onCheckedChange={(readUsers) => void setDirectory({ ...directory, readUsers })}
+              />
+              <span className="text-sm text-text-muted">{t("identityProviders.sync.readUsersHint")}</span>
+            </div>
+          )}
+        </>
+      ) : null}
       <div className="flex flex-col gap-2">
         <span className="flex items-center gap-2 font-medium">
           {t("identityProviders.sync.serviceAccountKey")}

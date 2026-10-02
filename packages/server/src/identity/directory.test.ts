@@ -20,7 +20,7 @@ function google(url: string, tokenUrl: string) {
     preset: "google",
     clientId: "client",
     domains: ["example.org"],
-    directory: { adminEmail: "admin@example.org", url, tokenUrl },
+    directory: { method: "delegation", adminEmail: "admin@example.org", url, tokenUrl },
   });
   if (config.preset !== "google") throw new Error("Google expected");
   return config;

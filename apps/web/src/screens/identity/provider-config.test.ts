@@ -17,14 +17,16 @@ describe("toConfigInput", () => {
       ...common,
       issuer: "https://accounts.google.com",
       directory: {
+        method: "delegation",
         adminEmail: "admin@example.org",
+        readUsers: false,
         url: "https://admin.googleapis.com",
         tokenUrl: "https://oauth2.googleapis.com/token",
       },
     } as ProviderConfig);
     expect(input).toMatchObject({
       sync: { intervalMinutes: 240 },
-      directory: { adminEmail: "admin@example.org" },
+      directory: { method: "delegation", adminEmail: "admin@example.org", readUsers: false },
     });
   });
 

@@ -327,6 +327,15 @@ export class ProviderSyncService {
     result: SynchronizedAccount,
     report: SyncReport,
   ): Promise<void> {
+    if (result.state === "unknown") {
+      const groups = result.groups;
+      if (!groups) return;
+      await this.#database.transaction(async (tx) => {
+        await this.#mapping.recordGroups(tx, provider.id, identity.id, groups, report);
+        await this.#mapping.reconcile(tx, identity.accountId, report);
+      });
+      return;
+    }
     if (result.state !== "enabled") {
       await this.#deactivate(provider, identity.accountId, result.state, report);
       return;

@@ -38,7 +38,7 @@ afterEach(() => {
   window.history.replaceState(null, "", "/");
 });
 
-function provider(preset: "entraId" | "generic" = "entraId") {
+function provider(preset: "entraId" | "generic" | "google" = "entraId") {
   const common = {
     clientId: "a91b7e04-2c6d-4f13-8e5a-0b9d4c7f2a61",
     domains: ["example.org"],
@@ -49,31 +49,33 @@ function provider(preset: "entraId" | "generic" = "entraId") {
   return {
     id: PROVIDER,
     type: "oidc",
-    name: preset === "entraId" ? "Entra ID" : "Keycloak",
+    name: preset === "entraId" ? "Entra ID" : preset === "google" ? "Google" : "Keycloak",
     config:
-      preset === "entraId"
-        ? {
-            preset,
-            ...common,
-            tenantId: "3f2a9c1e-7b4d-4e8a-9c21-5d6f0a8b2e17",
-            authority: "https://login.microsoftonline.com",
-            graphUrl: "https://graph.microsoft.com",
-            emailSource: "email",
-            signInNameSource: "userPrincipalName",
-          }
-        : {
-            preset,
-            ...common,
-            issuer: "https://keycloak.example.org/realms/pagehall",
-            scopes: ["openid", "email", "profile"],
-            claims: {
-              email: "email",
-              signInName: "preferred_username",
-              displayName: "name",
-              groups: "groups",
-              groupNames: "group_names",
+      preset === "google"
+        ? { preset, ...common, issuer: "https://accounts.google.com", directory: null }
+        : preset === "entraId"
+          ? {
+              preset,
+              ...common,
+              tenantId: "3f2a9c1e-7b4d-4e8a-9c21-5d6f0a8b2e17",
+              authority: "https://login.microsoftonline.com",
+              graphUrl: "https://graph.microsoft.com",
+              emailSource: "email",
+              signInNameSource: "userPrincipalName",
+            }
+          : {
+              preset,
+              ...common,
+              issuer: "https://keycloak.example.org/realms/pagehall",
+              scopes: ["openid", "email", "profile"],
+              claims: {
+                email: "email",
+                signInName: "preferred_username",
+                displayName: "name",
+                groups: "groups",
+                groupNames: "group_names",
+              },
             },
-          },
     issuer: "https://login.example/v2.0",
     redirectUri: `https://wiki.example.org/api/v1/auth/providers/${PROVIDER}/callback`,
     logoRef: null,
@@ -319,6 +321,25 @@ describe("the sync log", () => {
     await waitFor(() =>
       expect(requests.some((entry) => entry.path === `${BASE}/sync-runs/${RUN}/cancel`)).toBe(true),
     );
+  });
+
+  it("turns on Google group sync with an administrator role and warns about delegation", async () => {
+    const { requests } = adminApi({
+      [`GET ${BASE}`]: () => ({ body: provider("google") }),
+      [`PATCH ${BASE}`]: (request) => ({
+        body: { ...provider("google"), config: (request.body as { config: unknown }).config },
+      }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=settings`);
+    await userEvent.click(await screen.findByRole("switch", { name: "Synchronize groups" }));
+    await waitFor(() =>
+      expect(requests.find((entry) => entry.method === "PATCH" && entry.path === BASE)?.body).toMatchObject({
+        config: { directory: { method: "adminRole", readUsers: false } },
+      }),
+    );
+    expect(await screen.findByText(/assign the prebuilt role Groups Reader/)).toBeTruthy();
+    await userEvent.click(screen.getByRole("radio", { name: "Domain-wide delegation" }));
+    expect(await screen.findByText(/acts as the administrator below/)).toBeTruthy();
   });
 
   it("explains that providers without a directory only update at sign-in", async () => {

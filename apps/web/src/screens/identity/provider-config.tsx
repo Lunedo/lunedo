@@ -46,7 +46,9 @@ export function toConfigInput(config: ProviderConfig): ProviderConfigInput {
       ...(config.issuer ? { issuer: String(config.issuer) } : {}),
       directory: config.directory
         ? {
+            method: config.directory.method,
             adminEmail: config.directory.adminEmail,
+            readUsers: config.directory.readUsers,
             ...(config.directory.url ? { url: String(config.directory.url) } : {}),
             ...(config.directory.tokenUrl ? { tokenUrl: String(config.directory.tokenUrl) } : {}),
           }

@@ -115,6 +115,17 @@
       "whenDisabled": "Wenn ein Konto deaktiviert wird",
       "whenDisabledHint": "Konten, die in {provider} deaktiviert oder gelöscht werden, werden in Pagehall deaktiviert und wieder aktiviert, wenn sie wieder aktiv sind. Pagehall löscht nie Konten.",
       "deactivate": "In Pagehall deaktivieren",
+      "groupSync": "Gruppen synchronisieren",
+      "groupSyncHint": "Ohne Synchronisierung dient Google Workspace nur zur Anmeldung, und Zuordnungsregeln sehen keine Gruppen.",
+      "method": "Wie Pagehall die Gruppen liest",
+      "methods": {
+        "adminRole": "Administratorrolle (empfohlen)",
+        "delegation": "Domainweite Delegierung"
+      },
+      "adminRoleSetup": "Weise dem Dienstkonto in der Google Admin-Konsole unter Konto > Administratorrollen die vordefinierte Rolle Groups Reader zu. Pagehall liest die Gruppen dann als Dienstkonto selbst, ohne im Namen einer Person zu handeln.",
+      "delegationWarning": "Mit domainweiter Delegierung handelt das Dienstkonto als die unten genannte Person und darf für die ganze Domain alles, was seine Scopes erlauben. Nimm lieber die Administratorrolle, wenn deine Umgebung keine Delegierung verlangt.",
+      "readUsers": "Gesperrte Konten erkennen",
+      "readUsersHint": "Braucht eine Rolle, die auch Nutzer lesen darf, zum Beispiel eine eigene Rolle mit Nutzer > Lesen. Ohne sie sieht Pagehall keine Sperren: Eine gesperrte Person kann sich nicht mehr über Google anmelden, offene Sitzungen laufen aber weiter, bis sie ablaufen.",
       "adminEmail": "Administrator für das Verzeichnis",
       "adminEmailHint": "Das Dienstkonto handelt über die domainweite Delegierung im Namen dieser Person.",
       "serviceAccountKey": "Schlüssel des Dienstkontos",

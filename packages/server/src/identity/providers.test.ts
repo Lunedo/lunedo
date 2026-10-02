@@ -255,6 +255,21 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
         }),
       ).rejects.toMatchObject({ code: "invalidProviderConfiguration" });
     }
+    await expect(
+      strict.create(SYSTEM, {
+        name: "Google",
+        config: {
+          preset: "google",
+          clientId: "c",
+          domains: [uniqueDomain()],
+          directory: { method: "delegation" },
+        },
+        credential,
+      }),
+    ).rejects.toMatchObject({
+      code: "invalidProviderConfiguration",
+      details: { fields: ["directory.adminEmail"] },
+    });
     const google = await strict.create(SYSTEM, {
       name: "Google",
       config: { preset: "google", clientId: "c", domains: [uniqueDomain()] },

@@ -13,10 +13,14 @@ import { type ProviderCredential, type ProviderGroup, ProviderResponseError } fr
 const REQUEST_TIMEOUT_MS = 10_000;
 const GRAPH_PAGE_SIZE = 999;
 const GOOGLE_PAGE_SIZE = 200;
-const GOOGLE_SCOPES = [
-  "https://www.googleapis.com/auth/admin.directory.group.readonly",
-  "https://www.googleapis.com/auth/admin.directory.user.readonly",
-];
+const GOOGLE_GROUP_SCOPE = "https://www.googleapis.com/auth/admin.directory.group.readonly";
+const GOOGLE_USER_SCOPE = "https://www.googleapis.com/auth/admin.directory.user.readonly";
+
+export function googleReadsUsers(config: GoogleConfig): boolean {
+  return (
+    config.directory !== null && (config.directory.method === "delegation" || config.directory.readUsers)
+  );
+}
 
 type EntraConfig = Extract<OidcConfig, { preset: "entraId" }>;
 type GoogleConfig = Extract<OidcConfig, { preset: "google" }>;
@@ -304,10 +308,14 @@ export class DirectoryClients {
     const directory = config.directory;
     if (!directory) throw new ProviderResponseError("The Google directory is not configured");
     this.#checkEndpoints(config);
+    const scopes = [GOOGLE_GROUP_SCOPE, ...(googleReadsUsers(config) ? [GOOGLE_USER_SCOPE] : [])];
+    const subject = directory.method === "delegation" ? directory.adminEmail : null;
     const key = JSON.stringify([
       "google",
       providerId,
-      directory.adminEmail,
+      directory.method,
+      subject,
+      scopes,
       directory.url,
       directory.tokenUrl,
       createHash("sha256").update(keyJson).digest("hex"),
@@ -320,14 +328,13 @@ export class DirectoryClients {
         throw new ProviderResponseError("The service account key is not valid");
       }
       const signing = await importPKCS8(key.private_key, "RS256");
-      const assertion = await new SignJWT({ scope: GOOGLE_SCOPES.join(" ") })
+      const unsigned = new SignJWT({ scope: scopes.join(" ") })
         .setProtectedHeader({ alg: "RS256", typ: "JWT" })
         .setIssuer(key.client_email)
-        .setSubject(directory.adminEmail)
         .setAudience(directory.tokenUrl)
         .setIssuedAt()
-        .setExpirationTime("1h")
-        .sign(signing);
+        .setExpirationTime("1h");
+      const assertion = await (subject ? unsigned.setSubject(subject) : unsigned).sign(signing);
       const response = await this.#request(directory.tokenUrl, {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded" },

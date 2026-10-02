@@ -680,15 +680,15 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
     expect(audit.rows).toHaveLength(1);
   });
 
-  it("deactivates accounts suspended in the Google directory", async () => {
+  async function googleProvider(directory: Record<string, unknown>, domain = "example.org") {
     const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
     const provider = await test.services.identityProviders.create(SYSTEM, {
-      name: "Google",
+      name: `Google ${randomUUID().slice(0, 6)}`,
       config: {
         preset: "google",
         clientId: "google-client",
-        domains: ["example.org"],
-        directory: { adminEmail: "admin@example.org", url: google.url, tokenUrl: `${google.url}/token` },
+        domains: [domain],
+        directory: { url: google.url, tokenUrl: `${google.url}/token`, ...directory },
       },
       credential: { kind: "clientSecret", secret: "google-secret", expiresAt: null },
     });
@@ -701,6 +701,34 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
         private_key: privateKey.export({ type: "pkcs8", format: "pem" }).toString(),
       }),
     );
+    return provider;
+  }
+
+  it("reads Google groups through an administrator role without domain-wide delegation", async () => {
+    const provider = await googleProvider({ method: "adminRole" }, "role.example.org");
+    const org = await organization();
+    await test.services.mappingRules.create(accountPrincipal(org.owner), provider.provider.id, {
+      target: "organization",
+      group: { id: GOOGLE_IDS.admins, name: "Administrators" },
+      organizationId: org.id,
+      role: null,
+      synchronizedGroup: false,
+      homeOrganization: false,
+    });
+    const alice = await account(null);
+    const sam = await account(null);
+    await link(provider.provider.id, alice.id, GOOGLE_IDS.alice);
+    await link(provider.provider.id, sam.id, GOOGLE_IDS.sam);
+    const before = google.requests.length;
+    const run = await test.services.providerSync.run(provider.provider.id, "manual");
+    expect(run?.error).toBeNull();
+    expect(await membership(org.id, alice.id)).toBe("member");
+    expect((await test.services.accounts.get(sam.id))?.state).toBe("active");
+    expect(google.requests.slice(before).some((request) => request.includes("/users"))).toBe(false);
+  });
+
+  it("deactivates accounts suspended in the Google directory", async () => {
+    const provider = await googleProvider({ method: "delegation", adminEmail: "admin@example.org" });
     const sam = await account(null);
     const bob = await account(null);
     await link(provider.provider.id, sam.id, GOOGLE_IDS.sam);

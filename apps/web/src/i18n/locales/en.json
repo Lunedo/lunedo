@@ -115,6 +115,17 @@
       "whenDisabled": "When an account is disabled",
       "whenDisabledHint": "Accounts disabled or deleted in {provider} are deactivated in Pagehall and reactivated when enabled again. Pagehall never deletes accounts.",
       "deactivate": "Deactivate in Pagehall",
+      "groupSync": "Synchronize groups",
+      "groupSyncHint": "Without it, Google Workspace is only used to sign in, and mapping rules see no groups.",
+      "method": "How Pagehall reads the groups",
+      "methods": {
+        "adminRole": "Administrator role (recommended)",
+        "delegation": "Domain-wide delegation"
+      },
+      "adminRoleSetup": "In the Google Admin console, assign the prebuilt role Groups Reader to the service account under Account > Admin roles. Pagehall then reads groups as the service account itself, without acting for a person.",
+      "delegationWarning": "With domain-wide delegation the service account acts as the administrator below and may use everything its scopes allow for the whole domain. Prefer the administrator role unless your setup requires delegation.",
+      "readUsers": "Detect suspended accounts",
+      "readUsersHint": "Needs a role that can also read users, for example a custom role with Users > Read. Without it, Pagehall does not see suspensions: a suspended person can no longer sign in through Google, but open sessions run until they expire.",
       "adminEmail": "Administrator for the directory",
       "adminEmailHint": "The service account acts on behalf of this administrator through domain-wide delegation.",
       "serviceAccountKey": "Service account key",

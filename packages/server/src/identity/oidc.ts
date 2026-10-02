@@ -17,7 +17,7 @@ import {
   type RedirectSignInResult,
   type SynchronizedAccount,
 } from "./adapter.js";
-import { type DirectoryAccount, DirectoryClients } from "./directory.js";
+import { type DirectoryAccount, DirectoryClients, googleReadsUsers } from "./directory.js";
 
 const DISCOVERY_CACHE_MS = 10 * 60 * 1000;
 const CLOCK_TOLERANCE_SECONDS = 60;
@@ -156,7 +156,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
       );
       return account ? this.#profileFrom(provider, subject, account, null) : null;
     }
-    if (config.preset === "google" && this.hasDirectory(provider)) {
+    if (config.preset === "google" && this.hasDirectory(provider) && googleReadsUsers(config)) {
       const account = await this.#directory.googleAccount(
         provider.id,
         config,
@@ -184,6 +184,11 @@ export class OidcAdapter implements IdentityProviderAdapter {
           : null;
       } else if (config.preset === "google" && this.hasDirectory(provider)) {
         const key = provider.directoryKey ?? "";
+        if (!googleReadsUsers(config)) {
+          const known = await this.#directory.googleGroupsOf(provider.id, config, key, subject);
+          yield { subject, state: "unknown", profile: null, groups: known };
+          continue;
+        }
         account = await this.#directory.googleAccount(provider.id, config, key, subject);
         groups = account ? await this.#directory.googleGroupsOf(provider.id, config, key, subject) : null;
       } else {

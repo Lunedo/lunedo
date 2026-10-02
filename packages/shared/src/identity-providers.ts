@@ -25,6 +25,8 @@ export const MICROSOFT_GRAPH = "https://graph.microsoft.com";
 export const GOOGLE_DIRECTORY = "https://admin.googleapis.com";
 export const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 export const SYNC_INTERVAL_MINUTES = { minimum: 15, default: 60, maximum: 1440 } as const;
+export const googleDirectoryMethods = ["adminRole", "delegation"] as const;
+export type GoogleDirectoryMethod = (typeof googleDirectoryMethods)[number];
 
 const claimName = z
   .string()
@@ -95,11 +97,17 @@ export const googleConfigSchema = z
     issuer: issuerUrl.default(GOOGLE_ISSUER),
     directory: z
       .object({
-        adminEmail: emailSchema,
+        method: z.enum(googleDirectoryMethods).default("adminRole"),
+        adminEmail: emailSchema.nullable().default(null),
+        readUsers: z.boolean().default(false),
         url: httpUrl.default(GOOGLE_DIRECTORY),
         tokenUrl: httpUrl.default(GOOGLE_TOKEN_URL),
       })
       .strict()
+      .refine((directory) => directory.method !== "delegation" || directory.adminEmail !== null, {
+        message: "Domain-wide delegation needs the address of an administrator",
+        path: ["adminEmail"],
+      })
       .nullable()
       .default(null),
   })

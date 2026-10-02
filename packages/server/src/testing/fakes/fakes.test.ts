@@ -142,7 +142,11 @@ describe("Google Directory fake", () => {
       method: "POST",
       body: new URLSearchParams({
         grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-        assertion: unsignedJwt({ iss: GOOGLE_SERVICE_ACCOUNT, scope: GOOGLE_SCOPES.join(" ") }),
+        assertion: unsignedJwt({
+          iss: GOOGLE_SERVICE_ACCOUNT,
+          sub: "admin@example.org",
+          scope: GOOGLE_SCOPES.join(" "),
+        }),
       }),
     });
     const { access_token } = (await response.json()) as { access_token: string };

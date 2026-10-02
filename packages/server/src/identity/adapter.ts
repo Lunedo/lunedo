@@ -63,8 +63,9 @@ export interface ProviderLogout {
 
 export interface SynchronizedAccount {
   subject: string;
-  state: "enabled" | "disabled" | "deleted";
+  state: "enabled" | "disabled" | "deleted" | "unknown";
   profile: ProviderProfile | null;
+  groups?: ProviderGroup[] | null;
 }
 
 export interface DirectoryGroupMatch extends ProviderGroup {

@@ -35,6 +35,7 @@ export interface FakeGoogleMember {
 export interface FakeGoogleData {
   domain: string;
   serviceAccountEmail: string;
+  serviceAccountReadsUsers: boolean;
   users: FakeGoogleUser[];
   groups: FakeGoogleGroup[];
   members: Record<string, FakeGoogleMember[]>;
@@ -80,6 +81,7 @@ export function defaultGoogleData(): FakeGoogleData {
   return {
     domain: GOOGLE_DOMAIN,
     serviceAccountEmail: GOOGLE_SERVICE_ACCOUNT,
+    serviceAccountReadsUsers: false,
     users: [
       user(GOOGLE_IDS.alice, "Alice", "Example"),
       user(GOOGLE_IDS.bob, "Bob", "Example"),
@@ -128,7 +130,7 @@ export async function startFakeGoogleDirectory(
   options: { port?: number; data?: FakeGoogleData } = {},
 ): Promise<FakeGoogleDirectory> {
   const data = options.data ?? defaultGoogleData();
-  const tokens = new Set<string>();
+  const tokens = new Map<string, { delegated: boolean; scopes: string[] }>();
   const requests: string[] = [];
 
   const findUser = (key: string) =>
@@ -187,7 +189,7 @@ export async function startFakeGoogleDirectory(
       return { status: 400, body: { error: "invalid_scope" } };
     }
     const issued = issueToken();
-    tokens.add(issued);
+    tokens.set(issued, { delegated: typeof claims.sub === "string", scopes });
     return { status: 200, body: { access_token: issued, token_type: "Bearer", expires_in: 3599 } };
   };
 
@@ -219,8 +221,8 @@ export async function startFakeGoogleDirectory(
 
   const directory = (request: FakeRequest): FakeResponse => {
     const access = bearer(request);
-    if (!access || !tokens.has(access))
-      return googleError(401, "Request had invalid authentication credentials.");
+    const grant = access ? tokens.get(access) : undefined;
+    if (!grant) return googleError(401, "Request had invalid authentication credentials.");
     const [, , , collection, key, relation] = request.segments;
     if (collection === "groups") {
       if (!key) {
@@ -262,6 +264,10 @@ export async function startFakeGoogleDirectory(
       }
     }
     if (collection === "users") {
+      const readsUsers =
+        grant.scopes.includes("https://www.googleapis.com/auth/admin.directory.user.readonly") &&
+        (grant.delegated || data.serviceAccountReadsUsers);
+      if (!readsUsers) return googleError(403, "Not Authorized to access this resource/api");
       if (!key) {
         const domain = request.url.searchParams.get("domain");
         if (!domain && !request.url.searchParams.get("customer")) return googleError(400, "Bad Request");

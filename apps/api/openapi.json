@@ -13896,10 +13896,30 @@
                                   {
                                     "type": "object",
                                     "properties": {
-                                      "adminEmail": {
+                                      "method": {
+                                        "default": "adminRole",
                                         "type": "string",
-                                        "maxLength": 254,
-                                        "format": "email"
+                                        "enum": [
+                                          "adminRole",
+                                          "delegation"
+                                        ]
+                                      },
+                                      "adminEmail": {
+                                        "default": null,
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 254,
+                                            "format": "email"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "readUsers": {
+                                        "default": false,
+                                        "type": "boolean"
                                       },
                                       "url": {
                                         "default": "https://admin.googleapis.com"
@@ -13909,7 +13929,9 @@
                                       }
                                     },
                                     "required": [
+                                      "method",
                                       "adminEmail",
+                                      "readUsers",
                                       "url",
                                       "tokenUrl"
                                     ],
@@ -14564,10 +14586,30 @@
                               {
                                 "type": "object",
                                 "properties": {
-                                  "adminEmail": {
+                                  "method": {
+                                    "default": "adminRole",
                                     "type": "string",
-                                    "maxLength": 254,
-                                    "format": "email"
+                                    "enum": [
+                                      "adminRole",
+                                      "delegation"
+                                    ]
+                                  },
+                                  "adminEmail": {
+                                    "default": null,
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "maxLength": 254,
+                                        "format": "email"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "readUsers": {
+                                    "default": false,
+                                    "type": "boolean"
                                   },
                                   "url": {
                                     "type": "string",
@@ -14580,9 +14622,6 @@
                                     "format": "uri"
                                   }
                                 },
-                                "required": [
-                                  "adminEmail"
-                                ],
                                 "additionalProperties": false
                               },
                               {
@@ -15085,10 +15124,30 @@
                                     {
                                       "type": "object",
                                       "properties": {
-                                        "adminEmail": {
+                                        "method": {
+                                          "default": "adminRole",
                                           "type": "string",
-                                          "maxLength": 254,
-                                          "format": "email"
+                                          "enum": [
+                                            "adminRole",
+                                            "delegation"
+                                          ]
+                                        },
+                                        "adminEmail": {
+                                          "default": null,
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "maxLength": 254,
+                                              "format": "email"
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "readUsers": {
+                                          "default": false,
+                                          "type": "boolean"
                                         },
                                         "url": {
                                           "default": "https://admin.googleapis.com"
@@ -15098,7 +15157,9 @@
                                         }
                                       },
                                       "required": [
+                                        "method",
                                         "adminEmail",
+                                        "readUsers",
                                         "url",
                                         "tokenUrl"
                                       ],
@@ -16028,10 +16089,30 @@
                                 {
                                   "type": "object",
                                   "properties": {
-                                    "adminEmail": {
+                                    "method": {
+                                      "default": "adminRole",
                                       "type": "string",
-                                      "maxLength": 254,
-                                      "format": "email"
+                                      "enum": [
+                                        "adminRole",
+                                        "delegation"
+                                      ]
+                                    },
+                                    "adminEmail": {
+                                      "default": null,
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "maxLength": 254,
+                                          "format": "email"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "readUsers": {
+                                      "default": false,
+                                      "type": "boolean"
                                     },
                                     "url": {
                                       "default": "https://admin.googleapis.com"
@@ -16041,7 +16122,9 @@
                                     }
                                   },
                                   "required": [
+                                    "method",
                                     "adminEmail",
+                                    "readUsers",
                                     "url",
                                     "tokenUrl"
                                   ],
@@ -16736,10 +16819,30 @@
                               {
                                 "type": "object",
                                 "properties": {
-                                  "adminEmail": {
+                                  "method": {
+                                    "default": "adminRole",
                                     "type": "string",
-                                    "maxLength": 254,
-                                    "format": "email"
+                                    "enum": [
+                                      "adminRole",
+                                      "delegation"
+                                    ]
+                                  },
+                                  "adminEmail": {
+                                    "default": null,
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "maxLength": 254,
+                                        "format": "email"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "readUsers": {
+                                    "default": false,
+                                    "type": "boolean"
                                   },
                                   "url": {
                                     "type": "string",
@@ -16752,9 +16855,6 @@
                                     "format": "uri"
                                   }
                                 },
-                                "required": [
-                                  "adminEmail"
-                                ],
                                 "additionalProperties": false
                               },
                               {
@@ -17190,10 +17290,30 @@
                                 {
                                   "type": "object",
                                   "properties": {
-                                    "adminEmail": {
+                                    "method": {
+                                      "default": "adminRole",
                                       "type": "string",
-                                      "maxLength": 254,
-                                      "format": "email"
+                                      "enum": [
+                                        "adminRole",
+                                        "delegation"
+                                      ]
+                                    },
+                                    "adminEmail": {
+                                      "default": null,
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "maxLength": 254,
+                                          "format": "email"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "readUsers": {
+                                      "default": false,
+                                      "type": "boolean"
                                     },
                                     "url": {
                                       "default": "https://admin.googleapis.com"
@@ -17203,7 +17323,9 @@
                                     }
                                   },
                                   "required": [
+                                    "method",
                                     "adminEmail",
+                                    "readUsers",
                                     "url",
                                     "tokenUrl"
                                   ],
@@ -19567,10 +19689,30 @@
                                 {
                                   "type": "object",
                                   "properties": {
-                                    "adminEmail": {
+                                    "method": {
+                                      "default": "adminRole",
                                       "type": "string",
-                                      "maxLength": 254,
-                                      "format": "email"
+                                      "enum": [
+                                        "adminRole",
+                                        "delegation"
+                                      ]
+                                    },
+                                    "adminEmail": {
+                                      "default": null,
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "maxLength": 254,
+                                          "format": "email"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "readUsers": {
+                                      "default": false,
+                                      "type": "boolean"
                                     },
                                     "url": {
                                       "default": "https://admin.googleapis.com"
@@ -19580,7 +19722,9 @@
                                     }
                                   },
                                   "required": [
+                                    "method",
                                     "adminEmail",
+                                    "readUsers",
                                     "url",
                                     "tokenUrl"
                                   ],
