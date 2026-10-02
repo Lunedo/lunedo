@@ -83,7 +83,7 @@ describe("the sign-in page", () => {
       },
     );
     await renderPath("/sign-in?redirect=%2Fsettings%2Fsecurity");
-    await userEvent.type(await screen.findByLabelText("Work e-mail address"), "lena@example.org");
+    await userEvent.type(await screen.findByLabelText("Work e-mail address or sign-in name"), "lena@example.org");
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByText("example.org signs in with Microsoft")).toBeTruthy();
     expect(screen.queryByLabelText("Password")).toBeNull();
@@ -102,7 +102,7 @@ describe("the sign-in page", () => {
     let step = "password";
     signedOutApi({}, { "POST /api/v1/auth/sign-in/discover": () => ({ body: { step } }) });
     await renderPath("/sign-in");
-    await userEvent.type(await screen.findByLabelText("Work e-mail address"), "guest@partner.example");
+    await userEvent.type(await screen.findByLabelText("Work e-mail address or sign-in name"), "guest@partner.example");
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByLabelText("Password")).toBeTruthy();
 
@@ -126,7 +126,7 @@ describe("the sign-in page", () => {
       },
     );
     await renderPath("/sign-in");
-    await userEvent.type(await screen.findByLabelText("Work e-mail address"), OLIVIA.email);
+    await userEvent.type(await screen.findByLabelText("Work e-mail address or sign-in name"), OLIVIA.email);
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("button", { name: "Sign in with Microsoft" })).toBeTruthy();
     expect(screen.queryByLabelText("Password")).toBeNull();
@@ -154,7 +154,7 @@ describe("the sign-in page", () => {
     );
     await renderPath("/sign-in");
     expect(await screen.findByRole("button", { name: "Sign in with Microsoft" })).toBeTruthy();
-    expect(screen.queryByLabelText("Work e-mail address")).toBeNull();
+    expect(screen.queryByLabelText("Work e-mail address or sign-in name")).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: "Emergency sign-in for the instance owner" }));
     const dialog = await screen.findByRole("dialog", { name: "Emergency sign-in" });

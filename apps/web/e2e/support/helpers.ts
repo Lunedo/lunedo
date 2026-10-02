@@ -109,7 +109,7 @@ export async function setAppearance(
 }
 
 export async function signInWithPassword(page: Page, email: string, password: string): Promise<void> {
-  await page.getByLabel("Work e-mail address").fill(email);
+  await page.getByLabel("Work e-mail address or sign-in name").fill(email);
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();

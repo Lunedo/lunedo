@@ -97,7 +97,7 @@ async function signInThroughProvider(
   user: keyof typeof TEST_USERS,
 ) {
   await page.goto("/sign-in");
-  await page.getByLabel("Work e-mail address").fill(TEST_USERS[user].email);
+  await page.getByLabel("Work e-mail address or sign-in name").fill(TEST_USERS[user].email);
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByText(`${TEST_DOMAIN} signs in with E2E ${provider.name}`)).toBeVisible();
   await page.getByRole("button", { name: `Continue with E2E ${provider.name}` }).click();
@@ -144,7 +144,7 @@ for (const provider of identityProviders) {
       const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
       const page = await context.newPage();
       await page.goto("/sign-in");
-      await page.getByLabel("Work e-mail address").fill(TEST_USERS.alice.email);
+      await page.getByLabel("Work e-mail address or sign-in name").fill(TEST_USERS.alice.email);
       await page.getByRole("button", { name: "Continue" }).click();
       await page.getByRole("button", { name: `Continue with E2E ${provider.name}` }).click();
       await provider.signIn(page, "erin");
@@ -225,7 +225,7 @@ for (const provider of identityProviders) {
       const page = await context.newPage();
       await page.goto("/sign-in");
       await expect(page.getByRole("button", { name: `Continue with E2E ${provider.name}` })).toBeVisible();
-      await expect(page.getByLabel("Work e-mail address")).toHaveCount(0);
+      await expect(page.getByLabel("Work e-mail address or sign-in name")).toHaveCount(0);
 
       await page.getByRole("button", { name: "Emergency sign-in for the instance owner" }).click();
       const dialog = page.getByRole("dialog", { name: "Emergency sign-in" });
