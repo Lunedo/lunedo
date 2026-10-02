@@ -32,6 +32,7 @@ export interface IdentityProviderFixture {
   setBackchannelLogoutUrl(url: string): Promise<void>;
   reset(): Promise<void>;
   signIn(page: Page, user: TestUserName, password?: string): Promise<void>;
+  endSessions?(user: TestUserName): Promise<void>;
 }
 
 const env = (name: string, fallback: string) => process.env[name] || fallback;
@@ -94,6 +95,9 @@ export const keycloak: IdentityProviderFixture = {
   },
   async setUserEnabled(user, enabled) {
     await keycloakAdmin("PUT", `/users/${await keycloakUserId(user)}`, { enabled });
+  },
+  async endSessions(user) {
+    await keycloakAdmin("POST", `/users/${await keycloakUserId(user)}/logout`);
   },
   async isUserEnabled(user) {
     return (await keycloakAdmin<{ enabled: boolean }>("GET", `/users/${await keycloakUserId(user)}`)).enabled;
