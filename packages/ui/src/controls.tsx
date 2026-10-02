@@ -17,8 +17,14 @@ import { useTruncated } from "./truncated-text.js";
 export interface SelectOption {
   value: string;
   label: string;
+  example?: string;
+  marker?: string;
   disabled?: boolean;
   group?: string;
+}
+
+export function optionText(option: SelectOption): string {
+  return option.example ? `${option.label} (${option.example})` : option.label;
 }
 
 export interface SelectProps {
@@ -28,6 +34,7 @@ export interface SelectProps {
   placeholder?: string;
   invalid?: boolean;
   disabled?: boolean;
+  muted?: boolean;
   "aria-label"?: string;
   className?: string;
 }
@@ -45,21 +52,24 @@ export function Select({
   placeholder,
   invalid,
   disabled,
+  muted,
   className,
   ...props
 }: SelectProps) {
   const field = useFieldControl();
   const selected = options.find((option) => option.value === value);
   const valueRef = useRef<HTMLSpanElement>(null);
-  const truncated = useTruncated(valueRef, selected?.label ?? "");
+  const truncated = useTruncated(valueRef, selected ? optionText(selected) : "");
   const trigger = (
     <SelectPrimitive.Trigger
       {...field}
       {...(invalid ? { "aria-invalid": true } : {})}
+      {...(muted ? { "data-muted": "" } : {})}
       {...(props["aria-label"] ? { "aria-label": props["aria-label"] } : {})}
       className={classNames(
         controlClassName,
         "inline-flex h-control-field items-center justify-between gap-2 overflow-hidden text-left",
+        muted && "text-text-muted",
         className,
       )}
     >
@@ -77,12 +87,12 @@ export function Select({
       onValueChange={onValueChange}
       {...(disabled !== undefined ? { disabled } : {})}
     >
-      {truncated && selected ? <Tooltip content={selected.label}>{trigger}</Tooltip> : trigger}
+      {truncated && selected ? <Tooltip content={optionText(selected)}>{trigger}</Tooltip> : trigger}
       <SelectPrimitive.Portal>
         <SelectPrimitive.Content
           position="popper"
           sideOffset={4}
-          className="z-50 max-h-sidebar min-w-field overflow-hidden rounded-md border border-border bg-surface shadow-popover"
+          className="z-50 max-h-sidebar min-w-select-trigger overflow-hidden rounded-md border border-border bg-surface shadow-popover"
         >
           <SelectPrimitive.Viewport className="p-1">
             {groupOptions(options).map(([group, items]) => (
@@ -102,7 +112,15 @@ export function Select({
                     <SelectPrimitive.ItemIndicator className="absolute left-2 inline-flex">
                       <Icon icon={Check} className="text-accent" />
                     </SelectPrimitive.ItemIndicator>
-                    <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
+                    <SelectPrimitive.ItemText>
+                      {option.label}
+                      {option.example ? <span className="text-text-muted"> ({option.example})</span> : null}
+                    </SelectPrimitive.ItemText>
+                    {option.marker ? (
+                      <span className="ml-auto pl-4 text-xs font-medium text-text-muted">
+                        {option.marker}
+                      </span>
+                    ) : null}
                   </SelectPrimitive.Item>
                 ))}
               </SelectPrimitive.Group>
@@ -272,32 +290,65 @@ export function RadioGroup({ value, onValueChange, options, label, variant = "de
   );
 }
 
+export interface SegmentedOption {
+  value: string;
+  label: ReactNode;
+  disabled?: boolean;
+  disabledReason?: string;
+}
+
 export interface SegmentedControlProps {
   value: string;
   onValueChange: (value: string) => void;
-  options: { value: string; label: ReactNode }[];
+  options: SegmentedOption[];
   label: string;
+  disabled?: boolean;
 }
 
-export function SegmentedControl({ value, onValueChange, options, label }: SegmentedControlProps) {
+function SegmentedItem({ option }: { option: SegmentedOption }) {
+  const reasonId = useId();
+  const blocked = option.disabled === true;
+  const item = (
+    <ToggleGroupPrimitive.Item
+      value={option.value}
+      {...(blocked ? { "aria-disabled": true } : {})}
+      {...(blocked && option.disabledReason ? { "aria-describedby": reasonId } : {})}
+      className={classNames(
+        "h-control-sm rounded-sm px-3 font-medium whitespace-nowrap text-text-muted focus-visible:focus-ring aria-checked:bg-accent aria-checked:text-on-accent",
+        blocked
+          ? "cursor-not-allowed opacity-50"
+          : "hover:bg-hover hover:text-text aria-checked:hover:bg-accent-hover",
+      )}
+    >
+      {option.label}
+    </ToggleGroupPrimitive.Item>
+  );
+  if (!blocked || !option.disabledReason) return item;
+  return (
+    <>
+      <Tooltip content={option.disabledReason}>{item}</Tooltip>
+      <span id={reasonId} className="sr-only">
+        {option.disabledReason}
+      </span>
+    </>
+  );
+}
+
+export function SegmentedControl({ value, onValueChange, options, label, disabled }: SegmentedControlProps) {
   return (
     <ToggleGroupPrimitive.Root
       type="single"
       value={value}
+      {...(disabled !== undefined ? { disabled } : {})}
       onValueChange={(next) => {
-        if (next) onValueChange(next);
+        if (!next || options.find((option) => option.value === next)?.disabled) return;
+        onValueChange(next);
       }}
       aria-label={label}
       className="inline-flex gap-1 rounded-md border border-border bg-surface-sunken p-1"
     >
       {options.map((option) => (
-        <ToggleGroupPrimitive.Item
-          key={option.value}
-          value={option.value}
-          className="h-control-sm rounded-sm px-3 font-medium text-text-muted hover:bg-hover hover:text-text focus-visible:focus-ring aria-checked:bg-accent aria-checked:text-on-accent aria-checked:hover:bg-accent-hover"
-        >
-          {option.label}
-        </ToggleGroupPrimitive.Item>
+        <SegmentedItem key={option.value} option={option} />
       ))}
     </ToggleGroupPrimitive.Root>
   );

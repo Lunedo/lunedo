@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { ChevronRight } from "lucide-react";
 import { isValidElement, type ReactNode, useId } from "react";
+import { classNames } from "./class-names.js";
 import { Icon } from "./icon.js";
 import { useUiLabels } from "./labels.js";
 
@@ -103,25 +104,52 @@ export function Section({
   );
 }
 
-export function SettingRow({
-  label,
-  description,
-  meta,
-  control,
-}: {
+export interface SettingRowProps {
   label: ReactNode;
   description?: ReactNode;
   meta?: ReactNode;
   control: ReactNode;
-}) {
+  menu?: ReactNode;
+  status?: ReactNode;
+}
+
+export function SettingRow({ label, description, meta, control, menu, status }: SettingRowProps) {
   return (
-    <div className="flex flex-wrap items-center gap-4 px-4 py-3">
-      <div className="flex min-w-field flex-1 flex-col gap-1">
+    <div
+      data-setting-row=""
+      className="grid grid-cols-setting-row items-center gap-x-3 gap-y-2 px-4 py-3 sm:grid-cols-setting-row-wide"
+    >
+      <div className="col-span-2 flex min-w-0 flex-col gap-1 sm:col-span-1">
         <span className="font-medium text-text">{label}</span>
         {description && <span className="text-sm text-text-muted">{description}</span>}
         {meta && <span className="text-xs text-text-muted">{meta}</span>}
       </div>
-      <div className="flex flex-wrap items-center gap-2">{control}</div>
+      <div data-setting-control="" className="flex w-full min-w-0 flex-col items-end gap-1 sm:w-field">
+        <div className="flex w-full justify-end">{control}</div>
+        {status}
+      </div>
+      <div data-setting-menu="" className="flex w-control-md justify-end">
+        {menu}
+      </div>
+    </div>
+  );
+}
+
+export interface PageContainerProps {
+  width: "narrow" | "wide";
+  children: ReactNode;
+}
+
+export function PageContainer({ width, children }: PageContainerProps) {
+  return (
+    <div
+      data-page-width={width}
+      className={classNames(
+        "flex w-full flex-col gap-6 px-4 pt-6 pb-12 md:px-8",
+        width === "narrow" && "mx-auto max-w-page",
+      )}
+    >
+      {children}
     </div>
   );
 }

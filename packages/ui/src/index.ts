@@ -10,8 +10,19 @@ export {
   type IconButtonProps,
   type IconButtonVariant,
 } from "./button.js";
+export { ChoiceTable, type ChoiceTableProps, type ChoiceTableRow } from "./choice-table.js";
 export { classNames } from "./class-names.js";
 export { type ColorModePreference, resolveColorMode, useColorMode } from "./color-mode.js";
+export {
+  Combobox,
+  type ComboboxItem,
+  type ComboboxLoader,
+  type ComboboxPage,
+  type ComboboxProps,
+  type MultiComboboxProps,
+  matchesQuery,
+  type SingleComboboxProps,
+} from "./combobox.js";
 export {
   type CommandGroup,
   type CommandItem,
@@ -22,10 +33,12 @@ export {
   Checkbox,
   type CheckboxProps,
   type ChoiceOption,
+  optionText,
   RadioGroup,
   type RadioGroupProps,
   SegmentedControl,
   type SegmentedControlProps,
+  type SegmentedOption,
   Select,
   type SelectOption,
   type SelectProps,
@@ -87,10 +100,13 @@ export {
   type Breadcrumb,
   List,
   ListRow,
+  PageContainer,
+  type PageContainerProps,
   PageHeader,
   type PageHeaderProps,
   Section,
   SettingRow,
+  type SettingRowProps,
 } from "./layout.js";
 export {
   Menu,
@@ -109,6 +125,13 @@ export {
   type RailLinkProps,
   type RailProps,
 } from "./rail.js";
+export {
+  DurationSelect,
+  type DurationSelectProps,
+  type SettingOption,
+  SettingSelect,
+  type SettingSelectProps,
+} from "./setting-select.js";
 export { Sidebar, SidebarGroup, SidebarHeader, SidebarItem, type SidebarItemProps } from "./sidebar.js";
 export {
   COPIED_VISIBLE_MS,
@@ -129,7 +152,17 @@ export {
   type TablePagination,
   type TableProps,
   type TableSort,
+  TableToolbar,
+  type TableToolbarProps,
 } from "./table.js";
+export {
+  supportedTimeZones,
+  TimeZoneCombobox,
+  type TimeZoneComboboxProps,
+  timeZoneItem,
+  timeZoneItems,
+  timeZoneOffset,
+} from "./time-zone-combobox.js";
 export { type ToastOptions, ToastProvider, type ToastVariant, useToast } from "./toast.js";
 export { Tooltip, TooltipProvider } from "./tooltip.js";
 export { isTruncated, TruncatedText, type TruncatedTextProps, useTruncated } from "./truncated-text.js";

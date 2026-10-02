@@ -55,7 +55,20 @@
     "durationUnit": "Einheit",
     "minutes": "Minuten",
     "hours": "Stunden",
-    "days": "Tage"
+    "days": "Tage",
+    "defaultMarker": "Standard",
+    "custom": "Eigener Wert…",
+    "apply": "Übernehmen",
+    "cancel": "Abbrechen",
+    "durationRange": "Wähle eine Dauer von {minimum} bis {maximum}.",
+    "noMatches": "Keine Treffer",
+    "loadMore": "Mehr laden",
+    "removeItem": "{item} entfernen",
+    "search": "Suchen",
+    "resetFilters": "Filter zurücksetzen",
+    "suggested": "Vorschläge",
+    "allTimeZones": "Alle Zeitzonen",
+    "browserTimeZone": "Dieser Browser"
   },
   "shell": {
     "documentTitle": "{title} · Pagehall",

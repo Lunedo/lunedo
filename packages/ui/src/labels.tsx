@@ -31,6 +31,19 @@ export interface UiLabels {
   minutes: string;
   hours: string;
   days: string;
+  defaultMarker: string;
+  custom: string;
+  apply: string;
+  cancel: string;
+  durationRange: string;
+  noMatches: string;
+  loadMore: string;
+  removeItem: string;
+  search: string;
+  resetFilters: string;
+  suggested: string;
+  allTimeZones: string;
+  browserTimeZone: string;
 }
 
 const LabelsContext = createContext<UiLabels | null>(null);

@@ -37,6 +37,19 @@ const labels: UiLabels = {
   minutes: "Minutes",
   hours: "Hours",
   days: "Days",
+  defaultMarker: "Default",
+  custom: "Custom…",
+  apply: "Apply",
+  cancel: "Cancel",
+  durationRange: "Choose a duration from {minimum} to {maximum}.",
+  noMatches: "No matches",
+  loadMore: "Load more",
+  removeItem: "Remove {item}",
+  search: "Search",
+  resetFilters: "Reset filters",
+  suggested: "Suggested",
+  allTimeZones: "All time zones",
+  browserTimeZone: "This browser",
 };
 
 export async function renderWithProviders(

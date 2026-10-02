@@ -103,6 +103,8 @@ function themeDeclarations(tokens: DesignTokens): Declarations {
     ["--spacing-field", tokens.layout.fieldWidth],
     ["--spacing-number-field", tokens.layout.numberFieldWidth],
     ["--spacing-unit-field", tokens.layout.unitFieldWidth],
+    ["--spacing-select-trigger", "var(--radix-select-trigger-width)"],
+    ["--spacing-popover-trigger", "var(--radix-popover-trigger-width)"],
     ...Object.entries(tokens.icon.size).map(([key, value]): [string, string] => [
       `--spacing-icon-${key}`,
       value,
@@ -155,6 +157,13 @@ const FOCUS_RING = `@utility focus-ring {
   outline-offset: var(--${PREFIX}-focus-offset);
 }`;
 
+const SETTING_ROW = `@utility grid-cols-setting-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+@utility grid-cols-setting-row-wide {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}`;
+
 export function generateThemeCss(tokens: DesignTokens): string {
   const light: Declarations = [["color-scheme", "light"], ...colorDeclarations(tokens, "light", "light")];
   const dark: Declarations = [["color-scheme", "dark"], ...colorDeclarations(tokens, "dark", "dark")];
@@ -183,6 +192,7 @@ export function generateThemeCss(tokens: DesignTokens): string {
     block("@theme inline", themeDeclarations(tokens)),
     '@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));',
     FOCUS_RING,
+    SETTING_ROW,
     block(":root", rootDeclarations(tokens)),
     block(':root,\n[data-theme="light"]', light),
     block('[data-theme="dark"]', dark),

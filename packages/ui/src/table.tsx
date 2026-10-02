@@ -1,8 +1,17 @@
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ChevronsUpDown } from "lucide-react";
-import type { Key, ReactNode } from "react";
-import { IconButton } from "./button.js";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsUpDown,
+  RotateCcw,
+  Search,
+} from "lucide-react";
+import type { Key, KeyboardEvent, MouseEvent, ReactNode } from "react";
+import { Button, IconButton } from "./button.js";
 import { classNames } from "./class-names.js";
 import { SkeletonText } from "./feedback.js";
+import { controlClassName } from "./field.js";
 import { Icon } from "./icon.js";
 import { useUiLabels } from "./labels.js";
 
@@ -40,6 +49,15 @@ export interface TableProps<T> {
   loading?: boolean;
   pagination?: TablePagination;
   onRowClick?: (row: T) => void;
+  rowLabel?: (row: T) => string;
+}
+
+const CONTROLS = "a, button, input, select, textarea, label, [role=menuitem], [role=checkbox], [role=switch]";
+
+function fromControl(target: EventTarget, row: HTMLElement): boolean {
+  if (!(target instanceof Element)) return false;
+  const control = target.closest(CONTROLS);
+  return control !== null && row.contains(control);
 }
 
 const HIDDEN: Record<"sm" | "md", string> = {
@@ -63,6 +81,7 @@ export function Table<T>({
   loading = false,
   pagination,
   onRowClick,
+  rowLabel,
 }: TableProps<T>) {
   const labels = useUiLabels();
   const cellClass = (column: TableColumn<T>) =>
@@ -140,9 +159,26 @@ export function Table<T>({
                   key={rowKey(row)}
                   className={classNames(
                     "border-b border-border last:border-b-0",
-                    onRowClick && "cursor-pointer hover:bg-hover",
+                    onRowClick &&
+                      "cursor-pointer hover:bg-hover focus-visible:bg-hover focus-visible:focus-ring",
                   )}
-                  {...(onRowClick ? { onClick: () => onRowClick(row) } : {})}
+                  {...(onRowClick
+                    ? {
+                        tabIndex: 0,
+                        "data-row-action": "",
+                        ...(rowLabel ? { "aria-label": rowLabel(row) } : {}),
+                        onClick: (event: MouseEvent<HTMLTableRowElement>) => {
+                          if (fromControl(event.target, event.currentTarget)) return;
+                          onRowClick(row);
+                        },
+                        onKeyDown: (event: KeyboardEvent<HTMLTableRowElement>) => {
+                          if (event.target !== event.currentTarget) return;
+                          if (event.key !== "Enter" && event.key !== " ") return;
+                          event.preventDefault();
+                          onRowClick(row);
+                        },
+                      }
+                    : {})}
                 >
                   {columns.map((column) => (
                     <td key={column.key} className={classNames(cellClass(column), "py-2 align-middle")}>
@@ -173,6 +209,52 @@ export function Table<T>({
           />
         </nav>
       )}
+    </div>
+  );
+}
+
+export interface TableToolbarProps {
+  search?: {
+    value: string;
+    onChange: (value: string) => void;
+    label?: string;
+    placeholder?: string;
+  };
+  filters?: ReactNode;
+  filtersActive?: boolean;
+  onResetFilters?: () => void;
+  actions?: ReactNode;
+}
+
+export function TableToolbar({ search, filters, filtersActive, onResetFilters, actions }: TableToolbarProps) {
+  const labels = useUiLabels();
+  return (
+    <div data-table-toolbar="" className="flex flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        {search ? (
+          <div className="relative w-full sm:w-field">
+            <Icon
+              icon={Search}
+              className="pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 text-text-muted"
+            />
+            <input
+              type="search"
+              value={search.value}
+              aria-label={search.label ?? labels.search}
+              placeholder={search.placeholder ?? labels.search}
+              onChange={(event) => search.onChange(event.target.value)}
+              className={classNames(controlClassName, "h-control-field pl-8")}
+            />
+          </div>
+        ) : null}
+        {filters}
+        {filtersActive && onResetFilters ? (
+          <Button variant="secondary" size="sm" icon={RotateCcw} onClick={onResetFilters}>
+            {labels.resetFilters}
+          </Button>
+        ) : null}
+      </div>
+      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </div>
   );
 }
