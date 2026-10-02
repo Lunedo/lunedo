@@ -5,6 +5,7 @@ import {
   type CallbackResult,
   generateToken,
   OrganizationError,
+  RateLimitedError,
 } from "@pagehall/server";
 import { idSchema } from "@pagehall/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
@@ -124,6 +125,7 @@ export class ProviderAuthController {
       purpose: "signIn",
       baseUrl: await baseUrlOf(this.context, request),
       returnTo: body.returnTo ?? null,
+      clientIp: request.ip,
     });
     setCookie(reply, COOKIES.providerFlow, started.browserToken, PROVIDER_FLOW_MAX_AGE_SECONDS);
     return { url: started.url };
@@ -203,12 +205,14 @@ export class ProviderAuthController {
   async backchannelLogout(
     @Param("providerId") providerId: string,
     @Body() body: z.output<typeof logoutBodySchema>,
+    @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
     reply.header("cache-control", "no-store").header("content-type", "text/plain");
     try {
-      await this.#services.providerSignIn.backchannelLogout(providerId, body.logout_token);
+      await this.#services.providerSignIn.backchannelLogout(providerId, body.logout_token, request.ip);
     } catch (error) {
+      if (error instanceof RateLimitedError) throw error;
       this.context.logger.warn({ providerId, reason: (error as Error).message }, "Logout token rejected");
       throw new ProblemException("invalidInput", "The logout token was not accepted");
     }
@@ -317,6 +321,7 @@ export class ProviderAuthController {
       sessionId: session.id,
       accountId: session.accountId,
       returnTo: body.returnTo ?? null,
+      clientIp: request.ip,
     });
     setCookie(reply, COOKIES.providerFlow, started.browserToken, PROVIDER_FLOW_MAX_AGE_SECONDS);
     return { url: started.url };

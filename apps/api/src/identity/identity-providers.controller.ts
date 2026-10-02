@@ -77,6 +77,7 @@ export class IdentityProvidersController {
       baseUrl: await baseUrlOf(this.context, request),
       sessionId: sessionOf(request).id,
       returnTo: returnTo ?? null,
+      clientIp: request.ip,
     });
     setCookie(reply, COOKIES.providerFlow, started.browserToken, PROVIDER_FLOW_MAX_AGE_SECONDS);
     return { url: started.url };

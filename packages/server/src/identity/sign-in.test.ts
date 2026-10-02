@@ -3,7 +3,12 @@ import { Secret, TOTP } from "otpauth";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { SYSTEM } from "../accounts/principal.js";
-import { ChallengeExpiredError, InvalidCredentialsError, InvalidSecondFactorError } from "../auth/errors.js";
+import {
+  ChallengeExpiredError,
+  InvalidCredentialsError,
+  InvalidSecondFactorError,
+  RateLimitedError,
+} from "../auth/errors.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { type FakeOidcProvider, startFakeOidcProvider, type TokenOverrides } from "../testing/fake-oidc.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
@@ -362,6 +367,30 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     ).toBe(1);
     const left = await test.pool.query("select 1 from sessions where account_id = $1", [accountId]);
     expect(left.rows).toEqual([]);
+  });
+
+  it("limits sign-in starts and logout requests per client", async () => {
+    const id = await provider({ accountCreation: true });
+    const clientIp = `198.51.100.${Math.floor(Math.random() * 200) + 1}`;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      await test.services.providerSignIn.start({
+        providerId: id,
+        purpose: "signIn",
+        baseUrl: BASE,
+        clientIp,
+      });
+    }
+    await expect(
+      test.services.providerSignIn.start({ providerId: id, purpose: "signIn", baseUrl: BASE, clientIp }),
+    ).rejects.toThrow(RateLimitedError);
+    for (let attempt = 0; attempt < 60; attempt++) {
+      await expect(
+        test.services.providerSignIn.backchannelLogout(id, "not-a-token", clientIp),
+      ).rejects.toThrow();
+    }
+    await expect(test.services.providerSignIn.backchannelLogout(id, "not-a-token", clientIp)).rejects.toThrow(
+      RateLimitedError,
+    );
   });
 
   it("confirms the identity again through the provider only with a fresh sign-in", async () => {

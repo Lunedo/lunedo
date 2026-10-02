@@ -41,6 +41,8 @@ const FLOW_LIFETIME_MS = 10 * 60 * 1000;
 const AUTH_TIME_TOLERANCE_MS = 60 * 1000;
 const REFUSAL_RETENTION_DAYS = 90;
 const DISCOVERIES_PER_CLIENT = 30;
+const STARTS_PER_CLIENT = 20;
+const LOGOUTS_PER_CLIENT = 60;
 const REFERENCE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
 export type ProviderFlowPurpose = "signIn" | "reauthentication" | "test";
@@ -196,7 +198,9 @@ export class ProviderSignInService {
     returnTo?: string | null;
     sessionId?: string | null;
     accountId?: string | null;
+    clientIp?: string | undefined;
   }): Promise<StartedFlow> {
+    await this.#limit("providerStart", input.clientIp, STARTS_PER_CLIENT);
     const { provider, credentials } = await this.#load(input.providerId);
     if (input.purpose === "reauthentication") {
       const [identity] = await this.#database
@@ -698,7 +702,14 @@ export class ProviderSignInService {
     };
   }
 
-  async backchannelLogout(providerId: string, logoutToken: string): Promise<number> {
+  async #limit(kind: string, clientIp: string | undefined, perMinute: number): Promise<void> {
+    if (clientIp === undefined) return;
+    const limit = await this.#rateLimiter.consume(`${kind}:client:${clientSubject(clientIp)}`, perMinute, 60);
+    if (!limit.allowed) throw new RateLimitedError(limit.retryAfterSeconds);
+  }
+
+  async backchannelLogout(providerId: string, logoutToken: string, clientIp?: string): Promise<number> {
+    await this.#limit("providerLogout", clientIp, LOGOUTS_PER_CLIENT);
     const { provider, credentials } = await this.#load(providerId);
     const logout = await this.#adapter(provider.type).verifyLogout(provider, credentials, logoutToken);
     return this.#database.transaction(async (tx) => {

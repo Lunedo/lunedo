@@ -99,6 +99,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
   readonly #allowInsecure: boolean;
   readonly #fetch: typeof fetch;
   readonly #cache = new Map<string, CachedConfiguration>();
+  readonly #keySets = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
   readonly #directory: DirectoryClients;
 
   constructor(options: { allowInsecure: boolean; fetch?: typeof fetch }) {
@@ -402,6 +403,15 @@ export class OidcAdapter implements IdentityProviderAdapter {
     };
   }
 
+  #keySet(providerId: string, uri: string): ReturnType<typeof createRemoteJWKSet> {
+    const key = `${providerId}:${uri}`;
+    const existing = this.#keySets.get(key);
+    if (existing) return existing;
+    const created = createRemoteJWKSet(new URL(uri));
+    this.#keySets.set(key, created);
+    return created;
+  }
+
   async verifyLogout(
     provider: ProviderDefinition,
     credentials: readonly ProviderCredential[],
@@ -415,7 +425,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
     this.#checkTransport(metadata.jwks_uri);
     let payload: JWTPayload;
     try {
-      ({ payload } = await jwtVerify(logoutToken, createRemoteJWKSet(new URL(metadata.jwks_uri)), {
+      ({ payload } = await jwtVerify(logoutToken, this.#keySet(provider.id, metadata.jwks_uri), {
         issuer: metadata.issuer,
         audience: provider.config.clientId,
         algorithms: [provider.config.idTokenAlgorithm],
