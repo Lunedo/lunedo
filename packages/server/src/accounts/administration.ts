@@ -7,17 +7,17 @@ import {
   totpCredentials,
   webauthnCredentials,
 } from "../auth/schema.js";
-import { passwordSignInSetting } from "../auth/settings.js";
 import { secondFactorsOf } from "../auth/two-factor.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Transaction } from "../database/database.js";
 import { emptyReport, type GroupMappingService } from "../identity/groups.js";
 import type { IdentityProviderService } from "../identity/providers.js";
 import { identities, identityProviders, providerDeactivations } from "../identity/schema.js";
+import { accountsWithoutOtherSignIn } from "../identity/sign-in-ways.js";
 import type { MailService } from "../mail/mail-service.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import type { SettingsService } from "../settings/service.js";
-import type { Principal } from "./principal.js";
+import { accountPrincipal, type Principal } from "./principal.js";
 import { accounts, instance } from "./schema.js";
 
 export const SECOND_FACTOR_RESET_ACTION = "account.secondFactor.reset";
@@ -137,18 +137,7 @@ export class AccountAdministrationService {
     identityId: string,
   ): Promise<{ endedSessions: number }> {
     return this.#database.transaction(async (tx) => {
-      const [row] = await tx
-        .select({
-          id: accounts.id,
-          home: accounts.homeOrganizationId,
-          email: accounts.email,
-          passwordHash: accounts.passwordHash,
-        })
-        .from(accounts)
-        .where(eq(accounts.id, accountId))
-        .for("update");
-      if (!row) throw new OrganizationError("notFound", "The account does not exist");
-      const target = { id: row.id, home: row.home, email: row.email };
+      const target = await this.#lockAccount(tx, accountId);
       await this.#authorization.require(
         actor,
         IDENTITIES_ACTION,
@@ -156,36 +145,58 @@ export class AccountAdministrationService {
         { executor: tx },
       );
       await this.#checkRank(tx, actor, target, IDENTITIES_ACTION);
-      const [identity] = await tx
-        .select({ id: identities.id, providerId: identities.providerId })
-        .from(identities)
-        .where(and(eq(identities.id, identityId), eq(identities.accountId, target.id)));
-      if (!identity) throw new OrganizationError("notFound", "The identity does not exist");
-      const others = await tx.execute<{ count: number }>(sql`
-        select (select count(*) from identities where account_id = ${target.id} and id <> ${identity.id})
-          + (select count(*) from webauthn_credentials where account_id = ${target.id}) as count`);
-      const [owner] = await tx.select({ id: instance.ownerAccountId }).from(instance);
-      const passwordWorks =
-        row.passwordHash !== null &&
-        (owner?.id === target.id || (await this.#settings.get(passwordSignInSetting, {}, { executor: tx })));
-      if (!passwordWorks && Number(others.rows[0]?.count ?? 0) === 0) {
-        throw new OrganizationError("lastSignInMethod", "The account would have no way to sign in");
-      }
-      const ended = await tx
-        .delete(sessions)
-        .where(eq(sessions.identityId, identity.id))
-        .returning({ id: sessions.id });
-      await tx.delete(identities).where(eq(identities.id, identity.id));
-      await this.#mapping.reconcile(tx, target.id, emptyReport());
-      await this.#audit.record(tx, {
-        name: "identity.unlinked",
-        actor,
-        targetId: target.id,
-        fields: { providerId: identity.providerId, endedSessions: ended.length },
-        ...(target.home ? { scope: { type: "organization" as const, id: target.home } } : {}),
-      });
-      return { endedSessions: ended.length };
+      return this.#unlink(tx, actor, target, identityId);
     });
+  }
+
+  async unlinkOwnIdentity(accountId: string, identityId: string): Promise<{ endedSessions: number }> {
+    return this.#database.transaction(async (tx) => {
+      const target = await this.#lockAccount(tx, accountId);
+      return this.#unlink(tx, accountPrincipal(target.id), target, identityId);
+    });
+  }
+
+  async #lockAccount(tx: Transaction, accountId: string) {
+    const [row] = await tx
+      .select({ id: accounts.id, home: accounts.homeOrganizationId, email: accounts.email })
+      .from(accounts)
+      .where(eq(accounts.id, accountId))
+      .for("update");
+    if (!row) throw new OrganizationError("notFound", "The account does not exist");
+    return row;
+  }
+
+  async #unlink(
+    tx: Transaction,
+    actor: Principal,
+    target: { id: string; home: string | null },
+    identityId: string,
+  ): Promise<{ endedSessions: number }> {
+    const [identity] = await tx
+      .select({ id: identities.id, providerId: identities.providerId })
+      .from(identities)
+      .where(and(eq(identities.id, identityId), eq(identities.accountId, target.id)));
+    if (!identity) throw new OrganizationError("notFound", "The identity does not exist");
+    const stranded = await accountsWithoutOtherSignIn(tx, this.#settings, [target.id], {
+      identityId: identity.id,
+    });
+    if (stranded.length > 0) {
+      throw new OrganizationError("lastSignInMethod", "The account would have no way to sign in");
+    }
+    const ended = await tx
+      .delete(sessions)
+      .where(eq(sessions.identityId, identity.id))
+      .returning({ id: sessions.id });
+    await tx.delete(identities).where(eq(identities.id, identity.id));
+    await this.#mapping.reconcile(tx, target.id, emptyReport());
+    await this.#audit.record(tx, {
+      name: "identity.unlinked",
+      actor,
+      targetId: target.id,
+      fields: { providerId: identity.providerId, endedSessions: ended.length },
+      ...(target.home ? { scope: { type: "organization" as const, id: target.home } } : {}),
+    });
+    return { endedSessions: ended.length };
   }
 
   async resetSecondFactor(

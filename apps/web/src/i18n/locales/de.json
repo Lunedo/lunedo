@@ -403,7 +403,8 @@
     "unlinkDescription": "Die Person kann sich mit dieser Identität nicht mehr anmelden. Ihr Konto, ihre Inhalte und Mitgliedschaften bleiben.",
     "none": "Keine Anmeldung über einen Provider verknüpft.",
     "noneOwn": "Du meldest dich nicht über einen Identity Provider an.",
-    "ownHint": "Anmeldungen über Provider verknüpft und trennt deine Administration.",
+    "ownHint": "Anmeldungen über Provider verknüpft deine Administration. Du kannst eine trennen, solange dir ein anderer Weg zur Anmeldung bleibt.",
+    "unlinkOwnDescription": "Du kannst dich mit dieser Identität nicht mehr anmelden, und die Sitzungen, die von ihr kommen, enden. Dein Konto, deine Inhalte und Mitgliedschaften bleiben.",
     "link": "Identität verknüpfen",
     "linkTitle": "Identität verknüpfen",
     "linkDescription": "Verbinde eine Anmeldung bei einem Provider mit diesem Konto, zum Beispiel nach einer Änderung der E-Mail-Adresse.",
@@ -588,7 +589,7 @@
     "durationRange": "Wähle eine Dauer von {minimum} bis {maximum}."
   },
   "problems": {
-    "lastSignInMethod": "Das ist die letzte Anmeldemethode des Kontos. Verknüpfe zuerst eine andere Identität oder setze ein Passwort, bevor du sie trennst.",
+    "lastSignInMethod": "Das ist der letzte funktionierende Weg, sich bei dem Konto anzumelden. Eine Identität bei einem anderen aktiven Provider, ein Passkey oder ein Passwort bei eingeschalteter Passwort-Anmeldung hielte es erreichbar. Richte zuerst eines davon ein und trenne dann erneut.",
     "lastCredential": "Das ist der einzige Zugang dieses Providers. Füge zuerst einen neuen hinzu, bevor du ihn entfernst.",
     "identityInUse": "Diese Identität ist schon mit einem anderen Konto verknüpft. Trenne sie dort zuerst.",
     "passwordSignInDisabled": "Die Anmeldung mit Passwort ist für diese Instanz ausgeschaltet. Melde dich über deinen Provider oder mit einem Passkey an.",

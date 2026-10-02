@@ -421,4 +421,39 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     ).resolves.toEqual({ endedSessions: 0 });
     expect(await test.services.administration.identities(target.id)).toEqual([]);
   });
+
+  it("lets people unlink their own identity only while another working way to sign in remains", async () => {
+    const first = await instanceProvider(null, [uniqueDomain()]);
+    const second = await instanceProvider(null, [uniqueDomain()]);
+    const person = await account(null);
+    await test.pool.query("update accounts set password_hash = null where id = $1", [person.id]);
+    const own = await test.services.administration.linkIdentity(SYSTEM, person.id, {
+      providerId: first.id,
+      subject: randomUUID(),
+    });
+    const other = await test.services.administration.linkIdentity(SYSTEM, person.id, {
+      providerId: second.id,
+      subject: randomUUID(),
+    });
+    await test.services.identityProviders.deactivate(SYSTEM, second.id);
+    await expect(test.services.administration.unlinkOwnIdentity(person.id, own.id)).rejects.toMatchObject({
+      code: "lastSignInMethod",
+    });
+    await test.services.identityProviders.activate(SYSTEM, second.id);
+    await expect(test.services.administration.unlinkOwnIdentity(person.id, own.id)).resolves.toEqual({
+      endedSessions: 0,
+    });
+    await expect(test.services.administration.unlinkOwnIdentity(person.id, other.id)).rejects.toMatchObject({
+      code: "lastSignInMethod",
+    });
+    const stranger = await account(null);
+    await expect(test.services.administration.unlinkOwnIdentity(stranger.id, other.id)).rejects.toMatchObject({
+      code: "notFound",
+    });
+    const audit = await test.pool.query<{ actor_id: string }>(
+      "select actor_id from audit_events where name = 'identity.unlinked' and target_id = $1",
+      [person.id],
+    );
+    expect(audit.rows).toEqual([{ actor_id: person.id }]);
+  });
 });

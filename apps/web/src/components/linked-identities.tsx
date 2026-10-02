@@ -68,7 +68,10 @@ function IdentityRows({
 
 export function OwnIdentities() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const showFailure = useFailureToast();
   const identities = useQuery({ ...ownIdentitiesQuery, throwOnError: false });
+  const [unlinking, setUnlinking] = useState<LinkedIdentity | null>(null);
   if (identities.isPending) return <Skeleton className="h-12 w-full" />;
   if (identities.isError) {
     return (
@@ -84,8 +87,32 @@ export function OwnIdentities() {
   }
   return (
     <>
-      <IdentityRows identities={identities.data} />
+      <IdentityRows identities={identities.data} onUnlink={setUnlinking} />
       <p className="px-4 py-3 text-sm text-text-muted">{t("identities.ownHint")}</p>
+      <ConfirmDialog
+        open={unlinking !== null}
+        onOpenChange={(next) => (next ? undefined : setUnlinking(null))}
+        title={t("identities.unlinkTitle", { provider: unlinking?.providerName ?? "" })}
+        description={t("identities.unlinkOwnDescription")}
+        confirmLabel={t("identities.unlink")}
+        cancelLabel={t("common.cancel")}
+        destructive
+        onConfirm={async () => {
+          if (!unlinking) return;
+          try {
+            await request(() =>
+              api.DELETE("/api/v1/account/identities/{identityId}", {
+                params: { path: { identityId: unlinking.id } },
+              }),
+            );
+            setUnlinking(null);
+            await queryClient.invalidateQueries({ queryKey: identityKeys.ownIdentities });
+          } catch (failure) {
+            setUnlinking(null);
+            showFailure(t("failures.unlinkIdentity"), failure);
+          }
+        }}
+      />
     </>
   );
 }

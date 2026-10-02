@@ -48,6 +48,7 @@ import {
 const TAG = "Identity providers";
 const LINK_MAX_AGE_SECONDS = 5 * 60;
 const accountIdParams = z.object({ accountId: identityParams.shape.accountId }).strict();
+const ownIdentityParams = z.object({ identityId: identityParams.shape.identityId }).strict();
 const account = { type: "account", param: "accountId" } as const;
 
 function withQuery(path: string, values: Record<string, string>): string {
@@ -344,6 +345,20 @@ export class ProviderAuthController {
   })
   async ownIdentities(@Req() request: FastifyRequest) {
     return this.#services.administration.identities(sessionOf(request).accountId);
+  }
+
+  @Delete("account/identities/:identityId")
+  @SessionRoute({ recentAuthentication: true })
+  @ApiRoute({
+    summary: "Unlink an own identity",
+    description:
+      "Ends the sessions that came from this identity. Refused while it is the last working way to sign in: another identity of an active provider, a passkey, or a password while password sign-in is on.",
+    tags: [TAG],
+    params: ownIdentityParams,
+    errors: ["lastSignInMethod", "reauthenticationRequired"],
+  })
+  async unlinkOwnIdentity(@Param("identityId") identityId: string, @Req() request: FastifyRequest) {
+    await this.#services.administration.unlinkOwnIdentity(sessionOf(request).accountId, identityId);
   }
 
   @Get("accounts/:accountId/identities")

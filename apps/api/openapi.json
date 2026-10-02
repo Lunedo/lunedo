@@ -608,6 +608,156 @@
         }
       }
     },
+    "/api/v1/account/identities/{identityId}": {
+      "delete": {
+        "operationId": "providerAuth.unlinkOwnIdentity",
+        "summary": "Unlink an own identity",
+        "description": "Ends the sessions that came from this identity. Refused while it is the last working way to sign in: another identity of an active provider, a passkey, or a password while password sign-in is on.\n\nNeeds a signed-in session.",
+        "tags": [
+          "Identity providers"
+        ],
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "identityId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the linked identity.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "reauthenticationRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:reauthenticationRequired",
+                      "title": "Confirm your identity first",
+                      "status": 403,
+                      "code": "reauthenticationRequired"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`lastSignInMethod`: The last way to sign in cannot be removed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "lastSignInMethod": {
+                    "value": {
+                      "type": "urn:pagehall:problem:lastSignInMethod",
+                      "title": "The last way to sign in cannot be removed",
+                      "status": 409,
+                      "code": "lastSignInMethod"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/account/passkeys": {
       "post": {
         "operationId": "account.registerPasskey",

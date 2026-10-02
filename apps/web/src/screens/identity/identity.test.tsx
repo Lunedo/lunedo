@@ -411,6 +411,46 @@ describe("the sign-in settings of the instance", () => {
 });
 
 describe("linked identities", () => {
+  it("lets people unlink their own identity and explains a refusal", async () => {
+    let refuse = true;
+    const { requests } = adminApi({
+      "GET /api/v1/account/identities": () => ({
+        body: [
+          {
+            id: "01929b1e-0000-7000-8000-0000000000c2",
+            providerId: PROVIDER,
+            providerName: "Microsoft",
+            subject: "tid:oid",
+            email: "olivia@example.org",
+            signInName: null,
+            displayName: "Olivia",
+            lastSignInAt: null,
+            createdAt: "2026-09-01T08:00:00.000Z",
+          },
+        ],
+      }),
+      "GET /api/v1/account/security": () => ({
+        body: { totp: true, passkeys: [], recoveryCodes: 8, secondFactorRequired: true },
+      }),
+      "GET /api/v1/account/sessions": () => ({ body: { items: [], nextCursor: null } }),
+      "GET /api/v1/account/tokens": () => ({ body: { items: [], nextCursor: null } }),
+      "DELETE /api/v1/account/identities/01929b1e-0000-7000-8000-0000000000c2": () =>
+        refuse ? problem(409, "lastSignInMethod") : { status: 204 },
+    });
+    await renderPath("/settings/security");
+    await userEvent.click(await screen.findByRole("button", { name: "Unlink" }));
+    let confirm = await screen.findByRole("dialog", { name: "Unlink Microsoft?" });
+    await userEvent.click(within(confirm).getByRole("button", { name: "Unlink" }));
+    expect(await screen.findByText(/This is the last working way to sign in/)).toBeTruthy();
+    refuse = false;
+    await userEvent.click(screen.getByRole("button", { name: "Unlink" }));
+    confirm = await screen.findByRole("dialog", { name: "Unlink Microsoft?" });
+    await userEvent.click(within(confirm).getByRole("button", { name: "Unlink" }));
+    await waitFor(() =>
+      expect(requests.filter((request) => request.method === "DELETE")).toHaveLength(2),
+    );
+  });
+
   it("lets administrators unlink an identity in the account panel", { timeout: 15_000 }, async () => {
     const { requests } = adminApi({
       "GET /api/v1/instance/accounts": () => ({

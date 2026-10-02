@@ -403,7 +403,8 @@
     "unlinkDescription": "The person can no longer sign in with this identity. Their account, content and memberships stay.",
     "none": "No sign-ins through providers are linked.",
     "noneOwn": "You do not sign in through an identity provider.",
-    "ownHint": "Your administrator links and unlinks sign-ins through providers.",
+    "ownHint": "Your administrator links sign-ins through providers. You can unlink one while another way to sign in remains.",
+    "unlinkOwnDescription": "You can no longer sign in with this identity, and the sessions that came from it end. Your account, content and memberships stay.",
     "link": "Link identity",
     "linkTitle": "Link an identity",
     "linkDescription": "Connect a sign-in at a provider to this account, for example after a change of the e-mail address.",
@@ -588,7 +589,7 @@
     "durationRange": "Choose a duration from {minimum} to {maximum}."
   },
   "problems": {
-    "lastSignInMethod": "This is the account's last way to sign in. Link another identity or set a password before you unlink it.",
+    "lastSignInMethod": "This is the last working way to sign in to the account. Another identity of an active provider, a passkey, or a password while password sign-in is on would keep it reachable. Add one of them first, then unlink again.",
     "lastCredential": "This is the provider's only credential. Add a new one before you remove it.",
     "identityInUse": "This identity is already linked to another account. Unlink it there first.",
     "passwordSignInDisabled": "Password sign-in is turned off for this instance. Sign in through your provider or with a passkey.",
