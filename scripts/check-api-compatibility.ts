@@ -17,6 +17,7 @@ let previous: string;
 try {
   previous = execFileSync("git", ["show", `${base}:${DESCRIPTION}`], {
     encoding: "utf8",
+    maxBuffer: 256 * 1024 * 1024,
     stdio: ["ignore", "pipe", "ignore"],
   });
 } catch {
