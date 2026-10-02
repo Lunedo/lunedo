@@ -8,6 +8,7 @@ import { DocsController } from "../docs/docs.controller.js";
 import { API_ROUTE, type ApiRouteDefinition } from "../http/api-route.js";
 import { IdentityProvidersController } from "../identity/identity-providers.controller.js";
 import { ProviderAuthController } from "../identity/provider-auth.controller.js";
+import { ProviderGroupsController } from "../identity/provider-groups.controller.js";
 import { NotificationsController } from "../notifications/notifications.controller.js";
 import { AccountsController } from "../organizations/accounts.controller.js";
 import { GroupsController } from "../organizations/groups.controller.js";
@@ -31,6 +32,7 @@ export const apiControllers = (): Type[] => [
   NotificationsController,
   IdentityProvidersController,
   ProviderAuthController,
+  ProviderGroupsController,
   DocsController,
 ];
 

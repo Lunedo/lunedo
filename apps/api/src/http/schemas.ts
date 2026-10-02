@@ -113,6 +113,16 @@ export const groupSchema = z
     organizationId: uuid("ID of the organization the group belongs to."),
     name: z.string().describe("Name of the group, unique in the organization, 1 to 100 characters."),
     description: z.string().describe("Description, up to 1000 characters."),
+    managedBy: z
+      .object({
+        providerId: uuid("ID of the identity provider."),
+        providerName: z.string().describe("Name of the identity provider."),
+      })
+      .nullable()
+      .optional()
+      .describe(
+        "The identity provider that manages the members of a synchronized group, or null. Members of such a group cannot be changed in Pagehall; its permissions can.",
+      ),
   })
   .describe("A group of accounts.");
 

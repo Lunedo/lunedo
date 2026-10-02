@@ -3,6 +3,7 @@ import {
   clientSecretSchema,
   identityProviderNameSchema,
   identityProviderPresets,
+  mappingRuleInputSchema,
   oidcConfigSchema,
   signInRefusalReferenceSchema,
 } from "@pagehall/shared";
@@ -120,6 +121,9 @@ export const providerSchema = z
     redirectUri: z.string().describe("Redirect URI to register with the provider."),
     logoRef: z.string().nullable().describe("Reference to the uploaded logo, or null."),
     credentials: z.array(credentialSchema).describe("Credentials, newest first."),
+    directoryKey: z
+      .boolean()
+      .describe("Whether a service account key for the Google directory is stored. The key is never shown."),
     warnings: z
       .array(z.enum(["noCredential", "credentialExpiring", "credentialExpired"]))
       .describe("Problems that need attention."),
@@ -273,3 +277,212 @@ export const identityParams = z
 export const logoutBodySchema = z
   .object({ logout_token: z.string().min(1).max(16_384).describe("The logout token.") })
   .describe("Back-channel logout request of the provider.");
+
+export const directoryKeySchema = z
+  .object({
+    key: z
+      .string()
+      .min(2)
+      .max(20_000)
+      .describe("The JSON key of the Google service account, as downloaded from Google Cloud."),
+  })
+  .strict()
+  .describe("A service account key for reading the Google directory.");
+
+export const ruleParams = z
+  .object({
+    providerId: uuid("ID of the identity provider."),
+    ruleId: uuid("ID of the mapping rule."),
+  })
+  .strict();
+
+export const runParams = z
+  .object({
+    providerId: uuid("ID of the identity provider."),
+    runId: uuid("ID of the sync run."),
+  })
+  .strict();
+
+export const mappingRuleBodySchema = mappingRuleInputSchema.describe(
+  "A mapping rule. Groups are identified by their stable ID at the provider; the name is only shown.",
+);
+
+const ruleRoleSchema = z
+  .union([
+    z.object({ builtIn: z.string().describe("Key of the built-in role.") }).strict(),
+    z
+      .object({
+        customRoleId: uuid("ID of the custom role."),
+        name: z.string().describe("Name of the custom role."),
+      })
+      .strict(),
+  ])
+  .nullable()
+  .describe("The role the rule grants, or null for membership only.");
+
+export const mappingRuleSchema = z
+  .object({
+    id: uuid("ID of the rule."),
+    providerId: uuid("ID of the provider."),
+    position: z.number().int().describe("Order of the rule; earlier rules decide the home organization."),
+    group: z
+      .object({
+        id: z.string().describe("Stable ID of the group at the provider."),
+        name: z.string().nullable().describe("Last known name of the group, or null."),
+        missing: z
+          .boolean()
+          .describe("Whether the group no longer exists at the provider. Such a rule grants nothing."),
+      })
+      .describe("The group at the provider."),
+    target: z.enum(["organization", "instance"]).describe("What the rule grants access to."),
+    organization: z
+      .object({ id: uuid("ID of the organization."), name: z.string().describe("Name of the organization.") })
+      .nullable()
+      .describe("The organization, for organization rules."),
+    role: ruleRoleSchema,
+    synchronizedGroup: z
+      .object({ id: uuid("ID of the group in Pagehall."), name: z.string().describe("Name of the group.") })
+      .nullable()
+      .describe("The synchronized Pagehall group the members are added to, or null."),
+    homeOrganization: z
+      .boolean()
+      .describe("Whether the organization becomes the home organization of new accounts."),
+    accounts: z.number().int().describe("Accounts in Pagehall that are in the group."),
+    createdAt: timestamp("When the rule was created."),
+    updatedAt: timestamp("When the rule was last changed."),
+  })
+  .describe("A rule that maps a group of the provider to access in Pagehall.");
+
+export const ruleOrderSchema = z
+  .object({
+    ruleIds: z
+      .array(uuid("ID of a rule."))
+      .max(500)
+      .describe("Every rule of the provider, in the new order."),
+  })
+  .strict()
+  .describe("A new order of the rules.");
+
+export const groupSearchQuery = z
+  .object({ q: z.string().trim().max(200).default("").describe("Text in the name of the group.") })
+  .strict();
+
+export const groupPreviewQuery = z
+  .object({ group: z.string().trim().min(1).max(256).describe("Stable ID of the group at the provider.") })
+  .strict();
+
+export const providerGroupMatchSchema = z
+  .object({
+    id: z.string().describe("Stable ID of the group at the provider."),
+    name: z.string().nullable().describe("Name of the group."),
+    members: z.number().int().nullable().describe("Members at the provider, or null when unknown."),
+    accounts: z.number().int().describe("Accounts in Pagehall that are in the group."),
+    mapped: z.boolean().describe("Whether a rule uses the group already."),
+  })
+  .describe("A group of the provider.");
+
+export const rulePreviewSchema = z
+  .object({
+    members: z.number().int().nullable().describe("Members at the provider, or null when unknown."),
+    accounts: z.number().int().describe("Accounts in Pagehall that gain access."),
+    sample: z
+      .array(z.object({ id: uuid("ID of the account."), name: z.string().describe("Name of the account.") }))
+      .describe("Some of these accounts, by name."),
+    withoutAccount: z
+      .number()
+      .int()
+      .nullable()
+      .describe(
+        "Members without an account yet; they gain access at their first sign-in. Null when unknown.",
+      ),
+  })
+  .describe("Who gains access through a rule.");
+
+export const syncRequestedSchema = z
+  .object({ runId: uuid("ID of the run when it ran at once.").nullable() })
+  .describe(
+    "The requested synchronization. With a job queue the run appears in the sync log shortly; otherwise it runs at once.",
+  );
+
+const syncRunShape = {
+  id: uuid("ID of the run."),
+  providerId: uuid("ID of the provider."),
+  trigger: z.enum(["schedule", "manual"]).describe("What started the run."),
+  status: z.enum(["running", "succeeded", "warnings", "failed"]).describe("Result of the run."),
+  startedAt: timestamp("When the run started."),
+  finishedAt: timestamp("When the run finished.").nullable(),
+  durationMs: z.number().int().nullable().describe("Duration in milliseconds, or null while running."),
+  changeCount: z.number().int().describe("Number of changes."),
+  warningCount: z.number().int().describe("Number of warnings."),
+  error: z.string().nullable().describe("Why the run failed, or null."),
+};
+
+export const syncRunSchema = z.object(syncRunShape).describe("A run of the synchronization.");
+
+export const syncRunDetailsSchema = z
+  .object({
+    ...syncRunShape,
+    changes: z
+      .array(
+        z.object({
+          kind: z
+            .enum([
+              "membershipAdded",
+              "membershipRemoved",
+              "roleAdded",
+              "roleRemoved",
+              "groupMemberAdded",
+              "groupMemberRemoved",
+              "groupRenamed",
+              "profileUpdated",
+              "accountDeactivated",
+              "accountReactivated",
+            ])
+            .describe("Kind of change."),
+          accountId: uuid("ID of the account.").nullable(),
+          organizationId: uuid("ID of the organization.").nullable(),
+          detail: z
+            .string()
+            .nullable()
+            .describe("Further detail, such as a role or the old and new name of a group."),
+        }),
+      )
+      .describe("What the run changed."),
+    warnings: z
+      .array(
+        z.object({
+          kind: z
+            .enum(["missingGroup", "grantRefused", "removalRefused", "accountFailed", "deactivationRefused"])
+            .describe("Kind of warning."),
+          accountId: uuid("ID of the account.").nullable(),
+          ruleId: uuid("ID of the rule.").nullable(),
+          detail: z.string().nullable().describe("Further detail."),
+        }),
+      )
+      .describe("What needs attention."),
+    references: z
+      .record(z.string(), z.string())
+      .describe("Names of the accounts named in the changes and warnings, by ID."),
+  })
+  .describe("A run of the synchronization with its changes and warnings.");
+
+export const syncRunsQuery = z
+  .object({
+    cursor: z
+      .string()
+      .max(2000)
+      .optional()
+      .describe("Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page."),
+    limit: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(200)
+      .default(50)
+      .describe("Maximum number of runs in the page."),
+    filter: z
+      .enum(["all", "changes", "failed"])
+      .default("all")
+      .describe("All runs, only runs with changes, or only failed runs."),
+  })
+  .strict();
