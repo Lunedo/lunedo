@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { mockApi, renderWithProviders } from "../../testing/render.js";
 import { AssignRoleDialog } from "./roles.js";
+import { RoleEditorDialog } from "./roles-screen.js";
 
 const ORGANIZATION_ID = "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f";
 const ANNA = "01929b1e-0000-7000-8000-00000000000a";
@@ -80,5 +81,36 @@ describe("AssignRoleDialog", () => {
         { kind: "group", id: GROUP },
       ],
     });
+  });
+});
+
+describe("RoleEditorDialog", () => {
+  it("offers every area with no access, view and manage, and disables what the user cannot grant", async () => {
+    mockApi({});
+    const onSave = vi.fn(async () => undefined);
+    await renderWithProviders(
+      <RoleEditorDialog
+        scope="organization"
+        role={null}
+        grantable={{ membersAndGroups: "manage", auditLog: "view" }}
+        impact={[]}
+        onClose={() => undefined}
+        onSave={onSave}
+      />,
+    );
+    const dialog = screen.getByRole("dialog", { name: "Create role" });
+    const table = within(dialog).getByRole("table", { name: "Areas" });
+    const audit = within(table).getByRole("row", { name: /Audit log/ });
+    expect(within(audit).getByRole("radio", { name: "Manage" }).getAttribute("aria-disabled")).toBe("true");
+    const spaces = within(table).getByRole("row", { name: /Spaces/ });
+    expect(within(spaces).getByRole("radio", { name: "View" }).getAttribute("aria-disabled")).toBe("true");
+    expect(within(dialog).getByText("Nobody can give more than they hold themselves.")).toBeTruthy();
+
+    await userEvent.type(within(dialog).getByLabelText("Name"), "Readers");
+    await userEvent.click(within(audit).getByRole("radio", { name: "View" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith({ name: "Readers", areas: { auditLog: "view" } }),
+    );
   });
 });

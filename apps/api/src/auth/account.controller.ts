@@ -33,9 +33,21 @@ const preferenceUpdateSchema = z.union([
   z.object({ clear: z.literal(true) }).strict(),
 ]);
 const permissionsQuery = z.object({ organizationId: z.uuid().optional() }).strict();
+const levelSchema = z.enum(["view", "manage"]);
+
 const permissionsSchema = z.object({
   instance: z.array(z.string()),
   organization: z.array(z.string()),
+  grantableAreas: z
+    .object({
+      instance: z
+        .record(z.string(), levelSchema)
+        .describe("Areas and levels the account may grant on the instance."),
+      organization: z
+        .record(z.string(), levelSchema)
+        .describe("Areas and levels the account may grant in the organization, if asked for."),
+    })
+    .describe("What the account may pass on in roles; nobody grants more than they hold permanently."),
 });
 
 @Controller("api/v1/account")
@@ -107,6 +119,12 @@ export class AccountController {
     return {
       instance: await allowed("instance"),
       organization: query.organizationId ? await allowed("organization", query.organizationId) : [],
+      grantableAreas: {
+        instance: await authorization.grantableAreas(principal, "instance", null),
+        organization: query.organizationId
+          ? await authorization.grantableAreas(principal, "organization", query.organizationId)
+          : {},
+      },
     };
   }
 

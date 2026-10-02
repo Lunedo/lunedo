@@ -1,6 +1,7 @@
 import { type Areas, areasOf, type RoleScope, roleNameSchema } from "@pagehall/shared";
 import {
   Button,
+  ChoiceTable,
   ConfirmDialog,
   Dialog,
   Field,
@@ -9,7 +10,6 @@ import {
   Menu,
   Notice,
   Section,
-  Select,
   Table,
 } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -201,6 +201,7 @@ export function OrganizationRolesScreen() {
       />
       {editing ? (
         <RoleEditorDialog
+          grantable={state.grantableAreas("organization")}
           scope="organization"
           role={editing === "new" ? null : editing}
           onClose={() => setEditing(null)}
@@ -314,8 +315,10 @@ export function RoleEditorDialog({
   onClose,
   onSave,
   impact,
+  grantable,
 }: {
   scope: RoleScope;
+  grantable: Areas;
   role: { name: string; areas: Record<string, unknown> } | null;
   onClose: () => void;
   onSave: (values: { name: string; areas: Areas }) => Promise<void>;
@@ -344,10 +347,6 @@ export function RoleEditorDialog({
         setError(problemMessage(t, failure));
     }
   });
-  const levelOptions = (["none", "view", "manage"] as const).map((value) => ({
-    value,
-    label: t(`areas.levels.${value}`),
-  }));
   return (
     <Dialog
       open
@@ -366,30 +365,39 @@ export function RoleEditorDialog({
         <Field label={t("roles.name")} error={form.formState.errors.name?.message}>
           <Input autoFocus {...form.register("name")} />
         </Field>
-        <fieldset className="flex flex-col gap-2">
-          <legend className="mb-1 font-medium">{t("roles.areas")}</legend>
-          <p className="text-sm text-text-muted">{t("roles.areasHint")}</p>
-          {areasOf(scope).map((area) => (
-            <div key={area} className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-col">
-                <span>{translateKey(t, `areas.${scope}.${area}`)}</span>
-                <span className="text-sm text-text-muted">
-                  {translateKey(t, `areas.descriptions.${scope}.${area}`)}
-                </span>
-              </div>
-              <div className="w-field max-w-full">
-                <Select
-                  aria-label={translateKey(t, `areas.${scope}.${area}`)}
-                  value={values?.[area] ?? "none"}
-                  onValueChange={(value) =>
-                    form.setValue(`areas.${area}`, value as "none", { shouldDirty: true })
-                  }
-                  options={levelOptions}
-                />
-              </div>
-            </div>
-          ))}
-        </fieldset>
+        <ChoiceTable
+          caption={t("roles.areas")}
+          labelHeader={t("roles.areas")}
+          choiceHeader={t("roles.access")}
+          rows={areasOf(scope).map((area) => {
+            const name = translateKey(t, `areas.${scope}.${area}`);
+            const held = grantable[area];
+            return {
+              key: area,
+              label: name,
+              description: translateKey(t, `areas.descriptions.${scope}.${area}`),
+              value: values?.[area] ?? "none",
+              options: (["none", "view", "manage"] as const).map((level) => {
+                const allowed =
+                  level === "none" || held === "manage" || (level === "view" && held === "view");
+                return {
+                  value: level,
+                  label: t(`areas.levels.${level}`),
+                  ...(allowed
+                    ? {}
+                    : {
+                        disabled: true,
+                        disabledReason: held
+                          ? t("roles.cannotGrantMore", { area: name, level: t(`areas.levels.${held}`) })
+                          : t("roles.cannotGrant", { area: name }),
+                      }),
+                };
+              }),
+              onValueChange: (value: string) =>
+                form.setValue(`areas.${area}`, value as "none", { shouldDirty: true }),
+            };
+          })}
+        />
         {role && impact.length > 0 ? (
           <AccessImpact change="gains" people={impact} what={t("roles.editImpact")} />
         ) : null}

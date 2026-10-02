@@ -60,7 +60,11 @@ async function fetchPermissions(organizationId: string | null) {
       params: { query: organizationId ? { organizationId } : {} },
     }),
   );
-  return { instance: new Set(result.instance), organization: new Set(result.organization) };
+  return {
+    instance: new Set(result.instance),
+    organization: new Set(result.organization),
+    grantableAreas: result.grantableAreas,
+  };
 }
 
 export const instanceInfoQuery = queryOptions({

@@ -1035,6 +1035,10 @@
     "why": "Why"
   },
   "roles": {
+    "transferOwnership": "Transfer ownership",
+    "access": "Access",
+    "cannotGrant": "You have no access to {area} yourself, so you cannot grant it.",
+    "cannotGrantMore": "You hold {level} for {area}, so you cannot grant more.",
     "peopleLabel": "People",
     "groupsLabel": "Groups",
     "people": "People",
@@ -1286,6 +1290,7 @@
         "placeholder": "Placeholder"
       },
       "transferOwnership": "Make instance owner",
+      "newOwner": "New owner",
       "transferTitle": "Make {name} the instance owner?",
       "transferDescription": "You stay an administrator. Only the owner can transfer the ownership again.",
       "transferImpact": "They become the owner of the instance and the break-glass account."

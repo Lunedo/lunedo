@@ -345,6 +345,22 @@ export class AuthorizationService {
     return roles.some((role) => ownerRole(role) && role.via.type !== "breakGlass");
   }
 
+  async grantableAreas(
+    actor: Principal,
+    scope: RoleScope,
+    organizationId: string | null,
+    executor: Executor = this.#database,
+  ): Promise<Areas> {
+    if (actor.type === "anonymous" || actor.type === "system") return {};
+    const held = await this.#heldRoles(actor.id, scope, organizationId, executor);
+    const roles = this.#limitRoles(held.roles, actor, scope, organizationId);
+    return mergeAreas(
+      ...roles
+        .filter((role) => role.expiresAt === null && role.via.type !== "breakGlass")
+        .map((role) => role.areas),
+    );
+  }
+
   async heldAreas(
     accountId: string,
     scope: RoleScope,

@@ -27,6 +27,7 @@ import {
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
 import { accountLoader } from "../../components/pickers.js";
+import { TransferOwnershipDialog } from "../../components/transfer-ownership-dialog.js";
 import { useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { translateKey } from "../../i18n/translate.js";
@@ -53,6 +54,7 @@ export function InstanceRolesScreen() {
   const [deleting, setDeleting] = useState<CustomRole | null>(null);
   const [assigning, setAssigning] = useState(false);
   const [removing, setRemoving] = useState<Assignment | null>(null);
+  const [transferring, setTransferring] = useState<string | null>(null);
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: instanceKeys.roles });
     await queryClient.invalidateQueries({ queryKey: instanceKeys.assignments });
@@ -149,7 +151,9 @@ export function InstanceRolesScreen() {
         <Table
           caption={t("roles.assignmentsTitle")}
           rowKey={(assignment) => assignment.id}
-          rows={assignments.data ?? []}
+          rows={[...(assignments.data ?? [])].sort(
+            (left, right) => Number(right.builtInRole === "owner") - Number(left.builtInRole === "owner"),
+          )}
           loading={assignments.isPending}
           empty={<p className="p-4 text-text-muted">{t("roles.noAssignments")}</p>}
           columns={[
@@ -167,7 +171,17 @@ export function InstanceRolesScreen() {
               header: t("settings.actions"),
               align: "end",
               cell: (assignment) =>
-                manage && assignment.builtInRole !== "owner" ? (
+                assignment.builtInRole === "owner" ? (
+                  state.can("instance.ownership.transfer") ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setTransferring(assignment.principalId ?? "")}
+                    >
+                      {t("roles.transferOwnership")}
+                    </Button>
+                  ) : null
+                ) : manage ? (
                   <Button variant="danger" size="sm" onClick={() => setRemoving(assignment)}>
                     {t("roles.unassign")}
                   </Button>
@@ -176,11 +190,15 @@ export function InstanceRolesScreen() {
           ]}
         />
       </Section>
+      {transferring !== null ? (
+        <TransferOwnershipDialog ownerId={transferring} onClose={() => setTransferring(null)} />
+      ) : null}
       {assigning ? (
         <AssignInstanceRoleDialog onClose={() => setAssigning(false)} roles={roles.data ?? []} />
       ) : null}
       {editing ? (
         <RoleEditorDialog
+          grantable={state.grantableAreas("instance")}
           scope="instance"
           role={editing === "new" ? null : editing}
           onClose={() => setEditing(null)}

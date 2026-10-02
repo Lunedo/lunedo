@@ -1035,6 +1035,10 @@
     "why": "Warum"
   },
   "roles": {
+    "transferOwnership": "Owner-Rolle übertragen",
+    "access": "Zugriff",
+    "cannotGrant": "Du hast selbst keinen Zugriff auf {area} und kannst ihn deshalb nicht vergeben.",
+    "cannotGrantMore": "Du hast für {area} nur {level} und kannst deshalb nicht mehr vergeben.",
     "peopleLabel": "Personen",
     "groupsLabel": "Gruppen",
     "people": "Personen",
@@ -1286,6 +1290,7 @@
         "placeholder": "Platzhalter"
       },
       "transferOwnership": "Zum Owner der Instanz machen",
+      "newOwner": "Neuer Owner",
       "transferTitle": "{name} zum Owner der Instanz machen?",
       "transferDescription": "Du bleibst Administrator. Nur der Owner kann die Rolle wieder übertragen.",
       "transferImpact": "Sie werden Owner der Instanz und Notfallkonto."

@@ -1322,11 +1322,51 @@
                       "items": {
                         "type": "string"
                       }
+                    },
+                    "grantableAreas": {
+                      "type": "object",
+                      "properties": {
+                        "instance": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "string",
+                            "enum": [
+                              "view",
+                              "manage"
+                            ]
+                          },
+                          "description": "Areas and levels the account may grant on the instance."
+                        },
+                        "organization": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "string",
+                            "enum": [
+                              "view",
+                              "manage"
+                            ]
+                          },
+                          "description": "Areas and levels the account may grant in the organization, if asked for."
+                        }
+                      },
+                      "required": [
+                        "instance",
+                        "organization"
+                      ],
+                      "additionalProperties": false,
+                      "description": "What the account may pass on in roles; nobody grants more than they hold permanently."
                     }
                   },
                   "required": [
                     "instance",
-                    "organization"
+                    "organization",
+                    "grantableAreas"
                   ],
                   "additionalProperties": false
                 }

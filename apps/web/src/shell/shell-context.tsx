@@ -1,3 +1,4 @@
+import type { Areas, RoleScope } from "@pagehall/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import { createContext, type ReactNode, useContext, useEffect, useMemo } from "react";
@@ -20,6 +21,7 @@ export interface OrganizationState {
   organizationId: string | null;
   multipleOrganizations: boolean;
   can(action: string): boolean;
+  grantableAreas(scope: RoleScope): Areas;
   permissionsLoaded: boolean;
 }
 
@@ -86,6 +88,7 @@ export function OrganizationProvider({ session, children }: { session: SessionIn
       organizationId,
       multipleOrganizations: list.length > 1,
       can: (action) => (allowed ? allowed.instance.has(action) || allowed.organization.has(action) : false),
+      grantableAreas: (scope) => (allowed?.grantableAreas[scope] as Areas | undefined) ?? {},
       permissionsLoaded: allowed !== undefined,
     };
   }, [session, list, organization, organizationId, permissions.data]);

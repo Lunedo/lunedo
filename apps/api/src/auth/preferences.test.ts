@@ -178,6 +178,9 @@ describe.skipIf(!databaseBaseUrl)("own preferences and permissions", () => {
     expect(limited.organization).toContain("organization.view");
     expect(limited.organization).toContain("organization.members.view");
     expect(limited.organization).not.toContain("organization.members.manage");
+    expect(own.grantableAreas.organization).toMatchObject({ membersAndGroups: "manage", auditLog: "manage" });
+    expect(own.grantableAreas.instance).toMatchObject({ accounts: "manage" });
+    expect(limited.grantableAreas).toEqual({ instance: {}, organization: { membersAndGroups: "view" } });
 
     const created = await owner.post("/api/v1/organizations", { name: "Elsewhere" });
     const foreign = (
