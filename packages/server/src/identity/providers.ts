@@ -305,6 +305,10 @@ export class IdentityProviderService {
     });
   }
 
+  get allowsInsecure(): boolean {
+    return this.#allowInsecure;
+  }
+
   async list(): Promise<ProviderSummary[]> {
     const rows = await this.#database
       .select()

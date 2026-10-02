@@ -86,6 +86,14 @@ export function resolveGeneratedSecrets(config: ServerConfig): {
   }
 }
 
+export function startupWarnings(config: Pick<ServerConfig, "insecureIdentityProviders">): string[] {
+  return config.insecureIdentityProviders
+    ? [
+        "PAGEHALL_INSECURE_IDENTITY_PROVIDERS is set: identity providers may use plain HTTP and any host. Use it only for local tests.",
+      ]
+    : [];
+}
+
 /**
  * Starts the shared server foundation of a process: configuration, secrets, database,
  * migrations, master keys, settings and jobs. Every role runs migrations at startup;
@@ -102,6 +110,7 @@ export async function createServerRuntime(options: {
   const { role } = options;
   const config = loadConfig(options.env);
   const logger = createLogger({ service: role, level: config.logLevel });
+  for (const warning of startupWarnings(config)) logger.warn(warning);
   await checkRestoreComplete(config.paths.files);
   const { metricsToken, backupKeys } = resolveGeneratedSecrets(config);
 

@@ -1,9 +1,10 @@
-import { Rail } from "@pagehall/ui";
-import { useQueryClient } from "@tanstack/react-query";
+import { Notice, Rail } from "@pagehall/ui";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link, Outlet, useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
+import { signInSecurityQuery } from "../api/identity-queries.js";
 import { request } from "../api/request.js";
 import { NotificationPanel } from "../notifications/notification-panel.js";
 import { useNotificationStream } from "../notifications/notifications-api.js";
@@ -107,13 +108,31 @@ function ShellFrame() {
             ))}
         </Rail>
         {notificationsOpen ? <NotificationPanel onClose={() => setNotificationsOpen(false)} /> : null}
-        <div className="flex min-w-0 flex-1">
-          <Outlet />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <InsecureProvidersBanner />
+          <div className="flex min-w-0 flex-1">
+            <Outlet />
+          </div>
         </div>
       </div>
       <CommandPaletteHost open={paletteOpen} onOpenChange={setPaletteOpen} />
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </ShellStateContext>
+  );
+}
+
+function InsecureProvidersBanner() {
+  const { t } = useTranslation();
+  const state = useOrganizationState();
+  const allowed = state.can("instance.signIn.view");
+  const security = useQuery({ ...signInSecurityQuery, enabled: allowed, throwOnError: false });
+  if (!allowed || !security.data?.insecureIdentityProviders) return null;
+  return (
+    <div className="px-4 pt-3">
+      <Notice variant="warning" title={t("shell.insecureProviders.title")}>
+        {t("shell.insecureProviders.description")}
+      </Notice>
+    </div>
   );
 }
 

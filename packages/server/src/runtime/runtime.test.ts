@@ -17,7 +17,7 @@ import { createDatabasePool } from "../database/pool.js";
 import { defineJob } from "../jobs/job-queue.js";
 import { createLogger } from "../logging/logger.js";
 import { createTemporaryDatabase, type TemporaryDatabase } from "../testing/database.js";
-import { createServerRuntime, type ServerRuntime } from "./runtime.js";
+import { createServerRuntime, type ServerRuntime, startupWarnings } from "./runtime.js";
 import { registerShutdown } from "./shutdown.js";
 import { StartupError } from "./startup-error.js";
 
@@ -55,6 +55,15 @@ function fakeProcess() {
     exited: exitedPromise,
   };
 }
+
+describe("startupWarnings", () => {
+  it("warns at the start when identity providers may be insecure", () => {
+    expect(startupWarnings({ insecureIdentityProviders: true })).toEqual([
+      expect.stringContaining("PAGEHALL_INSECURE_IDENTITY_PROVIDERS"),
+    ]);
+    expect(startupWarnings({ insecureIdentityProviders: false })).toEqual([]);
+  });
+});
 
 describe("registerShutdown", () => {
   it("ends the process forcibly only after the timeout plus the margin", async () => {

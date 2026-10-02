@@ -144,6 +144,28 @@ export class IdentityProvidersController {
     return { provider: await this.#present(request, created.provider), credential: created.credential };
   }
 
+  @Get("instance/sign-in-security")
+  @Permission("instance.signIn.view")
+  @ApiRoute({
+    summary: "Get warnings about the sign-in security of the instance",
+    tags: [TAG],
+    response: {
+      description: "The warnings.",
+      schema: z
+        .object({
+          insecureIdentityProviders: z
+            .boolean()
+            .describe(
+              "Whether PAGEHALL_INSECURE_IDENTITY_PROVIDERS is set, so identity providers may use plain HTTP and any host.",
+            ),
+        })
+        .describe("Sign-in security warnings."),
+    },
+  })
+  signInSecurity() {
+    return { insecureIdentityProviders: this.#services.identityProviders.allowsInsecure };
+  }
+
   @Get("instance/identity-providers/:providerId")
   @Permission("instance.signIn.view")
   @ApiRoute({

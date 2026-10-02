@@ -69,6 +69,12 @@ export function discoverSignIn(email: string) {
   });
 }
 
+export const signInSecurityQuery = queryOptions({
+  queryKey: ["instance", "signInSecurity"] as const,
+  queryFn: () => request(() => api.GET("/api/v1/instance/sign-in-security")),
+  staleTime: Number.POSITIVE_INFINITY,
+});
+
 export const providersQuery = queryOptions({
   queryKey: identityKeys.providers,
   queryFn: () => request(() => api.GET("/api/v1/instance/identity-providers")),

@@ -272,7 +272,11 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
       factor: { type: "totp", code: TOTP.generate({ secret, timestamp: Date.now() + 30_000 }) },
       client: {},
     });
-    expect(completed.session).toMatchObject({ accountId, kind: "full", methods: ["identityProvider", "totp"] });
+    expect(completed.session).toMatchObject({
+      accountId,
+      kind: "full",
+      methods: ["identityProvider", "totp"],
+    });
     const stored = await test.pool.query<{ identity_id: string | null }>(
       "select identity_id from sessions where id = $1",
       [completed.session.id],

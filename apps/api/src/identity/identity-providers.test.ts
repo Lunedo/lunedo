@@ -132,6 +132,15 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     expect(stolen.headers.location).toBe("/sign-in?error=challengeExpired");
   });
 
+  it("tells only sign-in administrators that providers are not checked strictly", async () => {
+    const security = await owner.get("/api/v1/instance/sign-in-security");
+    expect(security.statusCode).toBe(200);
+    expect(security.json()).toEqual({ insecureIdentityProviders: true });
+    const person = new TestClient(test.app);
+    await signInThroughProvider(person, { sub: "security-reader", email: "reader@pagehall.test" });
+    expect((await person.get("/api/v1/instance/sign-in-security")).statusCode).toBe(403);
+  });
+
   it("sends people to the second factor of Pagehall when the provider asks for it", async () => {
     const created = await owner.post("/api/v1/instance/identity-providers", {
       name: "Second factor login",

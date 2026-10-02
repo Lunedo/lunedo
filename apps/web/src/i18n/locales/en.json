@@ -505,6 +505,10 @@
   },
   "shell": {
     "documentTitle": "{title} · Pagehall",
+    "insecureProviders": {
+      "title": "Identity providers are not checked strictly",
+      "description": "PAGEHALL_INSECURE_IDENTITY_PROVIDERS is set, so identity providers may use plain HTTP and any host. Use this only for local tests and remove the variable from the server configuration before people sign in."
+    },
     "skipToContent": "Skip to content"
   },
   "rail": {

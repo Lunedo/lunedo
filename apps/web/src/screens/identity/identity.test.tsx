@@ -379,6 +379,15 @@ describe("the sign-in settings of the instance", () => {
     ]);
   });
 
+  it("warns sign-in administrators when identity providers are not checked strictly", async () => {
+    adminApi({
+      "GET /api/v1/instance/identity-providers": () => ({ body: [provider()] }),
+      "GET /api/v1/instance/sign-in-security": () => ({ body: { insecureIdentityProviders: true } }),
+    });
+    await renderPath("/settings/instance/sign-in-providers");
+    expect(await screen.findByText("Identity providers are not checked strictly")).toBeTruthy();
+  });
+
   it("saves the second factor setting of a provider at once", async () => {
     const { requests } = adminApi({
       [`GET /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({ body: provider() }),

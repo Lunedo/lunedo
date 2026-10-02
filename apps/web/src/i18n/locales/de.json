@@ -505,6 +505,10 @@
   },
   "shell": {
     "documentTitle": "{title} · Pagehall",
+    "insecureProviders": {
+      "title": "Identity Provider werden nicht streng geprüft",
+      "description": "PAGEHALL_INSECURE_IDENTITY_PROVIDERS ist gesetzt, deshalb dürfen Identity Provider unverschlüsseltes HTTP und beliebige Hosts verwenden. Nutze das nur für lokale Tests und entferne die Variable aus der Serverkonfiguration, bevor sich Personen anmelden."
+    },
     "skipToContent": "Zum Inhalt springen"
   },
   "rail": {
