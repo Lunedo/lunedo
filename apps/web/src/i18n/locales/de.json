@@ -50,8 +50,11 @@
     "sync": {
       "now": "Jetzt synchronisieren",
       "started": "Synchronisierung gestartet. Die Ergebnisse erscheinen hier in etwa einer Minute.",
-      "noDirectory": "Dieser Provider hat kein Verzeichnis, aus dem gelesen werden kann.",
-      "signInOnly": "Dieser Provider wird nur bei der Anmeldung gelesen. Gruppen und Profile werden bei jeder Anmeldung aktualisiert; eine Synchronisierung im Hintergrund gibt es nicht.",
+      "signInOnly": {
+        "generic": "Profil und Gruppen dieses Providers werden bei jeder Anmeldung aktualisiert. Er hat kein Verzeichnis, das Pagehall im Hintergrund synchronisieren könnte; eine SCIM-Verbindung, geplant für eine spätere Version, wird Änderungen sofort übermitteln.",
+        "google": "Google Workspace dient nur zur Anmeldung. Schalte in den Einstellungen die Gruppensynchronisierung ein, um Gruppen zu lesen und im Hintergrund zu synchronisieren.",
+        "entraId": "Dieser Provider wird nur bei der Anmeldung gelesen."
+      },
       "filter": "Läufe filtern",
       "filterAll": "Alle Läufe",
       "filterChanges": "Mit Änderungen",
@@ -349,6 +352,11 @@
         "generic": "Keycloak, Authentik, Okta, Zitadel und andere."
       },
       "typeMore": "SAML und LDAP folgen später.",
+      "capabilities": {
+        "entraId": "Gruppen und Kontostatus werden im Hintergrund synchronisiert; deaktivierte Konten werden deaktiviert.",
+        "google": "Zuerst nur zur Anmeldung. Die Gruppensynchronisierung lässt sich später mit einem Dienstkonto einschalten.",
+        "generic": "Profil und Gruppen werden bei jeder Anmeldung aktualisiert. Eine Synchronisierung im Hintergrund gibt es nicht."
+      },
       "connectionTitle": "{type} verbinden",
       "connectionHints": {
         "entraId": "Erstelle im Entra Admin Center eine App-Registrierung. Nach dem Speichern zeigt Pagehall die Weiterleitungs-URI, die du dort einträgst. Schalte unter Unternehmensanwendungen „Zuweisung erforderlich“ ein und weise die Gruppen zu, die Pagehall verwenden dürfen.",

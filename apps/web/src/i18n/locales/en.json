@@ -50,8 +50,11 @@
     "sync": {
       "now": "Sync now",
       "started": "Synchronization started. Results appear here in about a minute.",
-      "noDirectory": "This provider has no directory to read from.",
-      "signInOnly": "This provider is only read at sign-in. Groups and profiles update whenever someone signs in; there is no background synchronization.",
+      "signInOnly": {
+        "generic": "Profile and groups of this provider update at every sign-in. It has no directory Pagehall could synchronize with in the background; a SCIM connection, planned for a later version, will send changes at once.",
+        "google": "Google Workspace is only used to sign in. Turn on group synchronization in the settings to read groups and synchronize them in the background.",
+        "entraId": "This provider is only read at sign-in."
+      },
       "filter": "Filter runs",
       "filterAll": "All runs",
       "filterChanges": "With changes",
@@ -349,6 +352,11 @@
         "generic": "Keycloak, Authentik, Okta, Zitadel and others."
       },
       "typeMore": "SAML and LDAP follow later.",
+      "capabilities": {
+        "entraId": "Groups and account status are synchronized in the background; disabled accounts are deactivated.",
+        "google": "Sign-in only at first. Group synchronization can be turned on later with a service account.",
+        "generic": "Profile and groups update at every sign-in. There is no background synchronization."
+      },
       "connectionTitle": "Connect {type}",
       "connectionHints": {
         "entraId": "In the Entra admin center, create an app registration. After saving, Pagehall shows the redirect URI to enter there. Under Enterprise applications, turn on Assignment required and assign the groups that may use Pagehall.",

@@ -41,12 +41,18 @@ const LOGO_MAX_BYTES = 256 * 1024;
 export interface ProviderTab {
   value: string;
   labelKey: string;
+  available: (provider: IdentityProvider) => boolean;
   component: ComponentType<{ provider: IdentityProvider; canManage: boolean }>;
 }
 
 export const providerTabs: ProviderTab[] = [
-  { value: "mapping", labelKey: "identityProviders.tabs.mapping", component: MappingTab },
-  { value: "sync", labelKey: "identityProviders.tabs.sync", component: SyncTab },
+  {
+    value: "mapping",
+    labelKey: "identityProviders.tabs.mapping",
+    component: MappingTab,
+    available: (provider) => provider.capabilities.groups,
+  },
+  { value: "sync", labelKey: "identityProviders.tabs.sync", component: SyncTab, available: () => true },
 ];
 
 async function toBase64(file: File): Promise<string> {
@@ -105,7 +111,9 @@ export function InstanceProviderScreen() {
           tabs={[
             { value: "overview", label: t("identityProviders.tabs.overview") },
             { value: "settings", label: t("identityProviders.tabs.settings") },
-            ...providerTabs.map((extra) => ({ value: extra.value, label: t(extra.labelKey as never) })),
+            ...providerTabs
+              .filter((extra) => extra.available(data))
+              .map((extra) => ({ value: extra.value, label: t(extra.labelKey as never) })),
           ]}
         >
           {tab === "overview" ? (
@@ -113,7 +121,7 @@ export function InstanceProviderScreen() {
           ) : null}
           {tab === "settings" ? <Settings provider={data} canManage={canManage} /> : null}
           {providerTabs.map((extra) =>
-            extra.value === tab ? (
+            extra.value === tab && extra.available(data) ? (
               <extra.component key={extra.value} provider={data} canManage={canManage} />
             ) : null,
           )}
@@ -176,14 +184,15 @@ function OverviewTiles({ provider }: { provider: IdentityProvider }) {
   const last = runs.data?.items[0];
   const missing = rules.data?.filter((rule) => rule.group.missing).length ?? 0;
   const status = credentialStatus(t, format, provider);
+  const capabilities = provider.capabilities;
   const tiles = [
-    {
+    capabilities.directorySync && {
       key: "lastSync",
       label: t("identityProviders.overview.lastSync"),
       value: last ? format.time(last.startedAt) : t("identityProviders.overview.never"),
       detail: last ? syncSummary(t, last) : t("identityProviders.overview.noSyncYet"),
     },
-    {
+    capabilities.groups && {
       key: "rules",
       label: t("identityProviders.overview.mappedGroups"),
       value: String(rules.data?.length ?? 0),
@@ -198,7 +207,7 @@ function OverviewTiles({ provider }: { provider: IdentityProvider }) {
       value: status.label,
       detail: "",
     },
-  ];
+  ].filter((tile) => tile !== false);
   return (
     <ul
       aria-label={t("identityProviders.overview.summary")}

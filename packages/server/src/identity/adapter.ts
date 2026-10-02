@@ -19,6 +19,12 @@ export interface ProviderCredential {
   keyId: string | null;
 }
 
+export interface ProviderCapabilities {
+  groups: boolean;
+  directorySync: boolean;
+  disabledAccounts: boolean;
+}
+
 export interface ProviderGroup {
   id: string;
   name: string | null;

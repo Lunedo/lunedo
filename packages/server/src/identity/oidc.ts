@@ -7,6 +7,7 @@ import {
   type CallbackInput,
   type DirectoryGroupMatch,
   type IdentityProviderAdapter,
+  type ProviderCapabilities,
   type ProviderCredential,
   type ProviderDefinition,
   type ProviderGroup,
@@ -32,6 +33,23 @@ export function oidcIssuer(config: OidcConfig): string {
       return config.issuer;
     case "generic":
       return config.issuer;
+  }
+}
+
+export function oidcCapabilities(config: OidcConfig, directoryKey: boolean): ProviderCapabilities {
+  switch (config.preset) {
+    case "entraId":
+      return { groups: true, directorySync: true, disabledAccounts: true };
+    case "google": {
+      const directorySync = config.directory !== null && directoryKey;
+      return {
+        groups: config.directory !== null,
+        directorySync,
+        disabledAccounts: directorySync && googleReadsUsers(config),
+      };
+    }
+    case "generic":
+      return { groups: config.claims.groups !== null, directorySync: false, disabledAccounts: false };
   }
 }
 
@@ -109,9 +127,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
   }
 
   hasDirectory(provider: ProviderDefinition): boolean {
-    const config = provider.config;
-    if (config.preset === "entraId") return true;
-    return config.preset === "google" && config.directory !== null && provider.directoryKey !== null;
+    return oidcCapabilities(provider.config, provider.directoryKey !== null).directorySync;
   }
 
   #profileFrom(

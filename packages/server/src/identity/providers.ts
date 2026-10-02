@@ -22,11 +22,11 @@ import { defineJob } from "../jobs/job-queue.js";
 import type { NotificationService } from "../notifications/service.js";
 import type { BuiltInRoleKey } from "../organizations/access-schema.js";
 import { LOGO_MAX_BYTES, logoContentType, OrganizationError } from "../organizations/organizations.js";
-import type { ProviderCredential, ProviderDefinition } from "./adapter.js";
+import type { ProviderCapabilities, ProviderCredential, ProviderDefinition } from "./adapter.js";
 import { generateCertificate } from "./certificates.js";
 import { foreignDirectoryEndpoint } from "./directory.js";
 import { emptyReport, type GroupMappingService } from "./groups.js";
-import { oidcIssuer } from "./oidc.js";
+import { oidcCapabilities, oidcIssuer } from "./oidc.js";
 import {
   identities,
   identityProviderCredentials,
@@ -56,6 +56,7 @@ export interface ProviderSummary {
   logoRef: string | null;
   credentials: CredentialSummary[];
   directoryKey: boolean;
+  capabilities: ProviderCapabilities;
   warnings: ProviderWarning[];
   createdAt: Date;
   updatedAt: Date;
@@ -275,6 +276,10 @@ export class IdentityProviderService {
         logoRef: logos.find((logo) => logo.providerId === row.id)?.ref ?? null,
         credentials: own,
         directoryKey: keys.some((key) => key.providerId === row.id),
+        capabilities: oidcCapabilities(
+          config,
+          keys.some((key) => key.providerId === row.id),
+        ),
         warnings: warningsOf(own, now),
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,

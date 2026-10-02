@@ -124,6 +124,17 @@ export const providerSchema = z
     directoryKey: z
       .boolean()
       .describe("Whether a service account key for the Google directory is stored. The key is never shown."),
+    capabilities: z
+      .object({
+        groups: z.boolean().describe("Whether Pagehall learns the groups of a person from this provider."),
+        directorySync: z
+          .boolean()
+          .describe("Whether profiles and groups are synchronized in the background, not only at sign-in."),
+        disabledAccounts: z
+          .boolean()
+          .describe("Whether accounts disabled or deleted in the provider are detected without a sign-in."),
+      })
+      .describe("What the provider can do with its current configuration."),
     warnings: z
       .array(z.enum(["noCredential", "credentialExpiring", "credentialExpired"]))
       .describe("Problems that need attention."),

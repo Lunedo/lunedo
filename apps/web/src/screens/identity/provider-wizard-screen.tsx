@@ -250,6 +250,9 @@ function TypeStep({
               <span className="text-sm text-text-muted">
                 {t(`identityProviders.wizard.typeHints.${preset}`)}
               </span>
+              <span className="text-sm text-text-muted">
+                {t(`identityProviders.wizard.capabilities.${preset}`)}
+              </span>
             </button>
           ))}
         </div>

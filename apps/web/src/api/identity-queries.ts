@@ -330,7 +330,5 @@ export async function removeDirectoryKey(providerId: string): Promise<void> {
 }
 
 export function hasDirectory(provider: IdentityProvider): boolean {
-  if (provider.config.preset === "entraId") return true;
-  if (provider.config.preset === "google") return provider.config.directory !== null && provider.directoryKey;
-  return false;
+  return provider.capabilities.directorySync;
 }

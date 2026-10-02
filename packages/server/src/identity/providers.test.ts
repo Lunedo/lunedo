@@ -73,6 +73,44 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     return provider;
   }
 
+  it("declares what each provider can do with its configuration", async () => {
+    const credential = { kind: "clientSecret" as const, secret: "x", expiresAt: null };
+    const generic = await instanceProvider();
+    expect(generic.capabilities).toEqual({ groups: false, directorySync: false, disabledAccounts: false });
+    const withGroups = await test.services.identityProviders.update(SYSTEM, generic.id, {
+      config: { ...GENERIC, claims: { groups: "groups" } },
+    });
+    expect(withGroups.capabilities).toEqual({ groups: true, directorySync: false, disabledAccounts: false });
+    const entra = await test.services.identityProviders.create(SYSTEM, {
+      name: "Entra ID",
+      config: { preset: "entraId", clientId: "c", tenantId: randomUUID(), domains: [uniqueDomain()] },
+      credential,
+    });
+    expect(entra.provider.capabilities).toEqual({
+      groups: true,
+      directorySync: true,
+      disabledAccounts: true,
+    });
+    const google = await test.services.identityProviders.create(SYSTEM, {
+      name: "Google",
+      config: { preset: "google", clientId: "c", domains: [uniqueDomain()] },
+      credential,
+    });
+    expect(google.provider.capabilities).toEqual({
+      groups: false,
+      directorySync: false,
+      disabledAccounts: false,
+    });
+    const withDirectory = await test.services.identityProviders.update(SYSTEM, google.provider.id, {
+      config: { ...google.provider.config, directory: { method: "adminRole" } },
+    });
+    expect(withDirectory.capabilities).toEqual({
+      groups: true,
+      directorySync: false,
+      disabledAccounts: false,
+    });
+  });
+
   it("stores secrets encrypted and never returns them", async () => {
     const provider = await instanceProvider();
     const stored = await test.pool.query<{ secret: Buffer }>(

@@ -95,9 +95,11 @@ export function SyncTab({ provider, canManage }: { provider: IdentityProvider; c
     }
   };
 
+  if (!directory) {
+    return <Notice variant="info">{t(`identityProviders.sync.signInOnly.${provider.config.preset}`)}</Notice>;
+  }
   return (
     <div className="flex flex-col gap-4">
-      {!directory ? <Notice variant="info">{t("identityProviders.sync.signInOnly")}</Notice> : null}
       <TableToolbar
         filters={
           <div className="w-field max-w-full">
@@ -117,14 +119,7 @@ export function SyncTab({ provider, canManage }: { provider: IdentityProvider; c
         onResetFilters={() => setFilter("all")}
         actions={
           canManage ? (
-            <Button
-              variant="primary"
-              icon={RefreshCw}
-              loading={starting}
-              disabled={!directory}
-              {...(directory ? {} : { title: t("identityProviders.sync.noDirectory") })}
-              onClick={() => void syncNow()}
-            >
+            <Button variant="primary" icon={RefreshCw} loading={starting} onClick={() => void syncNow()}>
               {t("identityProviders.sync.now")}
             </Button>
           ) : undefined
@@ -317,37 +312,42 @@ export function SyncSettings({ provider, canManage }: { provider: IdentityProvid
   const update = useProviderUpdate(provider);
   const interval = useSaveState();
   const config = provider.config;
+  const capabilities = provider.capabilities;
   if (config.preset === "generic") return null;
   return (
     <Section title={t("identityProviders.sync.settingsTitle")}>
-      <SettingRow
-        label={t("identityProviders.sync.interval")}
-        description={t("identityProviders.sync.intervalHint")}
-        control={
-          <DurationSelect
-            aria-label={t("identityProviders.sync.interval")}
-            value={config.sync.intervalMinutes}
-            choices={[15, 60, 240, 1440]}
-            units={["minutes", "hours"]}
-            min={15}
-            max={1440}
-            locale={i18n.language}
-            disabled={!canManage}
-            onValueChange={(minutes) => {
-              if (minutes === null) return;
-              void interval.run(() =>
-                update.config((current) => ({ ...current, sync: { intervalMinutes: minutes } })),
-              );
-            }}
-          />
-        }
-        status={<SaveIndicator tracker={interval} />}
-      />
-      <SettingRow
-        label={t("identityProviders.sync.whenDisabled")}
-        description={t("identityProviders.sync.whenDisabledHint", { provider: provider.name })}
-        control={<span className="text-text-muted">{t("identityProviders.sync.deactivate")}</span>}
-      />
+      {capabilities.directorySync ? (
+        <SettingRow
+          label={t("identityProviders.sync.interval")}
+          description={t("identityProviders.sync.intervalHint")}
+          control={
+            <DurationSelect
+              aria-label={t("identityProviders.sync.interval")}
+              value={config.sync.intervalMinutes}
+              choices={[15, 60, 240, 1440]}
+              units={["minutes", "hours"]}
+              min={15}
+              max={1440}
+              locale={i18n.language}
+              disabled={!canManage}
+              onValueChange={(minutes) => {
+                if (minutes === null) return;
+                void interval.run(() =>
+                  update.config((current) => ({ ...current, sync: { intervalMinutes: minutes } })),
+                );
+              }}
+            />
+          }
+          status={<SaveIndicator tracker={interval} />}
+        />
+      ) : null}
+      {capabilities.disabledAccounts ? (
+        <SettingRow
+          label={t("identityProviders.sync.whenDisabled")}
+          description={t("identityProviders.sync.whenDisabledHint", { provider: provider.name })}
+          control={<span className="text-text-muted">{t("identityProviders.sync.deactivate")}</span>}
+        />
+      ) : null}
       {config.preset === "google" ? <GoogleDirectory provider={provider} canManage={canManage} /> : null}
     </Section>
   );

@@ -82,6 +82,11 @@ function provider(preset: "entraId" | "generic" | "google" = "entraId") {
     credentials: [],
     warnings: [],
     directoryKey: false,
+    capabilities: {
+      groups: preset !== "google",
+      directorySync: preset === "entraId",
+      disabledAccounts: preset === "entraId",
+    },
     createdAt: "2026-09-01T08:00:00.000Z",
     updatedAt: "2026-09-01T08:00:00.000Z",
   };
@@ -348,8 +353,18 @@ describe("the sync log", () => {
       [`GET ${BASE}/mapping-rules`]: () => ({ body: [] }),
     });
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=sync`);
-    expect(await screen.findByText(/This provider is only read at sign-in/)).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Sync now" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(await screen.findByText(/It has no directory Pagehall could synchronize with/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Sync now" })).toBeNull();
+  });
+
+  it("shows a Google provider without group sync only what it can do", async () => {
+    adminApi({ [`GET ${BASE}`]: () => ({ body: provider("google") }) });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}`);
+    expect(await screen.findByRole("tab", { name: "Sync log" })).toBeTruthy();
+    expect(screen.queryByRole("tab", { name: "Group mapping" })).toBeNull();
+    expect(screen.queryByText("Last sync")).toBeNull();
+    await userEvent.click(screen.getByRole("tab", { name: "Sync log" }));
+    expect(await screen.findByText(/Turn on group synchronization in the settings/)).toBeTruthy();
   });
 });
 
