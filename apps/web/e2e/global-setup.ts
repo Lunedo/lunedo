@@ -75,6 +75,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     PAGEHALL_SECRETS_DIR: path.join(dataDir, "secrets"),
     PAGEHALL_FILES_DIR: path.join(dataDir, "files"),
     PAGEHALL_LOG_LEVEL: "info",
+    PAGEHALL_INSECURE_IDENTITY_PROVIDERS: "true",
   };
   mkdirSync(env.PAGEHALL_FILES_DIR as string, { recursive: true });
 

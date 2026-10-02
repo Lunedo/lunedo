@@ -39,6 +39,41 @@ Dependencies are installed when the `app` container starts. After pulling change
 
 To run everything on the host instead, start PostgreSQL, set `PAGEHALL_DATABASE_URL` and run `pnpm dev:apps`.
 
+### Identity providers for development and tests
+
+Keycloak and Authentik run as OIDC providers with test users and groups. They belong to the Compose profile `idp` and start only on request, because Authentik needs its own database and both take a minute to start:
+
+```sh
+pnpm dev:idp
+```
+
+`pnpm dev:down` stops them together with the rest of the environment.
+
+| Provider | Issuer | Client ID | Client secret | Administration |
+|---|---|---|---|---|
+| Keycloak | `http://keycloak.localhost:8080/realms/pagehall` | `pagehall` | `pagehall-keycloak-secret` | `http://keycloak.localhost:8080/admin`, user `admin`, password `admin` |
+| Authentik | `http://authentik.localhost:9000/application/o/pagehall/` | `pagehall` | `pagehall-authentik-secret` | `http://authentik.localhost:9000`, user `akadmin`, password `admin`, API token `pagehall-authentik-api-token` |
+
+Browsers and the `app` container reach both providers under the same `*.localhost` address, so the issuer in tokens matches the issuer Pagehall discovers. Browsers resolve `*.localhost` to the local machine; the `app` container maps the two names to the host. Both providers accept redirect URIs on `http://localhost:3000`, `http://localhost:5173` and `http://localhost:4310` (end-to-end tests). They are set up from `docker/idp/keycloak/pagehall-realm.json` and the Authentik blueprint `docker/idp/authentik/pagehall.yaml` at start.
+
+Test users, all with the password `pagehall-test-password`:
+
+| User | E-mail | Groups |
+|---|---|---|
+| `alice` | `alice@example.org` | engineering, admins |
+| `bob` | `bob@example.org` | engineering |
+| `carol` | `carol@example.org` | none |
+| `dave` | `dave@example.org` | engineering; tests disable this account |
+| `erin` | `erin@example.net` | none; e-mail outside the configured domain `example.org` |
+
+Both providers send the stable group IDs in the `groups` claim and the group names in `group_names`. Keycloak sends them without an extra scope, Authentik with the scope `groups`. In Keycloak the IDs are fixed in the realm (`engineering` is `6f1c2b8e-3a4d-4c5e-9f60-7a8b9c0d1e2f`, `admins` is `0b9a8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d`); in Authentik they are created at the first start and can be looked up by the group attribute `pagehall_test_group`.
+
+Back-channel logout goes to the URL in `PAGEHALL_KEYCLOAK_BACKCHANNEL_LOGOUT_URL` and `PAGEHALL_AUTHENTIK_BACKCHANNEL_LOGOUT_URL` when the providers start; tests set it through the administration interfaces. The providers reach Pagehall on the host as `host.docker.internal`.
+
+`apps/web/e2e/support/idp.ts` drives both providers in end-to-end tests: it signs in through their login forms, disables and enables users, changes group memberships and group names, sets the back-channel logout URL and restores the initial state. The tests in `apps/web/e2e/idp` run when `PAGEHALL_E2E_IDP=1` is set, for example `PAGEHALL_E2E_IDP=1 pnpm --filter @pagehall/web exec playwright test --project=idp`.
+
+Microsoft Graph and the Google Directory API are replaced in tests by small local fakes in `packages/server/src/testing/fakes`, exported from `@pagehall/server/testing`. `startFakeGraph()` and `startFakeGoogleDirectory()` start them on a free port inside a test; `node --import ./packages/server/src/testing/ts-resolve.mjs packages/server/src/testing/fakes/serve.ts` runs both as a process on ports 4320 and 4321 (`PAGEHALL_FAKE_GRAPH_PORT`, `PAGEHALL_FAKE_GOOGLE_PORT`). They issue application tokens (client credentials for Graph, a service account assertion for Google), page their results like the real APIs (`@odata.nextLink`, `nextPageToken`) and contain a person with 250 groups for the Entra ID group overage, nested groups, a disabled and a suspended account. Tests change their data directly or through `/_fake/...` requests.
+
 ## Operations
 
 All settings are described in [configuration.md](configuration.md). The database conventions are in [database.md](database.md), encryption and key rotation in [encryption.md](encryption.md), backups in [backup.md](backup.md). Setup is described in [setup.md](setup.md), sign-in and sessions in [authentication.md](authentication.md), the audit log in [audit.md](audit.md) and e-mail in [email.md](email.md).
@@ -96,7 +131,7 @@ Screens are built from the components in `packages/ui`; `/dev/components` shows 
 
 | Workflow | Trigger | Checks |
 |---|---|---|
-| `ci.yml` | pull requests, pushes to `main` | lint, translation check, typecheck, unit tests against PostgreSQL, end-to-end tests with accessibility checks and screenshots, backup round trip with the image, license check, dependency audit, DCO sign-off |
+| `ci.yml` | pull requests, pushes to `main` | lint, translation check, typecheck, unit tests against PostgreSQL, end-to-end tests with accessibility checks and screenshots, sign-in through Keycloak and Authentik, backup round trip with the image, license check, dependency audit, DCO sign-off |
 | `image.yml` | pushes to `main`, pull requests that change `docker/` | image build for amd64 and arm64, not published |
 | `audit.yml` | Mondays 05:00 UTC, manual | `pnpm audit` on `main`; fails on any known vulnerability and lists the findings in the job summary |
 
