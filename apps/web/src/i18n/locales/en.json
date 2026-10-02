@@ -218,6 +218,9 @@
     "slugTaken": "Another organization uses this short name. Choose a different one.",
     "domainTaken": "The domain belongs to another organization. Ask an administrator of the instance if this is wrong.",
     "domainInUse": "Another identity provider already uses one of these e-mail domains. Remove it there first, or use a different domain.",
+    "groupManagedByProvider": "The members of this group come from an identity provider. Change them there; they update at the next sign-in or synchronization.",
+    "syncUnavailable": "This provider has no directory Pagehall can read, so its accounts update when people sign in. Set up the directory in the provider settings to synchronize.",
+    "invalidServiceAccountKey": "The service account key could not be read. Download a new JSON key for the service account in Google Cloud and upload it again.",
     "roleNameTaken": "A role with this name already exists. Choose a different name.",
     "groupNameTaken": "A group with this name already exists. Choose a different name.",
     "alreadyMember": "This person is already a member. No invitation is needed.",
@@ -1417,7 +1420,14 @@
         "removed": "Identity provider removed",
         "credentialAdded": "Provider credential added",
         "credentialRemoved": "Provider credential removed",
-        "logoChanged": "Provider logo changed"
+        "logoChanged": "Provider logo changed",
+        "directoryKeyChanged": "Directory key changed",
+        "synchronized": "Provider synchronized"
+      },
+      "mappingRule": {
+        "created": "Mapping rule created",
+        "updated": "Mapping rule changed",
+        "removed": "Mapping rule removed"
       },
       "auth": {
         "emergencySignIn": "Emergency sign-in",
@@ -1442,7 +1452,9 @@
         "deactivated": "Account deactivated",
         "secondFactorReset": "Second factor reset",
         "reactivated": "Account reactivated",
-        "sessionsEnded": "All sessions ended"
+        "sessionsEnded": "All sessions ended",
+        "deactivatedByProvider": "Account deactivated by the provider",
+        "reactivatedByProvider": "Account reactivated by the provider"
       },
       "twoFactor": {
         "totpAdded": "Authenticator app added",

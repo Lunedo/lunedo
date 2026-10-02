@@ -72,7 +72,18 @@ export interface PendingIdentity {
   signInName: string | null;
   displayName: string | null;
   providerSessionId: string | null;
+  groups: { id: string; name: string | null }[] | null;
 }
+
+export type IdentityLinkedHook = (
+  tx: Transaction,
+  link: {
+    providerId: string;
+    identityId: string;
+    accountId: string;
+    groups: { id: string; name: string | null }[] | null;
+  },
+) => Promise<unknown>;
 
 export interface SecondFactorRequired {
   status: "secondFactorRequired";
@@ -123,6 +134,7 @@ export class SignInService {
   readonly #notifications: NotificationService;
   readonly #settings: SettingsService;
   readonly #setupComplete: () => Promise<boolean>;
+  readonly #onIdentityLinked: IdentityLinkedHook | undefined;
 
   constructor(options: {
     database: Database;
@@ -140,6 +152,7 @@ export class SignInService {
     notifications: NotificationService;
     settings: SettingsService;
     setupComplete: () => Promise<boolean>;
+    onIdentityLinked?: IdentityLinkedHook;
   }) {
     this.#database = options.database;
     this.#accounts = options.accounts;
@@ -156,6 +169,7 @@ export class SignInService {
     this.#notifications = options.notifications;
     this.#settings = options.settings;
     this.#setupComplete = options.setupComplete;
+    this.#onIdentityLinked = options.onIdentityLinked;
   }
 
   async secondFactorRequired(accountId: string): Promise<boolean> {
@@ -611,6 +625,12 @@ export class SignInService {
           .onConflictDoNothing()
           .returning({ id: identities.id });
         if (!linked) throw new ChallengeExpiredError();
+        await this.#onIdentityLinked?.(tx, {
+          providerId: identity.providerId,
+          identityId: linked.id,
+          accountId: account.id,
+          groups: identity.groups ?? null,
+        });
         await this.#audit.record(tx, {
           name: "identity.linked",
           actor: accountPrincipal(account.id),

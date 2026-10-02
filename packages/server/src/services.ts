@@ -21,6 +21,8 @@ import type { KeyRing } from "./crypto/key-ring.js";
 import type { KeyRingHolder } from "./crypto/key-ring-holder.js";
 import type { Database } from "./database/database.js";
 import type { DatabasePool } from "./database/pool.js";
+import { GroupMappingService } from "./identity/groups.js";
+import { MappingRuleService } from "./identity/mapping.js";
 import { OidcAdapter } from "./identity/oidc.js";
 import {
   IdentityProviderService,
@@ -28,6 +30,14 @@ import {
   providerCredentialReminderJob,
 } from "./identity/providers.js";
 import { ProviderSignInService } from "./identity/sign-in.js";
+import {
+  PROVIDER_SYNC_RETENTION_SCHEDULE,
+  PROVIDER_SYNC_SCHEDULE,
+  ProviderSyncService,
+  providerSyncJob,
+  providerSyncRetentionJob,
+  providerSyncScheduleJob,
+} from "./identity/sync.js";
 import type { JobQueue } from "./jobs/job-queue.js";
 import type { Logger } from "./logging/logger.js";
 import {
@@ -93,6 +103,9 @@ export interface AccountServices {
   notifications: NotificationService;
   identityProviders: IdentityProviderService;
   providerSignIn: ProviderSignInService;
+  groupMapping: GroupMappingService;
+  mappingRules: MappingRuleService;
+  providerSync: ProviderSyncService;
 }
 
 export function createAccountServices(options: {
@@ -197,6 +210,7 @@ export function createAccountServices(options: {
   });
   const setupRegistry = new SetupRegistry();
   const setup = new SetupService({ database, registry: setupRegistry, audit, rateLimiter });
+  const groupMapping = new GroupMappingService({ roles, memberships, audit });
   const signIn = new SignInService({
     database,
     accounts,
@@ -213,11 +227,34 @@ export function createAccountServices(options: {
     notifications,
     settings,
     setupComplete: () => setup.isComplete(),
+    onIdentityLinked: (tx, link) => groupMapping.applyAtSignIn(tx, link),
+  });
+  const providerAdapters = [new OidcAdapter({ allowInsecure: options.insecureIdentityProviders ?? false })];
+  const mappingRules = new MappingRuleService({
+    database,
+    providers: identityProviders,
+    adapters: providerAdapters,
+    roles,
+    authorization,
+    audit,
+    mapping: groupMapping,
+  });
+  const providerSync = new ProviderSyncService({
+    database,
+    providers: identityProviders,
+    adapters: providerAdapters,
+    mapping: groupMapping,
+    memberships,
+    administration,
+    audit,
+    settings,
+    jobs,
   });
   const providerSignIn = new ProviderSignInService({
     database,
     providers: identityProviders,
-    adapters: [new OidcAdapter({ allowInsecure: options.insecureIdentityProviders ?? false })],
+    adapters: providerAdapters,
+    mapping: groupMapping,
     accounts,
     signIn,
     sessions,
@@ -292,6 +329,9 @@ export function createAccountServices(options: {
     notifications,
     identityProviders,
     providerSignIn,
+    groupMapping,
+    mappingRules,
+    providerSync,
   };
 }
 
@@ -343,6 +383,22 @@ export async function workAccountJobs(
     const sent = await services.identityProviders.sendCredentialReminders();
     if (sent > 0) job.logger.info({ sent }, "Provider credential reminders sent");
   });
+  await jobs.work(providerSyncJob, async (job) => {
+    const { providerId, trigger, actorId } = job.payload;
+    const run = await services.providerSync.run(
+      providerId,
+      trigger,
+      actorId ? { type: "account", id: actorId } : undefined,
+    );
+    if (run) job.logger.info({ providerId, status: run.status }, "Identity provider synchronized");
+  });
+  await jobs.work(providerSyncScheduleJob, async () => {
+    await services.providerSync.scheduleDue();
+  });
+  await jobs.work(providerSyncRetentionJob, async (job) => {
+    const removed = await services.providerSync.applyRetention();
+    if (removed > 0) job.logger.info({ removed }, "Old sync runs removed");
+  });
   await jobs.work(notificationRetentionJob, async (job) => {
     const removed = await services.notifications.applyRetention();
     if (removed > 0) job.logger.info({ removed }, "Old notifications removed");
@@ -358,6 +414,8 @@ export async function workAccountJobs(
   await jobs.schedule(organizationExpiryJob, ORGANIZATION_EXPIRY_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(apiTokenExpiryJob, API_TOKEN_EXPIRY_SCHEDULE, {}, { key: "regular" });
   await jobs.schedule(organizationRemindersJob, ORGANIZATION_REMINDERS_SCHEDULE, {}, { key: "hourly" });
+  await jobs.schedule(providerSyncScheduleJob, PROVIDER_SYNC_SCHEDULE, {}, { key: "regular" });
+  await jobs.schedule(providerSyncRetentionJob, PROVIDER_SYNC_RETENTION_SCHEDULE, {}, { key: "daily" });
   await jobs.schedule(
     providerCredentialReminderJob,
     PROVIDER_CREDENTIAL_REMINDER_SCHEDULE,

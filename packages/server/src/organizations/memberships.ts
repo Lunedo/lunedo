@@ -329,9 +329,10 @@ export class MembershipService {
     actor: Principal,
     organizationId: string,
     accountId: string,
-    reason: "removed" | "left" = "removed",
+    reason: "removed" | "left" | "providerRule" = "removed",
+    options: { tx?: Transaction } = {},
   ): Promise<boolean> {
-    return this.#database.transaction(async (tx) => {
+    const run = async (tx: Transaction) => {
       await lockOrganization(tx, organizationId);
       const [membership] = await tx
         .select({ kind: memberships.kind })
@@ -368,7 +369,8 @@ export class MembershipService {
       });
       await this.#audit.recordMany(tx, events);
       return true;
-    });
+    };
+    return options.tx ? run(options.tx) : this.#database.transaction(run);
   }
 
   async expire(organizationId: string, accountId: string): Promise<boolean> {

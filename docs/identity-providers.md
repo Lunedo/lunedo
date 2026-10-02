@@ -70,12 +70,43 @@ An account can have several linked identities. An identity is unique per provide
 When nobody is linked to the identity yet:
 
 1. If the verified e-mail address belongs to an existing account, the person links the identity by confirming with that account's password and, if it has one, its second factor (`/sign-in/link`). Pagehall never links automatically. "This is not my account" ends the sign-in with a reference. Accounts without a password are linked by an administrator.
-2. Otherwise, when the provider allows accounts at first sign-in and the address lies in a configured domain, Pagehall creates a standard account without a password. Optionally, the token must carry one of a list of groups. The home organization is the organization that owns the e-mail domain, if one does; group mapping can set it as well.
+2. Otherwise, when the provider allows accounts at first sign-in and the address lies in a configured domain, Pagehall creates a standard account without a password. Optionally, the person must be in one of a list of groups. The home organization comes from the first mapping rule, in rule order, that names one for a group of the person; otherwise it is the organization that owns the e-mail domain, if one does.
 3. Otherwise the sign-in is refused.
 
 Every refusal gets a reference such as `7KQ2-M9XA`. The refusal page shows it, and administrators look it up at `GET /api/v1/instance/sign-in-refusals/{reference}`. Refusals are kept for 90 days.
 
 Reasons: `accountCreationDisabled`, `domainNotAllowed`, `emailNotVerified`, `groupRequired`, `accountInactive`, `linkDeclined`, `linkUnavailable`, `invalidResponse`.
+
+## Groups
+
+Groups are identified by their stable ID at the provider, never by their name. Pagehall stores the names it sees and updates them when the provider renames a group; rules keep working.
+
+- Generic OpenID Connect providers send groups in a claim set in the provider (`claims.groups`, for example `groups`). An optional second claim (`claims.groupNames`) carries the names in the same order; Keycloak and Authentik can send both.
+- Microsoft Entra ID sends group IDs in the token. When a person is in too many groups, the token carries an overage reference instead, and Pagehall reads the groups through Microsoft Graph with the provider's own credential (client credentials, application permissions `GroupMember.Read.All` and `User.Read.All`), never with the person's token. Nested groups count.
+- Google Workspace does not put groups into the token. Pagehall reads them through the Directory API with a service account: create a service account with domain-wide delegation for the read-only scopes `admin.directory.group.readonly` and `admin.directory.user.readonly`, set the e-mail address of an administrator to act for in the provider's directory settings, and upload the JSON key. The key is stored encrypted and never shown again.
+
+When groups cannot be read at sign-in, for example because Graph is not reachable, the person is signed in with the groups Pagehall knew before.
+
+## Synchronization
+
+Providers with a directory (Entra ID, and Google Workspace with a service account key) are synchronized in the background, every 60 minutes by default (`config.sync.intervalMinutes`, 15 to 1440), and on "Sync now". A run updates profiles and groups of linked accounts, applies the mapping rules, follows renamed groups and marks deleted ones. Only one run per provider happens at a time, on any number of nodes; a run that is still marked as running after two hours counts as interrupted. Generic providers have no directory: their accounts update at every sign-in.
+
+An account that the provider disabled or deleted is deactivated: its sessions and personal API tokens end. Pagehall never deletes accounts. When the provider enables the account again, Pagehall reactivates it, but only if this provider deactivated it.
+
+Every run is kept in the sync log with trigger, result, duration, changes and warnings, for `identityProviders.syncLogRetentionDays` days (instance, default 90).
+
+## Mapping rules
+
+A rule maps a group of a provider to:
+
+- membership in an organization, optionally with a role, optionally adding the members to a synchronized Pagehall group, and optionally making the organization the home organization of new accounts; or
+- an instance role. Groups of organizations in Pagehall never receive instance roles; only rules of providers do.
+
+Creating, changing, reordering and removing a rule is a grant: the authorization service checks that the person may manage members of the organization and may grant the role themselves. Rules apply at every sign-in and synchronization. Several rules add up. When someone leaves a group, Pagehall removes exactly what the rules granted; access granted by hand stays, and a membership stays while the person holds other access in the organization or it is their home organization. When several rules name a home organization, the first in rule order decides. A rule whose group no longer exists at the provider grants nothing, is marked in the list and produces a warning in the sync log.
+
+Synchronized Pagehall groups are read-only: their members, managers, name and description come from the provider, and the group shows which provider manages it. Their permissions in Pagehall can still be changed.
+
+The rule dialog searches the provider's groups (the directory, or the groups seen at sign-in for generic providers) and shows beforehand who gains access.
 
 ## Sessions and sign-out
 
@@ -93,4 +124,4 @@ The instance owner can always sign in with password and second factor. When pass
 
 ## Audit events
 
-`identityProvider.created`, `.updated`, `.removed`, `.credentialAdded`, `.credentialRemoved`, `.logoChanged`; `auth.signedIn` with `providerId`, `auth.signInRefused` with reason and reference, `auth.providerSignedOut`, `auth.emergencySignIn`; `identity.linked`, `identity.unlinked`; `account.createdAtSignIn`.
+`identityProvider.created`, `.updated`, `.removed`, `.credentialAdded`, `.credentialRemoved`, `.logoChanged`, `.directoryKeyChanged`, `.synchronized` with the result of the run; `mappingRule.created`, `.updated`, `.removed`; `account.deactivatedByProvider`, `account.reactivatedByProvider`; memberships, roles and group members changed by rules, with the reason `providerRule`; `auth.signedIn` with `providerId`, `auth.signInRefused` with reason and reference, `auth.providerSignedOut`, `auth.emergencySignIn`; `identity.linked`, `identity.unlinked`; `account.createdAtSignIn`.

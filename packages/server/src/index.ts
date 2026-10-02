@@ -141,6 +141,8 @@ export { createDatabasePool, type DatabasePool, pingDatabase } from "./database/
 export { handleOperationsRequest, type OperationsEndpoints, operationsPaths } from "./health/health-http.js";
 export { readinessChecks } from "./health/readiness.js";
 export type { ProviderProfile } from "./identity/adapter.js";
+export type { SyncChange, SyncReport, SyncWarning } from "./identity/groups.js";
+export type { MappingRule, ProviderGroupMatch, RulePreview } from "./identity/mapping.js";
 export {
   type AddedCredential,
   type CredentialInput,
@@ -159,6 +161,14 @@ export type {
   SignInStep,
   TestResult,
 } from "./identity/sign-in.js";
+export {
+  ProviderSyncService,
+  providerSyncJob,
+  type SyncRunDetails,
+  type SyncRunFilter,
+  type SyncRunSummary,
+  syncLogRetentionDaysSetting,
+} from "./identity/sync.js";
 export {
   defineJob,
   type EnqueueOptions,

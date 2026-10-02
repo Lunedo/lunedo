@@ -14,6 +14,7 @@ import {
   pageLimit,
   toPage,
 } from "../database/keyset.js";
+import { identityProviders, managedGroups } from "../identity/schema.js";
 import { groupManagers, groupMembers, groups, memberships, roleAssignments } from "./access-schema.js";
 import { lockOrganization } from "./memberships.js";
 import { OrganizationError } from "./organizations.js";
@@ -25,6 +26,7 @@ export interface Group {
   organizationId: string;
   name: string;
   description: string;
+  managedBy?: { providerId: string; providerName: string } | null;
 }
 
 export interface GroupDetails extends Group {
@@ -35,6 +37,26 @@ export interface GroupMember {
   accountId: string;
   name: string;
   expiresAt: Date | null;
+}
+
+function managedBy(providerId: string | null, providerName: string | null) {
+  return providerId ? { providerId, providerName: providerName ?? "" } : null;
+}
+
+export async function assertNotManaged(
+  executor: Pick<Transaction, "select">,
+  groupId: string,
+): Promise<void> {
+  const [managed] = await executor
+    .select({ providerId: managedGroups.providerId })
+    .from(managedGroups)
+    .where(eq(managedGroups.groupId, groupId));
+  if (managed) {
+    throw new OrganizationError(
+      "groupManagedByProvider",
+      "Members of a synchronized group are managed by its identity provider",
+    );
+  }
 }
 
 function scopeOf(organizationId: string) {
@@ -70,9 +92,13 @@ export class GroupService {
         organizationId: groups.organizationId,
         name: groups.name,
         description: groups.description,
+        managedProviderId: managedGroups.providerId,
+        managedProviderName: identityProviders.name,
         sortName,
       })
       .from(groups)
+      .leftJoin(managedGroups, eq(managedGroups.groupId, groups.id))
+      .leftJoin(identityProviders, eq(identityProviders.id, managedGroups.providerId))
       .where(
         and(
           eq(groups.organizationId, organizationId),
@@ -86,7 +112,10 @@ export class GroupService {
       rows,
       page,
       (row) => [row.sortName, row.id],
-      ({ sortName: _sortName, ...row }) => row,
+      ({ sortName: _sortName, managedProviderId, managedProviderName, ...row }) => ({
+        ...row,
+        managedBy: managedBy(managedProviderId, managedProviderName),
+      }),
     );
   }
 
@@ -125,8 +154,12 @@ export class GroupService {
         organizationId: groups.organizationId,
         name: groups.name,
         description: groups.description,
+        managedProviderId: managedGroups.providerId,
+        managedProviderName: identityProviders.name,
       })
       .from(groups)
+      .leftJoin(managedGroups, eq(managedGroups.groupId, groups.id))
+      .leftJoin(identityProviders, eq(identityProviders.id, managedGroups.providerId))
       .where(eq(groups.id, id));
     if (!group) return null;
     const managers = await this.#database
@@ -135,7 +168,8 @@ export class GroupService {
       .innerJoin(accounts, eq(accounts.id, groupManagers.accountId))
       .where(eq(groupManagers.groupId, id))
       .orderBy(asc(accounts.name));
-    return { ...group, managers };
+    const { managedProviderId, managedProviderName, ...rest } = group;
+    return { ...rest, managedBy: managedBy(managedProviderId, managedProviderName), managers };
   }
 
   async #lockGroup(tx: Transaction, id: string): Promise<Group> {
@@ -213,6 +247,7 @@ export class GroupService {
   async update(actor: Principal, id: string, input: { name?: string; description?: string }): Promise<Group> {
     return this.#database.transaction(async (tx) => {
       const current = await this.#lockGroup(tx, id);
+      await assertNotManaged(tx, id);
       const name = input.name === undefined ? current.name : groupNameSchema.parse(input.name);
       const description =
         input.description === undefined
@@ -240,6 +275,7 @@ export class GroupService {
   async delete(actor: Principal, id: string): Promise<void> {
     await this.#database.transaction(async (tx) => {
       const group = await this.#lockGroup(tx, id);
+      await assertNotManaged(tx, id);
       await this.#authorization.checkRank(
         actor,
         {
@@ -275,6 +311,7 @@ export class GroupService {
     }
     await this.#database.transaction(async (tx) => {
       const group = await this.#lockGroup(tx, id);
+      await assertNotManaged(tx, id);
       const [membership] = await tx
         .select({ kind: memberships.kind })
         .from(memberships)
@@ -322,6 +359,7 @@ export class GroupService {
   async removeMember(actor: Principal, id: string, accountId: string): Promise<boolean> {
     return this.#database.transaction(async (tx) => {
       const group = await this.#lockGroup(tx, id);
+      await assertNotManaged(tx, id);
       const deleted = await tx
         .delete(groupMembers)
         .where(and(eq(groupMembers.groupId, id), eq(groupMembers.accountId, accountId)))
@@ -341,6 +379,7 @@ export class GroupService {
   async addManager(actor: Principal, id: string, accountId: string): Promise<void> {
     await this.#database.transaction(async (tx) => {
       const group = await this.#lockGroup(tx, id);
+      await assertNotManaged(tx, id);
       const [membership] = await tx
         .select({ kind: memberships.kind })
         .from(memberships)
@@ -373,6 +412,7 @@ export class GroupService {
   async removeManager(actor: Principal, id: string, accountId: string): Promise<boolean> {
     return this.#database.transaction(async (tx) => {
       const group = await this.#lockGroup(tx, id);
+      await assertNotManaged(tx, id);
       const deleted = await tx
         .delete(groupManagers)
         .where(and(eq(groupManagers.groupId, id), eq(groupManagers.accountId, accountId)))

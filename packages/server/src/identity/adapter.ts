@@ -9,6 +9,7 @@ export interface ProviderDefinition {
   type: IdentityProviderType;
   name: string;
   config: OidcConfig;
+  directoryKey: string | null;
 }
 
 export interface ProviderCredential {
@@ -62,8 +63,12 @@ export interface ProviderLogout {
 
 export interface SynchronizedAccount {
   subject: string;
+  state: "enabled" | "disabled" | "deleted";
   profile: ProviderProfile | null;
-  enabled: boolean;
+}
+
+export interface DirectoryGroupMatch extends ProviderGroup {
+  members: number | null;
 }
 
 export interface IdentityProviderAdapter {
@@ -92,12 +97,28 @@ export interface IdentityProviderAdapter {
     provider: ProviderDefinition,
     credentials: readonly ProviderCredential[],
     subject: string,
-  ): Promise<ProviderGroup[]>;
+  ): Promise<ProviderGroup[] | null>;
   synchronizeAccounts?(
     provider: ProviderDefinition,
     credentials: readonly ProviderCredential[],
     subjects: readonly string[],
   ): AsyncIterable<SynchronizedAccount>;
+  hasDirectory?(provider: ProviderDefinition): boolean;
+  readGroup?(
+    provider: ProviderDefinition,
+    credentials: readonly ProviderCredential[],
+    groupId: string,
+  ): Promise<ProviderGroup | null>;
+  searchGroups?(
+    provider: ProviderDefinition,
+    credentials: readonly ProviderCredential[],
+    query: string,
+  ): Promise<DirectoryGroupMatch[]>;
+  countMembers?(
+    provider: ProviderDefinition,
+    credentials: readonly ProviderCredential[],
+    groupId: string,
+  ): Promise<number | null>;
 }
 
 export class ProviderResponseError extends Error {

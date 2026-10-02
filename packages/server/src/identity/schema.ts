@@ -1,6 +1,9 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -13,6 +16,8 @@ import {
 import { accounts } from "../accounts/schema.js";
 import { encrypted } from "../crypto/encrypted-column.js";
 import { bytes, primaryId, timestamps } from "../database/columns.js";
+import { builtInRole, customRoles, groups } from "../organizations/access-schema.js";
+import { organizations } from "../organizations/schema.js";
 
 const timestampColumn = () => timestamp({ withTimezone: true, mode: "date" });
 
@@ -159,4 +164,145 @@ export const providerLogoutTokens = pgTable(
     expiresAt: timestampColumn().notNull(),
   },
   (table) => [primaryKey({ columns: [table.providerId, table.tokenId] }), index().on(table.expiresAt)],
+);
+
+export const identityProviderSecrets = pgTable("identity_provider_secrets", {
+  providerId: uuid()
+    .primaryKey()
+    .references(() => identityProviders.id, { onDelete: "cascade" }),
+  directoryKey: encrypted().notNull(),
+  ...timestamps(),
+});
+
+export const providerGroups = pgTable(
+  "provider_groups",
+  {
+    id: primaryId(),
+    providerId: uuid()
+      .notNull()
+      .references(() => identityProviders.id, { onDelete: "cascade" }),
+    externalId: text().notNull(),
+    name: text(),
+    missingSince: timestampColumn(),
+    ...timestamps(),
+  },
+  (table) => [uniqueIndex().on(table.providerId, table.externalId)],
+);
+
+export const identityGroups = pgTable(
+  "identity_groups",
+  {
+    identityId: uuid()
+      .notNull()
+      .references(() => identities.id, { onDelete: "cascade" }),
+    groupId: uuid()
+      .notNull()
+      .references(() => providerGroups.id, { onDelete: "cascade" }),
+  },
+  (table) => [primaryKey({ columns: [table.identityId, table.groupId] }), index().on(table.groupId)],
+);
+
+export const mappingTargets = ["organization", "instance"] as const;
+export const mappingTarget = pgEnum("mapping_target", mappingTargets);
+
+export const mappingRules = pgTable(
+  "mapping_rules",
+  {
+    id: primaryId(),
+    providerId: uuid()
+      .notNull()
+      .references(() => identityProviders.id, { onDelete: "cascade" }),
+    position: integer().notNull(),
+    groupId: uuid()
+      .notNull()
+      .references(() => providerGroups.id, { onDelete: "cascade" }),
+    target: mappingTarget().notNull(),
+    organizationId: uuid().references(() => organizations.id, { onDelete: "cascade" }),
+    builtInRole: builtInRole(),
+    customRoleId: uuid().references(() => customRoles.id, { onDelete: "cascade" }),
+    pagehallGroupId: uuid().references(() => groups.id, { onDelete: "set null" }),
+    homeOrganization: boolean().notNull().default(false),
+    ...timestamps(),
+  },
+  (table) => [
+    index().on(table.providerId),
+    index().on(table.groupId),
+    check(
+      "mapping_rules_target",
+      sql`(${table.target} = 'organization') = (${table.organizationId} is not null)`,
+    ),
+    check(
+      "mapping_rules_instance",
+      sql`${table.target} = 'organization' or (${table.pagehallGroupId} is null and not ${table.homeOrganization} and (${table.builtInRole} is not null or ${table.customRoleId} is not null))`,
+    ),
+  ],
+);
+
+export const managedGroups = pgTable("managed_groups", {
+  groupId: uuid()
+    .primaryKey()
+    .references(() => groups.id, { onDelete: "cascade" }),
+  providerId: uuid()
+    .notNull()
+    .references(() => identityProviders.id, { onDelete: "cascade" }),
+  providerGroupId: uuid()
+    .notNull()
+    .references(() => providerGroups.id, { onDelete: "cascade" }),
+  createdAt: timestampColumn().notNull().defaultNow(),
+});
+
+export const providerGrantKinds = ["membership", "role", "groupMember"] as const;
+export const providerGrantKind = pgEnum("provider_grant_kind", providerGrantKinds);
+
+export const providerGrants = pgTable(
+  "provider_grants",
+  {
+    id: primaryId(),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    kind: providerGrantKind().notNull(),
+    key: text().notNull(),
+    organizationId: uuid().references(() => organizations.id, { onDelete: "cascade" }),
+    roleAssignmentId: uuid(),
+    groupId: uuid().references(() => groups.id, { onDelete: "cascade" }),
+    createdAt: timestampColumn().notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex().on(table.accountId, table.key)],
+);
+
+export const providerDeactivations = pgTable("provider_deactivations", {
+  accountId: uuid()
+    .primaryKey()
+    .references(() => accounts.id, { onDelete: "cascade" }),
+  providerId: uuid()
+    .notNull()
+    .references(() => identityProviders.id, { onDelete: "cascade" }),
+  createdAt: timestampColumn().notNull().defaultNow(),
+});
+
+export const syncTriggers = ["schedule", "manual"] as const;
+export const syncTrigger = pgEnum("provider_sync_trigger", syncTriggers);
+export const syncStatuses = ["running", "succeeded", "warnings", "failed"] as const;
+export const syncStatus = pgEnum("provider_sync_status", syncStatuses);
+
+export const providerSyncRuns = pgTable(
+  "provider_sync_runs",
+  {
+    id: primaryId(),
+    providerId: uuid()
+      .notNull()
+      .references(() => identityProviders.id, { onDelete: "cascade" }),
+    trigger: syncTrigger().notNull(),
+    status: syncStatus().notNull().default("running"),
+    startedAt: timestampColumn().notNull().defaultNow(),
+    finishedAt: timestampColumn(),
+    changes: jsonb().notNull().default([]),
+    warnings: jsonb().notNull().default([]),
+    error: text(),
+  },
+  (table) => [
+    index().on(table.providerId, table.startedAt),
+    uniqueIndex("provider_sync_runs_running").on(table.providerId).where(sql`${table.status} = 'running'`),
+  ],
 );

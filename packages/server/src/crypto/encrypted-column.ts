@@ -26,6 +26,7 @@ export interface EncryptedColumn {
  */
 export const encryptedColumns: readonly EncryptedColumn[] = [
   { table: "identity_provider_credentials", idColumn: "id", column: "secret" },
+  { table: "identity_provider_secrets", idColumn: "provider_id", column: "directory_key" },
   { table: "instance_secrets", idColumn: "name", column: "value" },
   { table: "mail_outbox", idColumn: "id", column: "message" },
   { table: "totp_credentials", idColumn: "id", column: "secret" },

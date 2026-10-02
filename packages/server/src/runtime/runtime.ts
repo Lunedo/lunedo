@@ -22,6 +22,7 @@ import { runMigrations } from "../database/migrate.js";
 import { NotificationListener } from "../database/notifications.js";
 import { createDatabasePool, type DatabasePool } from "../database/pool.js";
 import { readinessChecks } from "../health/readiness.js";
+import { syncLogRetentionDaysSetting } from "../identity/sync.js";
 import type { JobQueue } from "../jobs/job-queue.js";
 import { PgBossQueue } from "../jobs/pg-boss-queue.js";
 import {
@@ -141,6 +142,7 @@ export async function createServerRuntime(options: {
         ...notificationSettings,
         auditRetentionSetting,
         smtpSetting,
+        syncLogRetentionDaysSetting,
       ] as SettingDefinition<never>[]),
       ...(options.settings ?? []),
     );

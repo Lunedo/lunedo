@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { domainSchema } from "./validation.js";
+import { domainSchema, emailSchema, idSchema } from "./validation.js";
 
 export const identityProviderPresets = ["entraId", "google", "generic"] as const;
 export type IdentityProviderPreset = (typeof identityProviderPresets)[number];
@@ -22,6 +22,9 @@ export const signInNameSources = ["preferredUsername", "userPrincipalName", "ema
 export const ENTRA_AUTHORITY = "https://login.microsoftonline.com";
 export const GOOGLE_ISSUER = "https://accounts.google.com";
 export const MICROSOFT_GRAPH = "https://graph.microsoft.com";
+export const GOOGLE_DIRECTORY = "https://admin.googleapis.com";
+export const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+export const SYNC_INTERVAL_MINUTES = { minimum: 15, default: 60, maximum: 1440 } as const;
 
 const claimName = z
   .string()
@@ -51,11 +54,23 @@ const accountCreationSchema = z
   })
   .strict();
 
+const syncSchema = z
+  .object({
+    intervalMinutes: z
+      .number()
+      .int()
+      .min(SYNC_INTERVAL_MINUTES.minimum)
+      .max(SYNC_INTERVAL_MINUTES.maximum)
+      .default(SYNC_INTERVAL_MINUTES.default),
+  })
+  .strict();
+
 const commonShape = {
   clientId: z.string().trim().min(1).max(500),
   domains: z.array(domainSchema).max(50).default([]),
   idTokenAlgorithm: z.enum(idTokenAlgorithms).default("RS256"),
   accountCreation: accountCreationSchema.default({ enabled: false, requiredGroups: [] }),
+  sync: syncSchema.default({ intervalMinutes: SYNC_INTERVAL_MINUTES.default }),
 };
 
 export const entraIdConfigSchema = z
@@ -76,6 +91,15 @@ export const googleConfigSchema = z
     ...commonShape,
     domains: z.array(domainSchema).min(1).max(50),
     issuer: httpUrl.default(GOOGLE_ISSUER),
+    directory: z
+      .object({
+        adminEmail: emailSchema,
+        url: httpUrl.default(GOOGLE_DIRECTORY),
+        tokenUrl: httpUrl.default(GOOGLE_TOKEN_URL),
+      })
+      .strict()
+      .nullable()
+      .default(null),
   })
   .strict();
 
@@ -91,9 +115,16 @@ export const genericOidcConfigSchema = z
         signInName: claimName.default("preferred_username"),
         displayName: claimName.default("name"),
         groups: claimName.nullable().default(null),
+        groupNames: claimName.nullable().default(null),
       })
       .strict()
-      .default({ email: "email", signInName: "preferred_username", displayName: "name", groups: null }),
+      .default({
+        email: "email",
+        signInName: "preferred_username",
+        displayName: "name",
+        groups: null,
+        groupNames: null,
+      }),
   })
   .strict();
 
@@ -114,3 +145,41 @@ export const signInRefusalReferenceSchema = z
   .trim()
   .toUpperCase()
   .regex(/^[0-9A-Z]{4}-[0-9A-Z]{4}$/, "must be a reference such as 7KQ2-M9XA");
+
+export const googleServiceAccountKeySchema = z
+  .object({
+    type: z.literal("service_account"),
+    client_email: emailSchema,
+    private_key: z.string().min(1).max(10_000),
+  })
+  .loose();
+
+export const mappingRoleSchema = z.union([
+  z.object({ builtIn: z.enum(["owner", "administrator", "securityAuditor"]) }).strict(),
+  z.object({ customRoleId: idSchema }).strict(),
+]);
+
+export const mappingRuleInputSchema = z.discriminatedUnion("target", [
+  z
+    .object({
+      target: z.literal("organization"),
+      group: z
+        .object({ id: z.string().trim().min(1).max(256), name: z.string().trim().max(256).nullable() })
+        .strict(),
+      organizationId: idSchema,
+      role: mappingRoleSchema.nullable(),
+      synchronizedGroup: z.boolean(),
+      homeOrganization: z.boolean(),
+    })
+    .strict(),
+  z
+    .object({
+      target: z.literal("instance"),
+      group: z
+        .object({ id: z.string().trim().min(1).max(256), name: z.string().trim().max(256).nullable() })
+        .strict(),
+      role: mappingRoleSchema,
+    })
+    .strict(),
+]);
+export type MappingRuleInput = z.output<typeof mappingRuleInputSchema>;

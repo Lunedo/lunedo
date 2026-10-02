@@ -26,6 +26,7 @@ import {
   type ProviderProfile,
   ProviderResponseError,
 } from "./adapter.js";
+import type { GroupMappingService } from "./groups.js";
 import type { IdentityProviderService, SignInProvider } from "./providers.js";
 import { callbackPath } from "./providers.js";
 import {
@@ -143,6 +144,7 @@ export class ProviderSignInService {
   readonly #notifications: NotificationService;
   readonly #settings: SettingsService;
   readonly #rateLimiter: RateLimiter;
+  readonly #mapping: GroupMappingService;
   readonly #clock: () => Date;
 
   constructor(options: {
@@ -157,6 +159,7 @@ export class ProviderSignInService {
     notifications: NotificationService;
     settings: SettingsService;
     rateLimiter: RateLimiter;
+    mapping: GroupMappingService;
     clock?: () => Date;
   }) {
     this.#database = options.database;
@@ -170,6 +173,7 @@ export class ProviderSignInService {
     this.#notifications = options.notifications;
     this.#settings = options.settings;
     this.#rateLimiter = options.rateLimiter;
+    this.#mapping = options.mapping;
     this.#clock = options.clock ?? (() => new Date());
   }
 
@@ -305,11 +309,13 @@ export class ProviderSignInService {
       return this.#reauthenticate(flow, provider.id, profile, result.authTime);
     }
 
+    const groups = await this.#groups(provider, credentials, profile);
     for (let attempt = 0; ; attempt++) {
       try {
         return await this.#signInWith({
           provider,
           profile,
+          groups,
           emailVerified,
           providerSessionId: result.providerSessionId,
           client: input.client,
@@ -330,6 +336,21 @@ export class ProviderSignInService {
     }
   }
 
+  async #groups(
+    provider: ProviderDefinition,
+    credentials: Parameters<IdentityProviderAdapter["completeSignIn"]>[1],
+    profile: ProviderProfile,
+  ): Promise<ProviderProfile["groups"]> {
+    if (profile.groups !== null) return profile.groups;
+    const adapter = this.#adapter(provider.type);
+    if (!adapter.readGroups) return null;
+    try {
+      return await adapter.readGroups(provider, credentials, profile.subject);
+    } catch {
+      return null;
+    }
+  }
+
   #emailVerified(domains: readonly string[], email: string | null): boolean {
     const domain = domainOf(email);
     return domain !== null && domains.includes(domain);
@@ -343,6 +364,7 @@ export class ProviderSignInService {
   async #signInWith(input: {
     provider: ProviderDefinition;
     profile: ProviderProfile;
+    groups: ProviderProfile["groups"];
     emailVerified: boolean;
     providerSessionId: string | null;
     client: ClientInfo;
@@ -370,6 +392,12 @@ export class ProviderSignInService {
               lastSignInAt: this.#clock(),
             })
             .where(eq(identities.id, identity.id));
+          await this.#mapping.applyAtSignIn(tx, {
+            providerId: provider.id,
+            identityId: identity.id,
+            accountId: account.id,
+            groups: input.groups,
+          });
           return identity.id;
         },
         { ...input, returnTo: input.returnTo },
@@ -388,6 +416,7 @@ export class ProviderSignInService {
           signInName: profile.signInName,
           displayName: profile.displayName,
           providerSessionId: input.providerSessionId,
+          groups: input.groups,
         };
         const pending = await this.#challenges.create(this.#database, {
           purpose: "identityLink",
@@ -403,11 +432,16 @@ export class ProviderSignInService {
     if (!creation.enabled) throw new Refused("accountCreationDisabled");
     if (!profile.email || !input.emailVerified) throw new Refused("domainNotAllowed");
     if (creation.requiredGroups.length > 0) {
-      const held = new Set((profile.groups ?? []).flatMap((group) => [group.id, group.name ?? ""]));
+      const held = new Set((input.groups ?? []).flatMap((group) => [group.id, group.name ?? ""]));
       if (!creation.requiredGroups.some((group) => held.has(group))) throw new Refused("groupRequired");
     }
     const email = profile.email;
-    const home = await this.#homeOrganization(email);
+    const home =
+      (await this.#mapping.homeOrganizationFor(
+        this.#database,
+        provider.id,
+        (input.groups ?? []).map((group) => group.id),
+      )) ?? (await this.#homeOrganization(email));
     return this.#withSession(
       null,
       async (tx) => {
@@ -430,6 +464,12 @@ export class ProviderSignInService {
           })
           .returning({ id: identities.id });
         if (!created) throw new Error("The identity was not stored");
+        await this.#mapping.applyAtSignIn(tx, {
+          providerId: provider.id,
+          identityId: created.id,
+          accountId: account.id,
+          groups: input.groups,
+        });
         const scope = home ? { scope: { type: "organization" as const, id: home } } : {};
         await this.#audit.record(tx, {
           name: "account.createdAtSignIn",

@@ -3,6 +3,7 @@ import {
   clientSecretSchema,
   ENTRA_AUTHORITY,
   GOOGLE_ISSUER,
+  googleServiceAccountKeySchema,
   identityProviderNameSchema,
   type OidcConfig,
   type OidcConfigInput,
@@ -27,6 +28,7 @@ import {
   identityProviderCredentials,
   identityProviderDomains,
   identityProviderLogos,
+  identityProviderSecrets,
   identityProviders,
 } from "./schema.js";
 
@@ -49,6 +51,7 @@ export interface ProviderSummary {
   callbackPath: string;
   logoRef: string | null;
   credentials: CredentialSummary[];
+  directoryKey: boolean;
   warnings: ProviderWarning[];
   createdAt: Date;
   updatedAt: Date;
@@ -91,6 +94,10 @@ export const PROVIDER_CREDENTIAL_REMINDER_SCHEDULE = "41 * * * *";
 
 export function callbackPath(providerId: string): string {
   return `/api/v1/auth/providers/${providerId}/callback`;
+}
+
+function directoryKeyContext(id: string): string {
+  return `identity_provider_secrets.directory_key:${id}`;
 }
 
 function credentialContext(id: string): string {
@@ -232,6 +239,13 @@ export class IdentityProviderService {
             .select({ providerId: identityProviderLogos.providerId, ref: identityProviderLogos.ref })
             .from(identityProviderLogos)
             .where(inArray(identityProviderLogos.providerId, ids));
+    const keys =
+      ids.length === 0
+        ? []
+        : await executor
+            .select({ providerId: identityProviderSecrets.providerId })
+            .from(identityProviderSecrets)
+            .where(inArray(identityProviderSecrets.providerId, ids));
     const now = this.#clock();
     return rows.map((row) => {
       const config = oidcConfigSchema.parse(row.config);
@@ -245,6 +259,7 @@ export class IdentityProviderService {
         callbackPath: callbackPath(row.id),
         logoRef: logos.find((logo) => logo.providerId === row.id)?.ref ?? null,
         credentials: own,
+        directoryKey: keys.some((key) => key.providerId === row.id),
         warnings: warningsOf(own, now),
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
@@ -428,6 +443,58 @@ export class IdentityProviderService {
     });
   }
 
+  async setDirectoryKey(actor: Principal, id: string, key: string): Promise<void> {
+    let parsed: { client_email: string };
+    try {
+      parsed = googleServiceAccountKeySchema.parse(JSON.parse(key));
+    } catch {
+      throw new OrganizationError(
+        "invalidServiceAccountKey",
+        "The service account key is not a valid JSON key",
+      );
+    }
+    await this.#database.transaction(async (tx) => {
+      const provider = await this.#find(tx, id, true);
+      if (provider.preset !== "google") {
+        throw new OrganizationError(
+          "invalidProviderConfiguration",
+          "Only Google providers use a service account key",
+        );
+      }
+      const encrypted = this.#encryption.encrypt(key, directoryKeyContext(provider.id));
+      await tx
+        .insert(identityProviderSecrets)
+        .values({ providerId: provider.id, directoryKey: encrypted })
+        .onConflictDoUpdate({
+          target: identityProviderSecrets.providerId,
+          set: { directoryKey: encrypted, updatedAt: new Date() },
+        });
+      await this.#audit.record(tx, {
+        name: "identityProvider.directoryKeyChanged",
+        actor,
+        targetId: provider.id,
+        fields: { action: "set", serviceAccount: parsed.client_email },
+      });
+    });
+  }
+
+  async removeDirectoryKey(actor: Principal, id: string): Promise<void> {
+    await this.#database.transaction(async (tx) => {
+      const provider = await this.#find(tx, id, true);
+      const removed = await tx
+        .delete(identityProviderSecrets)
+        .where(eq(identityProviderSecrets.providerId, provider.id))
+        .returning({ providerId: identityProviderSecrets.providerId });
+      if (removed.length === 0) return;
+      await this.#audit.record(tx, {
+        name: "identityProvider.directoryKeyChanged",
+        actor,
+        targetId: provider.id,
+        fields: { action: "removed", serviceAccount: null },
+      });
+    });
+  }
+
   async certificate(id: string, credentialId: string): Promise<string> {
     await this.#find(this.#database, id);
     const [row] = await this.#database
@@ -516,12 +583,19 @@ export class IdentityProviderService {
         ),
       )
       .orderBy(desc(identityProviderCredentials.createdAt), desc(identityProviderCredentials.id));
+    const [secret] = await this.#database
+      .select({ directoryKey: identityProviderSecrets.directoryKey })
+      .from(identityProviderSecrets)
+      .where(eq(identityProviderSecrets.providerId, id));
     return {
       provider: {
         id: row.id,
         type: row.type,
         name: row.name,
         config: oidcConfigSchema.parse(row.config),
+        directoryKey: secret
+          ? this.#encryption.decryptString(secret.directoryKey, directoryKeyContext(row.id))
+          : null,
       },
       credentials: rows.map((credential) => ({
         id: credential.id,

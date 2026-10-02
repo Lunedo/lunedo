@@ -5,6 +5,7 @@ import * as client from "openid-client";
 import {
   type AuthorizationRequest,
   type CallbackInput,
+  type DirectoryGroupMatch,
   type IdentityProviderAdapter,
   type ProviderCredential,
   type ProviderDefinition,
@@ -14,7 +15,9 @@ import {
   type ProviderProfile,
   ProviderResponseError,
   type RedirectSignInResult,
+  type SynchronizedAccount,
 } from "./adapter.js";
+import { type DirectoryAccount, DirectoryClients } from "./directory.js";
 
 const DISCOVERY_CACHE_MS = 10 * 60 * 1000;
 const CLOCK_TOLERANCE_SECONDS = 60;
@@ -42,12 +45,24 @@ function stringClaim(claims: Record<string, unknown>, name: string | null): stri
   return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
 }
 
-function groupsClaim(claims: Record<string, unknown>, name: string): ProviderGroup[] | null {
+function groupsClaim(
+  claims: Record<string, unknown>,
+  name: string,
+  namesClaim: string | null = null,
+): ProviderGroup[] | null {
   const value = claims[name];
   if (!Array.isArray(value)) return null;
-  return value
-    .filter((entry): entry is string => typeof entry === "string" && entry !== "")
-    .map((entry) => ({ id: entry, name: null }));
+  const names = namesClaim ? claims[namesClaim] : undefined;
+  const nameList = Array.isArray(names) ? names : [];
+  return value.flatMap((entry, index) => {
+    if (typeof entry !== "string" || entry === "") return [];
+    const named = nameList[index];
+    return [{ id: entry, name: typeof named === "string" && named !== "" ? named : null }];
+  });
+}
+
+function objectIdOf(subject: string): string {
+  return subject.split(":")[1] ?? subject;
 }
 
 async function privateKey(credential: ProviderCredential): Promise<client.CryptoKey> {
@@ -84,10 +99,149 @@ export class OidcAdapter implements IdentityProviderAdapter {
   readonly #allowInsecure: boolean;
   readonly #fetch: typeof fetch;
   readonly #cache = new Map<string, CachedConfiguration>();
+  readonly #directory: DirectoryClients;
 
   constructor(options: { allowInsecure: boolean; fetch?: typeof fetch }) {
     this.#allowInsecure = options.allowInsecure;
     this.#fetch = options.fetch ?? fetch;
+    this.#directory = new DirectoryClients(options);
+  }
+
+  hasDirectory(provider: ProviderDefinition): boolean {
+    const config = provider.config;
+    if (config.preset === "entraId") return true;
+    return config.preset === "google" && config.directory !== null && provider.directoryKey !== null;
+  }
+
+  #profileFrom(
+    provider: ProviderDefinition,
+    subject: string,
+    account: DirectoryAccount,
+    groups: ProviderGroup[] | null,
+  ): ProviderProfile {
+    const config = provider.config;
+    const signInName =
+      config.preset === "entraId" && config.signInNameSource === "email" ? account.email : account.signInName;
+    return { subject, email: account.email, signInName, displayName: account.displayName, groups };
+  }
+
+  async readGroups(
+    provider: ProviderDefinition,
+    credentials: readonly ProviderCredential[],
+    subject: string,
+  ): Promise<ProviderGroup[] | null> {
+    const config = provider.config;
+    if (config.preset === "entraId") {
+      return this.#directory.graphGroupsOf(provider.id, config, credentials, objectIdOf(subject));
+    }
+    if (config.preset === "google" && this.hasDirectory(provider)) {
+      return this.#directory.googleGroupsOf(provider.id, config, provider.directoryKey ?? "", subject);
+    }
+    return null;
+  }
+
+  async readProfile(
+    provider: ProviderDefinition,
+    credentials: readonly ProviderCredential[],
+    subject: string,
+  ): Promise<ProviderProfile | null> {
+    const config = provider.config;
+    if (config.preset === "entraId") {
+      const account = await this.#directory.graphAccount(
+        provider.id,
+        config,
+        credentials,
+        objectIdOf(subject),
+      );
+      return account ? this.#profileFrom(provider, subject, account, null) : null;
+    }
+    if (config.preset === "google" && this.hasDirectory(provider)) {
+      const account = await this.#directory.googleAccount(
+        provider.id,
+        config,
+        provider.directoryKey ?? "",
+        subject,
+      );
+      return account ? this.#profileFrom(provider, subject, account, null) : null;
+    }
+    return null;
+  }
+
+  async *synchronizeAccounts(
+    provider: ProviderDefinition,
+    credentials: readonly ProviderCredential[],
+    subjects: readonly string[],
+  ): AsyncIterable<SynchronizedAccount> {
+    const config = provider.config;
+    for (const subject of subjects) {
+      let account: DirectoryAccount | null;
+      let groups: ProviderGroup[] | null;
+      if (config.preset === "entraId") {
+        account = await this.#directory.graphAccount(provider.id, config, credentials, objectIdOf(subject));
+        groups = account
+          ? await this.#directory.graphGroupsOf(provider.id, config, credentials, objectIdOf(subject))
+          : null;
+      } else if (config.preset === "google" && this.hasDirectory(provider)) {
+        const key = provider.directoryKey ?? "";
+        account = await this.#directory.googleAccount(provider.id, config, key, subject);
+        groups = account ? await this.#directory.googleGroupsOf(provider.id, config, key, subject) : null;
+      } else {
+        return;
+      }
+      if (!account) {
+        yield { subject, state: "deleted", profile: null };
+        continue;
+      }
+      yield {
+        subject,
+        state: account.enabled ? "enabled" : "disabled",
+        profile: this.#profileFrom(provider, subject, account, groups),
+      };
+    }
+  }
+
+  async readGroup(
+    provider: ProviderDefinition,
+    credentials: readonly ProviderCredential[],
+    groupId: string,
+  ): Promise<ProviderGroup | null> {
+    const config = provider.config;
+    if (config.preset === "entraId")
+      return this.#directory.graphGroup(provider.id, config, credentials, groupId);
+    if (config.preset === "google" && this.hasDirectory(provider)) {
+      return this.#directory.googleGroup(provider.id, config, provider.directoryKey ?? "", groupId);
+    }
+    throw new ProviderResponseError("The provider has no directory to read groups from");
+  }
+
+  async searchGroups(
+    provider: ProviderDefinition,
+    credentials: readonly ProviderCredential[],
+    query: string,
+  ): Promise<DirectoryGroupMatch[]> {
+    const config = provider.config;
+    if (config.preset === "entraId") {
+      return this.#directory.graphSearchGroups(provider.id, config, credentials, query);
+    }
+    if (config.preset === "google" && this.hasDirectory(provider)) {
+      return this.#directory.googleSearchGroups(provider.id, config, provider.directoryKey ?? "", query);
+    }
+    return [];
+  }
+
+  async countMembers(
+    provider: ProviderDefinition,
+    credentials: readonly ProviderCredential[],
+    groupId: string,
+  ): Promise<number | null> {
+    const config = provider.config;
+    if (config.preset === "entraId") {
+      return this.#directory.graphMemberCount(provider.id, config, credentials, groupId);
+    }
+    if (config.preset === "google" && this.hasDirectory(provider)) {
+      return this.#directory.googleMemberCount(provider.id, config, provider.directoryKey ?? "", groupId);
+    }
+    return null;
   }
 
   #checkTransport(url: string): void {
@@ -164,7 +318,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
         });
         const claims = tokens.claims();
         if (!claims) throw new ProviderResponseError("The provider returned no ID token");
-        const profile = await this.#profile(provider, configuration, claims);
+        const profile = await this.#profile(provider, credentials, claims);
         return {
           profile,
           authTime: typeof claims.auth_time === "number" ? claims.auth_time : null,
@@ -189,7 +343,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
 
   async #profile(
     provider: ProviderDefinition,
-    configuration: client.Configuration,
+    credentials: readonly ProviderCredential[],
     claims: Record<string, unknown>,
   ): Promise<ProviderProfile> {
     const config = provider.config;
@@ -206,7 +360,8 @@ export class OidcAdapter implements IdentityProviderAdapter {
           ? stringClaim(claims, "email")
           : config.emailSource === "userPrincipalName"
             ? userPrincipalName
-            : await this.#graphMail(config, configuration, objectId);
+            : ((await this.#directory.graphAccount(provider.id, config, credentials, objectId))?.email ??
+              null);
       const signInName =
         config.signInNameSource === "email"
           ? email
@@ -241,26 +396,10 @@ export class OidcAdapter implements IdentityProviderAdapter {
       email: stringClaim(claims, config.claims.email),
       signInName: stringClaim(claims, config.claims.signInName),
       displayName: stringClaim(claims, config.claims.displayName),
-      groups: config.claims.groups ? groupsClaim(claims, config.claims.groups) : null,
+      groups: config.claims.groups
+        ? groupsClaim(claims, config.claims.groups, config.claims.groupNames)
+        : null,
     };
-  }
-
-  async #graphMail(
-    config: Extract<OidcConfig, { preset: "entraId" }>,
-    configuration: client.Configuration,
-    objectId: string,
-  ): Promise<string | null> {
-    this.#checkTransport(config.graphUrl);
-    const token = await client.clientCredentialsGrant(configuration, {
-      scope: `${config.graphUrl}/.default`,
-    });
-    const response = await this.#fetch(
-      `${config.graphUrl}/v1.0/users/${encodeURIComponent(objectId)}?$select=mail`,
-      { headers: { authorization: `Bearer ${token.access_token}` }, signal: AbortSignal.timeout(10_000) },
-    );
-    if (!response.ok) throw new ProviderResponseError(`Microsoft Graph answered ${response.status}`);
-    const body = (await response.json()) as { mail?: unknown };
-    return typeof body.mail === "string" && body.mail !== "" ? body.mail : null;
   }
 
   async verifyLogout(

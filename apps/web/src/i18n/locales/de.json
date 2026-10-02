@@ -218,6 +218,9 @@
     "slugTaken": "Eine andere Organisation verwendet diesen Kurznamen. Wähle einen anderen.",
     "domainTaken": "Die Domain gehört zu einer anderen Organisation. Wende dich an die Administration der Instanz, wenn das nicht stimmt.",
     "domainInUse": "Ein anderer Identitätsanbieter verwendet bereits eine dieser E-Mail-Domains. Entferne sie dort zuerst oder verwende eine andere Domain.",
+    "groupManagedByProvider": "Die Mitglieder dieser Gruppe kommen von einem Identitätsanbieter. Ändere sie dort; sie werden bei der nächsten Anmeldung oder Synchronisierung übernommen.",
+    "syncUnavailable": "Pagehall kann das Verzeichnis dieses Anbieters nicht lesen, deshalb werden Konten bei der Anmeldung aktualisiert. Richte das Verzeichnis in den Einstellungen des Anbieters ein, um zu synchronisieren.",
+    "invalidServiceAccountKey": "Der Schlüssel des Dienstkontos konnte nicht gelesen werden. Lade in Google Cloud einen neuen JSON-Schlüssel für das Dienstkonto herunter und lade ihn erneut hoch.",
     "roleNameTaken": "Eine Rolle mit diesem Namen gibt es bereits. Wähle einen anderen Namen.",
     "groupNameTaken": "Eine Gruppe mit diesem Namen gibt es bereits. Wähle einen anderen Namen.",
     "alreadyMember": "Diese Person ist bereits Mitglied. Eine Einladung ist nicht nötig.",
@@ -1414,7 +1417,14 @@
         "removed": "Identitätsanbieter entfernt",
         "credentialAdded": "Zugangsdaten des Anbieters hinzugefügt",
         "credentialRemoved": "Zugangsdaten des Anbieters entfernt",
-        "logoChanged": "Logo des Anbieters geändert"
+        "logoChanged": "Logo des Anbieters geändert",
+        "directoryKeyChanged": "Directory-Schlüssel geändert",
+        "synchronized": "Anbieter synchronisiert"
+      },
+      "mappingRule": {
+        "created": "Zuordnungsregel erstellt",
+        "updated": "Zuordnungsregel geändert",
+        "removed": "Zuordnungsregel entfernt"
       },
       "auth": {
         "emergencySignIn": "Notfallanmeldung",
@@ -1439,7 +1449,9 @@
         "deactivated": "Konto deaktiviert",
         "secondFactorReset": "Zweiter Faktor zurückgesetzt",
         "reactivated": "Konto reaktiviert",
-        "sessionsEnded": "Alle Sitzungen beendet"
+        "sessionsEnded": "Alle Sitzungen beendet",
+        "deactivatedByProvider": "Konto vom Anbieter deaktiviert",
+        "reactivatedByProvider": "Konto vom Anbieter reaktiviert"
       },
       "twoFactor": {
         "totpAdded": "Authenticator-App hinzugefügt",

@@ -208,7 +208,7 @@ export async function startFakeGraph(
         decodeJwtPayload(assertion)?.sub === data.clientId
       : form.get("client_id") === data.clientId && form.get("client_secret") === data.clientSecret;
     if (!authenticated) return { status: 401, body: { error: "invalid_client" } };
-    if (form.get("scope") !== "https://graph.microsoft.com/.default") {
+    if (!form.get("scope")?.endsWith("/.default")) {
       return { status: 400, body: { error: "invalid_scope" } };
     }
     const issued = issueToken();
