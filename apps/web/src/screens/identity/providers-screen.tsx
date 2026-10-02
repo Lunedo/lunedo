@@ -24,6 +24,7 @@ import {
   providerLogoUrl,
   providersQuery,
   removeProvider,
+  signInSecurityQuery,
 } from "../../api/identity-queries.js";
 import { SettingsList } from "../../components/settings-list.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
@@ -266,6 +267,7 @@ export function InstanceProvidersScreen() {
         ) : undefined
       }
     >
+      <InsecureProvidersNotice />
       {providers.isError ? (
         <LoadError
           what={t("failures.loadProviders")}
@@ -304,5 +306,18 @@ export function InstanceProvidersScreen() {
         <EmergencyRecipients />
       </Section>
     </SettingsPage>
+  );
+}
+
+function InsecureProvidersNotice() {
+  const { t } = useTranslation();
+  const state = useOrganizationState();
+  const allowed = state.can("instance.signIn.view");
+  const security = useQuery({ ...signInSecurityQuery, enabled: allowed, throwOnError: false });
+  if (!allowed || !security.data?.insecureIdentityProviders) return null;
+  return (
+    <Notice variant="warning" title={t("shell.insecureProviders.title")}>
+      <span className="wrap-anywhere">{t("shell.insecureProviders.description")}</span>
+    </Notice>
   );
 }
