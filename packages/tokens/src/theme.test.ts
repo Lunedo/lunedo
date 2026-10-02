@@ -260,9 +260,7 @@ describe("generateThemeCss", () => {
     const theme = ruleBody(css, "@theme inline");
     expect(theme).toContain("--spacing-select-trigger: var(--radix-select-trigger-width);");
     expect(theme).toContain("--spacing-popover-trigger: var(--radix-popover-trigger-width);");
-    expect(css).toContain(
-      "@utility grid-cols-setting-row-wide {\n  grid-template-columns: minmax(0, 1fr) auto auto;",
-    );
+    expect(css).toContain("@utility grid-cols-setting-row {\n  grid-template-columns: minmax(0, 1fr) auto;");
   });
 
   it("switches the font for the reading-friendly option", () => {
