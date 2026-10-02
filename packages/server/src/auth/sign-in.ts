@@ -203,6 +203,11 @@ export class SignInService {
     });
   }
 
+  async #databaseNow(): Promise<Date> {
+    const result = await this.#database.execute<{ now: Date | string }>(sql`select now() as now`);
+    return new Date(result.rows[0]?.now ?? Date.now());
+  }
+
   async #createSession(
     tx: Transaction,
     account: Account,
@@ -210,7 +215,16 @@ export class SignInService {
     kind: SessionKind,
     client: ClientInfo,
     mailIds: string[],
+    verifiedSince: Date,
   ): Promise<SignedIn> {
+    const [current] = await tx
+      .select({ resetAt: accounts.secondFactorResetAt })
+      .from(accounts)
+      .where(eq(accounts.id, account.id))
+      .for("update");
+    if (current?.resetAt && current.resetAt.getTime() >= verifiedSince.getTime()) {
+      throw new ChallengeExpiredError();
+    }
     const { session, token } = await this.#sessions.create(tx, {
       accountId: account.id,
       kind,
@@ -273,6 +287,7 @@ export class SignInService {
     client: ClientInfo;
   }): Promise<SignedIn | SecondFactorRequired> {
     const subjects = { email: input.email, clientIp: input.client.ip };
+    const started = await this.#databaseNow();
     const found = await this.#accounts.findByEmail(input.email);
     const account = canSignIn(found) && found.passwordHash ? found : null;
     await this.#checkAttempt(subjects, account?.id ?? null, "password");
@@ -314,7 +329,7 @@ export class SignInService {
     const kind = (await this.secondFactorRequired(account.id)) ? "secondFactorSetup" : "full";
     await this.#throttle.recordSuccess(account.email);
     return this.#signedIn((tx, mailIds) =>
-      this.#createSession(tx, account, ["password"], kind, input.client, mailIds),
+      this.#createSession(tx, account, ["password"], kind, input.client, mailIds, started),
     );
   }
 
@@ -340,6 +355,7 @@ export class SignInService {
     factor: SecondFactorInput;
     client: ClientInfo;
   }): Promise<SignedIn> {
+    const started = await this.#databaseNow();
     const { pending, account } = await this.#pending(input.pendingToken);
     const method: SignInMethod = input.factor.type;
     const subjects = { email: account.email, clientIp: input.client.ip };
@@ -385,6 +401,7 @@ export class SignInService {
           "full",
           input.client,
           mailIds,
+          started,
         );
         if (remaining !== null) {
           await this.#audit.record(tx, {
@@ -435,6 +452,7 @@ export class SignInService {
     client: ClientInfo;
   }): Promise<SignedIn> {
     const clientSubjects = { clientIp: input.client.ip };
+    const started = await this.#databaseNow();
     await this.#checkAttempt(clientSubjects, null, "passkey");
     const found = await this.#challenges.findByToken(input.token, "passkeySignIn");
     const challenge = found ? await this.#challenges.consume(this.#database, found.id) : null;
@@ -462,7 +480,7 @@ export class SignInService {
     }
     await this.#throttle.recordSuccess(account.email);
     return this.#signedIn((tx, mailIds) =>
-      this.#createSession(tx, account, ["passkey"], "full", input.client, mailIds),
+      this.#createSession(tx, account, ["passkey"], "full", input.client, mailIds, started),
     );
   }
 

@@ -143,6 +143,30 @@ describe.skipIf(!baseUrl)("resetting another account's second factor", () => {
     ).rejects.toMatchObject({ code: "resetOwnSecondFactor" });
   });
 
+  it("gives no session to a sign-in whose password was checked before a reset", async () => {
+    const org = await organization();
+    const admin = await standard(org.id);
+    await role(admin, "organization", "administrator", org.id);
+    const email = `${randomUUID()}@example.org`;
+    const person = await standard(org.id, email);
+    const recordSuccess = test.services.throttle.recordSuccess.bind(test.services.throttle);
+    const spy = vi.spyOn(test.services.throttle, "recordSuccess").mockImplementationOnce(async (subject) => {
+      await test.services.administration.resetSecondFactor(accountPrincipal(admin), person, "During sign-in");
+      return recordSuccess(subject);
+    });
+    try {
+      await expect(
+        test.services.signIn.signInWithPassword({ email, password: "a long test passphrase", client: {} }),
+      ).rejects.toMatchObject({ code: "challengeExpired" });
+    } finally {
+      spy.mockRestore();
+    }
+    expect(await count("sessions", person)).toBe(0);
+    await expect(
+      test.services.signIn.signInWithPassword({ email, password: "a long test passphrase", client: {} }),
+    ).resolves.toMatchObject({ status: "signedIn", session: { kind: "secondFactorSetup" } });
+  });
+
   it("recognizes the own account by its stored ID when the request uses capital letters", async () => {
     const org = await organization();
     const admin = await standard(org.id);

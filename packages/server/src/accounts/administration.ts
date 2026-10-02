@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { AuditLog } from "../audit/audit-log.js";
 import {
   authChallenges,
@@ -75,7 +75,7 @@ export class AccountAdministrationService {
       await tx.delete(authChallenges).where(eq(authChallenges.accountId, accountId));
       await tx
         .update(accounts)
-        .set({ secondFactorResetAt: new Date(), updatedAt: new Date() })
+        .set({ secondFactorResetAt: sql`now()`, updatedAt: new Date() })
         .where(eq(accounts.id, accountId));
       if (target.email) {
         mailId = await this.#mail.queue(tx, {
