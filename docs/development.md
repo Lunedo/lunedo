@@ -62,6 +62,36 @@ Roles are `api`, `collab`, `worker` and `all` (default), which runs all three pr
 
 `packages/tokens/src/design-tokens.json` is the single source for colors, type, spacing, radii and shadows. The build generates `packages/tokens/generated/theme.css`, which defines the Tailwind theme and the CSS variables for light and dark mode. The default Tailwind scales are removed, so only token values can be used in class names. The web client is described in [web-client.md](web-client.md).
 
+## Interface patterns
+
+Screens are built from the components in `packages/ui`; `/dev/components` shows each of them in every state. New screens follow these rules, so that the interface behaves the same everywhere.
+
+### Choosing from many options
+
+| Options | Component |
+|---|---|
+| Up to 4 fixed options | `SegmentedControl` |
+| 5 to 10 fixed options | `Select` |
+| More than 10 options, or options that come from data (people, groups, organizations, roles, time zones, languages) | `Combobox`, which searches as you type, is operated with the arrow keys, Home, End, Enter and Escape, and says when nothing matches |
+| Several values | `Combobox` with `multiple`, which shows the chosen values as removable chips |
+
+- Data that can be large, such as accounts or groups, is searched on the server: pass `load(query, cursor)` instead of `items`. The combobox debounces the input, shows the newest answer only and offers "Load more" while a next cursor exists.
+- Time zones use `TimeZoneCombobox`. It matches city, region and offset, shows the current offset and local time of each zone, and lists the inherited and the browser's time zone first.
+- The list of every select and combobox is at least as wide as its trigger.
+
+### Settings
+
+- Every setting is one `SettingRow` with three columns: label, description and source line on the left; exactly one control in a fixed-width column; the "…" menu (`menu`) in a fixed column on the right, also when a row has no menu.
+- Choices use `SettingSelect`. Options list the concrete values once, with an example where it helps, such as "24-hour (14:30)". The option equal to the inherited value carries a "Default" marker. While the setting is inherited, that option is selected and the control is muted; choosing it later follows the default again, choosing another option overrides it. Resetting to the default and locking stay in the "…" menu.
+- Durations use `DurationSelect`: the common values of the setting, plus "Custom…", which opens a small popover with a number and a unit. Values are always shown as readable durations.
+
+### Page layout
+
+- Pages that are mainly a table or list use `PageContainer` with `width="wide"` and fill the content area. Pages that are mainly a form or settings use `width="narrow"`.
+- A table page has one `TableToolbar` above the table: search, filters and "Reset filters" on the left, actions such as export on the right.
+- Clicking a table row, or pressing Enter on it, opens the object (`onRowClick` with `rowLabel`). Clicks on buttons, links and menus inside a row do not open it; the "…" menu holds secondary actions only.
+- Access levels per area use `ChoiceTable`: the area and its explanation on the left, a `SegmentedControl` in one aligned column on the right. Options a person may not choose stay visible, disabled, with a tooltip that says why (`disabledReason`).
+
 ## Continuous integration
 
 | Workflow | Trigger | Checks |
