@@ -965,6 +965,7 @@
     }
   },
   "members": {
+    "openPermissions": "Berechtigungen von {name} anzeigen",
     "title": "Mitglieder",
     "description": "Personen in {name}.",
     "tabs": "Arten von Mitgliedern",
@@ -1157,6 +1158,9 @@
     }
   },
   "groups": {
+    "search": "Nach Name oder Beschreibung suchen",
+    "open": "Gruppe {name} öffnen",
+    "noMatch": "Keine Gruppe passt zur Suche.",
     "title": "Gruppen",
     "description": "Gruppen geben mehreren Personen auf einmal Rollen und Zugriff.",
     "create": "Gruppe anlegen",
@@ -1195,6 +1199,7 @@
     "losesMembership": "Sie verlassen {name}."
   },
   "serviceAccounts": {
+    "open": "Service-Konto {name} öffnen",
     "title": "Dienstkonten",
     "description": "Konten für Skripte und Integrationen. Sie handeln nur über API-Tokens.",
     "create": "Dienstkonto anlegen",
@@ -1670,6 +1675,7 @@
     }
   },
   "failures": {
+    "loadGroups": "Die Gruppen konnten nicht geladen werden",
     "loadOrganizations": "Die Organisationen konnten nicht geladen werden",
     "loadAccounts": "Die Konten konnten nicht geladen werden",
     "loadAccount": "Die Details des Kontos konnten nicht geladen werden",

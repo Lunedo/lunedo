@@ -11,12 +11,13 @@ import {
   Input,
   Menu,
   Table,
+  TableToolbar,
   Tabs,
   useToast,
 } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { MoreHorizontal, Plus, Search, Users } from "lucide-react";
+import { MoreHorizontal, Plus, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -174,29 +175,24 @@ export function MembersScreen() {
           <InvitationsTable organizationId={organizationId} />
         ) : (
           <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative w-field max-w-full">
-                <Search
-                  aria-hidden="true"
-                  className="absolute start-2 top-1/2 size-icon-sm -translate-y-1/2 text-text-muted"
-                />
-                <Input
-                  aria-label={t("members.search")}
-                  placeholder={t("members.search")}
-                  className="ps-8"
-                  value={search}
-                  onChange={(event) => {
-                    setSearch(event.target.value);
-                    paged.reset();
-                  }}
-                />
-              </div>
-            </div>
+            <TableToolbar
+              search={{
+                value: search,
+                onChange: (value) => {
+                  setSearch(value);
+                  paged.reset();
+                },
+                label: t("members.search"),
+                placeholder: t("members.search"),
+              }}
+            />
             <Table
               caption={t("members.title")}
               rowKey={(member) => member.accountId}
               rows={paged.rows}
               loading={members.isPending}
+              onRowClick={(member) => setAction({ kind: "permissions", member })}
+              rowLabel={(member) => t("members.openPermissions", { name: member.name })}
               sort={sorted.sort}
               onSortChange={sorted.setSort}
               pagination={paged.pagination}

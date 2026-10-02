@@ -965,6 +965,7 @@
     }
   },
   "members": {
+    "openPermissions": "Show the permissions of {name}",
     "title": "Members",
     "description": "People in {name}.",
     "tabs": "Kinds of members",
@@ -1157,6 +1158,9 @@
     }
   },
   "groups": {
+    "search": "Search by name or description",
+    "open": "Open group {name}",
+    "noMatch": "No group matches the search.",
     "title": "Groups",
     "description": "Groups give roles and access to several people at once.",
     "create": "Create group",
@@ -1195,6 +1199,7 @@
     "losesMembership": "They leave {name}."
   },
   "serviceAccounts": {
+    "open": "Open service account {name}",
     "title": "Service accounts",
     "description": "Accounts for scripts and integrations. They act only through API tokens.",
     "create": "Create service account",
@@ -1670,6 +1675,7 @@
     }
   },
   "failures": {
+    "loadGroups": "The groups could not be loaded",
     "loadOrganizations": "The organizations could not be loaded",
     "loadAccounts": "The accounts could not be loaded",
     "loadAccount": "The account details could not be loaded",

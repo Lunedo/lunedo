@@ -157,15 +157,22 @@ describe("screens that cannot load", () => {
       }),
       "GET /api/v1/organizations": () => ({ body: { items: [ORGANIZATION], nextCursor: null } }),
       "GET /api/v1/account/permissions": () => ({
-        body: { instance: [], organization: ["organization.view", "organization.groups.view"] },
+        body: {
+          instance: [],
+          organization: ["organization.view", "organization.integrations.view"],
+          grantableAreas: { instance: {}, organization: {} },
+        },
       }),
       "GET /api/v1/account/preferences": () => ({ body: [] }),
       "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
       [`GET /api/v1/organizations/${ORGANIZATION.id}`]: () => ({ body: ORGANIZATION }),
-      [`GET /api/v1/organizations/${ORGANIZATION.id}/groups`]: () =>
+      [`GET /api/v1/organizations/${ORGANIZATION.id}/members`]: () => ({
+        body: { items: [], nextCursor: null },
+      }),
+      [`GET /api/v1/organizations/${ORGANIZATION.id}/service-accounts`]: () =>
         failing ? problem(503, "busy") : { body: { items: [], nextCursor: null } },
     });
-    window.history.replaceState(null, "", `/settings/organizations/${ORGANIZATION.id}/groups`);
+    window.history.replaceState(null, "", `/settings/organizations/${ORGANIZATION.id}/service-accounts`);
     const i18n = await initI18n(["en"]);
     render(<App i18n={i18n} queryClient={createQueryClient()} />);
 
@@ -176,6 +183,6 @@ describe("screens that cannot load", () => {
     failing = false;
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     await waitFor(() => expect(screen.queryByText("This page could not be loaded")).toBeNull());
-    expect(await screen.findByRole("heading", { name: "Groups", level: 1 })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Service accounts", level: 1 })).toBeTruthy();
   });
 });

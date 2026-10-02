@@ -1,7 +1,18 @@
 import { serviceAccountDescriptionSchema, serviceAccountNameSchema } from "@pagehall/shared";
-import { Badge, Button, Dialog, EmptyState, Field, Input, Notice, Table, Textarea } from "@pagehall/ui";
+import {
+  Badge,
+  Button,
+  Dialog,
+  EmptyState,
+  Field,
+  Input,
+  Notice,
+  Table,
+  TableToolbar,
+  Textarea,
+} from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
+import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { Bot, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,7 +35,16 @@ export function ServiceAccountsScreen() {
   const state = useOrganizationState();
   const accounts = useQuery(serviceAccountsQuery(organizationId));
   const members = useQuery(membersQuery(organizationId));
+  const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
+  const [search, setSearch] = useState("");
+  const needle = search.trim().toLowerCase();
+  const rows = (accounts.data ?? []).filter(
+    (account) =>
+      !needle ||
+      account.name.toLowerCase().includes(needle) ||
+      (account.description ?? "").toLowerCase().includes(needle),
+  );
   const manage = state.can("organization.integrations.manage");
   const names = new Map((members.data ?? []).map((member) => [member.accountId, member.name]));
 
@@ -50,48 +70,57 @@ export function ServiceAccountsScreen() {
           description={t("serviceAccounts.noneDescription")}
         />
       ) : (
-        <Table
-          caption={t("serviceAccounts.title")}
-          rowKey={(account) => account.id}
-          rows={accounts.data ?? []}
-          loading={accounts.isPending}
-          columns={[
-            {
-              key: "name",
-              header: t("serviceAccounts.name"),
-              cell: (account) => (
-                <Link
-                  to="/settings/organizations/$organizationId/service-accounts/$serviceAccountId"
-                  params={{ organizationId, serviceAccountId: account.id }}
-                  className="font-medium text-accent hover:underline"
-                >
-                  {account.name}
-                </Link>
-              ),
-            },
-            {
-              key: "responsible",
-              header: t("serviceAccounts.responsible"),
-              hideBelow: "sm",
-              cell: (account) =>
-                account.unattended ? (
-                  <Badge variant="warning">{t("serviceAccounts.unattended")}</Badge>
-                ) : (
-                  account.responsibleAccountIds.map((id) => names.get(id) ?? t("common.unknown")).join(", ")
-                ),
-            },
-            {
-              key: "state",
-              header: t("serviceAccounts.state"),
-              cell: (account) =>
-                account.state === "active" ? (
-                  <Badge variant="success">{t("serviceAccounts.states.active")}</Badge>
-                ) : (
-                  <Badge variant="neutral">{t("serviceAccounts.states.deactivated")}</Badge>
-                ),
-            },
-          ]}
-        />
+        <>
+          <TableToolbar
+            search={{
+              value: search,
+              onChange: setSearch,
+              label: t("groups.search"),
+              placeholder: t("groups.search"),
+            }}
+          />
+          <Table
+            caption={t("serviceAccounts.title")}
+            rowKey={(account) => account.id}
+            rows={rows}
+            loading={accounts.isPending}
+            onRowClick={(account) =>
+              void navigate({
+                to: "/settings/organizations/$organizationId/service-accounts/$serviceAccountId",
+                params: { organizationId, serviceAccountId: account.id },
+              })
+            }
+            rowLabel={(account) => t("serviceAccounts.open", { name: account.name })}
+            columns={[
+              {
+                key: "name",
+                header: t("serviceAccounts.name"),
+                cell: (account) => <span className="font-medium">{account.name}</span>,
+              },
+              {
+                key: "responsible",
+                header: t("serviceAccounts.responsible"),
+                hideBelow: "sm",
+                cell: (account) =>
+                  account.unattended ? (
+                    <Badge variant="warning">{t("serviceAccounts.unattended")}</Badge>
+                  ) : (
+                    account.responsibleAccountIds.map((id) => names.get(id) ?? t("common.unknown")).join(", ")
+                  ),
+              },
+              {
+                key: "state",
+                header: t("serviceAccounts.state"),
+                cell: (account) =>
+                  account.state === "active" ? (
+                    <Badge variant="success">{t("serviceAccounts.states.active")}</Badge>
+                  ) : (
+                    <Badge variant="neutral">{t("serviceAccounts.states.deactivated")}</Badge>
+                  ),
+              },
+            ]}
+          />
+        </>
       )}
       <CreateServiceAccountDialog
         open={creating}

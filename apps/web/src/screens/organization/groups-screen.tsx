@@ -1,15 +1,27 @@
 import { groupDescriptionSchema, groupNameSchema } from "@pagehall/shared";
-import { Button, Dialog, EmptyState, Field, Input, Notice, Table, Textarea, useToast } from "@pagehall/ui";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
+import {
+  Button,
+  Dialog,
+  EmptyState,
+  Field,
+  Input,
+  Notice,
+  Table,
+  TableToolbar,
+  Textarea,
+  useToast,
+} from "@pagehall/ui";
+import { useQueryClient } from "@tanstack/react-query";
+import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { Plus, UsersRound } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { api } from "../../api/client.js";
-import { groupsQuery, organizationKeys } from "../../api/organization-queries.js";
+import { organizationKeys } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
-import { usePaged, useSorted } from "../../components/table-state.js";
+import { useServerTable } from "../../components/table-state.js";
+import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
@@ -23,12 +35,18 @@ export function GroupsScreen() {
   const { t } = useTranslation();
   const { organizationId } = route.useParams();
   const state = useOrganizationState();
-  const groups = useQuery(groupsQuery(organizationId));
-  const [creating, setCreating] = useState(false);
-  const sorted = useSorted(groups.data ?? [], { key: "name", direction: "asc" }, (group) =>
-    group.name.toLowerCase(),
+  const navigate = useNavigate();
+  const table = useServerTable([...organizationKeys.groups(organizationId)], (search, cursor) =>
+    request(() =>
+      api.GET("/api/v1/organizations/{organizationId}/groups", {
+        params: {
+          path: { organizationId },
+          query: { limit: 25, ...(search ? { q: search } : {}), ...(cursor ? { cursor } : {}) },
+        },
+      }),
+    ),
   );
-  const paged = usePaged(sorted.rows, 25);
+  const [creating, setCreating] = useState(false);
   const canCreate = state.can("organization.groups.create");
 
   return (
@@ -46,40 +64,49 @@ export function GroupsScreen() {
         ) : null
       }
     >
-      {groups.isSuccess && groups.data.length === 0 ? (
+      {table.query.isSuccess && table.rows.length === 0 && !table.search.value ? (
         <EmptyState icon={UsersRound} title={t("groups.none")} description={t("groups.noneDescription")} />
       ) : (
-        <Table
-          caption={t("groups.title")}
-          rowKey={(group) => group.id}
-          rows={paged.rows}
-          loading={groups.isPending}
-          sort={sorted.sort}
-          onSortChange={sorted.setSort}
-          pagination={paged.pagination}
-          columns={[
-            {
-              key: "name",
-              header: t("groups.name"),
-              sortable: true,
-              cell: (group) => (
-                <Link
-                  to="/settings/organizations/$organizationId/groups/$groupId"
-                  params={{ organizationId, groupId: group.id }}
-                  className="font-medium text-accent hover:underline"
-                >
-                  {group.name}
-                </Link>
-              ),
-            },
-            {
-              key: "description",
-              header: t("groups.descriptionLabel"),
-              hideBelow: "sm",
-              cell: (group) => group.description || "—",
-            },
-          ]}
-        />
+        <>
+          <TableToolbar
+            search={{ ...table.search, label: t("groups.search"), placeholder: t("groups.search") }}
+          />
+          {table.query.isError ? (
+            <LoadError
+              what={t("failures.loadGroups")}
+              error={table.query.error}
+              onRetry={() => table.query.refetch()}
+            />
+          ) : null}
+          <Table
+            caption={t("groups.title")}
+            rowKey={(group) => group.id}
+            rows={table.rows}
+            loading={table.query.isPending}
+            {...(table.pagination ? { pagination: table.pagination } : {})}
+            onRowClick={(group) =>
+              void navigate({
+                to: "/settings/organizations/$organizationId/groups/$groupId",
+                params: { organizationId, groupId: group.id },
+              })
+            }
+            rowLabel={(group) => t("groups.open", { name: group.name })}
+            empty={<p className="p-4 text-text-muted">{t("groups.noMatch")}</p>}
+            columns={[
+              {
+                key: "name",
+                header: t("groups.name"),
+                cell: (group) => <span className="font-medium">{group.name}</span>,
+              },
+              {
+                key: "description",
+                header: t("groups.descriptionLabel"),
+                hideBelow: "sm",
+                cell: (group) => group.description || "—",
+              },
+            ]}
+          />
+        </>
       )}
       <CreateGroupDialog open={creating} onOpenChange={setCreating} organizationId={organizationId} />
     </SettingsPage>
