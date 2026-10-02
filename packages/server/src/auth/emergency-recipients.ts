@@ -31,18 +31,22 @@ export interface EmergencyRecipients {
   addresses: string[];
 }
 
+export async function instanceAdministratorIds(executor: Executor): Promise<string[]> {
+  const result = await executor.execute<{ id: string }>(sql`
+    select distinct a.id from role_assignments ra join accounts a on a.id = ra.principal_id
+    where ra.scope = 'instance' and ra.principal_kind = 'account'
+      and ra.built_in_role in ('owner', 'administrator') and a.state = 'active'
+      and (ra.expires_at is null or ra.expires_at > now())
+    union select owner_account_id from instance where owner_account_id is not null`);
+  return result.rows.map((row) => row.id);
+}
+
 export async function emergencyRecipientsOf(
   executor: Executor,
   settings: SettingsService,
 ): Promise<{ accountIds: string[]; addresses: string[] }> {
   const setting = await settings.get(emergencyRecipientsSetting, {}, { executor });
-  const administrators = setting.instanceAdministrators
-    ? await executor.execute<{ id: string }>(sql`
-        select distinct a.id from role_assignments ra join accounts a on a.id = ra.principal_id
-        where ra.scope = 'instance' and ra.principal_kind = 'account'
-          and ra.built_in_role in ('owner', 'administrator') and a.state = 'active'
-          and (ra.expires_at is null or ra.expires_at > now())`)
-    : { rows: [] };
+  const administrators = setting.instanceAdministrators ? await instanceAdministratorIds(executor) : [];
   const owner = await executor.execute<{ id: string }>(
     sql`select owner_account_id as id from instance where owner_account_id is not null`,
   );
@@ -53,7 +57,7 @@ export async function emergencyRecipientsOf(
           .select({ id: accounts.id })
           .from(accounts)
           .where(and(inArray(accounts.id, setting.accounts), eq(accounts.state, "active")));
-  const accountIds = new Set([...owner.rows, ...administrators.rows, ...chosen].map((row) => row.id));
+  const accountIds = new Set([...administrators, ...[...owner.rows, ...chosen].map((row) => row.id)]);
   return { accountIds: [...accountIds], addresses: setting.addresses };
 }
 

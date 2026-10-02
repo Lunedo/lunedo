@@ -43,6 +43,11 @@ export const notificationParamSchemas = {
     operatingSystem: z.string().nullable(),
     clientIp: z.string().nullable(),
   }),
+  "account.withoutOrganization": z.object({
+    accountName: z.string(),
+    email: z.string().nullable(),
+    providerName: z.string(),
+  }),
   "identityProvider.credentialExpiring": z.object({
     providerName: z.string(),
     expiresAt: instant,

@@ -52,6 +52,7 @@ const KNOWN = new Set([
   "groupManagedByProvider",
   "syncUnavailable",
   "providerDeactivated",
+  "accountHasOrganization",
   "syncNotRunning",
   "providerUnavailable",
   "invalidServiceAccountKey",

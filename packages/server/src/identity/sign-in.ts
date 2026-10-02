@@ -8,6 +8,7 @@ import { EmailInUseError } from "../accounts/accounts.js";
 import { ANONYMOUS, accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { ChallengeStore } from "../auth/challenges.js";
+import { instanceAdministratorIds } from "../auth/emergency-recipients.js";
 import { ChallengeExpiredError, RateLimitedError } from "../auth/errors.js";
 import { sessions } from "../auth/schema.js";
 import type { ClientInfo, SessionService } from "../auth/sessions.js";
@@ -472,12 +473,22 @@ export class ProviderSignInService {
       )) ?? (await this.#homeOrganization(email));
     return this.#withSession(
       null,
-      async (tx) => {
+      async (tx, mailIds) => {
         const account = await this.#accounts.createFromProvider(tx, {
           email,
           name: profile.displayName ?? email,
           homeOrganizationId: home,
         });
+        if (home === null) {
+          const notified = await this.#notifications.notify(tx, {
+            type: "account.withoutOrganization",
+            recipients: await instanceAdministratorIds(tx),
+            organizationId: null,
+            targetId: account.id,
+            params: { accountName: account.name, email: account.email, providerName: provider.name },
+          });
+          mailIds.push(...notified.mailIds);
+        }
         const [created] = await tx
           .insert(identities)
           .values({
@@ -531,7 +542,10 @@ export class ProviderSignInService {
 
   async #withSession(
     account: (Account & { email: string }) | null,
-    prepare: (tx: Transaction) => Promise<string | { identityId: string; account: Account }>,
+    prepare: (
+      tx: Transaction,
+      mailIds: string[],
+    ) => Promise<string | { identityId: string; account: Account }>,
     input: {
       provider: { id: string };
       providerSessionId: string | null;
@@ -543,7 +557,7 @@ export class ProviderSignInService {
   ): Promise<CallbackResult> {
     const mailIds: string[] = [];
     const outcome = await this.#database.transaction(async (tx) => {
-      const prepared = await prepare(tx);
+      const prepared = await prepare(tx, mailIds);
       const identityId = typeof prepared === "string" ? prepared : prepared.identityId;
       const target = typeof prepared === "string" ? account : prepared.account;
       if (!target) throw new Error("No account to sign in");

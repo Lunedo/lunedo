@@ -131,7 +131,15 @@ export const creationOptionsSchema = z.object({
   extensions: extensions.optional(),
 });
 
-const sessionAccount = z.object({ id: idSchema, email: z.string().nullable(), name: z.string() }).nullable();
+const sessionAccount = z
+  .object({
+    id: idSchema,
+    email: z.string().nullable(),
+    name: z.string(),
+    type: z.enum(["standard", "guest", "portal", "service"]).describe("Kind of account."),
+    homeOrganizationId: idSchema.nullable().describe("Organization the account belongs to, or null."),
+  })
+  .nullable();
 
 export const signedInSchema = z.object({
   status: z.literal("signedIn"),

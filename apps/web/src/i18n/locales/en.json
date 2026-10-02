@@ -518,6 +518,10 @@
   },
   "shell": {
     "documentTitle": "{title} · Pagehall",
+    "withoutOrganization": {
+      "title": "No organization is assigned to you yet",
+      "description": "Your account was created, but no organization belongs to it yet. The administrators of this instance were told and will assign one. You can already change your preferences and security settings."
+    },
     "insecureProviders": {
       "title": "Identity providers are not checked strictly",
       "description": "PAGEHALL_INSECURE_IDENTITY_PROVIDERS is set, so identity providers may use plain HTTP and any host. Use this only for local tests and remove the variable from the server configuration before people sign in."
@@ -1444,6 +1448,7 @@
     "events": {
       "identityProviderCredentialExpiring": "Provider credential expires soon",
       "authEmergencySignIn": "Emergency sign-in used",
+      "accountWithoutOrganization": "New account without organization",
       "apiTokenExpiring": "API token expires soon",
       "guestExpiring": "Guest access ends soon",
       "guestInactive": "Guest is inactive",
@@ -1456,6 +1461,9 @@
     "types": {
       "identityProvider": {
         "credentialExpiring": "The credential of {providerName} expires on {expiresAt}. Add a new one before then, or sign-in through it stops working."
+      },
+      "account": {
+        "withoutOrganization": "{accountName} signed in through {providerName} for the first time and has no organization yet. Assign one in the account list."
       },
       "auth": {
         "emergencySignIn": "{accountName} used the emergency sign-in with password: {browser} on {operatingSystem}, {clientIp}."
@@ -1884,6 +1892,14 @@
     "accounts": {
       "open": "Open {name}",
       "empty": "No account matches the search.",
+      "filter": "Filter accounts",
+      "filterAll": "All accounts",
+      "withoutOrganization": "Without organization",
+      "withoutOrganizationHint": "No mapping rule and no organization domain gave this account an organization. Assign one so the person can work in it.",
+      "assignTitle": "Organization",
+      "organization": "Organization",
+      "chooseOrganization": "Choose an organization",
+      "assign": "Assign organization",
       "accountType": "Account type",
       "typesHint": "Standard accounts belong to people in an organization. Guests and portal users see only what is shared with them. Service accounts belong to integrations and sign in only with API tokens.",
       "instanceRole": "Instance role",
@@ -2017,6 +2033,7 @@
         "reauthenticationFailed": "Identity confirmation failed"
       },
       "account": {
+        "organizationAssigned": "Organization assigned",
         "createdAtSignIn": "Account created at the first sign-in",
         "created": "Account created",
         "passwordChanged": "Password changed",

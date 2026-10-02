@@ -1,5 +1,5 @@
 import { accountNameSchema, emailSchema } from "@pagehall/shared";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import type { AuditEvents, AuditLog } from "../audit/audit-log.js";
 import type { PasswordHasher, PasswordProblem } from "../auth/passwords.js";
 import { passwordProblem } from "../auth/passwords.js";
@@ -100,7 +100,10 @@ export class AccountService {
     return { ...(await accountScopeChain(this.#database, accountId)), user: accountId };
   }
 
-  async list(page: PageRequest = FIRST_PAGE): Promise<Page<Omit<Account, "passwordHash">>> {
+  async list(
+    page: PageRequest = FIRST_PAGE,
+    filter: { withoutOrganization?: boolean } = {},
+  ): Promise<Page<Omit<Account, "passwordHash">>> {
     const { passwordHash: _passwordHash, ...columns } = accountColumns;
     const sortName = sql<string>`lower(${accounts.name})`;
     const rows = await this.#database
@@ -110,6 +113,9 @@ export class AccountService {
         and(
           afterKey([sortName, accounts.id], page.after),
           matchesSearch([accounts.name, accounts.email], page.search),
+          filter.withoutOrganization
+            ? and(isNull(accounts.homeOrganizationId), eq(accounts.type, "standard"))
+            : undefined,
         ),
       )
       .orderBy(sortName, accounts.id)

@@ -22,6 +22,7 @@ export const auditEventNames = [
   "mappingRule.removed",
   "account.deactivatedByProvider",
   "account.reactivatedByProvider",
+  "account.organizationAssigned",
   "auth.signInFailed",
   "auth.lockedOut",
   "auth.signedOut",

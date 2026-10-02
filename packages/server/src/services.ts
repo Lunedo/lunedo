@@ -183,6 +183,7 @@ export function createAccountServices(options: {
     providers: identityProviders,
     mapping: groupMapping,
     settings,
+    memberships,
   });
   const breakGlass = new BreakGlassService({ database, audit, notifications, settings });
   const emergencyRecipients = new EmergencyRecipientsService({ database, settings, authorization });

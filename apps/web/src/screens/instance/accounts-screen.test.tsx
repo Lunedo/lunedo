@@ -11,6 +11,7 @@ const OLIVIA = {
   name: "Olivia Owner",
 };
 const MAX = "01929b1e-0000-7000-8000-0000000000cc";
+const ORGANIZATION = "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f";
 
 function account(id: string, name: string, email: string) {
   return {
@@ -126,6 +127,10 @@ function api(resetResult: () => { status?: number; body?: unknown }) {
       },
     }),
     [`POST /api/v1/accounts/${MAX}/second-factor/reset`]: resetResult,
+    "GET /api/v1/instance/organizations": () => ({
+      body: { items: [{ id: ORGANIZATION, name: "Platform Team", slug: "platform" }], nextCursor: null },
+    }),
+    [`POST /api/v1/instance/accounts/${MAX}/organization`]: () => ({ status: 204 }),
   });
 }
 
@@ -151,6 +156,28 @@ describe("the accounts page", () => {
     expect(await within(panel).findByText("Audit readers through Auditors", { exact: false })).toBeTruthy();
     expect(within(panel).getByText("Firefox · Linux")).toBeTruthy();
     expect(within(panel).getByText("One passkey")).toBeTruthy();
+  });
+
+  it("filters accounts without an organization and assigns one", async () => {
+    const { requests } = api(() => ({ body: { endedSessions: 0 } }));
+    const table = await renderAccounts();
+    await userEvent.click(await screen.findByRole("combobox", { name: "Filter accounts" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Without organization" }));
+    await waitFor(() =>
+      expect(requests.some((request) => request.path.includes("withoutOrganization=true"))).toBe(true),
+    );
+    await userEvent.click(await within(table).findByText("Max Member"));
+    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    await userEvent.click(within(panel).getByRole("combobox", { name: "Organization" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Platform Team" }));
+    await userEvent.click(within(panel).getByRole("button", { name: "Assign organization" }));
+    await waitFor(() =>
+      expect(
+        requests.find((request) => request.path.endsWith(`/accounts/${MAX}/organization`))?.body,
+      ).toEqual({
+        organizationId: ORGANIZATION,
+      }),
+    );
   });
 
   it("resets a second factor only with a reason and reports the result", async () => {

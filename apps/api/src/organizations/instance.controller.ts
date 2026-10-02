@@ -193,6 +193,15 @@ function settingPermission(key: string): string {
 
 const byName = (item: { name: string; id: string }) => [item.name.toLowerCase(), item.id];
 
+const accountListQuerySchema = searchQuerySchema
+  .extend({
+    withoutOrganization: z
+      .enum(["true", "false"])
+      .optional()
+      .describe("With true, only standard accounts that have no organization yet."),
+  })
+  .strict();
+
 @Controller("api/v1/instance")
 export class InstanceController {
   constructor(@Inject(API_CONTEXT) private readonly context: ApiContext) {}
@@ -329,15 +338,43 @@ export class InstanceController {
     description:
       "Lists every account of the instance, including service accounts, with instance roles, second-factor state and last sign-in. `q` searches name and e-mail address.",
     tags: [TAG],
-    query: searchQuerySchema,
+    query: accountListQuerySchema,
     response: {
       description: "Accounts of the instance.",
       schema: pageSchema(administeredAccountSchema, "Accounts, ordered by name."),
       example: { items: [exampleAdministeredAccount], nextCursor: null },
     },
   })
-  async accounts(@Query() query: z.output<typeof searchQuerySchema>) {
-    return toApiPage(await this.#services.overview.listAccounts(pageRequest(query, nameCursor)));
+  async accounts(@Query() query: z.output<typeof accountListQuerySchema>) {
+    return toApiPage(
+      await this.#services.overview.listAccounts(pageRequest(query, nameCursor), {
+        withoutOrganization: query.withoutOrganization === "true",
+      }),
+    );
+  }
+
+  @Post("accounts/:accountId/organization")
+  @Permission("instance.accounts.manage")
+  @ApiRoute({
+    summary: "Assign an organization to an account without one",
+    description:
+      "Makes the organization the home organization of the account and adds the account as a member. Only for accounts that have no organization yet.",
+    tags: [TAG],
+    status: 204,
+    params: z.object({ accountId: uuid("ID of the account.") }).strict(),
+    body: z
+      .object({ organizationId: uuid("ID of the organization the account belongs to from now on.") })
+      .strict()
+      .describe("The organization to assign."),
+    bodyExample: { organizationId: "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9e" },
+    errors: ["notFound", "accountHasOrganization"],
+  })
+  async assignOrganization(
+    @Param("accountId") accountId: string,
+    @Body() body: { organizationId: string },
+    @Req() request: FastifyRequest,
+  ) {
+    await this.#services.administration.assignOrganization(actorOf(request), accountId, body.organizationId);
   }
 
   @Get("accounts/:accountId")

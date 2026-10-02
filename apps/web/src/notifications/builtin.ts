@@ -43,6 +43,7 @@ notificationTypes.register(
   { id: "breakGlass.started", icon: ShieldAlert, link: (item) => inOrganization(item, "/audit-log") },
   { id: "signIn.newBrowser", icon: KeyRound, link: () => ({ to: "/settings/security" }) },
   { id: "auth.emergencySignIn", icon: ShieldAlert, link: () => ({ to: "/settings/instance/audit-log" }) },
+  { id: "account.withoutOrganization", icon: UserRound, link: () => ({ to: "/settings/instance/accounts" }) },
   {
     id: "identityProvider.credentialExpiring",
     icon: KeyRound,

@@ -110,6 +110,7 @@ function ShellFrame() {
         {notificationsOpen ? <NotificationPanel onClose={() => setNotificationsOpen(false)} /> : null}
         <div className="flex min-w-0 flex-1 flex-col">
           <InsecureProvidersBanner />
+          <WithoutOrganizationBanner />
           <div className="flex min-w-0 flex-1">
             <Outlet />
           </div>
@@ -118,6 +119,28 @@ function ShellFrame() {
       <CommandPaletteHost open={paletteOpen} onOpenChange={setPaletteOpen} />
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </ShellStateContext>
+  );
+}
+
+function WithoutOrganizationBanner() {
+  const { t } = useTranslation();
+  const state = useOrganizationState();
+  const account = state.session.account;
+  if (
+    !account ||
+    account.type !== "standard" ||
+    account.homeOrganizationId !== null ||
+    !state.permissionsLoaded ||
+    state.organizations.length > 0
+  ) {
+    return null;
+  }
+  return (
+    <div className="px-4 pt-3">
+      <Notice variant="info" title={t("shell.withoutOrganization.title")}>
+        {t("shell.withoutOrganization.description")}
+      </Notice>
+    </div>
   );
 }
 

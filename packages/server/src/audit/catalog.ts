@@ -211,6 +211,12 @@ export const auditCatalog = {
     fields: z.object({ providerId: z.uuid(), state: z.enum(["disabled", "deleted"]) }),
     visibility: "organization",
   }),
+  "account.organizationAssigned": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({ organizationId: z.uuid() }),
+    visibility: "organization",
+  }),
   "account.reactivatedByProvider": event({
     actor: ["system"],
     target: "account",

@@ -189,6 +189,15 @@ const emergencySignIn = defineNotificationType({
   mail: (params) => ({ template: "emergencySignIn", params }),
 });
 
+const accountWithoutOrganization = defineNotificationType({
+  type: "account.withoutOrganization",
+  targetType: "account",
+  params: notificationParamSchemas["account.withoutOrganization"],
+  setting: settingOf("account.withoutOrganization"),
+  visible: async (context) => context.can("instance.accounts.view", { type: "instance" }),
+  mail: (params) => ({ template: "accountWithoutOrganization", params }),
+});
+
 const providerCredentialExpiring = defineNotificationType({
   type: "identityProvider.credentialExpiring",
   targetType: "identityProvider",
@@ -211,5 +220,6 @@ export const builtinNotificationTypes = [
   breakGlassStarted,
   signInNewBrowser,
   emergencySignIn,
+  accountWithoutOrganization,
   providerCredentialExpiring,
 ];

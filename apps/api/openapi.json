@@ -6865,12 +6865,36 @@
                             },
                             "name": {
                               "type": "string"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "standard",
+                                "guest",
+                                "portal",
+                                "service"
+                              ],
+                              "description": "Kind of account."
+                            },
+                            "homeOrganizationId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Organization the account belongs to, or null."
                             }
                           },
                           "required": [
                             "id",
                             "email",
-                            "name"
+                            "name",
+                            "type",
+                            "homeOrganizationId"
                           ],
                           "additionalProperties": false
                         },
@@ -8373,12 +8397,36 @@
                             },
                             "name": {
                               "type": "string"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "standard",
+                                "guest",
+                                "portal",
+                                "service"
+                              ],
+                              "description": "Kind of account."
+                            },
+                            "homeOrganizationId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Organization the account belongs to, or null."
                             }
                           },
                           "required": [
                             "id",
                             "email",
-                            "name"
+                            "name",
+                            "type",
+                            "homeOrganizationId"
                           ],
                           "additionalProperties": false
                         },
@@ -8522,12 +8570,36 @@
                                 },
                                 "name": {
                                   "type": "string"
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "standard",
+                                    "guest",
+                                    "portal",
+                                    "service"
+                                  ],
+                                  "description": "Kind of account."
+                                },
+                                "homeOrganizationId": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Organization the account belongs to, or null."
                                 }
                               },
                               "required": [
                                 "id",
                                 "email",
-                                "name"
+                                "name",
+                                "type",
+                                "homeOrganizationId"
                               ],
                               "additionalProperties": false
                             },
@@ -9130,12 +9202,36 @@
                             },
                             "name": {
                               "type": "string"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "standard",
+                                "guest",
+                                "portal",
+                                "service"
+                              ],
+                              "description": "Kind of account."
+                            },
+                            "homeOrganizationId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Organization the account belongs to, or null."
                             }
                           },
                           "required": [
                             "id",
                             "email",
-                            "name"
+                            "name",
+                            "type",
+                            "homeOrganizationId"
                           ],
                           "additionalProperties": false
                         },
@@ -9566,12 +9662,36 @@
                             },
                             "name": {
                               "type": "string"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "standard",
+                                "guest",
+                                "portal",
+                                "service"
+                              ],
+                              "description": "Kind of account."
+                            },
+                            "homeOrganizationId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Organization the account belongs to, or null."
                             }
                           },
                           "required": [
                             "id",
                             "email",
-                            "name"
+                            "name",
+                            "type",
+                            "homeOrganizationId"
                           ],
                           "additionalProperties": false
                         },
@@ -11855,6 +11975,19 @@
               "type": "string",
               "maxLength": 200
             }
+          },
+          {
+            "name": "withoutOrganization",
+            "in": "query",
+            "required": false,
+            "description": "With true, only standard accounts that have no organization yet.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
           }
         ],
         "responses": {
@@ -12763,6 +12896,214 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/accounts/{accountId}/organization": {
+      "post": {
+        "operationId": "instance.assignOrganization",
+        "summary": "Assign an organization to an account without one",
+        "description": "Makes the organization the home organization of the account and adds the account as a member. Only for accounts that have no organization yet.\n\nRequires the permission `instance.accounts.manage` on the instance.",
+        "tags": [
+          "Instance"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.accounts.manage",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the account.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "organizationId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of the organization the account belongs to from now on."
+                  }
+                },
+                "required": [
+                  "organizationId"
+                ],
+                "additionalProperties": false,
+                "description": "The organization to assign."
+              },
+              "example": {
+                "organizationId": "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9e"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`accountHasOrganization`: The account belongs to an organization already.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "accountHasOrganization": {
+                    "value": {
+                      "type": "urn:pagehall:problem:accountHasOrganization",
+                      "title": "The account belongs to an organization already",
+                      "status": 409,
+                      "code": "accountHasOrganization"
                     }
                   }
                 }

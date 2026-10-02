@@ -6,11 +6,11 @@ import { InternalRoute, Permission, PublicRoute } from "../access/route-access.j
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
-import { uuid } from "../http/schemas.js";
 import { COOKIES, PROVIDER_FLOW_MAX_AGE_SECONDS, setCookie } from "../http/cookies.js";
 import { ownOrigin } from "../http/csrf.js";
 import { notFound } from "../http/problems.js";
 import { actorOf, sessionOf } from "../http/request.js";
+import { uuid } from "../http/schemas.js";
 import {
   addedCredentialSchema,
   createdProviderSchema,
@@ -52,7 +52,10 @@ const emergencyRecipientsSchema = z
 const emergencyRecipientsInputSchema = z
   .object({
     instanceAdministrators: z.boolean().describe("Whether instance owners and administrators are told."),
-    accountIds: z.array(uuid("ID of an account.")).max(50).describe("Further active accounts to notify, up to 50."),
+    accountIds: z
+      .array(uuid("ID of an account."))
+      .max(50)
+      .describe("Further active accounts to notify, up to 50."),
     addresses: z.array(z.email()).max(20).describe("E-mail addresses outside Pagehall, up to 20."),
   })
   .strict()

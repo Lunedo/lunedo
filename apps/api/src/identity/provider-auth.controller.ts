@@ -74,7 +74,15 @@ export class ProviderAuthController {
 
   async #describe(accountId: string) {
     const found = await this.#services.accounts.get(accountId);
-    return found ? { id: found.id, email: found.email, name: found.name } : null;
+    return found
+      ? {
+          id: found.id,
+          email: found.email,
+          name: found.name,
+          type: found.type,
+          homeOrganizationId: found.homeOrganizationId,
+        }
+      : null;
   }
 
   @Get("auth/sign-in-options")

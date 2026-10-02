@@ -40,6 +40,12 @@ export interface MailTemplates {
     clientIp: string | null;
   };
   providerCredentialExpiring: { instanceName: string; providerName: string; date: string };
+  accountWithoutOrganization: {
+    instanceName: string;
+    accountName: string;
+    email: string | null;
+    providerName: string;
+  };
   signInNewBrowser: {
     instanceName: string;
     browser: string | null;
@@ -196,6 +202,13 @@ const catalogs: Record<Language, Catalog> = {
         "This sign-in is meant for emergencies, for example when the identity provider fails. Check the audit log if you did not expect it.",
       ],
     }),
+    accountWithoutOrganization: ({ instanceName, accountName, email, providerName }) => ({
+      subject: `${accountName} has no organization on ${instanceName}`,
+      paragraphs: [
+        `${accountName}${email ? ` (${email})` : ""} signed in to ${instanceName} through ${providerName} for the first time. No mapping rule and no organization domain gave the account an organization.`,
+        "Assign an organization in the account list of the instance settings, filtered by accounts without an organization.",
+      ],
+    }),
     providerCredentialExpiring: ({ instanceName, providerName, date }) => ({
       subject: `Credential of ${providerName} on ${instanceName} expires soon`,
       paragraphs: [
@@ -329,6 +342,13 @@ const catalogs: Record<Language, Catalog> = {
       paragraphs: [
         `${accountName}, Eigentümer von ${instanceName}, hat sich mit Passwort angemeldet, obwohl die Anmeldung mit Passwort ausgeschaltet ist: ${describeBrowser(browser, operatingSystem, "ein unbekannter Browser", "unter")}${clientIp ? `, Adresse ${clientIp}` : ""}.`,
         "Diese Anmeldung ist für Notfälle gedacht, zum Beispiel wenn der Identitätsanbieter ausfällt. Prüfen Sie das Audit-Log, wenn Sie sie nicht erwartet haben.",
+      ],
+    }),
+    accountWithoutOrganization: ({ instanceName, accountName, email, providerName }) => ({
+      subject: `${accountName} hat keine Organisation auf ${instanceName}`,
+      paragraphs: [
+        `${accountName}${email ? ` (${email})` : ""} hat sich zum ersten Mal über ${providerName} bei ${instanceName} angemeldet. Weder eine Zuordnungsregel noch eine Domain einer Organisation hat dem Konto eine Organisation gegeben.`,
+        "Weisen Sie in der Kontenliste der Instanz-Einstellungen eine Organisation zu, gefiltert nach Konten ohne Organisation.",
       ],
     }),
     providerCredentialExpiring: ({ instanceName, providerName, date }) => ({

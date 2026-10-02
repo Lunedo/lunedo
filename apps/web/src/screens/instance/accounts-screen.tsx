@@ -8,6 +8,7 @@ import {
   IconButton,
   Notice,
   Section,
+  Select,
   Table,
   TableToolbar,
   Textarea,
@@ -19,7 +20,7 @@ import { Info, UserRound } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
-import { instanceKeys } from "../../api/instance-queries.js";
+import { instanceKeys, instanceOrganizationsQuery } from "../../api/instance-queries.js";
 import { request } from "../../api/request.js";
 import { AccountIdentities } from "../../components/linked-identities.js";
 import { useServerTable } from "../../components/table-state.js";
@@ -41,10 +42,19 @@ const STATE_BADGES = {
 type AccountPage = Awaited<ReturnType<typeof fetchAccounts>>;
 type Account = AccountPage["items"][number];
 
-function fetchAccounts(search: string, cursor: string | null) {
+type AccountFilter = "all" | "withoutOrganization";
+
+function fetchAccounts(search: string, cursor: string | null, filter: AccountFilter = "all") {
   return request(() =>
     api.GET("/api/v1/instance/accounts", {
-      params: { query: { limit: 25, ...(search ? { q: search } : {}), ...(cursor ? { cursor } : {}) } },
+      params: {
+        query: {
+          limit: 25,
+          ...(search ? { q: search } : {}),
+          ...(cursor ? { cursor } : {}),
+          ...(filter === "withoutOrganization" ? { withoutOrganization: "true" as const } : {}),
+        },
+      },
     }),
   );
 }
@@ -56,7 +66,10 @@ export function instanceRoleName(t: TFunction, role: { builtInRole: string | nul
 export function InstanceAccountsScreen() {
   const { t } = useTranslation();
   const format = useFormat();
-  const table = useServerTable([...instanceKeys.accounts], fetchAccounts);
+  const [filter, setFilter] = useState<AccountFilter>("all");
+  const table = useServerTable([...instanceKeys.accounts, filter], (search, cursor) =>
+    fetchAccounts(search, cursor, filter),
+  );
   const [open, setOpen] = useState<Account | null>(null);
 
   return (
@@ -68,6 +81,21 @@ export function InstanceAccountsScreen() {
     >
       <TableToolbar
         search={{ ...table.search, label: t("members.search"), placeholder: t("members.search") }}
+        filters={
+          <div className="w-field max-w-full">
+            <Select
+              aria-label={t("instance.accounts.filter")}
+              value={filter}
+              onValueChange={(value) => setFilter(value as AccountFilter)}
+              options={[
+                { value: "all", label: t("instance.accounts.filterAll") },
+                { value: "withoutOrganization", label: t("instance.accounts.withoutOrganization") },
+              ]}
+            />
+          </div>
+        }
+        filtersActive={filter !== "all"}
+        onResetFilters={() => setFilter("all")}
       />
       {table.query.isError ? (
         <LoadError
@@ -104,7 +132,15 @@ export function InstanceAccountsScreen() {
                   <IconButton size="sm" icon={Info} label={t("instance.accounts.typesHint")} />
                 </span>
               ),
-              cell: (account) => t(`instance.accounts.types.${account.type}`),
+              cell: (account) =>
+                account.type === "standard" && account.homeOrganizationId === null ? (
+                  <span className="flex flex-wrap items-center gap-2">
+                    {t(`instance.accounts.types.${account.type}`)}
+                    <Badge variant="warning">{t("instance.accounts.withoutOrganization")}</Badge>
+                  </span>
+                ) : (
+                  t(`instance.accounts.types.${account.type}`)
+                ),
             },
             {
               key: "role",
@@ -247,6 +283,9 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
             </div>
           </div>
         ) : null}
+        {manage && account.type === "standard" && current.homeOrganizationId === null ? (
+          <AssignOrganization accountId={account.id} onAssigned={refresh} />
+        ) : null}
         {detail.isError ? (
           <LoadError what={t("failures.loadAccount")} error={detail.error} onRetry={() => detail.refetch()} />
         ) : null}
@@ -385,6 +424,70 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
         />
       ) : null}
     </Drawer>
+  );
+}
+
+function AssignOrganization({
+  accountId,
+  onAssigned,
+}: {
+  accountId: string;
+  onAssigned: () => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const organizations = useQuery({ ...instanceOrganizationsQuery, throwOnError: false });
+  const [organizationId, setOrganizationId] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const assign = async () => {
+    if (!organizationId) {
+      setError(t("validation.required"));
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await request(() =>
+        api.POST("/api/v1/instance/accounts/{accountId}/organization", {
+          params: { path: { accountId } },
+          body: { organizationId },
+        }),
+      );
+      await onAssigned();
+    } catch (failure) {
+      setError(problemMessage(t, failure));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <PanelSection title={t("instance.accounts.assignTitle")}>
+      <Notice variant="warning">{t("instance.accounts.withoutOrganizationHint")}</Notice>
+      {organizations.isError ? (
+        <LoadError
+          what={t("failures.loadOrganizations")}
+          error={organizations.error}
+          onRetry={() => organizations.refetch()}
+        />
+      ) : null}
+      <Field label={t("instance.accounts.organization")} {...(error ? { error } : {})}>
+        <Select
+          aria-label={t("instance.accounts.organization")}
+          value={organizationId}
+          placeholder={t("instance.accounts.chooseOrganization")}
+          onValueChange={setOrganizationId}
+          options={(organizations.data ?? []).map((organization) => ({
+            value: organization.id,
+            label: organization.name,
+          }))}
+        />
+      </Field>
+      <div>
+        <Button variant="primary" size="sm" loading={busy} onClick={() => void assign()}>
+          {t("instance.accounts.assign")}
+        </Button>
+      </div>
+    </PanelSection>
   );
 }
 

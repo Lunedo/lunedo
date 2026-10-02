@@ -15,9 +15,12 @@ import type { IdentityProviderService } from "../identity/providers.js";
 import { identities, identityProviders, providerDeactivations } from "../identity/schema.js";
 import { accountsWithoutOtherSignIn } from "../identity/sign-in-ways.js";
 import type { MailService } from "../mail/mail-service.js";
+import { memberships } from "../organizations/access-schema.js";
+import type { MembershipService } from "../organizations/memberships.js";
 import { OrganizationError } from "../organizations/organizations.js";
+import { organizations } from "../organizations/schema.js";
 import type { SettingsService } from "../settings/service.js";
-import { accountPrincipal, type Principal } from "./principal.js";
+import { accountPrincipal, type Principal, SYSTEM } from "./principal.js";
 import { accounts, instance } from "./schema.js";
 
 export const SECOND_FACTOR_RESET_ACTION = "account.secondFactor.reset";
@@ -51,6 +54,7 @@ export class AccountAdministrationService {
   readonly #providers: IdentityProviderService;
   readonly #mapping: GroupMappingService;
   readonly #settings: SettingsService;
+  readonly #memberships: MembershipService;
 
   constructor(options: {
     database: Database;
@@ -60,6 +64,7 @@ export class AccountAdministrationService {
     providers: IdentityProviderService;
     mapping: GroupMappingService;
     settings: SettingsService;
+    memberships: MembershipService;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
@@ -68,6 +73,52 @@ export class AccountAdministrationService {
     this.#providers = options.providers;
     this.#mapping = options.mapping;
     this.#settings = options.settings;
+    this.#memberships = options.memberships;
+  }
+
+  async assignOrganization(actor: Principal, accountId: string, organizationId: string): Promise<void> {
+    await this.#database.transaction(async (tx) => {
+      await this.#authorization.require(
+        actor,
+        "instance.accounts.manage",
+        { type: "instance" },
+        { executor: tx },
+      );
+      const target = await this.#lockActive(tx, accountId);
+      if (target.home !== null) {
+        throw new OrganizationError(
+          "accountHasOrganization",
+          "The account belongs to an organization already",
+        );
+      }
+      const [organization] = await tx
+        .select({ id: organizations.id })
+        .from(organizations)
+        .where(eq(organizations.id, organizationId));
+      if (!organization) throw new OrganizationError("notFound", "The organization does not exist");
+      await tx
+        .update(accounts)
+        .set({ homeOrganizationId: organization.id })
+        .where(eq(accounts.id, target.id));
+      const [membership] = await tx
+        .select({ kind: memberships.kind })
+        .from(memberships)
+        .where(and(eq(memberships.organizationId, organization.id), eq(memberships.accountId, target.id)));
+      if (!membership) {
+        await this.#memberships.add(tx, SYSTEM, {
+          organizationId: organization.id,
+          accountId: target.id,
+          kind: "member",
+        });
+      }
+      await this.#audit.record(tx, {
+        name: "account.organizationAssigned",
+        actor,
+        targetId: target.id,
+        fields: { organizationId: organization.id },
+        scope: { type: "organization", id: organization.id },
+      });
+    });
   }
 
   async identities(accountId: string): Promise<IdentitySummary[]> {

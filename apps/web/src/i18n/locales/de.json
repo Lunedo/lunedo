@@ -518,6 +518,10 @@
   },
   "shell": {
     "documentTitle": "{title} · Pagehall",
+    "withoutOrganization": {
+      "title": "Dir ist noch keine Organisation zugewiesen",
+      "description": "Dein Konto wurde angelegt, aber es gehört noch zu keiner Organisation. Die Administration dieser Instanz wurde informiert und weist dir eine zu. Deine Einstellungen und die Sicherheit kannst du schon jetzt ändern."
+    },
     "insecureProviders": {
       "title": "Identity Provider werden nicht streng geprüft",
       "description": "PAGEHALL_INSECURE_IDENTITY_PROVIDERS ist gesetzt, deshalb dürfen Identity Provider unverschlüsseltes HTTP und beliebige Hosts verwenden. Nutze das nur für lokale Tests und entferne die Variable aus der Serverkonfiguration, bevor sich Personen anmelden."
@@ -1441,6 +1445,7 @@
     "events": {
       "identityProviderCredentialExpiring": "Zugang eines Providers läuft bald ab",
       "authEmergencySignIn": "Notfall-Anmeldung verwendet",
+      "accountWithoutOrganization": "Neues Konto ohne Organisation",
       "apiTokenExpiring": "API-Token läuft bald ab",
       "guestExpiring": "Gastzugang endet bald",
       "guestInactive": "Gast ist inaktiv",
@@ -1453,6 +1458,9 @@
     "types": {
       "identityProvider": {
         "credentialExpiring": "Der Zugang von {providerName} läuft am {expiresAt} ab. Füge vorher einen neuen hinzu, sonst funktioniert die Anmeldung darüber nicht mehr."
+      },
+      "account": {
+        "withoutOrganization": "{accountName} hat sich zum ersten Mal über {providerName} angemeldet und hat noch keine Organisation. Weise in der Kontenliste eine zu."
       },
       "auth": {
         "emergencySignIn": "{accountName} hat die Notfall-Anmeldung mit Passwort verwendet: {browser} auf {operatingSystem}, {clientIp}."
@@ -1881,6 +1889,14 @@
     "accounts": {
       "open": "{name} öffnen",
       "empty": "Kein Konto passt zur Suche.",
+      "filter": "Konten filtern",
+      "filterAll": "Alle Konten",
+      "withoutOrganization": "Ohne Organisation",
+      "withoutOrganizationHint": "Weder eine Zuordnungsregel noch eine Domain einer Organisation hat diesem Konto eine Organisation gegeben. Weise eine zu, damit die Person darin arbeiten kann.",
+      "assignTitle": "Organisation",
+      "organization": "Organisation",
+      "chooseOrganization": "Organisation auswählen",
+      "assign": "Organisation zuweisen",
       "accountType": "Kontotyp",
       "typesHint": "Standardkonten gehören Personen einer Organisation. Gäste und Portalnutzer sehen nur, was mit ihnen geteilt ist. Service-Konten gehören zu Integrationen und melden sich nur mit API-Tokens an.",
       "instanceRole": "Instanzrolle",
@@ -2014,6 +2030,7 @@
         "reauthenticationFailed": "Bestätigung der Identität fehlgeschlagen"
       },
       "account": {
+        "organizationAssigned": "Organisation zugewiesen",
         "createdAtSignIn": "Konto bei der ersten Anmeldung angelegt",
         "created": "Konto angelegt",
         "passwordChanged": "Passwort geändert",

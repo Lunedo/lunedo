@@ -97,8 +97,11 @@ export class AccountOverviewService {
     this.#accounts = options.accounts;
   }
 
-  async listAccounts(page: PageRequest): Promise<Page<AdministeredAccount>> {
-    const result = await this.#accounts.list(page);
+  async listAccounts(
+    page: PageRequest,
+    filter: { withoutOrganization?: boolean } = {},
+  ): Promise<Page<AdministeredAccount>> {
+    const result = await this.#accounts.list(page, filter);
     const details = await this.#details(result.items.map((item) => item.id));
     return {
       next: result.next,

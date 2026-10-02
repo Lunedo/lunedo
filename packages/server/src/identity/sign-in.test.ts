@@ -2,13 +2,14 @@ import { randomUUID } from "node:crypto";
 import { Secret, TOTP } from "otpauth";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
-import { SYSTEM } from "../accounts/principal.js";
+import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import {
   ChallengeExpiredError,
   InvalidCredentialsError,
   InvalidSecondFactorError,
   RateLimitedError,
 } from "../auth/errors.js";
+import { ForbiddenError } from "../authorization/service.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { type FakeOidcProvider, startFakeOidcProvider, type TokenOverrides } from "../testing/fake-oidc.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
@@ -253,6 +254,58 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     });
     return secret;
   }
+
+  it("creates accounts without an organization, tells the administrators and lets them assign one", async () => {
+    const administrator = await account(null);
+    await test.services.roles.assign(SYSTEM, {
+      scope: "instance",
+      organizationId: null,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: administrator.id },
+    });
+    const org = await organization();
+    const domain = `${randomUUID().slice(0, 8)}.example.net`;
+    const id = await provider({ accountCreation: true, domains: [domain] });
+    const subject = randomUUID();
+    const result = await signIn(id, { sub: subject, email: `lost@${domain}`, name: "Lost Person" });
+    if (result.kind !== "signedIn") throw new Error(`Signed in expected, got ${result.kind}`);
+    const accountId = result.signedIn.session.accountId;
+    expect(await test.services.accounts.get(accountId)).toMatchObject({ homeOrganizationId: null });
+    const notified = await test.pool.query<{ recipient_id: string; params: Record<string, unknown> }>(
+      "select recipient_id, params from notifications where type = 'account.withoutOrganization' and target_id = $1",
+      [accountId],
+    );
+    expect(notified.rows).toEqual([
+      {
+        recipient_id: administrator.id,
+        params: { accountName: "Lost Person", email: `lost@${domain}`, providerName: "Test provider" },
+      },
+    ]);
+    const without = await test.services.overview.listAccounts({ limit: 200 }, { withoutOrganization: true });
+    expect(without.items.map((item) => item.id)).toContain(accountId);
+    expect(without.items.every((item) => item.homeOrganizationId === null && item.type === "standard")).toBe(
+      true,
+    );
+
+    await expect(
+      test.services.administration.assignOrganization(accountPrincipal(accountId), accountId, org),
+    ).rejects.toThrow(ForbiddenError);
+    await test.services.administration.assignOrganization(accountPrincipal(administrator.id), accountId, org);
+    expect(await test.services.accounts.get(accountId)).toMatchObject({ homeOrganizationId: org });
+    const membership = await test.pool.query(
+      "select kind from memberships where organization_id = $1 and account_id = $2",
+      [org, accountId],
+    );
+    expect(membership.rows).toEqual([{ kind: "member" }]);
+    await expect(
+      test.services.administration.assignOrganization(accountPrincipal(administrator.id), accountId, org),
+    ).rejects.toMatchObject({ code: "accountHasOrganization" });
+    const audited = await test.pool.query(
+      "select fields from audit_events where name = 'account.organizationAssigned' and target_id = $1",
+      [accountId],
+    );
+    expect(audited.rows).toEqual([{ fields: { organizationId: org } }]);
+  });
 
   it("asks for a Pagehall second factor when the provider shows no proof of one", async () => {
     const id = await provider({ accountCreation: true, secondFactor: { mode: "providerProof" } });

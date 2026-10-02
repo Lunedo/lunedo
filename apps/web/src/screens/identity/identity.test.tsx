@@ -385,6 +385,22 @@ describe("the sign-in settings of the instance", () => {
     ]);
   });
 
+  it("tells a person without an organization that the administrators were informed", async () => {
+    adminApi({
+      "GET /api/v1/instance/identity-providers": () => ({ body: [provider()] }),
+      "GET /api/v1/auth/session": () => ({
+        body: {
+          sessionKind: "full",
+          account: { ...OLIVIA, type: "standard", homeOrganizationId: null },
+          methods: ["identityProvider"],
+          recentlyAuthenticated: true,
+        },
+      }),
+    });
+    await renderPath("/settings/instance/sign-in-providers");
+    expect(await screen.findByText("No organization is assigned to you yet")).toBeTruthy();
+  });
+
   it("warns sign-in administrators when identity providers are not checked strictly", async () => {
     adminApi({
       "GET /api/v1/instance/identity-providers": () => ({ body: [provider()] }),
