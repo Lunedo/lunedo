@@ -333,13 +333,14 @@ export class ProviderSignInService {
       return this.#reauthenticate(flow, provider.id, profile, result.authTime);
     }
 
-    const groups = await this.#groups(provider, credentials, profile);
+    const { groups, failed: groupsFailed } = await this.#groups(provider, credentials, profile);
     for (let attempt = 0; ; attempt++) {
       try {
         return await this.#signInWith({
           provider,
           profile,
           groups,
+          groupsFailed,
           emailVerified,
           secondFactor: needsPagehallFactor(provider.config.secondFactor, result.methods),
           providerSessionId: result.providerSessionId,
@@ -368,14 +369,14 @@ export class ProviderSignInService {
     provider: ProviderDefinition,
     credentials: Parameters<IdentityProviderAdapter["completeSignIn"]>[1],
     profile: ProviderProfile,
-  ): Promise<ProviderProfile["groups"]> {
-    if (profile.groups !== null) return profile.groups;
+  ): Promise<{ groups: ProviderProfile["groups"]; failed: boolean }> {
+    if (profile.groups !== null) return { groups: profile.groups, failed: false };
     const adapter = this.#adapter(provider.type);
-    if (!adapter.readGroups) return null;
+    if (!adapter.readGroups) return { groups: null, failed: false };
     try {
-      return await adapter.readGroups(provider, credentials, profile.subject);
+      return { groups: await adapter.readGroups(provider, credentials, profile.subject), failed: false };
     } catch {
-      return null;
+      return { groups: null, failed: true };
     }
   }
 
@@ -393,6 +394,7 @@ export class ProviderSignInService {
     provider: ProviderDefinition;
     profile: ProviderProfile;
     groups: ProviderProfile["groups"];
+    groupsFailed: boolean;
     emailVerified: boolean;
     secondFactor: boolean;
     providerSessionId: string | null;
@@ -410,7 +412,7 @@ export class ProviderSignInService {
       if (!canSignIn(account)) throw new Refused("accountInactive");
       return this.#withSession(
         account,
-        async (tx) => {
+        async (tx, mailIds) => {
           await tx
             .update(identities)
             .set({
@@ -421,12 +423,17 @@ export class ProviderSignInService {
               lastSignInAt: this.#clock(),
             })
             .where(eq(identities.id, identity.id));
-          await this.#mapping.applyAtSignIn(tx, {
-            providerId: provider.id,
-            identityId: identity.id,
-            accountId: account.id,
-            groups: input.groups,
-          });
+          await this.#mapping.applyAtSignIn(
+            tx,
+            {
+              providerId: provider.id,
+              identityId: identity.id,
+              accountId: account.id,
+              groups: input.groups,
+              groupsFailed: input.groupsFailed,
+            },
+            mailIds,
+          );
           return identity.id;
         },
         { ...input, returnTo: input.returnTo },

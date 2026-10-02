@@ -40,6 +40,7 @@ export interface MailTemplates {
     clientIp: string | null;
   };
   providerCredentialExpiring: { instanceName: string; providerName: string; date: string };
+  accountRolesWithheld: { instanceName: string; accountName: string; providerName: string; roles: number };
   accountWithoutOrganization: {
     instanceName: string;
     accountName: string;
@@ -202,6 +203,13 @@ const catalogs: Record<Language, Catalog> = {
         "This sign-in is meant for emergencies, for example when the identity provider fails. Check the audit log if you did not expect it.",
       ],
     }),
+    accountRolesWithheld: ({ instanceName, accountName, providerName, roles }) => ({
+      subject: `Administrative roles of ${accountName} on ${instanceName} are paused`,
+      paragraphs: [
+        `Pagehall could not read the groups of ${accountName} from ${providerName} for longer than twice the sync interval. ${roles} administrative role${roles === 1 ? "" : "s"} granted by mapping rules ${roles === 1 ? "is" : "are"} paused until the groups can be read again. Memberships stay as last known.`,
+        "Check the connection to the provider and its sync log.",
+      ],
+    }),
     accountWithoutOrganization: ({ instanceName, accountName, email, providerName }) => ({
       subject: `${accountName} has no organization on ${instanceName}`,
       paragraphs: [
@@ -342,6 +350,13 @@ const catalogs: Record<Language, Catalog> = {
       paragraphs: [
         `${accountName}, Eigentümer von ${instanceName}, hat sich mit Passwort angemeldet, obwohl die Anmeldung mit Passwort ausgeschaltet ist: ${describeBrowser(browser, operatingSystem, "ein unbekannter Browser", "unter")}${clientIp ? `, Adresse ${clientIp}` : ""}.`,
         "Diese Anmeldung ist für Notfälle gedacht, zum Beispiel wenn der Identitätsanbieter ausfällt. Prüfen Sie das Audit-Log, wenn Sie sie nicht erwartet haben.",
+      ],
+    }),
+    accountRolesWithheld: ({ instanceName, accountName, providerName, roles }) => ({
+      subject: `Administrative Rollen von ${accountName} auf ${instanceName} sind ausgesetzt`,
+      paragraphs: [
+        `Pagehall konnte die Gruppen von ${accountName} länger als das doppelte Synchronisierungsintervall nicht aus ${providerName} lesen. ${roles === 1 ? "Eine administrative Rolle" : `${roles} administrative Rollen`} aus Zuordnungsregeln ${roles === 1 ? "ist" : "sind"} ausgesetzt, bis die Gruppen wieder gelesen werden können. Mitgliedschaften bleiben wie zuletzt bekannt.`,
+        "Prüfen Sie die Verbindung zum Anbieter und sein Sync-Protokoll.",
       ],
     }),
     accountWithoutOrganization: ({ instanceName, accountName, email, providerName }) => ({

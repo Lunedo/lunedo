@@ -36,6 +36,19 @@ const preferenceUpdateSchema = z.union([
 const permissionsQuery = z.object({ organizationId: idSchema.optional() }).strict();
 const levelSchema = z.enum(["view", "manage"]);
 
+const withheldRoleSchema = z
+  .object({
+    assignmentId: idSchema.describe("ID of the role assignment."),
+    scope: z.enum(["instance", "organization"]).describe("Where the role applies."),
+    organizationId: idSchema.nullable().describe("The organization of the role, or null."),
+    organizationName: z.string().nullable().describe("Name of the organization, or null."),
+    builtInRole: z.string().nullable().describe("Key of the built-in role, or null for a custom role."),
+    roleName: z.string().nullable().describe("Name of the custom role, or null."),
+    providerName: z.string().describe("The identity provider whose groups could not be read."),
+    groupsReadAt: z.iso.datetime().nullable().describe("When the groups were last read, or null."),
+  })
+  .describe("A role that is paused because the groups of the account could not be read.");
+
 const permissionsSchema = z.object({
   instance: z.array(z.string()),
   organization: z.array(z.string()),
@@ -94,6 +107,19 @@ export class AccountController {
     const { settings, settingsRegistry } = this.#settingsServices();
     const definition = definitionFor(settingsRegistry, key, "user");
     await updateSetting(settings, definition, "user", await this.#chain(request), body);
+  }
+
+  @Get("withheld-roles")
+  @SessionRoute({ secondFactorSetup: true })
+  @ApiRoute({
+    summary: "List own paused roles",
+    description:
+      "Administrative roles granted by mapping rules are paused while the groups of the account could not be read from its identity provider for longer than twice the provider's sync interval. They return at the next successful read.",
+    tags: ["Account"],
+    response: { description: "The paused roles.", schema: z.array(withheldRoleSchema) },
+  })
+  async withheldRoles(@Req() request: FastifyRequest) {
+    return this.#services.administration.withheldRoles(sessionOf(request).accountId);
   }
 
   @Get("permissions")

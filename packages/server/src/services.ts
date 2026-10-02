@@ -165,7 +165,7 @@ export function createAccountServices(options: {
     authorization,
     registry: new NotificationRegistry().register(...builtinNotificationTypes),
   });
-  const groupMapping = new GroupMappingService({ roles, memberships, audit });
+  const groupMapping = new GroupMappingService({ roles, memberships, audit, notifications });
   const identityProviders = new IdentityProviderService({
     database,
     audit,

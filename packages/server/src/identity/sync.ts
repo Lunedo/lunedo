@@ -282,6 +282,10 @@ export class ProviderSyncService {
             ruleId: null,
             detail: message(error),
           });
+          const mailIds = await this.#database.transaction((tx) =>
+            this.#mapping.groupReadFailed(tx, identity.id, identity.accountId),
+          );
+          await this.#mapping.dispatch(mailIds);
         }
       }
       if (!cancelled) await this.#refreshMappedGroups(provider, adapter, loaded.credentials, report);

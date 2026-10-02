@@ -385,6 +385,29 @@ describe("the sign-in settings of the instance", () => {
     ]);
   });
 
+  it("explains paused administrative roles to the person", async () => {
+    adminApi({
+      "GET /api/v1/instance/identity-providers": () => ({ body: [provider()] }),
+      "GET /api/v1/account/withheld-roles": () => ({
+        body: [
+          {
+            assignmentId: "01929b1e-0000-7000-8000-0000000000d1",
+            scope: "organization",
+            organizationId: "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f",
+            organizationName: "Platform Team",
+            builtInRole: "administrator",
+            roleName: null,
+            providerName: "Microsoft",
+            groupsReadAt: "2026-10-01T08:00:00.000Z",
+          },
+        ],
+      }),
+    });
+    await renderPath("/settings/instance/sign-in-providers");
+    expect(await screen.findByText("One of your administrative roles is paused")).toBeTruthy();
+    expect(screen.getByText(/could not read your groups from Microsoft/)).toBeTruthy();
+  });
+
   it("tells a person without an organization that the administrators were informed", async () => {
     adminApi({
       "GET /api/v1/instance/identity-providers": () => ({ body: [provider()] }),

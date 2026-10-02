@@ -111,6 +111,7 @@ function ShellFrame() {
         <div className="flex min-w-0 flex-1 flex-col">
           <InsecureProvidersBanner />
           <WithoutOrganizationBanner />
+          <WithheldRolesBanner />
           <div className="flex min-w-0 flex-1">
             <Outlet />
           </div>
@@ -139,6 +140,25 @@ function WithoutOrganizationBanner() {
     <div className="px-4 pt-3">
       <Notice variant="info" title={t("shell.withoutOrganization.title")}>
         {t("shell.withoutOrganization.description")}
+      </Notice>
+    </div>
+  );
+}
+
+function WithheldRolesBanner() {
+  const { t } = useTranslation();
+  const withheld = useQuery({
+    queryKey: ["account", "withheldRoles"],
+    queryFn: () => request(() => api.GET("/api/v1/account/withheld-roles")),
+    throwOnError: false,
+    staleTime: 60_000,
+  });
+  const first = withheld.data?.[0];
+  if (!first) return null;
+  return (
+    <div className="px-4 pt-3">
+      <Notice variant="warning" title={t("shell.withheldRoles.title", { count: withheld.data?.length ?? 0 })}>
+        {t("shell.withheldRoles.description", { provider: first.providerName })}
       </Notice>
     </div>
   );

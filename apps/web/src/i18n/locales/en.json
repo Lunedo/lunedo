@@ -518,6 +518,10 @@
   },
   "shell": {
     "documentTitle": "{title} · Pagehall",
+    "withheldRoles": {
+      "title": "{count, plural, one {One of your administrative roles is paused} other {# of your administrative roles are paused}}",
+      "description": "Pagehall could not read your groups from {provider} for a while, so administrative roles that come from those groups are paused for safety. Your memberships stay. The roles return as soon as your groups can be read again, for example at your next sign-in. Your administrators were told."
+    },
     "withoutOrganization": {
       "title": "No organization is assigned to you yet",
       "description": "Your account was created, but no organization belongs to it yet. The administrators of this instance were told and will assign one. You can already change your preferences and security settings."
@@ -1449,6 +1453,7 @@
       "identityProviderCredentialExpiring": "Provider credential expires soon",
       "authEmergencySignIn": "Emergency sign-in used",
       "accountWithoutOrganization": "New account without organization",
+      "accountRolesWithheld": "Administrative roles paused",
       "apiTokenExpiring": "API token expires soon",
       "guestExpiring": "Guest access ends soon",
       "guestInactive": "Guest is inactive",
@@ -1463,7 +1468,8 @@
         "credentialExpiring": "The credential of {providerName} expires on {expiresAt}. Add a new one before then, or sign-in through it stops working."
       },
       "account": {
-        "withoutOrganization": "{accountName} signed in through {providerName} for the first time and has no organization yet. Assign one in the account list."
+        "withoutOrganization": "{accountName} signed in through {providerName} for the first time and has no organization yet. Assign one in the account list.",
+        "rolesWithheld": "The groups of {accountName} could not be read from {providerName} for too long, so {roles, plural, one {# administrative role is} other {# administrative roles are}} paused. Check the connection to the provider."
       },
       "auth": {
         "emergencySignIn": "{accountName} used the emergency sign-in with password: {browser} on {operatingSystem}, {clientIp}."

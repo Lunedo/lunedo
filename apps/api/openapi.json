@@ -4533,6 +4533,154 @@
         }
       }
     },
+    "/api/v1/account/withheld-roles": {
+      "get": {
+        "operationId": "account.withheldRoles",
+        "summary": "List own paused roles",
+        "description": "Administrative roles granted by mapping rules are paused while the groups of the account could not be read from its identity provider for longer than twice the provider's sync interval. They return at the next successful read.\n\nNeeds a signed-in session.",
+        "tags": [
+          "Account"
+        ],
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The paused roles.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "assignmentId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the role assignment."
+                      },
+                      "scope": {
+                        "type": "string",
+                        "enum": [
+                          "instance",
+                          "organization"
+                        ],
+                        "description": "Where the role applies."
+                      },
+                      "organizationId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The organization of the role, or null."
+                      },
+                      "organizationName": {
+                        "description": "Name of the organization, or null.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "builtInRole": {
+                        "description": "Key of the built-in role, or null for a custom role.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "roleName": {
+                        "description": "Name of the custom role, or null.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "providerName": {
+                        "type": "string",
+                        "description": "The identity provider whose groups could not be read."
+                      },
+                      "groupsReadAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "When the groups were last read, or null."
+                      }
+                    },
+                    "required": [
+                      "assignmentId",
+                      "scope",
+                      "organizationId",
+                      "organizationName",
+                      "builtInRole",
+                      "roleName",
+                      "providerName",
+                      "groupsReadAt"
+                    ],
+                    "additionalProperties": false,
+                    "description": "A role that is paused because the groups of the account could not be read."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/accounts/{accountId}/deactivate": {
       "post": {
         "operationId": "accounts.deactivate",

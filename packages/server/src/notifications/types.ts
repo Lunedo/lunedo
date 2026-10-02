@@ -189,6 +189,15 @@ const emergencySignIn = defineNotificationType({
   mail: (params) => ({ template: "emergencySignIn", params }),
 });
 
+const accountRolesWithheld = defineNotificationType({
+  type: "account.rolesWithheld",
+  targetType: "account",
+  params: notificationParamSchemas["account.rolesWithheld"],
+  setting: settingOf("account.rolesWithheld"),
+  visible: async (context) => context.can("instance.accounts.view", { type: "instance" }),
+  mail: (params) => ({ template: "accountRolesWithheld", params }),
+});
+
 const accountWithoutOrganization = defineNotificationType({
   type: "account.withoutOrganization",
   targetType: "account",
@@ -221,5 +230,6 @@ export const builtinNotificationTypes = [
   signInNewBrowser,
   emergencySignIn,
   accountWithoutOrganization,
+  accountRolesWithheld,
   providerCredentialExpiring,
 ];

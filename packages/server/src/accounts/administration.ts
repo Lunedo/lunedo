@@ -14,6 +14,7 @@ import { emptyReport, type GroupMappingService } from "../identity/groups.js";
 import type { IdentityProviderService } from "../identity/providers.js";
 import { identities, identityProviders, providerDeactivations } from "../identity/schema.js";
 import { accountsWithoutOtherSignIn } from "../identity/sign-in-ways.js";
+import { type WithheldRole, withheldRoles } from "../identity/withheld.js";
 import type { MailService } from "../mail/mail-service.js";
 import { memberships } from "../organizations/access-schema.js";
 import type { MembershipService } from "../organizations/memberships.js";
@@ -74,6 +75,10 @@ export class AccountAdministrationService {
     this.#mapping = options.mapping;
     this.#settings = options.settings;
     this.#memberships = options.memberships;
+  }
+
+  async withheldRoles(accountId: string): Promise<WithheldRole[]> {
+    return withheldRoles(this.#database, accountId);
   }
 
   async assignOrganization(actor: Principal, accountId: string, organizationId: string): Promise<void> {

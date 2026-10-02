@@ -110,6 +110,8 @@ Creating, changing, reordering and removing a rule is a grant: the authorization
 
 Synchronized Pagehall groups are read-only: their members, managers, name and description come from the provider, and the group shows which provider manages it. When the provider renames a group, the synchronized group follows at the next sign-in or synchronization; if the name is taken in the organization, the provider name is added in parentheses, for example "engineering (Keycloak)". Renames appear in the sync log with the old and the new name. Their permissions in Pagehall can still be changed.
 
+When the groups of a person cannot be read at sign-in or during a synchronization, memberships stay as last known. If the last successful read is older than twice the provider's sync interval, instance roles and the organization roles owner and administrator that come from mapping rules are paused: the authorization service does not count them. The person sees which roles are paused and why (`GET /api/v1/account/withheld-roles`), instance administrators get the notification `account.rolesWithheld` once, and the roles return at the next successful read.
+
 The rule dialog searches the provider's groups (the directory, or the groups seen at sign-in for generic providers) and shows beforehand who gains access.
 
 ## Deactivating and removing a provider

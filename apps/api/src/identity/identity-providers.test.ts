@@ -139,6 +139,9 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     const person = new TestClient(test.app);
     await signInThroughProvider(person, { sub: "security-reader", email: "reader@pagehall.test" });
     expect((await person.get("/api/v1/instance/sign-in-security")).statusCode).toBe(403);
+    const withheld = await person.get("/api/v1/account/withheld-roles");
+    expect(withheld.statusCode).toBe(200);
+    expect(withheld.json()).toEqual([]);
   });
 
   it("sends people to the second factor of Pagehall when the provider asks for it", async () => {

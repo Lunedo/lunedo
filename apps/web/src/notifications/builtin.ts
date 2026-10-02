@@ -45,6 +45,11 @@ notificationTypes.register(
   { id: "auth.emergencySignIn", icon: ShieldAlert, link: () => ({ to: "/settings/instance/audit-log" }) },
   { id: "account.withoutOrganization", icon: UserRound, link: () => ({ to: "/settings/instance/accounts" }) },
   {
+    id: "account.rolesWithheld",
+    icon: ShieldAlert,
+    link: () => ({ to: "/settings/instance/sign-in-providers" }),
+  },
+  {
     id: "identityProvider.credentialExpiring",
     icon: KeyRound,
     link: (item) => ({

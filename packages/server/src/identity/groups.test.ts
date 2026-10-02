@@ -25,6 +25,7 @@ import { createTestServices, type TestServices } from "../testing/services.js";
 import { OidcAdapter } from "./oidc.js";
 import { identities } from "./schema.js";
 import type { CallbackResult } from "./sign-in.js";
+import { withheldRoles } from "./withheld.js";
 
 const baseUrl = testDatabaseBaseUrl();
 const BASE = "https://pagehall.test";
@@ -425,6 +426,73 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
       { name: "identityProvider.deactivated", fields: { name: "Paused", endedSessions: 1 } },
       { name: "identityProvider.activated", fields: { name: "Paused" } },
     ]);
+  });
+
+  it("pauses administrative roles from rules while groups cannot be read and returns them later", async () => {
+    const org = await organization();
+    const administrator = await account(null);
+    await test.services.roles.assign(SYSTEM, {
+      scope: "instance",
+      organizationId: null,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: administrator.id },
+    });
+    const group = `group-${randomUUID()}`;
+    await test.services.mappingRules.create(accountPrincipal(org.owner), generic, {
+      target: "organization",
+      group: { id: group, name: "Org admins" },
+      organizationId: org.id,
+      role: { builtIn: "administrator" },
+      synchronizedGroup: false,
+      homeOrganization: false,
+    });
+    const subject = randomUUID();
+    const claims = { sub: subject, email: `${subject.slice(0, 8)}@generic.example`, groups: [group] };
+    const person = await signedInAccount(await signIn(claims));
+    const allowed = async () =>
+      (
+        await test.services.authorization.explain(accountPrincipal(person), "organization.members.manage", {
+          type: "organization",
+          id: org.id,
+        })
+      ).allowed;
+    expect(await allowed()).toBe(true);
+    const identity = await test.pool.query<{ id: string }>("select id from identities where subject = $1", [
+      subject,
+    ]);
+    const identityId = identity.rows[0]?.id ?? "";
+
+    const failRead = () =>
+      test.database.transaction((tx) => test.services.groupMapping.groupReadFailed(tx, identityId, person));
+    await failRead();
+    expect(await withheldRoles(test.database, person)).toEqual([]);
+    expect(await allowed()).toBe(true);
+
+    await test.pool.query("update identities set groups_read_at = now() - interval '3 hours' where id = $1", [
+      identityId,
+    ]);
+    await failRead();
+    await failRead();
+    expect(await withheldRoles(test.database, person)).toMatchObject([
+      {
+        scope: "organization",
+        organizationId: org.id,
+        builtInRole: "administrator",
+        providerName: "Keycloak",
+      },
+    ]);
+    expect(await allowed()).toBe(false);
+    expect(await membership(org.id, person)).toBe("member");
+    const notified = await test.pool.query<{ recipient_id: string }>(
+      "select recipient_id from notifications where type = 'account.rolesWithheld' and target_id = $1",
+      [person],
+    );
+    expect(notified.rows.map((row) => row.recipient_id)).toContain(administrator.id);
+    expect(notified.rows.filter((row) => row.recipient_id === administrator.id)).toHaveLength(1);
+
+    await signedInAccount(await signIn(claims));
+    expect(await withheldRoles(test.database, person)).toEqual([]);
+    expect(await allowed()).toBe(true);
   });
 
   it("refuses a rule that would grant more than its creator may grant", async () => {

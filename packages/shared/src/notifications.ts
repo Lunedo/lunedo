@@ -43,6 +43,11 @@ export const notificationParamSchemas = {
     operatingSystem: z.string().nullable(),
     clientIp: z.string().nullable(),
   }),
+  "account.rolesWithheld": z.object({
+    accountName: z.string(),
+    providerName: z.string(),
+    roles: z.number().int(),
+  }),
   "account.withoutOrganization": z.object({
     accountName: z.string(),
     email: z.string().nullable(),

@@ -2,7 +2,9 @@ import { and, asc, eq, inArray, isNull, ne, notInArray, sql } from "drizzle-orm"
 import { SYSTEM } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
+import { instanceAdministratorIds } from "../auth/emergency-recipients.js";
 import type { Executor, Transaction } from "../database/database.js";
+import type { NotificationService } from "../notifications/service.js";
 import { groupMembers, groups, memberships, roleAssignments } from "../organizations/access-schema.js";
 import type { MembershipService } from "../organizations/memberships.js";
 import type { RoleService } from "../organizations/roles.js";
@@ -16,6 +18,7 @@ import {
   providerGrants,
   providerGroups,
 } from "./schema.js";
+import { withheldRoles } from "./withheld.js";
 
 export type SyncChangeKind =
   | "membershipAdded"
@@ -107,11 +110,53 @@ export class GroupMappingService {
   readonly #roles: RoleService;
   readonly #memberships: MembershipService;
   readonly #audit: AuditLog;
+  readonly #notifications: NotificationService | undefined;
 
-  constructor(options: { roles: RoleService; memberships: MembershipService; audit: AuditLog }) {
+  constructor(options: {
+    roles: RoleService;
+    memberships: MembershipService;
+    audit: AuditLog;
+    notifications?: NotificationService;
+  }) {
     this.#roles = options.roles;
     this.#memberships = options.memberships;
     this.#audit = options.audit;
+    this.#notifications = options.notifications;
+  }
+
+  async dispatch(mailIds: readonly string[]): Promise<void> {
+    if (mailIds.length > 0) await this.#notifications?.dispatch([...mailIds]);
+  }
+
+  async groupReadFailed(tx: Transaction, identityId: string, accountId: string): Promise<string[]> {
+    await tx.update(identities).set({ groupsReadFailedAt: new Date() }).where(eq(identities.id, identityId));
+    const withheld = await withheldRoles(tx, accountId);
+    if (withheld.length === 0 || !this.#notifications) return [];
+    const [identity] = await tx
+      .select({ notifiedAt: identities.groupsWithheldNotifiedAt })
+      .from(identities)
+      .where(eq(identities.id, identityId));
+    if (identity?.notifiedAt) return [];
+    await tx
+      .update(identities)
+      .set({ groupsWithheldNotifiedAt: new Date() })
+      .where(eq(identities.id, identityId));
+    const [account] = await tx
+      .select({ name: accounts.name })
+      .from(accounts)
+      .where(eq(accounts.id, accountId));
+    const result = await this.#notifications.notify(tx, {
+      type: "account.rolesWithheld",
+      recipients: await instanceAdministratorIds(tx),
+      organizationId: null,
+      targetId: accountId,
+      params: {
+        accountName: account?.name ?? "",
+        providerName: withheld[0]?.providerName ?? "",
+        roles: withheld.length,
+      },
+    });
+    return result.mailIds;
   }
 
   async recordGroups(
@@ -175,6 +220,10 @@ export class GroupMappingService {
         .values(ids.map((groupId) => ({ identityId, groupId })))
         .onConflictDoNothing();
     }
+    await tx
+      .update(identities)
+      .set({ groupsReadAt: new Date(), groupsReadFailedAt: null, groupsWithheldNotifiedAt: null })
+      .where(eq(identities.id, identityId));
   }
 
   async renameManagedGroups(
@@ -223,11 +272,15 @@ export class GroupMappingService {
       identityId: string;
       accountId: string;
       groups: readonly ProviderGroup[] | null;
+      groupsFailed?: boolean;
     },
+    mailIds: string[] = [],
   ): Promise<SyncReport> {
     const report = emptyReport();
     if (link.groups !== null)
       await this.recordGroups(tx, link.providerId, link.identityId, link.groups, report);
+    else if (link.groupsFailed)
+      mailIds.push(...(await this.groupReadFailed(tx, link.identityId, link.accountId)));
     await this.reconcile(tx, link.accountId, report);
     return report;
   }

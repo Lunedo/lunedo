@@ -175,6 +175,7 @@ export {
   type SyncRunSummary,
   syncLogRetentionDaysSetting,
 } from "./identity/sync.js";
+export type { WithheldRole } from "./identity/withheld.js";
 export {
   defineJob,
   type EnqueueOptions,
