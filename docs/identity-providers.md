@@ -104,7 +104,7 @@ A rule maps a group of a provider to:
 
 Creating, changing, reordering and removing a rule is a grant: the authorization service checks that the person may manage members of the organization and may grant the role themselves. Rules apply at every sign-in and synchronization. Several rules add up. When someone leaves a group, Pagehall removes exactly what the rules granted; access granted by hand stays, and a membership stays while the person holds other access in the organization or it is their home organization. When several rules name a home organization, the first in rule order decides. A rule whose group no longer exists at the provider grants nothing, is marked in the list and produces a warning in the sync log.
 
-Synchronized Pagehall groups are read-only: their members, managers, name and description come from the provider, and the group shows which provider manages it. Their permissions in Pagehall can still be changed.
+Synchronized Pagehall groups are read-only: their members, managers, name and description come from the provider, and the group shows which provider manages it. When the provider renames a group, the synchronized group follows at the next sign-in or synchronization; if the name is taken in the organization, the provider name is added in parentheses, for example "engineering (Keycloak)". Renames appear in the sync log with the old and the new name. Their permissions in Pagehall can still be changed.
 
 The rule dialog searches the provider's groups (the directory, or the groups seen at sign-in for generic providers) and shows beforehand who gains access.
 

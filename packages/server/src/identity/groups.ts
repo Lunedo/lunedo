@@ -3,11 +3,19 @@ import { SYSTEM } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Executor, Transaction } from "../database/database.js";
-import { groupMembers, memberships, roleAssignments } from "../organizations/access-schema.js";
+import { groupMembers, groups, memberships, roleAssignments } from "../organizations/access-schema.js";
 import type { MembershipService } from "../organizations/memberships.js";
 import type { RoleService } from "../organizations/roles.js";
 import type { ProviderGroup } from "./adapter.js";
-import { identities, identityGroups, mappingRules, providerGrants, providerGroups } from "./schema.js";
+import {
+  identities,
+  identityGroups,
+  identityProviders,
+  managedGroups,
+  mappingRules,
+  providerGrants,
+  providerGroups,
+} from "./schema.js";
 
 export type SyncChangeKind =
   | "membershipAdded"
@@ -69,6 +77,32 @@ function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+const GROUP_NAME_MAX = 100;
+
+export async function synchronizedGroupName(
+  executor: Executor,
+  organizationId: string,
+  name: string,
+  providerName: string,
+  exceptGroupId: string | null,
+): Promise<string | null> {
+  for (const candidate of [name, `${name} (${providerName})`]) {
+    const trimmed = candidate.slice(0, GROUP_NAME_MAX);
+    const [taken] = await executor
+      .select({ id: groups.id })
+      .from(groups)
+      .where(
+        and(
+          eq(groups.organizationId, organizationId),
+          sql`lower(${groups.name}) = lower(${trimmed})`,
+          exceptGroupId ? sql`${groups.id} <> ${exceptGroupId}` : sql`true`,
+        ),
+      );
+    if (!taken) return trimmed;
+  }
+  return null;
+}
+
 export class GroupMappingService {
   readonly #roles: RoleService;
   readonly #memberships: MembershipService;
@@ -114,6 +148,7 @@ export class GroupMappingService {
             updatedAt: new Date(),
           })
           .where(eq(providerGroups.id, existing.id));
+        if (renamed && group.name) await this.renameManagedGroups(tx, existing.id, group.name, report);
         continue;
       }
       const [inserted] = await tx
@@ -139,6 +174,45 @@ export class GroupMappingService {
         .insert(identityGroups)
         .values(ids.map((groupId) => ({ identityId, groupId })))
         .onConflictDoNothing();
+    }
+  }
+
+  async renameManagedGroups(
+    tx: Transaction,
+    providerGroupId: string,
+    name: string,
+    report: SyncReport,
+  ): Promise<void> {
+    const managed = await tx
+      .select({
+        id: groups.id,
+        organizationId: groups.organizationId,
+        name: groups.name,
+        description: groups.description,
+        providerName: identityProviders.name,
+      })
+      .from(managedGroups)
+      .innerJoin(groups, eq(groups.id, managedGroups.groupId))
+      .innerJoin(identityProviders, eq(identityProviders.id, managedGroups.providerId))
+      .where(eq(managedGroups.providerGroupId, providerGroupId))
+      .for("update", { of: groups });
+    for (const group of managed) {
+      const next = await synchronizedGroupName(tx, group.organizationId, name, group.providerName, group.id);
+      if (!next || next === group.name) continue;
+      await tx.update(groups).set({ name: next, updatedAt: new Date() }).where(eq(groups.id, group.id));
+      await this.#audit.record(tx, {
+        name: "group.updated",
+        actor: SYSTEM,
+        targetId: group.id,
+        fields: { name: next, description: group.description, previous: { name: group.name } },
+        scope: { type: "organization", id: group.organizationId },
+      });
+      report.changes.push({
+        kind: "groupRenamed",
+        accountId: null,
+        organizationId: group.organizationId,
+        detail: `${group.name} → ${next}`,
+      });
     }
   }
 

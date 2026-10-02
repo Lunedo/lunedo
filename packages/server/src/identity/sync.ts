@@ -413,6 +413,7 @@ export class ProviderSyncService {
           .update(providerGroups)
           .set({ ...(renamed ? { name: found.name } : {}), missingSince: null, updatedAt: new Date() })
           .where(eq(providerGroups.id, group.id));
+        if (renamed && found.name) await this.#mapping.renameManagedGroups(tx, group.id, found.name, report);
         return group.missingSince !== null;
       });
       if (!changed) continue;

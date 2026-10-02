@@ -545,6 +545,57 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
     expect(rule?.group.name).toBe("Platform Team");
   });
 
+  it("renames synchronized groups with the provider and adds the provider name on a conflict", async () => {
+    const org = await organization();
+    const before = `Design ${randomUUID().slice(0, 6)}`;
+    graph.renameGroup(GRAPH_IDS.platform, before);
+    await test.services.providerSync.run(entra, "manual");
+    const rule = await test.services.mappingRules.create(accountPrincipal(org.owner), entra, {
+      target: "organization",
+      group: { id: GRAPH_IDS.platform, name: before },
+      organizationId: org.id,
+      role: null,
+      synchronizedGroup: true,
+      homeOrganization: false,
+    });
+    const groupId = rule.synchronizedGroup?.id ?? "";
+    expect((await test.services.groups.get(groupId))?.name).toBe(before);
+
+    const after = `Product ${randomUUID().slice(0, 6)}`;
+    await test.services.groups.create(accountPrincipal(org.owner), org.id, { name: after });
+    graph.renameGroup(GRAPH_IDS.platform, after);
+    const run = await test.services.providerSync.run(entra, "manual");
+    expect((await test.services.groups.get(groupId))?.name).toBe(`${after} (Entra ID)`);
+    const details = await test.services.providerSync.runDetails(entra, run?.id ?? "");
+    expect(details?.changes).toContainEqual(
+      expect.objectContaining({
+        kind: "groupRenamed",
+        organizationId: org.id,
+        detail: `${before} → ${after} (Entra ID)`,
+      }),
+    );
+
+    const subject = randomUUID();
+    const renamed = `Research ${randomUUID().slice(0, 6)}`;
+    const generalRule = await test.services.mappingRules.create(accountPrincipal(org.owner), generic, {
+      target: "organization",
+      group: { id: `group-${subject}`, name: "Research" },
+      organizationId: org.id,
+      role: null,
+      synchronizedGroup: true,
+      homeOrganization: false,
+    });
+    await signedInAccount(
+      await signIn({
+        sub: subject,
+        email: `${subject.slice(0, 8)}@generic.example`,
+        groups: [`group-${subject}`],
+        group_names: [renamed],
+      }),
+    );
+    expect((await test.services.groups.get(generalRule.synchronizedGroup?.id ?? ""))?.name).toBe(renamed);
+  });
+
   it("reads every group of a person with a group overage through Microsoft Graph, page by page", async () => {
     const data = defaultGraphData();
     const extra = Array.from({ length: 1000 }, (_, index) => ({

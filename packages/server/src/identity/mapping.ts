@@ -11,9 +11,16 @@ import { OrganizationError } from "../organizations/organizations.js";
 import type { RoleService } from "../organizations/roles.js";
 import { organizations } from "../organizations/schema.js";
 import type { IdentityProviderAdapter, ProviderDefinition } from "./adapter.js";
-import { emptyReport, type GroupMappingService, type SyncReport } from "./groups.js";
+import { emptyReport, type GroupMappingService, type SyncReport, synchronizedGroupName } from "./groups.js";
 import type { IdentityProviderService } from "./providers.js";
-import { identities, identityGroups, managedGroups, mappingRules, providerGroups } from "./schema.js";
+import {
+  identities,
+  identityGroups,
+  identityProviders,
+  managedGroups,
+  mappingRules,
+  providerGroups,
+} from "./schema.js";
 
 export interface MappingRule {
   id: string;
@@ -211,12 +218,18 @@ export class MappingRuleService {
       );
     if (existing) return existing.groupId;
     await lockOrganization(tx, organizationId);
-    const name = (providerGroup.name ?? externalId).slice(0, 100);
-    const [taken] = await tx
-      .select({ id: groups.id })
-      .from(groups)
-      .where(and(eq(groups.organizationId, organizationId), sql`lower(${groups.name}) = lower(${name})`));
-    if (taken) throw new OrganizationError("groupNameTaken", "A group with this name exists already");
+    const [provider] = await tx
+      .select({ name: identityProviders.name })
+      .from(identityProviders)
+      .where(eq(identityProviders.id, providerId));
+    const name = await synchronizedGroupName(
+      tx,
+      organizationId,
+      providerGroup.name ?? externalId,
+      provider?.name ?? "",
+      null,
+    );
+    if (!name) throw new OrganizationError("groupNameTaken", "A group with this name exists already");
     const [group] = await tx
       .insert(groups)
       .values({
