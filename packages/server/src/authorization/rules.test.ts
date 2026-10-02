@@ -163,7 +163,7 @@ describe.skipIf(!baseUrl)("authorization rules", () => {
           scope: "organization",
           organizationId: org.id,
           role: { builtIn: "administrator" },
-          principal: { kind: "organizationMembers", id: null },
+          principal: { kind: "account", id: accountId },
         });
       expect(await denial(selfAssign(temporary))).toBe("selfExtension");
 
@@ -396,10 +396,11 @@ describe.skipIf(!baseUrl)("authorization rules", () => {
       org.id,
       "Owners left the company yesterday",
     );
-    const ownerMail = await test.pool.query(
-      "select template from mail_outbox where template = 'breakGlassStarted'",
+    const ownerNotice = await test.pool.query(
+      "select recipient_id from notifications where type = 'breakGlass.started' and target_id = $1",
+      [access.id],
     );
-    expect(ownerMail.rows.length).toBeGreaterThan(0);
+    expect(ownerNotice.rows.length).toBeGreaterThan(0);
 
     expect(await allowed(administrator, "organization.members.view", org.id)).toBe(true);
     await test.pool.query(

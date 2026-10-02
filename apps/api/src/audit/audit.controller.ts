@@ -1,9 +1,10 @@
 import { Readable } from "node:stream";
 import { Controller, Get, Inject, Param, Query, Req, Res } from "@nestjs/common";
-import type { AuditEntry, AuditFilter } from "@pagehall/server";
+import { type AuditEntry, type AuditFilter, presentAuditEntry } from "@pagehall/server";
+import { idSchema } from "@pagehall/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
-import { Permission } from "../access/route-access.js";
+import { InternalRoute, Permission } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
@@ -44,9 +45,11 @@ const instanceListQuery = instanceFilter.extend(pageQuery);
 const organizationFilter = z.object(filterShape).strict();
 const organizationListQuery = organizationFilter.extend(pageQuery);
 
-const cursorSchema = z.object({ occurredAt: z.iso.datetime(), id: z.uuid() });
+const cursorSchema = z.object({ occurredAt: z.iso.datetime(), id: idSchema });
 const auditPage = pageSchema(auditEntrySchema, "Events, newest first.");
 const pageExample = { items: [exampleAuditEntry], nextCursor: null };
+
+const READABLE_COLUMNS = ["time", "actor", "action", "target", "scope", "changes"] as const;
 
 const CSV_COLUMNS = [
   "occurredAt",
@@ -65,7 +68,7 @@ const CSV_COLUMNS = [
   "id",
 ] as const;
 
-const csvExample = `${CSV_COLUMNS.join(",")}\r\n"2026-10-01T08:00:00.000Z","role.assigned","organization",...\r\n`;
+const csvExample = `${[...READABLE_COLUMNS, ...CSV_COLUMNS].join(",")}\r\n"2026-10-01T08:00:00.000Z","Olivia Owner","role.assigned",...\r\n`;
 
 export function csvCell(value: unknown): string {
   if (value === null || value === undefined) return "";
@@ -79,8 +82,37 @@ export function csvCell(value: unknown): string {
   return `"${text.replaceAll('"', '""')}"`;
 }
 
+function readable(value: unknown, references: Record<string, string>): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return references[value] ?? value;
+  if (Array.isArray(value)) return value.map((item) => readable(item, references)).join(", ");
+  return JSON.stringify(value);
+}
+
 function csvRow(entry: AuditEntry): string {
-  return `${CSV_COLUMNS.map((column) => csvCell(entry[column])).join(",")}\r\n`;
+  const view = presentAuditEntry(entry);
+  const changes = view.changes
+    .map((change) =>
+      change.old === null
+        ? `${change.property}: ${readable(change.new, view.references)}`
+        : `${change.property}: ${readable(change.old, view.references)} → ${readable(change.new, view.references)}`,
+    )
+    .join("; ");
+  const readableCells = [
+    entry.occurredAt,
+    view.actor.name ?? view.actor.type,
+    entry.name,
+    view.target.name ?? view.target.id,
+    view.scope.name ?? view.scope.type,
+    changes,
+  ];
+  const raw = CSV_COLUMNS.map((column) => entry[column]);
+  return `${[...readableCells, ...raw].map(csvCell).join(",")}\r\n`;
+}
+
+function withPresentation(entry: AuditEntry) {
+  const { labels: _labels, ...raw } = entry;
+  return { ...raw, ...presentAuditEntry(entry) };
 }
 
 function toFilter(query: z.output<typeof instanceFilter>, organizationId?: string): AuditFilter {
@@ -115,7 +147,7 @@ export class AuditController {
       ...(cursor ? { cursor: { occurredAt: new Date(cursor.occurredAt), id: cursor.id } } : {}),
     });
     return {
-      items: page.items,
+      items: page.items.map(withPresentation),
       nextCursor: page.next
         ? encodeCursor({ occurredAt: page.next.occurredAt.toISOString(), id: page.next.id })
         : null,
@@ -130,10 +162,40 @@ export class AuditController {
       .header("cache-control", "no-store");
     return Readable.from(
       (async function* () {
-        yield `${CSV_COLUMNS.join(",")}\r\n`;
+        yield `${[...READABLE_COLUMNS, ...CSV_COLUMNS].join(",")}\r\n`;
         for await (const entry of entries) yield csvRow(entry);
       })(),
     );
+  }
+
+  @Get("accounts/:accountId/security-activity")
+  @Permission("account.activity.view", { type: "account", param: "accountId" })
+  @InternalRoute()
+  @ApiRoute({
+    summary: "List the own recent security activity",
+    description:
+      "Lists the security events of the signed-in account, newest first: sign-ins and failed sign-ins with browser, IP address and time, password and second-factor changes, ended sessions, and personal API tokens created, revoked or expired. Each account can read only its own activity.",
+    tags: [TAG],
+    params: z.object({ accountId: uuid("ID of the own account.") }).strict(),
+    query: z.object(pageQuery).strict(),
+    response: { description: "Security events of the account.", schema: auditPage, example: pageExample },
+  })
+  async securityActivity(
+    @Param("accountId") accountId: string,
+    @Query() query: { cursor?: string | undefined; limit: number },
+    @Req() request: FastifyRequest,
+  ) {
+    const cursor = decodeCursor(query.cursor, cursorSchema);
+    const page = await this.#services.auditReader.securityActivity(actorOf(request), accountId, {
+      limit: query.limit,
+      ...(cursor ? { cursor: { occurredAt: new Date(cursor.occurredAt), id: cursor.id } } : {}),
+    });
+    return {
+      items: page.items.map(withPresentation),
+      nextCursor: page.next
+        ? encodeCursor({ occurredAt: page.next.occurredAt.toISOString(), id: page.next.id })
+        : null,
+    };
   }
 
   @Get("instance/audit-events")

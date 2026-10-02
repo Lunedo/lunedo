@@ -425,10 +425,12 @@ describe.skipIf(!databaseBaseUrl)("sign-in", () => {
       expect(signedIn.json()).toMatchObject({ status: "signedIn" });
 
       await test.deliverMail();
-      const notice = test.mail.sent.find((mail) => mail.to === account.email);
+      const notice = test.mail.sent.find(
+        (mail) => mail.to === account.email && mail.subject.startsWith("A recovery code"),
+      );
       expect(notice?.subject).toBe("A recovery code was used for Test wiki");
       expect(notice?.text).toContain("9 unused codes are left");
-      expect(notice?.html).toContain("<p>");
+      expect(notice?.html).toContain("9 unused codes are left");
 
       const again = new TestClient(test.app);
       await again.post("/api/v1/auth/sign-in", { email: account.email, password: account.password });

@@ -1,10 +1,14 @@
+import { eq, sql } from "drizzle-orm";
 import type { Account, AccountService } from "../accounts/accounts.js";
 import { ANONYMOUS, accountPrincipal } from "../accounts/principal.js";
+import { accounts } from "../accounts/schema.js";
 import { accountScopeChain } from "../accounts/scope.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { SignInMethod } from "../audit/catalog.js";
 import type { Database, Transaction } from "../database/database.js";
 import type { MailService } from "../mail/mail-service.js";
+import { knownDevices } from "../notifications/schema.js";
+import type { NotificationService } from "../notifications/service.js";
 import type { SettingsService } from "../settings/service.js";
 import type { ChallengeStore } from "./challenges.js";
 import {
@@ -16,7 +20,13 @@ import {
   SetupIncompleteError,
 } from "./errors.js";
 import type { PasswordHasher } from "./passwords.js";
-import type { ClientInfo, Session, SessionKind, SessionService } from "./sessions.js";
+import {
+  type ClientInfo,
+  describeClient,
+  type Session,
+  type SessionKind,
+  type SessionService,
+} from "./sessions.js";
 import { twoFactorRequiredSetting } from "./settings.js";
 import {
   clientSubject,
@@ -99,6 +109,7 @@ export class SignInService {
   readonly #webauthn: WebAuthnService;
   readonly #audit: AuditLog;
   readonly #mail: MailService;
+  readonly #notifications: NotificationService;
   readonly #settings: SettingsService;
   readonly #setupComplete: () => Promise<boolean>;
 
@@ -115,6 +126,7 @@ export class SignInService {
     webauthn: WebAuthnService;
     audit: AuditLog;
     mail: MailService;
+    notifications: NotificationService;
     settings: SettingsService;
     setupComplete: () => Promise<boolean>;
   }) {
@@ -130,12 +142,18 @@ export class SignInService {
     this.#webauthn = options.webauthn;
     this.#audit = options.audit;
     this.#mail = options.mail;
+    this.#notifications = options.notifications;
     this.#settings = options.settings;
     this.#setupComplete = options.setupComplete;
   }
 
   async secondFactorRequired(accountId: string): Promise<boolean> {
     if ((await this.#accounts.ownerId()) === accountId) return true;
+    const [reset] = await this.#database
+      .select({ at: accounts.secondFactorResetAt })
+      .from(accounts)
+      .where(eq(accounts.id, accountId));
+    if (reset?.at) return true;
     return this.#settings.get(twoFactorRequiredSetting, await accountScopeChain(this.#database, accountId));
   }
 
@@ -185,26 +203,82 @@ export class SignInService {
     });
   }
 
+  async #databaseNow(): Promise<Date> {
+    const result = await this.#database.execute<{ now: Date | string }>(sql`select now() as now`);
+    return new Date(result.rows[0]?.now ?? Date.now());
+  }
+
   async #createSession(
     tx: Transaction,
     account: Account,
     methods: SignInMethod[],
     kind: SessionKind,
     client: ClientInfo,
+    mailIds: string[],
+    verifiedSince: Date,
   ): Promise<SignedIn> {
+    const [current] = await tx
+      .select({ resetAt: accounts.secondFactorResetAt })
+      .from(accounts)
+      .where(eq(accounts.id, account.id))
+      .for("update");
+    if (current?.resetAt && current.resetAt.getTime() >= verifiedSince.getTime()) {
+      throw new ChallengeExpiredError();
+    }
     const { session, token } = await this.#sessions.create(tx, {
       accountId: account.id,
       kind,
       methods,
       client,
     });
+    await tx.update(accounts).set({ lastSignInAt: new Date() }).where(eq(accounts.id, account.id));
     await this.#audit.record(tx, {
       name: "auth.signedIn",
       actor: accountPrincipal(account.id),
       targetId: account.id,
       fields: { sessionId: session.id, methods },
     });
+    await this.#recordDevice(tx, account.id, client, mailIds);
     return { status: "signedIn", session, token };
+  }
+
+  async #recordDevice(
+    tx: Transaction,
+    accountId: string,
+    client: ClientInfo,
+    mailIds: string[],
+  ): Promise<void> {
+    if (!client.deviceToken) return;
+    const deviceHash = hashToken(client.deviceToken);
+    const inserted = await tx
+      .insert(knownDevices)
+      .values({ accountId, deviceHash })
+      .onConflictDoNothing()
+      .returning({ accountId: knownDevices.accountId });
+    if (inserted.length === 0) return;
+    const others = await tx.execute(sql`
+      select 1 from known_devices where account_id = ${accountId} and device_hash <> ${deviceHash} limit 1`);
+    if (others.rows.length === 0) return;
+    const described = describeClient(client.userAgent);
+    const result = await this.#notifications.notify(tx, {
+      type: "signIn.newBrowser",
+      recipients: [accountId],
+      organizationId: null,
+      targetId: accountId,
+      params: {
+        browser: described.browser,
+        operatingSystem: described.operatingSystem,
+        clientIp: client.ip ?? null,
+      },
+    });
+    mailIds.push(...result.mailIds);
+  }
+
+  async #signedIn(run: (tx: Transaction, mailIds: string[]) => Promise<SignedIn>): Promise<SignedIn> {
+    const mailIds: string[] = [];
+    const result = await this.#database.transaction((tx) => run(tx, mailIds));
+    await this.#notifications.dispatch(mailIds);
+    return result;
   }
 
   async signInWithPassword(input: {
@@ -213,6 +287,7 @@ export class SignInService {
     client: ClientInfo;
   }): Promise<SignedIn | SecondFactorRequired> {
     const subjects = { email: input.email, clientIp: input.client.ip };
+    const started = await this.#databaseNow();
     const found = await this.#accounts.findByEmail(input.email);
     const account = canSignIn(found) && found.passwordHash ? found : null;
     await this.#checkAttempt(subjects, account?.id ?? null, "password");
@@ -253,8 +328,8 @@ export class SignInService {
     }
     const kind = (await this.secondFactorRequired(account.id)) ? "secondFactorSetup" : "full";
     await this.#throttle.recordSuccess(account.email);
-    return this.#database.transaction((tx) =>
-      this.#createSession(tx, account, ["password"], kind, input.client),
+    return this.#signedIn((tx, mailIds) =>
+      this.#createSession(tx, account, ["password"], kind, input.client, mailIds, started),
     );
   }
 
@@ -280,6 +355,7 @@ export class SignInService {
     factor: SecondFactorInput;
     client: ClientInfo;
   }): Promise<SignedIn> {
+    const started = await this.#databaseNow();
     const { pending, account } = await this.#pending(input.pendingToken);
     const method: SignInMethod = input.factor.type;
     const subjects = { email: account.email, clientIp: input.client.ip };
@@ -324,6 +400,8 @@ export class SignInService {
           [...pending.methods, method],
           "full",
           input.client,
+          mailIds,
+          started,
         );
         if (remaining !== null) {
           await this.#audit.record(tx, {
@@ -374,6 +452,7 @@ export class SignInService {
     client: ClientInfo;
   }): Promise<SignedIn> {
     const clientSubjects = { clientIp: input.client.ip };
+    const started = await this.#databaseNow();
     await this.#checkAttempt(clientSubjects, null, "passkey");
     const found = await this.#challenges.findByToken(input.token, "passkeySignIn");
     const challenge = found ? await this.#challenges.consume(this.#database, found.id) : null;
@@ -400,8 +479,8 @@ export class SignInService {
       throw new LockedError(secondsUntil(lockout.lockedUntil));
     }
     await this.#throttle.recordSuccess(account.email);
-    return this.#database.transaction((tx) =>
-      this.#createSession(tx, account, ["passkey"], "full", input.client),
+    return this.#signedIn((tx, mailIds) =>
+      this.#createSession(tx, account, ["passkey"], "full", input.client, mailIds, started),
     );
   }
 

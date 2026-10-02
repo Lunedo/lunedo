@@ -53,7 +53,7 @@ const sessionColumns = {
   operatingSystem: sessions.operatingSystem,
 };
 
-function describeClient(userAgent: string | undefined): {
+export function describeClient(userAgent: string | undefined): {
   browser: string | null;
   operatingSystem: string | null;
 } {
@@ -188,6 +188,17 @@ export class SessionService {
       now.getTime() - session.lastUsedAt.getTime() > idle * MINUTE ||
       now.getTime() - session.createdAt.getTime() > lifetime * MINUTE
     );
+  }
+
+  async isActive(sessionId: string): Promise<boolean> {
+    const [row] = await this.#database
+      .select({ ...sessionColumns, accountState: accounts.state })
+      .from(sessions)
+      .innerJoin(accounts, eq(accounts.id, sessions.accountId))
+      .where(eq(sessions.id, sessionId));
+    if (!row) return false;
+    const { accountState, ...session } = row;
+    return accountState === "active" && !(await this.#expired(session, this.#clock()));
   }
 
   async isRecentlyAuthenticated(session: Session): Promise<boolean> {

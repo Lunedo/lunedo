@@ -1,4 +1,8 @@
-import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@pagehall/server";
+import {
+  accountAttemptLimitSetting,
+  clientAttemptLimitSetting,
+  selfServiceOrganizationsSetting,
+} from "@pagehall/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -302,6 +306,33 @@ describe.skipIf(!databaseBaseUrl)("organizations through the API", () => {
       "select 1 from audit_events where name = 'instance.ownershipTransferred'",
     );
     expect(audit.rows).toHaveLength(1);
+  });
+
+  it("lets self-service creators own only their own organization", async () => {
+    await test.runtime.settings.set(selfServiceOrganizationsSetting, {}, "instance", true);
+    const creator = await createAccount(test, "creator@example.org");
+    const victim = await createAccount(test, "victim@example.org");
+    const client = await signedInClient(test, creator.email, creator.password);
+
+    const refused = await client.post("/api/v1/organizations", {
+      name: "Not yours",
+      ownerAccountId: victim.id,
+    });
+    expect(refused.statusCode).toBe(403);
+    const memberships = await test.runtime.pool.query("select 1 from memberships where account_id = $1", [
+      victim.id,
+    ]);
+    expect(memberships.rows).toHaveLength(1);
+
+    const own = await client.post("/api/v1/organizations", { name: "Mine", ownerAccountId: creator.id });
+    expect(own.statusCode).toBe(201);
+    expect((await client.post("/api/v1/organizations", { name: "Also mine" })).statusCode).toBe(201);
+    const byAdministrator = await owner.post("/api/v1/organizations", {
+      name: "For the victim",
+      ownerAccountId: victim.id,
+    });
+    expect(byAdministrator.statusCode).toBe(201);
+    await test.runtime.settings.set(selfServiceOrganizationsSetting, {}, "instance", false);
   });
 
   it("pages lists in the database with an opaque cursor", async () => {

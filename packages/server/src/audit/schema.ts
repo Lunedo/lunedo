@@ -44,6 +44,7 @@ export const auditEvents = pgTable(
     targetType: text().notNull(),
     targetId: text(),
     fields: jsonb().notNull(),
+    labels: jsonb(),
     occurredAt: timestamp({ withTimezone: true, mode: "date" }).notNull(),
     requestId: text(),
     clientIp: text(),

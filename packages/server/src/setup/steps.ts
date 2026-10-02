@@ -1,20 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { statfs, unlink, writeFile } from "node:fs/promises";
+import { stat, statfs, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { proposeFormats, setupStepSchemas } from "@pagehall/shared";
 import { eq } from "drizzle-orm";
-import { z } from "zod";
-import {
-  type AccountService,
-  accountNameSchema,
-  emailSchema,
-  withUniqueEmail,
-} from "../accounts/accounts.js";
-import {
-  instanceNameSchema,
-  instanceNameSetting,
-  instanceUrlSchema,
-  instanceUrlSetting,
-} from "../accounts/instance-settings.js";
+import { type AccountService, withUniqueEmail } from "../accounts/accounts.js";
+import { instanceNameSetting, instanceUrlSetting } from "../accounts/instance-settings.js";
 import { ANONYMOUS, accountPrincipal } from "../accounts/principal.js";
 import { accounts, instance } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
@@ -26,16 +16,12 @@ import type { KeyRingHolder } from "../crypto/key-ring-holder.js";
 import type { Database } from "../database/database.js";
 import { migrationStatus } from "../database/migrate.js";
 import type { DatabasePool } from "../database/pool.js";
-import { type MailService, smtpConfigurationSchema } from "../mail/mail-service.js";
-import {
-  type OrganizationService,
-  organizationNameSchema,
-  slugSchema,
-  timeZoneSchema,
-} from "../organizations/organizations.js";
+import { type MailService } from "../mail/mail-service.js";
+import { type OrganizationService } from "../organizations/organizations.js";
 import { organizations } from "../organizations/schema.js";
 import { organizationSettingsChain } from "../organizations/settings.js";
-import { languageSetting, supportedLanguages, timeZoneSetting } from "../settings/builtin.js";
+import { languageSetting, timeZoneSetting } from "../settings/builtin.js";
+import { applyFormats, formatSettings } from "../settings/preferences.js";
 import type { SettingsService } from "../settings/service.js";
 import { defineSetupAction, type SetupActionContext, type SetupStep } from "./framework.js";
 import { SetupStepError } from "./setup-service.js";
@@ -44,6 +30,126 @@ const CLOCK_TOLERANCE_MS = 5_000;
 const LOW_DISK_BYTES = 1024 ** 3;
 
 type CheckStatus = "ok" | "warning" | "error";
+
+interface CheckHelp {
+  status: CheckStatus;
+  cause: string | null;
+  fixCommand: string | null;
+  docs: string;
+}
+
+async function checkDatabaseAndClock(
+  pool: DatabasePool,
+): Promise<[CheckHelp & Record<string, unknown>, CheckHelp & Record<string, unknown>]> {
+  try {
+    const [row] = (
+      await pool.query<{ version: string; now: Date }>(
+        "select current_setting('server_version') as version, now() as now",
+      )
+    ).rows;
+    const migrations = await migrationStatus(pool);
+    const offsetMs = row ? Math.abs(new Date(row.now).getTime() - Date.now()) : null;
+    const clockOk = offsetMs !== null && offsetMs <= CLOCK_TOLERANCE_MS;
+    return [
+      {
+        status: migrations.upToDate ? "ok" : "error",
+        cause: migrations.upToDate ? null : "migrationsPending",
+        fixCommand: null,
+        docs: "setup.md#database",
+        version: row?.version ?? null,
+        migrationsUpToDate: migrations.upToDate,
+      },
+      {
+        status: clockOk ? "ok" : "warning",
+        cause: clockOk ? null : offsetMs === null ? "unknown" : "offset",
+        fixCommand: null,
+        docs: "setup.md#clock",
+        offsetMs,
+        toleranceMs: CLOCK_TOLERANCE_MS,
+      },
+    ];
+  } catch {
+    return [
+      {
+        status: "error",
+        cause: "unreachable",
+        fixCommand: null,
+        docs: "setup.md#database",
+        version: null,
+        migrationsUpToDate: false,
+      },
+      {
+        status: "warning",
+        cause: "unknown",
+        fixCommand: null,
+        docs: "setup.md#clock",
+        offsetMs: null,
+        toleranceMs: CLOCK_TOLERANCE_MS,
+      },
+    ];
+  }
+}
+
+export async function checkFileStorage(directory: string): Promise<CheckHelp & Record<string, unknown>> {
+  const processUid = process.getuid?.() ?? null;
+  const processGid = process.getgid?.() ?? null;
+  const owner = processUid !== null && processGid !== null ? `${processUid}:${processGid}` : null;
+  const facts = {
+    docs: "setup.md#file-storage",
+    path: directory,
+    minimumFreeBytes: LOW_DISK_BYTES,
+    processUid,
+    processGid,
+  };
+  const info = await stat(directory).catch(() => null);
+  if (!info?.isDirectory()) {
+    return {
+      status: "error",
+      cause: "missing",
+      fixCommand: owner
+        ? `mkdir -p ${shellQuote(directory)} && chown ${owner} ${shellQuote(directory)}`
+        : `mkdir -p ${shellQuote(directory)}`,
+      ...facts,
+      exists: false,
+      writable: false,
+      freeBytes: null,
+      ownerUid: null,
+      ownerGid: null,
+    };
+  }
+  const ownership = { exists: true, ownerUid: info.uid, ownerGid: info.gid };
+  try {
+    const probe = path.join(directory, `.setup-check-${randomUUID()}`);
+    await writeFile(probe, "");
+    await unlink(probe);
+  } catch {
+    return {
+      status: "error",
+      cause: "notWritable",
+      fixCommand: owner ? `chown -R ${owner} ${shellQuote(directory)}` : null,
+      ...facts,
+      ...ownership,
+      writable: false,
+      freeBytes: null,
+    };
+  }
+  const stats = await statfs(directory);
+  const freeBytes = stats.bavail * stats.bsize;
+  const low = freeBytes < LOW_DISK_BYTES;
+  return {
+    status: low ? "warning" : "ok",
+    cause: low ? "lowSpace" : null,
+    fixCommand: null,
+    ...facts,
+    ...ownership,
+    writable: true,
+    freeBytes,
+  };
+}
+
+function shellQuote(value: string): string {
+  return /^[\w./-]+$/.test(value) ? value : `'${value.replaceAll("'", `'\\''`)}'`;
+}
 
 export interface SetupStepDependencies {
   organizations: OrganizationService;
@@ -58,6 +164,7 @@ export interface SetupStepDependencies {
   keyRing: KeyRingHolder;
   backupKeys: KeyRing;
   filesDir: string;
+  configuredInstanceUrl?: string | undefined;
 }
 
 export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
@@ -66,58 +173,36 @@ export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
     order: 10,
     required: true,
     async describe({ request }) {
-      const checks: Record<string, { status: CheckStatus } & Record<string, unknown>> = {};
-
-      try {
-        const [row] = (
-          await deps.pool.query<{ version: string; now: Date }>(
-            "select current_setting('server_version') as version, now() as now",
-          )
-        ).rows;
-        const migrations = await migrationStatus(deps.pool);
-        checks.database = {
-          status: migrations.upToDate ? "ok" : "error",
-          version: row?.version ?? null,
-          migrationsUpToDate: migrations.upToDate,
-        };
-        const offsetMs = row ? Math.abs(new Date(row.now).getTime() - Date.now()) : null;
-        checks.clock = {
-          status: offsetMs !== null && offsetMs <= CLOCK_TOLERANCE_MS ? "ok" : "warning",
-          offsetMs,
-        };
-      } catch {
-        checks.database = { status: "error", version: null, migrationsUpToDate: false };
-        checks.clock = { status: "warning", offsetMs: null };
-      }
-
-      try {
-        const probe = path.join(deps.filesDir, `.setup-check-${randomUUID()}`);
-        await writeFile(probe, "");
-        await unlink(probe);
-        const stats = await statfs(deps.filesDir);
-        const freeBytes = stats.bavail * stats.bsize;
-        checks.fileStorage = {
-          status: freeBytes < LOW_DISK_BYTES ? "warning" : "ok",
-          writable: true,
-          freeBytes,
-        };
-      } catch {
-        checks.fileStorage = { status: "error", writable: false, freeBytes: null };
-      }
-
+      const [database, clock] = await checkDatabaseAndClock(deps.pool);
       const url = await deps.settings.get(instanceUrlSetting, {});
-      checks.instanceUrl = { status: url ? "ok" : "warning", configured: url !== "" };
-      const https = url.startsWith("https:") && request.protocol === "https";
-      checks.https = {
-        status: https ? "ok" : "warning",
-        instanceUrl: url.startsWith("https:"),
-        request: request.protocol === "https",
+      const httpsUrl = url.startsWith("https:");
+      const httpsRequest = request.protocol === "https";
+      return {
+        checks: {
+          database,
+          clock,
+          fileStorage: await checkFileStorage(deps.filesDir),
+          instanceUrl: {
+            status: url ? "ok" : "warning",
+            cause: url ? null : "notSet",
+            fixCommand: null,
+            docs: "setup.md#instance-url",
+            configured: url !== "",
+          },
+          https: {
+            status: httpsUrl && httpsRequest ? "ok" : "warning",
+            cause: !httpsUrl ? "instanceUrlNotHttps" : httpsRequest ? null : "requestNotHttps",
+            fixCommand: null,
+            docs: "setup.md#https",
+            instanceUrl: httpsUrl,
+            request: httpsRequest,
+          },
+        },
       };
-      return { checks };
     },
     actions: {
       acknowledge: defineSetupAction({
-        input: z.object({}).strict(),
+        input: setupStepSchemas.systemCheck.actions.acknowledge.input,
         async run(context) {
           await context.complete();
           return {};
@@ -136,12 +221,13 @@ export function instanceStep(deps: SetupStepDependencies): SetupStep {
       return {
         url: await deps.settings.get(instanceUrlSetting, {}),
         name: await deps.settings.get(instanceNameSetting, {}),
-        suggestedUrl: request.host ? `${request.protocol}://${request.host}` : null,
+        suggestedUrl:
+          deps.configuredInstanceUrl ?? (request.host ? `${request.protocol}://${request.host}` : null),
       };
     },
     actions: {
       save: defineSetupAction({
-        input: z.object({ url: instanceUrlSchema, name: instanceNameSchema }).strict(),
+        input: setupStepSchemas.instance.actions.save.input,
         async run(context, input) {
           await deps.settings.set(instanceUrlSetting, {}, "instance", input.url, { tx: context.tx });
           await deps.settings.set(instanceNameSetting, {}, "instance", input.name, { tx: context.tx });
@@ -180,14 +266,7 @@ export function ownerStep(deps: SetupStepDependencies): SetupStep {
     },
     actions: {
       createAccount: defineSetupAction({
-        input: z
-          .object({
-            email: emailSchema,
-            name: accountNameSchema,
-            password: z.string().min(1).max(PASSWORD_MAX_LENGTH),
-            language: z.enum(supportedLanguages).optional(),
-          })
-          .strict(),
+        input: setupStepSchemas.owner.actions.createAccount.input,
         async run(context, input) {
           const existing = await ownerOf(context);
           let accountId: string;
@@ -224,7 +303,7 @@ export function ownerStep(deps: SetupStepDependencies): SetupStep {
         },
       }),
       beginTotp: defineSetupAction({
-        input: z.object({}).strict(),
+        input: setupStepSchemas.owner.actions.beginTotp.input,
         async run(context) {
           const owner = await ownerOf(context);
           if (!owner) throw new SetupStepError("ownerMissing", "Create the owner account first");
@@ -236,7 +315,7 @@ export function ownerStep(deps: SetupStepDependencies): SetupStep {
         },
       }),
       confirmTotp: defineSetupAction({
-        input: z.object({ code: z.string().max(16) }).strict(),
+        input: setupStepSchemas.owner.actions.confirmTotp.input,
         async run(context, input) {
           const owner = await ownerOf(context);
           if (!owner) throw new SetupStepError("ownerMissing", "Create the owner account first");
@@ -278,7 +357,7 @@ export function keyBackupStep(deps: SetupStepDependencies): SetupStep {
     },
     actions: {
       download: defineSetupAction({
-        input: z.object({}).strict(),
+        input: setupStepSchemas.keyBackup.actions.download.input,
         async run(context) {
           if (typeof context.state.downloadedAt === "string") {
             throw new SetupStepError("keysAlreadyDownloaded", "The keys can be downloaded once only");
@@ -304,7 +383,7 @@ export function keyBackupStep(deps: SetupStepDependencies): SetupStep {
         },
       }),
       confirm: defineSetupAction({
-        input: z.object({}).strict(),
+        input: setupStepSchemas.keyBackup.actions.confirm.input,
         async run(context) {
           if (typeof context.state.downloadedAt !== "string") {
             throw new SetupStepError("keysNotDownloaded", "Download the keys first");
@@ -317,21 +396,17 @@ export function keyBackupStep(deps: SetupStepDependencies): SetupStep {
   };
 }
 
-const smtpInput = smtpConfigurationSchema
-  .extend({ password: z.string().max(1024).nullable().optional() })
-  .strict();
-
 export function mailStep(deps: SetupStepDependencies): SetupStep {
   return {
     id: "mail",
     order: 60,
     required: false,
     async describe() {
-      return { smtp: await deps.mail.smtpConfiguration() };
+      return { smtp: await deps.mail.smtpConfiguration(), passwordSet: await deps.mail.hasSmtpPassword() };
     },
     actions: {
       save: defineSetupAction({
-        input: smtpInput,
+        input: setupStepSchemas.mail.actions.save.input,
         async run(context, input) {
           const { password, ...configuration } = input;
           await deps.mail.configureSmtp(configuration, password, { tx: context.tx });
@@ -340,12 +415,12 @@ export function mailStep(deps: SetupStepDependencies): SetupStep {
         },
       }),
       test: defineSetupAction({
-        input: smtpInput.extend({ to: emailSchema, language: z.enum(supportedLanguages).default("en") }),
+        input: setupStepSchemas.mail.actions.test.input,
         async run(_context, input) {
           const { to, language, password, ...configuration } = input;
           const result = await deps.mail.sendTest(to, language, {
             configuration,
-            password: password ?? null,
+            password,
           });
           return { body: result };
         },
@@ -361,18 +436,21 @@ export function organizationStep(deps: SetupStepDependencies): SetupStep {
     required: true,
     async describe({ state }) {
       const id = typeof state.organizationId === "string" ? state.organizationId : null;
-      return { organization: id ? await deps.organizations.get(id) : null };
+      if (!id) return { organization: null, formats: null };
+      const chain = organizationSettingsChain(id);
+      return {
+        organization: await deps.organizations.get(id),
+        formats: {
+          dateFormat: await deps.settings.get(formatSettings.dateFormat, chain),
+          timeFormat: await deps.settings.get(formatSettings.timeFormat, chain),
+          numberFormat: await deps.settings.get(formatSettings.numberFormat, chain),
+          firstDayOfWeek: await deps.settings.get(formatSettings.firstDayOfWeek, chain),
+        },
+      };
     },
     actions: {
       save: defineSetupAction({
-        input: z
-          .object({
-            name: organizationNameSchema,
-            slug: slugSchema.optional(),
-            language: z.enum(supportedLanguages),
-            timeZone: timeZoneSchema,
-          })
-          .strict(),
+        input: setupStepSchemas.organization.actions.save.input,
         async run(context, input) {
           const existing =
             typeof context.state.organizationId === "string" ? context.state.organizationId : null;
@@ -388,6 +466,13 @@ export function organizationStep(deps: SetupStepDependencies): SetupStep {
             await deps.settings.set(timeZoneSetting, chain, "organization", input.timeZone, {
               tx: context.tx,
             });
+            await applyFormats(
+              deps.settings,
+              chain,
+              "organization",
+              input.formats ?? proposeFormats(input.language, input.timeZone),
+              { tx: context.tx },
+            );
             await context.complete();
             return { body: { organizationId: existing } };
           }
@@ -400,6 +485,13 @@ export function organizationStep(deps: SetupStepDependencies): SetupStep {
             timeZone: input.timeZone,
             ownerAccountId: owner.id,
           });
+          await applyFormats(
+            deps.settings,
+            organizationSettingsChain(organization.id),
+            "organization",
+            input.formats ?? proposeFormats(input.language, input.timeZone),
+            { tx: context.tx },
+          );
           await context.setState({ organizationId: organization.id });
           await context.complete();
           return { body: { organizationId: organization.id } };

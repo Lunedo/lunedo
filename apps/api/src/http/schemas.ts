@@ -1,7 +1,8 @@
 import { accessLevels, instanceAreas, organizationAreas, supportedLanguages } from "@pagehall/server";
+import { accentColors, idSchema } from "@pagehall/shared";
 import { z } from "zod";
 
-export const uuid = (description: string) => z.uuid().describe(description);
+export const uuid = (description: string) => idSchema.describe(description);
 
 export const timestamp = (description: string) =>
   z.iso.datetime().describe(`${description} ISO 8601 timestamp in UTC.`);
@@ -46,6 +47,9 @@ export const organizationSchema = z
     logoRef: z.string().nullable().describe("Reference to the uploaded logo, or null."),
     language: z.enum(supportedLanguages).describe("Default language of the organization."),
     timeZone: z.string().describe("Default IANA time zone, for example `Europe/Vienna`."),
+    accentColor: z
+      .enum(accentColors)
+      .describe("Accent color from the palette, from the setting `branding.accentColor`."),
     createdAt: timestamp("When the organization was created."),
   })
   .describe("An organization.");
@@ -57,6 +61,7 @@ export const exampleOrganization = {
   logoRef: null,
   language: "en",
   timeZone: "Europe/Vienna",
+  accentColor: "petrol",
   createdAt: "2026-10-01T08:00:00.000Z",
 };
 
@@ -253,22 +258,48 @@ export const settingSchema = z
   .object({
     key: z.string().describe("Key of the setting."),
     value: z.json().describe("Effective value at this level."),
+    defaultValue: z.json().describe("Value that applies when no level sets one."),
     source: z.string().describe("Level the effective value comes from, or `default`."),
     lockedBy: z.string().nullable().describe("Higher level that locked the setting, or null."),
     locked: z.boolean().describe("Whether this level locks the setting for lower levels."),
     lockable: z.boolean().describe("Whether the setting can be locked."),
+    levelsBelow: z
+      .array(z.string())
+      .describe("Lower levels where the setting can be set. A lock at this level applies to them."),
     editable: z.boolean().describe("Whether the setting can be changed through the settings endpoint."),
+    levels: z
+      .array(
+        z
+          .object({
+            level: z.string().describe("The level: `instance`, `organization`, `space` or `user`."),
+            value: z.json().describe("Value stored at this level, or null."),
+            locked: z.boolean().describe("Whether this level locks the setting."),
+            effective: z
+              .boolean()
+              .describe(
+                "False when a lock above or a stricter value above makes this level's value ineffective.",
+              ),
+          })
+          .describe("The state of the setting at one level."),
+      )
+      .describe("Every level the setting applies to, from the instance down to this level."),
   })
-  .describe("A setting with its effective value.");
+  .describe("A setting with its effective value and where it comes from.");
 
 export const exampleSetting = {
   key: "organizations.membersCreateGroups",
   value: false,
+  defaultValue: false,
   source: "default",
   lockedBy: null,
   locked: false,
   lockable: true,
+  levelsBelow: ["organization"],
   editable: true,
+  levels: [
+    { level: "instance", value: null, locked: false, effective: true },
+    { level: "organization", value: null, locked: false, effective: true },
+  ],
 };
 
 export const serviceAccountSchema = z
@@ -359,6 +390,52 @@ export const auditEntrySchema = z
     requestId: z.string().nullable().describe("ID of the HTTP request, or null."),
     clientIp: z.string().nullable().describe("Client IP address, or null."),
     userAgent: z.string().nullable().describe("User agent of the client, or null."),
+    labelKey: z
+      .string()
+      .describe("Translation key of the action, `audit.events.` followed by the event type."),
+    changeKind: z
+      .enum(["setting", "fields"])
+      .describe("How `changes` reads: a setting value or lock, or changed fields."),
+    actor: z
+      .object({
+        type: z.string().describe("`account`, `system` or `anonymous`."),
+        id: z.string().nullable().describe("ID of the account, or null."),
+        name: z.string().nullable().describe("Name of the account when the event happened, or null."),
+      })
+      .describe("Who acted."),
+    target: z
+      .object({
+        type: z.string().describe("Kind of object."),
+        id: z.string().nullable().describe("ID of the object, or for settings the setting key."),
+        name: z.string().nullable().describe("Name of the object when the event happened, or null."),
+      })
+      .describe("What the event is about."),
+    scope: z
+      .object({
+        type: z
+          .enum(["instance", "organization", "account"])
+          .describe("Instance, organization, or the account for events about one person's own account."),
+        id: z.string().nullable().describe("ID of the organization or account, null for the instance."),
+        name: z
+          .string()
+          .nullable()
+          .describe("Name of the organization or account when the event happened, or null."),
+      })
+      .describe("Where the event happened."),
+    changes: z
+      .array(
+        z
+          .object({
+            property: z.string().describe("Changed property or field."),
+            old: z.json().describe("Value before, or null when unknown or not set."),
+            new: z.json().describe("Value after, or null when removed."),
+          })
+          .describe("One change."),
+      )
+      .describe("What changed, readable without the raw fields."),
+    references: z
+      .record(z.string(), z.string())
+      .describe("Names of accounts, organizations, groups and roles that the fields refer to, by ID."),
   })
   .describe("An entry of the audit log.");
 
@@ -377,6 +454,17 @@ export const exampleAuditEntry = {
   requestId: "6f1c2b0e-5d4a-4c3b-9a2f-1e0d9c8b7a6f",
   clientIp: "203.0.113.7",
   userAgent: "curl/8.9.1",
+  labelKey: "audit.events.role.assigned",
+  changeKind: "fields",
+  actor: { type: "account", id: exampleMember.accountId, name: "Olivia Owner" },
+  target: { type: "roleAssignment", id: exampleRoleAssignment.id, name: null },
+  scope: { type: "organization", id: exampleOrganization.id, name: "Platform Team" },
+  changes: [
+    { property: "role", old: null, new: "Handbook editors" },
+    { property: "principalKind", old: null, new: "group" },
+    { property: "principalId", old: null, new: exampleGroup.id },
+  ],
+  references: { [exampleGroup.id]: "Editors" },
 };
 
 export const decisionSchema = z

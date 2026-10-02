@@ -1,0 +1,1 @@
+ALTER TABLE "accounts" ADD COLUMN "second_factor_reset_at" timestamp with time zone;

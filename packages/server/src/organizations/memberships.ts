@@ -6,7 +6,15 @@ import type { AuditEventName } from "../audit/catalog.js";
 import { authChallenges, sessions } from "../auth/schema.js";
 import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
 import type { Database, Transaction } from "../database/database.js";
-import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
+import {
+  afterKey,
+  FIRST_PAGE,
+  matchesSearch,
+  type Page,
+  type PageRequest,
+  pageLimit,
+  toPage,
+} from "../database/keyset.js";
 import { responsiblesOf } from "../tokens/service-accounts.js";
 import {
   customRoles,
@@ -103,6 +111,7 @@ export class MembershipService {
           eq(accounts.state, "active"),
           or(isNull(memberships.expiresAt), sql`${memberships.expiresAt} > now()`),
           afterKey([sortName, accounts.id], page.after),
+          matchesSearch([accounts.name, accounts.email], page.search),
         ),
       )
       .orderBy(sortName, accounts.id)
@@ -453,18 +462,18 @@ export class MembershipService {
   }
 
   async deactivate(actor: Principal, accountId: string): Promise<number> {
-    if (actor.type === "account" && actor.id === accountId) {
-      throw new OrganizationError("deactivateSelf", "An account cannot deactivate itself");
-    }
     return this.#database.transaction(async (tx) => {
       const [target] = await tx
         .select({ id: accounts.id, state: accounts.state, home: accounts.homeOrganizationId })
         .from(accounts)
         .where(eq(accounts.id, accountId))
         .for("update");
+      if (actor.type === "account" && target && actor.id === target.id) {
+        throw new OrganizationError("deactivateSelf", "An account cannot deactivate itself");
+      }
       if (target?.state !== "active") throw new OrganizationError("notFound", "The account is not active");
       const [owner] = await tx.select({ id: instance.ownerAccountId }).from(instance);
-      if (owner?.id === accountId) {
+      if (owner?.id === target.id) {
         throw new OrganizationError("instanceOwner", "Transfer the ownership of the instance first");
       }
       if (actor.type === "account") {
@@ -479,8 +488,16 @@ export class MembershipService {
             denials: ["ownerOnly"],
           });
         }
-        if (instanceAreas.accounts !== "manage" && target.home)
-          await this.#checkRank(tx, actor, target.home, accountId);
+        await this.#authorization.checkOwnersOverAccount(actor, target.id, {
+          executor: tx,
+          action: "account.deactivate",
+        });
+        if (target.home) {
+          const homeOwner = await this.#authorization.isOrganizationOwner(accountId, target.home, tx);
+          const instanceAdministrator = instanceAreas.accounts === "manage";
+          if (!instanceAdministrator || (homeOwner && owner?.id !== actor.id))
+            await this.#checkRank(tx, actor, target.home, accountId);
+        }
       }
       const owned = await tx
         .selectDistinct({ organizationId: roleAssignments.organizationId })

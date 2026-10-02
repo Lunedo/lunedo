@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Inject, Param, Post, Req, Res } from "@nestjs/common";
+import { setupCodeSchema, setupStepStateSchema } from "@pagehall/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, SetupCodeRoute, SetupSessionRoute } from "../access/route-access.js";
@@ -8,13 +9,11 @@ import { ApiRoute } from "../http/api-route.js";
 import { COOKIES, clearCookie, readCookie, setCookie } from "../http/cookies.js";
 
 const SETUP_COOKIE_MAX_AGE_SECONDS = 24 * 60 * 60;
-const codeSchema = z.object({ code: z.string().trim().min(1).max(64) }).strict();
+const codeSchema = z.object({ code: setupCodeSchema }).strict();
 const identifier = z.string().regex(/^[a-z][a-zA-Z]{0,63}$/);
 const actionParams = z.object({ step: identifier, action: identifier }).strict();
 const stepsSchema = z.object({
-  steps: z.array(
-    z.object({ id: z.string(), required: z.boolean(), completed: z.boolean(), details: z.json() }),
-  ),
+  steps: z.array(setupStepStateSchema),
   ready: z.boolean(),
 });
 

@@ -6,7 +6,16 @@ export {
   emailSchema,
   PasswordPolicyError,
 } from "./accounts/accounts.js";
+export { AccountAdministrationService } from "./accounts/administration.js";
 export { instanceNameSetting, instanceUrlSetting } from "./accounts/instance-settings.js";
+export {
+  type AccountDetail,
+  type AccountMembership,
+  AccountOverviewService,
+  type AdministeredAccount,
+  type InstanceRoleSummary,
+  type OrganizationOverview,
+} from "./accounts/overview.js";
 export {
   ANONYMOUS,
   accountPrincipal,
@@ -15,8 +24,16 @@ export {
   type TokenGrant,
   type TokenScopes,
 } from "./accounts/principal.js";
+export { accountScopeChain } from "./accounts/scope.js";
 export { AuditLog, type AuditScope, type AuditVerification } from "./audit/audit-log.js";
-export { type AuditEventName, auditCatalog, type SignInMethod } from "./audit/catalog.js";
+export {
+  type AuditChangeKind,
+  type AuditEventName,
+  auditCatalog,
+  type SignInMethod,
+} from "./audit/catalog.js";
+export type { AuditLabels } from "./audit/labels.js";
+export { type AuditChange, type AuditPresentation, presentAuditEntry } from "./audit/presentation.js";
 export type { AuditCursor, AuditEntry, AuditFilter } from "./audit/reader.js";
 export { auditRetentionSetting } from "./audit/retention.js";
 export type { FactorAdded } from "./auth/account-security.js";
@@ -137,6 +154,28 @@ export { PgBossQueue } from "./jobs/pg-boss-queue.js";
 export { createLogger, type Logger, type LogLevel, logLevels } from "./logging/logger.js";
 export { MailNotConfiguredError, SmtpConfigurationError, smtpSetting } from "./mail/mail-service.js";
 export type { MailMessage, MailTransport, SmtpOptions } from "./mail/transport.js";
+export { NotificationHub } from "./notifications/hub.js";
+export {
+  defineNotificationType,
+  NotificationRegistry,
+  type NotificationTypeDefinition,
+  type VisibilityContext,
+} from "./notifications/registry.js";
+export {
+  COMBINE_WINDOW_MINUTES,
+  NOTIFICATIONS_CHANNEL,
+  type NotificationCursor,
+  type NotificationItem,
+  type NotificationPage,
+  NotificationService,
+  type NotifyInput,
+} from "./notifications/service.js";
+export {
+  builtinNotificationTypes,
+  notificationPreferenceSetting,
+  notificationRetentionSetting,
+  notificationSettings,
+} from "./notifications/types.js";
 export { isAuthorizedMetricsRequest, Metrics } from "./observability/metrics.js";
 export {
   currentRequestContext,
@@ -154,6 +193,8 @@ export { LastOwnerError } from "./organizations/memberships.js";
 export type { Organization } from "./organizations/organizations.js";
 export {
   domainSchema,
+  LOGO_MAX_BYTES,
+  logoContentType,
   OrganizationError,
   organizationNameSchema,
   slugSchema,
@@ -178,10 +219,12 @@ export {
   type SettingLevel,
   SettingsRegistry,
 } from "./settings/definition.js";
+export * from "./settings/preferences.js";
 export {
   INSTANCE_SCOPE_ID,
   type Scope,
   type ScopeChain,
+  type SettingChangeSignal,
   SettingError,
   type SettingExplanation,
   SettingLockedError,

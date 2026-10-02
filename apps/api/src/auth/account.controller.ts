@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, Inject, Param, Post, Query, Req, Res } from "@nestjs/common";
-import type { FactorAdded, RegistrationResponseJSON } from "@pagehall/server";
+import { Body, Controller, Delete, Get, Inject, Param, Post, Put, Query, Req, Res } from "@nestjs/common";
+import { accountPrincipal, type FactorAdded, type RegistrationResponseJSON } from "@pagehall/server";
+import { idSchema } from "@pagehall/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
-import type { z } from "zod";
+import { z } from "zod";
 import { InternalRoute, SessionRoute } from "../access/route-access.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
@@ -9,6 +10,8 @@ import { COOKIES, clearCookie } from "../http/cookies.js";
 import { pageQuerySchema, pageSchema, paginate } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { sessionOf } from "../http/request.js";
+import { settingSchema } from "../http/schemas.js";
+import { definitionFor, listSettings, updateSetting } from "../http/settings.js";
 import { servicesOf, setSessionCookie } from "./auth.controller.js";
 import {
   accountSessionSchema,
@@ -25,6 +28,29 @@ import {
   totpSetupSchema,
 } from "./schemas.js";
 
+const preferenceParams = z.object({ key: z.string().max(200) }).strict();
+const preferenceUpdateSchema = z.union([
+  z.object({ value: z.json() }).strict(),
+  z.object({ clear: z.literal(true) }).strict(),
+]);
+const permissionsQuery = z.object({ organizationId: idSchema.optional() }).strict();
+const levelSchema = z.enum(["view", "manage"]);
+
+const permissionsSchema = z.object({
+  instance: z.array(z.string()),
+  organization: z.array(z.string()),
+  grantableAreas: z
+    .object({
+      instance: z
+        .record(z.string(), levelSchema)
+        .describe("Areas and levels the account may grant on the instance."),
+      organization: z
+        .record(z.string(), levelSchema)
+        .describe("Areas and levels the account may grant in the organization, if asked for."),
+    })
+    .describe("What the account may pass on in roles; nobody grants more than they hold permanently."),
+});
+
 @Controller("api/v1/account")
 @InternalRoute()
 export class AccountController {
@@ -37,6 +63,80 @@ export class AccountController {
   async #factorAdded(reply: FastifyReply, added: FactorAdded) {
     if (added.token) await setSessionCookie(this.context, reply, added.token);
     return { recoveryCodes: added.recoveryCodes };
+  }
+
+  @Get("preferences")
+  @SessionRoute({ secondFactorSetup: true })
+  @ApiRoute({
+    summary: "List own preferences",
+    tags: ["Account"],
+    response: { description: "Settings that apply to the account.", schema: z.array(settingSchema) },
+  })
+  async preferences(@Req() request: FastifyRequest) {
+    const { settings, settingsRegistry } = this.#settingsServices();
+    return listSettings(settings, settingsRegistry, "user", await this.#chain(request));
+  }
+
+  @Put("preferences/:key")
+  @SessionRoute({ secondFactorSetup: true })
+  @ApiRoute({
+    summary: "Change an own preference",
+    tags: ["Account"],
+    params: preferenceParams,
+    body: preferenceUpdateSchema,
+    errors: ["invalidSetting", "settingLocked"],
+  })
+  async updatePreference(
+    @Param("key") key: string,
+    @Body() body: z.output<typeof preferenceUpdateSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    const { settings, settingsRegistry } = this.#settingsServices();
+    const definition = definitionFor(settingsRegistry, key, "user");
+    await updateSetting(settings, definition, "user", await this.#chain(request), body);
+  }
+
+  @Get("permissions")
+  @SessionRoute({ secondFactorSetup: true })
+  @ApiRoute({
+    summary: "List own permissions",
+    tags: ["Account"],
+    query: permissionsQuery,
+    response: {
+      description: "Allowed actions on the instance and, if asked for, on one organization.",
+      schema: permissionsSchema,
+    },
+  })
+  async permissions(@Req() request: FastifyRequest, @Query() query: z.output<typeof permissionsQuery>) {
+    const authorization = this.#services.authorization;
+    const principal = accountPrincipal(sessionOf(request).accountId);
+    const allowed = async (type: "instance" | "organization", id?: string) => {
+      const actions = authorization.registry.actions().filter((action) => action.resourceType.type === type);
+      const decisions = await Promise.all(
+        actions.map((action) => authorization.explain(principal, action.name, id ? { type, id } : { type })),
+      );
+      return decisions.filter((decision) => decision.allowed).map((decision) => decision.action);
+    };
+    return {
+      instance: await allowed("instance"),
+      organization: query.organizationId ? await allowed("organization", query.organizationId) : [],
+      grantableAreas: {
+        instance: await authorization.grantableAreas(principal, "instance", null),
+        organization: query.organizationId
+          ? await authorization.grantableAreas(principal, "organization", query.organizationId)
+          : {},
+      },
+    };
+  }
+
+  #settingsServices() {
+    const { settings, settingsRegistry } = this.context;
+    if (!settings || !settingsRegistry) throw new Error("The settings are not available");
+    return { settings, settingsRegistry };
+  }
+
+  #chain(request: FastifyRequest) {
+    return this.#services.accounts.settingsChain(sessionOf(request).accountId);
   }
 
   @Get("security")

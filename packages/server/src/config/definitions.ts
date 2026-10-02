@@ -93,7 +93,17 @@ export const configSettings = [
     positiveInt.max(64).default(4),
     "Password hashes computed at once per process; each needs about 19 MiB of memory.",
   ),
-  setting("PAGEHALL_INSTANCE_URL", nonEmpty.optional(), "Instance URL for setup through configuration."),
+  setting(
+    "PAGEHALL_SETUP_CODE",
+    nonEmpty.optional(),
+    "Setup code for the setup assistant, used instead of a generated one.",
+    true,
+  ),
+  setting(
+    "PAGEHALL_INSTANCE_URL",
+    nonEmpty.optional(),
+    "Address of the instance, used for the setup link and for setup through configuration.",
+  ),
   setting("PAGEHALL_INSTANCE_NAME", nonEmpty.optional(), "Instance name for setup through configuration."),
   setting(
     "PAGEHALL_OWNER_EMAIL",

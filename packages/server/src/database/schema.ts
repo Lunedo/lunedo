@@ -23,6 +23,7 @@ export {
 export { keyRotationStatus, keyRotations } from "../crypto/schema.js";
 export { jobProgress } from "../jobs/schema.js";
 export { instanceSecrets, mailOutbox, mailStatus } from "../mail/schema.js";
+export { knownDevices, notifications } from "../notifications/schema.js";
 export {
   breakGlassAccesses,
   builtInRole,
@@ -38,7 +39,7 @@ export {
   roleAssignments,
   roleScope,
 } from "../organizations/access-schema.js";
-export { organizationDomains, organizations } from "../organizations/schema.js";
+export { organizationDomains, organizationLogos, organizations } from "../organizations/schema.js";
 export { settingLevel, settingValues } from "../settings/schema.js";
 export { setupSessions, setupSteps } from "../setup/schema.js";
 export { apiTokens, serviceAccountResponsibles, serviceAccounts } from "../tokens/schema.js";

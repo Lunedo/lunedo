@@ -24,6 +24,7 @@ export interface Operation {
   tags?: string[];
   "x-pagehall-permission"?: unknown;
   "x-pagehall-internal"?: boolean;
+  "x-stability-level"?: "alpha";
   security: Record<string, string[]>[];
   parameters?: Parameter[];
   requestBody?: { required: boolean; content: Record<string, { schema: JsonSchema; example?: unknown }> };
@@ -56,6 +57,8 @@ const TAG_DESCRIPTIONS: Record<string, string> = {
   "Audit log": "Reading and exporting the tamper-evident audit log.",
 };
 
+const ROOT = "root";
+
 const FORMATS_WITHOUT_PATTERN = new Set(["uuid", "date-time", "email"]);
 
 function hoistDescription(schema: JsonSchema): JsonSchema {
@@ -75,10 +78,14 @@ class SchemaCollector {
   readonly components: Record<string, JsonSchema> = {};
 
   convert(schema: z.ZodType, io: "input" | "output"): JsonSchema {
-    const converted = z.toJSONSchema(schema, { io, unrepresentable: "any" }) as JsonSchema;
+    let converted = z.toJSONSchema(schema, { io, unrepresentable: "any" }) as JsonSchema;
     delete converted.$schema;
     const defs = (converted.$defs ?? {}) as Record<string, JsonSchema>;
     delete converted.$defs;
+    if (JSON.stringify(converted).includes('"$ref":"#"')) {
+      defs[ROOT] = converted;
+      converted = { $ref: `#/$defs/${ROOT}` };
+    }
     const names = new Map<string, string>();
     for (const [key, definition] of Object.entries(defs)) {
       const hash = createHash("sha256").update(JSON.stringify(definition)).digest("hex").slice(0, 12);
@@ -92,6 +99,9 @@ class SchemaCollector {
         Object.entries(hoistDescription(value as JsonSchema))
           .filter(([key]) => !(formatted && key === "pattern"))
           .map(([key, entry]) => {
+            if (key === "$ref" && entry === "#") {
+              return [key, `#/components/schemas/${names.get(ROOT)}`];
+            }
             if (key === "$ref" && typeof entry === "string" && entry.startsWith("#/$defs/")) {
               const name = names.get(entry.slice("#/$defs/".length));
               return [key, `#/components/schemas/${name}`];
@@ -125,8 +135,9 @@ function acceptsTokens(access: RouteAccess | undefined): boolean {
 function security(access: RouteAccess | undefined): Record<string, string[]>[] {
   if (!access || access.kind === "public" || access.kind === "setupCode" || access.kind === "setupSession")
     return [];
-  if (acceptsTokens(access)) return [{ bearerAuth: [] }, { sessionCookie: [] }];
-  return [{ sessionCookie: [] }];
+  const open = access.kind === "permission" && access.publicForSoleOrganization ? [{}] : [];
+  if (acceptsTokens(access)) return [{ bearerAuth: [] }, { sessionCookie: [] }, ...open];
+  return [{ sessionCookie: [] }, ...open];
 }
 
 function accessText(access: RouteAccess | undefined): string | null {
@@ -141,11 +152,14 @@ function accessText(access: RouteAccess | undefined): string | null {
         access.sessionOnly || access.recentAuthentication
           ? " Needs a signed-in session; API tokens are refused."
           : "";
+      const open = access.publicForSoleOrganization
+        ? " Open to everyone while the instance has exactly one organization."
+        : "";
       if (access.alternatives.length > 0) {
         const all = [access.action, ...access.alternatives].map((action) => `\`${action}\``).join(", ");
-        return `Requires one of the permissions ${all} on ${on}; the request decides which.${via}`;
+        return `Requires one of the permissions ${all} on ${on}; the request decides which.${via}${open}`;
       }
-      return `Requires the permission \`${access.action}\` on ${on}.${via}`;
+      return `Requires the permission \`${access.action}\` on ${on}.${via}${open}`;
     }
     case "session":
       return "Needs a signed-in session.";
@@ -270,7 +284,7 @@ function operation(
           },
         }
       : {}),
-    ...(route.internal ? { "x-pagehall-internal": true } : {}),
+    ...(route.internal ? { "x-pagehall-internal": true, "x-stability-level": "alpha" } : {}),
     security: security(route.access),
     ...(parameterList.length > 0 ? { parameters: parameterList } : {}),
     ...(definition.body

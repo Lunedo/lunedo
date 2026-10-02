@@ -10,6 +10,7 @@ import { HealthModule } from "./health/health.module.js";
 import { ApiRouteInterceptor } from "./http/api-route.interceptor.js";
 import { ErrorFilter } from "./http/error.filter.js";
 import { MetricsController } from "./metrics/metrics.controller.js";
+import { NotificationsModule } from "./notifications/notifications.module.js";
 import { OrganizationsModule } from "./organizations/organizations.module.js";
 import { SetupModule } from "./setup/setup.module.js";
 import { TokensModule } from "./tokens/tokens.module.js";
@@ -24,7 +25,15 @@ export class AppModule {
         DiscoveryModule,
         HealthModule,
         ...(context.services
-          ? [AuthModule, SetupModule, OrganizationsModule, TokensModule, AuditModule, DocsModule]
+          ? [
+              AuthModule,
+              SetupModule,
+              OrganizationsModule,
+              TokensModule,
+              AuditModule,
+              NotificationsModule,
+              DocsModule,
+            ]
           : []),
       ],
       controllers: [MetricsController],

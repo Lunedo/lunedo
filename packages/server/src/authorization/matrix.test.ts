@@ -71,12 +71,13 @@ const SUBJECT_FACTS: Record<Subject, SubjectFacts> = {
 
 function assignmentValid(subject: Subject, via: PrincipalKind, role: RoleCase): boolean {
   const facts = SUBJECT_FACTS[subject];
+  if (via === "organizationMembers" || via === "instanceUsers") return false;
   if (role.scope === "instance" && role.builtIn === "owner")
     return via === "account" && facts.type === "standard";
   if (role.builtIn && !ASSIGNABLE[role.scope].includes(role.builtIn)) return false;
   if (role.builtIn === "owner" && facts.type !== "standard") return false;
   if (role.builtIn === "owner" && via !== "account") return false;
-  if (role.scope === "instance" && (via === "group" || via === "organizationMembers")) return false;
+  if (role.scope === "instance" && via === "group") return false;
   if (via !== "account") return true;
   if (role.scope === "instance") return facts.type === "standard";
   return facts.membership === "member";
@@ -119,7 +120,8 @@ type Rule =
   | "membersCreateGroups"
   | "homeOrganizationAdministrator"
   | "manager"
-  | "memberOrManager";
+  | "memberOrManager"
+  | "self";
 
 interface Expectation {
   scope: RoleScope;
@@ -185,6 +187,10 @@ const EXPECTED: Record<string, Expectation> = {
   "group.manage": organization("membersAndGroups", "manage", "manager"),
   "group.delete": organization("membersAndGroups", "manage", "manager"),
   "account.deactivate": instance("accounts", "manage", "homeOrganizationAdministrator"),
+  "account.activity.view": { scope: "instance", rule: "self" },
+  "account.reactivate": instance("accounts", "manage", "homeOrganizationAdministrator"),
+  "account.sessions.end": instance("accounts", "manage", "homeOrganizationAdministrator"),
+  "account.secondFactor.reset": instance("accounts", "manage", "homeOrganizationAdministrator"),
   "serviceAccount.view": organization("integrationsAndApi", "view"),
   "serviceAccount.manage": organization("integrationsAndApi", "manage"),
 };
@@ -201,6 +207,7 @@ function expectedAllowed(held: Held, actionName: string): boolean {
     selfService: () => false,
     membersCreateGroups: () => false,
     homeOrganizationAdministrator: () => grantsLevel(organizationAreas.membersAndGroups, "manage"),
+    self: () => false,
     manager: () => false,
     memberOrManager: () => facts.membership !== null && held.via === "group",
   };

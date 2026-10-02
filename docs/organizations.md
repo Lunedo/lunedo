@@ -4,11 +4,13 @@ An instance contains one or more organizations. Each has its own members, groups
 
 ## Organizations
 
-An organization has a name, a slug that is unique regardless of case, a language, a time zone and a logo reference. Language and time zone are organization-level settings, so members inherit them unless they choose their own.
+An organization has a name, a slug that is unique regardless of case, a language, a time zone and an optional logo. Language and time zone are organization-level settings, so members inherit them unless they choose their own.
+
+The logo is a PNG, JPEG or WebP image of at most 256 KiB. Pagehall checks that the file content matches the declared type and stores the image in the database, so that backups contain it. Logos are served with their stored type, `nosniff` and a content security policy that forbids any active content. While the instance has exactly one organization, its logo is public, because the sign-in page shows it; otherwise only members of the organization can read it, so the logo cannot be used to find out which organizations exist. The logo reference changes with every upload. The accent color is the setting `branding.accentColor`, one of the seven palette colors, at instance and organization level.
 
 Instance administrators assign e-mail domains to organizations. A domain belongs to at most one organization. When an account is created with a verified address in an assigned domain, through an invitation or self-registration, that organization becomes its home organization. Changes of the home organization of existing accounts follow with identity providers.
 
-Self-service creation of organizations is the instance setting `organizations.selfServiceCreation` (default off). When it is on, every active standard account may create organizations.
+Self-service creation of organizations is the instance setting `organizations.selfServiceCreation` (default off). When it is on, every active standard account may create organizations, which it then owns. Naming another account as owner needs `instance.organizations.manage`.
 
 ## Memberships
 
@@ -60,7 +62,8 @@ Rules:
 - Every operation that gives or widens access passes one check: assigning a role, adding a member to a group that holds roles, widening a custom role, and creating a token for a service account. What the target gains must be covered by the actor's own permanent permissions; temporary roles and break-glass access never count. A refusal is `selfExtension` when the actor would gain the access, directly, through a group, through a role they hold or through a token they receive, and `roleExceedsOwnPermissions` otherwise.
 - Every operation that removes or disables a principal holding a role checks the actor's rank: removing a role or a member, deleting a group or a custom role, deactivating an account or a service account. The actor must hold the areas of what is removed, and only owners remove owners.
 - Only owners appoint owners. Owners are individual standard accounts and never expire; service accounts and guests cannot be owners, and the last owner cannot leave or be removed.
-- Roles are assigned to accounts, groups, all members of an organization or all internal users of the instance.
+- Roles at the instance and organization level, built-in and custom, are assigned only to individual accounts and to groups; instance roles only to accounts. The server refuses all members of an organization and all internal users of the instance with `roleNeedsAccountOrGroup`. These principals remain for content permissions. Assignments made earlier to them stay in effect until they are removed.
+- One role can be given to several accounts and groups at once through `POST /api/v1/organizations/{organizationId}/role-assignments/batch` and `POST /api/v1/instance/role-assignments/batch`. Either all assignments are made or none.
 
 ## Groups
 
@@ -86,6 +89,12 @@ Principals are accounts, including service accounts, groups, all members of an o
 
 A permission matrix test generates every combination of account kind, principal kind, built-in role, a custom role per area and registered action, and compares each decision with a model of the rules. New actions and roles are covered without changing the test; an action with a rule the model does not know fails it.
 
+## Account administration
+
+`GET /api/v1/instance/accounts` lists accounts with their instance roles, whether a second factor is set up and the last sign-in; `GET /api/v1/instance/accounts/{id}` adds the memberships and roles per organization, active sessions, active personal API tokens and the second factors. `GET /api/v1/instance/organizations` lists organizations with their owners, number of members and domains. These lists, the members and the groups of an organization accept `q` to search names, e-mail addresses, short names and group descriptions on the server, page by page.
+
+Administrators deactivate and reactivate accounts, end all sessions of an account and reset its second factor. Instance administrators with the accounts area may do this for every account, administrators of an organization for accounts whose home organization it is. The same rank rules apply to all four actions: holders of instance roles need someone with at least the same instance areas, owners of an organization, their home organization or any other, need an owner of that organization or the instance owner, the instance owner needs an owner, and nobody acts on their own account this way. Ending sessions and reactivating are audited as `account.sessionsEnded` and `account.reactivated`.
+
 ## Endpoints
 
 Each endpoint declares the action it requires. Endpoints marked internal serve the web client and are left out of the public API reference; the others are described at `/api/docs`, see [api.md](api.md).
@@ -95,6 +104,8 @@ Each endpoint declares the action it requires. Endpoints marked internal serve t
 | `GET /api/v1/organizations` | session: organizations of the caller; internal |
 | `POST /api/v1/organizations` | `instance.organizations.create` |
 | `GET, PATCH /api/v1/organizations/{id}` | `organization.view`, `organization.update` |
+| `PUT, DELETE /api/v1/organizations/{id}/logo` | `organization.update` |
+| `GET /api/v1/organizations/{id}/logo` | `organization.view`, public while the instance has one organization; internal |
 | `GET /api/v1/organizations/{id}/domains` | `organization.signIn.view` |
 | `POST, DELETE /api/v1/organizations/{id}/domains` | `instance.organizations.manage` |
 | `GET /api/v1/organizations/{id}/members` | `organization.members.view` |
@@ -103,6 +114,7 @@ Each endpoint declares the action it requires. Endpoints marked internal serve t
 | `DELETE /api/v1/organizations/{id}/membership` | `organization.leave`; internal |
 | `GET, POST, PATCH, DELETE /api/v1/organizations/{id}/roles` | `organization.roles.view`, `organization.roles.manage` |
 | `GET, POST, DELETE /api/v1/organizations/{id}/role-assignments` | `organization.roles.view`, `organization.roles.manage` |
+| `POST /api/v1/organizations/{id}/role-assignments/batch` | `organization.roles.manage`; internal |
 | `GET, POST /api/v1/organizations/{id}/groups` | `organization.groups.view`, `organization.groups.create` |
 | `GET, PATCH, DELETE /api/v1/groups/{id}`, members and managers | `group.view`, `group.manage`, `group.delete` |
 | `GET, POST, DELETE /api/v1/organizations/{id}/invitations` | `organization.members.manage` |
@@ -111,9 +123,22 @@ Each endpoint declares the action it requires. Endpoints marked internal serve t
 | `POST, DELETE /api/v1/organizations/{id}/break-glass` | `instance.breakGlass.request`, session only; internal |
 | `GET /api/v1/instance/organizations`, `.../accounts` | `instance.organizations.view`, `instance.accounts.view` |
 | `GET, POST, PATCH, DELETE /api/v1/instance/roles`, `.../role-assignments` | `instance.roles.view`, `instance.roles.manage` |
+| `POST /api/v1/instance/role-assignments/batch` | `instance.roles.manage`; internal |
+| `GET /api/v1/instance/accounts/{id}` | `instance.accounts.view`; internal |
 | `POST /api/v1/instance/ownership` | `instance.ownership.transfer`, recent authentication; internal |
+| `GET /api/v1/instance/info` | public: instance name, defaults and the only organization; internal |
+| `GET /api/v1/instance/break-glass` | `instance.organizations.view`; internal |
+| `GET /api/v1/instance/mail` | `instance.settings.view`; internal |
+| `PUT /api/v1/instance/mail` | `instance.settings.manage`, recent authentication; internal |
+| `POST /api/v1/instance/mail/test` | `instance.settings.manage`; internal |
 | `GET /api/v1/instance/settings` | `instance.settings.view` |
 | `PUT /api/v1/instance/settings/{key}` | the `manage` permission of the setting's area: settings, sign-in, audit log or organizations |
+| `GET /api/v1/account/permissions` | session: the actions the caller may perform on the instance and one organization; internal |
+| `GET, PUT /api/v1/account/preferences` | session: the caller's settings at the user level; internal |
 | `POST /api/v1/accounts/{id}/deactivate` | `account.deactivate`, recent authentication; internal |
+| `POST /api/v1/accounts/{id}/reactivate` | `account.reactivate`, recent authentication; internal |
+| `POST /api/v1/accounts/{id}/sessions/end` | `account.sessions.end`, recent authentication; internal |
+| `POST /api/v1/accounts/{id}/second-factor/reset` | `account.secondFactor.reset`, recent authentication; internal |
+| `GET /api/v1/accounts/{id}/security-activity` | `account.activity.view`, only the own account; internal |
 | `POST /api/v1/invitations/accept` | public, with the token from the mail; internal |
 | `POST /api/v1/registrations`, `.../complete` | public; internal |

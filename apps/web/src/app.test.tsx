@@ -1,52 +1,201 @@
-import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { App } from "./app.js";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { App, createQueryClient } from "./app.js";
 import { initI18n } from "./i18n/index.js";
+import { mockApi, problem, type RecordedRequest } from "./testing/render.js";
+
+const ORGANIZATION = {
+  id: "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f",
+  name: "Platform Team",
+  slug: "platform-team",
+  logoRef: null,
+  language: "en",
+  timeZone: "Europe/Vienna",
+  accentColor: "violet",
+  createdAt: "2026-10-01T08:00:00.000Z",
+  membershipKind: "member",
+};
+
+const SESSION = {
+  sessionKind: "full",
+  account: { id: "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c", email: "olivia@example.org", name: "Olivia Owner" },
+  methods: ["password", "totp"],
+  recentlyAuthenticated: true,
+};
+
+function preference(key: string, value: unknown) {
+  return {
+    key,
+    value,
+    defaultValue: value,
+    source: "default",
+    lockedBy: null,
+    locked: false,
+    lockable: false,
+    levelsBelow: [],
+    editable: true,
+    levels: [],
+  };
+}
+
+function api(
+  overrides: Record<string, (request: RecordedRequest) => { status?: number; body?: unknown }> = {},
+) {
+  let signedIn = false;
+  return mockApi({
+    "GET /api/v1/instance/info": () => ({
+      body: {
+        name: "Example Wiki",
+        setupComplete: true,
+        language: "en",
+        accentColor: "petrol",
+        passwordMinLength: 12,
+        selfRegistration: false,
+        organization: { id: ORGANIZATION.id, name: ORGANIZATION.name, logoRef: null, accentColor: "violet" },
+      },
+    }),
+    "GET /api/v1/auth/session": () => (signedIn ? { body: SESSION } : problem(401, "notSignedIn")),
+    "POST /api/v1/auth/sign-in": (request) =>
+      (request.body as { password: string }).password === "correct horse battery"
+        ? { body: { status: "secondFactorRequired", factors: ["totp", "recoveryCode"] } }
+        : problem(401, "invalidCredentials"),
+    "POST /api/v1/auth/sign-in/second-factor": (request) => {
+      if ((request.body as { code: string }).code !== "123456") return problem(401, "invalidSecondFactor");
+      signedIn = true;
+      return { body: { status: "signedIn", sessionKind: "full", account: SESSION.account } };
+    },
+    "GET /api/v1/organizations": () => ({ body: { items: [ORGANIZATION], nextCursor: null } }),
+    "GET /api/v1/account/permissions": () => ({
+      body: { instance: [], organization: ["organization.view", "organization.members.view"] },
+    }),
+    "GET /api/v1/account/preferences": () => ({
+      body: [
+        preference("locale.language", "en"),
+        preference("appearance.colorMode", "dark"),
+        preference("appearance.textSize", 1.25),
+      ],
+    }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 2 } }),
+    ...overrides,
+  });
+}
 
 beforeEach(() => {
   vi.stubGlobal("matchMedia", () => ({
-    matches: true,
+    matches: false,
     addEventListener: () => {},
     removeEventListener: () => {},
   }));
+  vi.stubGlobal(
+    "EventSource",
+    class {
+      addEventListener() {}
+      removeEventListener() {}
+      close() {}
+    },
+  );
 });
 
-describe("App", () => {
-  it("shows the rail with the logo and all navigation items", async () => {
-    await initI18n(["en"]);
-    render(<App />);
+afterEach(() => {
+  window.history.replaceState(null, "", "/");
+});
 
-    const rail = screen.getByRole("navigation", { name: "Main navigation" });
-    expect(rail).toBeDefined();
-    expect(screen.getByRole("link", { name: "Pagehall home" })).toBeDefined();
-    for (const name of [
-      "Create",
-      "For you",
-      "Search",
-      "Starred",
-      "Spaces",
-      "Projects",
-      "Notifications",
-      "Help",
-      "Settings",
-      "Account",
-    ]) {
-      expect(screen.getByRole("button", { name })).toBeDefined();
-    }
-    expect(screen.getByRole("main")).toBeDefined();
+async function renderApp(path: string) {
+  window.history.replaceState(null, "", path);
+  const i18n = await initI18n(["en"]);
+  render(<App i18n={i18n} queryClient={createQueryClient()} />);
+}
+
+describe("the web client", () => {
+  it("sends a signed-out visitor to the sign-in page and back after both factors", async () => {
+    const { requests } = api();
+    await renderApp("/settings/security");
+    expect(await screen.findByRole("heading", { name: "Sign in to Platform Team" })).toBeTruthy();
+    expect(new URL(window.location.href).searchParams.get("redirect")).toBe("/settings/security");
+
+    await userEvent.type(screen.getByLabelText("E-mail"), "olivia@example.org");
+    await userEvent.type(screen.getByLabelText("Password"), "wrong");
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByText("The e-mail address or the password is not correct.")).toBeTruthy();
+
+    await userEvent.type(screen.getByLabelText("Password"), "correct horse battery");
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByRole("heading", { name: "Confirm it's you" })).toBeTruthy();
+    await userEvent.type(screen.getByLabelText("Code from your authenticator app"), "123456");
+    await userEvent.click(screen.getByRole("button", { name: "Verify" }));
+
+    expect(await screen.findByRole("heading", { name: "Security", level: 1 })).toBeTruthy();
+    const signIn = requests.find((request) => request.path === "/api/v1/auth/sign-in");
+    expect(signIn?.headers.get("X-Pagehall-Request")).toBe("1");
   });
 
-  it("uses German labels for German browsers", async () => {
-    await initI18n(["de-DE"]);
-    render(<App />);
-    expect(screen.getByRole("navigation", { name: "Hauptnavigation" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Einstellungen" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Favoriten" })).toBeDefined();
+  it("applies the preferences and the organization's accent once signed in", async () => {
+    api({ "GET /api/v1/auth/session": () => ({ body: SESSION }) });
+    await renderApp("/settings/preferences");
+    expect(await screen.findByRole("heading", { name: "Preferences", level: 1 })).toBeTruthy();
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark"));
+    expect(document.documentElement.dataset.accent).toBe("violet");
+    expect(document.documentElement.style.getPropertyValue("--ph-text-scale")).toBe("1.25");
+    expect(await screen.findByRole("button", { name: "Notifications, 2 unread" })).toBeTruthy();
+    const navigation = screen.getByRole("navigation", { name: "Settings" });
+    expect(within(navigation).getByRole("link", { name: "Members" })).toBeTruthy();
+    expect(within(navigation).queryByRole("link", { name: "Roles" })).toBeNull();
+    expect(within(navigation).queryByRole("link", { name: "Organizations" })).toBeNull();
   });
 
-  it("applies the system color mode", async () => {
-    await initI18n(["en"]);
-    render(<App />);
-    expect(document.documentElement.dataset.theme).toBe("dark");
+  it("steps the text size and offers the default only when it differs", async () => {
+    const { requests } = api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "PUT /api/v1/account/preferences/appearance.textSize": () => ({ status: 204 }),
+    });
+    await renderApp("/settings/preferences");
+    const textSize = await screen.findByRole("group", { name: "Text size" });
+    expect(await within(textSize).findByText("125%")).toBeTruthy();
+    expect(within(textSize).getByRole("button", { name: "Default" })).toBeTruthy();
+    expect(within(textSize).getByRole("button", { name: "Increase" }).getAttribute("aria-disabled")).toBe(
+      "true",
+    );
+    await userEvent.click(within(textSize).getByRole("button", { name: "Decrease" }));
+    await waitFor(() =>
+      expect(
+        requests.find((request) => request.path === "/api/v1/account/preferences/appearance.textSize")?.body,
+      ).toEqual({ value: 1.125 }),
+    );
+  });
+
+  it("asks for the identity before a sensitive change and repeats it", async () => {
+    let confirmed = false;
+    const { requests } = api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/security": () => ({
+        body: { totp: true, passkeys: [], recoveryCodes: 8, secondFactorRequired: true },
+      }),
+      "GET /api/v1/account/sessions": () => ({ body: { items: [], nextCursor: null } }),
+      "GET /api/v1/account/tokens": () => ({ body: { items: [], nextCursor: null } }),
+      "POST /api/v1/account/password": () =>
+        confirmed ? { status: 204 } : problem(403, "reauthenticationRequired"),
+      "POST /api/v1/auth/reauthenticate": () => {
+        confirmed = true;
+        return { status: 204 };
+      },
+    });
+    await renderApp("/settings/security");
+    await userEvent.click(await screen.findByRole("button", { name: "Change password" }));
+    const dialog = screen.getByRole("dialog", { name: "Change password" });
+    await userEvent.type(within(dialog).getByLabelText("New password"), "a new long passphrase");
+    await userEvent.type(within(dialog).getByLabelText("Repeat the password"), "a new long passphrase");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Change password" }));
+
+    const confirm = await screen.findByRole("dialog", { name: "Confirm your identity" });
+    await userEvent.type(within(confirm).getByLabelText("Password"), "correct horse battery");
+    await userEvent.click(within(confirm).getByRole("button", { name: "Confirm" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Change password" })).toBeNull());
+    const changes = requests.filter((request) => request.path === "/api/v1/account/password");
+    expect(changes).toHaveLength(2);
+    expect(requests.find((request) => request.path === "/api/v1/auth/reauthenticate")?.body).toEqual({
+      method: "password",
+      password: "correct horse battery",
+    });
   });
 });

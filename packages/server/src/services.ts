@@ -1,4 +1,6 @@
 import { AccountService } from "./accounts/accounts.js";
+import { AccountAdministrationService } from "./accounts/administration.js";
+import { AccountOverviewService } from "./accounts/overview.js";
 import { AuditLog } from "./audit/audit-log.js";
 import { AuditReader } from "./audit/reader.js";
 import { AUDIT_RETENTION_SCHEDULE, applyAuditRetention, auditRetentionJob } from "./audit/retention.js";
@@ -28,6 +30,10 @@ import {
   MailService,
 } from "./mail/mail-service.js";
 import type { MailTransport, SmtpOptions } from "./mail/transport.js";
+import { NotificationRegistry } from "./notifications/registry.js";
+import { NOTIFICATION_RETENTION_SCHEDULE, notificationRetentionJob } from "./notifications/retention.js";
+import { NotificationService } from "./notifications/service.js";
+import { builtinNotificationTypes } from "./notifications/types.js";
 import { BreakGlassService } from "./organizations/break-glass.js";
 import { GroupService } from "./organizations/groups.js";
 import { InvitationService, registrationRequestJob } from "./organizations/invitations.js";
@@ -67,6 +73,8 @@ export interface AccountServices {
   authorization: AuthorizationService;
   organizations: OrganizationService;
   memberships: MembershipService;
+  administration: AccountAdministrationService;
+  overview: AccountOverviewService;
   roles: RoleService;
   groups: GroupService;
   invitations: InvitationService;
@@ -75,6 +83,7 @@ export interface AccountServices {
   auditReader: AuditReader;
   serviceAccounts: ServiceAccountService;
   apiTokens: ApiTokenService;
+  notifications: NotificationService;
 }
 
 export function createAccountServices(options: {
@@ -88,6 +97,7 @@ export function createAccountServices(options: {
   jobs: JobQueue | undefined;
   logger: Logger;
   filesDir: string;
+  configuredInstanceUrl?: string | undefined;
   passwordHashConcurrency: number;
   mailTransport?: (options: SmtpOptions) => MailTransport;
 }): AccountServices {
@@ -120,10 +130,26 @@ export function createAccountServices(options: {
   });
   const organizations = new OrganizationService({ database, settings, audit });
   const memberships = new MembershipService({ database, audit, authorization });
+  const administration = new AccountAdministrationService({ database, authorization, audit, mail });
+  const overview = new AccountOverviewService({ database, accounts });
   const roles = new RoleService({ database, audit, authorization });
   const groups = new GroupService({ database, audit, authorization });
-  const breakGlass = new BreakGlassService({ database, audit, mail, settings });
-  const lifecycle = new OrganizationLifecycle({ database, audit, memberships, breakGlass, mail, settings });
+  const notifications = new NotificationService({
+    database,
+    settings,
+    mail,
+    authorization,
+    registry: new NotificationRegistry().register(...builtinNotificationTypes),
+  });
+  const breakGlass = new BreakGlassService({ database, audit, notifications, settings });
+  const lifecycle = new OrganizationLifecycle({
+    database,
+    audit,
+    memberships,
+    breakGlass,
+    notifications,
+    settings,
+  });
   const invitations = new InvitationService({
     database,
     audit,
@@ -137,8 +163,15 @@ export function createAccountServices(options: {
     jobs,
   });
   const auditReader = new AuditReader({ database, authorization, audit });
-  const serviceAccounts = new ServiceAccountService({ database, audit, mail, authorization });
-  const apiTokens = new ApiTokenService({ database, audit, settings, rateLimiter, mail, authorization });
+  const serviceAccounts = new ServiceAccountService({ database, audit, notifications, authorization });
+  const apiTokens = new ApiTokenService({
+    database,
+    audit,
+    settings,
+    rateLimiter,
+    notifications,
+    authorization,
+  });
   const setupRegistry = new SetupRegistry();
   const setup = new SetupService({ database, registry: setupRegistry, audit, rateLimiter });
   const signIn = new SignInService({
@@ -154,6 +187,7 @@ export function createAccountServices(options: {
     webauthn,
     audit,
     mail,
+    notifications,
     settings,
     setupComplete: () => setup.isComplete(),
   });
@@ -187,6 +221,7 @@ export function createAccountServices(options: {
       keyRing: options.keyRing,
       backupKeys: options.backupKeys,
       filesDir: options.filesDir,
+      configuredInstanceUrl: options.configuredInstanceUrl,
     }),
   );
   return {
@@ -208,6 +243,8 @@ export function createAccountServices(options: {
     authorization,
     organizations,
     memberships,
+    administration,
+    overview,
     roles,
     groups,
     invitations,
@@ -216,6 +253,7 @@ export function createAccountServices(options: {
     auditReader,
     serviceAccounts,
     apiTokens,
+    notifications,
   };
 }
 
@@ -244,7 +282,10 @@ export async function workAccountJobs(
   await jobs.work(apiTokenExpiryJob, async (job) => {
     const expired = await services.apiTokens.recordExpired();
     const reminded = await services.apiTokens.sendReminders();
-    if (expired + reminded > 0) job.logger.info({ expired, reminded }, "API token expiry processed");
+    const unused = await services.apiTokens.notifyUnused();
+    if (expired + reminded + unused > 0) {
+      job.logger.info({ expired, reminded, unused }, "API token expiry processed");
+    }
   });
   await jobs.work(authCleanupJob, async (job) => {
     const removed = {
@@ -259,6 +300,10 @@ export async function workAccountJobs(
     };
     job.logger.debug(removed, "Authentication data cleaned up");
   });
+  await jobs.work(notificationRetentionJob, async (job) => {
+    const removed = await services.notifications.applyRetention();
+    if (removed > 0) job.logger.info({ removed }, "Old notifications removed");
+  });
   await jobs.work(auditRetentionJob, async (job) => {
     const removed = await applyAuditRetention({ audit: services.audit, settings });
     if (removed > 0) job.logger.info({ removed }, "Old audit events removed");
@@ -266,6 +311,7 @@ export async function workAccountJobs(
   await jobs.schedule(dispatchPendingMailJob, DISPATCH_PENDING_MAIL_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(authCleanupJob, AUTH_CLEANUP_SCHEDULE, {}, { key: "regular" });
   await jobs.schedule(auditRetentionJob, AUDIT_RETENTION_SCHEDULE, {}, { key: "daily" });
+  await jobs.schedule(notificationRetentionJob, NOTIFICATION_RETENTION_SCHEDULE, {}, { key: "daily" });
   await jobs.schedule(organizationExpiryJob, ORGANIZATION_EXPIRY_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(apiTokenExpiryJob, API_TOKEN_EXPIRY_SCHEDULE, {}, { key: "regular" });
   await jobs.schedule(organizationRemindersJob, ORGANIZATION_REMINDERS_SCHEDULE, {}, { key: "hourly" });

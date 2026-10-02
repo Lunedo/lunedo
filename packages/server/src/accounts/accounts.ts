@@ -1,18 +1,25 @@
-import { eq, sql } from "drizzle-orm";
-import { z } from "zod";
+import { accountNameSchema, emailSchema } from "@pagehall/shared";
+import { and, eq, sql } from "drizzle-orm";
 import type { AuditEvents, AuditLog } from "../audit/audit-log.js";
 import type { PasswordHasher, PasswordProblem } from "../auth/passwords.js";
 import { passwordProblem } from "../auth/passwords.js";
 import { passwordMinLengthSetting } from "../auth/settings.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
-import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
+import {
+  afterKey,
+  FIRST_PAGE,
+  matchesSearch,
+  type Page,
+  type PageRequest,
+  pageLimit,
+  toPage,
+} from "../database/keyset.js";
 import { memberships } from "../organizations/access-schema.js";
-import type { SettingsService } from "../settings/service.js";
+import type { ScopeChain, SettingsService } from "../settings/service.js";
 import { type AccountState, type AccountType, accounts, instance } from "./schema.js";
 import { accountScopeChain } from "./scope.js";
 
-export const emailSchema = z.email().max(254);
-export const accountNameSchema = z.string().trim().min(1).max(200);
+export { accountNameSchema, emailSchema };
 
 export interface Account {
   id: string;
@@ -89,6 +96,9 @@ export class AccountService {
     this.#audit = options.audit;
     this.#hasher = options.hasher;
   }
+  async settingsChain(accountId: string): Promise<ScopeChain> {
+    return { ...(await accountScopeChain(this.#database, accountId)), user: accountId };
+  }
 
   async list(page: PageRequest = FIRST_PAGE): Promise<Page<Omit<Account, "passwordHash">>> {
     const { passwordHash: _passwordHash, ...columns } = accountColumns;
@@ -96,7 +106,12 @@ export class AccountService {
     const rows = await this.#database
       .select({ ...columns, sortName })
       .from(accounts)
-      .where(afterKey([sortName, accounts.id], page.after))
+      .where(
+        and(
+          afterKey([sortName, accounts.id], page.after),
+          matchesSearch([accounts.name, accounts.email], page.search),
+        ),
+      )
       .orderBy(sortName, accounts.id)
       .limit(pageLimit(page));
     return toPage(

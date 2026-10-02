@@ -37,5 +37,11 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "dependencies": {
+    "@pagehall/tokens": "workspace:*",
+    "cmdk": "^1.1.1",
+    "lucide-react": "^1.48.0",
+    "radix-ui": "^1.6.7"
+  }
 }

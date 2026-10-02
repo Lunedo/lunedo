@@ -1,4 +1,17 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Query, Req } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Query,
+  Req,
+  Res,
+} from "@nestjs/common";
 import {
   accountPrincipal,
   breakGlassReasonSchema,
@@ -6,6 +19,7 @@ import {
   emailSchema,
   groupDescriptionSchema,
   groupNameSchema,
+  LOGO_MAX_BYTES,
   organizationNameSchema,
   organizationSettingsChain,
   roleNameSchema,
@@ -13,7 +27,7 @@ import {
   supportedLanguages,
   timeZoneSchema,
 } from "@pagehall/server";
-import type { FastifyRequest } from "fastify";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission, SessionRoute } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
@@ -26,6 +40,7 @@ import {
   pageRequest,
   pageSchema,
   paginate,
+  searchQuerySchema,
   toApiPage,
 } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
@@ -89,7 +104,9 @@ const createSchema = z
     timeZone: timeZoneSchema
       .optional()
       .describe("Default IANA time zone. The instance default when left out."),
-    ownerAccountId: uuid("Account that becomes owner. The caller when left out.").optional(),
+    ownerAccountId: uuid(
+      "Account that becomes owner. The caller when left out. Naming another account needs the permission `instance.organizations.manage`.",
+    ).optional(),
   })
   .strict()
   .describe("A new organization.");
@@ -111,6 +128,17 @@ const updateSchema = z
   })
   .strict()
   .describe("Fields to change. Fields that are left out stay as they are.");
+
+const logoBody = z
+  .object({
+    contentType: z.enum(["image/png", "image/jpeg", "image/webp"]).describe("Type of the image."),
+    data: z
+      .base64()
+      .max(Math.ceil(LOGO_MAX_BYTES / 3) * 4)
+      .describe("The image, Base64-encoded."),
+  })
+  .strict()
+  .describe("A logo image.");
 
 const domainBody = z
   .object({
@@ -178,11 +206,42 @@ const assignmentBody = z
           .strict()
           .describe("All internal users."),
       ])
-      .describe("Who receives the role."),
+      .describe(
+        "Who receives the role. All members and all internal users are refused with `roleNeedsAccountOrGroup`: roles go to individual accounts and groups only.",
+      ),
     expiresAt: optionalExpiry("When the assignment ends."),
   })
   .strict()
   .describe("A role assignment. Nobody can give more than they hold themselves.");
+
+const batchAssignmentBody = z
+  .object({
+    role: roleInput,
+    principals: z
+      .array(
+        z
+          .discriminatedUnion("kind", [
+            z
+              .object({ kind: z.literal("account").describe("One account."), id: uuid("ID of the account.") })
+              .strict()
+              .describe("An account, including service accounts."),
+            z
+              .object({
+                kind: z.literal("group").describe("All members of a group."),
+                id: uuid("ID of the group."),
+              })
+              .strict()
+              .describe("A group."),
+          ])
+          .describe("An account or a group."),
+      )
+      .min(1)
+      .max(50)
+      .describe("Accounts and groups that receive the role, 1 to 50."),
+    expiresAt: optionalExpiry("When the assignments end."),
+  })
+  .strict()
+  .describe("One role for several accounts and groups. Either all assignments are made or none.");
 
 const assignmentParams = organizationIdParams.extend({ assignmentId: uuid("ID of the role assignment.") });
 
@@ -283,6 +342,11 @@ export class OrganizationsController {
   })
   async create(@Body() body: z.output<typeof createSchema>, @Req() request: FastifyRequest) {
     const actor = actorOf(request);
+    if (body.ownerAccountId !== undefined && body.ownerAccountId !== actor.id) {
+      await this.#services.authorization.require(actor, "instance.organizations.manage", {
+        type: "instance",
+      });
+    }
     const created = await this.#services.organizations.createAsActor(actor, {
       ...body,
       ownerAccountId: body.ownerAccountId ?? actor.id,
@@ -327,6 +391,72 @@ export class OrganizationsController {
     @Req() request: FastifyRequest,
   ) {
     return this.#services.organizations.update(actorOf(request), organizationId, body);
+  }
+
+  @Put(":organizationId/logo")
+  @Permission("organization.update", organization)
+  @ApiRoute({
+    summary: "Upload a logo",
+    description:
+      "Sets the logo shown on the sign-in page, in the navigation and in e-mails. PNG, JPEG or WebP, at most 256 KiB.",
+    tags: [TAG],
+    params: organizationIdParams,
+    body: logoBody,
+    bodyExample: { contentType: "image/png", data: "iVBORw0KGgo=" },
+    response: {
+      description: "The organization with its new logo reference.",
+      schema: organizationSchema,
+      example: { ...exampleOrganization, logoRef: "5f2b8c1d9a0e4b7c" },
+    },
+    errors: ["invalidLogo"],
+  })
+  async uploadLogo(
+    @Param("organizationId") organizationId: string,
+    @Body() body: z.output<typeof logoBody>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.organizations.setLogo(actorOf(request), organizationId, {
+      contentType: body.contentType,
+      data: Buffer.from(body.data, "base64"),
+    });
+  }
+
+  @Delete(":organizationId/logo")
+  @Permission("organization.update", organization)
+  @ApiRoute({
+    summary: "Remove the logo",
+    description: "Removes the logo. Pagehall shows its own logo again.",
+    tags: [TAG],
+    params: organizationIdParams,
+  })
+  async removeLogo(@Param("organizationId") organizationId: string, @Req() request: FastifyRequest) {
+    await this.#services.organizations.update(actorOf(request), organizationId, { logoRef: null });
+  }
+
+  @Get(":organizationId/logo")
+  @Permission("organization.view", organization, { publicForSoleOrganization: true })
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Get the logo",
+    description:
+      "Returns the logo with its stored image type. It is sent with `X-Content-Type-Options: nosniff` and a content security policy that blocks scripts.",
+    tags: [TAG],
+    params: organizationIdParams,
+    raw: { contentTypes: ["image/png", "image/jpeg", "image/webp"], description: "The logo.", example: "" },
+  })
+  async logo(
+    @Param("organizationId") organizationId: string,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const logo = await this.#services.organizations.logo(organizationId);
+    if (!logo) throw notFound();
+    reply
+      .header("content-type", logo.contentType)
+      .header("x-content-type-options", "nosniff")
+      .header("content-security-policy", "default-src 'none'; sandbox")
+      .header("cache-control", "private, max-age=300")
+      .header("etag", `"${logo.ref}"`);
+    return logo.data;
   }
 
   @Get(":organizationId/domains")
@@ -409,7 +539,7 @@ export class OrganizationsController {
     description: "Lists members, collaborators and guests with their directly assigned roles.",
     tags: [MEMBERS],
     params: organizationIdParams,
-    query: pageQuerySchema,
+    query: searchQuerySchema,
     response: {
       description: "Members of the organization.",
       schema: pageSchema(memberSchema, "Members, ordered by name."),
@@ -418,7 +548,7 @@ export class OrganizationsController {
   })
   async members(
     @Param("organizationId") organizationId: string,
-    @Query() query: z.output<typeof pageQuerySchema>,
+    @Query() query: z.output<typeof searchQuerySchema>,
   ) {
     return toApiPage(await this.#services.memberships.list(organizationId, pageRequest(query, nameCursor)));
   }
@@ -619,7 +749,7 @@ export class OrganizationsController {
   @Permission("organization.roles.manage", organization)
   @ApiRoute({
     summary: "Assign a role",
-    description: "Gives a role to an account, a group, all members or all internal users.",
+    description: "Gives a role to an account or a group. Roles go to individual accounts and groups only.",
     tags: [ROLES],
     status: 201,
     params: organizationIdParams,
@@ -636,6 +766,7 @@ export class OrganizationsController {
     errors: [
       "alreadyAssigned",
       "invalidPrincipal",
+      "roleNeedsAccountOrGroup",
       "roleNotAssignable",
       "roleNotFound",
       "expiryInPast",
@@ -654,6 +785,45 @@ export class OrganizationsController {
       principal: { kind: body.principal.kind, id: "id" in body.principal ? body.principal.id : null },
       expiresAt: body.expiresAt ?? null,
     });
+  }
+
+  @Post(":organizationId/role-assignments/batch")
+  @Permission("organization.roles.manage", organization)
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Assign a role to several accounts and groups",
+    description:
+      "Gives one role to several accounts and groups at once. Either all assignments are made or none.",
+    tags: [ROLES],
+    status: 201,
+    params: organizationIdParams,
+    body: batchAssignmentBody,
+    response: {
+      description: "The new assignments.",
+      schema: z.object({ items: z.array(roleAssignmentSchema).describe("The new assignments.") }),
+    },
+    errors: [
+      "alreadyAssigned",
+      "invalidPrincipal",
+      "roleNotAssignable",
+      "roleNotFound",
+      "expiryInPast",
+      "ownerExpiry",
+    ],
+  })
+  async assignMany(
+    @Param("organizationId") organizationId: string,
+    @Body() body: z.output<typeof batchAssignmentBody>,
+    @Req() request: FastifyRequest,
+  ) {
+    const items = await this.#services.roles.assignMany(actorOf(request), {
+      scope: "organization",
+      organizationId,
+      role: body.role,
+      principals: body.principals,
+      expiresAt: body.expiresAt ?? null,
+    });
+    return { items };
   }
 
   @Delete(":organizationId/role-assignments/:assignmentId")
@@ -684,7 +854,7 @@ export class OrganizationsController {
     description: "Lists the groups of the organization.",
     tags: [GROUPS],
     params: organizationIdParams,
-    query: pageQuerySchema,
+    query: searchQuerySchema,
     response: {
       description: "Groups of the organization.",
       schema: pageSchema(groupSchema, "Groups, ordered by name."),
@@ -693,7 +863,7 @@ export class OrganizationsController {
   })
   async groups(
     @Param("organizationId") organizationId: string,
-    @Query() query: z.output<typeof pageQuerySchema>,
+    @Query() query: z.output<typeof searchQuerySchema>,
   ) {
     return toApiPage(await this.#services.groups.list(organizationId, pageRequest(query, nameCursor)));
   }

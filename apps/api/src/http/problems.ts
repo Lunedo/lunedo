@@ -13,12 +13,14 @@ export const problems = {
   settingManagedElsewhere: { status: 400, title: "The setting is changed through another endpoint" },
   ambiguousCredentials: { status: 400, title: "The request carries both a session and an API token" },
   invalidPrincipal: { status: 400, title: "The role cannot go to this principal" },
+  roleNeedsAccountOrGroup: { status: 400, title: "The role can only go to individual accounts and groups" },
   roleNotAssignable: { status: 400, title: "The role cannot be assigned" },
   ownerExpiry: { status: 400, title: "The owner role cannot expire" },
   expiryInPast: { status: 400, title: "The expiry lies in the past" },
   expiryRequired: { status: 400, title: "An expiry date is required" },
   expiryTooLate: { status: 400, title: "The expiry exceeds the maximum lifetime" },
   invalidOwner: { status: 400, title: "The owner is not valid" },
+  invalidLogo: { status: 400, title: "The logo is not a supported image" },
   invalidScopes: { status: 400, title: "The scopes are not valid" },
   invalidResponsible: { status: 400, title: "The responsible person is not valid" },
   invalidInvitation: { status: 400, title: "The invitation is not valid" },
@@ -54,6 +56,8 @@ export const problems = {
   lastOwner: { status: 409, title: "The last owner cannot leave" },
   homeOrganization: { status: 409, title: "An account cannot leave its home organization" },
   deactivateSelf: { status: 409, title: "An account cannot deactivate itself" },
+  endOwnSessions: { status: 409, title: "Own sessions are ended on the security page" },
+  resetOwnSecondFactor: { status: 409, title: "An account cannot reset its own second factor this way" },
   instanceOwner: { status: 409, title: "The instance owner cannot be changed this way" },
   settingLocked: { status: 409, title: "A higher level locked the setting" },
   setupIncomplete: { status: 409, title: "The setup is not complete" },
@@ -107,6 +111,11 @@ export const problemSchema = z
     problem: z.string().optional().describe("Which password rule failed, for `passwordPolicy`."),
     minLength: z.number().int().optional().describe("Minimum password length, for `passwordPolicy`."),
     lockedBy: z.string().optional().describe("Level that locked the setting, for `settingLocked`."),
+    maxLifetimeDays: z
+      .number()
+      .int()
+      .optional()
+      .describe("Maximum lifetime of API tokens in days, for `expiryRequired` and `expiryTooLate`."),
   })
   .describe("Error response following RFC 9457 Problem Details.");
 

@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lt, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, or, type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import { ForbiddenError } from "../authorization/service.js";
@@ -17,6 +17,7 @@ export interface AuditEntry {
   targetType: string;
   targetId: string | null;
   fields: unknown;
+  labels: unknown;
   occurredAt: Date;
   requestId: string | null;
   clientIp: string | null;
@@ -40,6 +41,26 @@ export interface AuditCursor {
 
 const EXPORT_BATCH = 500;
 
+export const ACCOUNT_SECURITY_EVENTS = [
+  "auth.signedIn",
+  "auth.signInFailed",
+  "auth.lockedOut",
+  "auth.signedOut",
+  "auth.sessionEnded",
+  "account.passwordChanged",
+  "account.passwordReset",
+  "account.emailChanged",
+  "account.secondFactorReset",
+  "twoFactor.totpAdded",
+  "twoFactor.totpRemoved",
+  "twoFactor.passkeyAdded",
+  "twoFactor.passkeyRemoved",
+  "twoFactor.recoveryCodesGenerated",
+  "twoFactor.recoveryCodeUsed",
+] as const;
+
+export const TOKEN_SECURITY_EVENTS = ["apiToken.created", "apiToken.revoked", "apiToken.expired"] as const;
+
 const columns = {
   id: auditEvents.id,
   scopeType: auditEvents.scopeType,
@@ -51,6 +72,7 @@ const columns = {
   targetType: auditEvents.targetType,
   targetId: auditEvents.targetId,
   fields: auditEvents.fields,
+  labels: auditEvents.labels,
   occurredAt: auditEvents.occurredAt,
   requestId: auditEvents.requestId,
   clientIp: auditEvents.clientIp,
@@ -118,6 +140,45 @@ export class AuditReader {
     await this.#requireRead(actor, filter.scope);
     const limit = Math.min(Math.max(options.limit ?? 50, 1), 1000);
     const rows = await this.#page(filter, options.cursor, limit + 1);
+    const items = rows.slice(0, limit);
+    const last = items.at(-1);
+    return { items, next: rows.length > limit && last ? { occurredAt: last.occurredAt, id: last.id } : null };
+  }
+
+  async securityActivity(
+    actor: Principal,
+    accountId: string,
+    options: { limit?: number; cursor?: AuditCursor } = {},
+  ): Promise<{ items: AuditEntry[]; next: AuditCursor | null }> {
+    await this.#authorization.require(actor, "account.activity.view", { type: "account", id: accountId });
+    const limit = Math.min(Math.max(options.limit ?? 50, 1), 200);
+    const cursor = options.cursor;
+    const rows = await this.#database
+      .select(columns)
+      .from(auditEvents)
+      .where(
+        and(
+          or(
+            and(
+              eq(auditEvents.targetType, "account"),
+              eq(auditEvents.targetId, accountId),
+              inArray(auditEvents.name, [...ACCOUNT_SECURITY_EVENTS]),
+            ),
+            and(
+              inArray(auditEvents.name, [...TOKEN_SECURITY_EVENTS]),
+              sql`${auditEvents.fields}->>'accountId' = ${accountId}`,
+            ),
+          ),
+          cursor
+            ? or(
+                lt(auditEvents.occurredAt, cursor.occurredAt),
+                and(eq(auditEvents.occurredAt, cursor.occurredAt), lt(auditEvents.id, cursor.id)),
+              )
+            : undefined,
+        ),
+      )
+      .orderBy(desc(auditEvents.occurredAt), desc(auditEvents.id))
+      .limit(limit + 1);
     const items = rows.slice(0, limit);
     const last = items.at(-1);
     return { items, next: rows.length > limit && last ? { occurredAt: last.occurredAt, id: last.id } : null };

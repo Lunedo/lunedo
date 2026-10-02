@@ -213,6 +213,31 @@ describe.skipIf(!databaseUrl)("AuditLog", () => {
     expect(await eventsOf(scope)).toHaveLength(1);
   });
 
+  it("records the names at the time of the event and protects them with the hash", async () => {
+    const scope = newScope();
+    const accountId = uuidv7();
+    await pool.query(
+      `insert into accounts (id, type, state, name, email) values ($1, 'standard', 'active', 'Olivia Owner', $2)`,
+      [accountId, `${accountId}@example.org`],
+    );
+    await audit.recordAlone({
+      name: "group.memberAdded",
+      actor: { type: "account", id: accountId },
+      targetId: uuidv7(),
+      fields: { accountId, expiresAt: null },
+      scope,
+    });
+    await pool.query("update accounts set name = 'Olivia Renamed' where id = $1", [accountId]);
+    const [event] = await eventsOf(scope);
+    expect(event?.labels).toEqual({ actor: "Olivia Owner", references: { [accountId]: "Olivia Owner" } });
+    expect(await verifyScope(audit, scope)).toMatchObject({ entries: 1, broken: null });
+
+    await tamper(sql`update audit_events set labels = '{"actor":"Mallory"}' where id = ${event?.id}`);
+    expect(await verifyScope(audit, scope)).toMatchObject({
+      broken: { sequence: 1, problem: "the content does not match its hash" },
+    });
+  });
+
   it("reports the first entry whose content was changed", async () => {
     const scope = newScope();
     for (let i = 0; i < 4; i++) await audit.recordAlone(signIn(scope));

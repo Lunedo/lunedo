@@ -5,7 +5,7 @@ import { hashToken } from "../auth/tokens.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { generateApiToken } from "../tokens/format.js";
-import { tokenMaxLifetimeSetting, tokensWithoutExpirySetting } from "../tokens/settings.js";
+import { tokenMaxLifetimeSetting } from "../tokens/settings.js";
 import type { Areas } from "./areas.js";
 import { ForbiddenError } from "./service.js";
 
@@ -329,7 +329,7 @@ describe.skipIf(!baseUrl)("granting access", () => {
       expect(Math.round(((defaulted.apiToken.expiresAt?.getTime() ?? 0) - Date.now()) / DAY_MS)).toBe(30);
     });
 
-    it("allow no expiry only where every reached organization allows it", async () => {
+    it("allow no expiry only where no reached organization sets a maximum", async () => {
       const home = await organization();
       const strict = await organization();
       const person = await standard(home.id);
@@ -340,8 +340,7 @@ describe.skipIf(!baseUrl)("granting access", () => {
           kind: "collaborator",
         }),
       );
-      await test.settings.set(tokensWithoutExpirySetting, {}, "instance", true);
-      await test.settings.set(tokensWithoutExpirySetting, { organization: strict.id }, "organization", false);
+      await test.settings.set(tokenMaxLifetimeSetting, { organization: strict.id }, "organization", 30);
       try {
         const actor = accountPrincipal(person);
         const scopes = { organization: { membersAndGroups: "view" as const } };
@@ -362,7 +361,7 @@ describe.skipIf(!baseUrl)("granting access", () => {
         });
         expect(atHome.apiToken.expiresAt).toBeNull();
       } finally {
-        await test.settings.set(tokensWithoutExpirySetting, {}, "instance", false);
+        await test.settings.clear(tokenMaxLifetimeSetting, { organization: strict.id }, "organization");
       }
     });
   });

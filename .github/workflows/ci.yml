@@ -59,6 +59,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm references:check
+      - run: pnpm i18n:check
       - run: pnpm typecheck
       - run: pnpm test
 
@@ -76,21 +77,41 @@ jobs:
         run: scripts/backup-roundtrip.sh pagehall:ci
 
   e2e:
-    name: Playwright smoke test
+    name: End-to-end, accessibility and visual tests
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 40
+    container:
+      image: mcr.microsoft.com/playwright@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27 # v1.63.0-noble
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pagehall
+          POSTGRES_PASSWORD: pagehall
+          POSTGRES_DB: pagehall
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U pagehall -d pagehall"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      mailpit:
+        image: axllent/mailpit:v1.31.3
+        env:
+          MP_DISABLE_VERSION_CHECK: "true"
+    env:
+      PAGEHALL_E2E_DATABASE_URL: postgres://pagehall:pagehall@postgres:5432/pagehall
+      PAGEHALL_E2E_MAILPIT_URL: http://mailpit:8025
+      PAGEHALL_E2E_SMTP_HOST: mailpit
+      HOME: /root
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - run: corepack enable
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @pagehall/web exec playwright install --with-deps chromium
-      - run: pnpm test:e2e
+      - run: pnpm build
+      - run: pnpm --filter @pagehall/web build:e2e
+      - run: pnpm --filter @pagehall/web test:e2e
       - if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

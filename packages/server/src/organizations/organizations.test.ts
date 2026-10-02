@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { InvalidTokenError } from "../auth/errors.js";
@@ -432,6 +432,44 @@ describe.skipIf(!baseUrl)("organizations", () => {
     );
     const reminders = await sentMailTo(creatorEmail.rows[0]?.email ?? "");
     expect(reminders.map((mail) => mail.text)).toEqual([expect.stringContaining("The role administrator")]);
+  });
+
+  it("keeps a reminder due when its notification fails, so the next run sends it", async () => {
+    await test.services.lifecycle.sendReminders();
+    const org = await organization();
+    const creator = await standard(org.id);
+    await test.services.roles.assign(SYSTEM, {
+      scope: "organization",
+      organizationId: org.id,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: creator },
+    });
+    const person = await standard(org.id);
+    const assignment = await test.services.roles.assign(accountPrincipal(creator), {
+      scope: "organization",
+      organizationId: org.id,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: person },
+      expiresAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+    });
+    const failure = vi
+      .spyOn(test.services.notifications, "notify")
+      .mockRejectedValueOnce(new Error("The node stopped"));
+    await expect(test.services.lifecycle.sendReminders()).rejects.toThrow("The node stopped");
+    failure.mockRestore();
+    const marked = await test.pool.query("select expiry_reminded_at from role_assignments where id = $1", [
+      assignment.id,
+    ]);
+    expect(marked.rows).toEqual([{ expiry_reminded_at: null }]);
+
+    expect(await test.services.lifecycle.sendReminders()).toBe(1);
+    const notices = await test.pool.query(
+      "select params from notifications where recipient_id = $1 and type = 'access.expiring'",
+      [creator],
+    );
+    expect(notices.rows).toEqual([
+      { params: expect.objectContaining({ kind: "role", name: "administrator" }) },
+    ]);
   });
 
   it("transfers the instance ownership to an instance administrator only", async () => {

@@ -13,7 +13,8 @@ RUN corepack enable && corepack install
 FROM base AS dev
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && install -d -m 700 /var/lib/pagehall /var/lib/pagehall/files /var/lib/pagehall/secrets
 
 FROM base AS build
 COPY . .

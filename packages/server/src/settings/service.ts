@@ -1,5 +1,5 @@
 import { and, eq, or, sql } from "drizzle-orm";
-import type { Database, Transaction } from "../database/database.js";
+import type { Database, Executor, Transaction } from "../database/database.js";
 import type { NotificationListener } from "../database/notifications.js";
 import type { Logger } from "../logging/logger.js";
 import { isAtLeastAsStrict, type SettingDefinition, type SettingLevel, settingLevels } from "./definition.js";
@@ -9,6 +9,32 @@ import { settingValues } from "./schema.js";
 export const INSTANCE_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 
 const CHANNEL = "pagehall_settings";
+export const SETTING_CHANGES_CHANNEL = "pagehall_setting_changes";
+
+export interface SettingChangeSignal {
+  level: SettingLevel;
+  id: string;
+  key: string;
+  action: SettingChange["action"];
+}
+
+export function parseSettingChangeSignal(payload: string): SettingChangeSignal | null {
+  try {
+    const parsed = JSON.parse(payload) as Partial<SettingChangeSignal>;
+    if (
+      typeof parsed.level === "string" &&
+      (settingLevels as readonly string[]).includes(parsed.level) &&
+      typeof parsed.id === "string" &&
+      typeof parsed.key === "string" &&
+      typeof parsed.action === "string"
+    ) {
+      return parsed as SettingChangeSignal;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
 
 /** The scopes a request belongs to. The instance is always part of the chain. */
 export interface ScopeChain {
@@ -63,6 +89,8 @@ export interface SettingChange {
   scope: Scope;
   action: "set" | "clear" | "lock" | "unlock";
   value?: unknown;
+  previousValue: unknown;
+  previousLocked: boolean;
 }
 
 export type SettingChangeHandler = (tx: Transaction, change: SettingChange) => Promise<void>;
@@ -129,7 +157,7 @@ export class SettingsService {
     this.#caching = true;
   }
 
-  async #rows(scopes: Scope[]): Promise<Map<string, ScopeRows>> {
+  async #rows(scopes: Scope[], executor?: Executor): Promise<Map<string, ScopeRows>> {
     const result = new Map<string, ScopeRows>();
     const missing: Scope[] = [];
     for (const scope of scopes) {
@@ -139,7 +167,7 @@ export class SettingsService {
     }
     if (missing.length === 0) return result;
 
-    const loading = this.#database
+    const loading = (executor ?? this.#database)
       .select({
         level: settingValues.level,
         scopeId: settingValues.scopeId,
@@ -162,7 +190,7 @@ export class SettingsService {
         }
         return byScope;
       });
-    if (this.#caching) {
+    if (this.#caching && !executor) {
       for (const scope of missing) {
         const key = scopeKey(scope);
         const entry = loading.then((byScope) => byScope.get(key) ?? new Map<string, StoredRow>());
@@ -177,9 +205,13 @@ export class SettingsService {
     return result;
   }
 
-  async explain<T>(definition: SettingDefinition<T>, chain: ScopeChain): Promise<SettingExplanation<T>> {
+  async explain<T>(
+    definition: SettingDefinition<T>,
+    chain: ScopeChain,
+    options: { executor?: Executor } = {},
+  ): Promise<SettingExplanation<T>> {
     const scopes = scopesOf(chain);
-    const rows = await this.#rows(scopes);
+    const rows = await this.#rows(scopes, options.executor);
     let value = definition.default;
     let source: Scope | "default" = "default";
     let lockedBy: Scope | null = null;
@@ -211,8 +243,12 @@ export class SettingsService {
     return { key: definition.key, value, source, lockedBy, levels };
   }
 
-  async get<T>(definition: SettingDefinition<T>, chain: ScopeChain): Promise<T> {
-    return (await this.explain(definition, chain)).value;
+  async get<T>(
+    definition: SettingDefinition<T>,
+    chain: ScopeChain,
+    options: { executor?: Executor } = {},
+  ): Promise<T> {
+    return (await this.explain(definition, chain, options)).value;
   }
 
   #target(definition: SettingDefinition<unknown>, chain: ScopeChain, level: SettingLevel): Scope {
@@ -240,6 +276,17 @@ export class SettingsService {
     options: WriteOptions,
   ) {
     await (options.tx ?? this.#database).transaction(async (tx) => {
+      const [previous] = await tx
+        .select({ value: settingValues.value, locked: settingValues.locked })
+        .from(settingValues)
+        .where(
+          and(
+            eq(settingValues.level, target.level),
+            eq(settingValues.scopeId, target.id),
+            eq(settingValues.key, key),
+          ),
+        )
+        .for("update");
       await tx
         .insert(settingValues)
         .values({
@@ -254,12 +301,16 @@ export class SettingsService {
           set: { ...values, updatedAt: new Date() },
         });
       await tx.execute(sql`select pg_notify(${CHANNEL}, ${scopeKey(target)})`);
+      const signal: SettingChangeSignal = { level: target.level, id: target.id, key, action };
+      await tx.execute(sql`select pg_notify(${SETTING_CHANGES_CHANNEL}, ${JSON.stringify(signal)})`);
       if (options.audit === false) return;
       await this.#onChange?.(tx, {
         key,
         scope: target,
         action,
         ...(action === "set" ? { value: values.value } : {}),
+        previousValue: previous?.value ?? null,
+        previousLocked: previous?.locked ?? false,
       });
     });
     this.#cache.delete(scopeKey(target));
@@ -325,6 +376,35 @@ export class SettingsService {
     const target = this.#target(definition, chain, level);
     await this.#assertNotLockedAbove(definition, chain, target);
     await this.#write(target, definition.key, { locked: false }, "unlock", options);
+  }
+
+  async affects(accountId: string, signal: SettingChangeSignal): Promise<boolean> {
+    if (signal.level === "user") return signal.id === accountId;
+    const locking = signal.action === "lock" || signal.action === "unlock";
+    const scopeId = signal.level === "instance" ? INSTANCE_SCOPE_ID : signal.id;
+    const result = await this.#database.execute<{
+      reached: boolean;
+      overridden: boolean;
+      locked: boolean;
+    }>(sql`
+      select
+        case when ${signal.level} = 'organization' then exists (
+          select 1 from memberships m where m.account_id = ${accountId} and m.organization_id = ${signal.id}::uuid
+            and (m.expires_at is null or m.expires_at > now())
+        ) else true end as reached,
+        exists (
+          select 1 from setting_values v where v.key = ${signal.key} and v.value is not null and (
+            (v.level = 'user' and v.scope_id = ${accountId})
+            or (${signal.level} = 'instance' and v.level = 'organization' and v.scope_id =
+              (select home_organization_id from accounts where id = ${accountId}))
+          )
+        ) as overridden,
+        exists (
+          select 1 from setting_values l where l.key = ${signal.key} and l.level = ${signal.level}
+            and l.scope_id = ${scopeId}::uuid and l.locked
+        ) as locked`);
+    const row = result.rows[0];
+    return Boolean(row?.reached) && (locking || Boolean(row?.locked) || !row?.overridden);
   }
 
   /** Removes all values of a scope, e.g. when an organization or user is deleted. */

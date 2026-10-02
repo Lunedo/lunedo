@@ -1,10 +1,10 @@
 # E-mail
 
-Pagehall sends e-mail for password resets, e-mail address changes, recovery code use, setup tests, invitations, self-registration, break-glass access and reminders before access expires. Notification mails follow with the notification center.
+Pagehall sends e-mail for password resets, e-mail address changes, recovery code use, setup tests, invitations and self-registration. Reminders and notices, such as expiring access or break-glass access, are notifications; e-mail is one of their channels, see [notifications.md](notifications.md).
 
 ## SMTP
 
-SMTP is an instance setting, configured in the setup assistant or through configuration. The password is stored with envelope encryption.
+SMTP is an instance setting, configured in the setup assistant, in the instance administration or through configuration. The password is stored with envelope encryption and never returned; changing the configuration needs a recent sign-in. A test mail can be sent with a configuration before it is saved; without a new password it uses the stored one.
 
 | Security | Behavior |
 |---|---|
@@ -20,7 +20,9 @@ A mail is written to the outbox in the same transaction as the change that cause
 
 Logs name the mail ID, template and error code, never recipients or content.
 
-Mails are written in the language of the account, inherited from its home organization unless the account chose one, in English or German, as plain text with a simple HTML version. Mails to people without an account use the language of the organization.
+Mails are written in the language of the account, inherited from its home organization unless the account chose one, in English or German. Dates in notification mails use the date format and time zone of the account. Mails to people without an account use the language of the organization.
+
+Every mail has a plain-text and an HTML version with a fixed layout: the organization's logo, or its name, at the top, its accent color, the text, at most one action button followed by its address in plain text, and a footer with the instance name. Notification mails add a link to the notification preferences. Logo and color come from the organization the mail is about; everything else, including links and codes, is set by the template and cannot be changed by organizations.
 
 ## Development
 

@@ -18,6 +18,7 @@ export type RouteAccess =
       resource: ResourceSource;
       recentAuthentication: boolean;
       sessionOnly: boolean;
+      publicForSoleOrganization: boolean;
     };
 
 export type ResourceSource = { type: "instance" } | { type: string; param: string };
@@ -49,7 +50,11 @@ export const ApiDocumentationRoute = () =>
 export const Permission = (
   action: string | [string, ...string[]],
   resource: ResourceSource = { type: "instance" },
-  options: { recentAuthentication?: boolean; sessionOnly?: boolean } = {},
+  options: {
+    recentAuthentication?: boolean;
+    sessionOnly?: boolean;
+    publicForSoleOrganization?: boolean;
+  } = {},
 ) =>
   SetMetadata(ROUTE_ACCESS, {
     kind: "permission",
@@ -58,6 +63,7 @@ export const Permission = (
     resource,
     recentAuthentication: options.recentAuthentication ?? false,
     sessionOnly: options.sessionOnly ?? false,
+    publicForSoleOrganization: options.publicForSoleOrganization ?? false,
   } satisfies RouteAccess);
 
 export const InternalRoute = () => applyDecorators(SetMetadata(INTERNAL_ROUTE, true));

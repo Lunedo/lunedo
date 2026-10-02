@@ -57,6 +57,7 @@ export const apiTokens = pgTable(
     lastUsedIp: text(),
     revokedAt: timestampColumn(),
     expiryRemindedAt: timestampColumn(),
+    unusedNoticedAt: timestampColumn(),
     expiryRecordedAt: timestampColumn(),
     ...timestamps(),
   },

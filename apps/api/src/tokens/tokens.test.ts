@@ -1,6 +1,7 @@
 import {
   accountAttemptLimitSetting,
   clientAttemptLimitSetting,
+  tokenMaxLifetimeSetting,
   tokenRequestsPerMinuteSetting,
 } from "@pagehall/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -55,7 +56,10 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
   async function personalToken(client: TestClient, scopes: object, extra: object = {}) {
     const response = await client.post("/api/v1/account/tokens", { name: "Script", scopes, ...extra });
     expect(response.statusCode, response.body).toBe(201);
-    return response.json() as { token: string; apiToken: { id: string; prefix: string; expiresAt: string } };
+    return response.json() as {
+      token: string;
+      apiToken: { id: string; prefix: string; expiresAt: string | null };
+    };
   }
 
   async function customRole(name: string, areas: object) {
@@ -104,6 +108,9 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
     expect(beyondCreator.json()).toMatchObject({ code: "forbidden", denials: ["roleExceedsOwnPermissions"] });
     await assign(owner, directory, serviceAccount.id);
 
+    expect(
+      (await creatorClient.get(`/api/v1/service-accounts/${serviceAccount.id}/tokens/lifetime`)).json(),
+    ).toEqual({ maxLifetimeDays: null });
     const tokenResponse = await creatorClient.post(`/api/v1/service-accounts/${serviceAccount.id}/tokens`, {
       name: "Sync job",
       scopes: { organization: { membersAndGroups: "manage" } },
@@ -173,7 +180,7 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
     const { client } = await member("lister@pagehall.test");
     const { token, apiToken } = await personalToken(client, { organization: { membersAndGroups: "view" } });
     expect(apiToken.prefix).toBe(token.slice(0, 9));
-    expect(Math.round((Date.parse(apiToken.expiresAt) - Date.now()) / DAY_MS)).toBe(90);
+    expect(apiToken.expiresAt).toBeNull();
     const listed = await client.get("/api/v1/account/tokens");
     expect(listed.json().items).toHaveLength(1);
     expect(listed.body).not.toContain(token);
@@ -239,12 +246,24 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
     const { client } = await member("validation@pagehall.test");
     const post = (body: object) => client.post("/api/v1/account/tokens", { name: "Bad", ...body });
     const scopes = { organization: { membersAndGroups: "view" } };
-    expect((await post({ scopes, expiresAt: null })).json()).toMatchObject({ code: "expiryRequired" });
-    expect(
-      (await post({ scopes, expiresAt: new Date(Date.now() + 400 * DAY_MS).toISOString() })).json(),
-    ).toMatchObject({
-      code: "expiryTooLate",
-    });
+    expect((await client.get("/api/v1/account/tokens/lifetime")).json()).toEqual({ maxLifetimeDays: null });
+    const unlimited = await post({ scopes, expiresAt: null });
+    expect(unlimited.statusCode, unlimited.body).toBe(201);
+    expect(unlimited.json().apiToken.expiresAt).toBeNull();
+
+    await test.runtime.settings.set(tokenMaxLifetimeSetting, {}, "instance", 365);
+    try {
+      expect((await client.get("/api/v1/account/tokens/lifetime")).json()).toEqual({ maxLifetimeDays: 365 });
+      expect((await post({ scopes, expiresAt: null })).json()).toMatchObject({
+        code: "expiryRequired",
+        maxLifetimeDays: 365,
+      });
+      expect(
+        (await post({ scopes, expiresAt: new Date(Date.now() + 400 * DAY_MS).toISOString() })).json(),
+      ).toMatchObject({ code: "expiryTooLate", maxLifetimeDays: 365 });
+    } finally {
+      await test.runtime.settings.clear(tokenMaxLifetimeSetting, {}, "instance");
+    }
     expect((await post({ scopes: { organization: { membersAndGroups: "edit" } } })).statusCode).toBe(400);
     expect((await post({ scopes: {} })).statusCode).toBe(400);
   });

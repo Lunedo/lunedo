@@ -1,10 +1,33 @@
 import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Query, Req } from "@nestjs/common";
-import { roleNameSchema } from "@pagehall/server";
+import {
+  accentColorSetting,
+  instanceNameSetting,
+  languageSetting,
+  organizationSettingsChain,
+  passwordMinLengthSetting,
+  roleNameSchema,
+  supportedLanguages,
+} from "@pagehall/server";
+import {
+  accentColors,
+  idSchema,
+  setupStepSchemas,
+  smtpInputSchema,
+  smtpTestInputSchema,
+  smtpTestResultSchema,
+} from "@pagehall/shared";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
-import { InternalRoute, Permission } from "../access/route-access.js";
+import { InternalRoute, Permission, PublicRoute } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
+import {
+  accountDetailSchema,
+  administeredAccountSchema,
+  administeredOrganizationSchema,
+  exampleAdministeredAccount,
+  exampleAdministeredOrganization,
+} from "../http/administration-schemas.js";
 import { ApiRoute } from "../http/api-route.js";
 import {
   idCursor,
@@ -13,19 +36,17 @@ import {
   pageRequest,
   pageSchema,
   paginate,
+  searchQuerySchema,
   toApiPage,
 } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import {
-  accountSchema,
   customRoleSchema,
   exampleAccount,
-  exampleOrganization,
   exampleSetting,
   instanceAreasSchema,
   optionalExpiry,
-  organizationSchema,
   roleAssignmentSchema,
   settingSchema,
   uuid,
@@ -33,6 +54,35 @@ import {
 import { definitionFor, listSettings, settingUpdateSchema, updateSetting } from "../http/settings.js";
 
 const TAG = "Instance";
+
+const instanceInfoSchema = z.object({
+  name: z.string(),
+  setupComplete: z.boolean(),
+  language: z.enum(supportedLanguages),
+  accentColor: z.enum(accentColors),
+  passwordMinLength: z.number().int(),
+  selfRegistration: z.boolean(),
+  organization: z
+    .object({
+      id: idSchema,
+      name: z.string(),
+      logoRef: z.string().nullable(),
+      accentColor: z.enum(accentColors),
+    })
+    .nullable(),
+});
+
+const breakGlassEntrySchema = z.object({
+  id: idSchema,
+  organizationId: idSchema,
+  organizationName: z.string(),
+  accountId: idSchema,
+  accountName: z.string(),
+  reason: z.string(),
+  startedAt: z.iso.datetime(),
+  expiresAt: z.iso.datetime(),
+  endedAt: z.iso.datetime().nullable(),
+});
 
 const customRoleBody = z
   .object({
@@ -83,11 +133,31 @@ const assignmentBody = z
           .strict()
           .describe("All internal users."),
       ])
-      .describe("Who receives the role."),
+      .describe(
+        "Who receives the role. All internal users are refused with `roleNeedsAccountOrGroup`: instance roles go to individual accounts only.",
+      ),
     expiresAt: optionalExpiry("When the assignment ends."),
   })
   .strict()
   .describe("An instance role assignment.");
+
+const batchAssignmentBody = z
+  .object({
+    role: assignmentBody.shape.role,
+    principals: z
+      .array(
+        z
+          .object({ kind: z.literal("account").describe("One account."), id: uuid("ID of the account.") })
+          .strict()
+          .describe("An internal account."),
+      )
+      .min(1)
+      .max(50)
+      .describe("Accounts that receive the role, 1 to 50."),
+    expiresAt: optionalExpiry("When the assignments end."),
+  })
+  .strict()
+  .describe("One instance role for several accounts. Either all assignments are made or none.");
 
 const ownershipSchema = z
   .object({ accountId: uuid("Account that becomes the instance owner.") })
@@ -131,38 +201,161 @@ export class InstanceController {
     return servicesOf(this.context);
   }
 
+  @Get("info")
+  @PublicRoute()
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Get public instance information",
+    tags: [TAG],
+    response: { description: "What the sign-in and setup pages show.", schema: instanceInfoSchema },
+  })
+  async info() {
+    const { settings } = this.#settingsServices();
+    const services = this.#services;
+    const setupComplete = await services.setup.isComplete();
+    const first = setupComplete ? await services.organizations.list({ limit: 2 }) : { items: [] };
+    const only = first.items.length === 1 ? first.items[0] : undefined;
+    return {
+      name: await settings.get(instanceNameSetting, {}),
+      setupComplete,
+      language: await settings.get(languageSetting, {}),
+      accentColor: await settings.get(accentColorSetting, {}),
+      passwordMinLength: await settings.get(passwordMinLengthSetting, {}),
+      selfRegistration: setupComplete ? await services.invitations.selfRegistrationOpen() : false,
+      organization: only
+        ? {
+            id: only.id,
+            name: only.name,
+            logoRef: only.logoRef,
+            accentColor: await settings.get(accentColorSetting, organizationSettingsChain(only.id)),
+          }
+        : null,
+    };
+  }
+
+  @Get("break-glass")
+  @Permission("instance.organizations.view")
+  @InternalRoute()
+  @ApiRoute({
+    summary: "List recent break-glass access",
+    tags: [TAG],
+    query: pageQuerySchema,
+    response: {
+      description: "Break-glass access of the last 90 days, newest first.",
+      schema: pageSchema(breakGlassEntrySchema, "Break-glass access, newest first."),
+    },
+  })
+  async breakGlass(@Query() query: z.output<typeof pageQuerySchema>) {
+    const entries = await this.#services.breakGlass.recent(90);
+    return paginate(entries, (entry) => [-entry.startedAt.getTime(), entry.id], query);
+  }
+
+  @Get("mail")
+  @Permission("instance.settings.view")
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Get the mail server",
+    tags: [TAG],
+    response: {
+      description: "The SMTP configuration, without the password.",
+      schema: setupStepSchemas.mail.details,
+    },
+  })
+  async mail() {
+    const mail = this.#services.mail;
+    return { smtp: await mail.smtpConfiguration(), passwordSet: await mail.hasSmtpPassword() };
+  }
+
+  @Put("mail")
+  @Permission("instance.settings.manage", { type: "instance" }, { recentAuthentication: true })
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Configure the mail server",
+    tags: [TAG],
+    body: smtpInputSchema,
+    errors: ["invalidSmtpConfiguration"],
+  })
+  async configureMail(@Body() body: z.output<typeof smtpInputSchema>) {
+    const { password, ...configuration } = body;
+    await this.#services.mail.configureSmtp(configuration, password);
+  }
+
+  @Post("mail/test")
+  @Permission("instance.settings.manage")
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Send a test mail",
+    tags: [TAG],
+    status: 200,
+    body: smtpTestInputSchema,
+    response: { description: "Whether the mail server accepted the mail.", schema: smtpTestResultSchema },
+    errors: ["invalidSmtpConfiguration"],
+  })
+  async testMail(@Body() body: z.output<typeof smtpTestInputSchema>) {
+    const { to, language, password, ...configuration } = body;
+    return this.#services.mail.sendTest(to, language, { configuration, password });
+  }
+
   @Get("organizations")
   @Permission("instance.organizations.view")
   @ApiRoute({
     summary: "List all organizations",
-    description: "Lists every organization of the instance.",
+    description:
+      "Lists every organization of the instance with its owners, number of members and domains. `q` searches name and short name.",
     tags: [TAG],
-    query: pageQuerySchema,
+    query: searchQuerySchema,
     response: {
       description: "Organizations of the instance.",
-      schema: pageSchema(organizationSchema, "Organizations, ordered by name."),
-      example: { items: [exampleOrganization], nextCursor: null },
+      schema: pageSchema(administeredOrganizationSchema, "Organizations, ordered by name."),
+      example: { items: [exampleAdministeredOrganization], nextCursor: null },
     },
   })
-  async organizations(@Query() query: z.output<typeof pageQuerySchema>) {
-    return toApiPage(await this.#services.organizations.list(pageRequest(query, nameCursor)));
+  async organizations(@Query() query: z.output<typeof searchQuerySchema>) {
+    const page = await this.#services.organizations.list(pageRequest(query, nameCursor));
+    const overview = await this.#services.overview.describeOrganizations(page.items.map((item) => item.id));
+    return toApiPage({
+      ...page,
+      items: page.items.map((item) => ({
+        ...item,
+        ...(overview.get(item.id) ?? { owners: [], memberCount: 0, domains: [] }),
+      })),
+    });
   }
 
   @Get("accounts")
   @Permission("instance.accounts.view")
   @ApiRoute({
     summary: "List all accounts",
-    description: "Lists every account of the instance, including service accounts.",
+    description:
+      "Lists every account of the instance, including service accounts, with instance roles, second-factor state and last sign-in. `q` searches name and e-mail address.",
     tags: [TAG],
-    query: pageQuerySchema,
+    query: searchQuerySchema,
     response: {
       description: "Accounts of the instance.",
-      schema: pageSchema(accountSchema, "Accounts, ordered by name."),
-      example: { items: [exampleAccount], nextCursor: null },
+      schema: pageSchema(administeredAccountSchema, "Accounts, ordered by name."),
+      example: { items: [exampleAdministeredAccount], nextCursor: null },
     },
   })
-  async accounts(@Query() query: z.output<typeof pageQuerySchema>) {
-    return toApiPage(await this.#services.accounts.list(pageRequest(query, nameCursor)));
+  async accounts(@Query() query: z.output<typeof searchQuerySchema>) {
+    return toApiPage(await this.#services.overview.listAccounts(pageRequest(query, nameCursor)));
+  }
+
+  @Get("accounts/:accountId")
+  @Permission("instance.accounts.view")
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Show an account",
+    description:
+      "Shows an account with its memberships and roles per organization, active sessions, tokens and second factors.",
+    tags: [TAG],
+    params: z.object({ accountId: uuid("ID of the account.") }).strict(),
+    response: { description: "The account.", schema: accountDetailSchema },
+    errors: ["notFound"],
+  })
+  async account(@Param("accountId") accountId: string) {
+    const detail = await this.#services.overview.accountDetail(accountId);
+    if (!detail) throw notFound();
+    return detail;
   }
 
   @Get("roles")
@@ -254,7 +447,8 @@ export class InstanceController {
   @Permission("instance.roles.manage")
   @ApiRoute({
     summary: "Assign an instance role",
-    description: "Gives an instance role to an internal account or to all internal users.",
+    description:
+      "Gives an instance role to an internal account. Instance roles go to individual accounts only.",
     tags: [TAG],
     status: 201,
     body: assignmentBody,
@@ -267,7 +461,14 @@ export class InstanceController {
       schema: roleAssignmentSchema,
       example: exampleInstanceAssignment,
     },
-    errors: ["alreadyAssigned", "invalidPrincipal", "roleNotAssignable", "roleNotFound", "expiryInPast"],
+    errors: [
+      "alreadyAssigned",
+      "invalidPrincipal",
+      "roleNeedsAccountOrGroup",
+      "roleNotAssignable",
+      "roleNotFound",
+      "expiryInPast",
+    ],
   })
   async assign(@Body() body: z.output<typeof assignmentBody>, @Req() request: FastifyRequest) {
     return this.#services.roles.assign(actorOf(request), {
@@ -277,6 +478,33 @@ export class InstanceController {
       principal: { kind: body.principal.kind, id: "id" in body.principal ? body.principal.id : null },
       expiresAt: body.expiresAt ?? null,
     });
+  }
+
+  @Post("role-assignments/batch")
+  @Permission("instance.roles.manage")
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Assign an instance role to several accounts",
+    description:
+      "Gives one instance role to several accounts at once. Either all assignments are made or none.",
+    tags: [TAG],
+    status: 201,
+    body: batchAssignmentBody,
+    response: {
+      description: "The new assignments.",
+      schema: z.object({ items: z.array(roleAssignmentSchema).describe("The new assignments.") }),
+    },
+    errors: ["alreadyAssigned", "invalidPrincipal", "roleNotAssignable", "roleNotFound", "expiryInPast"],
+  })
+  async assignMany(@Body() body: z.output<typeof batchAssignmentBody>, @Req() request: FastifyRequest) {
+    const items = await this.#services.roles.assignMany(actorOf(request), {
+      scope: "instance",
+      organizationId: null,
+      role: body.role,
+      principals: body.principals,
+      expiresAt: body.expiresAt ?? null,
+    });
+    return { items };
   }
 
   @Delete("role-assignments/:assignmentId")

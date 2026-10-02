@@ -1,16 +1,8 @@
+import { isTimeZone, supportedLanguages } from "@pagehall/shared";
 import { z } from "zod";
 import { defineSetting } from "./definition.js";
 
-export const supportedLanguages = ["en", "de"] as const;
-
-function isTimeZone(value: string): boolean {
-  try {
-    new Intl.DateTimeFormat("en", { timeZone: value });
-    return true;
-  } catch {
-    return false;
-  }
-}
+export { supportedLanguages };
 
 /** Interface language. */
 export const languageSetting = defineSetting<(typeof supportedLanguages)[number]>({

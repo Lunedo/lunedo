@@ -1,5 +1,5 @@
+import { roleNameSchema } from "@pagehall/shared";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
-import { z } from "zod";
 import type { Principal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditEvents, AuditLog } from "../audit/audit-log.js";
@@ -26,7 +26,7 @@ import {
 import { lockOrganization, ownerCount } from "./memberships.js";
 import { OrganizationError } from "./organizations.js";
 
-export const roleNameSchema = z.string().trim().min(1).max(100);
+export { roleNameSchema };
 
 const ASSIGNABLE: Record<RoleScope, readonly BuiltInRoleKey[]> = {
   instance: ["administrator", "securityAuditor"],
@@ -197,7 +197,11 @@ export class RoleService {
         name: "role.updated",
         actor,
         targetId: id,
-        fields: { name, areas: areas as Record<string, string> },
+        fields: {
+          name,
+          areas: areas as Record<string, string>,
+          previous: { name: current.name, areas: current.areas as Record<string, string> },
+        },
         ...(scopeOf(scope, organizationId) ? { scope: scopeOf(scope, organizationId) } : {}),
       });
       return { ...current, name, areas };
@@ -302,16 +306,14 @@ export class RoleService {
     const invalid = (message: string): never => {
       throw new OrganizationError("invalidPrincipal", message);
     };
-    if (owner && principal.kind !== "account") invalid("Owners are accounts");
-    if (scope === "instance") {
-      if (principal.kind === "group" || principal.kind === "organizationMembers") {
-        invalid("Instance roles go to accounts or to all internal users");
-      }
-    }
     if (principal.kind === "organizationMembers" || principal.kind === "instanceUsers") {
-      if (principal.id !== null) invalid("This principal has no ID");
-      return;
+      throw new OrganizationError(
+        "roleNeedsAccountOrGroup",
+        "Roles at the instance and organization level go to individual accounts and groups only",
+      );
     }
+    if (owner && principal.kind !== "account") invalid("Owners are accounts");
+    if (scope === "instance" && principal.kind === "group") invalid("Instance roles go to accounts");
     if (!principal.id) return invalid("The principal needs an ID");
     if (principal.kind === "group") {
       const [group] = await tx
@@ -410,6 +412,44 @@ export class RoleService {
       return { ...row, role: role.name };
     };
     return options.tx ? run(options.tx) : this.#database.transaction(run);
+  }
+
+  async assignMany(
+    actor: Principal,
+    input: {
+      scope: RoleScope;
+      organizationId: string | null;
+      role: RoleInput;
+      principals: readonly { kind: PrincipalKind; id: string | null }[];
+      expiresAt?: Date | null;
+    },
+  ): Promise<RoleAssignment[]> {
+    const unique = [
+      ...new Map(
+        input.principals.map((principal) => [`${principal.kind}:${principal.id}`, principal]),
+      ).values(),
+    ];
+    return this.#database.transaction(async (tx) => {
+      const events: AuditEvents = [];
+      const assigned: RoleAssignment[] = [];
+      for (const principal of unique) {
+        assigned.push(
+          await this.assign(
+            actor,
+            {
+              scope: input.scope,
+              organizationId: input.organizationId,
+              role: input.role,
+              principal,
+              expiresAt: input.expiresAt ?? null,
+            },
+            { tx, collect: events },
+          ),
+        );
+      }
+      await this.#audit.recordMany(tx, events);
+      return assigned;
+    });
   }
 
   async checkAssignable(

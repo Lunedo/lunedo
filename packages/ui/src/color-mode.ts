@@ -12,10 +12,6 @@ export function resolveColorMode(
   return systemPrefersDark ? "dark" : "light";
 }
 
-/**
- * Sets `data-theme` on the root element so that the token variables and the
- * `dark` variant follow the preference, and tracks system changes.
- */
 export function useColorMode(preference: ColorModePreference, root: HTMLElement = document.documentElement) {
   useEffect(() => {
     const query = window.matchMedia(DARK_QUERY);

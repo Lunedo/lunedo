@@ -1,29 +1,48 @@
+import { createHash } from "node:crypto";
+import type { AccentColor } from "@pagehall/shared";
+import { domainSchema, organizationNameSchema, slugSchema, timeZoneSchema } from "@pagehall/shared";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Principal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
-import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
+import {
+  afterKey,
+  FIRST_PAGE,
+  matchesSearch,
+  type Page,
+  type PageRequest,
+  pageLimit,
+  toPage,
+} from "../database/keyset.js";
 import { languageSetting, supportedLanguages, timeZoneSetting } from "../settings/builtin.js";
+import { accentColorSetting } from "../settings/preferences.js";
 import type { SettingsService } from "../settings/service.js";
 import { memberships, roleAssignments } from "./access-schema.js";
-import { organizationDomains, organizations } from "./schema.js";
+import { organizationDomains, organizationLogos, organizations } from "./schema.js";
 import { organizationSettingsChain } from "./settings.js";
 
-export const organizationNameSchema = z.string().trim().min(1).max(100);
-export const slugSchema = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .regex(/^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/, "must be lowercase letters, digits and hyphens");
-export const domainSchema = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .max(253)
-  .regex(/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/, "must be a domain name");
-export const timeZoneSchema = z.string().refine((value) => timeZoneSetting.schema.safeParse(value).success);
+export { domainSchema, organizationNameSchema, slugSchema, timeZoneSchema };
+
+export const LOGO_MAX_BYTES = 256 * 1024;
+
+const LOGO_SIGNATURES: [string, (data: Buffer) => boolean][] = [
+  [
+    "image/png",
+    (data) => data.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
+  ],
+  ["image/jpeg", (data) => data.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))],
+  [
+    "image/webp",
+    (data) =>
+      data.subarray(0, 4).toString("latin1") === "RIFF" && data.subarray(8, 12).toString("latin1") === "WEBP",
+  ],
+];
+
+export function logoContentType(data: Buffer): string | null {
+  return LOGO_SIGNATURES.find(([, matches]) => matches(data))?.[0] ?? null;
+}
 
 export interface Organization {
   id: string;
@@ -32,6 +51,7 @@ export interface Organization {
   logoRef: string | null;
   language: (typeof supportedLanguages)[number];
   timeZone: string;
+  accentColor: AccentColor;
   createdAt: Date;
 }
 
@@ -41,6 +61,7 @@ export class OrganizationError extends Error {
   constructor(
     readonly code: string,
     message: string,
+    readonly details: Record<string, unknown> = {},
   ) {
     super(message);
   }
@@ -92,6 +113,7 @@ export class OrganizationService {
       logoRef: row.logoRef,
       language: await this.#settings.get(languageSetting, chain),
       timeZone: await this.#settings.get(timeZoneSetting, chain),
+      accentColor: await this.#settings.get(accentColorSetting, chain),
       createdAt: row.createdAt,
     };
   }
@@ -106,7 +128,12 @@ export class OrganizationService {
     const rows = await this.#database
       .select({ organization: organizations, sortName })
       .from(organizations)
-      .where(afterKey([sortName, organizations.id], page.after))
+      .where(
+        and(
+          afterKey([sortName, organizations.id], page.after),
+          matchesSearch([organizations.name, organizations.slug], page.search),
+        ),
+      )
       .orderBy(sortName, organizations.id)
       .limit(pageLimit(page));
     const result = toPage(
@@ -263,6 +290,7 @@ export class OrganizationService {
         .enum(supportedLanguages)
         .parse(input.language ?? (await this.#settings.get(languageSetting, {}))),
       timeZone: input.timeZone ?? (await this.#settings.get(timeZoneSetting, {})),
+      accentColor: await this.#settings.get(accentColorSetting, {}),
       createdAt: row.createdAt,
     };
   }
@@ -287,6 +315,12 @@ export class OrganizationService {
         slug: input.slug === undefined ? current.slug : slugSchema.parse(input.slug),
         logoRef: input.logoRef === undefined ? current.logoRef : input.logoRef,
       };
+      if (changes.logoRef !== null && changes.logoRef !== current.logoRef) {
+        throw new OrganizationError("invalidLogo", "A logo is set by uploading it");
+      }
+      if (changes.logoRef === null && current.logoRef !== null) {
+        await tx.delete(organizationLogos).where(eq(organizationLogos.organizationId, id));
+      }
       let row: typeof organizations.$inferSelect | undefined;
       try {
         [row] = await tx
@@ -326,12 +360,73 @@ export class OrganizationService {
         name: "organization.updated",
         actor,
         targetId: id,
-        fields: changes,
+        fields: {
+          ...changes,
+          previous: { name: current.name, slug: current.slug, logoRef: current.logoRef },
+        },
         scope: scopeOf(id),
       });
       return row;
     });
     return this.#withSettings(updated);
+  }
+
+  async setLogo(
+    actor: Principal,
+    id: string,
+    logo: { contentType: string; data: Buffer },
+  ): Promise<Organization> {
+    const contentType = logoContentType(logo.data);
+    if (contentType === null || contentType !== logo.contentType || logo.data.length > LOGO_MAX_BYTES) {
+      throw new OrganizationError(
+        "invalidLogo",
+        "The logo must be a PNG, JPEG or WebP image of at most 256 KiB",
+      );
+    }
+    const ref = createHash("sha256").update(logo.data).digest("hex").slice(0, 16);
+    const updated = await this.#database.transaction(async (tx) => {
+      const [current] = await tx.select().from(organizations).where(eq(organizations.id, id)).for("update");
+      if (!current) throw new OrganizationError("notFound", "The organization does not exist");
+      await tx
+        .insert(organizationLogos)
+        .values({ organizationId: id, contentType, data: logo.data, ref })
+        .onConflictDoUpdate({
+          target: organizationLogos.organizationId,
+          set: { contentType, data: logo.data, ref, updatedAt: new Date() },
+        });
+      const [row] = await tx
+        .update(organizations)
+        .set({ logoRef: ref, updatedAt: new Date() })
+        .where(eq(organizations.id, id))
+        .returning();
+      if (!row) throw new Error("The organization was not updated");
+      await this.#audit.record(tx, {
+        name: "organization.updated",
+        actor,
+        targetId: id,
+        fields: { name: row.name, slug: row.slug, logoRef: ref, previous: { logoRef: current.logoRef } },
+        scope: scopeOf(id),
+      });
+      return row;
+    });
+    return this.#withSettings(updated);
+  }
+
+  async soleOrganizationId(): Promise<string | null> {
+    const rows = await this.#database.select({ id: organizations.id }).from(organizations).limit(2);
+    return rows.length === 1 ? (rows[0]?.id ?? null) : null;
+  }
+
+  async logo(id: string): Promise<{ contentType: string; data: Buffer; ref: string } | null> {
+    const [row] = await this.#database
+      .select({
+        contentType: organizationLogos.contentType,
+        data: organizationLogos.data,
+        ref: organizationLogos.ref,
+      })
+      .from(organizationLogos)
+      .where(eq(organizationLogos.organizationId, id));
+    return row ?? null;
   }
 
   async domains(organizationId: string): Promise<string[]> {

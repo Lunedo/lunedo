@@ -41,6 +41,8 @@ export interface ServerConfig {
   trustedProxies: string[];
   passwordHashConcurrency: number;
   setup: ConfiguredSetup | undefined;
+  setupCode: Secret | undefined;
+  instanceUrl: string | undefined;
 }
 
 export interface ConfiguredSmtp {
@@ -154,6 +156,7 @@ export function loadConfig(env: Env): ServerConfig {
     problems.push("PAGEHALL_MASTER_KEYS: is only used by the env key provider");
   }
   const setup = configuredSetup(values, problems);
+  checkSetupCode(values.PAGEHALL_SETUP_CODE as string | undefined, problems);
   if (problems.length > 0) {
     throw new ConfigError(`Invalid configuration:\n  ${problems.join("\n  ")}`);
   }
@@ -193,11 +196,27 @@ export function loadConfig(env: Env): ServerConfig {
     trustedProxies: values.PAGEHALL_TRUSTED_PROXIES as string[],
     passwordHashConcurrency: values.PAGEHALL_PASSWORD_HASH_CONCURRENCY as number,
     setup,
+    setupCode: secret("PAGEHALL_SETUP_CODE"),
+    instanceUrl: instanceUrlSchema.safeParse(values.PAGEHALL_INSTANCE_URL).data,
   };
 }
 
+const SETUP_CODE_MIN_LENGTH = 12;
+const SETUP_CODE_MAX_LENGTH = 64;
+
+function checkSetupCode(code: string | undefined, problems: string[]): void {
+  if (code === undefined) return;
+  if (code.replace(/[\s-]/g, "").length < SETUP_CODE_MIN_LENGTH) {
+    problems.push(
+      `PAGEHALL_SETUP_CODE: must have at least ${SETUP_CODE_MIN_LENGTH} characters, not counting spaces and hyphens`,
+    );
+  }
+  if (code.length > SETUP_CODE_MAX_LENGTH) {
+    problems.push(`PAGEHALL_SETUP_CODE: must have at most ${SETUP_CODE_MAX_LENGTH} characters`);
+  }
+}
+
 const SETUP_SETTINGS = [
-  "PAGEHALL_INSTANCE_URL",
   "PAGEHALL_INSTANCE_NAME",
   "PAGEHALL_OWNER_EMAIL",
   "PAGEHALL_OWNER_NAME",
@@ -216,12 +235,22 @@ const SMTP_SETTINGS = [
   "PAGEHALL_SMTP_FROM",
 ] as const;
 
+function checkInstanceUrl(values: Record<ConfigSettingName, unknown>, problems: string[]): void {
+  const url = instanceUrlSchema.safeParse(values.PAGEHALL_INSTANCE_URL);
+  if (values.PAGEHALL_INSTANCE_URL !== undefined && !url.success) {
+    problems.push(`PAGEHALL_INSTANCE_URL: ${url.error.issues[0]?.message ?? "is invalid"}`);
+  }
+}
+
 function configuredSetup(
   values: Record<ConfigSettingName, unknown>,
   problems: string[],
 ): ConfiguredSetup | undefined {
   const given = (names: readonly ConfigSettingName[]) => names.filter((name) => values[name] !== undefined);
-  if (given([...SETUP_SETTINGS, ...SMTP_SETTINGS]).length === 0) return undefined;
+  if (given([...SETUP_SETTINGS, ...SMTP_SETTINGS]).length === 0) {
+    checkInstanceUrl(values, problems);
+    return undefined;
+  }
   if (given(SETUP_SETTINGS).length === 0) {
     problems.push(
       "PAGEHALL_SMTP_HOST: SMTP settings in the configuration require setup through configuration",
@@ -237,9 +266,7 @@ function configuredSetup(
     if (values[name] === undefined) problems.push(`${name}: is required for setup through configuration`);
   }
   const url = instanceUrlSchema.safeParse(values.PAGEHALL_INSTANCE_URL);
-  if (values.PAGEHALL_INSTANCE_URL !== undefined && !url.success) {
-    problems.push(`PAGEHALL_INSTANCE_URL: ${url.error.issues[0]?.message ?? "is invalid"}`);
-  }
+  checkInstanceUrl(values, problems);
   const timeZone = values.PAGEHALL_ORGANIZATION_TIME_ZONE as string | undefined;
   if (timeZone !== undefined && !isTimeZone(timeZone)) {
     problems.push("PAGEHALL_ORGANIZATION_TIME_ZONE: must be an IANA time zone");

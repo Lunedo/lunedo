@@ -4,6 +4,7 @@ import {
   ConfigError,
   createLogger,
   createServerRuntime,
+  instanceUrlSetting,
   registerShutdown,
   StartupError,
 } from "@pagehall/server";
@@ -26,7 +27,10 @@ async function main() {
         logger,
       });
     }
-    await services.setup.issueCode(logger);
+    await services.setup.issueCode(logger, {
+      configuredCode: config.setupCode,
+      instanceUrl: (await settings.get(instanceUrlSetting, {})) || config.instanceUrl,
+    });
   } catch (error) {
     if (!(error instanceof ConfigError) && !(error instanceof StartupError)) throw error;
     createLogger({ service: "api", level: "info" }).fatal(error.message);

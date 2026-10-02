@@ -129,6 +129,7 @@ export class AccountSecurityService {
   }
 
   async #factorAdded(tx: Transaction, session: Session): Promise<FactorAdded> {
+    await tx.update(accounts).set({ secondFactorResetAt: null }).where(eq(accounts.id, session.accountId));
     let recoveryCodes: string[] | null = null;
     if ((await this.#recoveryCodes.remaining(tx, session.accountId)) === 0) {
       recoveryCodes = await this.#recoveryCodes.generate(tx, session.accountId);

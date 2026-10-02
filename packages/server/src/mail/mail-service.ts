@@ -1,36 +1,36 @@
-import { uuidv7 } from "@pagehall/shared";
+import { type DateFormat, smtpConfigurationSchema, uuidv7 } from "@pagehall/shared";
+import designTokens from "@pagehall/tokens/design-tokens.json" with { type: "json" };
 import { and, eq, lt } from "drizzle-orm";
 import { z } from "zod";
-import { instanceNameSetting } from "../accounts/instance-settings.js";
+import { instanceNameSetting, instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountScopeChain } from "../accounts/scope.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Encryption } from "../crypto/envelope.js";
-import type { Database, Transaction } from "../database/database.js";
+import type { Database, Executor, Transaction } from "../database/database.js";
 import { defineJob, type JobContext, type JobQueue } from "../jobs/job-queue.js";
 import type { Logger } from "../logging/logger.js";
-import { languageSetting } from "../settings/builtin.js";
+import { organizations } from "../organizations/schema.js";
+import { languageSetting, timeZoneSetting } from "../settings/builtin.js";
 import { defineSetting } from "../settings/definition.js";
+import { accentColorSetting, dateFormatSetting } from "../settings/preferences.js";
 import type { SettingsService } from "../settings/service.js";
 import { instanceSecrets, mailOutbox } from "./schema.js";
-import { type Language, type MailTemplate, type MailTemplates, renderMail } from "./templates.js";
+import {
+  type Language,
+  type MailBranding,
+  type MailTemplate,
+  type MailTemplates,
+  renderMail,
+} from "./templates.js";
 import {
   describeMailError,
   type MailMessage,
   type MailTransport,
   type SmtpOptions,
   SmtpTransport,
-  smtpSecurityModes,
 } from "./transport.js";
 
-export const smtpConfigurationSchema = z
-  .object({
-    host: z.string().trim().min(1).max(253),
-    port: z.number().int().min(1).max(65_535),
-    security: z.enum(smtpSecurityModes),
-    username: z.string().min(1).max(256).nullable(),
-    from: z.email().max(254),
-  })
-  .strict();
+export { smtpConfigurationSchema };
 
 export type SmtpConfiguration = z.infer<typeof smtpConfigurationSchema>;
 
@@ -116,21 +116,70 @@ export class MailService {
     this.#transport = options.transport ?? ((smtp) => new SmtpTransport(smtp));
   }
 
-  async languageOf(accountId: string): Promise<Language> {
-    const chain = await accountScopeChain(this.#database, accountId);
-    return this.#settings.get(languageSetting, { ...chain, user: accountId });
+  async languageOf(accountId: string, executor: Executor = this.#database): Promise<Language> {
+    const chain = await accountScopeChain(executor, accountId);
+    return this.#settings.get(languageSetting, { ...chain, user: accountId }, { executor });
+  }
+
+  async dateFormatOf(accountId: string, executor: Executor = this.#database): Promise<DateFormat> {
+    const chain = await accountScopeChain(executor, accountId);
+    return this.#settings.get(dateFormatSetting, { ...chain, user: accountId }, { executor });
+  }
+
+  async timeZoneOf(accountId: string, executor: Executor = this.#database): Promise<string> {
+    const chain = await accountScopeChain(executor, accountId);
+    return this.#settings.get(timeZoneSetting, { ...chain, user: accountId }, { executor });
+  }
+
+  async branding(
+    executor: Executor,
+    options: { organizationId?: string | null; notification?: boolean },
+  ): Promise<MailBranding> {
+    const url = await this.#settings.get(instanceUrlSetting, {}, { executor });
+    const organizationId = options.organizationId ?? null;
+    const [organization] = organizationId
+      ? await executor
+          .select({ name: organizations.name, logoRef: organizations.logoRef })
+          .from(organizations)
+          .where(eq(organizations.id, organizationId))
+      : [];
+    const accent = await this.#settings.get(
+      accentColorSetting,
+      organization && organizationId ? { organization: organizationId } : {},
+      { executor },
+    );
+    return {
+      organizationName: organization?.name ?? null,
+      logoUrl:
+        url && organization?.logoRef
+          ? `${url}/api/v1/organizations/${organizationId}/logo?v=${organization.logoRef}`
+          : null,
+      accentColor: designTokens.color.palette.light[accent],
+      preferencesUrl: options.notification && url ? `${url}/settings/notifications` : null,
+    };
   }
 
   async queue<T extends MailTemplate>(
     tx: Transaction,
-    mail: { to: string; template: T; language: Language; params: Omit<MailTemplates[T], "instanceName"> },
+    mail: {
+      to: string;
+      template: T;
+      language: Language;
+      params: Omit<MailTemplates[T], "instanceName">;
+      organizationId?: string | null;
+      notification?: boolean;
+    },
   ): Promise<string> {
-    const instanceName = await this.#settings.get(instanceNameSetting, {});
+    const instanceName = await this.#settings.get(instanceNameSetting, {}, { executor: tx });
     const message = renderMail(
       mail.template,
       mail.language,
       { ...mail.params, instanceName } as MailTemplates[T],
       mail.to,
+      await this.branding(tx, {
+        organizationId: mail.organizationId ?? null,
+        notification: mail.notification ?? false,
+      }),
     );
     const id = uuidv7();
     await tx.insert(mailOutbox).values({
@@ -195,8 +244,12 @@ export class MailService {
     await this.#database.delete(mailOutbox).where(eq(mailOutbox.id, mailId));
   };
 
-  async smtpConfiguration(): Promise<SmtpConfiguration | null> {
-    return this.#settings.get(smtpSetting, {});
+  async smtpConfiguration(executor: Executor = this.#database): Promise<SmtpConfiguration | null> {
+    return this.#settings.get(smtpSetting, {}, { executor });
+  }
+
+  async hasSmtpPassword(): Promise<boolean> {
+    return (await this.#smtpPassword()) !== null;
   }
 
   async #transportOrThrow(): Promise<MailTransport> {
@@ -255,17 +308,21 @@ export class MailService {
   async sendTest(
     to: string,
     language: Language,
-    smtp?: { configuration: SmtpConfiguration; password: string | null },
+    smtp?: { configuration: SmtpConfiguration; password: string | null | undefined },
   ): Promise<{ delivered: boolean; error: { code: string | null; responseCode: number | null } | null }> {
     const instanceName = await this.#settings.get(instanceNameSetting, {});
     const message: MailMessage = renderMail("smtpTest", language, { instanceName }, to);
     const adHoc = smtp ? smtpConfigurationSchema.parse(smtp.configuration) : undefined;
-    if (adHoc) checkSmtpCredentials(adHoc, smtp?.password != null);
+    const password =
+      adHoc?.username === null
+        ? null
+        : smtp?.password === undefined
+          ? await this.#smtpPassword()
+          : smtp.password;
+    if (adHoc) checkSmtpCredentials(adHoc, password !== null);
     let error: { code: string | null; responseCode: number | null } | null = null;
     try {
-      const transport = adHoc
-        ? this.#transport({ ...adHoc, password: smtp?.password ?? null })
-        : await this.#transportOrThrow();
+      const transport = adHoc ? this.#transport({ ...adHoc, password }) : await this.#transportOrThrow();
       await transport.send(message);
     } catch (failure) {
       error =

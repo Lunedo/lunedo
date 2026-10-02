@@ -59,6 +59,8 @@ services:
     environment:
       PAGEHALL_DATABASE_URL: postgres://pagehall:pagehall@postgres:5432/pagehall
       PAGEHALL_LOG_LEVEL: debug
+      # Optional: a fixed setup code instead of the link in the log, at least 12 characters.
+      # PAGEHALL_SETUP_CODE: choose-a-long-setup-code
       PAGEHALL_DEV_HOST: 0.0.0.0
       PAGEHALL_DEV_POLLING: "true"
       PAGEHALL_DEV_API_URL: http://localhost:3000

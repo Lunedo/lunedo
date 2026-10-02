@@ -19,11 +19,14 @@ export type AuditTargetType = (typeof auditTargetTypes)[number];
 
 export type AuditVisibility = "instance" | "organization";
 
+export type AuditChangeKind = "setting" | "fields";
+
 export interface AuditEventDefinition<TFields extends z.ZodObject = z.ZodObject> {
   actor: readonly PrincipalType[];
   target: AuditTargetType;
   fields: TFields;
   visibility: AuditVisibility;
+  change?: AuditChangeKind;
 }
 
 function event<TFields extends z.ZodObject>(
@@ -38,6 +41,7 @@ export type SignInMethod = (typeof signInMethods)[number];
 const methods = z.array(z.enum(signInMethods)).min(1);
 const sessionReference = z.object({ sessionId: z.uuid() });
 const credential = z.object({ credentialId: z.uuid(), name: z.string() });
+const previous = z.record(z.string(), z.json()).optional();
 
 export const auditCatalog = {
   "auth.signedIn": event({
@@ -221,8 +225,11 @@ export const auditCatalog = {
       scopeId: z.uuid(),
       action: z.enum(["set", "clear", "lock", "unlock"]),
       value: z.json().optional(),
+      previousValue: z.json().optional(),
+      previousLocked: z.boolean().optional(),
     }),
     visibility: "organization",
+    change: "setting",
   }),
 
   "organization.created": event({
@@ -234,7 +241,7 @@ export const auditCatalog = {
   "organization.updated": event({
     actor: ["account", "system"],
     target: "organization",
-    fields: z.object({ name: z.string(), slug: z.string(), logoRef: z.string().nullable() }),
+    fields: z.object({ name: z.string(), slug: z.string(), logoRef: z.string().nullable(), previous }),
     visibility: "organization",
   }),
   "organization.domainAdded": event({
@@ -276,7 +283,7 @@ export const auditCatalog = {
   "role.updated": event({
     actor: ["account", "system"],
     target: "role",
-    fields: z.object({ name: z.string(), areas: z.record(z.string(), z.string()) }),
+    fields: z.object({ name: z.string(), areas: z.record(z.string(), z.string()), previous }),
     visibility: "organization",
   }),
   "role.deleted": event({
@@ -317,7 +324,7 @@ export const auditCatalog = {
   "group.updated": event({
     actor: ["account", "system"],
     target: "group",
-    fields: z.object({ name: z.string(), description: z.string() }),
+    fields: z.object({ name: z.string(), description: z.string(), previous }),
     visibility: "organization",
   }),
   "group.deleted": event({
@@ -380,6 +387,30 @@ export const auditCatalog = {
     fields: z.object({ endedSessions: z.number().int().nonnegative() }),
     visibility: "organization",
   }),
+  "account.reactivated": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({}),
+    visibility: "organization",
+  }),
+  "account.sessionsEnded": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({ endedSessions: z.number().int().nonnegative() }),
+    visibility: "organization",
+  }),
+  "account.secondFactorReset": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({
+      reason: z.string().min(1).max(500),
+      endedSessions: z.number().int().nonnegative(),
+      authenticatorApp: z.boolean(),
+      passkeys: z.number().int().nonnegative(),
+      recoveryLeft: z.number().int().nonnegative(),
+    }),
+    visibility: "organization",
+  }),
   "instance.ownershipTransferred": event({
     actor: ["account", "system"],
     target: "account",
@@ -413,7 +444,7 @@ export const auditCatalog = {
   "serviceAccount.updated": event({
     actor: ["account", "system"],
     target: "account",
-    fields: z.object({ name: z.string(), description: z.string() }),
+    fields: z.object({ name: z.string(), description: z.string(), previous }),
     visibility: "organization",
   }),
   "serviceAccount.responsiblesChanged": event({
@@ -452,7 +483,7 @@ export const auditCatalog = {
   "apiToken.updated": event({
     actor: ["account", "system"],
     target: "apiToken",
-    fields: z.object({ name: z.string() }),
+    fields: z.object({ name: z.string(), previous }),
     visibility: "organization",
   }),
   "apiToken.revoked": event({

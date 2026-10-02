@@ -32,11 +32,14 @@ import {
 import { createLogger, type Logger } from "../logging/logger.js";
 import { smtpSetting } from "../mail/mail-service.js";
 import type { MailTransport, SmtpOptions } from "../mail/transport.js";
+import { NotificationHub } from "../notifications/hub.js";
+import { notificationSettings } from "../notifications/types.js";
 import { Metrics } from "../observability/metrics.js";
 import { organizationSettings } from "../organizations/settings.js";
 import { type AccountServices, createAccountServices, workAccountJobs } from "../services.js";
 import { builtinSettings } from "../settings/builtin.js";
 import { type SettingDefinition, SettingsRegistry } from "../settings/definition.js";
+import { preferenceSettings } from "../settings/preferences.js";
 import { SettingsService } from "../settings/service.js";
 import { tokenSettings } from "../tokens/settings.js";
 
@@ -55,6 +58,7 @@ export interface ServerRuntime {
   settingsRegistry: SettingsRegistry;
   audit: AuditLog;
   services: AccountServices;
+  notificationHub: NotificationHub;
   /** Undefined for the collaboration server, which does not use jobs yet. */
   jobs: JobQueue | undefined;
   keyRotation: KeyRotation | undefined;
@@ -133,6 +137,8 @@ export async function createServerRuntime(options: {
         ...authSettings,
         ...organizationSettings,
         ...tokenSettings,
+        ...preferenceSettings,
+        ...notificationSettings,
         auditRetentionSetting,
         smtpSetting,
       ] as SettingDefinition<never>[]),
@@ -173,6 +179,7 @@ export async function createServerRuntime(options: {
       jobs,
       logger,
       filesDir: config.paths.files,
+      configuredInstanceUrl: config.instanceUrl,
       passwordHashConcurrency: config.passwordHashConcurrency,
       ...(options.mailTransport ? { mailTransport: options.mailTransport } : {}),
     });
@@ -206,6 +213,7 @@ export async function createServerRuntime(options: {
       settingsRegistry,
       audit,
       services,
+      notificationHub: new NotificationHub(listener),
       jobs,
       keyRotation,
       metrics,

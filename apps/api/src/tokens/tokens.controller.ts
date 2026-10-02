@@ -37,7 +37,7 @@ const createSchema = z
       .nullable()
       .optional()
       .describe(
-        "When the token stops working, ISO 8601. Default 90 days, at most the configured maximum. Null only when tokens without expiry are allowed.",
+        "When the token stops working, ISO 8601. Null or left out for a token without expiry. When a maximum lifetime of API tokens applies, an expiry within it is required; left out, it defaults to the maximum.",
       ),
   })
   .strict()
@@ -56,6 +56,26 @@ const createdSchema = z
   .describe("The new token with its secret.");
 
 const tokenPage = pageSchema(apiTokenSchema, "Tokens, oldest first.");
+
+const lifetimeQuery = z
+  .object({
+    organizationId: uuid(
+      "Organization the new token would be limited to. Leave it out for all organizations.",
+    ).optional(),
+  })
+  .strict();
+
+const lifetimeSchema = z
+  .object({
+    maxLifetimeDays: z
+      .number()
+      .int()
+      .nullable()
+      .describe(
+        "Maximum lifetime of API tokens in days that applies to a new token, or null when tokens may have no expiry.",
+      ),
+  })
+  .describe("The lifetime rules for a new token.");
 
 @Controller("api/v1")
 @InternalRoute()
@@ -90,6 +110,23 @@ export class TokensController {
     return toApiPage(
       await this.#services.apiTokens.listForAccount(actorOf(request).id, pageRequest(query, idCursor)),
     );
+  }
+
+  @Get("account/tokens/lifetime")
+  @SessionRoute()
+  @ApiRoute({
+    summary: "Get the lifetime rules for a new personal token",
+    tags: [TAG],
+    query: lifetimeQuery,
+    response: { description: "The maximum lifetime that applies.", schema: lifetimeSchema },
+  })
+  async lifetime(@Req() request: FastifyRequest, @Query() query: z.output<typeof lifetimeQuery>) {
+    return {
+      maxLifetimeDays: await this.#services.apiTokens.maxLifetimeDays(
+        actorOf(request).id,
+        query.organizationId ?? null,
+      ),
+    };
   }
 
   @Post("account/tokens")
@@ -155,6 +192,18 @@ export class TokensController {
     return toApiPage(
       await this.#services.apiTokens.listForAccount(serviceAccountId, pageRequest(query, idCursor)),
     );
+  }
+
+  @Get("service-accounts/:serviceAccountId/tokens/lifetime")
+  @Permission("serviceAccount.view", serviceAccount, { sessionOnly: true })
+  @ApiRoute({
+    summary: "Get the lifetime rules for a new service account token",
+    tags: [TAG],
+    params: serviceAccountParams,
+    response: { description: "The maximum lifetime that applies.", schema: lifetimeSchema },
+  })
+  async lifetimeForServiceAccount(@Param("serviceAccountId") serviceAccountId: string) {
+    return { maxLifetimeDays: await this.#services.apiTokens.maxLifetimeDays(serviceAccountId) };
   }
 
   @Post("service-accounts/:serviceAccountId/tokens")

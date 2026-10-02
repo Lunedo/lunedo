@@ -6,6 +6,7 @@ import type { Database, Transaction } from "../database/database.js";
 import { currentRequestContext } from "../observability/request-context.js";
 import { INSTANCE_SCOPE_ID, type SettingChangeHandler } from "../settings/service.js";
 import { type AuditEventFields, type AuditEventName, auditCatalog } from "./catalog.js";
+import { resolveAuditLabels } from "./labels.js";
 import { auditChains, auditEvents } from "./schema.js";
 
 export interface AuditScope {
@@ -40,6 +41,7 @@ interface HashedContent {
   targetType: string;
   targetId: string | null;
   fields: unknown;
+  labels: unknown;
   occurredAt: Date;
   requestId: string | null;
   clientIp: string | null;
@@ -75,6 +77,7 @@ export function hashAuditEntry(entry: HashedContent): Buffer {
     entry.clientIp,
     entry.userAgent,
     entry.previousHash.toString("hex"),
+    ...(entry.labels === null || entry.labels === undefined ? [] : [entry.labels]),
   ]);
   return createHash("sha256").update(content, "utf8").digest();
 }
@@ -108,6 +111,13 @@ export class AuditLog {
       throw new Error(`Audit event ${input.name} cannot be performed by ${actor.type}`);
     }
     const scope = input.scope ?? INSTANCE_AUDIT_SCOPE;
+    const labels = await resolveAuditLabels(tx, {
+      actor,
+      targetType: definition.target,
+      targetId: input.targetId,
+      fields,
+      scope,
+    });
     const chain = and(eq(auditChains.scopeType, scope.type), eq(auditChains.scopeId, scope.id));
 
     await tx.insert(auditChains).values({ scopeType: scope.type, scopeId: scope.id }).onConflictDoNothing();
@@ -128,6 +138,7 @@ export class AuditLog {
       targetType: definition.target,
       targetId: input.targetId,
       fields,
+      labels,
       occurredAt: this.#clock(),
       requestId: storable(context?.requestId),
       clientIp: storable(context?.clientIp),
@@ -274,9 +285,16 @@ export class AuditLog {
   }
 }
 
+const PERSONAL_PREFERENCE_PREFIXES = ["appearance.", "locale."];
+
+export function isPersonalPreference(level: string, key: string): boolean {
+  return level === "user" && PERSONAL_PREFERENCE_PREFIXES.some((prefix) => key.startsWith(prefix));
+}
+
 export function auditSettingChanges(audit: AuditLog): SettingChangeHandler {
-  return (tx, change) =>
-    audit.record(tx, {
+  return async (tx, change) => {
+    if (isPersonalPreference(change.scope.level, change.key)) return;
+    await audit.record(tx, {
       name: "settings.changed",
       targetId: change.key,
       ...(change.scope.level === "organization"
@@ -287,6 +305,9 @@ export function auditSettingChanges(audit: AuditLog): SettingChangeHandler {
         scopeId: change.scope.id,
         action: change.action,
         ...(change.action === "set" ? { value: change.value as z.core.util.JSONType } : {}),
+        previousValue: (change.previousValue ?? null) as z.core.util.JSONType,
+        previousLocked: change.previousLocked,
       },
     });
+  };
 }
