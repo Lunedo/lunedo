@@ -113,6 +113,36 @@ describe("the sign-in page", () => {
     expect(screen.queryByLabelText("Password")).toBeNull();
   });
 
+  it("keeps the emergency sign-in reachable when the owner's domain belongs to a provider", async () => {
+    const { requests } = signedOutApi(
+      { passwordSignIn: true },
+      {
+        "POST /api/v1/auth/sign-in/discover": () => ({
+          body: { step: "provider", providerId: PROVIDER, name: "Microsoft", preset: "entraId" },
+        }),
+        "POST /api/v1/auth/sign-in": () => ({
+          body: { status: "secondFactorRequired", factors: ["totp"] },
+        }),
+      },
+    );
+    await renderPath("/sign-in");
+    await userEvent.type(await screen.findByLabelText("Work e-mail address"), OLIVIA.email);
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("button", { name: "Sign in with Microsoft" })).toBeTruthy();
+    expect(screen.queryByLabelText("Password")).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Emergency sign-in for the instance owner" }));
+    const dialog = await screen.findByRole("dialog", { name: "Emergency sign-in" });
+    await userEvent.type(within(dialog).getByLabelText("E-mail"), OLIVIA.email);
+    await userEvent.type(within(dialog).getByLabelText("Password"), "correct horse battery");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("heading", { name: "Confirm it's you" })).toBeTruthy();
+    expect(requests.find((request) => request.path === "/api/v1/auth/sign-in")?.body).toEqual({
+      email: OLIVIA.email,
+      password: "correct horse battery",
+    });
+  });
+
   it("shows the only provider directly and keeps the emergency sign-in when passwords are off", async () => {
     const { requests } = signedOutApi(
       { emailStep: false, directProvider: ENTRA, passwordSignIn: false },

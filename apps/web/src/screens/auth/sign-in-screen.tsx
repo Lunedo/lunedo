@@ -175,18 +175,17 @@ export function SignInScreen() {
     </div>
   ) : null;
 
-  const emergencyLink =
-    data && !data.passwordSignIn ? (
-      <p className="text-center text-sm">
-        <button
-          type="button"
-          className="font-medium text-text-muted hover:underline focus-visible:focus-ring"
-          onClick={() => setEmergency(true)}
-        >
-          {t("auth.emergency.link")}
-        </button>
-      </p>
-    ) : null;
+  const emergencyLink = data ? (
+    <p className="text-center text-sm">
+      <button
+        type="button"
+        className="font-medium text-text-muted hover:underline focus-visible:focus-ring"
+        onClick={() => setEmergency(true)}
+      >
+        {t("auth.emergency.link")}
+      </button>
+    </p>
+  ) : null;
 
   return (
     <AuthCard title={t("auth.signInTitle", { name })} description={globalThis.location?.host}>
