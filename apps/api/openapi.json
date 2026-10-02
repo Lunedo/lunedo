@@ -7590,6 +7590,46 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "`providerUnavailable`: The identity provider could not be reached.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "providerUnavailable": {
+                    "value": {
+                      "type": "urn:pagehall:problem:providerUnavailable",
+                      "title": "The identity provider could not be reached",
+                      "status": 502,
+                      "code": "providerUnavailable"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -19022,6 +19062,26 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "`providerUnavailable`: The identity provider could not be reached.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "providerUnavailable": {
+                    "value": {
+                      "type": "urn:pagehall:problem:providerUnavailable",
+                      "title": "The identity provider could not be reached",
+                      "status": 502,
+                      "code": "providerUnavailable"
                     }
                   }
                 }

@@ -26,7 +26,12 @@ const emailForm = z.object({ email: signInEmailSchema });
 const passwordForm = z.object({ password: passwordSchema });
 const emergencyForm = z.object({ email: signInEmailSchema, password: passwordSchema });
 
-const PROVIDER_ERRORS = new Set(["challengeExpired", "passwordSignInDisabled", "invalidCredentials"]);
+const PROVIDER_ERRORS = new Set([
+  "challengeExpired",
+  "passwordSignInDisabled",
+  "invalidCredentials",
+  "providerUnavailable",
+]);
 
 export function providerErrorMessage(t: (key: string) => string, code: string): string {
   return PROVIDER_ERRORS.has(code) ? t(`problems.${code}`) : t("auth.providers.failed");

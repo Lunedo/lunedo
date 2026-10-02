@@ -168,6 +168,7 @@ export class ProviderGroupsController {
     params: providerIdParams,
     query: groupSearchQuery,
     response: { description: "Matching groups.", schema: z.array(providerGroupMatchSchema) },
+    errors: ["providerUnavailable"],
   })
   async searchGroups(
     @Param("providerId") providerId: string,

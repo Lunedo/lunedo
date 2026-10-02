@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import * as client from "openid-client";
+import { ZodError } from "zod";
 import type { Account, AccountService } from "../accounts/accounts.js";
 import { EmailInUseError } from "../accounts/accounts.js";
 import { ANONYMOUS, accountPrincipal, SYSTEM } from "../accounts/principal.js";
@@ -334,6 +335,9 @@ export class ProviderSignInService {
           });
         }
         if (attempt === 0 && isUniqueViolation(error)) continue;
+        if (error instanceof ZodError) {
+          return this.#refuse({ providerId: provider.id, reason: "invalidResponse", profile });
+        }
         throw error;
       }
     }

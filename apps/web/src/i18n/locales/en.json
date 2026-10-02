@@ -594,6 +594,7 @@
     "domainTaken": "The domain belongs to another organization. Ask an administrator of the instance if this is wrong.",
     "domainInUse": "Another identity provider already uses one of these e-mail domains. Remove it there first, or use a different domain.",
     "groupManagedByProvider": "The members of this group come from an identity provider. Change them there; they update at the next sign-in or synchronization.",
+    "providerUnavailable": "The identity provider could not be reached or answered in an unexpected way. It may be down or its settings may have changed. Try again in a moment; if it keeps failing, ask your administrator to check the provider.",
     "syncUnavailable": "This provider has no directory Pagehall can read, so its accounts update when people sign in. Set up the directory in the provider settings to synchronize.",
     "invalidServiceAccountKey": "The service account key could not be read. Download a new JSON key for the service account in Google Cloud and upload it again.",
     "roleNameTaken": "A role with this name already exists. Choose a different name.",

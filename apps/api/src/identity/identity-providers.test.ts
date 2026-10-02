@@ -237,4 +237,33 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
       await owner.put("/api/v1/instance/settings/auth.passwordSignIn", { clear: true });
     }
   });
+
+  it("answers provider failures and invalid profile values with a problem or a reference", async () => {
+    const unreachable = await owner.post("/api/v1/instance/identity-providers", {
+      name: "Unreachable login",
+      config: {
+        preset: "generic",
+        issuer: "http://127.0.0.1:9/realms/gone",
+        clientId: "pagehall",
+        domains: ["unreachable.test"],
+        accountCreation: { enabled: true, requiredGroups: [] },
+      },
+      credential: { kind: "clientSecret", secret: "secret", expiresAt: null },
+    });
+    expect(unreachable.statusCode).toBe(201);
+    const started = await new TestClient(test.app).post(
+      `/api/v1/auth/providers/${unreachable.json().provider.id}/start`,
+      {},
+    );
+    expect(started.statusCode).toBe(502);
+    expect(started.json()).toMatchObject({ code: "providerUnavailable" });
+
+    const callback = await signInThroughProvider(new TestClient(test.app), {
+      sub: crypto.randomUUID(),
+      email: "long.name@pagehall.test",
+      name: "x".repeat(300),
+    });
+    expect(callback.statusCode).toBe(303);
+    expect(callback.headers.location).toMatch(/^\/sign-in\/refused\?reference=/);
+  });
 });

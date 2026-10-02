@@ -5,6 +5,7 @@ import {
   type CallbackResult,
   generateToken,
   OrganizationError,
+  ProviderResponseError,
   RateLimitedError,
 } from "@pagehall/server";
 import { idSchema } from "@pagehall/shared";
@@ -113,6 +114,7 @@ export class ProviderAuthController {
     params: providerIdParams,
     body: startSchema,
     response: { description: "The provider address to open.", schema: startedSchema },
+    errors: ["providerUnavailable", "rateLimited"],
   })
   async start(
     @Param("providerId") providerId: string,
@@ -158,10 +160,16 @@ export class ProviderAuthController {
         client: clientOf(request, device),
       });
     } catch (error) {
-      if (!(error instanceof AuthError) && !(error instanceof OrganizationError)) throw error;
+      const code =
+        error instanceof ProviderResponseError
+          ? "providerUnavailable"
+          : error instanceof AuthError || error instanceof OrganizationError
+            ? error.code
+            : null;
+      if (code === null) throw error;
       await reply
         .status(303)
-        .header("location", withQuery("/sign-in", { error: error.code }))
+        .header("location", withQuery("/sign-in", { error: code }))
         .send();
       return;
     }

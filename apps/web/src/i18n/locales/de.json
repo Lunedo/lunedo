@@ -594,6 +594,7 @@
     "domainTaken": "Die Domain gehört zu einer anderen Organisation. Wende dich an die Administration der Instanz, wenn das nicht stimmt.",
     "domainInUse": "Ein anderer Identitätsanbieter verwendet bereits eine dieser E-Mail-Domains. Entferne sie dort zuerst oder verwende eine andere Domain.",
     "groupManagedByProvider": "Die Mitglieder dieser Gruppe kommen von einem Identitätsanbieter. Ändere sie dort; sie werden bei der nächsten Anmeldung oder Synchronisierung übernommen.",
+    "providerUnavailable": "Der Identitätsanbieter war nicht erreichbar oder hat unerwartet geantwortet. Vielleicht ist er gerade nicht verfügbar oder seine Einstellungen haben sich geändert. Versuch es gleich noch einmal; wenn es weiter scheitert, bitte deine Administration, den Anbieter zu prüfen.",
     "syncUnavailable": "Pagehall kann das Verzeichnis dieses Anbieters nicht lesen, deshalb werden Konten bei der Anmeldung aktualisiert. Richte das Verzeichnis in den Einstellungen des Anbieters ein, um zu synchronisieren.",
     "invalidServiceAccountKey": "Der Schlüssel des Dienstkontos konnte nicht gelesen werden. Lade in Google Cloud einen neuen JSON-Schlüssel für das Dienstkonto herunter und lade ihn erneut hoch.",
     "roleNameTaken": "Eine Rolle mit diesem Namen gibt es bereits. Wähle einen anderen Namen.",
