@@ -4,6 +4,7 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { Combobox, type ComboboxItem, type ComboboxLoader, matchesQuery } from "./combobox.js";
 import { renderUi } from "./testing/render.js";
+import { timeZoneItem } from "./time-zone-combobox.js";
 
 const PEOPLE: ComboboxItem[] = [
   { value: "anna", label: "Anna Roth", description: "anna@example.org" },
@@ -47,6 +48,22 @@ describe("matchesQuery", () => {
     expect(matchesQuery(lena, "hofer")).toBe(true);
     expect(matchesQuery(lena, "lena admin")).toBe(true);
     expect(matchesQuery(lena, "lena owner")).toBe(false);
+  });
+});
+
+describe("timeZoneItem", () => {
+  it("finds renamed time zones by their current and their former names", () => {
+    const now = new Date(Date.UTC(2026, 9, 2, 12));
+    for (const [zone, query] of [
+      ["Asia/Calcutta", "Kolkata"],
+      ["Asia/Kolkata", "Calcutta"],
+      ["Europe/Kiev", "Kyiv"],
+      ["Asia/Saigon", "Ho Chi Minh"],
+      ["Asia/Rangoon", "Yangon"],
+      ["Asia/Katmandu", "Kathmandu"],
+    ] as const) {
+      expect(matchesQuery(timeZoneItem(zone, now, "en"), query), zone).toBe(true);
+    }
   });
 });
 

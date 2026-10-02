@@ -36,6 +36,19 @@ function offsetKeywords(offset: string): string[] {
   return [offset, `UTC${short}`, `GMT${short}`, short, `${sign}${hours}:${minutes}`];
 }
 
+const RENAMED_ZONES: Record<string, readonly string[]> = {
+  "Asia/Calcutta": ["Asia/Kolkata", "Kolkata"],
+  "Asia/Kolkata": ["Asia/Calcutta", "Calcutta"],
+  "Europe/Kiev": ["Europe/Kyiv", "Kyiv"],
+  "Europe/Kyiv": ["Europe/Kiev", "Kiev"],
+  "Asia/Saigon": ["Asia/Ho_Chi_Minh", "Ho Chi Minh"],
+  "Asia/Ho_Chi_Minh": ["Asia/Saigon", "Saigon"],
+  "Asia/Rangoon": ["Asia/Yangon", "Yangon"],
+  "Asia/Yangon": ["Asia/Rangoon", "Rangoon"],
+  "Asia/Katmandu": ["Asia/Kathmandu", "Kathmandu"],
+  "Asia/Kathmandu": ["Asia/Katmandu", "Katmandu"],
+};
+
 function cityOf(timeZone: string): string {
   return (timeZone.split("/").at(-1) ?? timeZone).replaceAll("_", " ");
 }
@@ -53,7 +66,7 @@ export function timeZoneItem(timeZone: string, now: Date, locale?: string): Comb
     value: timeZone,
     label: cityOf(timeZone),
     description: [region, offset, time].filter(Boolean).join(" · "),
-    keywords: [timeZone, region, ...offsetKeywords(offset)],
+    keywords: [timeZone, region, ...(RENAMED_ZONES[timeZone] ?? []), ...offsetKeywords(offset)],
   };
 }
 
