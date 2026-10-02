@@ -198,19 +198,17 @@ const assignmentBody = z
         z
           .object({ kind: z.literal("organizationMembers").describe("Every member of the organization.") })
           .strict()
-          .describe(
-            "All members. Refused with `roleNeedsAccountOrGroup`: roles go to individual accounts and groups only.",
-          ),
+          .describe("All members."),
         z
           .object({
             kind: z.literal("instanceUsers").describe("Every internal user of the instance who is a member."),
           })
           .strict()
-          .describe(
-            "All internal users. Refused with `roleNeedsAccountOrGroup`: roles go to individual accounts and groups only.",
-          ),
+          .describe("All internal users."),
       ])
-      .describe("Who receives the role."),
+      .describe(
+        "Who receives the role. All members and all internal users are refused with `roleNeedsAccountOrGroup`: roles go to individual accounts and groups only.",
+      ),
     expiresAt: optionalExpiry("When the assignment ends."),
   })
   .strict()

@@ -12741,10 +12741,10 @@
                           "kind"
                         ],
                         "additionalProperties": false,
-                        "description": "All internal users. Refused with `roleNeedsAccountOrGroup`: instance roles go to individual accounts only."
+                        "description": "All internal users."
                       }
                     ],
-                    "description": "Who receives the role."
+                    "description": "Who receives the role. All internal users are refused with `roleNeedsAccountOrGroup`: instance roles go to individual accounts only."
                   },
                   "expiresAt": {
                     "description": "When the assignment ends. ISO 8601 timestamp, or null for no expiry. Leave it out to keep the default.",
@@ -23129,7 +23129,7 @@
                           "kind"
                         ],
                         "additionalProperties": false,
-                        "description": "All members. Refused with `roleNeedsAccountOrGroup`: roles go to individual accounts and groups only."
+                        "description": "All members."
                       },
                       {
                         "type": "object",
@@ -23144,10 +23144,10 @@
                           "kind"
                         ],
                         "additionalProperties": false,
-                        "description": "All internal users. Refused with `roleNeedsAccountOrGroup`: roles go to individual accounts and groups only."
+                        "description": "All internal users."
                       }
                     ],
-                    "description": "Who receives the role."
+                    "description": "Who receives the role. All members and all internal users are refused with `roleNeedsAccountOrGroup`: roles go to individual accounts and groups only."
                   },
                   "expiresAt": {
                     "description": "When the assignment ends. ISO 8601 timestamp, or null for no expiry. Leave it out to keep the default.",

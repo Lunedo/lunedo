@@ -130,11 +130,11 @@ const assignmentBody = z
         z
           .object({ kind: z.literal("instanceUsers").describe("Every internal user.") })
           .strict()
-          .describe(
-            "All internal users. Refused with `roleNeedsAccountOrGroup`: instance roles go to individual accounts only.",
-          ),
+          .describe("All internal users."),
       ])
-      .describe("Who receives the role."),
+      .describe(
+        "Who receives the role. All internal users are refused with `roleNeedsAccountOrGroup`: instance roles go to individual accounts only.",
+      ),
     expiresAt: optionalExpiry("When the assignment ends."),
   })
   .strict()
