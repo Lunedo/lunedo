@@ -107,3 +107,10 @@ export async function setAppearance(
   if (appearance.textSize !== undefined) await put("appearance.textSize", appearance.textSize);
   if (appearance.language !== undefined) await put("locale.language", appearance.language);
 }
+
+export async function signInWithPassword(page: Page, email: string, password: string): Promise<void> {
+  await page.getByLabel("Work e-mail address").fill(email);
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+}

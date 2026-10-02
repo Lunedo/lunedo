@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { OWNER, OWNER_STORAGE, readState } from "../support/environment.js";
-import { expectAccessible, freshTotp, setAppearance } from "../support/helpers.js";
+import { expectAccessible, freshTotp, setAppearance, signInWithPassword } from "../support/helpers.js";
 
 test.describe.configure({ mode: "serial" });
 test.use({ storageState: OWNER_STORAGE });
@@ -16,9 +16,7 @@ test("delivers a notification live to an open page", async ({ page, browser }) =
   });
   const other = await elsewhere.newPage();
   await other.goto("/sign-in");
-  await other.getByLabel("E-mail").fill(OWNER.email);
-  await other.getByLabel("Password", { exact: true }).fill(OWNER.password);
-  await other.getByRole("button", { name: "Sign in", exact: true }).click();
+  await signInWithPassword(other, OWNER.email, OWNER.password);
   await other
     .getByLabel("Code from your authenticator app")
     .fill(await freshTotp(readState().ownerSecret ?? ""));

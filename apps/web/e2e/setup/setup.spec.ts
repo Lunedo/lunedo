@@ -8,7 +8,7 @@ import {
   SMTP_PORT,
   writeState,
 } from "../support/environment.js";
-import { expectAccessible, freshTotp, waitForMail } from "../support/helpers.js";
+import { expectAccessible, freshTotp, signInWithPassword, waitForMail } from "../support/helpers.js";
 
 test.describe.configure({ mode: "serial" });
 
@@ -96,9 +96,7 @@ test("sets up a fresh instance and signs in the owner with a second factor", asy
   await expect(page.getByRole("heading", { name: `Sign in to ${ORGANIZATION_NAME}` })).toBeVisible();
   await expect(page.getByText("Example Wiki")).toBeVisible();
   await expectAccessible(page, "sign-in");
-  await page.getByLabel("E-mail").fill(OWNER.email);
-  await page.getByLabel("Password", { exact: true }).fill(OWNER.password);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await signInWithPassword(page, OWNER.email, OWNER.password);
   await expect(page.getByRole("heading", { name: "Confirm it's you" })).toBeVisible();
   await page.getByLabel("Code from your authenticator app").fill(await freshTotp(secret));
   await page.getByRole("button", { name: "Verify" }).click();

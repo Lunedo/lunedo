@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { OWNER, OWNER_STORAGE, readState } from "../support/environment.js";
-import { linkFrom, waitForMail } from "../support/helpers.js";
+import { linkFrom, signInWithPassword, waitForMail } from "../support/helpers.js";
 
 test.use({ storageState: OWNER_STORAGE });
 
@@ -46,9 +46,7 @@ test("an administrator resets a member's second factor with a reason", async ({ 
   expect((await waitForMail(PERSON.email, /second factor/i)).text).toContain("Lost phone, confirmed by call");
 
   await person.goto("/sign-in");
-  await person.getByLabel("E-mail").fill(PERSON.email);
-  await person.getByLabel("Password", { exact: true }).fill(PERSON.password);
-  await person.getByRole("button", { name: "Sign in", exact: true }).click();
+  await signInWithPassword(person, PERSON.email, PERSON.password);
   await expect(person.getByRole("heading", { name: "Set up a second factor" })).toBeVisible();
   await context.close();
 });

@@ -1,22 +1,18 @@
 import { expect, type Page, test } from "@playwright/test";
 import { OWNER, OWNER_STORAGE, readState, writeState } from "../support/environment.js";
-import { addVirtualAuthenticator, freshTotp } from "../support/helpers.js";
+import { addVirtualAuthenticator, freshTotp, signInWithPassword } from "../support/helpers.js";
 
 test.describe.configure({ mode: "serial" });
 
 async function enterPassword(page: Page) {
   await page.goto("/sign-in");
-  await page.getByLabel("E-mail").fill(OWNER.email);
-  await page.getByLabel("Password", { exact: true }).fill(OWNER.password);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await signInWithPassword(page, OWNER.email, OWNER.password);
   await expect(page.getByRole("heading", { name: "Confirm it's you" })).toBeVisible();
 }
 
 test("refuses a wrong password", async ({ page }) => {
   await page.goto("/sign-in");
-  await page.getByLabel("E-mail").fill(OWNER.email);
-  await page.getByLabel("Password", { exact: true }).fill("not the password");
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await signInWithPassword(page, OWNER.email, "not the password");
   await expect(page.getByText("The e-mail address or the password is not correct.")).toBeVisible();
 });
 
@@ -59,9 +55,7 @@ test("adds a passkey and uses it as second factor and for sign-in", async ({ bro
   await page.getByRole("menuitem", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/sign-in/);
 
-  await page.getByLabel("E-mail").fill(OWNER.email);
-  await page.getByLabel("Password", { exact: true }).fill(OWNER.password);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await signInWithPassword(page, OWNER.email, OWNER.password);
   await page.getByRole("button", { name: "Use a passkey" }).click();
   await page.getByRole("button", { name: "Use passkey" }).click();
   await expect(page.getByRole("heading", { name: "Preferences" })).toBeVisible();
@@ -84,9 +78,7 @@ test("returns to the page that was open when the session ended", async ({ browse
   await page.reload();
   await expect(page).toHaveURL(/\/sign-in\?/);
   expect(new URL(page.url()).searchParams.get("redirect")).toBe("/settings/security");
-  await page.getByLabel("E-mail").fill(OWNER.email);
-  await page.getByLabel("Password", { exact: true }).fill(OWNER.password);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await signInWithPassword(page, OWNER.email, OWNER.password);
   await page
     .getByLabel("Code from your authenticator app")
     .fill(await freshTotp(readState().ownerSecret ?? ""));
