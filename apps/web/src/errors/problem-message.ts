@@ -3,6 +3,9 @@ import { ApiError } from "../api/request.js";
 import { translateKey } from "../i18n/translate.js";
 
 const KNOWN = new Set([
+  "resetOwnSecondFactor",
+  "endOwnSessions",
+  "roleNeedsAccountOrGroup",
   "invalidInput",
   "passwordPolicy",
   "invalidToken",
