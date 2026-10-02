@@ -503,6 +503,19 @@
     "allTimeZones": "All time zones",
     "browserTimeZone": "This browser"
   },
+  "emergencyRecipients": {
+    "title": "Emergency sign-in",
+    "description": "When you sign in with your password while password sign-in is off, these people are told at once. You, as the instance owner, are always told.",
+    "ownerOnly": "Only the instance owner can change who is told about an emergency sign-in.",
+    "administrators": "Tell instance administrators",
+    "administratorsHint": "All instance owners and administrators get a notification.",
+    "accounts": "Further people",
+    "accountsHint": "They get a notification in Pagehall and by e-mail.",
+    "choosePeople": "Choose people",
+    "addresses": "Further e-mail addresses",
+    "addressesHint": "Addresses outside Pagehall, for example a security team, separated by commas. Up to 20.",
+    "addressesInvalid": "Enter up to 20 valid e-mail addresses, separated by commas."
+  },
   "shell": {
     "documentTitle": "{title} · Pagehall",
     "insecureProviders": {
@@ -2308,6 +2321,7 @@
     "removeCredential": "The credential could not be removed",
     "addCredential": "The credential could not be added",
     "removeProvider": "The provider could not be removed",
+    "loadEmergencyRecipients": "Who is told about an emergency sign-in could not be loaded",
     "deactivateProvider": "The provider could not be deactivated",
     "activateProvider": "The provider could not be activated",
     "loadRemovalPreview": "What the removal changes could not be loaded",

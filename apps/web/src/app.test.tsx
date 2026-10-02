@@ -124,7 +124,10 @@ describe("the web client", () => {
     expect(await screen.findByRole("heading", { name: "Sign in to Platform Team" })).toBeTruthy();
     expect(new URL(window.location.href).searchParams.get("redirect")).toBe("/settings/security");
 
-    await userEvent.type(await screen.findByLabelText("Work e-mail address or sign-in name"), "olivia@example.org");
+    await userEvent.type(
+      await screen.findByLabelText("Work e-mail address or sign-in name"),
+      "olivia@example.org",
+    );
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await userEvent.type(await screen.findByLabelText("Password"), "wrong");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));

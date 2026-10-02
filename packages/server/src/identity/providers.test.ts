@@ -8,7 +8,9 @@ import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { PasswordSignInDisabledError } from "../auth/errors.js";
 import { passwordSignInSetting } from "../auth/settings.js";
 import { ForbiddenError } from "../authorization/service.js";
+import { smtpSetting } from "../mail/mail-service.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
+import { deliverPendingMail } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { IdentityProviderService } from "./providers.js";
 
@@ -370,6 +372,93 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     } finally {
       await test.pool.query("update instance set owner_account_id = null");
       await test.settings.set(passwordSignInSetting, {}, "instance", true);
+    }
+  });
+
+  async function enableTotp(accountId: string) {
+    const setup = await test.services.totp.begin(accountId, { issuer: "Test", account: "person" });
+    if (!setup) throw new Error("TOTP was not started");
+    const secret = Secret.fromBase32(setup.secret);
+    await test.services.totp.verify(test.database, accountId, TOTP.generate({ secret }), {
+      confirming: true,
+    });
+    return secret;
+  }
+
+  it("tells the people and addresses the instance owner chose about an emergency sign-in", async () => {
+    const org = await organization();
+    const administrator = await account(null);
+    await test.services.roles.assign(SYSTEM, {
+      scope: "instance",
+      organizationId: null,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: administrator.id },
+    });
+    const security = await account(null);
+    await test.pool.query("update instance set owner_account_id = $1", [org.owner]);
+    await test.settings.set(passwordSignInSetting, {}, "instance", false);
+    await test.settings.set(smtpSetting, {}, "instance", {
+      host: "smtp.example.org",
+      port: 25,
+      security: "none",
+      username: null,
+      from: "wiki@example.org",
+    });
+    try {
+      expect(await test.services.emergencyRecipients.get()).toEqual({
+        instanceAdministrators: true,
+        accounts: [],
+        addresses: [],
+      });
+      const choice = {
+        instanceAdministrators: false,
+        accountIds: [security.id],
+        addresses: ["Alarm@Example.net"],
+      };
+      await expect(
+        test.services.emergencyRecipients.set(accountPrincipal(administrator.id), choice),
+      ).rejects.toThrow(ForbiddenError);
+      await expect(
+        test.services.emergencyRecipients.set(accountPrincipal(org.owner), {
+          ...choice,
+          accountIds: [randomUUID()],
+        }),
+      ).rejects.toMatchObject({ code: "invalidInput" });
+      expect(await test.services.emergencyRecipients.set(accountPrincipal(org.owner), choice)).toMatchObject({
+        instanceAdministrators: false,
+        accounts: [{ id: security.id }],
+        addresses: ["alarm@example.net"],
+      });
+      const audited = await test.pool.query(
+        "select fields from audit_events where name = 'settings.changed' and target_id = 'auth.emergencySignInRecipients'",
+      );
+      expect(audited.rows).toHaveLength(1);
+
+      const secret = await enableTotp(org.owner);
+      const owner = await test.services.accounts.get(org.owner);
+      const first = await test.services.signIn.signInWithPassword({
+        email: owner?.email ?? "",
+        password: PASSWORD,
+        client: {},
+      });
+      if (first.status !== "secondFactorRequired") throw new Error("A second factor was expected");
+      const signedIn = await test.services.signIn.completeSecondFactor({
+        pendingToken: first.pendingToken,
+        factor: { type: "totp", code: TOTP.generate({ secret, timestamp: Date.now() + 30_000 }) },
+        client: {},
+      });
+      const notified = await test.pool.query(
+        "select recipient_id from notifications where type = 'auth.emergencySignIn' and target_id = $1",
+        [org.owner],
+      );
+      expect(notified.rows.map((row) => row.recipient_id).sort()).toEqual([org.owner, security.id].sort());
+      expect(signedIn.session.accountId).toBe(org.owner);
+      await deliverPendingMail(test.services, test.database);
+      expect(test.mail.sent.map((mail) => mail.to)).toContain("alarm@example.net");
+    } finally {
+      await test.pool.query("update instance set owner_account_id = null");
+      await test.settings.set(passwordSignInSetting, {}, "instance", true);
+      await test.settings.clear(smtpSetting, {}, "instance");
     }
   });
 

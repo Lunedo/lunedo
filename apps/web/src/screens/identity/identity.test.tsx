@@ -83,7 +83,10 @@ describe("the sign-in page", () => {
       },
     );
     await renderPath("/sign-in?redirect=%2Fsettings%2Fsecurity");
-    await userEvent.type(await screen.findByLabelText("Work e-mail address or sign-in name"), "lena@example.org");
+    await userEvent.type(
+      await screen.findByLabelText("Work e-mail address or sign-in name"),
+      "lena@example.org",
+    );
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByText("example.org signs in with Microsoft")).toBeTruthy();
     expect(screen.queryByLabelText("Password")).toBeNull();
@@ -102,7 +105,10 @@ describe("the sign-in page", () => {
     let step = "password";
     signedOutApi({}, { "POST /api/v1/auth/sign-in/discover": () => ({ body: { step } }) });
     await renderPath("/sign-in");
-    await userEvent.type(await screen.findByLabelText("Work e-mail address or sign-in name"), "guest@partner.example");
+    await userEvent.type(
+      await screen.findByLabelText("Work e-mail address or sign-in name"),
+      "guest@partner.example",
+    );
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByLabelText("Password")).toBeTruthy();
 
@@ -386,6 +392,52 @@ describe("the sign-in settings of the instance", () => {
     });
     await renderPath("/settings/instance/sign-in-providers");
     expect(await screen.findByText("Identity providers are not checked strictly")).toBeTruthy();
+  });
+
+  it("lets only the instance owner choose who is told about an emergency sign-in", async () => {
+    const recipients = { instanceAdministrators: true, accounts: [], addresses: ["alarm@example.net"] };
+    adminApi({
+      "GET /api/v1/instance/identity-providers": () => ({ body: [provider()] }),
+      "GET /api/v1/instance/emergency-sign-in-recipients": () => ({ body: recipients }),
+    });
+    await renderPath("/settings/instance/sign-in-providers");
+    expect((await screen.findAllByText(/Only the instance owner can change/)).length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("switch", { name: "Tell instance administrators" }).getAttribute("aria-disabled"),
+    ).toBe("true");
+  });
+
+  it("saves the emergency sign-in recipients of the instance owner at once", async () => {
+    const recipients = { instanceAdministrators: true, accounts: [], addresses: ["alarm@example.net"] };
+    const { requests } = adminApi({
+      "GET /api/v1/instance/identity-providers": () => ({ body: [provider()] }),
+      "GET /api/v1/instance/emergency-sign-in-recipients": () => ({ body: recipients }),
+      "PUT /api/v1/instance/emergency-sign-in-recipients": (request) => {
+        const body = request.body as { instanceAdministrators: boolean; addresses: string[] };
+        return { body: { ...recipients, ...body, accounts: [] } };
+      },
+      "GET /api/v1/account/permissions": () => ({
+        body: {
+          instance: ["instance.signIn.view", "instance.signIn.manage", "instance.emergencyRecipients.manage"],
+          organization: [],
+          grantableAreas: { instance: {}, organization: {} },
+        },
+      }),
+    });
+    await renderPath("/settings/instance/sign-in-providers");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("switch", { name: "Tell instance administrators" }).getAttribute("aria-disabled"),
+      ).not.toBe("true"),
+    );
+    await userEvent.click(screen.getByRole("switch", { name: "Tell instance administrators" }));
+    await waitFor(() =>
+      expect(requests.find((request) => request.method === "PUT")?.body).toEqual({
+        instanceAdministrators: false,
+        accountIds: [],
+        addresses: ["alarm@example.net"],
+      }),
+    );
   });
 
   it("saves the second factor setting of a provider at once", async () => {

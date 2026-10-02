@@ -6,6 +6,7 @@ import { InternalRoute, Permission, PublicRoute } from "../access/route-access.j
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
+import { uuid } from "../http/schemas.js";
 import { COOKIES, PROVIDER_FLOW_MAX_AGE_SECONDS, setCookie } from "../http/cookies.js";
 import { ownOrigin } from "../http/csrf.js";
 import { notFound } from "../http/problems.js";
@@ -29,6 +30,33 @@ import {
 } from "./schemas.js";
 
 const TAG = "Identity providers";
+
+const emergencyRecipientsSchema = z
+  .object({
+    instanceAdministrators: z
+      .boolean()
+      .describe("Whether all instance owners and administrators are told, besides the instance owner."),
+    accounts: z
+      .array(
+        z.object({
+          id: uuid("ID of the account."),
+          name: z.string().describe("Name of the account."),
+          email: z.string().nullable().describe("E-mail address of the account."),
+        }),
+      )
+      .describe("Further accounts that get a notification."),
+    addresses: z.array(z.string()).describe("E-mail addresses outside Pagehall that get an e-mail."),
+  })
+  .describe("Who is told about an emergency sign-in of the instance owner.");
+
+const emergencyRecipientsInputSchema = z
+  .object({
+    instanceAdministrators: z.boolean().describe("Whether instance owners and administrators are told."),
+    accountIds: z.array(uuid("ID of an account.")).max(50).describe("Further active accounts to notify, up to 50."),
+    addresses: z.array(z.email()).max(20).describe("E-mail addresses outside Pagehall, up to 20."),
+  })
+  .strict()
+  .describe("The recipients of emergency sign-in warnings.");
 
 const logoBody = z
   .object({
@@ -142,6 +170,35 @@ export class IdentityProvidersController {
           : body.credential,
     });
     return { provider: await this.#present(request, created.provider), credential: created.credential };
+  }
+
+  @Get("instance/emergency-sign-in-recipients")
+  @Permission("instance.signIn.view")
+  @ApiRoute({
+    summary: "Get who is told about an emergency sign-in",
+    tags: [TAG],
+    response: { description: "The recipients.", schema: emergencyRecipientsSchema },
+  })
+  async emergencyRecipients() {
+    return this.#services.emergencyRecipients.get();
+  }
+
+  @Put("instance/emergency-sign-in-recipients")
+  @Permission("instance.emergencyRecipients.manage", { type: "instance" }, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "Change who is told about an emergency sign-in",
+    description:
+      "Only the instance owner can change the recipients. The instance owner is always told. Every change is audited.",
+    tags: [TAG],
+    body: emergencyRecipientsInputSchema,
+    response: { description: "The recipients.", schema: emergencyRecipientsSchema },
+    errors: ["invalidInput", "reauthenticationRequired"],
+  })
+  async setEmergencyRecipients(
+    @Body() body: z.output<typeof emergencyRecipientsInputSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.emergencyRecipients.set(actorOf(request), body);
   }
 
   @Get("instance/sign-in-security")

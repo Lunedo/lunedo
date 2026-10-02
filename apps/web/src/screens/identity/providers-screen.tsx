@@ -31,6 +31,7 @@ import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { useInstanceSettingsEditor } from "../instance/general-screen.js";
 import { SettingsPage } from "../settings/settings-page.js";
+import { EmergencyRecipients } from "./emergency-recipients.js";
 import { credentialStatus, presetLabel } from "./provider-labels.js";
 
 export function providerPath(providerId: string, search?: Record<string, string>) {
@@ -298,6 +299,9 @@ export function InstanceProvidersScreen() {
       ) : null}
       <Section title={t("identityProviders.otherMethods")}>
         <SettingsList {...editor} keys={["auth.passwordSignIn"]} level="instance" />
+      </Section>
+      <Section title={t("emergencyRecipients.title")}>
+        <EmergencyRecipients />
       </Section>
     </SettingsPage>
   );

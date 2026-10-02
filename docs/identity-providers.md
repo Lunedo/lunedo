@@ -130,7 +130,7 @@ Administrators link and unlink identities in the account panel. Unlinking ends t
 
 `auth.passwordSignIn` is an instance setting and decides whether people sign in with a password. When it is off, they sign in through a provider or a passkey. Requiring a second factor stays a setting that organizations can make stricter for their members.
 
-The instance owner can always sign in with password and second factor. When password sign-in is off for the owner, this counts as emergency sign-in: it is audited as `auth.emergencySignIn` and all instance administrators get the notification `auth.emergencySignIn` at once.
+The instance owner can always sign in with password and second factor. When password sign-in is off for the owner, this counts as emergency sign-in: it is audited as `auth.emergencySignIn`, and the recipients get the notification `auth.emergencySignIn` at once. The instance owner is always told. By default, all instance owners and administrators are told as well; the instance owner can turn that off, add further people and add e-mail addresses outside Pagehall (`PUT /api/v1/instance/emergency-sign-in-recipients`). Only the instance owner can change the recipients, and every change is audited as `settings.changed`.
 
 ## Audit events
 

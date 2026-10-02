@@ -503,6 +503,19 @@
     "allTimeZones": "Alle Zeitzonen",
     "browserTimeZone": "Dieser Browser"
   },
+  "emergencyRecipients": {
+    "title": "Notfall-Anmeldung",
+    "description": "Wenn du dich bei ausgeschalteter Passwort-Anmeldung mit deinem Passwort anmeldest, werden diese Personen sofort informiert. Du als Instanz-Owner wirst immer informiert.",
+    "ownerOnly": "Nur der Instanz-Owner kann ändern, wer über eine Notfall-Anmeldung informiert wird.",
+    "administrators": "Instanz-Administration informieren",
+    "administratorsHint": "Alle Owner und Administratoren der Instanz bekommen eine Benachrichtigung.",
+    "accounts": "Weitere Personen",
+    "accountsHint": "Sie bekommen eine Benachrichtigung in Pagehall und per E-Mail.",
+    "choosePeople": "Personen auswählen",
+    "addresses": "Weitere E-Mail-Adressen",
+    "addressesHint": "Adressen außerhalb von Pagehall, zum Beispiel ein Security-Team, durch Kommas getrennt. Höchstens 20.",
+    "addressesInvalid": "Gib bis zu 20 gültige E-Mail-Adressen ein, durch Kommas getrennt."
+  },
   "shell": {
     "documentTitle": "{title} · Pagehall",
     "insecureProviders": {
@@ -2305,6 +2318,7 @@
     "removeCredential": "Der Zugang konnte nicht entfernt werden",
     "addCredential": "Der Zugang konnte nicht hinzugefügt werden",
     "removeProvider": "Der Provider konnte nicht entfernt werden",
+    "loadEmergencyRecipients": "Wer über eine Notfall-Anmeldung informiert wird, konnte nicht geladen werden",
     "deactivateProvider": "Der Provider konnte nicht deaktiviert werden",
     "activateProvider": "Der Provider konnte nicht aktiviert werden",
     "loadRemovalPreview": "Was das Entfernen ändert, konnte nicht geladen werden",

@@ -7,6 +7,7 @@ import { AUDIT_RETENTION_SCHEDULE, applyAuditRetention, auditRetentionJob } from
 import { AccountSecurityService, passwordResetRequestJob } from "./auth/account-security.js";
 import { ChallengeStore } from "./auth/challenges.js";
 import { AUTH_CLEANUP_SCHEDULE, authCleanupJob } from "./auth/cleanup.js";
+import { EmergencyRecipientsService } from "./auth/emergency-recipients.js";
 import { PasswordHasher } from "./auth/passwords.js";
 import { SessionService } from "./auth/sessions.js";
 import { SignInService } from "./auth/sign-in.js";
@@ -96,6 +97,7 @@ export interface AccountServices {
   groups: GroupService;
   invitations: InvitationService;
   breakGlass: BreakGlassService;
+  emergencyRecipients: EmergencyRecipientsService;
   lifecycle: OrganizationLifecycle;
   auditReader: AuditReader;
   serviceAccounts: ServiceAccountService;
@@ -183,6 +185,7 @@ export function createAccountServices(options: {
     settings,
   });
   const breakGlass = new BreakGlassService({ database, audit, notifications, settings });
+  const emergencyRecipients = new EmergencyRecipientsService({ database, settings, authorization });
   const lifecycle = new OrganizationLifecycle({
     database,
     audit,
@@ -326,6 +329,7 @@ export function createAccountServices(options: {
     groups,
     invitations,
     breakGlass,
+    emergencyRecipients,
     lifecycle,
     auditReader,
     serviceAccounts,

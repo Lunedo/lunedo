@@ -10,8 +10,10 @@ import { identities } from "../identity/schema.js";
 import type { MailService } from "../mail/mail-service.js";
 import { knownDevices } from "../notifications/schema.js";
 import type { NotificationService } from "../notifications/service.js";
+import { languageSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import type { ChallengeStore } from "./challenges.js";
+import { emergencyRecipientsOf } from "./emergency-recipients.js";
 import {
   ChallengeExpiredError,
   InvalidCredentialsError,
@@ -269,16 +271,11 @@ export class SignInService {
       targetId: account.id,
       fields: { sessionId },
     });
-    const recipients = await tx.execute<{ id: string }>(sql`
-      select distinct a.id from role_assignments ra join accounts a on a.id = ra.principal_id
-      where ra.scope = 'instance' and ra.principal_kind = 'account'
-        and ra.built_in_role in ('owner', 'administrator') and a.state = 'active'
-        and (ra.expires_at is null or ra.expires_at > now())
-      union select owner_account_id from instance where owner_account_id is not null`);
+    const recipients = await emergencyRecipientsOf(tx, this.#settings);
     const described = describeClient(client.userAgent);
     const result = await this.#notifications.notify(tx, {
       type: "auth.emergencySignIn",
-      recipients: recipients.rows.map((row) => row.id),
+      recipients: recipients.accountIds,
       organizationId: null,
       targetId: account.id,
       params: {
@@ -289,6 +286,22 @@ export class SignInService {
       },
     });
     mailIds.push(...result.mailIds);
+    const language = await this.#settings.get(languageSetting, {}, { executor: tx });
+    for (const address of recipients.addresses) {
+      mailIds.push(
+        await this.#mail.queue(tx, {
+          to: address,
+          template: "emergencySignIn",
+          language,
+          params: {
+            accountName: account.name,
+            browser: described.browser,
+            operatingSystem: described.operatingSystem,
+            clientIp: client.ip ?? null,
+          },
+        }),
+      );
+    }
   }
 
   async createProviderSession(
