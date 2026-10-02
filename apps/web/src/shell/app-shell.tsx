@@ -128,8 +128,7 @@ function WithoutOrganizationBanner() {
   const state = useOrganizationState();
   const account = state.session.account;
   if (
-    !account ||
-    account.type !== "standard" ||
+    account?.type !== "standard" ||
     account.homeOrganizationId !== null ||
     !state.permissionsLoaded ||
     state.organizations.length > 0

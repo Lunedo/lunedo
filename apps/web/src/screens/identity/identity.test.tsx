@@ -494,7 +494,7 @@ describe("the sign-in settings of the instance", () => {
     await userEvent.click(await screen.findByRole("option", { name: "Require proof from the provider" }));
     expect(await screen.findByLabelText("Accepted proof values")).toBeTruthy();
     const patch = requests.find((request) => request.method === "PATCH");
-    expect((patch?.body as { config: { secondFactor: unknown } }).config.secondFactor).toEqual({
+    expect((patch?.body as { config: { secondFactor: unknown } } | undefined)?.config.secondFactor).toEqual({
       mode: "providerProof",
       proofValues: ["mfa"],
     });
