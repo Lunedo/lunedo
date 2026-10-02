@@ -35,6 +35,12 @@ async function allowedOrigins(request: FastifyRequest, context: ApiContext): Pro
   return origins;
 }
 
+const BACKCHANNEL_LOGOUT = /^\/api\/v1\/auth\/providers\/[0-9A-Fa-f-]{36}\/backchannel-logout$/;
+
+function isBackchannelLogout(request: FastifyRequest): boolean {
+  return BACKCHANNEL_LOGOUT.test(request.url.split("?")[0] ?? "");
+}
+
 export async function configureApp(app: NestFastifyApplication, context: ApiContext): Promise<void> {
   const fastify = app.getHttpAdapter().getInstance();
 
@@ -55,6 +61,7 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
       }
       if (!carriesCookieCredentials(request)) return;
     }
+    if (isBackchannelLogout(request) && !carriesCookieCredentials(request)) return;
     if (!changesState(request) || isCsrfSafe(request, await allowedOrigins(request, context))) return;
     return sendProblem(
       reply,

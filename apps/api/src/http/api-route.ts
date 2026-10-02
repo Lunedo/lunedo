@@ -19,6 +19,7 @@ export interface ApiRouteDefinition {
   description?: string;
   tags: string[];
   status?: 200 | 201 | 202 | 204;
+  redirect?: { description: string };
   params?: z.ZodObject;
   query?: z.ZodObject;
   body?: z.ZodType;
@@ -31,6 +32,7 @@ export interface ApiRouteDefinition {
 export const API_ROUTE = "pagehall:api-route";
 
 export function successStatus(definition: ApiRouteDefinition): number {
+  if (definition.redirect) return 303;
   return definition.status ?? (definition.response || definition.raw ? 200 : 204);
 }
 

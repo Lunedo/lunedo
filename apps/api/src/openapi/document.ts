@@ -260,7 +260,12 @@ function operation(
             ]),
           ),
         }
-      : { description: status === "202" ? "Accepted." : "Done. The response has no body." };
+      : definition.redirect
+        ? {
+            description: definition.redirect.description,
+            headers: { Location: { description: "The page to open next.", schema: { type: "string" } } },
+          }
+        : { description: status === "202" ? "Accepted." : "Done. The response has no body." };
   const access = accessText(route.access);
   const description = definition.description
     ? [definition.description, access].filter(Boolean).join("\n\n")
