@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Inject, Param, Post, Put, Query, Req, Res } from "@nestjs/common";
 import { accountPrincipal, type FactorAdded, type RegistrationResponseJSON } from "@pagehall/server";
+import { idSchema } from "@pagehall/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, SessionRoute } from "../access/route-access.js";
@@ -32,7 +33,7 @@ const preferenceUpdateSchema = z.union([
   z.object({ value: z.json() }).strict(),
   z.object({ clear: z.literal(true) }).strict(),
 ]);
-const permissionsQuery = z.object({ organizationId: z.uuid().optional() }).strict();
+const permissionsQuery = z.object({ organizationId: idSchema.optional() }).strict();
 const levelSchema = z.enum(["view", "manage"]);
 
 const permissionsSchema = z.object({

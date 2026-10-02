@@ -85,4 +85,31 @@ describe.skipIf(!databaseBaseUrl)("resetting another account's second factor thr
     });
     expect(forbidden.statusCode).toBe(403);
   });
+
+  it("treats an ID in capital letters exactly like the same ID in small letters", async () => {
+    await owner.post("/api/v1/auth/reauthenticate", { method: "password", password: OWNER.password });
+    const upper = ownerId.toUpperCase();
+    expect(
+      (await owner.post(`/api/v1/accounts/${upper}/second-factor/reset`, { reason: "Me" })).json(),
+    ).toMatchObject({ code: "resetOwnSecondFactor" });
+    expect((await owner.post(`/api/v1/accounts/${upper}/sessions/end`, {})).json()).toMatchObject({
+      code: "endOwnSessions",
+    });
+    expect((await owner.post(`/api/v1/accounts/${upper}/deactivate`, {})).json()).toMatchObject({
+      code: "deactivateSelf",
+    });
+
+    const person = await createAccount(test, "capital-letters@example.org");
+    for (const path of [
+      (id: string) => `/api/v1/instance/accounts/${id}`,
+      (id: string) => `/api/v1/accounts/${id}/security-activity`,
+    ]) {
+      for (const id of [person.id, ownerId]) {
+        const lower = await owner.get(path(id));
+        const capital = await owner.get(path(id.toUpperCase()));
+        expect(capital.statusCode, path(id)).toBe(lower.statusCode);
+        expect(capital.json(), path(id)).toEqual(lower.json());
+      }
+    }
+  });
 });

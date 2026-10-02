@@ -3,6 +3,7 @@ import { formatsSchema } from "./preferences.js";
 import {
   accountNameSchema,
   emailSchema,
+  idSchema,
   instanceNameSchema,
   instanceUrlSchema,
   languageSchema,
@@ -24,7 +25,7 @@ const checkHelp = {
 };
 
 export const setupOrganizationSchema = z.object({
-  id: z.uuid(),
+  id: idSchema,
   name: z.string(),
   slug: z.string(),
   language: languageSchema,
@@ -146,7 +147,7 @@ export const setupStepSchemas = {
             formats: formatsSchema.optional(),
           })
           .strict(),
-        result: z.object({ organizationId: z.uuid() }),
+        result: z.object({ organizationId: idSchema }),
       },
     },
   },

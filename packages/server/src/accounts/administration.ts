@@ -48,15 +48,15 @@ export class AccountAdministrationService {
     accountId: string,
     reason: string,
   ): Promise<{ endedSessions: number }> {
-    if (actor.type === "account" && actor.id === accountId) {
-      throw new OrganizationError(
-        "resetOwnSecondFactor",
-        "An account cannot reset its own second factor; use a recovery code instead",
-      );
-    }
     let mailId: string | null = null;
     const result = await this.#database.transaction(async (tx) => {
       const target = await this.#lockActive(tx, accountId);
+      if (actor.type === "account" && actor.id === target.id) {
+        throw new OrganizationError(
+          "resetOwnSecondFactor",
+          "An account cannot reset its own second factor; use a recovery code instead",
+        );
+      }
       await this.#authorization.require(
         actor,
         SECOND_FACTOR_RESET_ACTION,
@@ -106,11 +106,11 @@ export class AccountAdministrationService {
   }
 
   async endSessions(actor: Principal, accountId: string): Promise<{ endedSessions: number }> {
-    if (actor.type === "account" && actor.id === accountId) {
-      throw new OrganizationError("endOwnSessions", "Own sessions are ended on the security page");
-    }
     return this.#database.transaction(async (tx) => {
       const target = await this.#lockActive(tx, accountId);
+      if (actor.type === "account" && actor.id === target.id) {
+        throw new OrganizationError("endOwnSessions", "Own sessions are ended on the security page");
+      }
       await this.#authorization.require(
         actor,
         END_SESSIONS_ACTION,

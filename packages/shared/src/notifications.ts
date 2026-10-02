@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { idSchema } from "./validation.js";
 
 export const notificationChannels = ["inApp", "email"] as const;
 export type NotificationChannel = (typeof notificationChannels)[number];
@@ -9,13 +10,13 @@ export const notificationParamSchemas = {
   "apiToken.expiring": z.object({
     tokenName: z.string(),
     expiresAt: instant,
-    serviceAccountId: z.uuid().nullable(),
+    serviceAccountId: idSchema.nullable(),
   }),
   "apiToken.unused": z.object({
     tokenName: z.string(),
     lastUsedAt: instant.nullable(),
     days: z.number().int(),
-    serviceAccountId: z.uuid().nullable(),
+    serviceAccountId: idSchema.nullable(),
   }),
   "guest.expiring": z.object({ organizationName: z.string(), guestName: z.string(), expiresAt: instant }),
   "guest.inactive": z.object({

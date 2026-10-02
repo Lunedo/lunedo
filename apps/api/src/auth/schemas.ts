@@ -1,5 +1,6 @@
 import {
   emailSchema,
+  idSchema,
   linkTokenSchema,
   passkeyNameSchema,
   passwordSchema,
@@ -89,7 +90,7 @@ export const totpConfirmationSchema = z.object({ code: totpCode }).strict();
 export const passkeyRegistrationSchema = z
   .object({ response: registrationResponseSchema, name: passkeyNameSchema })
   .strict();
-export const idSchema = z.uuid();
+export { idSchema };
 export const emptySchema = z.object({}).strict().optional();
 
 const descriptor = z.object({
@@ -130,7 +131,7 @@ export const creationOptionsSchema = z.object({
   extensions: extensions.optional(),
 });
 
-const sessionAccount = z.object({ id: z.uuid(), email: z.string().nullable(), name: z.string() }).nullable();
+const sessionAccount = z.object({ id: idSchema, email: z.string().nullable(), name: z.string() }).nullable();
 
 export const signedInSchema = z.object({
   status: z.literal("signedIn"),
@@ -171,7 +172,7 @@ export const recoveryCodesSchema = z.object({ recoveryCodes: z.array(z.string())
 export const passkeyAddedSchema = recoveryCodesSchema.extend({ passkey: passkeySchema });
 
 export const accountSessionSchema = z.object({
-  id: z.uuid(),
+  id: idSchema,
   current: z.boolean(),
   createdAt: z.iso.datetime(),
   lastUsedAt: z.iso.datetime(),

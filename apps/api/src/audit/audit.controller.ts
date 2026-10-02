@@ -1,6 +1,7 @@
 import { Readable } from "node:stream";
 import { Controller, Get, Inject, Param, Query, Req, Res } from "@nestjs/common";
 import { type AuditEntry, type AuditFilter, presentAuditEntry } from "@pagehall/server";
+import { idSchema } from "@pagehall/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission } from "../access/route-access.js";
@@ -44,7 +45,7 @@ const instanceListQuery = instanceFilter.extend(pageQuery);
 const organizationFilter = z.object(filterShape).strict();
 const organizationListQuery = organizationFilter.extend(pageQuery);
 
-const cursorSchema = z.object({ occurredAt: z.iso.datetime(), id: z.uuid() });
+const cursorSchema = z.object({ occurredAt: z.iso.datetime(), id: idSchema });
 const auditPage = pageSchema(auditEntrySchema, "Events, newest first.");
 const pageExample = { items: [exampleAuditEntry], nextCursor: null };
 

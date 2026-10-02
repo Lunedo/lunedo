@@ -1,8 +1,8 @@
 import { accessLevels, instanceAreas, organizationAreas, supportedLanguages } from "@pagehall/server";
-import { accentColors } from "@pagehall/shared";
+import { accentColors, idSchema } from "@pagehall/shared";
 import { z } from "zod";
 
-export const uuid = (description: string) => z.uuid().describe(description);
+export const uuid = (description: string) => idSchema.describe(description);
 
 export const timestamp = (description: string) =>
   z.iso.datetime().describe(`${description} ISO 8601 timestamp in UTC.`);

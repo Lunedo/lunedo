@@ -143,6 +143,22 @@ describe.skipIf(!baseUrl)("resetting another account's second factor", () => {
     ).rejects.toMatchObject({ code: "resetOwnSecondFactor" });
   });
 
+  it("recognizes the own account by its stored ID when the request uses capital letters", async () => {
+    const org = await organization();
+    const admin = await standard(org.id);
+    await role(admin, "organization", "administrator", org.id);
+    const upper = admin.toUpperCase();
+    await expect(
+      test.services.administration.resetSecondFactor(accountPrincipal(admin), upper, "Myself"),
+    ).rejects.toMatchObject({ code: "resetOwnSecondFactor" });
+    await expect(
+      test.services.administration.endSessions(accountPrincipal(admin), upper),
+    ).rejects.toMatchObject({ code: "endOwnSessions" });
+    await expect(test.services.memberships.deactivate(accountPrincipal(admin), upper)).rejects.toMatchObject({
+      code: "deactivateSelf",
+    });
+  });
+
   it("decides through the authorization service and refuses people without the permission", async () => {
     const org = await organization();
     const member = await standard(org.id);

@@ -13,6 +13,7 @@ import {
 } from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { API_CONTEXT, type ApiContext } from "../context.js";
+import { API_ROUTE, type ApiRouteDefinition } from "../http/api-route.js";
 import { COOKIES, readCookie } from "../http/cookies.js";
 import { ProblemException } from "../http/problems.js";
 import { bearerToken } from "../http/request.js";
@@ -41,6 +42,11 @@ export class RouteAccessGuard implements CanActivate {
     }
     const request = execution.switchToHttp().getRequest<FastifyRequest>();
     const reply = execution.switchToHttp().getResponse<FastifyReply>();
+    const route = this.reflector.get<ApiRouteDefinition | undefined>(API_ROUTE, execution.getHandler());
+    if (route?.params) {
+      const params = route.params.safeParse(request.params ?? {});
+      if (params.success) request.params = params.data;
+    }
     switch (access.kind) {
       case "public":
         return true;

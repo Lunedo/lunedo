@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const idSchema = z.uuid().toLowerCase();
+
 export const supportedLanguages = ["en", "de"] as const;
 export type Language = (typeof supportedLanguages)[number];
 export const languageSchema = z.enum(supportedLanguages);
@@ -61,7 +63,7 @@ export const roleNameSchema = z.string().trim().min(1).max(100);
 export const tokenNameSchema = z.string().trim().min(1).max(100);
 export const serviceAccountNameSchema = z.string().trim().min(1).max(200);
 export const serviceAccountDescriptionSchema = z.string().trim().max(1000);
-export const responsibleAccountIdsSchema = z.array(z.uuid()).max(20);
+export const responsibleAccountIdsSchema = z.array(idSchema).max(20);
 export const breakGlassReasonSchema = z.string().trim().min(10).max(2000);
 
 export const smtpSecurityModes = ["tls", "starttls", "none"] as const;

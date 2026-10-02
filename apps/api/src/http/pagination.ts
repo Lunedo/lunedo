@@ -1,4 +1,5 @@
 import type { PageRequest, Page as ServerPage } from "@pagehall/server";
+import { idSchema } from "@pagehall/shared";
 import { z } from "zod";
 import { ProblemException } from "./problems.js";
 
@@ -71,8 +72,8 @@ export function decodeCursor<T extends z.ZodType>(
   }
 }
 
-export const nameCursor = z.tuple([z.string().max(1000), z.uuid()]);
-export const idCursor = z.tuple([z.uuid()]);
+export const nameCursor = z.tuple([z.string().max(1000), idSchema]);
+export const idCursor = z.tuple([idSchema]);
 
 export function pageRequest(
   query: { cursor?: string | undefined; limit: number; q?: string | undefined },

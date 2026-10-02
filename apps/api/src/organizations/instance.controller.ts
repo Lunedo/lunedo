@@ -10,6 +10,7 @@ import {
 } from "@pagehall/server";
 import {
   accentColors,
+  idSchema,
   setupStepSchemas,
   smtpInputSchema,
   smtpTestInputSchema,
@@ -63,7 +64,7 @@ const instanceInfoSchema = z.object({
   selfRegistration: z.boolean(),
   organization: z
     .object({
-      id: z.uuid(),
+      id: idSchema,
       name: z.string(),
       logoRef: z.string().nullable(),
       accentColor: z.enum(accentColors),
@@ -72,10 +73,10 @@ const instanceInfoSchema = z.object({
 });
 
 const breakGlassEntrySchema = z.object({
-  id: z.uuid(),
-  organizationId: z.uuid(),
+  id: idSchema,
+  organizationId: idSchema,
   organizationName: z.string(),
-  accountId: z.uuid(),
+  accountId: idSchema,
   accountName: z.string(),
   reason: z.string(),
   startedAt: z.iso.datetime(),

@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Inject, Param, Post, Query, Req, Res } from "@nestjs/common";
 import type { NotificationCursor, SettingChangeSignal } from "@pagehall/server";
+import { idSchema } from "@pagehall/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, SessionRoute } from "../access/route-access.js";
@@ -19,17 +20,17 @@ const cursorSchema = z.tuple([
     .string()
     .max(64)
     .regex(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,6})?[+-]\d{2}(:\d{2})?$/),
-  z.uuid(),
+  idSchema,
 ]);
 
 const listQuery = z.object({ ...pageQuery, unread: z.enum(["true", "false"]).optional() }).strict();
 
 const notificationSchema = z.object({
-  id: z.uuid(),
+  id: idSchema,
   type: z.string(),
-  organizationId: z.uuid().nullable(),
+  organizationId: idSchema.nullable(),
   target: z.object({ type: z.string(), id: z.string().nullable() }),
-  actor: z.object({ type: z.string(), id: z.uuid().nullable(), name: z.string().nullable() }).nullable(),
+  actor: z.object({ type: z.string(), id: idSchema.nullable(), name: z.string().nullable() }).nullable(),
   params: z.json(),
   count: z.number().int(),
   createdAt: z.iso.datetime(),
@@ -37,7 +38,7 @@ const notificationSchema = z.object({
   readAt: z.iso.datetime().nullable(),
 });
 
-const idParams = z.object({ notificationId: z.uuid() }).strict();
+const idParams = z.object({ notificationId: idSchema }).strict();
 const readAllSchema = z.object({ before: z.iso.datetime().optional() }).strict();
 const countSchema = z.object({ count: z.number().int() });
 const markedSchema = z.object({ marked: z.number().int() });

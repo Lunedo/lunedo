@@ -462,18 +462,18 @@ export class MembershipService {
   }
 
   async deactivate(actor: Principal, accountId: string): Promise<number> {
-    if (actor.type === "account" && actor.id === accountId) {
-      throw new OrganizationError("deactivateSelf", "An account cannot deactivate itself");
-    }
     return this.#database.transaction(async (tx) => {
       const [target] = await tx
         .select({ id: accounts.id, state: accounts.state, home: accounts.homeOrganizationId })
         .from(accounts)
         .where(eq(accounts.id, accountId))
         .for("update");
+      if (actor.type === "account" && target && actor.id === target.id) {
+        throw new OrganizationError("deactivateSelf", "An account cannot deactivate itself");
+      }
       if (target?.state !== "active") throw new OrganizationError("notFound", "The account is not active");
       const [owner] = await tx.select({ id: instance.ownerAccountId }).from(instance);
-      if (owner?.id === accountId) {
+      if (owner?.id === target.id) {
         throw new OrganizationError("instanceOwner", "Transfer the ownership of the instance first");
       }
       if (actor.type === "account") {

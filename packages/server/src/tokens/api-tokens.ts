@@ -115,6 +115,7 @@ export class ApiTokenService {
   async #owner(executor: Executor, accountId: string) {
     const [owner] = await executor
       .select({
+        id: accounts.id,
         type: accounts.type,
         state: accounts.state,
         home: accounts.homeOrganizationId,
@@ -192,7 +193,7 @@ export class ApiTokenService {
     if (service && input.organizationId && input.organizationId !== service) {
       throw new OrganizationError("invalidScopes", "A service account token is limited to its organization");
     }
-    if (!service && actor.type === "account" && actor.id !== input.accountId) {
+    if (!service && actor.type === "account" && actor.id !== owner.id) {
       throw new OrganizationError("invalidOwner", "Personal tokens are created by their owner");
     }
     if (input.organizationId && scopes.instance) {
@@ -202,7 +203,7 @@ export class ApiTokenService {
       );
     }
     const organizationId = service ?? input.organizationId ?? null;
-    if (service && actor.type === "account" && actor.id !== input.accountId && this.#authorization) {
+    if (service && actor.type === "account" && actor.id !== owner.id && this.#authorization) {
       const held = await this.#authorization.heldAreas(input.accountId, "organization", service);
       await this.#authorization.checkGrant(actor, {
         scope: "organization",
