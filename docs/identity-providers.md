@@ -112,6 +112,12 @@ Synchronized Pagehall groups are read-only: their members, managers, name and de
 
 The rule dialog searches the provider's groups (the directory, or the groups seen at sign-in for generic providers) and shows beforehand who gains access.
 
+## Deactivating and removing a provider
+
+Deactivate a provider to stop it without losing anything: nobody can sign in through it, the sign-in page no longer offers it, a running synchronization stops and no new one starts, and the sessions that came from it end. Settings, credentials, identities, rules, groups and access stay, and everything works again once the provider is activated (`identityProvider.deactivated`, `identityProvider.activated`).
+
+Removing a provider cannot be undone. Before the removal, Pagehall shows how many accounts lose their identity and how many of them have no other working way to sign in (another active provider, a passkey, or a password while password sign-in is on or for the instance owner), and how many groups, rules and granted memberships and roles are affected. The removal ends the sessions from the provider, deletes its identities and rules, and withdraws the memberships and roles its rules granted. Its synchronized groups become ordinary groups with their members and permissions and show "formerly synchronized from" the provider. The removal is audited as `identityProvider.removed` with the number of ended sessions and released groups.
+
 ## Sessions and sign-out
 
 Sessions created through a provider remember the identity and the provider's session ID (`sid`). Provider sign-ins satisfy the second-factor requirement; the provider is responsible for multi-factor authentication. The back-channel logout endpoint `POST /api/v1/auth/providers/{providerId}/backchannel-logout` accepts a signed logout token, refuses replayed tokens and tokens with a nonce, and ends the sessions from that provider sign-in.
@@ -128,4 +134,4 @@ The instance owner can always sign in with password and second factor. When pass
 
 ## Audit events
 
-`identityProvider.created`, `.updated`, `.removed`, `.credentialAdded`, `.credentialRemoved`, `.logoChanged`, `.directoryKeyChanged`, `.synchronized` with the result of the run; `mappingRule.created`, `.updated`, `.removed`; `account.deactivatedByProvider`, `account.reactivatedByProvider`; memberships, roles and group members changed by rules, with the reason `providerRule`; `auth.signedIn` with `providerId`, `auth.signInRefused` with reason and reference, `auth.providerSignedOut`, `auth.emergencySignIn`; `identity.linked`, `identity.unlinked`; `account.createdAtSignIn`.
+`identityProvider.created`, `.updated`, `.deactivated`, `.activated`, `.removed`, `.credentialAdded`, `.credentialRemoved`, `.logoChanged`, `.directoryKeyChanged`, `.synchronized` with the result of the run; `mappingRule.created`, `.updated`, `.removed`; `account.deactivatedByProvider`, `account.reactivatedByProvider`; memberships, roles and group members changed by rules, with the reason `providerRule`; `auth.signedIn` with `providerId`, `auth.signInRefused` with reason and reference, `auth.providerSignedOut`, `auth.emergencySignIn`; `identity.linked`, `identity.unlinked`; `account.createdAtSignIn`.

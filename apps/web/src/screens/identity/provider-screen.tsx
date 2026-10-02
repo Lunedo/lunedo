@@ -1,15 +1,28 @@
-import { Badge, Button, ConfirmDialog, Section, SettingRow, Skeleton, Tabs, useToast } from "@pagehall/ui";
+import {
+  Badge,
+  Button,
+  ConfirmDialog,
+  Notice,
+  Section,
+  SettingRow,
+  Skeleton,
+  Tabs,
+  useToast,
+} from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { ImageUp, KeyRound, Trash2 } from "lucide-react";
+import { ImageUp, KeyRound, Pause, Play, Trash2 } from "lucide-react";
 import { type ComponentType, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  activateProvider,
+  deactivateProvider,
   type IdentityProvider,
   identityKeys,
   mappingRulesQuery,
   providerLogoUrl,
   providerQuery,
+  removalPreviewQuery,
   removeProvider,
   removeProviderLogo,
   syncRunsQuery,
@@ -102,6 +115,11 @@ export function InstanceProviderScreen() {
           error={provider.error}
           onRetry={() => provider.refetch()}
         />
+      ) : null}
+      {data?.deactivatedAt ? (
+        <Notice variant="warning" title={t("identityProviders.status.deactivatedTitle")}>
+          {t("identityProviders.status.deactivatedNotice")}
+        </Notice>
       ) : null}
       {data ? (
         <Tabs
@@ -243,7 +261,7 @@ function Settings({ provider, canManage }: { provider: IdentityProvider; canMana
         <LinkFields />
       </Section>
       <SyncSettings provider={provider} canManage={canManage} />
-      {canManage ? <RemoveSection provider={provider} /> : null}
+      {canManage ? <StatusSection provider={provider} /> : null}
     </div>
   );
 }
@@ -342,14 +360,119 @@ function LogoRow({ provider, canManage }: { provider: IdentityProvider; canManag
   );
 }
 
-function RemoveSection({ provider }: { provider: IdentityProvider }) {
+function StatusSection({ provider }: { provider: IdentityProvider }) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const showFailure = useFailureToast();
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const deactivated = provider.deactivatedAt !== null;
+  const refresh = async (updated: IdentityProvider) => {
+    queryClient.setQueryData(identityKeys.provider(provider.id), updated);
+    await queryClient.invalidateQueries({ queryKey: identityKeys.providers });
+  };
+  const activate = async () => {
+    setBusy(true);
+    try {
+      await refresh(await activateProvider(provider.id));
+      toast({ title: t("identityProviders.status.activated", { name: provider.name }), variant: "success" });
+    } catch (failure) {
+      showFailure(t("failures.activateProvider"), failure);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Section title={t("identityProviders.status.title")}>
+      {deactivated ? (
+        <SettingRow
+          label={t("identityProviders.status.activateTitle", { name: provider.name })}
+          description={t("identityProviders.status.activateDescription")}
+          control={
+            <Button variant="primary" icon={Play} loading={busy} onClick={() => void activate()}>
+              {t("identityProviders.status.activate")}
+            </Button>
+          }
+        />
+      ) : (
+        <SettingRow
+          label={t("identityProviders.status.deactivateTitle", { name: provider.name })}
+          description={t("identityProviders.status.deactivateDescription")}
+          control={
+            <Button variant="secondary" icon={Pause} onClick={() => setConfirming(true)}>
+              {t("identityProviders.status.deactivate")}
+            </Button>
+          }
+        />
+      )}
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title={t("identityProviders.status.deactivateTitle", { name: provider.name })}
+        description={t("identityProviders.status.deactivateConfirm")}
+        confirmLabel={t("identityProviders.status.deactivate")}
+        cancelLabel={t("common.cancel")}
+        onConfirm={async () => {
+          try {
+            await refresh(await deactivateProvider(provider.id));
+            setConfirming(false);
+            toast({
+              title: t("identityProviders.status.deactivated", { name: provider.name }),
+              variant: "success",
+            });
+          } catch (failure) {
+            showFailure(t("failures.deactivateProvider"), failure);
+          }
+        }}
+      />
+      <RemoveRow provider={provider} />
+    </Section>
+  );
+}
+
+function RemovalPreview({ providerId }: { providerId: string }) {
+  const { t } = useTranslation();
+  const preview = useQuery({ ...removalPreviewQuery(providerId), throwOnError: false });
+  if (preview.isPending) return <Skeleton className="h-24 w-full" />;
+  if (preview.isError) {
+    return (
+      <LoadError
+        what={t("failures.loadRemovalPreview")}
+        error={preview.error}
+        onRetry={() => preview.refetch()}
+      />
+    );
+  }
+  const { accountsWithoutSignIn, groups, rules, grants } = preview.data;
+  return (
+    <div className="flex flex-col gap-3">
+      {accountsWithoutSignIn > 0 ? (
+        <Notice variant="danger">
+          {t("identityProviders.removal.accountsWithoutSignIn", { count: accountsWithoutSignIn })}
+        </Notice>
+      ) : null}
+      <ul
+        aria-label={t("identityProviders.removal.consequences")}
+        className="flex list-disc flex-col gap-1 pl-5"
+      >
+        <li>{t("identityProviders.removal.accounts", { count: preview.data.accounts })}</li>
+        <li>{t("identityProviders.removal.grants", { count: grants })}</li>
+        <li>{t("identityProviders.removal.rules", { count: rules })}</li>
+        <li>{t("identityProviders.removal.groups", { count: groups })}</li>
+      </ul>
+    </div>
+  );
+}
+
+function RemoveRow({ provider }: { provider: IdentityProvider }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const showFailure = useFailureToast();
   const [open, setOpen] = useState(false);
   return (
-    <Section title={t("identityProviders.removeSection")}>
+    <>
       <SettingRow
         label={t("identityProviders.removeTitle", { name: provider.name })}
         description={t("identityProviders.removeDescription")}
@@ -363,7 +486,7 @@ function RemoveSection({ provider }: { provider: IdentityProvider }) {
         open={open}
         onOpenChange={setOpen}
         title={t("identityProviders.removeTitle", { name: provider.name })}
-        description={t("identityProviders.removeDescription")}
+        description={t("identityProviders.removeConfirm")}
         confirmLabel={t("identityProviders.remove")}
         cancelLabel={t("common.cancel")}
         destructive
@@ -377,7 +500,9 @@ function RemoveSection({ provider }: { provider: IdentityProvider }) {
             showFailure(t("failures.removeProvider"), failure);
           }
         }}
-      />
-    </Section>
+      >
+        {open ? <RemovalPreview providerId={provider.id} /> : null}
+      </ConfirmDialog>
+    </>
   );
 }

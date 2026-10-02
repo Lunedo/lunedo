@@ -111,6 +111,34 @@ export function updateProvider(providerId: string, body: { name?: string; config
   );
 }
 
+export function deactivateProvider(providerId: string) {
+  return request(() =>
+    api.POST("/api/v1/instance/identity-providers/{providerId}/deactivate", {
+      params: { path: { providerId } },
+    }),
+  );
+}
+
+export function activateProvider(providerId: string) {
+  return request(() =>
+    api.POST("/api/v1/instance/identity-providers/{providerId}/activate", {
+      params: { path: { providerId } },
+    }),
+  );
+}
+
+export function removalPreviewQuery(providerId: string) {
+  return queryOptions({
+    queryKey: [...identityKeys.provider(providerId), "removalPreview"] as const,
+    queryFn: () =>
+      request(() =>
+        api.GET("/api/v1/instance/identity-providers/{providerId}/removal-preview", {
+          params: { path: { providerId } },
+        }),
+      ),
+  });
+}
+
 export async function removeProvider(providerId: string): Promise<void> {
   await request(() =>
     api.DELETE("/api/v1/instance/identity-providers/{providerId}", { params: { path: { providerId } } }),

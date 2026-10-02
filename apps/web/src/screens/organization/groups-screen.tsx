@@ -113,6 +113,8 @@ export function GroupsScreen() {
                     <Badge variant="info" icon={Lock}>
                       {group.managedBy.providerName}
                     </Badge>
+                  ) : group.formerlySynchronizedFrom ? (
+                    t("groups.formerlySynchronized", { provider: group.formerlySynchronizedFrom })
                   ) : (
                     t("groups.managedByPagehall")
                   ),

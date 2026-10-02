@@ -160,6 +160,9 @@ export function ProvidersTable({
               <span className="flex min-w-0 items-center gap-2">
                 <ProviderGlyph provider={provider} />
                 <TruncatedText text={provider.name} className="font-medium" />
+                {provider.deactivatedAt ? (
+                  <Badge variant="neutral">{t("identityProviders.status.deactivatedBadge")}</Badge>
+                ) : null}
               </span>
             ),
           },

@@ -10,7 +10,7 @@ import {
   oidcConfigSchema,
   uuidv7,
 } from "@pagehall/shared";
-import { and, asc, desc, eq, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
@@ -22,6 +22,7 @@ import { defineJob } from "../jobs/job-queue.js";
 import type { NotificationService } from "../notifications/service.js";
 import type { BuiltInRoleKey } from "../organizations/access-schema.js";
 import { LOGO_MAX_BYTES, logoContentType, OrganizationError } from "../organizations/organizations.js";
+import type { SettingsService } from "../settings/service.js";
 import type { ProviderCapabilities, ProviderCredential, ProviderDefinition } from "./adapter.js";
 import { generateCertificate } from "./certificates.js";
 import { foreignDirectoryEndpoint } from "./directory.js";
@@ -34,7 +35,11 @@ import {
   identityProviderLogos,
   identityProviderSecrets,
   identityProviders,
+  managedGroups,
+  mappingRules,
+  providerSyncRuns,
 } from "./schema.js";
+import { accountsWithoutOtherSignIn } from "./sign-in-ways.js";
 
 export type ProviderWarning = "noCredential" | "credentialExpiring" | "credentialExpired";
 
@@ -57,9 +62,18 @@ export interface ProviderSummary {
   credentials: CredentialSummary[];
   directoryKey: boolean;
   capabilities: ProviderCapabilities;
+  deactivatedAt: Date | null;
   warnings: ProviderWarning[];
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface RemovalPreview {
+  accounts: number;
+  accountsWithoutSignIn: number;
+  groups: number;
+  rules: number;
+  grants: number;
 }
 
 export interface SignInProvider {
@@ -137,12 +151,14 @@ export class IdentityProviderService {
   readonly #allowInsecure: boolean;
   readonly #clock: () => Date;
   readonly #mapping: GroupMappingService | undefined;
+  readonly #settings: SettingsService;
 
   constructor(options: {
     database: Database;
     audit: AuditLog;
     encryption: Encryption;
     notifications: NotificationService;
+    settings: SettingsService;
     allowInsecure: boolean;
     clock?: () => Date;
     mapping?: GroupMappingService;
@@ -154,6 +170,7 @@ export class IdentityProviderService {
     this.#allowInsecure = options.allowInsecure;
     this.#clock = options.clock ?? (() => new Date());
     this.#mapping = options.mapping;
+    this.#settings = options.settings;
   }
 
   #parseConfig(input: OidcConfigInput | unknown): OidcConfig {
@@ -280,6 +297,7 @@ export class IdentityProviderService {
           config,
           keys.some((key) => key.providerId === row.id),
         ),
+        deactivatedAt: row.deactivatedAt,
         warnings: warningsOf(own, now),
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
@@ -367,30 +385,106 @@ export class IdentityProviderService {
     return this.get(id);
   }
 
+  async #linked(executor: Executor, id: string) {
+    return executor
+      .select({ id: identities.id, accountId: identities.accountId })
+      .from(identities)
+      .where(eq(identities.providerId, id));
+  }
+
+  async #endSessions(tx: Transaction, linked: { id: string }[]): Promise<number> {
+    if (linked.length === 0) return 0;
+    const ended = await tx
+      .delete(sessions)
+      .where(
+        inArray(
+          sessions.identityId,
+          linked.map((identity) => identity.id),
+        ),
+      )
+      .returning({ id: sessions.id });
+    return ended.length;
+  }
+
+  async deactivate(actor: Principal, id: string): Promise<ProviderSummary> {
+    await this.#database.transaction(async (tx) => {
+      const current = await this.#find(tx, id, true);
+      if (current.deactivatedAt) return;
+      await tx
+        .update(identityProviders)
+        .set({ deactivatedAt: this.#clock() })
+        .where(eq(identityProviders.id, id));
+      await tx
+        .update(providerSyncRuns)
+        .set({ cancelRequestedAt: this.#clock() })
+        .where(
+          and(
+            eq(providerSyncRuns.providerId, id),
+            eq(providerSyncRuns.status, "running"),
+            isNull(providerSyncRuns.cancelRequestedAt),
+          ),
+        );
+      const endedSessions = await this.#endSessions(tx, await this.#linked(tx, id));
+      await this.#audit.record(tx, {
+        name: "identityProvider.deactivated",
+        actor,
+        targetId: id,
+        fields: { name: current.name, endedSessions },
+      });
+    });
+    return this.get(id);
+  }
+
+  async activate(actor: Principal, id: string): Promise<ProviderSummary> {
+    await this.#database.transaction(async (tx) => {
+      const current = await this.#find(tx, id, true);
+      if (!current.deactivatedAt) return;
+      await tx.update(identityProviders).set({ deactivatedAt: null }).where(eq(identityProviders.id, id));
+      await this.#audit.record(tx, {
+        name: "identityProvider.activated",
+        actor,
+        targetId: id,
+        fields: { name: current.name },
+      });
+    });
+    return this.get(id);
+  }
+
+  async removalPreview(id: string): Promise<RemovalPreview> {
+    await this.#find(this.#database, id);
+    const linked = await this.#linked(this.#database, id);
+    const accountIds = [...new Set(linked.map((identity) => identity.accountId))];
+    const [groups] = await this.#database
+      .select({ value: count() })
+      .from(managedGroups)
+      .where(eq(managedGroups.providerId, id));
+    const [rules] = await this.#database
+      .select({ value: count() })
+      .from(mappingRules)
+      .where(eq(mappingRules.providerId, id));
+    const withoutSignIn = await accountsWithoutOtherSignIn(this.#database, this.#settings, accountIds, {
+      providerId: id,
+    });
+    return {
+      accounts: accountIds.length,
+      accountsWithoutSignIn: withoutSignIn.length,
+      groups: Number(groups?.value ?? 0),
+      rules: Number(rules?.value ?? 0),
+      grants: (await this.#mapping?.withdrawnWithout(this.#database, id, accountIds)) ?? 0,
+    };
+  }
+
   async remove(actor: Principal, id: string): Promise<void> {
     await this.#database.transaction(async (tx) => {
       const current = await this.#find(tx, id, true);
-      const linked = await tx
-        .select({ id: identities.id, accountId: identities.accountId })
-        .from(identities)
-        .where(eq(identities.providerId, id));
-      const ended =
-        linked.length === 0
-          ? []
-          : await tx
-              .delete(sessions)
-              .where(
-                inArray(
-                  sessions.identityId,
-                  linked.map((identity) => identity.id),
-                ),
-              )
-              .returning({ id: sessions.id });
+      const linked = await this.#linked(tx, id);
+      const endedSessions = await this.#endSessions(tx, linked);
+      const releasedGroups = (await this.#mapping?.releaseGroups(tx, id, current.name)) ?? 0;
       await this.#audit.record(tx, {
         name: "identityProvider.removed",
         actor,
         targetId: id,
-        fields: { name: current.name, endedSessions: ended.length },
+        fields: { name: current.name, endedSessions, releasedGroups },
       });
       await tx.delete(identityProviders).where(eq(identityProviders.id, id));
       for (const accountId of new Set(linked.map((identity) => identity.accountId))) {
@@ -605,7 +699,7 @@ export class IdentityProviderService {
 
   async definition(
     id: string,
-  ): Promise<{ provider: ProviderDefinition; credentials: ProviderCredential[] } | null> {
+  ): Promise<{ provider: ProviderDefinition; credentials: ProviderCredential[]; active: boolean } | null> {
     const [row] = await this.#database.select().from(identityProviders).where(eq(identityProviders.id, id));
     if (!row) return null;
     const now = this.#clock();
@@ -636,6 +730,7 @@ export class IdentityProviderService {
           ? this.#encryption.decryptString(secret.directoryKey, directoryKeyContext(row.id))
           : null,
       },
+      active: row.deactivatedAt === null,
       credentials: rows.map((credential) => ({
         id: credential.id,
         kind: credential.kind,
@@ -655,6 +750,7 @@ export class IdentityProviderService {
       })
       .from(identityProviders)
       .leftJoin(identityProviderLogos, eq(identityProviderLogos.providerId, identityProviders.id))
+      .where(isNull(identityProviders.deactivatedAt))
       .orderBy(asc(identityProviders.name), asc(identityProviders.id));
     return rows.map((row) => ({ ...row, logoRef: row.logoRef ?? null }));
   }
@@ -670,7 +766,12 @@ export class IdentityProviderService {
       .from(identityProviderDomains)
       .innerJoin(identityProviders, eq(identityProviders.id, identityProviderDomains.providerId))
       .leftJoin(identityProviderLogos, eq(identityProviderLogos.providerId, identityProviders.id))
-      .where(eq(identityProviderDomains.domain, domain.trim().toLowerCase()));
+      .where(
+        and(
+          eq(identityProviderDomains.domain, domain.trim().toLowerCase()),
+          isNull(identityProviders.deactivatedAt),
+        ),
+      );
     return row ? { ...row, logoRef: row.logoRef ?? null } : null;
   }
 

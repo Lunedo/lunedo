@@ -313,6 +313,7 @@ function provider(patch: Record<string, unknown> = {}) {
     warnings: ["credentialExpiring"],
     directoryKey: false,
     capabilities: { groups: true, directorySync: true, disabledAccounts: true },
+    deactivatedAt: null,
     createdAt: "2026-09-01T08:00:00.000Z",
     updatedAt: "2026-09-01T08:00:00.000Z",
     ...patch,
@@ -346,6 +347,66 @@ describe("the sign-in settings of the instance", () => {
     await userEvent.click(screen.getByRole("tab", { name: "Settings" }));
     expect(await screen.findByText("Existing accounts")).toBeTruthy();
     expect(screen.queryByText(/Organizations/)).toBeNull();
+  });
+
+  it("deactivates a provider instead of removing it and activates it again", async () => {
+    let deactivatedAt: string | null = null;
+    const current = () => provider({ deactivatedAt });
+    const { requests } = adminApi({
+      [`GET /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({ body: current() }),
+      "GET /api/v1/instance/identity-providers": () => ({ body: [current()] }),
+      [`POST /api/v1/instance/identity-providers/${PROVIDER}/deactivate`]: () => {
+        deactivatedAt = "2026-10-02T08:00:00.000Z";
+        return { body: current() };
+      },
+      [`POST /api/v1/instance/identity-providers/${PROVIDER}/activate`]: () => {
+        deactivatedAt = null;
+        return { body: current() };
+      },
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=settings`);
+    await userEvent.click(await screen.findByRole("button", { name: "Deactivate" }));
+    const confirm = await screen.findByRole("dialog", { name: "Deactivate Microsoft Entra ID · Example" });
+    expect(within(confirm).getByText(/sessions that came from it end now/)).toBeTruthy();
+    await userEvent.click(within(confirm).getByRole("button", { name: "Deactivate" }));
+    expect(await screen.findByText("This provider is deactivated")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Activate" }));
+    await waitFor(() => expect(screen.queryByText("This provider is deactivated")).toBeNull());
+    expect(requests.filter((request) => request.method === "POST").map((request) => request.path)).toEqual([
+      `/api/v1/instance/identity-providers/${PROVIDER}/deactivate`,
+      `/api/v1/instance/identity-providers/${PROVIDER}/activate`,
+    ]);
+  });
+
+  it("shows what the removal changes before a provider is removed", async () => {
+    const { requests } = adminApi({
+      [`GET /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({ body: provider() }),
+      "GET /api/v1/instance/identity-providers": () => ({ body: [provider()] }),
+      [`GET /api/v1/instance/identity-providers/${PROVIDER}/removal-preview`]: () => ({
+        body: { accounts: 12, accountsWithoutSignIn: 3, groups: 2, rules: 4, grants: 9 },
+      }),
+      [`DELETE /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({ status: 204 }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=settings`);
+    await userEvent.click(await screen.findByRole("button", { name: "Remove provider" }));
+    const confirm = await screen.findByRole("dialog", { name: "Remove Microsoft Entra ID · Example?" });
+    expect(
+      await within(confirm).findByText(
+        "3 accounts have no other way to sign in and cannot sign in any more.",
+      ),
+    ).toBeTruthy();
+    const list = within(confirm).getByRole("list", { name: "What the removal changes" });
+    expect(
+      within(list).getByText("9 memberships and roles granted by its rules are withdrawn."),
+    ).toBeTruthy();
+    expect(within(list).getByText("4 mapping rules are removed.")).toBeTruthy();
+    expect(
+      within(list).getByText(
+        "2 synchronized groups become ordinary groups and keep their members and permissions.",
+      ),
+    ).toBeTruthy();
+    await userEvent.click(within(confirm).getByRole("button", { name: "Remove provider" }));
+    await waitFor(() => expect(requests.some((request) => request.method === "DELETE")).toBe(true));
   });
 });
 

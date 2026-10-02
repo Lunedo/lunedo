@@ -136,6 +136,9 @@ export class ProviderSyncService {
   async request(actor: Principal, providerId: string): Promise<{ runId: string | null }> {
     await this.#providers.get(providerId);
     const loaded = await this.#providers.definition(providerId);
+    if (loaded && !loaded.active) {
+      throw new OrganizationError("providerDeactivated", "The identity provider is deactivated");
+    }
     if (!loaded || !this.#adapterFor(loaded.provider)) {
       throw new OrganizationError(
         "syncUnavailable",
@@ -164,7 +167,7 @@ export class ProviderSyncService {
     let queued = 0;
     for (const row of providers) {
       const loaded = await this.#providers.definition(row.id);
-      if (!loaded || !this.#adapterFor(loaded.provider)) continue;
+      if (!loaded?.active || !this.#adapterFor(loaded.provider)) continue;
       const interval = loaded.provider.config.sync.intervalMinutes * 60 * 1000;
       const last = row.lastStart ? new Date(row.lastStart).getTime() : 0;
       if (Date.now() - last < interval) continue;
@@ -250,6 +253,7 @@ export class ProviderSyncService {
     try {
       const loaded = await this.#providers.definition(providerId);
       if (!loaded) throw new Error("The identity provider does not exist");
+      if (!loaded.active) throw new Error("The identity provider is deactivated");
       const provider = loaded.provider;
       const adapter = this.#adapterFor(provider);
       if (!adapter?.synchronizeAccounts) throw new Error("The provider has no directory to synchronize with");

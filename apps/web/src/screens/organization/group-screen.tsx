@@ -113,6 +113,11 @@ export function GroupScreen() {
           {t("groups.managedByDescription", { provider: managedBy.providerName })}
         </Notice>
       ) : null}
+      {!managedBy && group.data?.formerlySynchronizedFrom ? (
+        <Notice variant="info">
+          {t("groups.formerlySynchronizedDescription", { provider: group.data.formerlySynchronizedFrom })}
+        </Notice>
+      ) : null}
       {group.data && canManage ? <DetailsSection group={group.data} onSaved={refresh} /> : null}
       <Section title={t("groups.access")} icon={ShieldCheck}>
         {groupRoles.length === 0 ? (

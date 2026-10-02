@@ -27,6 +27,7 @@ export interface Group {
   name: string;
   description: string;
   managedBy?: { providerId: string; providerName: string } | null;
+  formerlySynchronizedFrom?: string | null;
 }
 
 export interface GroupDetails extends Group {
@@ -92,6 +93,7 @@ export class GroupService {
         organizationId: groups.organizationId,
         name: groups.name,
         description: groups.description,
+        formerlySynchronizedFrom: groups.formerProvider,
         managedProviderId: managedGroups.providerId,
         managedProviderName: identityProviders.name,
         sortName,
@@ -154,6 +156,7 @@ export class GroupService {
         organizationId: groups.organizationId,
         name: groups.name,
         description: groups.description,
+        formerlySynchronizedFrom: groups.formerProvider,
         managedProviderId: managedGroups.providerId,
         managedProviderName: identityProviders.name,
       })

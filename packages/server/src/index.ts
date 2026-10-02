@@ -149,6 +149,7 @@ export {
   type CredentialSummary,
   callbackPath,
   type ProviderSummary,
+  type RemovalPreview,
   type ProviderWarning,
   type SignInProvider,
 } from "./identity/providers.js";

@@ -123,6 +123,13 @@ export const groupSchema = z
       .describe(
         "The identity provider that manages the members of a synchronized group, or null. Members of such a group cannot be changed in Pagehall; its permissions can.",
       ),
+    formerlySynchronizedFrom: z
+      .string()
+      .nullable()
+      .optional()
+      .describe(
+        "Name of the removed identity provider this group was synchronized from, or null. Such a group is an ordinary group now.",
+      ),
   })
   .describe("A group of accounts.");
 

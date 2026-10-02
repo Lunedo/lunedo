@@ -169,6 +169,7 @@ export function createAccountServices(options: {
     audit,
     encryption,
     notifications,
+    settings,
     mapping: groupMapping,
     allowInsecure: options.insecureIdentityProviders ?? false,
   });

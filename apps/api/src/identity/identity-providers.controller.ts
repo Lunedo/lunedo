@@ -20,6 +20,7 @@ import {
   providerSchema,
   referenceParams,
   refusalSchema,
+  removalPreviewSchema,
   startedSchema,
   testResultParams,
   testResultSchema,
@@ -174,11 +175,56 @@ export class IdentityProvidersController {
     return this.#present(request, updated);
   }
 
+  @Post("instance/identity-providers/:providerId/deactivate")
+  @Permission("instance.signIn.manage", { type: "instance" }, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "Deactivate an instance identity provider",
+    description:
+      "Nobody can sign in through the provider any more, synchronization stops and the sessions that came from it end. Everything else stays and returns when the provider is activated again.",
+    tags: [TAG],
+    status: 200,
+    params: providerIdParams,
+    response: { description: "The provider.", schema: providerSchema },
+    errors: ["reauthenticationRequired"],
+  })
+  async deactivateInstance(@Param("providerId") providerId: string, @Req() request: FastifyRequest) {
+    const provider = await this.#services.identityProviders.deactivate(actorOf(request), providerId);
+    return this.#present(request, provider);
+  }
+
+  @Post("instance/identity-providers/:providerId/activate")
+  @Permission("instance.signIn.manage", { type: "instance" }, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "Activate an instance identity provider again",
+    tags: [TAG],
+    status: 200,
+    params: providerIdParams,
+    response: { description: "The provider.", schema: providerSchema },
+    errors: ["reauthenticationRequired"],
+  })
+  async activateInstance(@Param("providerId") providerId: string, @Req() request: FastifyRequest) {
+    const provider = await this.#services.identityProviders.activate(actorOf(request), providerId);
+    return this.#present(request, provider);
+  }
+
+  @Get("instance/identity-providers/:providerId/removal-preview")
+  @Permission("instance.signIn.manage")
+  @ApiRoute({
+    summary: "Preview the removal of an instance identity provider",
+    tags: [TAG],
+    params: providerIdParams,
+    response: { description: "What the removal changes.", schema: removalPreviewSchema },
+  })
+  async removalPreview(@Param("providerId") providerId: string) {
+    return this.#services.identityProviders.removalPreview(providerId);
+  }
+
   @Delete("instance/identity-providers/:providerId")
   @Permission("instance.signIn.manage", { type: "instance" }, { recentAuthentication: true })
   @ApiRoute({
     summary: "Remove an instance identity provider",
-    description: "Removes the provider, its credentials and all identities linked through it.",
+    description:
+      "Removes the provider, its credentials, its mapping rules and all identities linked through it. Memberships and roles its rules granted are withdrawn; its synchronized groups become ordinary groups with their members and permissions.",
     tags: [TAG],
     params: providerIdParams,
     errors: ["reauthenticationRequired"],

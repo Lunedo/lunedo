@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, notInArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne, notInArray, sql } from "drizzle-orm";
 import { SYSTEM } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
@@ -263,8 +263,8 @@ export class GroupMappingService {
     return rule?.organizationId ?? null;
   }
 
-  async #desired(tx: Transaction, accountId: string): Promise<DesiredGrant[]> {
-    const rows = await tx
+  async #desired(executor: Executor, accountId: string, without?: string): Promise<DesiredGrant[]> {
+    const rows = await executor
       .select({
         target: mappingRules.target,
         organizationId: mappingRules.organizationId,
@@ -282,7 +282,9 @@ export class GroupMappingService {
         mappingRules,
         and(eq(mappingRules.groupId, providerGroups.id), eq(mappingRules.providerId, identities.providerId)),
       )
-      .where(eq(identities.accountId, accountId));
+      .where(
+        and(eq(identities.accountId, accountId), without ? ne(identities.providerId, without) : undefined),
+      );
     const desired = new Map<string, DesiredGrant>();
     for (const row of rows) {
       const role: RoleKey | null = row.builtInRole
@@ -548,6 +550,49 @@ export class GroupMappingService {
       where g.organization_id = ${organizationId} and gm.account_id = ${accountId}
       limit 1`);
     return result.rows.length > 0;
+  }
+
+  async withdrawnWithout(
+    executor: Executor,
+    providerId: string,
+    accountIds: readonly string[],
+  ): Promise<number> {
+    if (accountIds.length === 0) return 0;
+    const kept = await executor
+      .select({ groupId: managedGroups.groupId })
+      .from(managedGroups)
+      .where(eq(managedGroups.providerId, providerId));
+    const keptGroups = new Set(kept.map((row) => row.groupId));
+    let withdrawn = 0;
+    for (const accountId of new Set(accountIds)) {
+      const remaining = new Set(
+        (await this.#desired(executor, accountId, providerId)).map((grant) => grant.key),
+      );
+      const current = await executor
+        .select({ key: providerGrants.key, kind: providerGrants.kind, groupId: providerGrants.groupId })
+        .from(providerGrants)
+        .where(eq(providerGrants.accountId, accountId));
+      withdrawn += current.filter(
+        (grant) =>
+          !remaining.has(grant.key) && !(grant.kind === "groupMember" && keptGroups.has(grant.groupId ?? "")),
+      ).length;
+    }
+    return withdrawn;
+  }
+
+  async releaseGroups(tx: Transaction, providerId: string, providerName: string): Promise<number> {
+    const managed = await tx
+      .select({ groupId: managedGroups.groupId })
+      .from(managedGroups)
+      .where(eq(managedGroups.providerId, providerId));
+    const groupIds = managed.map((row) => row.groupId);
+    if (groupIds.length === 0) return 0;
+    await tx.update(groups).set({ formerProvider: providerName }).where(inArray(groups.id, groupIds));
+    await tx
+      .delete(providerGrants)
+      .where(and(eq(providerGrants.kind, "groupMember"), inArray(providerGrants.groupId, groupIds)));
+    await tx.delete(managedGroups).where(inArray(managedGroups.groupId, groupIds));
+    return groupIds.length;
   }
 
   async accountsHolding(executor: Executor, groupId: string): Promise<string[]> {

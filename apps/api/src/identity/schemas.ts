@@ -11,6 +11,28 @@ import { z } from "zod";
 import { secondFactorSchema } from "../auth/schemas.js";
 import { inputTimestamp, timestamp, uuid } from "../http/schemas.js";
 
+export const removalPreviewSchema = z
+  .object({
+    accounts: z.number().int().nonnegative().describe("Accounts with an identity of this provider."),
+    accountsWithoutSignIn: z
+      .number()
+      .int()
+      .nonnegative()
+      .describe("Accounts that have no other working way to sign in once the provider is removed."),
+    groups: z
+      .number()
+      .int()
+      .nonnegative()
+      .describe("Synchronized groups that become ordinary groups and keep their members and permissions."),
+    rules: z.number().int().nonnegative().describe("Mapping rules that are removed."),
+    grants: z
+      .number()
+      .int()
+      .nonnegative()
+      .describe("Memberships and roles granted by the provider's rules that are withdrawn."),
+  })
+  .describe("What removing the provider changes.");
+
 export const providerIdParams = z.object({ providerId: uuid("ID of the identity provider.") }).strict();
 
 export const credentialParams = z
@@ -135,6 +157,12 @@ export const providerSchema = z
           .describe("Whether accounts disabled or deleted in the provider are detected without a sign-in."),
       })
       .describe("What the provider can do with its current configuration."),
+    deactivatedAt: z.iso
+      .datetime()
+      .nullable()
+      .describe(
+        "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized.",
+      ),
     warnings: z
       .array(z.enum(["noCredential", "credentialExpiring", "credentialExpired"]))
       .describe("Problems that need attention."),

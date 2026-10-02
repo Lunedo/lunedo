@@ -37,6 +37,7 @@ export const identityProviders = pgTable("identity_providers", {
   preset: identityProviderPreset().notNull(),
   name: text().notNull(),
   config: jsonb().notNull(),
+  deactivatedAt: timestampColumn(),
   ...timestamps(),
 });
 

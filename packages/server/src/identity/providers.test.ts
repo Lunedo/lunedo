@@ -226,6 +226,7 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
       audit: test.services.audit,
       encryption: test.encryption,
       notifications: test.services.notifications,
+      settings: test.settings,
       allowInsecure: false,
     });
     const credential = { kind: "clientSecret" as const, secret: "x", expiresAt: null };

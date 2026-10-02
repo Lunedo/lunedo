@@ -186,9 +186,12 @@ export class ProviderSignInService {
     return adapter;
   }
 
-  async #load(providerId: string) {
+  async #load(providerId: string, purpose?: ProviderFlowPurpose) {
     const loaded = await this.#providers.definition(providerId);
     if (!loaded) throw new OrganizationError("notFound", "The identity provider does not exist");
+    if (!loaded.active && purpose !== undefined && purpose !== "test") {
+      throw new OrganizationError("providerDeactivated", "The identity provider is deactivated");
+    }
     return loaded;
   }
 
@@ -202,7 +205,7 @@ export class ProviderSignInService {
     clientIp?: string | undefined;
   }): Promise<StartedFlow> {
     await this.#limit("providerStart", input.clientIp, STARTS_PER_CLIENT);
-    const { provider, credentials } = await this.#load(input.providerId);
+    const { provider, credentials } = await this.#load(input.providerId, input.purpose);
     if (input.purpose === "reauthentication") {
       const [identity] = await this.#database
         .select({ id: identities.id })
@@ -264,7 +267,7 @@ export class ProviderSignInService {
     ) {
       throw new ChallengeExpiredError();
     }
-    const { provider, credentials } = await this.#load(flow.providerId);
+    const { provider, credentials } = await this.#load(flow.providerId, flow.purpose);
     const callbackUrl = new URL(flow.redirectUri);
     callbackUrl.search = input.query.toString();
 

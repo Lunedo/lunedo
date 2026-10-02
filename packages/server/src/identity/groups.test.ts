@@ -2,6 +2,7 @@ import { generateKeyPairSync, randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
+import { passwordSignInSetting } from "../auth/settings.js";
 import { ForbiddenError } from "../authorization/service.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
@@ -248,63 +249,182 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
     expect(await roles(person.id)).toEqual([]);
   });
 
-  it("removes grants and ends sessions of a removed provider", async () => {
-    const org = await organization();
+  async function removableProvider(name: string) {
     const domain = `removed-${randomUUID().slice(0, 8)}.example`;
-    const removable = (
-      await test.services.identityProviders.create(SYSTEM, {
-        name: "Removable",
-        config: {
-          preset: "generic",
-          issuer: idp.issuer,
-          clientId: idp.clientId,
-          domains: [domain],
-          accountCreation: { enabled: true, requiredGroups: [] },
-          claims: {
-            email: "email",
-            signInName: "preferred_username",
-            displayName: "name",
-            groups: "groups",
-            groupNames: "group_names",
-          },
+    const created = await test.services.identityProviders.create(SYSTEM, {
+      name,
+      config: {
+        preset: "generic",
+        issuer: idp.issuer,
+        clientId: idp.clientId,
+        domains: [domain],
+        accountCreation: { enabled: true, requiredGroups: [] },
+        claims: {
+          email: "email",
+          signInName: "preferred_username",
+          displayName: "name",
+          groups: "groups",
+          groupNames: "group_names",
         },
-        credential: { kind: "clientSecret", secret: idp.clientSecret, expiresAt: null },
-      })
-    ).provider.id;
+      },
+      credential: { kind: "clientSecret", secret: idp.clientSecret, expiresAt: null },
+    });
+    return { id: created.provider.id, domain };
+  }
+
+  async function signInThrough(
+    provider: { id: string; domain: string },
+    subject: string,
+    groups: string[],
+  ): Promise<CallbackResult> {
+    const started = await test.services.providerSignIn.start({
+      providerId: provider.id,
+      purpose: "signIn",
+      baseUrl: BASE,
+    });
+    const callback = await idp.authorize(started.url, {
+      sub: subject,
+      email: `${subject.slice(0, 8)}@${provider.domain}`,
+      groups,
+    });
+    return test.services.providerSignIn.callback({
+      providerId: provider.id,
+      query: callback.searchParams,
+      browserToken: started.browserToken,
+      client: {},
+    });
+  }
+
+  it("previews a removal, withdraws roles and keeps synchronized groups as ordinary groups", async () => {
+    const org = await organization();
+    const removable = await removableProvider("Removable");
     const group = `group-${randomUUID()}`;
-    await test.services.mappingRules.create(accountPrincipal(org.owner), removable, {
+    const rule = await test.services.mappingRules.create(accountPrincipal(org.owner), removable.id, {
       target: "organization",
-      group: { id: group, name: "Admins" },
+      group: { id: group, name: `Admins ${group.slice(6, 12)}` },
+      organizationId: org.id,
+      role: { builtIn: "administrator" },
+      synchronizedGroup: true,
+      homeOrganization: false,
+    });
+    const groupId = rule.synchronizedGroup?.id ?? "";
+    const person = await signedInAccount(await signInThrough(removable, randomUUID(), [group]));
+    expect(await roles(person)).toEqual([{ scope: "organization", role: "administrator" }]);
+
+    expect(await test.services.identityProviders.removalPreview(removable.id)).toEqual({
+      accounts: 1,
+      accountsWithoutSignIn: 1,
+      groups: 1,
+      rules: 1,
+      grants: 2,
+    });
+
+    await test.services.identityProviders.remove(SYSTEM, removable.id);
+    expect(await roles(person)).toEqual([]);
+    expect(await membership(org.id, person)).toBe("member");
+    const details = await test.services.groups.get(groupId);
+    expect(details).toMatchObject({ managedBy: null, formerlySynchronizedFrom: "Removable" });
+    const members = await test.pool.query("select account_id from group_members where group_id = $1", [
+      groupId,
+    ]);
+    expect(members.rows).toEqual([{ account_id: person }]);
+    const other = await account(org.id);
+    await test.services.groups.addMember(accountPrincipal(org.owner), groupId, other.id);
+    const sessions = await test.pool.query("select 1 from sessions where account_id = $1", [person]);
+    expect(sessions.rows).toHaveLength(0);
+    const audit = await test.pool.query<{ fields: Record<string, unknown> }>(
+      "select fields from audit_events where name = 'identityProvider.removed' and target_id = $1",
+      [removable.id],
+    );
+    expect(audit.rows[0]?.fields).toMatchObject({ name: "Removable", endedSessions: 1, releasedGroups: 1 });
+  });
+
+  it("counts only other working ways to sign in for the removal preview", async () => {
+    const removable = await removableProvider("Counted");
+    const withPassword = await account(null);
+    await link(removable.id, withPassword.id, randomUUID());
+    expect(await test.services.identityProviders.removalPreview(removable.id)).toMatchObject({
+      accounts: 1,
+      accountsWithoutSignIn: 0,
+    });
+    await test.settings.set(passwordSignInSetting, {}, "instance", false);
+    try {
+      expect(await test.services.identityProviders.removalPreview(removable.id)).toMatchObject({
+        accountsWithoutSignIn: 1,
+      });
+      const elsewhere = await removableProvider("Elsewhere");
+      await link(elsewhere.id, withPassword.id, randomUUID());
+      expect(await test.services.identityProviders.removalPreview(removable.id)).toMatchObject({
+        accountsWithoutSignIn: 0,
+      });
+      await test.services.identityProviders.deactivate(SYSTEM, elsewhere.id);
+      expect(await test.services.identityProviders.removalPreview(removable.id)).toMatchObject({
+        accountsWithoutSignIn: 1,
+      });
+    } finally {
+      await test.settings.clear(passwordSignInSetting, {}, "instance");
+    }
+  });
+
+  it("keeps everything of a deactivated provider but lets nobody sign in or synchronize through it", async () => {
+    const org = await organization();
+    const deactivated = await removableProvider("Paused");
+    const group = `group-${randomUUID()}`;
+    await test.services.mappingRules.create(accountPrincipal(org.owner), deactivated.id, {
+      target: "organization",
+      group: { id: group, name: "Paused admins" },
       organizationId: org.id,
       role: { builtIn: "administrator" },
       synchronizedGroup: false,
       homeOrganization: false,
     });
-    const started = await test.services.providerSignIn.start({
-      providerId: removable,
+    const subject = randomUUID();
+    const person = await signedInAccount(await signInThrough(deactivated, subject, [group]));
+    const pending = await test.services.providerSignIn.start({
+      providerId: deactivated.id,
       purpose: "signIn",
       baseUrl: BASE,
     });
-    const subject = randomUUID();
-    const callback = await idp.authorize(started.url, {
+    const pendingCallback = await idp.authorize(pending.url, {
       sub: subject,
-      email: `${subject.slice(0, 8)}@${domain}`,
+      email: `${subject.slice(0, 8)}@${deactivated.domain}`,
       groups: [group],
     });
-    const person = await signedInAccount(
-      await test.services.providerSignIn.callback({
-        providerId: removable,
-        query: callback.searchParams,
-        browserToken: started.browserToken,
-        client: {},
-      }),
-    );
-    expect(await roles(person)).toEqual([{ scope: "organization", role: "administrator" }]);
 
-    await test.services.identityProviders.remove(SYSTEM, removable);
-    expect(await roles(person)).toEqual([]);
+    const summary = await test.services.identityProviders.deactivate(SYSTEM, deactivated.id);
+    expect(summary.deactivatedAt).toBeInstanceOf(Date);
     const sessions = await test.pool.query("select 1 from sessions where account_id = $1", [person]);
     expect(sessions.rows).toHaveLength(0);
+    expect(await roles(person)).toEqual([{ scope: "organization", role: "administrator" }]);
+    expect(await test.services.identityProviders.providerForDomain(deactivated.domain)).toBeNull();
+    expect(
+      (await test.services.identityProviders.signInProviders()).map((provider) => provider.id),
+    ).not.toContain(deactivated.id);
+    await expect(
+      test.services.providerSignIn.start({ providerId: deactivated.id, purpose: "signIn", baseUrl: BASE }),
+    ).rejects.toMatchObject({ code: "providerDeactivated" });
+    await expect(
+      test.services.providerSignIn.callback({
+        providerId: deactivated.id,
+        query: pendingCallback.searchParams,
+        browserToken: pending.browserToken,
+        client: {},
+      }),
+    ).rejects.toMatchObject({ code: "providerDeactivated" });
+    await expect(test.services.providerSync.request(SYSTEM, deactivated.id)).rejects.toMatchObject({
+      code: "providerDeactivated",
+    });
+
+    await test.services.identityProviders.activate(SYSTEM, deactivated.id);
+    expect(await signedInAccount(await signInThrough(deactivated, subject, [group]))).toBe(person);
+    const audit = await test.pool.query<{ name: string; fields: Record<string, unknown> }>(
+      "select name, fields from audit_events where target_id = $1 and name in ('identityProvider.deactivated', 'identityProvider.activated') order by occurred_at",
+      [deactivated.id],
+    );
+    expect(audit.rows).toEqual([
+      { name: "identityProvider.deactivated", fields: { name: "Paused", endedSessions: 1 } },
+      { name: "identityProvider.activated", fields: { name: "Paused" } },
+    ]);
   });
 
   it("refuses a rule that would grant more than its creator may grant", async () => {

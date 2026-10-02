@@ -9,6 +9,8 @@ export const auditEventNames = [
   "identityProvider.created",
   "identityProvider.updated",
   "identityProvider.removed",
+  "identityProvider.deactivated",
+  "identityProvider.activated",
   "identityProvider.credentialAdded",
   "identityProvider.credentialRemoved",
   "identityProvider.logoChanged",

@@ -9999,6 +9999,13 @@
                         }
                       ]
                     },
+                    "formerlySynchronizedFrom": {
+                      "description": "Name of the removed identity provider this group was synchronized from, or null. Such a group is an ordinary group now.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "managers": {
                       "type": "array",
                       "items": {
@@ -10278,6 +10285,13 @@
                         {
                           "type": "null"
                         }
+                      ]
+                    },
+                    "formerlySynchronizedFrom": {
+                      "description": "Name of the removed identity provider this group was synchronized from, or null. Such a group is an ordinary group now.",
+                      "type": [
+                        "string",
+                        "null"
                       ]
                     }
                   },
@@ -14241,6 +14255,18 @@
                         "additionalProperties": false,
                         "description": "What the provider can do with its current configuration."
                       },
+                      "deactivatedAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
+                      },
                       "warnings": {
                         "type": "array",
                         "items": {
@@ -14275,6 +14301,7 @@
                       "credentials",
                       "directoryKey",
                       "capabilities",
+                      "deactivatedAt",
                       "warnings",
                       "createdAt",
                       "updatedAt"
@@ -15494,6 +15521,18 @@
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
                         },
+                        "deactivatedAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -15528,6 +15567,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "deactivatedAt",
                         "warnings",
                         "createdAt",
                         "updatedAt"
@@ -15724,7 +15764,7 @@
       "delete": {
         "operationId": "identityProviders.removeInstance",
         "summary": "Remove an instance identity provider",
-        "description": "Removes the provider, its credentials and all identities linked through it.\n\nRequires the permission `instance.signIn.manage` on the instance. Needs a signed-in session; API tokens are refused.",
+        "description": "Removes the provider, its credentials, its mapping rules and all identities linked through it. Memberships and roles its rules granted are withdrawn; its synchronized groups become ordinary groups with their members and permissions.\n\nRequires the permission `instance.signIn.manage` on the instance. Needs a signed-in session; API tokens are refused.",
         "tags": [
           "Identity providers"
         ],
@@ -16484,6 +16524,18 @@
                       "additionalProperties": false,
                       "description": "What the provider can do with its current configuration."
                     },
+                    "deactivatedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
+                    },
                     "warnings": {
                       "type": "array",
                       "items": {
@@ -16518,6 +16570,7 @@
                     "credentials",
                     "directoryKey",
                     "capabilities",
+                    "deactivatedAt",
                     "warnings",
                     "createdAt",
                     "updatedAt"
@@ -17710,6 +17763,18 @@
                       "additionalProperties": false,
                       "description": "What the provider can do with its current configuration."
                     },
+                    "deactivatedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
+                    },
                     "warnings": {
                       "type": "array",
                       "items": {
@@ -17744,6 +17809,7 @@
                     "credentials",
                     "directoryKey",
                     "capabilities",
+                    "deactivatedAt",
                     "warnings",
                     "createdAt",
                     "updatedAt"
@@ -17880,6 +17946,791 @@
                       "title": "A domain belongs to another identity provider",
                       "status": 409,
                       "code": "domainInUse"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/identity-providers/{providerId}/activate": {
+      "post": {
+        "operationId": "identityProviders.activateInstance",
+        "summary": "Activate an instance identity provider again",
+        "tags": [
+          "Identity providers"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.signIn.manage",
+          "resource": "instance"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the identity provider.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The provider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the provider."
+                    },
+                    "type": {
+                      "type": "string",
+                      "const": "oidc",
+                      "description": "Protocol of the provider."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Name shown on the sign-in page."
+                    },
+                    "config": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "preset": {
+                              "type": "string",
+                              "const": "entraId"
+                            },
+                            "clientId": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500
+                            },
+                            "domains": {
+                              "default": [],
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "maxLength": 253,
+                                "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                              }
+                            },
+                            "idTokenAlgorithm": {
+                              "default": "RS256",
+                              "type": "string",
+                              "enum": [
+                                "RS256",
+                                "RS384",
+                                "RS512",
+                                "PS256",
+                                "PS384",
+                                "PS512",
+                                "ES256",
+                                "ES384",
+                                "ES512"
+                              ]
+                            },
+                            "accountCreation": {
+                              "default": {
+                                "enabled": false,
+                                "requiredGroups": []
+                              },
+                              "type": "object",
+                              "properties": {
+                                "enabled": {
+                                  "default": false,
+                                  "type": "boolean"
+                                },
+                                "requiredGroups": {
+                                  "default": [],
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256
+                                  }
+                                }
+                              },
+                              "required": [
+                                "enabled",
+                                "requiredGroups"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "sync": {
+                              "default": {
+                                "intervalMinutes": 60
+                              },
+                              "type": "object",
+                              "properties": {
+                                "intervalMinutes": {
+                                  "default": 60,
+                                  "type": "integer",
+                                  "minimum": 15,
+                                  "maximum": 1440
+                                }
+                              },
+                              "required": [
+                                "intervalMinutes"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "tenantId": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                            },
+                            "authority": {
+                              "default": "https://login.microsoftonline.com"
+                            },
+                            "graphUrl": {
+                              "default": "https://graph.microsoft.com"
+                            },
+                            "emailSource": {
+                              "default": "email",
+                              "type": "string",
+                              "enum": [
+                                "email",
+                                "userPrincipalName",
+                                "graphMail"
+                              ]
+                            },
+                            "signInNameSource": {
+                              "default": "userPrincipalName",
+                              "type": "string",
+                              "enum": [
+                                "preferredUsername",
+                                "userPrincipalName",
+                                "email"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "preset",
+                            "clientId",
+                            "domains",
+                            "idTokenAlgorithm",
+                            "accountCreation",
+                            "sync",
+                            "tenantId",
+                            "authority",
+                            "graphUrl",
+                            "emailSource",
+                            "signInNameSource"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "preset": {
+                              "type": "string",
+                              "const": "google"
+                            },
+                            "clientId": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500
+                            },
+                            "domains": {
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "maxLength": 253,
+                                "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                              }
+                            },
+                            "idTokenAlgorithm": {
+                              "default": "RS256",
+                              "type": "string",
+                              "enum": [
+                                "RS256",
+                                "RS384",
+                                "RS512",
+                                "PS256",
+                                "PS384",
+                                "PS512",
+                                "ES256",
+                                "ES384",
+                                "ES512"
+                              ]
+                            },
+                            "accountCreation": {
+                              "default": {
+                                "enabled": false,
+                                "requiredGroups": []
+                              },
+                              "type": "object",
+                              "properties": {
+                                "enabled": {
+                                  "default": false,
+                                  "type": "boolean"
+                                },
+                                "requiredGroups": {
+                                  "default": [],
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256
+                                  }
+                                }
+                              },
+                              "required": [
+                                "enabled",
+                                "requiredGroups"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "sync": {
+                              "default": {
+                                "intervalMinutes": 60
+                              },
+                              "type": "object",
+                              "properties": {
+                                "intervalMinutes": {
+                                  "default": 60,
+                                  "type": "integer",
+                                  "minimum": 15,
+                                  "maximum": 1440
+                                }
+                              },
+                              "required": [
+                                "intervalMinutes"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "issuer": {
+                              "default": "https://accounts.google.com",
+                              "type": "string",
+                              "maxLength": 2048,
+                              "format": "uri"
+                            },
+                            "directory": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "method": {
+                                      "default": "adminRole",
+                                      "type": "string",
+                                      "enum": [
+                                        "adminRole",
+                                        "delegation"
+                                      ]
+                                    },
+                                    "adminEmail": {
+                                      "default": null,
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "maxLength": 254,
+                                          "format": "email"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "readUsers": {
+                                      "default": false,
+                                      "type": "boolean"
+                                    },
+                                    "url": {
+                                      "default": "https://admin.googleapis.com"
+                                    },
+                                    "tokenUrl": {
+                                      "default": "https://oauth2.googleapis.com/token"
+                                    }
+                                  },
+                                  "required": [
+                                    "method",
+                                    "adminEmail",
+                                    "readUsers",
+                                    "url",
+                                    "tokenUrl"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "preset",
+                            "clientId",
+                            "domains",
+                            "idTokenAlgorithm",
+                            "accountCreation",
+                            "sync",
+                            "issuer",
+                            "directory"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "preset": {
+                              "type": "string",
+                              "const": "generic"
+                            },
+                            "clientId": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500
+                            },
+                            "domains": {
+                              "default": [],
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "maxLength": 253,
+                                "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                              }
+                            },
+                            "idTokenAlgorithm": {
+                              "default": "RS256",
+                              "type": "string",
+                              "enum": [
+                                "RS256",
+                                "RS384",
+                                "RS512",
+                                "PS256",
+                                "PS384",
+                                "PS512",
+                                "ES256",
+                                "ES384",
+                                "ES512"
+                              ]
+                            },
+                            "accountCreation": {
+                              "default": {
+                                "enabled": false,
+                                "requiredGroups": []
+                              },
+                              "type": "object",
+                              "properties": {
+                                "enabled": {
+                                  "default": false,
+                                  "type": "boolean"
+                                },
+                                "requiredGroups": {
+                                  "default": [],
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256
+                                  }
+                                }
+                              },
+                              "required": [
+                                "enabled",
+                                "requiredGroups"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "sync": {
+                              "default": {
+                                "intervalMinutes": 60
+                              },
+                              "type": "object",
+                              "properties": {
+                                "intervalMinutes": {
+                                  "default": 60,
+                                  "type": "integer",
+                                  "minimum": 15,
+                                  "maximum": 1440
+                                }
+                              },
+                              "required": [
+                                "intervalMinutes"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "issuer": {
+                              "type": "string",
+                              "maxLength": 2048,
+                              "format": "uri"
+                            },
+                            "scopes": {
+                              "default": [
+                                "openid",
+                                "profile",
+                                "email"
+                              ],
+                              "maxItems": 20,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 100
+                              }
+                            },
+                            "claims": {
+                              "default": {
+                                "email": "email",
+                                "signInName": "preferred_username",
+                                "displayName": "name",
+                                "groups": null,
+                                "groupNames": null
+                              },
+                              "type": "object",
+                              "properties": {
+                                "email": {
+                                  "default": "email",
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "^[A-Za-z0-9_:./-]+$"
+                                },
+                                "signInName": {
+                                  "default": "preferred_username",
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "^[A-Za-z0-9_:./-]+$"
+                                },
+                                "displayName": {
+                                  "default": "name",
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "^[A-Za-z0-9_:./-]+$"
+                                },
+                                "groups": {
+                                  "default": null,
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^[A-Za-z0-9_:./-]+$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "groupNames": {
+                                  "default": null,
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^[A-Za-z0-9_:./-]+$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "email",
+                                "signInName",
+                                "displayName",
+                                "groups",
+                                "groupNames"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "preset",
+                            "clientId",
+                            "domains",
+                            "idTokenAlgorithm",
+                            "accountCreation",
+                            "sync",
+                            "issuer",
+                            "scopes",
+                            "claims"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "Configuration of the provider."
+                    },
+                    "issuer": {
+                      "type": "string",
+                      "description": "Issuer URL the provider is discovered at."
+                    },
+                    "redirectUri": {
+                      "type": "string",
+                      "description": "Redirect URI to register with the provider."
+                    },
+                    "logoRef": {
+                      "description": "Reference to the uploaded logo, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "credentials": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the credential."
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "clientSecret",
+                              "certificate"
+                            ],
+                            "description": "A client secret or a certificate."
+                          },
+                          "keyId": {
+                            "description": "Thumbprint of the certificate, or null for a secret.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "expiresAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When the credential expires. ISO 8601 timestamp in UTC."
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "keyId",
+                          "expiresAt",
+                          "createdAt"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A credential. Secrets and private keys are never returned."
+                      },
+                      "description": "Credentials, newest first."
+                    },
+                    "directoryKey": {
+                      "type": "boolean",
+                      "description": "Whether a service account key for the Google directory is stored. The key is never shown."
+                    },
+                    "capabilities": {
+                      "type": "object",
+                      "properties": {
+                        "groups": {
+                          "type": "boolean",
+                          "description": "Whether Pagehall learns the groups of a person from this provider."
+                        },
+                        "directorySync": {
+                          "type": "boolean",
+                          "description": "Whether profiles and groups are synchronized in the background, not only at sign-in."
+                        },
+                        "disabledAccounts": {
+                          "type": "boolean",
+                          "description": "Whether accounts disabled or deleted in the provider are detected without a sign-in."
+                        }
+                      },
+                      "required": [
+                        "groups",
+                        "directorySync",
+                        "disabledAccounts"
+                      ],
+                      "additionalProperties": false,
+                      "description": "What the provider can do with its current configuration."
+                    },
+                    "deactivatedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "noCredential",
+                          "credentialExpiring",
+                          "credentialExpired"
+                        ]
+                      },
+                      "description": "Problems that need attention."
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the provider was set up. ISO 8601 timestamp in UTC."
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the provider was last changed. ISO 8601 timestamp in UTC."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "type",
+                    "name",
+                    "config",
+                    "issuer",
+                    "redirectUri",
+                    "logoRef",
+                    "credentials",
+                    "directoryKey",
+                    "capabilities",
+                    "deactivatedAt",
+                    "warnings",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "An identity provider."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "reauthenticationRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:reauthenticationRequired",
+                      "title": "Confirm your identity first",
+                      "status": 403,
+                      "code": "reauthenticationRequired"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
                     }
                   }
                 }
@@ -18502,6 +19353,792 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/identity-providers/{providerId}/deactivate": {
+      "post": {
+        "operationId": "identityProviders.deactivateInstance",
+        "summary": "Deactivate an instance identity provider",
+        "description": "Nobody can sign in through the provider any more, synchronization stops and the sessions that came from it end. Everything else stays and returns when the provider is activated again.\n\nRequires the permission `instance.signIn.manage` on the instance. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Identity providers"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.signIn.manage",
+          "resource": "instance"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the identity provider.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The provider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the provider."
+                    },
+                    "type": {
+                      "type": "string",
+                      "const": "oidc",
+                      "description": "Protocol of the provider."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Name shown on the sign-in page."
+                    },
+                    "config": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "preset": {
+                              "type": "string",
+                              "const": "entraId"
+                            },
+                            "clientId": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500
+                            },
+                            "domains": {
+                              "default": [],
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "maxLength": 253,
+                                "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                              }
+                            },
+                            "idTokenAlgorithm": {
+                              "default": "RS256",
+                              "type": "string",
+                              "enum": [
+                                "RS256",
+                                "RS384",
+                                "RS512",
+                                "PS256",
+                                "PS384",
+                                "PS512",
+                                "ES256",
+                                "ES384",
+                                "ES512"
+                              ]
+                            },
+                            "accountCreation": {
+                              "default": {
+                                "enabled": false,
+                                "requiredGroups": []
+                              },
+                              "type": "object",
+                              "properties": {
+                                "enabled": {
+                                  "default": false,
+                                  "type": "boolean"
+                                },
+                                "requiredGroups": {
+                                  "default": [],
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256
+                                  }
+                                }
+                              },
+                              "required": [
+                                "enabled",
+                                "requiredGroups"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "sync": {
+                              "default": {
+                                "intervalMinutes": 60
+                              },
+                              "type": "object",
+                              "properties": {
+                                "intervalMinutes": {
+                                  "default": 60,
+                                  "type": "integer",
+                                  "minimum": 15,
+                                  "maximum": 1440
+                                }
+                              },
+                              "required": [
+                                "intervalMinutes"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "tenantId": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                            },
+                            "authority": {
+                              "default": "https://login.microsoftonline.com"
+                            },
+                            "graphUrl": {
+                              "default": "https://graph.microsoft.com"
+                            },
+                            "emailSource": {
+                              "default": "email",
+                              "type": "string",
+                              "enum": [
+                                "email",
+                                "userPrincipalName",
+                                "graphMail"
+                              ]
+                            },
+                            "signInNameSource": {
+                              "default": "userPrincipalName",
+                              "type": "string",
+                              "enum": [
+                                "preferredUsername",
+                                "userPrincipalName",
+                                "email"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "preset",
+                            "clientId",
+                            "domains",
+                            "idTokenAlgorithm",
+                            "accountCreation",
+                            "sync",
+                            "tenantId",
+                            "authority",
+                            "graphUrl",
+                            "emailSource",
+                            "signInNameSource"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "preset": {
+                              "type": "string",
+                              "const": "google"
+                            },
+                            "clientId": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500
+                            },
+                            "domains": {
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "maxLength": 253,
+                                "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                              }
+                            },
+                            "idTokenAlgorithm": {
+                              "default": "RS256",
+                              "type": "string",
+                              "enum": [
+                                "RS256",
+                                "RS384",
+                                "RS512",
+                                "PS256",
+                                "PS384",
+                                "PS512",
+                                "ES256",
+                                "ES384",
+                                "ES512"
+                              ]
+                            },
+                            "accountCreation": {
+                              "default": {
+                                "enabled": false,
+                                "requiredGroups": []
+                              },
+                              "type": "object",
+                              "properties": {
+                                "enabled": {
+                                  "default": false,
+                                  "type": "boolean"
+                                },
+                                "requiredGroups": {
+                                  "default": [],
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256
+                                  }
+                                }
+                              },
+                              "required": [
+                                "enabled",
+                                "requiredGroups"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "sync": {
+                              "default": {
+                                "intervalMinutes": 60
+                              },
+                              "type": "object",
+                              "properties": {
+                                "intervalMinutes": {
+                                  "default": 60,
+                                  "type": "integer",
+                                  "minimum": 15,
+                                  "maximum": 1440
+                                }
+                              },
+                              "required": [
+                                "intervalMinutes"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "issuer": {
+                              "default": "https://accounts.google.com",
+                              "type": "string",
+                              "maxLength": 2048,
+                              "format": "uri"
+                            },
+                            "directory": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "method": {
+                                      "default": "adminRole",
+                                      "type": "string",
+                                      "enum": [
+                                        "adminRole",
+                                        "delegation"
+                                      ]
+                                    },
+                                    "adminEmail": {
+                                      "default": null,
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "maxLength": 254,
+                                          "format": "email"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "readUsers": {
+                                      "default": false,
+                                      "type": "boolean"
+                                    },
+                                    "url": {
+                                      "default": "https://admin.googleapis.com"
+                                    },
+                                    "tokenUrl": {
+                                      "default": "https://oauth2.googleapis.com/token"
+                                    }
+                                  },
+                                  "required": [
+                                    "method",
+                                    "adminEmail",
+                                    "readUsers",
+                                    "url",
+                                    "tokenUrl"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "preset",
+                            "clientId",
+                            "domains",
+                            "idTokenAlgorithm",
+                            "accountCreation",
+                            "sync",
+                            "issuer",
+                            "directory"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "preset": {
+                              "type": "string",
+                              "const": "generic"
+                            },
+                            "clientId": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500
+                            },
+                            "domains": {
+                              "default": [],
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "maxLength": 253,
+                                "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                              }
+                            },
+                            "idTokenAlgorithm": {
+                              "default": "RS256",
+                              "type": "string",
+                              "enum": [
+                                "RS256",
+                                "RS384",
+                                "RS512",
+                                "PS256",
+                                "PS384",
+                                "PS512",
+                                "ES256",
+                                "ES384",
+                                "ES512"
+                              ]
+                            },
+                            "accountCreation": {
+                              "default": {
+                                "enabled": false,
+                                "requiredGroups": []
+                              },
+                              "type": "object",
+                              "properties": {
+                                "enabled": {
+                                  "default": false,
+                                  "type": "boolean"
+                                },
+                                "requiredGroups": {
+                                  "default": [],
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256
+                                  }
+                                }
+                              },
+                              "required": [
+                                "enabled",
+                                "requiredGroups"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "sync": {
+                              "default": {
+                                "intervalMinutes": 60
+                              },
+                              "type": "object",
+                              "properties": {
+                                "intervalMinutes": {
+                                  "default": 60,
+                                  "type": "integer",
+                                  "minimum": 15,
+                                  "maximum": 1440
+                                }
+                              },
+                              "required": [
+                                "intervalMinutes"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "issuer": {
+                              "type": "string",
+                              "maxLength": 2048,
+                              "format": "uri"
+                            },
+                            "scopes": {
+                              "default": [
+                                "openid",
+                                "profile",
+                                "email"
+                              ],
+                              "maxItems": 20,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 100
+                              }
+                            },
+                            "claims": {
+                              "default": {
+                                "email": "email",
+                                "signInName": "preferred_username",
+                                "displayName": "name",
+                                "groups": null,
+                                "groupNames": null
+                              },
+                              "type": "object",
+                              "properties": {
+                                "email": {
+                                  "default": "email",
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "^[A-Za-z0-9_:./-]+$"
+                                },
+                                "signInName": {
+                                  "default": "preferred_username",
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "^[A-Za-z0-9_:./-]+$"
+                                },
+                                "displayName": {
+                                  "default": "name",
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "^[A-Za-z0-9_:./-]+$"
+                                },
+                                "groups": {
+                                  "default": null,
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^[A-Za-z0-9_:./-]+$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "groupNames": {
+                                  "default": null,
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^[A-Za-z0-9_:./-]+$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "email",
+                                "signInName",
+                                "displayName",
+                                "groups",
+                                "groupNames"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "preset",
+                            "clientId",
+                            "domains",
+                            "idTokenAlgorithm",
+                            "accountCreation",
+                            "sync",
+                            "issuer",
+                            "scopes",
+                            "claims"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "Configuration of the provider."
+                    },
+                    "issuer": {
+                      "type": "string",
+                      "description": "Issuer URL the provider is discovered at."
+                    },
+                    "redirectUri": {
+                      "type": "string",
+                      "description": "Redirect URI to register with the provider."
+                    },
+                    "logoRef": {
+                      "description": "Reference to the uploaded logo, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "credentials": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the credential."
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "clientSecret",
+                              "certificate"
+                            ],
+                            "description": "A client secret or a certificate."
+                          },
+                          "keyId": {
+                            "description": "Thumbprint of the certificate, or null for a secret.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "expiresAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When the credential expires. ISO 8601 timestamp in UTC."
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "keyId",
+                          "expiresAt",
+                          "createdAt"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A credential. Secrets and private keys are never returned."
+                      },
+                      "description": "Credentials, newest first."
+                    },
+                    "directoryKey": {
+                      "type": "boolean",
+                      "description": "Whether a service account key for the Google directory is stored. The key is never shown."
+                    },
+                    "capabilities": {
+                      "type": "object",
+                      "properties": {
+                        "groups": {
+                          "type": "boolean",
+                          "description": "Whether Pagehall learns the groups of a person from this provider."
+                        },
+                        "directorySync": {
+                          "type": "boolean",
+                          "description": "Whether profiles and groups are synchronized in the background, not only at sign-in."
+                        },
+                        "disabledAccounts": {
+                          "type": "boolean",
+                          "description": "Whether accounts disabled or deleted in the provider are detected without a sign-in."
+                        }
+                      },
+                      "required": [
+                        "groups",
+                        "directorySync",
+                        "disabledAccounts"
+                      ],
+                      "additionalProperties": false,
+                      "description": "What the provider can do with its current configuration."
+                    },
+                    "deactivatedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "noCredential",
+                          "credentialExpiring",
+                          "credentialExpired"
+                        ]
+                      },
+                      "description": "Problems that need attention."
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the provider was set up. ISO 8601 timestamp in UTC."
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the provider was last changed. ISO 8601 timestamp in UTC."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "type",
+                    "name",
+                    "config",
+                    "issuer",
+                    "redirectUri",
+                    "logoRef",
+                    "credentials",
+                    "directoryKey",
+                    "capabilities",
+                    "deactivatedAt",
+                    "warnings",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "An identity provider."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "reauthenticationRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:reauthenticationRequired",
+                      "title": "Confirm your identity first",
+                      "status": 403,
+                      "code": "reauthenticationRequired"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
                     }
                   }
                 }
@@ -20134,6 +21771,18 @@
                       "additionalProperties": false,
                       "description": "What the provider can do with its current configuration."
                     },
+                    "deactivatedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
+                    },
                     "warnings": {
                       "type": "array",
                       "items": {
@@ -20168,6 +21817,7 @@
                     "credentials",
                     "directoryKey",
                     "capabilities",
+                    "deactivatedAt",
                     "warnings",
                     "createdAt",
                     "updatedAt"
@@ -22361,6 +24011,210 @@
                       "title": "The group name is taken",
                       "status": 409,
                       "code": "groupNameTaken"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/identity-providers/{providerId}/removal-preview": {
+      "get": {
+        "operationId": "identityProviders.removalPreview",
+        "summary": "Preview the removal of an instance identity provider",
+        "tags": [
+          "Identity providers"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.signIn.manage",
+          "resource": "instance"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the identity provider.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What the removal changes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accounts": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Accounts with an identity of this provider."
+                    },
+                    "accountsWithoutSignIn": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Accounts that have no other working way to sign in once the provider is removed."
+                    },
+                    "groups": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Synchronized groups that become ordinary groups and keep their members and permissions."
+                    },
+                    "rules": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Mapping rules that are removed."
+                    },
+                    "grants": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Memberships and roles granted by the provider's rules that are withdrawn."
+                    }
+                  },
+                  "required": [
+                    "accounts",
+                    "accountsWithoutSignIn",
+                    "groups",
+                    "rules",
+                    "grants"
+                  ],
+                  "additionalProperties": false,
+                  "description": "What removing the provider changes."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
                     }
                   }
                 }
@@ -32703,6 +34557,13 @@
                                 "type": "null"
                               }
                             ]
+                          },
+                          "formerlySynchronizedFrom": {
+                            "description": "Name of the removed identity provider this group was synchronized from, or null. Such a group is an ordinary group now.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
                           }
                         },
                         "required": [
@@ -32978,6 +34839,13 @@
                         {
                           "type": "null"
                         }
+                      ]
+                    },
+                    "formerlySynchronizedFrom": {
+                      "description": "Name of the removed identity provider this group was synchronized from, or null. Such a group is an ordinary group now.",
+                      "type": [
+                        "string",
+                        "null"
                       ]
                     }
                   },
