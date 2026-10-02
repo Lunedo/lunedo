@@ -76,7 +76,7 @@ test("switches the whole interface at once when the own language changes", async
   await expect(page.locator("html")).toHaveAttribute("lang", "de");
 
   await combobox(page, "Sprache").click();
-  await page.getByRole("option", { name: /^Standard:/ }).click();
+  await page.getByRole("option", { name: /^Standard verwenden/ }).click();
   await expect(page.getByRole("heading", { name: "Preferences", level: 1 })).toBeVisible();
   await expect(settings.getByRole("link", { name: "Security" }).first()).toBeVisible();
   await context.close();

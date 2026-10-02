@@ -501,8 +501,8 @@
   },
   "settings": {
     "actions": "Actions",
-    "override": "Override",
     "useDefault": "Use the default",
+    "useDefaultOption": "Use default ({value})",
     "useInstanceValue": "Use the instance value",
     "inherit": "Inherit",
     "lockForOrganizations": "Lock for organizations",

@@ -1,8 +1,8 @@
 import {
   Badge,
-  Button,
   Checkbox,
   ConfirmDialog,
+  classNames,
   Dialog,
   DurationInput,
   formatDuration,
@@ -121,7 +121,6 @@ function SettingItem({
   const { t } = useTranslation();
   const field = settingField(entry.key);
   const [explaining, setExplaining] = useState(false);
-  const [overriding, setOverriding] = useState(false);
   const [confirmingLock, setConfirmingLock] = useState(false);
   const tracker = useSaveState();
   const apply = (change: SettingChange) => tracker.run(() => onChange(change));
@@ -147,26 +146,21 @@ function SettingItem({
         />
       );
     }
-    if (!own && !overriding) {
-      return (
-        <div className="flex items-center gap-2">
-          <span>{formatValue(entry.value)}</span>
-          {writable ? (
-            <Button variant="outline" size="sm" onClick={() => setOverriding(true)}>
-              {t("settings.override")}
-            </Button>
-          ) : null}
-        </div>
-      );
-    }
+    const inherited = inheritedValue(entry, level);
     return (
       <ValueEditor
+        key={own ? "own" : "inherited"}
         field={field}
         label={label}
-        value={own ? entry.value : inheritedValue(entry, level)}
+        value={own ? entry.value : inherited}
+        inherited={!own}
+        inheritedLabel={formatValue(inherited)}
         disabled={!writable}
         onSave={async (value) => {
-          if (await apply({ value })) setOverriding(false);
+          await apply({ value });
+        }}
+        onReset={async () => {
+          await apply({ clear: true });
         }}
       />
     );
@@ -307,21 +301,29 @@ function SettingItem({
   );
 }
 
+const INHERITED = "__inherited__";
+
 function ValueEditor({
   field,
   label,
   value,
+  inherited,
+  inheritedLabel,
   disabled,
   onSave,
+  onReset,
 }: {
   field: SettingField;
   label: string;
   value: unknown;
+  inherited: boolean;
+  inheritedLabel: string;
   disabled: boolean;
   onSave: (value: unknown) => Promise<void>;
+  onReset: () => Promise<void>;
 }) {
   const { t, i18n } = useTranslation();
-  const [draft, setDraft] = useState(String(value ?? ""));
+  const [draft, setDraft] = useState(inherited ? "" : String(value ?? ""));
   const [error, setError] = useState<string | null>(null);
 
   if (field.type.kind === "duration") {
@@ -330,6 +332,7 @@ function ValueEditor({
         type={field.type}
         label={label}
         value={typeof value === "number" ? value : null}
+        inherited={inherited}
         disabled={disabled}
         onSave={onSave}
       />
@@ -348,10 +351,14 @@ function ValueEditor({
       <div className="w-field max-w-full">
         <Select
           aria-label={label}
-          value={String(value)}
+          value={inherited ? INHERITED : String(value)}
           disabled={disabled}
-          onValueChange={(next) => void onSave(next)}
-          options={options}
+          className={inherited ? "text-text-muted" : undefined}
+          onValueChange={(next) => void (next === INHERITED ? onReset() : onSave(next))}
+          options={[
+            { value: INHERITED, label: t("settings.useDefaultOption", { value: inheritedLabel }) },
+            ...options,
+          ]}
         />
       </div>
     );
@@ -359,6 +366,10 @@ function ValueEditor({
 
   const commit = async () => {
     setError(null);
+    if (draft.trim() === "") {
+      if (!inherited) await onReset();
+      return;
+    }
     if (field.type.kind === "number") {
       const schema = z.coerce.number().int().min(field.type.min).max(field.type.max);
       const parsed = schema.safeParse(draft);
@@ -366,10 +377,10 @@ function ValueEditor({
         setError(t("validation.range", { minimum: field.type.min, maximum: field.type.max }));
         return;
       }
-      if (parsed.data !== value) await onSave(parsed.data);
+      if (inherited || parsed.data !== value) await onSave(parsed.data);
       return;
     }
-    if (draft !== value) await onSave(draft.trim());
+    if (inherited || draft !== value) await onSave(draft.trim());
   };
 
   return (
@@ -380,6 +391,7 @@ function ValueEditor({
             aria-label={label}
             aria-invalid={error !== null}
             value={draft}
+            placeholder={inherited ? inheritedLabel : undefined}
             disabled={disabled}
             inputMode={field.type.kind === "number" ? "numeric" : undefined}
             type={field.type.kind === "text" && field.type.inputType === "url" ? "url" : "text"}
@@ -409,12 +421,14 @@ function DurationEditor({
   type,
   label,
   value,
+  inherited,
   disabled,
   onSave,
 }: {
   type: DurationType;
   label: string;
   value: number | null;
+  inherited: boolean;
   disabled: boolean;
   onSave: (value: unknown) => Promise<void>;
 }) {
@@ -435,10 +449,10 @@ function DurationEditor({
     }
     setError(null);
     const next = fromMinutes(type, minutes);
-    if (next !== value) void onSave(next);
+    if (inherited || next !== value) void onSave(next);
   };
   return (
-    <div className="flex min-w-0 flex-col gap-2">
+    <div className={classNames("flex min-w-0 flex-col gap-2", inherited && "[&_input]:text-text-muted")}>
       {type.nullable ? (
         <Checkbox
           label={t("settings.limitDuration")}

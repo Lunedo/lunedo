@@ -649,7 +649,22 @@ function Layout() {
               "Wie lange Personen ohne Aktivität angemeldet bleiben.",
             )}
             meta={t("Instance default: 12 hours", "Standard der Instanz: 12 Stunden")}
-            control={<Button variant="outline">{t("Override", "Überschreiben")}</Button>}
+            control={
+              <Select
+                aria-label={t("Session length", "Sitzungsdauer")}
+                value="inherited"
+                className="text-text-muted"
+                onValueChange={() => {}}
+                options={[
+                  {
+                    value: "inherited",
+                    label: t("Use default (12 hours)", "Standard verwenden (12 Stunden)"),
+                  },
+                  { value: "8", label: t("8 hours", "8 Stunden") },
+                  { value: "24", label: t("24 hours", "24 Stunden") },
+                ]}
+              />
+            }
           />
           <SettingRow
             label={t("Require two-factor authentication", "Zwei-Faktor-Authentifizierung verlangen")}

@@ -141,11 +141,12 @@ export function PreferencesScreen() {
                     aria-label={translateKey(t, set_.labelKey)}
                     value={own ? String(entry.value) : INHERIT}
                     disabled={locked}
+                    className={own ? undefined : "text-text-muted"}
                     onValueChange={(value) => set(set_.key, value === INHERIT ? undefined : value)}
                     options={[
                       {
                         value: INHERIT,
-                        label: t("settings.source.fromDefault", {
+                        label: t("settings.useDefaultOption", {
                           value: set_.formatValue(t, inheritedValue(entry, "user"), i18n.language),
                         }),
                       },

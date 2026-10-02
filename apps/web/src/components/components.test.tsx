@@ -124,7 +124,7 @@ describe("SettingsList", () => {
     await renderList([entry({})], onChange);
     expect(screen.getByText("Inactive guests")).toBeTruthy();
     expect(screen.getByText("30 days")).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: "Override" }));
+    expect(screen.queryByRole("button", { name: "Override" })).toBeNull();
     const input = screen.getByRole("textbox", { name: "Inactive guests" });
     await userEvent.clear(input);
     await userEvent.type(input, "500{Enter}");
@@ -288,6 +288,54 @@ describe("SettingsList", () => {
   it("only shows values to people who may not change them", async () => {
     await renderList([entry({})], vi.fn(), false);
     expect(screen.queryByRole("button", { name: "Override" })).toBeNull();
-    expect(screen.getByText("30 days")).toBeTruthy();
+    expect((screen.getByRole("textbox", { name: "Inactive guests" }) as HTMLInputElement).disabled).toBe(
+      true,
+    );
+  });
+
+  it("offers the inherited value as the first option and overrides it by choosing another", async () => {
+    const onChange = vi.fn(async () => undefined);
+    await renderList(
+      [
+        entry({
+          key: "locale.timeFormat",
+          value: "24h",
+          defaultValue: "24h",
+          source: "instance",
+          levels: [
+            { level: "instance", value: "24h", locked: false, effective: true },
+            { level: "organization", value: null, locked: false, effective: true },
+          ],
+        }),
+      ],
+      onChange,
+    );
+    const select = screen.getByRole("combobox", { name: "Time format" });
+    expect(select.textContent).toMatch(/^Use default \(/);
+    await userEvent.click(select);
+    await userEvent.click(screen.getByRole("option", { name: /^12-hour/ }));
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith("locale.timeFormat", { value: "12h" }));
+  });
+
+  it("resets an own value when the default option is chosen", async () => {
+    const onChange = vi.fn(async () => undefined);
+    await renderList(
+      [
+        entry({
+          key: "locale.timeFormat",
+          value: "12h",
+          defaultValue: "24h",
+          source: "organization",
+          levels: [
+            { level: "instance", value: "24h", locked: false, effective: true },
+            { level: "organization", value: "12h", locked: false, effective: true },
+          ],
+        }),
+      ],
+      onChange,
+    );
+    await userEvent.click(screen.getByRole("combobox", { name: "Time format" }));
+    await userEvent.click(screen.getByRole("option", { name: /^Use default/ }));
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith("locale.timeFormat", { clear: true }));
   });
 });

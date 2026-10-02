@@ -501,8 +501,8 @@
   },
   "settings": {
     "actions": "Aktionen",
-    "override": "Überschreiben",
     "useDefault": "Standard verwenden",
+    "useDefaultOption": "Standard verwenden ({value})",
     "useInstanceValue": "Wert der Instanz verwenden",
     "inherit": "Erben",
     "lockForOrganizations": "Für Organisationen sperren",
