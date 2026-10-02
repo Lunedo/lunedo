@@ -179,6 +179,7 @@ export function createAccountServices(options: {
     mail,
     providers: identityProviders,
     mapping: groupMapping,
+    settings,
   });
   const breakGlass = new BreakGlassService({ database, audit, notifications, settings });
   const lifecycle = new OrganizationLifecycle({

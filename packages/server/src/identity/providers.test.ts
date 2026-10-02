@@ -354,6 +354,14 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
       test.services.administration.unlinkIdentity(accountPrincipal(admin.id), target.id, linked.id),
     ).rejects.toMatchObject({ code: "lastSignInMethod" });
     await test.pool.query("update accounts set password_hash = 'x' where id = $1", [target.id]);
+    await test.settings.set(passwordSignInSetting, {}, "instance", false);
+    try {
+      await expect(
+        test.services.administration.unlinkIdentity(accountPrincipal(admin.id), target.id, linked.id),
+      ).rejects.toMatchObject({ code: "lastSignInMethod" });
+    } finally {
+      await test.settings.set(passwordSignInSetting, {}, "instance", true);
+    }
     await expect(
       test.services.administration.unlinkIdentity(accountPrincipal(admin.id), target.id, linked.id),
     ).resolves.toEqual({ endedSessions: 0 });

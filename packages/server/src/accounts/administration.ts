@@ -7,6 +7,7 @@ import {
   totpCredentials,
   webauthnCredentials,
 } from "../auth/schema.js";
+import { passwordSignInSetting } from "../auth/settings.js";
 import { secondFactorsOf } from "../auth/two-factor.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Transaction } from "../database/database.js";
@@ -15,6 +16,7 @@ import type { IdentityProviderService } from "../identity/providers.js";
 import { identities, identityProviders, providerDeactivations } from "../identity/schema.js";
 import type { MailService } from "../mail/mail-service.js";
 import { OrganizationError } from "../organizations/organizations.js";
+import type { SettingsService } from "../settings/service.js";
 import type { Principal } from "./principal.js";
 import { accounts, instance } from "./schema.js";
 
@@ -48,6 +50,7 @@ export class AccountAdministrationService {
   readonly #mail: MailService;
   readonly #providers: IdentityProviderService;
   readonly #mapping: GroupMappingService;
+  readonly #settings: SettingsService;
 
   constructor(options: {
     database: Database;
@@ -56,6 +59,7 @@ export class AccountAdministrationService {
     mail: MailService;
     providers: IdentityProviderService;
     mapping: GroupMappingService;
+    settings: SettingsService;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
@@ -63,6 +67,7 @@ export class AccountAdministrationService {
     this.#mail = options.mail;
     this.#providers = options.providers;
     this.#mapping = options.mapping;
+    this.#settings = options.settings;
   }
 
   async identities(accountId: string): Promise<IdentitySummary[]> {
@@ -159,7 +164,11 @@ export class AccountAdministrationService {
       const others = await tx.execute<{ count: number }>(sql`
         select (select count(*) from identities where account_id = ${target.id} and id <> ${identity.id})
           + (select count(*) from webauthn_credentials where account_id = ${target.id}) as count`);
-      if (!row.passwordHash && Number(others.rows[0]?.count ?? 0) === 0) {
+      const [owner] = await tx.select({ id: instance.ownerAccountId }).from(instance);
+      const passwordWorks =
+        row.passwordHash !== null &&
+        (owner?.id === target.id || (await this.#settings.get(passwordSignInSetting, {}, { executor: tx })));
+      if (!passwordWorks && Number(others.rows[0]?.count ?? 0) === 0) {
         throw new OrganizationError("lastSignInMethod", "The account would have no way to sign in");
       }
       const ended = await tx
