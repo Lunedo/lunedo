@@ -14,6 +14,7 @@ import { and, asc, desc, eq, inArray, isNotNull, isNull, lte, or, sql } from "dr
 import { z } from "zod";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
+import { sessions } from "../auth/schema.js";
 import { type Areas, builtInRoleAreas } from "../authorization/areas.js";
 import type { Encryption } from "../crypto/envelope.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
@@ -24,8 +25,10 @@ import { LOGO_MAX_BYTES, logoContentType, OrganizationError } from "../organizat
 import type { ProviderCredential, ProviderDefinition } from "./adapter.js";
 import { generateCertificate } from "./certificates.js";
 import { foreignDirectoryEndpoint } from "./directory.js";
+import { emptyReport, type GroupMappingService } from "./groups.js";
 import { oidcIssuer } from "./oidc.js";
 import {
+  identities,
   identityProviderCredentials,
   identityProviderDomains,
   identityProviderLogos,
@@ -132,6 +135,7 @@ export class IdentityProviderService {
   readonly #notifications: NotificationService;
   readonly #allowInsecure: boolean;
   readonly #clock: () => Date;
+  readonly #mapping: GroupMappingService | undefined;
 
   constructor(options: {
     database: Database;
@@ -140,6 +144,7 @@ export class IdentityProviderService {
     notifications: NotificationService;
     allowInsecure: boolean;
     clock?: () => Date;
+    mapping?: GroupMappingService;
   }) {
     this.#database = options.database;
     this.#audit = options.audit;
@@ -147,6 +152,7 @@ export class IdentityProviderService {
     this.#notifications = options.notifications;
     this.#allowInsecure = options.allowInsecure;
     this.#clock = options.clock ?? (() => new Date());
+    this.#mapping = options.mapping;
   }
 
   #parseConfig(input: OidcConfigInput | unknown): OidcConfig {
@@ -359,13 +365,32 @@ export class IdentityProviderService {
   async remove(actor: Principal, id: string): Promise<void> {
     await this.#database.transaction(async (tx) => {
       const current = await this.#find(tx, id, true);
+      const linked = await tx
+        .select({ id: identities.id, accountId: identities.accountId })
+        .from(identities)
+        .where(eq(identities.providerId, id));
+      const ended =
+        linked.length === 0
+          ? []
+          : await tx
+              .delete(sessions)
+              .where(
+                inArray(
+                  sessions.identityId,
+                  linked.map((identity) => identity.id),
+                ),
+              )
+              .returning({ id: sessions.id });
       await this.#audit.record(tx, {
         name: "identityProvider.removed",
         actor,
         targetId: id,
-        fields: { name: current.name },
+        fields: { name: current.name, endedSessions: ended.length },
       });
       await tx.delete(identityProviders).where(eq(identityProviders.id, id));
+      for (const accountId of new Set(linked.map((identity) => identity.accountId))) {
+        await this.#mapping?.reconcile(tx, accountId, emptyReport());
+      }
     });
   }
 

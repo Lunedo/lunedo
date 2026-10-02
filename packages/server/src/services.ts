@@ -163,11 +163,13 @@ export function createAccountServices(options: {
     authorization,
     registry: new NotificationRegistry().register(...builtinNotificationTypes),
   });
+  const groupMapping = new GroupMappingService({ roles, memberships, audit });
   const identityProviders = new IdentityProviderService({
     database,
     audit,
     encryption,
     notifications,
+    mapping: groupMapping,
     allowInsecure: options.insecureIdentityProviders ?? false,
   });
   const administration = new AccountAdministrationService({
@@ -176,6 +178,7 @@ export function createAccountServices(options: {
     audit,
     mail,
     providers: identityProviders,
+    mapping: groupMapping,
   });
   const breakGlass = new BreakGlassService({ database, audit, notifications, settings });
   const lifecycle = new OrganizationLifecycle({
@@ -210,7 +213,6 @@ export function createAccountServices(options: {
   });
   const setupRegistry = new SetupRegistry();
   const setup = new SetupService({ database, registry: setupRegistry, audit, rateLimiter });
-  const groupMapping = new GroupMappingService({ roles, memberships, audit });
   const signIn = new SignInService({
     database,
     accounts,

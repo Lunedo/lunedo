@@ -224,6 +224,89 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
     expect(await roles(existing.id)).toEqual([{ scope: "organization", role: "administrator" }]);
   });
 
+  it("removes what the rules granted when an identity is unlinked", async () => {
+    const home = await organization();
+    const other = await organization();
+    const group = `group-${randomUUID()}`;
+    await test.services.mappingRules.create(accountPrincipal(other.owner), generic, {
+      target: "organization",
+      group: { id: group, name: "Admins" },
+      organizationId: other.id,
+      role: { builtIn: "administrator" },
+      synchronizedGroup: false,
+      homeOrganization: false,
+    });
+    const person = await account(home.id);
+    const subject = randomUUID();
+    const identityId = await link(generic, person.id, subject);
+    await signedInAccount(await signIn({ sub: subject, email: person.email, groups: [group] }));
+    expect(await membership(other.id, person.id)).toBe("member");
+    expect(await roles(person.id)).toEqual([{ scope: "organization", role: "administrator" }]);
+
+    await test.services.administration.unlinkIdentity(accountPrincipal(home.owner), person.id, identityId);
+    expect(await membership(other.id, person.id)).toBeNull();
+    expect(await roles(person.id)).toEqual([]);
+  });
+
+  it("removes grants and ends sessions of a removed provider", async () => {
+    const org = await organization();
+    const domain = `removed-${randomUUID().slice(0, 8)}.example`;
+    const removable = (
+      await test.services.identityProviders.create(SYSTEM, {
+        name: "Removable",
+        config: {
+          preset: "generic",
+          issuer: idp.issuer,
+          clientId: idp.clientId,
+          domains: [domain],
+          accountCreation: { enabled: true, requiredGroups: [] },
+          claims: {
+            email: "email",
+            signInName: "preferred_username",
+            displayName: "name",
+            groups: "groups",
+            groupNames: "group_names",
+          },
+        },
+        credential: { kind: "clientSecret", secret: idp.clientSecret, expiresAt: null },
+      })
+    ).provider.id;
+    const group = `group-${randomUUID()}`;
+    await test.services.mappingRules.create(accountPrincipal(org.owner), removable, {
+      target: "organization",
+      group: { id: group, name: "Admins" },
+      organizationId: org.id,
+      role: { builtIn: "administrator" },
+      synchronizedGroup: false,
+      homeOrganization: false,
+    });
+    const started = await test.services.providerSignIn.start({
+      providerId: removable,
+      purpose: "signIn",
+      baseUrl: BASE,
+    });
+    const subject = randomUUID();
+    const callback = await idp.authorize(started.url, {
+      sub: subject,
+      email: `${subject.slice(0, 8)}@${domain}`,
+      groups: [group],
+    });
+    const person = await signedInAccount(
+      await test.services.providerSignIn.callback({
+        providerId: removable,
+        query: callback.searchParams,
+        browserToken: started.browserToken,
+        client: {},
+      }),
+    );
+    expect(await roles(person)).toEqual([{ scope: "organization", role: "administrator" }]);
+
+    await test.services.identityProviders.remove(SYSTEM, removable);
+    expect(await roles(person)).toEqual([]);
+    const sessions = await test.pool.query("select 1 from sessions where account_id = $1", [person]);
+    expect(sessions.rows).toHaveLength(0);
+  });
+
   it("refuses a rule that would grant more than its creator may grant", async () => {
     const org = await organization();
     const administrator = await account(org.id);

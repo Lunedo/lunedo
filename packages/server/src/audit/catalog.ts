@@ -127,7 +127,7 @@ export const auditCatalog = {
   "identityProvider.removed": event({
     actor: ["account", "system"],
     target: "identityProvider",
-    fields: z.object({ name: z.string() }),
+    fields: z.object({ name: z.string(), endedSessions: z.number().int().nonnegative() }),
     visibility: "instance",
   }),
   "identityProvider.credentialAdded": event({

@@ -10,6 +10,7 @@ import {
 import { secondFactorsOf } from "../auth/two-factor.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Transaction } from "../database/database.js";
+import { emptyReport, type GroupMappingService } from "../identity/groups.js";
 import type { IdentityProviderService } from "../identity/providers.js";
 import { identities, identityProviders, providerDeactivations } from "../identity/schema.js";
 import type { MailService } from "../mail/mail-service.js";
@@ -46,6 +47,7 @@ export class AccountAdministrationService {
   readonly #audit: AuditLog;
   readonly #mail: MailService;
   readonly #providers: IdentityProviderService;
+  readonly #mapping: GroupMappingService;
 
   constructor(options: {
     database: Database;
@@ -53,12 +55,14 @@ export class AccountAdministrationService {
     audit: AuditLog;
     mail: MailService;
     providers: IdentityProviderService;
+    mapping: GroupMappingService;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
     this.#audit = options.audit;
     this.#mail = options.mail;
     this.#providers = options.providers;
+    this.#mapping = options.mapping;
   }
 
   async identities(accountId: string): Promise<IdentitySummary[]> {
@@ -163,6 +167,7 @@ export class AccountAdministrationService {
         .where(eq(sessions.identityId, identity.id))
         .returning({ id: sessions.id });
       await tx.delete(identities).where(eq(identities.id, identity.id));
+      await this.#mapping.reconcile(tx, target.id, emptyReport());
       await this.#audit.record(tx, {
         name: "identity.unlinked",
         actor,
