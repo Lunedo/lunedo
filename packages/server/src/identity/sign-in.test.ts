@@ -69,7 +69,13 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
           enabled: options.accountCreation ?? false,
           requiredGroups: options.requiredGroups ?? [],
         },
-        claims: { email: "email", signInName: "preferred_username", displayName: "name", groups: "groups" },
+        claims: {
+          email: "email",
+          signInName: "preferred_username",
+          displayName: "name",
+          groups: "groups",
+          groupNames: "group_names",
+        },
       },
       credential: { kind: "clientSecret", secret: source.clientSecret, expiresAt: null },
     });
@@ -305,6 +311,14 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     const id = await provider({ accountCreation: true, requiredGroups: ["wiki-users"] });
     expect(
       await signIn(id, { sub: randomUUID(), email: `g.${randomUUID()}@example.org`, groups: ["others"] }),
+    ).toMatchObject({ kind: "refused", reason: "groupRequired" });
+    expect(
+      await signIn(id, {
+        sub: randomUUID(),
+        email: `n.${randomUUID()}@example.org`,
+        groups: [randomUUID()],
+        group_names: ["wiki-users"],
+      }),
     ).toMatchObject({ kind: "refused", reason: "groupRequired" });
     expect(
       (

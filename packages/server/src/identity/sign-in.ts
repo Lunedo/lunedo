@@ -432,7 +432,7 @@ export class ProviderSignInService {
     if (!creation.enabled) throw new Refused("accountCreationDisabled");
     if (!profile.email || !input.emailVerified) throw new Refused("domainNotAllowed");
     if (creation.requiredGroups.length > 0) {
-      const held = new Set((input.groups ?? []).flatMap((group) => [group.id, group.name ?? ""]));
+      const held = new Set((input.groups ?? []).map((group) => group.id));
       if (!creation.requiredGroups.some((group) => held.has(group))) throw new Refused("groupRequired");
     }
     const email = profile.email;
