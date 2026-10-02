@@ -55,8 +55,9 @@ export interface TableProps<T> {
 const CONTROLS = "a, button, input, select, textarea, label, [role=menuitem], [role=checkbox], [role=switch]";
 
 function fromControl(target: EventTarget, row: HTMLElement): boolean {
-  if (!(target instanceof Element)) return false;
-  const control = target.closest(CONTROLS);
+  const element = target as Partial<Element>;
+  if (typeof element.closest !== "function") return false;
+  const control = element.closest(CONTROLS);
   return control !== null && row.contains(control);
 }
 

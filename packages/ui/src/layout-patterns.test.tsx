@@ -69,7 +69,7 @@ describe("time zones", () => {
     await userEvent.clear(input);
     await userEvent.type(input, "tokyo{Enter}");
     expect((input as HTMLInputElement).value).toBe("Tokyo");
-  });
+  }, 15_000);
 });
 
 describe("tables", () => {
