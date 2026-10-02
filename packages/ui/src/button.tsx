@@ -16,8 +16,8 @@ const BASE =
 const VARIANTS: Record<ButtonVariant, string> = {
   primary:
     "border-accent bg-accent font-semibold text-on-accent hover:border-accent-hover hover:bg-accent-hover disabled:hover:bg-accent",
-  secondary: "border-transparent bg-transparent text-text hover:bg-hover",
-  outline: "border-border bg-surface text-text hover:bg-hover",
+  secondary: "border-control-border bg-control text-text hover:bg-control-hover",
+  outline: "border-control-border bg-surface text-text hover:bg-control-hover",
   danger: "border-transparent bg-transparent text-danger hover:bg-danger-soft",
   dangerPrimary: "border-danger bg-danger font-semibold text-on-accent hover:opacity-90",
 };
@@ -106,8 +106,9 @@ export function ButtonGroup({ label, children }: { label: string; children: Reac
 export type IconButtonVariant = "ghost" | "outline" | "primary";
 
 const ICON_VARIANTS: Record<IconButtonVariant, string> = {
-  ghost: "border-transparent bg-transparent text-text-muted hover:bg-hover hover:text-text",
-  outline: "border-border bg-surface text-text hover:bg-hover",
+  ghost:
+    "border-transparent bg-transparent text-text-muted hover:border-control-border hover:bg-control hover:text-text focus-visible:border-control-border",
+  outline: "border-control-border bg-surface text-text hover:bg-control-hover",
   primary: "border-accent bg-accent text-on-accent hover:bg-accent-hover",
 };
 

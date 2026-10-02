@@ -1,6 +1,6 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Plus } from "lucide-react";
+import { MoreHorizontal, Plus } from "lucide-react";
 import { describe, expect, it, vi } from "vitest";
 import { Button, ButtonGroup, IconButton } from "./button.js";
 import { renderUi } from "./testing/render.js";
@@ -15,8 +15,20 @@ describe("Button", () => {
       </>,
     );
     expect(screen.getByRole("button", { name: "Save" }).className).toContain("bg-accent");
-    expect(screen.getByRole("button", { name: "Cancel" }).className).toContain("bg-transparent");
-    expect(screen.getByRole("button", { name: "Copy link" }).className).toContain("border-border");
+    for (const name of ["Cancel", "Copy link"]) {
+      const className = screen.getByRole("button", { name }).className;
+      expect(className, name).not.toContain("bg-accent");
+      expect(className, name).toContain("border-control-border");
+    }
+    expect(screen.getByRole("button", { name: "Cancel" }).className).toContain("bg-control");
+  });
+
+  it("gives icon buttons a visible boundary on hover and focus", () => {
+    renderUi(<IconButton label="More" icon={MoreHorizontal} />);
+    const className = screen.getByRole("button", { name: "More" }).className;
+    expect(className).toContain("hover:border-control-border");
+    expect(className).toContain("focus-visible:border-control-border");
+    expect(className).toContain("text-text-muted");
   });
 
   it("is a non-submitting button unless asked otherwise", () => {

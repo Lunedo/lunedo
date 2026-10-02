@@ -124,16 +124,51 @@ describe("design tokens", () => {
     }
   });
 
+  it("give secondary controls a visible boundary and readable text in every set", () => {
+    for (const set of colorSets) {
+      const colors = tokens.color[set];
+      for (const background of [colors.control, colors.controlHover]) {
+        expect(contrast(colors.controlBorder, background), set).toBeGreaterThanOrEqual(3);
+        expect(contrast(colors.text, background), set).toBeGreaterThanOrEqual(4.5);
+      }
+      for (const surface of [colors.surface, colors.bg, colors.sidebar]) {
+        expect(contrast(colors.controlBorder, surface), set).toBeGreaterThanOrEqual(3);
+        expect(contrast(colors.textMuted, surface), `${set} icon`).toBeGreaterThanOrEqual(3);
+      }
+    }
+  });
+
+  it("mark the selected item with a soft accent that is as visible in dark mode as in light mode", () => {
+    const chroma = (hex: string) => Math.hypot(...linearToOklab(toLinear(hex)).slice(1));
+    expect(chroma(tokens.color.dark.selected)).toBeGreaterThanOrEqual(
+      chroma(tokens.color.light.selected) * 1.5,
+    );
+    for (const key of accentKeys) {
+      const light = mixOklab(
+        tokens.color.palette.light[key],
+        tokens.color.light.bg,
+        tokens.accentShare.light.selected,
+      );
+      const dark = mixOklab(
+        tokens.color.palette.dark[key],
+        tokens.color.dark.bg,
+        tokens.accentShare.dark.selected,
+      );
+      expect(chroma(dark), key).toBeGreaterThanOrEqual(chroma(light));
+    }
+  });
+
   it("keep derived accent colors readable for every palette color", () => {
     for (const key of accentKeys) {
       for (const mode of ["light", "dark"] as const) {
         const accent = tokens.color.palette[mode][key];
         const colors = tokens.color[mode];
-        const selected = mixOklab(accent, colors.bg, 0.14);
+        const share = tokens.accentShare[mode];
+        const selected = mixOklab(accent, colors.bg, share.selected);
         const selectedText = mixOklab(accent, colors.text, 0.82);
         expect(contrast(selectedText, selected), `${key} ${mode} selected`).toBeGreaterThanOrEqual(4.5);
         expect(contrast(colors.onAccent, accent), `${key} ${mode} on accent`).toBeGreaterThanOrEqual(4.5);
-        const soft = mixOklab(accent, colors.bg, 0.09);
+        const soft = mixOklab(accent, colors.bg, share.soft);
         expect(contrast(accent, soft), `${key} ${mode} icon on soft`).toBeGreaterThanOrEqual(3);
       }
     }

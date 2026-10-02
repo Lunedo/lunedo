@@ -116,16 +116,27 @@ function themeDeclarations(tokens: DesignTokens): Declarations {
   ];
 }
 
+function percent(share: number): string {
+  return `${Math.round(share * 100)}%`;
+}
+
 export function accentDeclarations(tokens: DesignTokens, key: PaletteKey, mode: ColorMode): Declarations {
   const color = tokens.color.palette[mode][key];
   const variable = (name: string) => `var(--${PREFIX}-color-${name})`;
   const hover = `color-mix(in oklab, ${color} 82%, ${variable("text")})`;
+  const share = tokens.accentShare[mode];
   return [
     [`--${PREFIX}-color-accent`, color],
     [`--${PREFIX}-color-accent-hover`, hover],
     [`--${PREFIX}-color-on-accent`, tokens.color[mode].onAccent],
-    [`--${PREFIX}-color-accent-soft`, `color-mix(in oklab, ${color} 9%, ${variable("bg")})`],
-    [`--${PREFIX}-color-selected`, `color-mix(in oklab, ${color} 14%, ${variable("bg")})`],
+    [
+      `--${PREFIX}-color-accent-soft`,
+      `color-mix(in oklab, ${color} ${percent(share.soft)}, ${variable("bg")})`,
+    ],
+    [
+      `--${PREFIX}-color-selected`,
+      `color-mix(in oklab, ${color} ${percent(share.selected)}, ${variable("bg")})`,
+    ],
     [`--${PREFIX}-color-selected-text`, hover],
   ];
 }
