@@ -1,0 +1,67 @@
+.brand-sign-in {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-style: solid;
+  border-width: 1px;
+  white-space: nowrap;
+}
+
+.brand-sign-in:focus-visible {
+  outline: var(--ph-focus-width) solid var(--ph-color-accent);
+  outline-offset: var(--ph-focus-offset);
+}
+
+.brand-sign-in:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.brand-sign-in-microsoft {
+  height: 2.5625rem;
+  gap: 0.75rem;
+  padding: 0 0.75rem;
+  border-color: #8c8c8c;
+  background-color: #ffffff;
+  color: #5e5e5e;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.brand-sign-in-microsoft img {
+  width: 1.3125rem;
+  height: 1.3125rem;
+}
+
+:root[data-theme="dark"] .brand-sign-in-microsoft {
+  border-color: #2f2f2f;
+  background-color: #2f2f2f;
+  color: #ffffff;
+}
+
+.brand-sign-in-google {
+  height: 2.5rem;
+  gap: 0.625rem;
+  padding: 0 0.75rem;
+  border-radius: 0.25rem;
+  border-color: #747775;
+  background-color: #ffffff;
+  color: #1f1f1f;
+  font-family: Roboto, system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.brand-sign-in-google img {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+:root[data-theme="dark"] .brand-sign-in-google {
+  border-color: #8e918f;
+  background-color: #131314;
+  color: #e3e3e3;
+}

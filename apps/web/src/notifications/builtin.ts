@@ -42,4 +42,13 @@ notificationTypes.register(
   },
   { id: "breakGlass.started", icon: ShieldAlert, link: (item) => inOrganization(item, "/audit-log") },
   { id: "signIn.newBrowser", icon: KeyRound, link: () => ({ to: "/settings/security" }) },
+  { id: "auth.emergencySignIn", icon: ShieldAlert, link: () => ({ to: "/settings/instance/audit-log" }) },
+  {
+    id: "identityProvider.credentialExpiring",
+    icon: KeyRound,
+    link: (item) => ({
+      to: "/settings/instance/sign-in-providers/$providerId",
+      params: { providerId: (item.params as { providerId: string }).providerId },
+    }),
+  },
 );

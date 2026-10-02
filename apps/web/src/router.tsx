@@ -18,6 +18,17 @@ export interface RouterContext {
 
 const redirectSearch = z.object({ redirect: z.string().optional() });
 
+const wizardSearch = z.object({
+  providerId: z.uuid().optional(),
+  step: z.coerce.number().int().min(0).max(5).optional(),
+  providerTest: z.string().max(100).optional(),
+});
+
+const providerSearch = z.object({
+  tab: z.string().max(50).optional(),
+  providerTest: z.string().max(100).optional(),
+});
+
 const rootRoute = createRootRouteWithContext<RouterContext>()({
   component: RootLayout,
   notFoundComponent: NotFoundScreen,
@@ -49,7 +60,10 @@ const publicRoute = createRoute({
 const signInRoute = createRoute({
   getParentRoute: () => publicRoute,
   path: "/sign-in",
-  validateSearch: redirectSearch.extend({ reason: z.enum(["sessionEnded", "signedOut"]).optional() }),
+  validateSearch: redirectSearch.extend({
+    reason: z.enum(["sessionEnded", "signedOut"]).optional(),
+    error: z.string().max(100).optional(),
+  }),
   beforeLoad: async ({ context, search }) => {
     const session = await context.queryClient.fetchQuery(sessionQuery);
     if (session?.sessionKind === "full") throw redirect({ href: safeRedirect(search.redirect) });
@@ -64,6 +78,25 @@ const verifyRoute = createRoute({
     factors: z.array(z.enum(["totp", "passkey", "recoveryCode"])).catch(["totp", "recoveryCode"]),
   }),
   component: lazyRouteComponent(() => import("./screens/auth/second-factor-screen.js"), "SecondFactorScreen"),
+});
+
+const linkAccountRoute = createRoute({
+  getParentRoute: () => publicRoute,
+  path: "/sign-in/link",
+  component: lazyRouteComponent(() => import("./screens/auth/link-account-screen.js"), "LinkAccountScreen"),
+});
+
+const signInRefusedRoute = createRoute({
+  getParentRoute: () => publicRoute,
+  path: "/sign-in/refused",
+  validateSearch: z.object({
+    reference: z.string().max(100).optional(),
+    reason: z.string().max(100).optional(),
+  }),
+  component: lazyRouteComponent(
+    () => import("./screens/auth/sign-in-refused-screen.js"),
+    "SignInRefusedScreen",
+  ),
 });
 
 const resetPasswordRoute = createRoute({
@@ -311,6 +344,29 @@ const instanceSecurityRoute = instanceScreen(
   () => import("./screens/instance/security-screen.js"),
   "InstanceSecurityScreen",
 );
+const instanceProvidersRoute = instanceScreen(
+  "/sign-in-providers",
+  () => import("./screens/identity/providers-screen.js"),
+  "InstanceProvidersScreen",
+);
+const instanceNewProviderRoute = createRoute({
+  getParentRoute: () => instanceRoute,
+  path: "/sign-in-providers/new",
+  validateSearch: wizardSearch,
+  component: lazyRouteComponent(
+    () => import("./screens/identity/provider-wizard-screen.js"),
+    "InstanceProviderWizardScreen",
+  ),
+});
+const instanceProviderRoute = createRoute({
+  getParentRoute: () => instanceRoute,
+  path: "/sign-in-providers/$providerId",
+  validateSearch: providerSearch,
+  component: lazyRouteComponent(
+    () => import("./screens/identity/provider-screen.js"),
+    "InstanceProviderScreen",
+  ),
+});
 const instanceMailRoute = instanceScreen(
   "/mail",
   () => import("./screens/instance/mail-screen.js"),
@@ -348,6 +404,8 @@ const routeTree = rootRoute.addChildren([
   publicRoute.addChildren([
     signInRoute,
     verifyRoute,
+    linkAccountRoute,
+    signInRefusedRoute,
     resetPasswordRoute,
     confirmEmailRoute,
     acceptInvitationRoute,
@@ -384,6 +442,9 @@ const routeTree = rootRoute.addChildren([
         instanceAccountsRoute,
         instanceRolesRoute,
         instanceSecurityRoute,
+        instanceProvidersRoute,
+        instanceNewProviderRoute,
+        instanceProviderRoute,
         instanceMailRoute,
         breakGlassRoute,
         instanceNotificationsRoute,

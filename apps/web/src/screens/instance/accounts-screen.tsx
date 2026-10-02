@@ -21,6 +21,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { instanceKeys } from "../../api/instance-queries.js";
 import { request } from "../../api/request.js";
+import { AccountIdentities } from "../../components/linked-identities.js";
 import { useServerTable } from "../../components/table-state.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
@@ -264,6 +265,9 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
                   {t("instance.accounts.recoveryCodeCount", { count: detail.data.twoFactor.recoveryCodes })}
                 </li>
               </ul>
+            </PanelSection>
+            <PanelSection title={t("identities.title")}>
+              <AccountIdentities accountId={account.id} manage={manage} />
             </PanelSection>
             <PanelSection title={t("instance.accounts.memberships")}>
               {detail.data.memberships.length === 0 ? (

@@ -56,6 +56,16 @@ function api(
       },
     }),
     "GET /api/v1/auth/session": () => (signedIn ? { body: SESSION } : problem(401, "notSignedIn")),
+    "GET /api/v1/auth/sign-in-options": () => ({
+      body: {
+        emailStep: true,
+        directProvider: null,
+        lastProvider: null,
+        passwordSignIn: true,
+        passkeys: true,
+      },
+    }),
+    "POST /api/v1/auth/sign-in/discover": () => ({ body: { step: "password" } }),
     "POST /api/v1/auth/sign-in": (request) =>
       (request.body as { password: string }).password === "correct horse battery"
         ? { body: { status: "secondFactorRequired", factors: ["totp", "recoveryCode"] } }
@@ -114,8 +124,9 @@ describe("the web client", () => {
     expect(await screen.findByRole("heading", { name: "Sign in to Platform Team" })).toBeTruthy();
     expect(new URL(window.location.href).searchParams.get("redirect")).toBe("/settings/security");
 
-    await userEvent.type(screen.getByLabelText("E-mail"), "olivia@example.org");
-    await userEvent.type(screen.getByLabelText("Password"), "wrong");
+    await userEvent.type(await screen.findByLabelText("Work e-mail address"), "olivia@example.org");
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await userEvent.type(await screen.findByLabelText("Password"), "wrong");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
     expect(await screen.findByText("The e-mail address or the password is not correct.")).toBeTruthy();
 

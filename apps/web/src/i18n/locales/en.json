@@ -1,4 +1,240 @@
 {
+  "identityProviders": {
+    "title": "Sign-in",
+    "description": "How people sign in to this instance. Organizations follow from group mapping after sign-in.",
+    "providers": "Identity providers",
+    "details": "Provider",
+    "add": "Add provider",
+    "search": "Search providers",
+    "filterType": "Filter by type",
+    "allTypes": "All types",
+    "noMatches": "No providers match",
+    "open": "Open {name}",
+    "openDetails": "Open details",
+    "moreFor": "More for {name}",
+    "remove": "Remove provider",
+    "removeSection": "Remove",
+    "removeTitle": "Remove {name}?",
+    "removeDescription": "People can no longer sign in through this provider. Their accounts, content and linked identities stay, and you can add the provider again later.",
+    "emptyTitle": "No identity providers yet",
+    "emptyDescription": "Add Microsoft Entra ID, Google Workspace or another OIDC provider, so people sign in with their work account.",
+    "domainHint": "The sign-in page chooses the provider by the domain of the e-mail address people enter.",
+    "noDomains": "No domains",
+    "noPermission": "Your roles do not allow you to change sign-in providers.",
+    "otherMethods": "Other sign-in methods",
+    "columns": {
+      "provider": "Provider",
+      "type": "Type",
+      "domains": "E-mail domains",
+      "credential": "Credential"
+    },
+    "presets": {
+      "entraId": "Microsoft Entra ID",
+      "google": "Google Workspace",
+      "generic": "Other OIDC provider"
+    },
+    "credentialStatus": {
+      "none": "No credential",
+      "expired": "Credential expired",
+      "expiring": "Expires {date}",
+      "validUntil": "Valid until {date}",
+      "noExpiry": "No expiry date"
+    },
+    "warnings": {
+      "expiring": "The credential of {name} expires soon: {status}.",
+      "expiringAction": "Create a new credential at the provider and add it here before then, or sign-in through this provider stops working.",
+      "stopped": "Sign-in through {name} does not work: {status}.",
+      "stoppedAction": "Add a valid credential from the provider, then test the sign-in.",
+      "renew": "Renew credential"
+    },
+    "tabs": {
+      "label": "Provider sections",
+      "overview": "Overview",
+      "settings": "Settings"
+    },
+    "overview": {
+      "connection": "Connection",
+      "credentialStatus": "Credential"
+    },
+    "settings": {
+      "signIn": "Sign-in"
+    },
+    "redirectUri": "Redirect URI",
+    "redirectUriHint": "Enter this address in the app registration of your provider.",
+    "fields": {
+      "name": "Name on the sign-in page",
+      "nameHint": "For example Microsoft or the name of your company.",
+      "clientId": "Client ID",
+      "tenantId": "Directory (tenant) ID",
+      "tenantIdHint": "Found in the overview of your Entra ID tenant.",
+      "tenantIdInvalid": "Enter the tenant ID as shown in Entra ID, for example 3f2a9c1e-7b4d-4e8a-9c21-5d6f0a8b2e17.",
+      "issuer": "Issuer URL",
+      "issuerHint": "The address of the provider. Pagehall reads its configuration from /.well-known/openid-configuration.",
+      "googleDomains": "Enter at least one Google Workspace domain.",
+      "algorithm": "Token signature",
+      "algorithmHint": "The only algorithm Pagehall accepts for ID tokens from this provider."
+    },
+    "attributes": {
+      "description": "Pagehall recognizes an account by the provider's identifier, never by its e-mail address. The other attributes fill the profile and update at every sign-in.",
+      "mapping": "User attributes",
+      "identifier": "Identifier",
+      "identifierHint": "Never changes, also when names or addresses change.",
+      "fixed": "Fixed for this type of provider",
+      "identifiers": {
+        "entraId": "Tenant and object ID",
+        "google": "Google user ID (sub)",
+        "generic": "Subject (sub)"
+      },
+      "email": "E-mail address",
+      "emailHint": "Used for notifications, invitations and the home organization by domain.",
+      "emailSources": {
+        "email": "email claim",
+        "userPrincipalName": "User principal name",
+        "graphMail": "mail attribute (Graph)"
+      },
+      "signInName": "Sign-in name",
+      "signInNameHint": "Shown next to the e-mail address, so people recognize their work account.",
+      "signInNameSources": {
+        "preferredUsername": "preferred_username claim",
+        "userPrincipalName": "User principal name",
+        "email": "E-mail address"
+      },
+      "googleFixed": "Google Workspace sends the e-mail address, name and user ID; there is nothing to choose.",
+      "claims": {
+        "email": "Claim for the e-mail address",
+        "signInName": "Claim for the sign-in name",
+        "displayName": "Claim for the display name",
+        "groups": "Claim for groups",
+        "groupsHint": "Leave empty if the provider does not send groups."
+      }
+    },
+    "accounts": {
+      "newPeople": "New people",
+      "existing": "Existing accounts",
+      "create": "Create accounts at first sign-in",
+      "createHint": "Without this, only invited people and existing accounts can sign in.",
+      "domains": "E-mail domains",
+      "domainsHint": "The sign-in page sends people with these domains to this provider. Accounts are created only for them. A domain belongs to one provider only.",
+      "domainsHintGoogle": "Your Google Workspace domains. The sign-in page sends people with these domains to Google.",
+      "domainsInvalid": "Enter domains like example.org, separated by commas.",
+      "requireGroup": "Require group membership",
+      "requireGroupHint": "Usually not needed: restrict access in the provider instead. Use this only when the provider cannot restrict access itself.",
+      "groups": "Required groups",
+      "groupsHint": "IDs of the groups at the provider, separated by commas. Membership in one of them is enough.",
+      "link": "Link by e-mail address",
+      "linkHint": "When an account with the same verified address exists, the person confirms once with its password and second factor. Pagehall never links accounts automatically.",
+      "linkFixed": "Fixed for security",
+      "confirmationRequired": "Confirmation required"
+    },
+    "credentials": {
+      "title": "Credentials",
+      "kind": "Credential",
+      "kinds": {
+        "clientSecret": "Client secret",
+        "certificate": "Certificate"
+      },
+      "secret": "Client secret",
+      "expiresOn": "Expires on",
+      "expiresOnHint": "Pagehall reminds you 30 and 7 days before.",
+      "validity": "Valid for",
+      "years": "{count, plural, one {# year} other {# years}}",
+      "certificateHint": "Pagehall creates a key pair. Upload the certificate to the app registration; the private key never leaves Pagehall.",
+      "certificateCreated": "Certificate created",
+      "certificateUpload": "Download the certificate and upload it to the app registration at your provider.",
+      "download": "Download certificate",
+      "details": "Created {created} · expires {expires}",
+      "never": "never",
+      "newest": "In use",
+      "add": "Add credential",
+      "addTitle": "New credential for {name}",
+      "addDescription": "The current credential keeps working until you remove it, so you can switch without interruption.",
+      "save": "Add credential",
+      "renewHint": "During a renewal, old and new credential both work. Remove the old one once the new one is in place.",
+      "noneTitle": "No credential",
+      "noneDescription": "Sign-in through this provider does not work until you add a client secret or a certificate.",
+      "removeTitle": "Remove this credential?",
+      "removeDescription": "Pagehall stops using it at once. Make sure a newer credential works first."
+    },
+    "logo": {
+      "label": "Logo",
+      "hint": "Shown on the sign-in button. PNG, JPEG or WebP, at most 256 KiB. Microsoft and Google use their own buttons.",
+      "alt": "Logo of {name}",
+      "none": "No logo",
+      "upload": "Upload logo",
+      "replace": "Replace logo",
+      "removeTitle": "Remove the logo?",
+      "removeDescription": "The sign-in button shows a key icon instead."
+    },
+    "test": {
+      "title": "Test the connection",
+      "description": "Sign in once with a test account. Nothing is saved, and no account is created.",
+      "start": "Start test sign-in",
+      "worked": "Sign-in worked",
+      "summary": "Received {claims, plural, one {# claim} other {# claims}} and {groups, plural, one {# group} other {# groups}}.",
+      "failed": "The test sign-in failed",
+      "failedAction": "Check the client ID, the credential and the redirect URI at your provider, then test again.",
+      "unverifiedTitle": "The e-mail address is not in the provider's domains",
+      "unverified": "{email} is not in one of the configured domains. Pagehall does not link or create accounts for it.",
+      "received": "What Pagehall received",
+      "subject": "Identifier",
+      "email": "E-mail address",
+      "signInName": "Sign-in name",
+      "displayName": "Display name",
+      "groups": "Groups",
+      "noGroups": "No groups",
+      "claims": "Claims"
+    },
+    "wizard": {
+      "title": "Add sign-in provider",
+      "new": "New",
+      "close": "Close",
+      "steps": "Steps",
+      "stepNames": {
+        "type": "Type",
+        "connection": "Connection",
+        "attributes": "User attributes",
+        "accounts": "Accounts",
+        "test": "Test"
+      },
+      "typeTitle": "Which provider do you use?",
+      "typeHints": {
+        "entraId": "OIDC with groups through Microsoft Graph.",
+        "google": "OIDC with groups through the Directory API.",
+        "generic": "Keycloak, Authentik, Okta, Zitadel and others."
+      },
+      "typeMore": "SAML and LDAP follow later.",
+      "connectionTitle": "Connect {type}",
+      "connectionHints": {
+        "entraId": "In the Entra admin center, create an app registration. After saving, Pagehall shows the redirect URI to enter there. Under Enterprise applications, turn on Assignment required and assign the groups that may use Pagehall.",
+        "google": "In the Google Cloud console, create an OAuth client of type Web application. After saving, Pagehall shows the redirect URI to enter there.",
+        "generic": "Create a confidential OIDC client at your provider. After saving, Pagehall shows the redirect URI to enter there."
+      },
+      "saveConnection": "Save and continue",
+      "saved": "{name} is saved",
+      "redirectHint": "Enter this redirect URI in the app registration at your provider, then continue.",
+      "finish": "Finish"
+    }
+  },
+  "identities": {
+    "title": "Linked sign-ins",
+    "list": "Linked sign-ins",
+    "signInName": "Signs in as {name}",
+    "lastSignIn": "last sign-in {time}",
+    "neverUsed": "not used yet",
+    "unlink": "Unlink",
+    "unlinkTitle": "Unlink {provider}?",
+    "unlinkDescription": "The person can no longer sign in with this identity. Their account, content and memberships stay.",
+    "none": "No sign-ins through providers are linked.",
+    "noneOwn": "You do not sign in through an identity provider.",
+    "ownHint": "Your administrator links and unlinks sign-ins through providers.",
+    "link": "Link identity",
+    "linkTitle": "Link an identity",
+    "linkDescription": "Connect a sign-in at a provider to this account, for example after a change of the e-mail address.",
+    "provider": "Provider",
+    "chooseProvider": "Choose a provider",
+    "subject": "Identifier at the provider",
+    "subjectHint": "The stable ID of the person at the provider, for example the object ID in Entra ID. A test sign-in shows it."
+  },
   "brand": {
     "name": "Pagehall",
     "organizationLogo": "Logo of {name}"
@@ -8,6 +244,8 @@
     "de": "Deutsch"
   },
   "common": {
+    "continue": "Continue",
+    "back": "Back",
     "add": "Add",
     "cancel": "Cancel",
     "copy": "Copy",
@@ -89,6 +327,7 @@
     "apiReference": "API reference"
   },
   "navigation": {
+    "signInProviders": "Sign-in",
     "settings": "Settings",
     "settingsSection": "Settings section",
     "myAccount": "My account",
@@ -172,6 +411,11 @@
     "durationRange": "Choose a duration from {minimum} to {maximum}."
   },
   "problems": {
+    "lastSignInMethod": "This is the account's last way to sign in. Link another identity or set a password before you unlink it.",
+    "lastCredential": "This is the provider's only credential. Add a new one before you remove it.",
+    "identityInUse": "This identity is already linked to another account. Unlink it there first.",
+    "passwordSignInDisabled": "Password sign-in is turned off for this instance. Sign in through your provider or with a passkey.",
+    "invalidProviderConfiguration": "Pagehall could not use this provider configuration. Check the issuer, tenant or client ID against your provider's settings and save again.",
     "resetOwnSecondFactor": "You cannot reset your own second factor here, because that would bypass it. Sign in with a recovery code or ask another administrator.",
     "endOwnSessions": "Your own sessions are not ended from the account list. End them on your Security page.",
     "roleNeedsAccountOrGroup": "Roles can only go to individual people and groups, not to everyone at once. Choose people or groups instead.",
@@ -260,6 +504,98 @@
     "allInstanceUsers": "Every internal user of the instance"
   },
   "auth": {
+    "refused": {
+      "title": "Sign-in refused",
+      "whatToDo": "What you can do:",
+      "anotherAccount": "Sign in with another account",
+      "reference": "Reference for your administrator:",
+      "reasons": {
+        "accountCreationDisabled": {
+          "title": "No account exists for you in {name}",
+          "cause": "Your provider confirmed who you are, but Pagehall only creates accounts for invited people with this provider.",
+          "action": "ask an administrator to invite you, then sign in again."
+        },
+        "domainNotAllowed": {
+          "title": "Your address is not accepted by this provider",
+          "cause": "Pagehall only accepts addresses in the e-mail domains configured for this provider.",
+          "action": "sign in with your work account instead, or ask an administrator to invite you."
+        },
+        "emailNotVerified": {
+          "title": "Your e-mail address could not be verified",
+          "cause": "Your provider sent an address in a domain that is not configured for it, so Pagehall cannot trust it to match an account.",
+          "action": "ask an administrator to link your account or to add your domain to the provider."
+        },
+        "groupRequired": {
+          "title": "You are not in a group that may use {name}",
+          "cause": "Pagehall only creates accounts for members of certain groups in your provider.",
+          "action": "ask your administrator to add you to the right group, then sign in again."
+        },
+        "accountInactive": {
+          "title": "Your account is deactivated",
+          "cause": "The Pagehall account linked to your sign-in is deactivated.",
+          "action": "ask an administrator to reactivate it."
+        },
+        "linkDeclined": {
+          "title": "The accounts were not linked",
+          "cause": "You said that the existing account with your address is not yours.",
+          "action": "send the reference below to an administrator, who can check the address."
+        },
+        "linkUnavailable": {
+          "title": "Your account cannot be linked by you",
+          "cause": "An account with your address exists but has no password, so you cannot confirm that it is yours.",
+          "action": "ask an administrator to link your sign-in to the account."
+        },
+        "invalidResponse": {
+          "title": "Your provider sent an answer Pagehall could not accept",
+          "cause": "The response did not pass the security checks, for example because it expired or was meant for another application.",
+          "action": "try again; if it fails again, send the reference below to your administrator."
+        }
+      }
+    },
+    "link": {
+      "loading": "Loading the account to link",
+      "unavailableTitle": "This link has expired",
+      "backToSignIn": "Back to sign in",
+      "title": "Link your {provider} account",
+      "description": "A Pagehall account with the e-mail address {email} already exists. Confirm that it is yours, so both sign-ins lead to the same account.",
+      "signedInAs": "Signed in as {email}",
+      "verified": "Verified",
+      "password": "Password of {name}",
+      "secondFactor": "Second factor",
+      "factors": {
+        "totp": "Authenticator app",
+        "passkey": "Passkey",
+        "recoveryCode": "Recovery code"
+      },
+      "passkeyHint": "Your browser asks for the passkey when you confirm.",
+      "afterwards": "From then on you can sign in with {provider}.",
+      "confirm": "Confirm and link",
+      "notMine": "This is not my account",
+      "notMineTitle": "This is not my account",
+      "notMineDescription": "Then the e-mail address of your {provider} account matches someone else's Pagehall account. Do not link them.",
+      "notMineReference": "Send this reference to an administrator, who can check the address:"
+    },
+    "emergency": {
+      "link": "Emergency sign-in for the instance owner",
+      "title": "Emergency sign-in",
+      "description": "Only for the instance owner, when sign-in through providers does not work. Every use is recorded in the audit log, and all instance administrators are notified at once.",
+      "submit": "Continue"
+    },
+    "providers": {
+      "continueWith": "Continue with {name}",
+      "signInWithMicrosoft": "Sign in with Microsoft",
+      "signInWithGoogle": "Sign in with Google",
+      "failedTitle": "Sign-in through your provider did not complete",
+      "failed": "Your provider did not confirm the sign-in. Try again; if it fails again, ask your administrator to check the provider in Pagehall."
+    },
+    "discover": {
+      "or": "or",
+      "change": "Change",
+      "domainUses": "{domain} signs in with {name}",
+      "lastUsed": "Last time you used",
+      "noneTitle": "No sign-in method is set up for this address",
+      "noneDescription": "Check the address for typos. If it is right, ask your administrator to invite you or to set up sign-in for your domain. If you have a passkey, you can use it below."
+    },
     "signInTitle": "Sign in to {name}",
     "signIn": "Sign in",
     "signInFailed": "Sign-in failed",
@@ -323,10 +659,13 @@
     "registerLink": "No account yet? Create one"
   },
   "reauthentication": {
+    "withProvider": "Continue with {name}",
+    "providerHint": "You sign in again at your provider and come back to this page. Then repeat the change.",
     "title": "Confirm your identity",
     "description": "This change needs a recent confirmation that it's you.",
     "method": "Method",
     "methods": {
+      "provider": "Provider",
       "password": "Password",
       "totp": "Authenticator app",
       "passkey": "Passkey"
@@ -575,6 +914,10 @@
       }
     },
     "keys": {
+      "auth_passwordSignIn": {
+        "label": "Password sign-in",
+        "description": "When off, people sign in only through a provider or a passkey. The emergency sign-in of the instance owner always works."
+      },
       "appearance_colorMode": {
         "label": "Color mode",
         "description": "Light, dark or following the system."
@@ -884,6 +1227,8 @@
       "none": "none"
     },
     "events": {
+      "identityProviderCredentialExpiring": "Provider credential expires soon",
+      "authEmergencySignIn": "Emergency sign-in used",
       "apiTokenExpiring": "API token expires soon",
       "guestExpiring": "Guest access ends soon",
       "guestInactive": "Guest is inactive",
@@ -894,6 +1239,12 @@
       "apiTokenUnused": "API token unused"
     },
     "types": {
+      "identityProvider": {
+        "credentialExpiring": "The credential of {providerName} expires on {expiresAt}. Add a new one before then, or sign-in through it stops working."
+      },
+      "auth": {
+        "emergencySignIn": "{accountName} used the emergency sign-in with password: {browser} on {operatingSystem}, {clientIp}."
+      },
       "apiToken": {
         "expiring": "The API token {tokenName} expires on {expiresAt}.",
         "unused": "The API token {tokenName} has not been used for {days, plural, one {# day} other {# days}}. It keeps working; revoke it if nobody needs it anymore."
@@ -1727,6 +2078,20 @@
     }
   },
   "failures": {
+    "unlinkIdentity": "The identity could not be unlinked",
+    "linkIdentity": "The identity could not be linked",
+    "loadIdentities": "The linked identities could not be loaded",
+    "loadTestResult": "The result of the test sign-in could not be loaded",
+    "startTest": "The test sign-in could not be started",
+    "removeCredential": "The credential could not be removed",
+    "addCredential": "The credential could not be added",
+    "removeProvider": "The provider could not be removed",
+    "createProvider": "The provider could not be saved",
+    "loadProvider": "The identity provider could not be loaded",
+    "loadProviders": "The identity providers could not be loaded",
+    "linkAccount": "The accounts could not be linked",
+    "loadLink": "The account link could not be loaded",
+    "loadSignInOptions": "The sign-in options could not be loaded",
     "loadGroups": "The groups could not be loaded",
     "loadOrganizations": "The organizations could not be loaded",
     "loadAccounts": "The accounts could not be loaded",
