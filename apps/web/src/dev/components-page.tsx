@@ -9,11 +9,16 @@ import {
   type ButtonSize,
   type ButtonVariant,
   Checkbox,
+  ChoiceTable,
+  Combobox,
+  type ComboboxItem,
+  type ComboboxLoader,
   CommandPalette,
   ConfirmDialog,
   Dialog,
   Drawer,
   DurationInput,
+  DurationSelect,
   EmptyState,
   ErrorState,
   Field,
@@ -23,6 +28,7 @@ import {
   List,
   ListRow,
   Menu,
+  matchesQuery,
   Notice,
   type NoticeVariant,
   PageHeader,
@@ -36,6 +42,7 @@ import {
   SegmentedControl,
   Select,
   SettingRow,
+  SettingSelect,
   Sidebar,
   SidebarGroup,
   SidebarHeader,
@@ -47,8 +54,10 @@ import {
   Switch,
   Table,
   type TableSort,
+  TableToolbar,
   Tabs,
   Textarea,
+  TimeZoneCombobox,
   ToastProvider,
   Tooltip,
   TruncatedText,
@@ -111,6 +120,19 @@ const LABELS: Record<PageLanguage, UiLabels> = {
     minutes: "Minutes",
     hours: "Hours",
     days: "Days",
+    defaultMarker: "Default",
+    custom: "Custom…",
+    apply: "Apply",
+    cancel: "Cancel",
+    durationRange: "Choose a duration from {minimum} to {maximum}.",
+    noMatches: "No matches",
+    loadMore: "Load more",
+    removeItem: "Remove {item}",
+    search: "Search",
+    resetFilters: "Reset filters",
+    suggested: "Suggested",
+    allTimeZones: "All time zones",
+    browserTimeZone: "This browser",
   },
   de: {
     close: "Schließen",
@@ -142,6 +164,19 @@ const LABELS: Record<PageLanguage, UiLabels> = {
     minutes: "Minuten",
     hours: "Stunden",
     days: "Tage",
+    defaultMarker: "Standard",
+    custom: "Eigener Wert…",
+    apply: "Übernehmen",
+    cancel: "Abbrechen",
+    durationRange: "Wähle eine Dauer von {minimum} bis {maximum}.",
+    noMatches: "Keine Treffer",
+    loadMore: "Mehr laden",
+    removeItem: "{item} entfernen",
+    search: "Suchen",
+    resetFilters: "Filter zurücksetzen",
+    suggested: "Vorschläge",
+    allTimeZones: "Alle Zeitzonen",
+    browserTimeZone: "Dieser Browser",
   },
 };
 
@@ -533,12 +568,50 @@ function Data() {
   const members = useMembers();
   const [tab, setTab] = useState("all");
   const [sort, setSort] = useState<TableSort>({ key: "name", direction: "asc" });
-  const rows = [...members].sort((left, right) =>
-    sort.direction === "asc" ? left.name.localeCompare(right.name) : right.name.localeCompare(left.name),
-  );
+  const [query, setQuery] = useState("");
+  const [role, setRole] = useState("all");
+  const [opened, setOpened] = useState<string | null>(null);
+  const rows = [...members]
+    .filter((member) => role === "all" || member.role === role)
+    .filter((member) => `${member.name} ${member.email}`.toLowerCase().includes(query.toLowerCase()))
+    .sort((left, right) =>
+      sort.direction === "asc" ? left.name.localeCompare(right.name) : right.name.localeCompare(left.name),
+    );
   return (
     <Group title={t("Tabs, tables and lists", "Reiter, Tabellen und Listen")}>
       <div className="flex w-full flex-col gap-4">
+        <TableToolbar
+          search={{
+            value: query,
+            onChange: setQuery,
+            label: t("Search members", "Mitglieder durchsuchen"),
+          }}
+          filters={
+            <div className="w-field">
+              <Select
+                aria-label={t("Role", "Rolle")}
+                value={role}
+                onValueChange={setRole}
+                options={[
+                  { value: "all", label: t("All roles", "Alle Rollen") },
+                  ...[...new Set(members.map((member) => member.role))].map((value) => ({
+                    value,
+                    label: value,
+                  })),
+                ]}
+              />
+            </div>
+          }
+          filtersActive={query !== "" || role !== "all"}
+          onResetFilters={() => {
+            setQuery("");
+            setRole("all");
+          }}
+          actions={<Button icon={Copy}>{t("Export", "Exportieren")}</Button>}
+        />
+        {opened ? (
+          <p className="text-sm text-text-muted">{t(`Opened ${opened}`, `${opened} geöffnet`)}</p>
+        ) : null}
         <Tabs
           label={t("Member types", "Mitgliedsarten")}
           value={tab}
@@ -588,6 +661,8 @@ function Data() {
             ]}
             rows={rows}
             rowKey={(row) => row.id}
+            onRowClick={(row) => setOpened(row.name)}
+            rowLabel={(row) => t(`Open ${row.name}`, `${row.name} öffnen`)}
             sort={sort}
             onSortChange={setSort}
             pagination={{ hasPrevious: false, hasNext: true, onPrevious: () => {}, onNext: () => {} }}
@@ -606,6 +681,166 @@ function Data() {
           rows={[]}
           rowKey={() => ""}
           loading
+        />
+      </div>
+    </Group>
+  );
+}
+
+function RowMenu() {
+  const t = useText();
+  return (
+    <Menu
+      align="end"
+      trigger={<IconButton label={t("More options", "Weitere Optionen")} icon={MoreHorizontal} />}
+      items={[
+        { label: t("Reset to default", "Auf Standard zurücksetzen"), onSelect: () => {} },
+        { label: t("Lock for members", "Für Mitglieder sperren"), icon: Lock, onSelect: () => {} },
+      ]}
+    />
+  );
+}
+
+function SettingRows() {
+  const t = useText();
+  const language = useContext(LanguageContext);
+  const [timeFormat, setTimeFormat] = useState<string | null>(null);
+  const [session, setSession] = useState<number | null>(45 * 1440);
+  return (
+    <>
+      <SettingRow
+        label={t("Time format", "Zeitformat")}
+        description={t("How times are shown.", "Wie Uhrzeiten angezeigt werden.")}
+        meta={t("Inherited from the instance", "Von der Instanz übernommen")}
+        menu={<RowMenu />}
+        control={
+          <SettingSelect
+            aria-label={t("Time format", "Zeitformat")}
+            value={timeFormat ?? "24h"}
+            inheritedValue="24h"
+            inherited={timeFormat === null}
+            onValueChange={setTimeFormat}
+            onFollowDefault={() => setTimeFormat(null)}
+            options={[
+              { value: "24h", label: t("24-hour", "24 Stunden"), example: "14:30" },
+              { value: "12h", label: t("12-hour", "12 Stunden"), example: "2:30 PM" },
+            ]}
+          />
+        }
+      />
+      <SettingRow
+        label={t("Session length", "Sitzungsdauer")}
+        description={t(
+          "How long people stay signed in without activity.",
+          "Wie lange Personen ohne Aktivität angemeldet bleiben.",
+        )}
+        meta={t("Set for Platform Team", "Für Platform Team festgelegt")}
+        menu={<RowMenu />}
+        control={
+          <DurationSelect
+            aria-label={t("Session length", "Sitzungsdauer")}
+            value={session}
+            inheritedValue={14 * 1440}
+            choices={[1440, 7 * 1440, 14 * 1440, 30 * 1440]}
+            min={60}
+            max={365 * 1440}
+            locale={language}
+            onValueChange={setSession}
+            onFollowDefault={() => setSession(14 * 1440)}
+          />
+        }
+      />
+    </>
+  );
+}
+
+const PEOPLE: ComboboxItem[] = [
+  { value: "anna", label: "Anna Roth", description: "anna@freelance.example" },
+  { value: "jonas", label: "Jonas Weber", description: "jonas.weber@digital.example.org" },
+  { value: "lena", label: "Lena Hofer", description: "lena.hofer@example.org" },
+  { value: "tomas", label: "Tomas Kern", description: "tomas.kern@example.org" },
+];
+
+const loadPeople: ComboboxLoader = async (query) => ({
+  items: PEOPLE.filter((person) => matchesQuery(person, query)),
+  nextCursor: null,
+});
+
+function Choosing() {
+  const t = useText();
+  const [person, setPerson] = useState<string | null>("lena");
+  const [people, setPeople] = useState<string[]>(["anna", "jonas"]);
+  const [searched, setSearched] = useState<string[]>([]);
+  const [timeZone, setTimeZone] = useState<string | null>("Europe/Vienna");
+  const [members, setMembers] = useState("view");
+  const [content, setContent] = useState("manage");
+  const levels = (limited: boolean) => [
+    { value: "none", label: t("No access", "Kein Zugriff") },
+    { value: "view", label: t("View", "Ansehen") },
+    {
+      value: "manage",
+      label: t("Manage", "Verwalten"),
+      disabled: limited,
+      ...(limited
+        ? {
+            disabledReason: t(
+              "Nobody can grant more than they have.",
+              "Niemand kann mehr vergeben, als er selbst hat.",
+            ),
+          }
+        : {}),
+    },
+  ];
+  return (
+    <Group title={t("Choosing from many options", "Auswahl aus vielen Optionen")}>
+      <div className="grid w-full gap-4 sm:grid-cols-2">
+        <Field label={t("Person", "Person")}>
+          <Combobox items={PEOPLE} value={person} onValueChange={setPerson} />
+        </Field>
+        <Field label={t("People", "Personen")}>
+          <Combobox multiple items={PEOPLE} value={people} onValueChange={setPeople} />
+        </Field>
+        <Field label={t("Search on the server", "Suche auf dem Server")}>
+          <Combobox
+            multiple
+            load={loadPeople}
+            value={searched}
+            onValueChange={setSearched}
+            placeholder={t("Type a name", "Namen eingeben")}
+          />
+        </Field>
+        <Field label={t("Time zone", "Zeitzone")}>
+          <TimeZoneCombobox
+            value={timeZone}
+            onValueChange={setTimeZone}
+            browserTimeZone="Europe/Vienna"
+            inheritedTimeZone="UTC"
+          />
+        </Field>
+      </div>
+      <div className="w-full">
+        <ChoiceTable
+          caption={t("Access per area", "Zugriff je Bereich")}
+          labelHeader={t("Area", "Bereich")}
+          choiceHeader={t("Access", "Zugriff")}
+          rows={[
+            {
+              key: "members",
+              label: t("Members and groups", "Mitglieder und Gruppen"),
+              description: t("Invite people and manage groups.", "Personen einladen und Gruppen verwalten."),
+              value: members,
+              onValueChange: setMembers,
+              options: levels(true),
+            },
+            {
+              key: "content",
+              label: t("Spaces and pages", "Bereiche und Seiten"),
+              description: t("Create spaces and edit pages.", "Bereiche anlegen und Seiten bearbeiten."),
+              value: content,
+              onValueChange: setContent,
+              options: levels(false),
+            },
+          ]}
         />
       </div>
     </Group>
@@ -637,33 +872,11 @@ function Layout() {
           icon={Shield}
           actions={<Button size="sm">{t("Edit", "Bearbeiten")}</Button>}
         >
-          <SettingRow
-            label={t("Session length", "Sitzungsdauer")}
-            description={t(
-              "How long people stay signed in without activity.",
-              "Wie lange Personen ohne Aktivität angemeldet bleiben.",
-            )}
-            meta={t("Instance default: 12 hours", "Standard der Instanz: 12 Stunden")}
-            control={
-              <Select
-                aria-label={t("Session length", "Sitzungsdauer")}
-                value="inherited"
-                className="text-text-muted"
-                onValueChange={() => {}}
-                options={[
-                  {
-                    value: "inherited",
-                    label: t("Use default (12 hours)", "Standard verwenden (12 Stunden)"),
-                  },
-                  { value: "8", label: t("8 hours", "8 Stunden") },
-                  { value: "24", label: t("24 hours", "24 Stunden") },
-                ]}
-              />
-            }
-          />
+          <SettingRows />
           <SettingRow
             label={t("Require two-factor authentication", "Zwei-Faktor-Authentifizierung verlangen")}
             meta={t("Locked by the instance", "Von der Instanz gesperrt")}
+            menu={<RowMenu />}
             control={
               <Switch
                 checked
@@ -892,6 +1105,7 @@ function Page({ overlay }: { overlay: Overlay | null }) {
       <Forms />
       <Feedback />
       <Data />
+      <Choosing />
       <Layout />
       <Navigation />
       <Overlays initial={overlay} />
