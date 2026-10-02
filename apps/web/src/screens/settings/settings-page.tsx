@@ -1,4 +1,4 @@
-import { PageHeader } from "@pagehall/ui";
+import { classNames, PageHeader } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
@@ -20,6 +20,7 @@ export function SettingsPage({
   actions,
   organizationId,
   breadcrumbs,
+  width = "narrow",
   children,
 }: {
   title: string;
@@ -28,6 +29,7 @@ export function SettingsPage({
   actions?: ReactNode;
   organizationId?: string;
   breadcrumbs?: { label: string; href?: string }[];
+  width?: "narrow" | "wide";
   children: ReactNode;
 }) {
   useDocumentTitle(title);
@@ -37,7 +39,13 @@ export function SettingsPage({
   });
   const logoRef = organization.data?.logoRef;
   return (
-    <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 pt-6 pb-12 md:px-8">
+    <div
+      data-page-width={width}
+      className={classNames(
+        "flex w-full flex-col gap-6 px-4 pt-6 pb-12 md:px-8",
+        width === "narrow" && "mx-auto max-w-page",
+      )}
+    >
       <PageHeader
         title={title}
         icon={icon}

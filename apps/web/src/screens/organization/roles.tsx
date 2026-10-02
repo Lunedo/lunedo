@@ -1,19 +1,14 @@
 import { type Areas, areasOf, type RoleScope } from "@pagehall/shared";
-import { Button, Dialog, Field, Input, Notice, Select, useToast } from "@pagehall/ui";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button, Combobox, type ComboboxItem, Dialog, Field, Input, Notice, useToast } from "@pagehall/ui";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
-import {
-  groupMembersQuery,
-  groupsQuery,
-  membersQuery,
-  organizationKeys,
-  rolesQuery,
-} from "../../api/organization-queries.js";
+import { groupMembersQuery, organizationKeys, rolesQuery } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
+import { ACCOUNT_PREFIX, principalFromValue, principalLoader } from "../../components/pickers.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { translateKey } from "../../i18n/translate.js";
 
@@ -48,26 +43,33 @@ export function areasDescription(t: TFunction, scope: RoleScope, areas: Areas): 
     .join(", ");
 }
 
-export type Principal =
-  | { kind: "account"; id: string }
-  | { kind: "group"; id: string }
-  | { kind: "organizationMembers" }
-  | { kind: "instanceUsers" };
+export function useGainingPeople(principals: readonly ComboboxItem[]) {
+  const groupIds = principals
+    .map((item) => principalFromValue(item.value))
+    .filter((principal) => principal.kind === "group")
+    .map((principal) => principal.id);
+  const groupMembers = useQueries({ queries: groupIds.map((groupId) => groupMembersQuery(groupId)) });
+  const people = new Set<string>();
+  for (const item of principals)
+    if (principalFromValue(item.value).kind === "account") people.add(item.label);
+  for (const query of groupMembers) for (const member of query.data ?? []) people.add(member.name);
+  return [...people];
+}
 
-export function usePrincipalPeople(organizationId: string, principal: Principal | null) {
-  const members = useQuery({ ...membersQuery(organizationId), enabled: principal !== null });
-  const groupMembers = useQuery({
-    ...groupMembersQuery(principal?.kind === "group" ? principal.id : ""),
-    enabled: principal?.kind === "group",
-  });
-  if (!principal) return { people: [] as string[], everyone: undefined as string | undefined };
-  if (principal.kind === "account") {
-    const member = members.data?.find((entry) => entry.accountId === principal.id);
-    return { people: member ? [member.name] : [], everyone: undefined };
-  }
-  if (principal.kind === "group")
-    return { people: groupMembers.data?.map((entry) => entry.name) ?? [], everyone: undefined };
-  return { people: [] as string[], everyone: principal.kind };
+export function roleItems(t: TFunction, custom: readonly { id: string; name: string }[]): ComboboxItem[] {
+  return [
+    {
+      value: "builtIn:administrator",
+      label: t("roles.builtIn.administrator"),
+      group: t("roles.builtInGroup"),
+    },
+    { value: "builtIn:owner", label: t("roles.builtIn.owner"), group: t("roles.builtInGroup") },
+    ...custom.map((entry) => ({
+      value: `custom:${entry.id}`,
+      label: entry.name,
+      group: t("roles.customGroup"),
+    })),
+  ];
 }
 
 export function AssignRoleDialog({
@@ -87,24 +89,17 @@ export function AssignRoleDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const roles = useQuery({ ...rolesQuery(organizationId), enabled: open });
-  const groups = useQuery({ ...groupsQuery(organizationId), enabled: open && !fixedPrincipal });
-  const members = useQuery({ ...membersQuery(organizationId), enabled: open });
-  const [role, setRole] = useState("builtIn:administrator");
-  const [kind, setKind] = useState<Principal["kind"]>(fixedPrincipal ? "account" : "account");
-  const [target, setTarget] = useState(fixedPrincipal?.id ?? "");
+  const [role, setRole] = useState<string | null>("builtIn:administrator");
+  const [principals, setPrincipals] = useState<ComboboxItem[]>(
+    fixedPrincipal ? [{ value: `${ACCOUNT_PREFIX}${fixedPrincipal.id}`, label: fixedPrincipal.name }] : [],
+  );
   const [expiry, setExpiry] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
-  const principal: Principal | null =
-    kind === "organizationMembers" || kind === "instanceUsers"
-      ? { kind }
-      : target
-        ? { kind, id: target }
-        : null;
-  const impact = usePrincipalPeople(organizationId, open ? principal : null);
+  const loader = useMemo(() => principalLoader(organizationId, t), [organizationId, t]);
+  const people = useGainingPeople(open ? principals : []);
   const customRole = roles.data?.find((entry) => `custom:${entry.id}` === role);
-  const builtIn = role.startsWith("builtIn:") ? role.slice("builtIn:".length) : null;
+  const builtIn = role?.startsWith("builtIn:") ? role.slice("builtIn:".length) : null;
   const areas = customRole
     ? (customRole.areas as Areas)
     : builtIn
@@ -113,7 +108,7 @@ export function AssignRoleDialog({
   const roleLabel = customRole ? customRole.name : builtIn ? translateKey(t, `roles.builtIn.${builtIn}`) : "";
 
   const submit = async () => {
-    if (!principal) {
+    if (principals.length === 0 || !role) {
       setError(t("roles.choosePrincipal"));
       return;
     }
@@ -121,13 +116,13 @@ export function AssignRoleDialog({
     setError(null);
     try {
       await request(() =>
-        api.POST("/api/v1/organizations/{organizationId}/role-assignments", {
+        api.POST("/api/v1/organizations/{organizationId}/role-assignments/batch", {
           params: { path: { organizationId } },
           body: {
             role: builtIn
               ? { builtIn: builtIn as "owner" | "administrator" }
               : { customRoleId: customRole?.id ?? "" },
-            principal: principal as never,
+            principals: principals.map((item) => principalFromValue(item.value)),
             ...(expiry ? { expiresAt: new Date(`${expiry}T23:59:59`).toISOString() } : {}),
           },
         }),
@@ -143,16 +138,6 @@ export function AssignRoleDialog({
     }
   };
 
-  const everyone =
-    impact.everyone === "organizationMembers"
-      ? t("access.allMembers", {
-          count: members.data?.filter((entry) => entry.kind === "member").length ?? 0,
-          name: organizationName,
-        })
-      : impact.everyone === "instanceUsers"
-        ? t("access.allInstanceUsers")
-        : undefined;
-
   return (
     <Dialog
       open={open}
@@ -167,76 +152,33 @@ export function AssignRoleDialog({
           </Notice>
         ) : null}
         <Field label={t("roles.role")}>
-          <Select
+          <Combobox
+            aria-label={t("roles.role")}
             value={role}
             onValueChange={setRole}
-            options={[
-              {
-                value: "builtIn:administrator",
-                label: t("roles.builtIn.administrator"),
-                group: t("roles.builtInGroup"),
-              },
-              { value: "builtIn:owner", label: t("roles.builtIn.owner"), group: t("roles.builtInGroup") },
-              ...(roles.data ?? []).map((entry) => ({
-                value: `custom:${entry.id}`,
-                label: entry.name,
-                group: t("roles.customGroup"),
-              })),
-            ]}
+            items={roleItems(t, roles.data ?? [])}
           />
         </Field>
         {fixedPrincipal ? null : (
-          <>
-            <Field label={t("roles.principal")}>
-              <Select
-                value={kind}
-                onValueChange={(value) => {
-                  setKind(value as Principal["kind"]);
-                  setTarget("");
-                }}
-                options={[
-                  { value: "account", label: t("roles.principals.account") },
-                  { value: "group", label: t("roles.principals.group") },
-                  { value: "organizationMembers", label: t("roles.principals.organizationMembers") },
-                  { value: "instanceUsers", label: t("roles.principals.instanceUsers") },
-                ]}
-              />
-            </Field>
-            {kind === "account" ? (
-              <Field label={t("roles.person")}>
-                <Select
-                  value={target}
-                  onValueChange={setTarget}
-                  placeholder={t("roles.choosePerson")}
-                  options={(members.data ?? [])
-                    .filter((entry) => entry.kind === "member")
-                    .map((entry) => ({
-                      value: entry.accountId,
-                      label: entry.email ? `${entry.name} (${entry.email})` : entry.name,
-                    }))}
-                />
-              </Field>
-            ) : null}
-            {kind === "group" ? (
-              <Field label={t("roles.group")}>
-                <Select
-                  value={target}
-                  onValueChange={setTarget}
-                  placeholder={t("roles.chooseGroup")}
-                  options={(groups.data ?? []).map((entry) => ({ value: entry.id, label: entry.name }))}
-                />
-              </Field>
-            ) : null}
-          </>
+          <Field label={t("roles.principalsLabel")} hint={t("roles.principalsHint")}>
+            <Combobox
+              multiple
+              aria-label={t("roles.principalsLabel")}
+              placeholder={t("roles.choosePrincipals")}
+              value={principals.map((item) => item.value)}
+              selectedItems={principals}
+              load={loader}
+              onValueChange={(_values, items) => setPrincipals(items)}
+            />
+          </Field>
         )}
         <Field label={t("roles.expires")} hint={t("roles.expiresHint")}>
           <Input type="date" value={expiry} onChange={(event) => setExpiry(event.target.value)} />
         </Field>
-        {principal ? (
+        {principals.length > 0 ? (
           <AccessImpact
             change="gains"
-            people={impact.people}
-            {...(everyone ? { everyone } : {})}
+            people={people}
             what={t("roles.gainsWhat", {
               role: roleLabel,
               areas: areasDescription(t, "organization", areas),
@@ -248,7 +190,12 @@ export function AssignRoleDialog({
           <Button variant="secondary" onClick={() => onOpenChange(false)}>
             {t("common.cancel")}
           </Button>
-          <Button variant="primary" loading={busy} disabled={!principal} onClick={() => void submit()}>
+          <Button
+            variant="primary"
+            loading={busy}
+            disabled={principals.length === 0 || !role}
+            onClick={() => void submit()}
+          >
             {t("roles.assignAction")}
           </Button>
         </div>

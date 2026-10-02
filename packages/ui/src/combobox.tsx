@@ -48,14 +48,14 @@ interface ComboboxCommonProps {
 export interface SingleComboboxProps extends ComboboxCommonProps {
   multiple?: false;
   value: string | null;
-  onValueChange: (value: string | null) => void;
+  onValueChange: (value: string | null, item: ComboboxItem | null) => void;
   selectedItem?: ComboboxItem | null;
 }
 
 export interface MultiComboboxProps extends ComboboxCommonProps {
   multiple: true;
   value: readonly string[];
-  onValueChange: (value: string[]) => void;
+  onValueChange: (value: string[], items: ComboboxItem[]) => void;
   selectedItems?: readonly ComboboxItem[];
 }
 
@@ -180,6 +180,9 @@ export function Combobox(props: ComboboxProps) {
   const labelOf = (value: string) => known.get(value)?.label ?? value;
   const singleLabel = !props.multiple && props.value ? labelOf(props.value) : "";
 
+  const itemsOf = (values: readonly string[]) =>
+    values.map((value) => known.get(value) ?? { value, label: value });
+
   const close = () => {
     setOpen(false);
     setQuery("");
@@ -190,18 +193,19 @@ export function Combobox(props: ComboboxProps) {
       const next = props.value.includes(item.value)
         ? props.value.filter((value) => value !== item.value)
         : [...props.value, item.value];
-      props.onValueChange(next);
+      props.onValueChange(next, itemsOf(next));
       setQuery("");
       inputRef.current?.focus();
       return;
     }
-    props.onValueChange(item.value);
+    props.onValueChange(item.value, item);
     close();
   };
 
   const remove = (value: string) => {
     if (!props.multiple) return;
-    props.onValueChange(props.value.filter((entry) => entry !== value));
+    const next = props.value.filter((entry) => entry !== value);
+    props.onValueChange(next, itemsOf(next));
     inputRef.current?.focus();
   };
 

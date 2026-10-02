@@ -1035,6 +1035,15 @@
     "why": "Why"
   },
   "roles": {
+    "peopleLabel": "People",
+    "groupsLabel": "Groups",
+    "people": "People",
+    "groups": "Groups",
+    "principalsLabel": "People and groups",
+    "principalsHint": "Roles go to individual people and groups, never to everyone at once.",
+    "instancePrincipalsHint": "Instance roles go to individual people.",
+    "choosePrincipals": "Search people or groups",
+    "choosePeople": "Search people",
     "title": "Roles",
     "description": "Who may administer what in the organization.",
     "builtInTitle": "Built-in roles",

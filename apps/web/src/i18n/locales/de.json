@@ -1035,6 +1035,15 @@
     "why": "Warum"
   },
   "roles": {
+    "peopleLabel": "Personen",
+    "groupsLabel": "Gruppen",
+    "people": "Personen",
+    "groups": "Gruppen",
+    "principalsLabel": "Personen und Gruppen",
+    "principalsHint": "Rollen gehen an einzelne Personen und Gruppen, nie an alle auf einmal.",
+    "instancePrincipalsHint": "Instanzrollen gehen an einzelne Personen.",
+    "choosePrincipals": "Personen oder Gruppen suchen",
+    "choosePeople": "Personen suchen",
     "title": "Rollen",
     "description": "Wer was in der Organisation verwalten darf.",
     "builtInTitle": "Eingebaute Rollen",

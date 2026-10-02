@@ -1,6 +1,8 @@
 import type { Areas } from "@pagehall/shared";
 import {
   Button,
+  Combobox,
+  type ComboboxItem,
   ConfirmDialog,
   Dialog,
   Field,
@@ -9,12 +11,11 @@ import {
   Menu,
   Notice,
   Section,
-  Select,
   Table,
 } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MoreHorizontal, Plus, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import {
@@ -25,6 +26,7 @@ import {
 } from "../../api/instance-queries.js";
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
+import { accountLoader } from "../../components/pickers.js";
 import { useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { translateKey } from "../../i18n/translate.js";
@@ -63,6 +65,7 @@ export function InstanceRolesScreen() {
 
   return (
     <SettingsPage
+      width="wide"
       title={t("instance.roles.title")}
       description={t("instance.roles.description")}
       icon={ShieldCheck}
@@ -276,30 +279,28 @@ export function InstanceRolesScreen() {
 function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; roles: CustomRole[] }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const accounts = useQuery(instanceAccountsQuery);
-  const [role, setRole] = useState("builtIn:administrator");
-  const [kind, setKind] = useState<"account" | "instanceUsers">("account");
-  const [target, setTarget] = useState("");
+  const [role, setRole] = useState<string | null>("builtIn:administrator");
+  const [people, setPeople] = useState<ComboboxItem[]>([]);
+  const loader = useMemo(() => accountLoader(), []);
   const [expiry, setExpiry] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const builtIn = role.startsWith("builtIn:") ? role.slice(8) : null;
+  const builtIn = role?.startsWith("builtIn:") ? role.slice(8) : null;
   const custom = roles.find((entry) => `custom:${entry.id}` === role);
   const areas = custom ? (custom.areas as Areas) : builtIn ? (BUILT_IN_AREAS[builtIn]?.instance ?? {}) : {};
   const label = custom ? custom.name : builtIn ? translateKey(t, `roles.builtIn.${builtIn}`) : "";
-  const person = accounts.data?.find((account) => account.id === target)?.name;
 
   const submit = async () => {
     setBusy(true);
     setError(null);
     try {
       await request(() =>
-        api.POST("/api/v1/instance/role-assignments", {
+        api.POST("/api/v1/instance/role-assignments/batch", {
           body: {
             role: builtIn
               ? { builtIn: builtIn as "administrator" | "securityAuditor" }
               : { customRoleId: custom?.id ?? "" },
-            principal: kind === "account" ? { kind, id: target } : { kind },
+            principals: people.map((item) => ({ kind: "account" as const, id: item.value })),
             ...(expiry ? { expiresAt: new Date(`${expiry}T23:59:59`).toISOString() } : {}),
           },
         }),
@@ -329,10 +330,11 @@ function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; rol
           </Notice>
         ) : null}
         <Field label={t("roles.role")}>
-          <Select
+          <Combobox
+            aria-label={t("roles.role")}
             value={role}
             onValueChange={setRole}
-            options={[
+            items={[
               {
                 value: "builtIn:administrator",
                 label: t("roles.builtIn.administrator"),
@@ -351,38 +353,23 @@ function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; rol
             ]}
           />
         </Field>
-        <Field label={t("roles.principal")}>
-          <Select
-            value={kind}
-            onValueChange={(value) => setKind(value as "account" | "instanceUsers")}
-            options={[
-              { value: "account", label: t("roles.principals.account") },
-              { value: "instanceUsers", label: t("roles.principals.instanceUsers") },
-            ]}
+        <Field label={t("roles.peopleLabel")} hint={t("roles.instancePrincipalsHint")}>
+          <Combobox
+            multiple
+            aria-label={t("roles.peopleLabel")}
+            placeholder={t("roles.choosePeople")}
+            value={people.map((item) => item.value)}
+            selectedItems={people}
+            load={loader}
+            onValueChange={(_values, items) => setPeople(items)}
           />
         </Field>
-        {kind === "account" ? (
-          <Field label={t("roles.person")}>
-            <Select
-              value={target}
-              onValueChange={setTarget}
-              placeholder={t("roles.choosePerson")}
-              options={(accounts.data ?? [])
-                .filter((account) => account.type === "standard" && account.state === "active")
-                .map((account) => ({
-                  value: account.id,
-                  label: account.email ? `${account.name} (${account.email})` : account.name,
-                }))}
-            />
-          </Field>
-        ) : null}
         <Field label={t("roles.expires")} hint={t("roles.expiresHint")}>
           <Input type="date" value={expiry} onChange={(event) => setExpiry(event.target.value)} />
         </Field>
         <AccessImpact
           change="gains"
-          people={kind === "account" && person ? [person] : []}
-          {...(kind === "instanceUsers" ? { everyone: t("access.allInstanceUsers") } : {})}
+          people={people.map((item) => item.label)}
           what={t("instance.roles.gainsWhat", { role: label, areas: areasDescription(t, "instance", areas) })}
         />
         <div className="flex justify-end gap-2">
@@ -392,7 +379,7 @@ function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; rol
           <Button
             variant="primary"
             loading={busy}
-            disabled={kind === "account" && !target}
+            disabled={people.length === 0 || !role}
             onClick={() => void submit()}
           >
             {t("roles.assignAction")}
