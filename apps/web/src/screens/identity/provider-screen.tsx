@@ -7,10 +7,12 @@ import { useTranslation } from "react-i18next";
 import {
   type IdentityProvider,
   identityKeys,
+  mappingRulesQuery,
   providerLogoUrl,
   providerQuery,
   removeProvider,
   removeProviderLogo,
+  syncRunsQuery,
   uploadProviderLogo,
 } from "../../api/identity-queries.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
@@ -27,6 +29,8 @@ import {
 } from "./provider-config.js";
 import { CredentialsList } from "./provider-credentials.js";
 import { credentialStatus, presetLabel } from "./provider-labels.js";
+import { MappingTab } from "./provider-mapping.js";
+import { SyncSettings, SyncTab, syncSummary } from "./provider-sync.js";
 import { StartTestButton, TestResult } from "./provider-test.js";
 
 const route = getRouteApi("/app/settings/instance/sign-in-providers/$providerId");
@@ -40,7 +44,10 @@ export interface ProviderTab {
   component: ComponentType<{ provider: IdentityProvider; canManage: boolean }>;
 }
 
-export const providerTabs: ProviderTab[] = [];
+export const providerTabs: ProviderTab[] = [
+  { value: "mapping", labelKey: "identityProviders.tabs.mapping", component: MappingTab },
+  { value: "sync", labelKey: "identityProviders.tabs.sync", component: SyncTab },
+];
 
 async function toBase64(file: File): Promise<string> {
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -131,6 +138,7 @@ function Overview({
   return (
     <div className="flex flex-col gap-6">
       {flowId ? <TestResult provider={provider} flowId={flowId} /> : null}
+      <OverviewTiles provider={provider} />
       <Section title={t("identityProviders.overview.connection")}>
         <SettingRow
           label={t("identityProviders.overview.credentialStatus")}
@@ -160,6 +168,53 @@ function Overview({
   );
 }
 
+function OverviewTiles({ provider }: { provider: IdentityProvider }) {
+  const { t } = useTranslation();
+  const format = useFormat();
+  const rules = useQuery({ ...mappingRulesQuery(provider.id), throwOnError: false });
+  const runs = useQuery({ ...syncRunsQuery(provider.id, "all"), throwOnError: false });
+  const last = runs.data?.items[0];
+  const missing = rules.data?.filter((rule) => rule.group.missing).length ?? 0;
+  const status = credentialStatus(t, format, provider);
+  const tiles = [
+    {
+      key: "lastSync",
+      label: t("identityProviders.overview.lastSync"),
+      value: last ? format.time(last.startedAt) : t("identityProviders.overview.never"),
+      detail: last ? syncSummary(t, last) : t("identityProviders.overview.noSyncYet"),
+    },
+    {
+      key: "rules",
+      label: t("identityProviders.overview.mappedGroups"),
+      value: String(rules.data?.length ?? 0),
+      detail:
+        missing > 0
+          ? t("identityProviders.overview.missingGroups", { count: missing })
+          : t("identityProviders.overview.rulesHint"),
+    },
+    {
+      key: "credential",
+      label: t("identityProviders.overview.credentialStatus"),
+      value: status.label,
+      detail: "",
+    },
+  ];
+  return (
+    <ul
+      aria-label={t("identityProviders.overview.summary")}
+      className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+    >
+      {tiles.map((tile) => (
+        <li key={tile.key} className="flex flex-col gap-1 rounded-md border border-border bg-surface p-4">
+          <span className="text-sm text-text-muted">{tile.label}</span>
+          <span className="font-semibold text-content">{tile.value}</span>
+          {tile.detail ? <span className="text-sm text-text-muted">{tile.detail}</span> : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function Settings({ provider, canManage }: { provider: IdentityProvider; canManage: boolean }) {
   const { t } = useTranslation();
   return (
@@ -178,6 +233,7 @@ function Settings({ provider, canManage }: { provider: IdentityProvider; canMana
       <Section title={t("identityProviders.accounts.existing")}>
         <LinkFields />
       </Section>
+      <SyncSettings provider={provider} canManage={canManage} />
       {canManage ? <RemoveSection provider={provider} /> : null}
     </div>
   );

@@ -26,6 +26,7 @@ export function toConfigInput(config: ProviderConfig): ProviderConfigInput {
     domains: config.domains,
     idTokenAlgorithm: config.idTokenAlgorithm,
     accountCreation: config.accountCreation,
+    sync: config.sync,
   };
   if (config.preset === "entraId") {
     return {
@@ -39,7 +40,18 @@ export function toConfigInput(config: ProviderConfig): ProviderConfigInput {
     };
   }
   if (config.preset === "google") {
-    return { preset: "google", ...common, ...(config.issuer ? { issuer: String(config.issuer) } : {}) };
+    return {
+      preset: "google",
+      ...common,
+      ...(config.issuer ? { issuer: String(config.issuer) } : {}),
+      directory: config.directory
+        ? {
+            adminEmail: config.directory.adminEmail,
+            ...(config.directory.url ? { url: String(config.directory.url) } : {}),
+            ...(config.directory.tokenUrl ? { tokenUrl: String(config.directory.tokenUrl) } : {}),
+          }
+        : null,
+    };
   }
   return {
     preset: "generic",
@@ -49,6 +61,8 @@ export function toConfigInput(config: ProviderConfig): ProviderConfigInput {
     claims: config.claims,
   };
 }
+
+const OPTIONAL_CLAIMS: ReadonlySet<string> = new Set(["groups", "groupNames"]);
 
 export function parseList(value: string): string[] {
   return value
@@ -253,13 +267,17 @@ export function AttributeFields({ provider, canManage }: { provider: IdentityPro
       ) : null}
       {config.preset === "generic" ? (
         <div className="grid grid-cols-1 gap-4 px-4 py-3 sm:grid-cols-2">
-          {(["email", "signInName", "displayName", "groups"] as const).map((claim) => (
+          {(["email", "signInName", "displayName", "groups", "groupNames"] as const).map((claim) => (
             <AutoSaveTextField
               key={claim}
               label={t(`identityProviders.attributes.claims.${claim}`)}
-              {...(claim === "groups" ? { hint: t("identityProviders.attributes.claims.groupsHint") } : {})}
+              {...(claim === "groups"
+                ? { hint: t("identityProviders.attributes.claims.groupsHint") }
+                : claim === "groupNames"
+                  ? { hint: t("identityProviders.attributes.claims.groupNamesHint") }
+                  : {})}
               value={config.claims[claim] ?? ""}
-              schema={claim === "groups" ? z.union([z.literal(""), claimName]) : claimName}
+              schema={OPTIONAL_CLAIMS.has(claim) ? z.union([z.literal(""), claimName]) : claimName}
               disabled={!canManage}
               className="font-mono"
               onSave={(value) =>
@@ -268,11 +286,8 @@ export function AttributeFields({ provider, canManage }: { provider: IdentityPro
                     ? {
                         ...current,
                         claims: {
-                          email: config.claims.email,
-                          signInName: config.claims.signInName,
-                          displayName: config.claims.displayName,
-                          groups: config.claims.groups,
-                          [claim]: claim === "groups" && value === "" ? null : value,
+                          ...current.claims,
+                          [claim]: OPTIONAL_CLAIMS.has(claim) && value === "" ? null : value,
                         },
                       }
                     : current,

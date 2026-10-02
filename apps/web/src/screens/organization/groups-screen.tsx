@@ -1,5 +1,6 @@
 import { groupDescriptionSchema, groupNameSchema } from "@pagehall/shared";
 import {
+  Badge,
   Button,
   Dialog,
   EmptyState,
@@ -13,7 +14,7 @@ import {
 } from "@pagehall/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { Plus, UsersRound } from "lucide-react";
+import { Lock, Plus, UsersRound } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -103,6 +104,18 @@ export function GroupsScreen() {
                 header: t("groups.descriptionLabel"),
                 hideBelow: "sm",
                 cell: (group) => group.description || "—",
+              },
+              {
+                key: "managedBy",
+                header: t("groups.managedBy"),
+                cell: (group) =>
+                  group.managedBy ? (
+                    <Badge variant="info" icon={Lock}>
+                      {group.managedBy.providerName}
+                    </Badge>
+                  ) : (
+                    t("groups.managedByPagehall")
+                  ),
               },
             ]}
           />
