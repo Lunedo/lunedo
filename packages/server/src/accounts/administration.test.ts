@@ -159,6 +159,34 @@ describe.skipIf(!baseUrl)("resetting another account's second factor", () => {
     });
   });
 
+  it("lets only owners act on owners of any organization, not only the home organization", async () => {
+    const home = await organization();
+    const other = await organization();
+    const join = (accountId: string) =>
+      test.database.transaction((tx) =>
+        test.services.memberships.add(tx, SYSTEM, { organizationId: other.id, accountId, kind: "member" }),
+      );
+    const target = await standard(home.id);
+    await join(target);
+    await role(target, "organization", "owner", other.id);
+    const admin = await standard(home.id);
+    await role(admin, "organization", "administrator", home.id);
+
+    await expect(
+      test.services.administration.resetSecondFactor(accountPrincipal(admin), target, "Owner elsewhere"),
+    ).rejects.toThrow(ForbiddenError);
+    await expect(test.services.memberships.deactivate(accountPrincipal(admin), target)).rejects.toThrow(
+      ForbiddenError,
+    );
+
+    await join(admin);
+    await role(admin, "organization", "owner", other.id);
+    await expect(
+      test.services.administration.resetSecondFactor(accountPrincipal(admin), target, "Owner elsewhere"),
+    ).resolves.toEqual({ endedSessions: 0 });
+    await expect(test.services.memberships.deactivate(accountPrincipal(admin), target)).resolves.toBe(0);
+  });
+
   it("decides through the authorization service and refuses people without the permission", async () => {
     const org = await organization();
     const member = await standard(org.id);

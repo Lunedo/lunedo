@@ -316,6 +316,33 @@ export class AuthorizationService {
     );
   }
 
+  async checkOwnersOverAccount(
+    actor: Principal,
+    accountId: string,
+    options: { executor?: Executor; action?: string } = {},
+  ): Promise<void> {
+    if (actor.type !== "account") return;
+    const executor = options.executor ?? this.#database;
+    const instance = await executor.execute<{ owner: string | null }>(
+      sql`select owner_account_id as owner from instance`,
+    );
+    if (instance.rows[0]?.owner === actor.id) return;
+    const memberships = await executor.execute<{ organization_id: string }>(sql`
+      select organization_id from memberships where account_id = ${accountId}
+      order by organization_id`);
+    for (const { organization_id: organizationId } of memberships.rows) {
+      if (!(await this.isOrganizationOwner(accountId, organizationId, executor))) continue;
+      if (await this.isOrganizationOwner(actor.id, organizationId, executor)) continue;
+      throw new ForbiddenError({
+        action: options.action ?? "account.manage",
+        resource: { type: "account", id: accountId },
+        allowed: false,
+        grants: [],
+        denials: ["ownerOnly"],
+      });
+    }
+  }
+
   async groupAreas(groupId: string, executor: Executor = this.#database): Promise<Areas> {
     const result = await executor.execute<{ built_in_role: BuiltInRoleKey | null; areas: Areas | null }>(sql`
       select ra.built_in_role, cr.areas

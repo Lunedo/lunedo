@@ -488,6 +488,10 @@ export class MembershipService {
             denials: ["ownerOnly"],
           });
         }
+        await this.#authorization.checkOwnersOverAccount(actor, target.id, {
+          executor: tx,
+          action: "account.deactivate",
+        });
         if (target.home) {
           const homeOwner = await this.#authorization.isOrganizationOwner(accountId, target.home, tx);
           const instanceAdministrator = instanceAreas.accounts === "manage";

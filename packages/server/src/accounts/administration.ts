@@ -192,6 +192,7 @@ export class AccountAdministrationService {
 
   async #checkRank(tx: Transaction, actor: Principal, target: Target, action: string): Promise<void> {
     if (actor.type !== "account") return;
+    await this.#authorization.checkOwnersOverAccount(actor, target.id, { executor: tx, action });
     const [row] = await tx.select({ owner: instance.ownerAccountId }).from(instance);
     const instanceOwner = row?.owner ?? null;
     const targetInstanceAreas = await this.#authorization.heldAreas(target.id, "instance", null, tx);
