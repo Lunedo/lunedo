@@ -138,6 +138,7 @@ export function MembersScreen() {
 
   return (
     <SettingsPage
+      width="wide"
       title={t("members.title")}
       description={t("members.description", { name: organizationName })}
       icon={Users}

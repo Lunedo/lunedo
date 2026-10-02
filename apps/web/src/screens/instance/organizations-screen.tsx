@@ -53,6 +53,7 @@ export function InstanceOrganizationsScreen() {
 
   return (
     <SettingsPage
+      width="wide"
       title={t("instance.organizations.title")}
       description={t("instance.organizations.description")}
       icon={Building2}

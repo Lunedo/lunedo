@@ -45,6 +45,7 @@ export function OrganizationTokensScreen() {
 
   return (
     <SettingsPage
+      width="wide"
       title={t("tokens.organizationTitle")}
       description={t("tokens.organizationDescription")}
       icon={KeyRound}

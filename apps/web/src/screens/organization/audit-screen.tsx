@@ -19,6 +19,7 @@ export function OrganizationAuditScreen() {
   });
   return (
     <SettingsPage
+      width="wide"
       title={t("audit.title")}
       description={t("audit.organizationDescription")}
       icon={FileClock}

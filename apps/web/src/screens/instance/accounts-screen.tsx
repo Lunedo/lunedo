@@ -58,6 +58,7 @@ export function InstanceAccountsScreen() {
 
   return (
     <SettingsPage
+      width="wide"
       title={t("instance.accounts.title")}
       description={t("instance.accounts.description")}
       icon={UserRound}

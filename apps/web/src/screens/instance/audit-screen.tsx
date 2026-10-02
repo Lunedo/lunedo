@@ -11,7 +11,12 @@ export function InstanceAuditScreen() {
   const state = useOrganizationState();
   const accounts = useQuery({ ...instanceAccountsQuery, enabled: state.can("instance.accounts.view") });
   return (
-    <SettingsPage title={t("audit.title")} description={t("audit.instanceDescription")} icon={Activity}>
+    <SettingsPage
+      width="wide"
+      title={t("audit.title")}
+      description={t("audit.instanceDescription")}
+      icon={Activity}
+    >
       <AuditLog
         scope="instance"
         people={(accounts.data ?? []).map((account) => ({ id: account.id, name: account.name }))}

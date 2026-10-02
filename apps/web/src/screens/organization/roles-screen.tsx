@@ -81,6 +81,7 @@ export function OrganizationRolesScreen() {
 
   return (
     <SettingsPage
+      width="wide"
       title={t("roles.title")}
       description={t("roles.description")}
       icon={ShieldCheck}
