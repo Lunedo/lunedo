@@ -338,26 +338,13 @@ export class ProviderSyncService {
       .where(eq(accounts.id, accountId));
     if (account?.state !== "active") return;
     try {
-      await this.#memberships.deactivate(SYSTEM, accountId);
+      await this.#memberships.deactivate(SYSTEM, accountId, {
+        byProvider: { providerId: provider.id, state },
+      });
     } catch (error) {
       report.warnings.push({ kind: "deactivationRefused", accountId, ruleId: null, detail: message(error) });
       return;
     }
-    await this.#database.transaction(async (tx) => {
-      await tx
-        .insert(providerDeactivations)
-        .values({ accountId, providerId: provider.id })
-        .onConflictDoUpdate({
-          target: providerDeactivations.accountId,
-          set: { providerId: provider.id, createdAt: new Date() },
-        });
-      await this.#audit.record(tx, {
-        name: "account.deactivatedByProvider",
-        actor: SYSTEM,
-        targetId: accountId,
-        fields: { providerId: provider.id, state },
-      });
-    });
     report.changes.push({ kind: "accountDeactivated", accountId, organizationId: null, detail: state });
   }
 
@@ -368,16 +355,7 @@ export class ProviderSyncService {
       .leftJoin(providerDeactivations, eq(providerDeactivations.accountId, accounts.id))
       .where(eq(accounts.id, accountId));
     if (row?.state !== "deactivated" || row.providerId !== provider.id) return;
-    await this.#administration.reactivate(SYSTEM, accountId);
-    await this.#database.transaction(async (tx) => {
-      await tx.delete(providerDeactivations).where(eq(providerDeactivations.accountId, accountId));
-      await this.#audit.record(tx, {
-        name: "account.reactivatedByProvider",
-        actor: SYSTEM,
-        targetId: accountId,
-        fields: { providerId: provider.id },
-      });
-    });
+    if (!(await this.#administration.reactivate(SYSTEM, accountId, { byProvider: provider.id }))) return;
     report.changes.push({ kind: "accountReactivated", accountId, organizationId: null, detail: null });
   }
 

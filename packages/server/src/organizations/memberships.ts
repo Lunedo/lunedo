@@ -15,6 +15,7 @@ import {
   pageLimit,
   toPage,
 } from "../database/keyset.js";
+import { providerDeactivations } from "../identity/schema.js";
 import { responsiblesOf } from "../tokens/service-accounts.js";
 import {
   customRoles,
@@ -463,7 +464,11 @@ export class MembershipService {
     });
   }
 
-  async deactivate(actor: Principal, accountId: string): Promise<number> {
+  async deactivate(
+    actor: Principal,
+    accountId: string,
+    options: { byProvider?: { providerId: string; state: "disabled" | "deleted" } } = {},
+  ): Promise<number> {
     return this.#database.transaction(async (tx) => {
       const [target] = await tx
         .select({ id: accounts.id, state: accounts.state, home: accounts.homeOrganizationId })
@@ -521,6 +526,12 @@ export class MembershipService {
         .update(accounts)
         .set({ state: "deactivated", updatedAt: new Date() })
         .where(eq(accounts.id, accountId));
+      await tx.delete(providerDeactivations).where(eq(providerDeactivations.accountId, target.id));
+      if (options.byProvider) {
+        await tx
+          .insert(providerDeactivations)
+          .values({ accountId: target.id, providerId: options.byProvider.providerId });
+      }
       const ended = await tx
         .delete(sessions)
         .where(eq(sessions.accountId, accountId))
@@ -548,6 +559,14 @@ export class MembershipService {
         fields: { endedSessions: ended.length },
         ...(target.home ? { scope: scopeOf(target.home) } : {}),
       });
+      if (options.byProvider) {
+        events.push({
+          name: "account.deactivatedByProvider",
+          actor,
+          targetId: accountId,
+          fields: { providerId: options.byProvider.providerId, state: options.byProvider.state },
+        });
+      }
       await this.#audit.recordMany(tx, events);
       return ended.length;
     });

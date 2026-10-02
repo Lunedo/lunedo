@@ -11,7 +11,7 @@ import { secondFactorsOf } from "../auth/two-factor.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Transaction } from "../database/database.js";
 import type { IdentityProviderService } from "../identity/providers.js";
-import { identities, identityProviders } from "../identity/schema.js";
+import { identities, identityProviders, providerDeactivations } from "../identity/schema.js";
 import type { MailService } from "../mail/mail-service.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import type { Principal } from "./principal.js";
@@ -265,8 +265,12 @@ export class AccountAdministrationService {
     });
   }
 
-  async reactivate(actor: Principal, accountId: string): Promise<void> {
-    await this.#database.transaction(async (tx) => {
+  async reactivate(
+    actor: Principal,
+    accountId: string,
+    options: { byProvider?: string } = {},
+  ): Promise<boolean> {
+    return this.#database.transaction(async (tx) => {
       const [row] = await tx
         .select({
           id: accounts.id,
@@ -282,6 +286,18 @@ export class AccountAdministrationService {
         throw new OrganizationError("notFound", "The account does not exist or is not deactivated");
       }
       const target = { id: row.id, home: row.home, email: row.email };
+      const cleared = await tx
+        .delete(providerDeactivations)
+        .where(
+          options.byProvider
+            ? and(
+                eq(providerDeactivations.accountId, target.id),
+                eq(providerDeactivations.providerId, options.byProvider),
+              )
+            : eq(providerDeactivations.accountId, target.id),
+        )
+        .returning({ providerId: providerDeactivations.providerId });
+      if (options.byProvider && cleared.length === 0) return false;
       await this.#authorization.require(
         actor,
         REACTIVATE_ACTION,
@@ -300,6 +316,15 @@ export class AccountAdministrationService {
         fields: {},
         ...(target.home ? { scope: { type: "organization" as const, id: target.home } } : {}),
       });
+      if (options.byProvider) {
+        await this.#audit.record(tx, {
+          name: "account.reactivatedByProvider",
+          actor,
+          targetId: accountId,
+          fields: { providerId: options.byProvider },
+        });
+      }
+      return true;
     });
   }
 

@@ -371,6 +371,43 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
     );
   });
 
+  it("never reactivates an account an administrator deactivated after a manual reactivation", async () => {
+    const org = await organization();
+    const subject = `${GRAPH_TENANT_ID}:${GRAPH_IDS.frank}`;
+    await test.pool.query("delete from identities where provider_id = $1 and subject = $2", [entra, subject]);
+    const person = await account(org.id);
+    await link(entra, person.id, subject);
+    graph.setAccountEnabled(GRAPH_IDS.frank, false);
+    await test.services.providerSync.run(entra, "manual");
+    expect((await test.services.accounts.get(person.id))?.state).toBe("deactivated");
+
+    await test.services.administration.reactivate(SYSTEM, person.id);
+    graph.setAccountEnabled(GRAPH_IDS.frank, true);
+    await test.services.providerSync.run(entra, "manual");
+    await test.services.memberships.deactivate(SYSTEM, person.id);
+    await test.services.providerSync.run(entra, "manual");
+    expect((await test.services.accounts.get(person.id))?.state).toBe("deactivated");
+  });
+
+  it("writes a provider deactivation and its record together or not at all", async () => {
+    const org = await organization();
+    const person = await account(org.id);
+    await expect(
+      test.services.memberships.deactivate(SYSTEM, person.id, {
+        byProvider: { providerId: randomUUID(), state: "disabled" },
+      }),
+    ).rejects.toThrow();
+    expect((await test.services.accounts.get(person.id))?.state).toBe("active");
+    await test.services.memberships.deactivate(SYSTEM, person.id, {
+      byProvider: { providerId: entra, state: "disabled" },
+    });
+    const record = await test.pool.query(
+      "select provider_id from provider_deactivations where account_id = $1",
+      [person.id],
+    );
+    expect(record.rows).toEqual([{ provider_id: entra }]);
+  });
+
   it("marks a rule whose group no longer exists and grants nothing through it", async () => {
     const org = await organization();
     const dave = await account(null);
