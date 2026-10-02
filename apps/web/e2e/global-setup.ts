@@ -68,7 +68,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     PAGEHALL_DATABASE_URL: databaseUrl(database),
-    PAGEHALL_HOST: "127.0.0.1",
+    PAGEHALL_HOST: process.env.PAGEHALL_E2E_HOST ?? "127.0.0.1",
     PAGEHALL_API_PORT: String(E2E_PORT),
     PAGEHALL_WORKER_PORT: String(E2E_PORT + 2),
     PAGEHALL_WEB_ROOT: webRoot,

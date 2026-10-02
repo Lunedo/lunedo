@@ -125,6 +125,7 @@ jobs:
     timeout-minutes: 30
     env:
       PAGEHALL_E2E_IDP: "1"
+      PAGEHALL_E2E_HOST: 0.0.0.0
       PAGEHALL_E2E_KEYCLOAK_URL: http://keycloak.localhost:8080
       PAGEHALL_E2E_AUTHENTIK_URL: http://authentik.localhost:9000
     steps:
