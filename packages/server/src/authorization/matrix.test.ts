@@ -156,6 +156,7 @@ const EXPECTED: Record<string, Expectation> = {
   "instance.roles.view": instance("accounts", "view"),
   "instance.roles.manage": instance("accounts", "manage"),
   "instance.ownership.transfer": { scope: "instance", ownerOnly: true },
+  "instance.emergencyRecipients.manage": { scope: "instance", ownerOnly: true },
   "instance.signIn.view": instance("signInAndSecurity", "view"),
   "instance.signIn.manage": instance("signInAndSecurity", "manage"),
   "instance.settings.view": instance("settings", "view"),
