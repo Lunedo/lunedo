@@ -35,9 +35,9 @@
       "inGroup": "Gruppe „{name}“",
       "homeOrganization": "Heimatorganisation",
       "synchronizedGroup": "Mitglieder zusätzlich in eine synchronisierte Gruppe in Pagehall aufnehmen",
-      "synchronizedGroupHint": "Die Gruppe wird mit dem Namen der Provider-Gruppe angelegt und lässt sich nur im Provider ändern.",
-      "makeHome": "{organization} zur Heimatorganisation neuer Konten machen",
-      "makeHomeHint": "Nennen mehrere Regeln eine Heimatorganisation, entscheidet die erste Regel in der Liste.",
+      "synchronizedGroupHint": "Die Gruppe wird mit dem Namen der Gruppe des Anbieters angelegt und lässt sich nur im Anbieter ändern.",
+      "makeHome": "Diese Organisation zur Heimatorganisation machen",
+      "makeHomeHint": "Nur nötig, wenn Regeln in mehrere Organisationen führen. Sonst wird die erste Organisation, der ein Konto beitritt, seine Heimatorganisation. Nennen mehrere Regeln eine Heimatorganisation, entscheidet die erste Regel in der Liste.",
       "instanceRoleNote": "Instanzrollen geben nie Zugriff auf die Inhalte von Organisationen. Gruppen von Organisationen in Pagehall können sie nie erhalten.",
       "previewOrganization": "{count, plural, one {# Person wird Mitglied von {organization}.} other {# Personen werden Mitglieder von {organization}.}}",
       "previewInstance": "{count, plural, one {# Person erhält die Instanzrolle {role}.} other {# Personen erhalten die Instanzrolle {role}.}}",
@@ -51,9 +51,9 @@
       "now": "Jetzt synchronisieren",
       "started": "Synchronisierung gestartet. Die Ergebnisse erscheinen hier in etwa einer Minute.",
       "signInOnly": {
-        "generic": "Profil und Gruppen dieses Providers werden bei jeder Anmeldung aktualisiert. Er hat kein Verzeichnis, das Pagehall im Hintergrund synchronisieren könnte; eine SCIM-Verbindung, geplant für eine spätere Version, wird Änderungen sofort übermitteln.",
+        "generic": "Profil und Gruppen dieses Anbieters werden bei jeder Anmeldung aktualisiert. Er hat kein Verzeichnis, das Pagehall im Hintergrund synchronisieren könnte; eine SCIM-Verbindung, geplant für eine spätere Version, wird Änderungen sofort übermitteln.",
         "google": "Google Workspace dient nur zur Anmeldung. Schalte in den Einstellungen die Gruppensynchronisierung ein, um Gruppen zu lesen und im Hintergrund zu synchronisieren.",
-        "entraId": "Dieser Provider wird nur bei der Anmeldung gelesen."
+        "entraId": "Dieser Anbieter wird nur bei der Anmeldung gelesen."
       },
       "filter": "Läufe filtern",
       "filterAll": "Alle Läufe",
@@ -138,70 +138,70 @@
       "saveKey": "Schlüssel speichern",
       "removeKey": "Schlüssel entfernen"
     },
-    "title": "Anmeldung",
+    "title": "Anmeldemethoden",
     "description": "Wie sich Personen bei dieser Instanz anmelden. Die Organisationen ergeben sich nach der Anmeldung aus der Gruppenzuordnung.",
-    "providers": "Identity Provider",
-    "details": "Provider",
-    "add": "Provider hinzufügen",
-    "search": "Provider durchsuchen",
+    "providers": "Identitätsanbieter",
+    "details": "Anbieter",
+    "add": "Anbieter hinzufügen",
+    "search": "Anbieter durchsuchen",
     "filterType": "Nach Typ filtern",
     "allTypes": "Alle Typen",
-    "noMatches": "Keine passenden Provider",
+    "noMatches": "Keine passenden Anbieter",
     "open": "{name} öffnen",
     "openDetails": "Details öffnen",
     "moreFor": "Mehr zu {name}",
-    "remove": "Provider entfernen",
+    "remove": "Anbieter entfernen",
     "removeTitle": "{name} entfernen?",
-    "removeDescription": "Entfernt den Provider, seine Regeln und alle darüber verknüpften Identitäten. Um Anmeldungen nur eine Zeit lang zu stoppen, deaktiviere ihn stattdessen.",
+    "removeDescription": "Entfernt den Anbieter, seine Regeln und alle darüber verknüpften Identitäten. Um Anmeldungen nur eine Zeit lang zu stoppen, deaktiviere ihn stattdessen.",
     "removeConfirm": "Das lässt sich nicht rückgängig machen. Konten und ihre Inhalte bleiben.",
     "removal": {
       "consequences": "Was das Entfernen ändert",
       "accountsWithoutSignIn": "{count, plural, one {# Konto hat keinen anderen Weg zur Anmeldung und kann sich nicht mehr anmelden.} other {# Konten haben keinen anderen Weg zur Anmeldung und können sich nicht mehr anmelden.}}",
-      "accounts": "{count, plural, =0 {Kein Konto ist mit diesem Provider verknüpft.} one {# Konto verliert seine Identität bei diesem Provider.} other {# Konten verlieren ihre Identität bei diesem Provider.}}",
+      "accounts": "{count, plural, =0 {Kein Konto ist mit diesem Anbieter verknüpft.} one {# Konto verliert seine Identität bei diesem Anbieter.} other {# Konten verlieren ihre Identität bei diesem Anbieter.}}",
       "grants": "{count, plural, =0 {Keine Mitgliedschaft und keine Rolle aus seinen Regeln wird entzogen.} one {# Mitgliedschaft oder Rolle aus seinen Regeln wird entzogen.} other {# Mitgliedschaften und Rollen aus seinen Regeln werden entzogen.}}",
       "rules": "{count, plural, =0 {Es gibt keine Zuordnungsregeln.} one {# Zuordnungsregel wird entfernt.} other {# Zuordnungsregeln werden entfernt.}}",
       "groups": "{count, plural, =0 {Es gibt keine synchronisierten Gruppen.} one {# synchronisierte Gruppe wird eine normale Gruppe und behält Mitglieder und Berechtigungen.} other {# synchronisierte Gruppen werden normale Gruppen und behalten Mitglieder und Berechtigungen.}}"
     },
     "secondFactor": {
       "title": "Zweiter Faktor",
-      "mode": "Zweiter Faktor nach einer Anmeldung über diesen Provider",
+      "mode": "Zweiter Faktor nach einer Anmeldung über diesen Anbieter",
       "modes": {
-        "provider": "Übernimmt der Provider",
-        "providerProof": "Nachweis vom Provider verlangen",
+        "provider": "Übernimmt der Anbieter",
+        "providerProof": "Nachweis vom Anbieter verlangen",
         "pagehall": "Immer den zweiten Faktor von Pagehall abfragen"
       },
       "hints": {
-        "provider": "Eine Anmeldung über diesen Provider ist vollständig. Richte die Mehrfaktor-Authentifizierung im Provider ein.",
-        "providerProof": "Der Provider muss im Anmelde-Token eine Mehrfaktor-Authentifizierung melden. Fehlt sie, fragt Pagehall den eigenen zweiten Faktor ab; wer noch keinen hat, richtet zuerst einen ein.",
-        "pagehall": "Nach jeder Anmeldung über diesen Provider fragt Pagehall den eigenen zweiten Faktor ab; wer noch keinen hat, richtet zuerst einen ein."
+        "provider": "Eine Anmeldung über diesen Anbieter ist vollständig. Richte die Mehrfaktor-Authentifizierung im Anbieter ein.",
+        "providerProof": "Der Anbieter muss im Anmelde-Token eine Mehrfaktor-Authentifizierung melden. Fehlt sie, fragt Pagehall den eigenen zweiten Faktor ab; wer noch keinen hat, richtet zuerst einen ein.",
+        "pagehall": "Nach jeder Anmeldung über diesen Anbieter fragt Pagehall den eigenen zweiten Faktor ab; wer noch keinen hat, richtet zuerst einen ein."
       },
       "proofValues": "Anerkannte Nachweise",
-      "proofValuesHint": "Werte des amr-Claims, die als Mehrfaktor-Authentifizierung gelten, durch Kommas getrennt. Die meisten Provider senden mfa.",
+      "proofValuesHint": "Werte des amr-Claims, die als Mehrfaktor-Authentifizierung gelten, durch Kommas getrennt. Die meisten Anbieter senden mfa.",
       "proofValuesInvalid": "Gib 1 bis 20 Werte mit höchstens 50 Zeichen ein, durch Kommas getrennt."
     },
     "status": {
       "title": "Status",
       "deactivatedBadge": "Deaktiviert",
-      "deactivatedTitle": "Dieser Provider ist deaktiviert",
+      "deactivatedTitle": "Dieser Anbieter ist deaktiviert",
       "deactivatedNotice": "Niemand kann sich darüber anmelden und er wird nicht synchronisiert. Einstellungen, Regeln und Gruppen bleiben. Aktiviere ihn in den Einstellungen wieder.",
       "deactivateTitle": "{name} deaktivieren",
-      "deactivateDescription": "Stoppt Anmeldungen und Synchronisierung über diesen Provider. Alles andere bleibt, und du kannst ihn jederzeit wieder aktivieren.",
-      "deactivateConfirm": "Niemand kann sich mehr über diesen Provider anmelden, und die Sitzungen, die von ihm kommen, enden jetzt. Einstellungen, Regeln, Gruppen und Zugriffe bleiben.",
+      "deactivateDescription": "Stoppt Anmeldungen und Synchronisierung über diesen Anbieter. Alles andere bleibt, und du kannst ihn jederzeit wieder aktivieren.",
+      "deactivateConfirm": "Niemand kann sich mehr über diesen Anbieter anmelden, und die Sitzungen, die von ihm kommen, enden jetzt. Einstellungen, Regeln, Gruppen und Zugriffe bleiben.",
       "deactivate": "Deaktivieren",
       "deactivated": "{name} ist deaktiviert.",
       "activateTitle": "{name} aktivieren",
-      "activateDescription": "Personen können sich wieder über diesen Provider anmelden, und die Synchronisierung läuft weiter.",
+      "activateDescription": "Personen können sich wieder über diesen Anbieter anmelden, und die Synchronisierung läuft weiter.",
       "activate": "Aktivieren",
       "activated": "{name} ist wieder aktiv."
     },
-    "emptyTitle": "Noch keine Identity Provider",
-    "emptyDescription": "Füge Microsoft Entra ID, Google Workspace oder einen anderen OIDC-Provider hinzu, damit sich Personen mit ihrem Arbeitskonto anmelden.",
-    "domainHint": "Die Anmeldeseite wählt den Provider über die Domain der E-Mail-Adresse oder des Anmeldenamens, den Personen eingeben.",
+    "emptyTitle": "Noch keine Identitätsanbieter",
+    "emptyDescription": "Füge Microsoft Entra ID, Google Workspace oder einen anderen OIDC-Anbieter hinzu, damit sich Personen mit ihrem Arbeitskonto anmelden.",
+    "domainHint": "Die Anmeldeseite wählt den Anbieter über die Domain der E-Mail-Adresse oder des Anmeldenamens, den Personen eingeben.",
     "noDomains": "Keine Domains",
-    "noPermission": "Deine Rollen erlauben dir nicht, Anmelde-Provider zu ändern.",
+    "noPermission": "Deine Rollen erlauben dir nicht, Identitätsanbieter zu ändern.",
     "otherMethods": "Weitere Anmeldemethoden",
     "columns": {
-      "provider": "Provider",
+      "provider": "Anbieter",
       "type": "Typ",
       "domains": "Domains",
       "credential": "Zugang"
@@ -209,7 +209,7 @@
     "presets": {
       "entraId": "Microsoft Entra ID",
       "google": "Google Workspace",
-      "generic": "Anderer OIDC-Provider"
+      "generic": "Anderer OIDC-Anbieter"
     },
     "credentialStatus": {
       "none": "Kein Zugang",
@@ -220,15 +220,15 @@
     },
     "warnings": {
       "expiring": "Der Zugang von {name} läuft bald ab: {status}.",
-      "expiringAction": "Erstelle beim Provider einen neuen Zugang und trage ihn vorher hier ein, sonst funktioniert die Anmeldung über diesen Provider nicht mehr.",
+      "expiringAction": "Erstelle beim Anbieter einen neuen Zugang und trage ihn vorher hier ein, sonst funktioniert die Anmeldung über diesen Anbieter nicht mehr.",
       "stopped": "Die Anmeldung über {name} funktioniert nicht: {status}.",
-      "stoppedAction": "Füge einen gültigen Zugang vom Provider hinzu und teste dann die Anmeldung.",
+      "stoppedAction": "Füge einen gültigen Zugang vom Anbieter hinzu und teste dann die Anmeldung.",
       "renew": "Zugang erneuern"
     },
     "tabs": {
       "mapping": "Gruppenzuordnung",
       "sync": "Sync-Protokoll",
-      "label": "Bereiche des Providers",
+      "label": "Bereiche des Anbieters",
       "overview": "Übersicht",
       "settings": "Einstellungen"
     },
@@ -247,7 +247,7 @@
       "signIn": "Anmeldung"
     },
     "redirectUri": "Weiterleitungs-URI",
-    "redirectUriHint": "Trage diese Adresse in der App-Registrierung deines Providers ein.",
+    "redirectUriHint": "Trage diese Adresse in der App-Registrierung deines Anbieters ein.",
     "fields": {
       "name": "Name auf der Anmeldeseite",
       "nameHint": "Zum Beispiel Microsoft oder der Name deines Unternehmens.",
@@ -256,17 +256,17 @@
       "tenantIdHint": "Steht in der Übersicht deines Entra-ID-Tenants.",
       "tenantIdInvalid": "Gib die Tenant-ID so ein, wie Entra ID sie zeigt, zum Beispiel 3f2a9c1e-7b4d-4e8a-9c21-5d6f0a8b2e17.",
       "issuer": "Issuer-URL",
-      "issuerHint": "Die Adresse des Providers. Pagehall liest seine Konfiguration aus /.well-known/openid-configuration.",
+      "issuerHint": "Die Adresse des Anbieters. Pagehall liest seine Konfiguration aus /.well-known/openid-configuration.",
       "googleDomains": "Gib mindestens eine Google-Workspace-Domain ein.",
       "algorithm": "Token-Signatur",
-      "algorithmHint": "Der einzige Algorithmus, den Pagehall für ID-Tokens dieses Providers akzeptiert."
+      "algorithmHint": "Der einzige Algorithmus, den Pagehall für ID-Tokens dieses Anbieters akzeptiert."
     },
     "attributes": {
-      "description": "Pagehall erkennt ein Konto an der Kennung des Providers, nie an der E-Mail-Adresse. Die anderen Attribute füllen das Profil und werden bei jeder Anmeldung aktualisiert.",
+      "description": "Pagehall erkennt ein Konto an der Kennung des Anbieters, nie an der E-Mail-Adresse. Die anderen Attribute füllen das Profil und werden bei jeder Anmeldung aktualisiert.",
       "mapping": "Benutzerattribute",
       "identifier": "Kennung",
       "identifierHint": "Ändert sich nie, auch wenn sich Namen oder Adressen ändern.",
-      "fixed": "Für diesen Provider-Typ fest",
+      "fixed": "Für diesen Anbietertyp fest",
       "identifiers": {
         "entraId": "Tenant- und Objekt-ID",
         "google": "Google-Benutzer-ID (sub)",
@@ -292,7 +292,7 @@
         "signInName": "Claim für den Anmeldenamen",
         "displayName": "Claim für den Anzeigenamen",
         "groups": "Claim für Gruppen",
-        "groupsHint": "Leer lassen, wenn der Provider keine Gruppen schickt.",
+        "groupsHint": "Leer lassen, wenn der Anbieter keine Gruppen schickt.",
         "groupNames": "Claim für Gruppennamen",
         "groupNamesHint": "Optional. Gruppen werden über ihre ID zugeordnet, Namen dienen nur der Anzeige."
       }
@@ -303,13 +303,13 @@
       "create": "Konten bei der ersten Anmeldung anlegen",
       "createHint": "Ohne diese Einstellung können sich nur eingeladene Personen und bestehende Konten anmelden.",
       "domains": "Domains",
-      "domainsHint": "Gib jede Domain ein, die im Tenant verifiziert ist, für Anmeldenamen und für E-Mail-Adressen, zum Beispiel example.com und example.at. Die Anmeldeseite schickt Personen mit diesen Domains zu diesem Provider, E-Mail-Adressen darin gelten als bestätigt, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Provider.",
+      "domainsHint": "Gib jede Domain ein, die im Tenant verifiziert ist, für Anmeldenamen und für E-Mail-Adressen, zum Beispiel example.com und example.at. Die Anmeldeseite schickt Personen mit diesen Domains zu diesem Anbieter, E-Mail-Adressen darin gelten als bestätigt, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Anbieter.",
       "domainsHintGoogle": "Gib jede Domain deines Google Workspace ein, für Anmeldenamen und für E-Mail-Adressen. Die Anmeldeseite schickt Personen mit diesen Domains zu Google.",
       "domainsInvalid": "Gib Domains wie example.org ein, durch Kommas getrennt.",
       "requireGroup": "Gruppenmitgliedschaft verlangen",
-      "requireGroupHint": "Meist nicht nötig: Beschränke den Zugang besser beim Provider. Verwende das nur, wenn der Provider den Zugang nicht selbst beschränken kann.",
+      "requireGroupHint": "Meist nicht nötig: Beschränke den Zugang besser beim Anbieter. Verwende das nur, wenn der Anbieter den Zugang nicht selbst beschränken kann.",
       "groups": "Verlangte Gruppen",
-      "groupsHint": "IDs der Gruppen beim Provider, durch Kommas getrennt. Die Mitgliedschaft in einer davon genügt.",
+      "groupsHint": "IDs der Gruppen beim Anbieter, durch Kommas getrennt. Die Mitgliedschaft in einer davon genügt.",
       "link": "Über die E-Mail-Adresse verknüpfen",
       "linkHint": "Gibt es schon ein Konto mit derselben bestätigten Adresse, bestätigt die Person einmal mit dessen Passwort und zweitem Faktor. Pagehall verknüpft Konten nie automatisch.",
       "linkFixed": "Aus Sicherheitsgründen fest",
@@ -329,7 +329,7 @@
       "years": "{count, plural, one {# Jahr} other {# Jahre}}",
       "certificateHint": "Pagehall erzeugt ein Schlüsselpaar. Lade das Zertifikat in die App-Registrierung hoch; der private Schlüssel verlässt Pagehall nie.",
       "certificateCreated": "Zertifikat erstellt",
-      "certificateUpload": "Lade das Zertifikat herunter und in die App-Registrierung bei deinem Provider hoch.",
+      "certificateUpload": "Lade das Zertifikat herunter und in die App-Registrierung bei deinem Anbieter hoch.",
       "download": "Zertifikat herunterladen",
       "details": "Erstellt am {created} · läuft ab {expires}",
       "never": "nie",
@@ -340,7 +340,7 @@
       "save": "Zugang hinzufügen",
       "renewHint": "Während einer Erneuerung funktionieren alter und neuer Zugang. Entferne den alten, sobald der neue eingetragen ist.",
       "noneTitle": "Kein Zugang",
-      "noneDescription": "Die Anmeldung über diesen Provider funktioniert erst, wenn du ein Client-Secret oder ein Zertifikat hinzufügst.",
+      "noneDescription": "Die Anmeldung über diesen Anbieter funktioniert erst, wenn du ein Client-Secret oder ein Zertifikat hinzufügst.",
       "removeTitle": "Diesen Zugang entfernen?",
       "removeDescription": "Pagehall verwendet ihn sofort nicht mehr. Stell vorher sicher, dass ein neuerer Zugang funktioniert."
     },
@@ -361,8 +361,8 @@
       "worked": "Die Anmeldung hat funktioniert",
       "summary": "{claims, plural, one {# Claim} other {# Claims}} und {groups, plural, one {# Gruppe} other {# Gruppen}} empfangen.",
       "failed": "Die Testanmeldung ist fehlgeschlagen",
-      "failedAction": "Prüfe Client-ID, Zugang und Weiterleitungs-URI bei deinem Provider und teste erneut.",
-      "unverifiedTitle": "Die E-Mail-Adresse liegt nicht in den Domains des Providers",
+      "failedAction": "Prüfe Client-ID, Zugang und Weiterleitungs-URI bei deinem Anbieter und teste erneut.",
+      "unverifiedTitle": "Die E-Mail-Adresse liegt nicht in den Domains des Anbieters",
       "unverified": "{email} liegt in keiner der eingerichteten Domains. Pagehall verknüpft dafür keine Konten und legt keine an.",
       "received": "Was Pagehall empfangen hat",
       "subject": "Kennung",
@@ -374,7 +374,7 @@
       "claims": "Claims"
     },
     "wizard": {
-      "title": "Anmelde-Provider hinzufügen",
+      "title": "Identitätsanbieter hinzufügen",
       "new": "Neu",
       "close": "Schließen",
       "steps": "Schritte",
@@ -385,7 +385,7 @@
         "accounts": "Konten",
         "test": "Test"
       },
-      "typeTitle": "Welchen Provider verwendest du?",
+      "typeTitle": "Welchen Anbieter verwendest du?",
       "typeHints": {
         "entraId": "OIDC mit Gruppen über Microsoft Graph.",
         "google": "OIDC mit Gruppen über die Directory API.",
@@ -401,11 +401,11 @@
       "connectionHints": {
         "entraId": "Erstelle im Entra Admin Center eine App-Registrierung. Nach dem Speichern zeigt Pagehall die Weiterleitungs-URI, die du dort einträgst. Schalte unter Unternehmensanwendungen „Zuweisung erforderlich“ ein und weise die Gruppen zu, die Pagehall verwenden dürfen.",
         "google": "Erstelle in der Google Cloud Console einen OAuth-Client vom Typ Webanwendung. Nach dem Speichern zeigt Pagehall die Weiterleitungs-URI, die du dort einträgst.",
-        "generic": "Erstelle bei deinem Provider einen vertraulichen OIDC-Client. Nach dem Speichern zeigt Pagehall die Weiterleitungs-URI, die du dort einträgst."
+        "generic": "Erstelle bei deinem Anbieter einen vertraulichen OIDC-Client. Nach dem Speichern zeigt Pagehall die Weiterleitungs-URI, die du dort einträgst."
       },
       "saveConnection": "Speichern und weiter",
       "saved": "{name} ist gespeichert",
-      "redirectHint": "Trage diese Weiterleitungs-URI in der App-Registrierung bei deinem Provider ein und mach dann weiter.",
+      "redirectHint": "Trage diese Weiterleitungs-URI in der App-Registrierung bei deinem Anbieter ein und mach dann weiter.",
       "finish": "Fertig"
     }
   },
@@ -418,17 +418,17 @@
     "unlink": "Trennen",
     "unlinkTitle": "{provider} trennen?",
     "unlinkDescription": "Die Person kann sich mit dieser Identität nicht mehr anmelden. Ihr Konto, ihre Inhalte und Mitgliedschaften bleiben.",
-    "none": "Keine Anmeldung über einen Provider verknüpft.",
-    "noneOwn": "Du meldest dich nicht über einen Identity Provider an.",
-    "ownHint": "Anmeldungen über Provider verknüpft deine Administration. Du kannst eine trennen, solange dir ein anderer Weg zur Anmeldung bleibt.",
+    "none": "Keine Anmeldung über einen Anbieter verknüpft.",
+    "noneOwn": "Du meldest dich nicht über einen Identitätsanbieter an.",
+    "ownHint": "Anmeldungen über Anbieter verknüpft deine Administration. Du kannst eine trennen, solange dir ein anderer Weg zur Anmeldung bleibt.",
     "unlinkOwnDescription": "Du kannst dich mit dieser Identität nicht mehr anmelden, und die Sitzungen, die von ihr kommen, enden. Dein Konto, deine Inhalte und Mitgliedschaften bleiben.",
     "link": "Identität verknüpfen",
     "linkTitle": "Identität verknüpfen",
-    "linkDescription": "Verbinde eine Anmeldung bei einem Provider mit diesem Konto, zum Beispiel nach einer Änderung der E-Mail-Adresse.",
-    "provider": "Provider",
-    "chooseProvider": "Provider wählen",
-    "subject": "Kennung beim Provider",
-    "subjectHint": "Die feste ID der Person beim Provider, zum Beispiel die Objekt-ID in Entra ID. Eine Testanmeldung zeigt sie an."
+    "linkDescription": "Verbinde eine Anmeldung bei einem Anbieter mit diesem Konto, zum Beispiel nach einer Änderung der E-Mail-Adresse.",
+    "provider": "Anbieter",
+    "chooseProvider": "Anbieter wählen",
+    "subject": "Kennung beim Anbieter",
+    "subjectHint": "Die feste ID der Person beim Anbieter, zum Beispiel die Objekt-ID in Entra ID. Eine Testanmeldung zeigt sie an."
   },
   "brand": {
     "name": "Pagehall",
@@ -524,11 +524,11 @@
     },
     "withoutOrganization": {
       "title": "Dir ist noch keine Organisation zugewiesen",
-      "description": "Dein Konto wurde angelegt, aber es gehört noch zu keiner Organisation. Die Administration dieser Instanz wurde informiert und weist dir eine zu. Deine Einstellungen und die Sicherheit kannst du schon jetzt ändern."
+      "description": "Dein Konto wurde angelegt, ist aber noch in keiner Organisation Mitglied. Die Administration dieser Instanz wurde informiert und weist dir eine zu. Deine Einstellungen und die Sicherheit kannst du schon jetzt ändern."
     },
     "insecureProviders": {
-      "title": "Identity Provider werden nicht streng geprüft",
-      "description": "PAGEHALL_INSECURE_IDENTITY_PROVIDERS ist gesetzt, deshalb dürfen Identity Provider unverschlüsseltes HTTP und beliebige Hosts verwenden. Nutze das nur für lokale Tests und entferne die Variable aus der Serverkonfiguration, bevor sich Personen anmelden."
+      "title": "Identitätsanbieter werden nicht streng geprüft",
+      "description": "PAGEHALL_INSECURE_IDENTITY_PROVIDERS ist gesetzt, deshalb dürfen Identitätsanbieter unverschlüsseltes HTTP und beliebige Hosts verwenden. Nutze das nur für lokale Tests und entferne die Variable aus der Serverkonfiguration, bevor sich Personen anmelden."
     },
     "skipToContent": "Zum Inhalt springen"
   },
@@ -547,7 +547,7 @@
     "apiReference": "API-Referenz"
   },
   "navigation": {
-    "signInProviders": "Anmeldung",
+    "signInProviders": "Anmeldemethoden",
     "settings": "Einstellungen",
     "settingsSection": "Bereich der Einstellungen",
     "myAccount": "Mein Konto",
@@ -631,11 +631,11 @@
     "durationRange": "Wähle eine Dauer von {minimum} bis {maximum}."
   },
   "problems": {
-    "lastSignInMethod": "Das ist der letzte funktionierende Weg, sich bei dem Konto anzumelden. Eine Identität bei einem anderen aktiven Provider, ein Passkey oder ein Passwort bei eingeschalteter Passwort-Anmeldung hielte es erreichbar. Richte zuerst eines davon ein und trenne dann erneut.",
-    "lastCredential": "Das ist der einzige Zugang dieses Providers. Füge zuerst einen neuen hinzu, bevor du ihn entfernst.",
+    "lastSignInMethod": "Das ist der letzte funktionierende Weg, sich bei dem Konto anzumelden. Eine Identität bei einem anderen aktiven Anbieter, ein Passkey oder ein Passwort bei eingeschalteter Passwort-Anmeldung hielte es erreichbar. Richte zuerst eines davon ein und trenne dann erneut.",
+    "lastCredential": "Das ist der einzige Zugang dieses Anbieters. Füge zuerst einen neuen hinzu, bevor du ihn entfernst.",
     "identityInUse": "Diese Identität ist schon mit einem anderen Konto verknüpft. Trenne sie dort zuerst.",
-    "passwordSignInDisabled": "Die Anmeldung mit Passwort ist für diese Instanz ausgeschaltet. Melde dich über deinen Provider oder mit einem Passkey an.",
-    "invalidProviderConfiguration": "Pagehall konnte diese Provider-Konfiguration nicht verwenden. Vergleiche Issuer, Tenant oder Client-ID mit den Einstellungen deines Providers und speichere erneut.",
+    "passwordSignInDisabled": "Die Anmeldung mit Passwort ist für diese Instanz ausgeschaltet. Melde dich über deinen Anbieter oder mit einem Passkey an.",
+    "invalidProviderConfiguration": "Pagehall konnte diese Anbieter-Konfiguration nicht verwenden. Vergleiche Issuer, Tenant oder Client-ID mit den Einstellungen deines Anbieters und speichere erneut.",
     "resetOwnSecondFactor": "Deinen eigenen zweiten Faktor kannst du hier nicht zurücksetzen, weil er sonst umgangen würde. Melde dich mit einem Wiederherstellungscode an oder bitte eine andere Person aus der Administration.",
     "endOwnSessions": "Deine eigenen Sitzungen beendest du nicht in der Kontenliste, sondern auf deiner Seite Sicherheit.",
     "roleNeedsAccountOrGroup": "Rollen können nur einzelnen Personen und Gruppen gegeben werden, nicht allen auf einmal. Wähle stattdessen Personen oder Gruppen.",
@@ -684,7 +684,7 @@
     "domainInUse": "Ein anderer Identitätsanbieter verwendet bereits eine dieser E-Mail-Domains. Entferne sie dort zuerst oder verwende eine andere Domain.",
     "groupManagedByProvider": "Die Mitglieder dieser Gruppe kommen von einem Identitätsanbieter. Ändere sie dort; sie werden bei der nächsten Anmeldung oder Synchronisierung übernommen.",
     "providerUnavailable": "Der Identitätsanbieter war nicht erreichbar oder hat unerwartet geantwortet. Vielleicht ist er gerade nicht verfügbar oder seine Einstellungen haben sich geändert. Versuch es gleich noch einmal; wenn es weiter scheitert, bitte deine Administration, den Anbieter zu prüfen.",
-    "providerDeactivated": "Dieser Provider ist deaktiviert, deshalb kann sich niemand darüber anmelden und nichts wird synchronisiert. Melde dich auf einem anderen Weg an oder bitte deine Administration, den Anbieter wieder zu aktivieren.",
+    "providerDeactivated": "Dieser Anbieter ist deaktiviert, deshalb kann sich niemand darüber anmelden und nichts wird synchronisiert. Melde dich auf einem anderen Weg an oder bitte deine Administration, den Anbieter wieder zu aktivieren.",
     "syncNotRunning": "Der Lauf ist schon beendet, es gibt nichts abzubrechen. Lade das Sync-Protokoll neu, um sein Ergebnis zu sehen.",
     "syncUnavailable": "Pagehall kann das Verzeichnis dieses Anbieters nicht lesen, deshalb werden Konten bei der Anmeldung aktualisiert. Richte das Verzeichnis in den Einstellungen des Anbieters ein, um zu synchronisieren.",
     "invalidServiceAccountKey": "Der Schlüssel des Dienstkontos konnte nicht gelesen werden. Lade in Google Cloud einen neuen JSON-Schlüssel für das Dienstkonto herunter und lade ihn erneut hoch.",
@@ -735,22 +735,22 @@
       "reasons": {
         "accountCreationDisabled": {
           "title": "Für dich gibt es kein Konto in {name}",
-          "cause": "Dein Provider hat bestätigt, wer du bist, aber Pagehall legt mit diesem Provider nur Konten für eingeladene Personen an.",
+          "cause": "Dein Anbieter hat bestätigt, wer du bist, aber Pagehall legt mit diesem Anbieter nur Konten für eingeladene Personen an.",
           "action": "Bitte deine Administration, dich einzuladen, und melde dich dann erneut an."
         },
         "domainNotAllowed": {
-          "title": "Dieser Provider akzeptiert deine Adresse nicht",
-          "cause": "Pagehall akzeptiert nur Adressen in den E-Mail-Domains, die für diesen Provider eingerichtet sind.",
+          "title": "Dieser Anbieter akzeptiert deine Adresse nicht",
+          "cause": "Pagehall akzeptiert nur Adressen in den E-Mail-Domains, die für diesen Anbieter eingerichtet sind.",
           "action": "Melde dich stattdessen mit deinem Arbeitskonto an oder bitte deine Administration, dich einzuladen."
         },
         "emailNotVerified": {
           "title": "Deine E-Mail-Adresse konnte nicht bestätigt werden",
-          "cause": "Dein Provider hat eine Adresse in einer Domain geschickt, die für ihn nicht eingerichtet ist. Deshalb kann Pagehall ihr kein Konto zuordnen.",
-          "action": "Bitte deine Administration, dein Konto zu verknüpfen oder deine Domain beim Provider einzutragen."
+          "cause": "Dein Anbieter hat eine Adresse in einer Domain geschickt, die für ihn nicht eingerichtet ist. Deshalb kann Pagehall ihr kein Konto zuordnen.",
+          "action": "Bitte deine Administration, dein Konto zu verknüpfen oder deine Domain beim Anbieter einzutragen."
         },
         "groupRequired": {
           "title": "Du bist in keiner Gruppe, die {name} verwenden darf",
-          "cause": "Pagehall legt nur Konten für Mitglieder bestimmter Gruppen bei deinem Provider an.",
+          "cause": "Pagehall legt nur Konten für Mitglieder bestimmter Gruppen bei deinem Anbieter an.",
           "action": "Bitte deine Administration, dich in die richtige Gruppe aufzunehmen, und melde dich dann erneut an."
         },
         "accountInactive": {
@@ -769,7 +769,7 @@
           "action": "Bitte deine Administration, deine Anmeldung mit dem Konto zu verknüpfen."
         },
         "invalidResponse": {
-          "title": "Dein Provider hat eine Antwort geschickt, die Pagehall nicht annehmen kann",
+          "title": "Dein Anbieter hat eine Antwort geschickt, die Pagehall nicht annehmen kann",
           "cause": "Die Antwort hat die Sicherheitsprüfungen nicht bestanden, zum Beispiel weil sie abgelaufen war oder für eine andere Anwendung bestimmt war.",
           "action": "Versuche es noch einmal; klappt es wieder nicht, schick die Referenz unten an deine Administration."
         }
@@ -801,15 +801,15 @@
     "emergency": {
       "link": "Notfall-Anmeldung für die Instanz-Ownerin oder den Instanz-Owner",
       "title": "Notfall-Anmeldung",
-      "description": "Nur für die Instanz-Ownerin oder den Instanz-Owner, wenn die Anmeldung über Provider nicht funktioniert. Jede Verwendung steht im Audit-Log, und alle Instanz-Administratoren werden sofort benachrichtigt.",
+      "description": "Nur für die Instanz-Ownerin oder den Instanz-Owner, wenn die Anmeldung über Anbieter nicht funktioniert. Jede Verwendung steht im Audit-Log, und alle Instanz-Administratoren werden sofort benachrichtigt.",
       "submit": "Weiter"
     },
     "providers": {
       "continueWith": "Weiter mit {name}",
       "signInWithMicrosoft": "Mit Microsoft anmelden",
       "signInWithGoogle": "Über Google anmelden",
-      "failedTitle": "Die Anmeldung über deinen Provider wurde nicht abgeschlossen",
-      "failed": "Dein Provider hat die Anmeldung nicht bestätigt. Versuche es noch einmal; klappt es wieder nicht, bitte deine Administration, den Provider in Pagehall zu prüfen."
+      "failedTitle": "Die Anmeldung über deinen Anbieter wurde nicht abgeschlossen",
+      "failed": "Dein Anbieter hat die Anmeldung nicht bestätigt. Versuche es noch einmal; klappt es wieder nicht, bitte deine Administration, den Anbieter in Pagehall zu prüfen."
     },
     "discover": {
       "or": "oder",
@@ -883,12 +883,12 @@
   },
   "reauthentication": {
     "withProvider": "Weiter mit {name}",
-    "providerHint": "Du meldest dich bei deinem Provider erneut an und kommst auf diese Seite zurück. Wiederhole dann die Änderung.",
+    "providerHint": "Du meldest dich bei deinem Anbieter erneut an und kommst auf diese Seite zurück. Wiederhole dann die Änderung.",
     "title": "Identität bestätigen",
     "description": "Für diese Änderung musst du kürzlich bestätigt haben, dass du es bist.",
     "method": "Methode",
     "methods": {
-      "provider": "Provider",
+      "provider": "Anbieter",
       "password": "Passwort",
       "totp": "Authenticator-App",
       "passkey": "Passkey"
@@ -1139,7 +1139,7 @@
     "keys": {
       "auth_passwordSignIn": {
         "label": "Anmeldung mit Passwort",
-        "description": "Wenn sie aus ist, melden sich Personen nur über einen Provider oder mit einem Passkey an. Die Notfall-Anmeldung der Instanz-Ownerin oder des Instanz-Owners funktioniert immer."
+        "description": "Wenn sie aus ist, melden sich Personen nur über einen Anbieter oder mit einem Passkey an. Die Notfall-Anmeldung der Instanz-Ownerin oder des Instanz-Owners funktioniert immer."
       },
       "appearance_colorMode": { "label": "Farbmodus", "description": "Hell, dunkel oder wie das System." },
       "appearance_highContrast": { "label": "Hoher Kontrast", "description": "Kräftigere Rahmen und Texte." },
@@ -1447,7 +1447,7 @@
       "none": "keine"
     },
     "events": {
-      "identityProviderCredentialExpiring": "Zugang eines Providers läuft bald ab",
+      "identityProviderCredentialExpiring": "Zugang eines Identitätsanbieters läuft bald ab",
       "authEmergencySignIn": "Notfall-Anmeldung verwendet",
       "accountWithoutOrganization": "Neues Konto ohne Organisation",
       "accountRolesWithheld": "Administrative Rollen ausgesetzt",
@@ -1465,8 +1465,8 @@
         "credentialExpiring": "Der Zugang von {providerName} läuft am {expiresAt} ab. Füge vorher einen neuen hinzu, sonst funktioniert die Anmeldung darüber nicht mehr."
       },
       "account": {
-        "withoutOrganization": "{accountName} hat sich zum ersten Mal über {providerName} angemeldet und hat noch keine Organisation. Weise in der Kontenliste eine zu.",
-        "rolesWithheld": "Die Gruppen von {accountName} konnten zu lange nicht aus {providerName} gelesen werden, deshalb {roles, plural, one {ist # administrative Rolle} other {sind # administrative Rollen}} ausgesetzt. Prüfe die Verbindung zum Provider."
+        "withoutOrganization": "{accountName} hat sich zum ersten Mal über {providerName} angemeldet und ist noch in keiner Organisation Mitglied. Weise in der Kontenliste eine zu.",
+        "rolesWithheld": "Die Gruppen von {accountName} konnten zu lange nicht aus {providerName} gelesen werden, deshalb {roles, plural, one {ist # administrative Rolle} other {sind # administrative Rollen}} ausgesetzt. Prüfe die Verbindung zum Anbieter."
       },
       "auth": {
         "emergencySignIn": "{accountName} hat die Notfall-Anmeldung mit Passwort verwendet: {browser} auf {operatingSystem}, {clientIp}."
@@ -1764,7 +1764,7 @@
     "managedBy": "Verwaltet von",
     "managedByPagehall": "Pagehall",
     "formerlySynchronized": "Pagehall, früher synchronisiert aus {provider}",
-    "formerlySynchronizedDescription": "Diese Gruppe wurde früher aus {provider} synchronisiert. Der Provider wurde entfernt, deshalb ist sie jetzt eine normale Gruppe: Mitglieder und Berechtigungen sind geblieben und werden in Pagehall verwaltet.",
+    "formerlySynchronizedDescription": "Diese Gruppe wurde früher aus {provider} synchronisiert. Der Anbieter wurde entfernt, deshalb ist sie jetzt eine normale Gruppe: Mitglieder und Berechtigungen sind geblieben und werden in Pagehall verwaltet.",
     "managedByTitle": "Verwaltet von {provider}",
     "managedByDescription": "Name und Mitglieder dieser Gruppe kommen aus {provider} und lassen sich nur dort ändern. Ihre Berechtigungen in Pagehall kannst du hier ändern.",
     "search": "Nach Name oder Beschreibung suchen",
@@ -1898,7 +1898,7 @@
       "filter": "Konten filtern",
       "filterAll": "Alle Konten",
       "withoutOrganization": "Ohne Organisation",
-      "withoutOrganizationHint": "Weder eine Zuordnungsregel noch eine Domain einer Organisation hat diesem Konto eine Organisation gegeben. Weise eine zu, damit die Person darin arbeiten kann.",
+      "withoutOrganizationHint": "Dieses Konto ist in keiner Organisation Mitglied. Weise eine zu, damit die Person darin arbeiten kann. Sie wird die Heimatorganisation des Kontos.",
       "assignTitle": "Organisation",
       "organization": "Organisation",
       "chooseOrganization": "Organisation auswählen",
@@ -1944,6 +1944,9 @@
       "type": "Art",
       "state": "Zustand",
       "home": "Heimatorganisation",
+      "homeHint": "Heimatorganisation: Ihre Administration verwaltet dieses Konto, und ihre Standardwerte gelten für die eigenen Einstellungen der Person.",
+      "organizations": "Organisationen",
+      "managedBy": "Verwaltet von: {organization}",
       "created": "Angelegt",
       "types": {
         "standard": "Standardkonto",
@@ -2340,14 +2343,14 @@
     "startTest": "Die Testanmeldung konnte nicht gestartet werden",
     "removeCredential": "Der Zugang konnte nicht entfernt werden",
     "addCredential": "Der Zugang konnte nicht hinzugefügt werden",
-    "removeProvider": "Der Provider konnte nicht entfernt werden",
+    "removeProvider": "Der Anbieter konnte nicht entfernt werden",
     "loadEmergencyRecipients": "Wer über eine Notfall-Anmeldung informiert wird, konnte nicht geladen werden",
-    "deactivateProvider": "Der Provider konnte nicht deaktiviert werden",
-    "activateProvider": "Der Provider konnte nicht aktiviert werden",
+    "deactivateProvider": "Der Anbieter konnte nicht deaktiviert werden",
+    "activateProvider": "Der Anbieter konnte nicht aktiviert werden",
     "loadRemovalPreview": "Was das Entfernen ändert, konnte nicht geladen werden",
-    "createProvider": "Der Provider konnte nicht gespeichert werden",
-    "loadProvider": "Der Identity Provider konnte nicht geladen werden",
-    "loadProviders": "Die Identity Provider konnten nicht geladen werden",
+    "createProvider": "Der Anbieter konnte nicht gespeichert werden",
+    "loadProvider": "Der Identitätsanbieter konnte nicht geladen werden",
+    "loadProviders": "Die Identitätsanbieter konnten nicht geladen werden",
     "linkAccount": "Die Konten konnten nicht verknüpft werden",
     "loadLink": "Die Kontoverknüpfung konnte nicht geladen werden",
     "loadSignInOptions": "Die Anmeldemöglichkeiten konnten nicht geladen werden",

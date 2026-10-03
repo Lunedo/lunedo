@@ -12128,7 +12128,7 @@
             "name": "withoutOrganization",
             "in": "query",
             "required": false,
-            "description": "With true, only standard accounts that have no organization yet.",
+            "description": "With true, only accounts without any current membership in an organization.",
             "schema": {
               "type": "string",
               "enum": [
@@ -12272,6 +12272,35 @@
                               "description": "An instance role the account holds."
                             },
                             "description": "Instance roles of the account, the instance owner first."
+                          },
+                          "organizations": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the organization."
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "description": "Name of the organization."
+                                },
+                                "home": {
+                                  "type": "boolean",
+                                  "description": "Whether this is the home organization of the account."
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name",
+                                "home"
+                              ],
+                              "additionalProperties": false,
+                              "description": "An organization the account is a member, collaborator or guest of."
+                            },
+                            "description": "Current memberships of the account, the home organization first."
                           }
                         },
                         "required": [
@@ -12284,7 +12313,8 @@
                           "createdAt",
                           "lastSignInAt",
                           "twoFactorActive",
-                          "instanceRoles"
+                          "instanceRoles",
+                          "organizations"
                         ],
                         "additionalProperties": false,
                         "description": "An account of the instance with what administrators need to see."
@@ -12323,6 +12353,13 @@
                           "builtInRole": "securityAuditor",
                           "customRoleId": null,
                           "name": null
+                        }
+                      ],
+                      "organizations": [
+                        {
+                          "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a6b",
+                          "name": "Example Inc.",
+                          "home": true
                         }
                       ]
                     }
@@ -12597,6 +12634,35 @@
                             "description": "An instance role the account holds."
                           },
                           "description": "Instance roles of the account, the instance owner first."
+                        },
+                        "organizations": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the organization."
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Name of the organization."
+                              },
+                              "home": {
+                                "type": "boolean",
+                                "description": "Whether this is the home organization of the account."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "home"
+                            ],
+                            "additionalProperties": false,
+                            "description": "An organization the account is a member, collaborator or guest of."
+                          },
+                          "description": "Current memberships of the account, the home organization first."
                         }
                       },
                       "required": [
@@ -12609,7 +12675,8 @@
                         "createdAt",
                         "lastSignInAt",
                         "twoFactorActive",
-                        "instanceRoles"
+                        "instanceRoles",
+                        "organizations"
                       ],
                       "additionalProperties": false,
                       "description": "An account of the instance with what administrators need to see."
@@ -24229,7 +24296,7 @@
                       },
                       "homeOrganization": {
                         "type": "boolean",
-                        "description": "Whether the organization becomes the home organization of new accounts."
+                        "description": "Whether the organization becomes the home organization of accounts that have none, ahead of other rules."
                       },
                       "accounts": {
                         "type": "integer",
@@ -24590,7 +24657,7 @@
                       },
                       "homeOrganization": {
                         "type": "boolean",
-                        "description": "Whether the organization becomes the home organization of new accounts."
+                        "description": "Whether the organization becomes the home organization of accounts that have none, ahead of other rules."
                       },
                       "accounts": {
                         "type": "integer",
@@ -25122,7 +25189,7 @@
                     },
                     "homeOrganization": {
                       "type": "boolean",
-                      "description": "Whether the organization becomes the home organization of new accounts."
+                      "description": "Whether the organization becomes the home organization of accounts that have none, ahead of other rules."
                     },
                     "accounts": {
                       "type": "integer",
@@ -25882,7 +25949,7 @@
                     },
                     "homeOrganization": {
                       "type": "boolean",
-                      "description": "Whether the organization becomes the home organization of new accounts."
+                      "description": "Whether the organization becomes the home organization of accounts that have none, ahead of other rules."
                     },
                     "accounts": {
                       "type": "integer",

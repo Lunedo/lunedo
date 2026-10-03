@@ -12,15 +12,23 @@ const OLIVIA = {
 };
 const MAX = "01929b1e-0000-7000-8000-0000000000cc";
 const ORGANIZATION = "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f";
+const RESEARCH = "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e60";
 
 function account(id: string, name: string, email: string) {
+  const own = id === OLIVIA.id;
   return {
     id,
     type: "standard",
     state: "active",
     email,
     name,
-    homeOrganizationId: null,
+    homeOrganizationId: own ? ORGANIZATION : null,
+    organizations: own
+      ? [
+          { id: ORGANIZATION, name: "Platform Team", home: true },
+          { id: RESEARCH, name: "Research", home: false },
+        ]
+      : [],
     createdAt: "2026-09-01T08:00:00.000Z",
     lastSignInAt: "2026-10-01T09:00:00.000Z",
     twoFactorActive: true,
@@ -126,6 +134,15 @@ function api(resetResult: () => { status?: number; body?: unknown }) {
         twoFactor: { totp: true, passkeys: 1, recoveryCodes: 9 },
       },
     }),
+    [`GET /api/v1/instance/accounts/${OLIVIA.id}`]: () => ({
+      body: {
+        account: account(OLIVIA.id, OLIVIA.name, OLIVIA.email),
+        memberships: [],
+        sessions: [],
+        tokens: [],
+        twoFactor: { totp: true, passkeys: 0, recoveryCodes: 10 },
+      },
+    }),
     [`POST /api/v1/accounts/${MAX}/second-factor/reset`]: resetResult,
     "GET /api/v1/instance/organizations": () => ({
       body: { items: [{ id: ORGANIZATION, name: "Platform Team", slug: "platform" }], nextCursor: null },
@@ -156,6 +173,25 @@ describe("the accounts page", () => {
     expect(await within(panel).findByText("Audit readers through Auditors", { exact: false })).toBeTruthy();
     expect(within(panel).getByText("Firefox · Linux")).toBeTruthy();
     expect(within(panel).getByText("One passkey")).toBeTruthy();
+  });
+
+  it("lists the organizations of each account, marks the home organization and names who manages it", async () => {
+    api(() => ({ body: { endedSessions: 0 } }));
+    const table = await renderAccounts();
+    const olivia = (await within(table).findByText("Olivia Owner")).closest("tr");
+    const max = within(table).getByText("Max Member").closest("tr");
+    if (!olivia || !max) throw new Error("Rows not found");
+    expect(within(table).getByRole("columnheader", { name: "Organizations" })).toBeTruthy();
+    expect(within(olivia).getByText("Platform Team")).toBeTruthy();
+    expect(within(olivia).getByText("Research")).toBeTruthy();
+    const marks = within(olivia).getAllByRole("img", { name: /^Home organization:/ });
+    expect(marks).toHaveLength(1);
+    expect(marks[0]?.closest("li")?.textContent).toBe("Platform Team");
+    expect(within(max).getByText("Without organization")).toBeTruthy();
+
+    await userEvent.click(within(table).getByText("Olivia Owner"));
+    const panel = await screen.findByRole("dialog", { name: "Olivia Owner" });
+    expect(within(panel).getByText("Managed by: Platform Team")).toBeTruthy();
   });
 
   it("filters accounts without an organization and assigns one", async () => {

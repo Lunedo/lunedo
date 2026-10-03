@@ -12,11 +12,12 @@ import {
   Table,
   TableToolbar,
   Textarea,
+  Tooltip,
   useToast,
 } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { Info, UserRound } from "lucide-react";
+import { House, Info, UserRound } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -132,15 +133,12 @@ export function InstanceAccountsScreen() {
                   <IconButton size="sm" icon={Info} label={t("instance.accounts.typesHint")} />
                 </span>
               ),
-              cell: (account) =>
-                account.type === "standard" && account.homeOrganizationId === null ? (
-                  <span className="flex flex-wrap items-center gap-2">
-                    {t(`instance.accounts.types.${account.type}`)}
-                    <Badge variant="warning">{t("instance.accounts.withoutOrganization")}</Badge>
-                  </span>
-                ) : (
-                  t(`instance.accounts.types.${account.type}`)
-                ),
+              cell: (account) => t(`instance.accounts.types.${account.type}`),
+            },
+            {
+              key: "organizations",
+              header: t("instance.accounts.organizations"),
+              cell: (account) => <AccountOrganizations organizations={account.organizations} />,
             },
             {
               key: "role",
@@ -191,6 +189,38 @@ export function InstanceAccountsScreen() {
   );
 }
 
+function HomeMark() {
+  const { t } = useTranslation();
+  return (
+    <Tooltip content={t("instance.accounts.homeHint")}>
+      <span
+        role="img"
+        aria-label={t("instance.accounts.homeHint")}
+        className="inline-flex shrink-0 text-text-muted"
+      >
+        <House aria-hidden className="size-4" />
+      </span>
+    </Tooltip>
+  );
+}
+
+function AccountOrganizations({ organizations }: { organizations: Account["organizations"] }) {
+  const { t } = useTranslation();
+  if (organizations.length === 0) {
+    return <Badge variant="warning">{t("instance.accounts.withoutOrganization")}</Badge>;
+  }
+  return (
+    <ul className="flex min-w-0 flex-col gap-0.5">
+      {organizations.map((organization) => (
+        <li key={organization.id} className="flex min-w-0 items-center gap-1.5">
+          {organization.home ? <HomeMark /> : null}
+          <span className="break-words">{organization.name}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 type PanelAction = "deactivate" | "reactivate" | "endSessions" | "reset";
 
 function AccountPanel({ account, onClose }: { account: Account; onClose: () => void }) {
@@ -213,6 +243,7 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
   const own = account.id === session.account?.id;
   const manage = state.can("instance.accounts.manage");
   const current = detail.data?.account ?? account;
+  const home = current.organizations.find((organization) => organization.home);
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: instanceKeys.accounts });
   };
@@ -264,6 +295,7 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
           <span className="text-text-muted">
             {t(`instance.accounts.types.${account.type}`)} · {t(`instance.accounts.states.${current.state}`)}
           </span>
+          {home ? <span>{t("instance.accounts.managedBy", { organization: home.name })}</span> : null}
         </div>
         {manage ? (
           <div className="flex flex-col gap-2">
@@ -315,9 +347,9 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
                 <ul className="flex flex-col gap-2 text-sm">
                   {detail.data.memberships.map((membership) => (
                     <li key={membership.organizationId} className="flex flex-col">
-                      <span className="font-medium">
+                      <span className="flex items-center gap-1.5 font-medium">
+                        {membership.home ? <HomeMark /> : null}
                         {membership.name}
-                        {membership.home ? ` · ${t("instance.accounts.home")}` : ""}
                       </span>
                       <span className="text-text-muted">
                         {t(`members.kinds.${membership.kind}`)}

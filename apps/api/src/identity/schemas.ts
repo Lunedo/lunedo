@@ -385,7 +385,9 @@ export const mappingRuleSchema = z
       .describe("The synchronized Pagehall group the members are added to, or null."),
     homeOrganization: z
       .boolean()
-      .describe("Whether the organization becomes the home organization of new accounts."),
+      .describe(
+        "Whether the organization becomes the home organization of accounts that have none, ahead of other rules.",
+      ),
     accounts: z.number().int().describe("Accounts in Pagehall that are in the group."),
     createdAt: timestamp("When the rule was created."),
     updatedAt: timestamp("When the rule was last changed."),

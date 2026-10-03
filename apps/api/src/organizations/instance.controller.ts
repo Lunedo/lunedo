@@ -198,7 +198,7 @@ const accountListQuerySchema = searchQuerySchema
     withoutOrganization: z
       .enum(["true", "false"])
       .optional()
-      .describe("With true, only standard accounts that have no organization yet."),
+      .describe("With true, only accounts without any current membership in an organization."),
   })
   .strict();
 

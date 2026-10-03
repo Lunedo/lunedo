@@ -283,9 +283,7 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     ]);
     const without = await test.services.overview.listAccounts({ limit: 200 }, { withoutOrganization: true });
     expect(without.items.map((item) => item.id)).toContain(accountId);
-    expect(without.items.every((item) => item.homeOrganizationId === null && item.type === "standard")).toBe(
-      true,
-    );
+    expect(without.items.every((item) => item.organizations.length === 0)).toBe(true);
 
     await expect(
       test.services.administration.assignOrganization(accountPrincipal(accountId), accountId, org),

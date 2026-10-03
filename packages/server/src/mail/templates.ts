@@ -211,16 +211,16 @@ const catalogs: Record<Language, Catalog> = {
       ],
     }),
     accountWithoutOrganization: ({ instanceName, accountName, email, providerName }) => ({
-      subject: `${accountName} has no organization on ${instanceName}`,
+      subject: `${accountName} is not a member of any organization on ${instanceName}`,
       paragraphs: [
-        `${accountName}${email ? ` (${email})` : ""} signed in to ${instanceName} through ${providerName} for the first time. No mapping rule and no organization domain gave the account an organization.`,
+        `${accountName}${email ? ` (${email})` : ""} signed in to ${instanceName} through ${providerName} for the first time. No mapping rule and no organization domain made the account a member of an organization.`,
         "Assign an organization in the account list of the instance settings, filtered by accounts without an organization.",
       ],
     }),
     providerCredentialExpiring: ({ instanceName, providerName, date }) => ({
       subject: `Credential of ${providerName} on ${instanceName} expires soon`,
       paragraphs: [
-        `A client secret or certificate of the sign-in provider ${providerName} on ${instanceName} expires on ${date}. Add a new credential in the provider settings and register it with the provider before then, or sign-in through ${providerName} stops working.`,
+        `A client secret or certificate of the identity provider ${providerName} on ${instanceName} expires on ${date}. Add a new credential in the provider settings and register it with the provider before then, or sign-in through ${providerName} stops working.`,
       ],
     }),
     signInNewBrowser: ({ instanceName, browser, operatingSystem, clientIp }) => ({
@@ -360,16 +360,16 @@ const catalogs: Record<Language, Catalog> = {
       ],
     }),
     accountWithoutOrganization: ({ instanceName, accountName, email, providerName }) => ({
-      subject: `${accountName} hat keine Organisation auf ${instanceName}`,
+      subject: `${accountName} ist auf ${instanceName} in keiner Organisation Mitglied`,
       paragraphs: [
-        `${accountName}${email ? ` (${email})` : ""} hat sich zum ersten Mal über ${providerName} bei ${instanceName} angemeldet. Weder eine Zuordnungsregel noch eine Domain einer Organisation hat dem Konto eine Organisation gegeben.`,
+        `${accountName}${email ? ` (${email})` : ""} hat sich zum ersten Mal über ${providerName} bei ${instanceName} angemeldet. Weder eine Zuordnungsregel noch eine Domain einer Organisation hat das Konto zum Mitglied einer Organisation gemacht.`,
         "Weisen Sie in der Kontenliste der Instanz-Einstellungen eine Organisation zu, gefiltert nach Konten ohne Organisation.",
       ],
     }),
     providerCredentialExpiring: ({ instanceName, providerName, date }) => ({
       subject: `Zugangsdaten von ${providerName} auf ${instanceName} laufen bald ab`,
       paragraphs: [
-        `Ein Client-Secret oder Zertifikat des Anmeldeanbieters ${providerName} auf ${instanceName} läuft am ${date} ab. Fügen Sie vorher in den Einstellungen des Anbieters neue Zugangsdaten hinzu und hinterlegen Sie sie beim Anbieter, sonst funktioniert die Anmeldung über ${providerName} nicht mehr.`,
+        `Ein Client-Secret oder Zertifikat des Identitätsanbieters ${providerName} auf ${instanceName} läuft am ${date} ab. Fügen Sie vorher in den Einstellungen des Anbieters neue Zugangsdaten hinzu und hinterlegen Sie sie beim Anbieter, sonst funktioniert die Anmeldung über ${providerName} nicht mehr.`,
       ],
     }),
     signInNewBrowser: ({ instanceName, browser, operatingSystem, clientIp }) => ({

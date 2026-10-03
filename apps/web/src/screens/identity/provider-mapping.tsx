@@ -510,9 +510,7 @@ function RuleDialog({
             <Checkbox
               checked={homeOrganization}
               onCheckedChange={setHomeOrganization}
-              label={t("identityProviders.mapping.makeHome", {
-                organization: organization?.label ?? t("identityProviders.mapping.thisOrganization"),
-              })}
+              label={t("identityProviders.mapping.makeHome")}
               description={t("identityProviders.mapping.makeHomeHint")}
             />
           </>

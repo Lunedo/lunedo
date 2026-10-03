@@ -127,12 +127,7 @@ function WithoutOrganizationBanner() {
   const { t } = useTranslation();
   const state = useOrganizationState();
   const account = state.session.account;
-  if (
-    account?.type !== "standard" ||
-    account.homeOrganizationId !== null ||
-    !state.permissionsLoaded ||
-    state.organizations.length > 0
-  ) {
+  if (account?.type !== "standard" || !state.permissionsLoaded || state.organizations.length > 0) {
     return null;
   }
   return (

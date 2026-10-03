@@ -1,5 +1,5 @@
 import { accountNameSchema, emailSchema } from "@pagehall/shared";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { AuditEvents, AuditLog } from "../audit/audit-log.js";
 import type { PasswordHasher, PasswordProblem } from "../auth/passwords.js";
 import { passwordProblem } from "../auth/passwords.js";
@@ -114,7 +114,8 @@ export class AccountService {
           afterKey([sortName, accounts.id], page.after),
           matchesSearch([accounts.name, accounts.email], page.search),
           filter.withoutOrganization
-            ? and(isNull(accounts.homeOrganizationId), eq(accounts.type, "standard"))
+            ? sql`not exists (select 1 from memberships m where m.account_id = ${accounts.id}
+                and (m.expires_at is null or m.expires_at > now()))`
             : undefined,
         ),
       )

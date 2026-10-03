@@ -36,8 +36,8 @@
       "homeOrganization": "home organization",
       "synchronizedGroup": "Also add the members to a synchronized group in Pagehall",
       "synchronizedGroupHint": "The group is created with the name of the provider group and can only be changed in the provider.",
-      "makeHome": "Make {organization} the home organization of new accounts",
-      "makeHomeHint": "When several rules name a home organization, the first rule in the list decides.",
+      "makeHome": "Make this organization the home organization",
+      "makeHomeHint": "Only needed when rules lead into several organizations. Otherwise the first organization an account joins becomes its home organization. When several rules name a home organization, the first rule in the list decides.",
       "instanceRoleNote": "Instance roles never grant access to the content of organizations. Groups of organizations in Pagehall can never receive them.",
       "previewOrganization": "{count, plural, one {# person becomes a member of {organization}.} other {# people become members of {organization}.}}",
       "previewInstance": "{count, plural, one {# person receives the instance role {role}.} other {# people receive the instance role {role}.}}",
@@ -138,7 +138,7 @@
       "saveKey": "Save key",
       "removeKey": "Remove key"
     },
-    "title": "Sign-in",
+    "title": "Sign-in methods",
     "description": "How people sign in to this instance. Organizations follow from group mapping after sign-in.",
     "providers": "Identity providers",
     "details": "Provider",
@@ -198,7 +198,7 @@
     "emptyDescription": "Add Microsoft Entra ID, Google Workspace or another OIDC provider, so people sign in with their work account.",
     "domainHint": "The sign-in page chooses the provider by the domain of the e-mail address or sign-in name people enter.",
     "noDomains": "No domains",
-    "noPermission": "Your roles do not allow you to change sign-in providers.",
+    "noPermission": "Your roles do not allow you to change identity providers.",
     "otherMethods": "Other sign-in methods",
     "columns": {
       "provider": "Provider",
@@ -374,7 +374,7 @@
       "claims": "Claims"
     },
     "wizard": {
-      "title": "Add sign-in provider",
+      "title": "Add identity provider",
       "new": "New",
       "close": "Close",
       "steps": "Steps",
@@ -524,7 +524,7 @@
     },
     "withoutOrganization": {
       "title": "No organization is assigned to you yet",
-      "description": "Your account was created, but no organization belongs to it yet. The administrators of this instance were told and will assign one. You can already change your preferences and security settings."
+      "description": "Your account was created, but it is not a member of any organization yet. The administrators of this instance were told and will assign one. You can already change your preferences and security settings."
     },
     "insecureProviders": {
       "title": "Identity providers are not checked strictly",
@@ -547,7 +547,7 @@
     "apiReference": "API reference"
   },
   "navigation": {
-    "signInProviders": "Sign-in",
+    "signInProviders": "Sign-in methods",
     "settings": "Settings",
     "settingsSection": "Settings section",
     "myAccount": "My account",
@@ -1468,7 +1468,7 @@
         "credentialExpiring": "The credential of {providerName} expires on {expiresAt}. Add a new one before then, or sign-in through it stops working."
       },
       "account": {
-        "withoutOrganization": "{accountName} signed in through {providerName} for the first time and has no organization yet. Assign one in the account list.",
+        "withoutOrganization": "{accountName} signed in through {providerName} for the first time and is not a member of any organization yet. Assign one in the account list.",
         "rolesWithheld": "The groups of {accountName} could not be read from {providerName} for too long, so {roles, plural, one {# administrative role is} other {# administrative roles are}} paused. Check the connection to the provider."
       },
       "auth": {
@@ -1901,7 +1901,7 @@
       "filter": "Filter accounts",
       "filterAll": "All accounts",
       "withoutOrganization": "Without organization",
-      "withoutOrganizationHint": "No mapping rule and no organization domain gave this account an organization. Assign one so the person can work in it.",
+      "withoutOrganizationHint": "This account is not a member of any organization. Assign one so the person can work in it. It becomes the home organization of the account.",
       "assignTitle": "Organization",
       "organization": "Organization",
       "chooseOrganization": "Choose an organization",
@@ -1947,6 +1947,9 @@
       "type": "Type",
       "state": "State",
       "home": "Home organization",
+      "homeHint": "Home organization: its administrators manage this account, and its defaults apply to the person's own settings.",
+      "organizations": "Organizations",
+      "managedBy": "Managed by: {organization}",
       "created": "Created",
       "types": {
         "standard": "Standard",

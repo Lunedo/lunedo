@@ -28,6 +28,17 @@ export const administeredAccountSchema = accountSchema
           .describe("An instance role the account holds."),
       )
       .describe("Instance roles of the account, the instance owner first."),
+    organizations: z
+      .array(
+        z
+          .object({
+            id: uuid("ID of the organization."),
+            name: z.string().describe("Name of the organization."),
+            home: z.boolean().describe("Whether this is the home organization of the account."),
+          })
+          .describe("An organization the account is a member, collaborator or guest of."),
+      )
+      .describe("Current memberships of the account, the home organization first."),
   })
   .describe("An account of the instance with what administrators need to see.");
 
@@ -36,6 +47,7 @@ export const exampleAdministeredAccount = {
   lastSignInAt: "2026-10-01T09:30:00.000Z",
   twoFactorActive: true,
   instanceRoles: [{ builtInRole: "securityAuditor", customRoleId: null, name: null }],
+  organizations: [{ id: exampleOrganization.id, name: exampleOrganization.name, home: true }],
 };
 
 export const administeredOrganizationSchema = organizationSchema
