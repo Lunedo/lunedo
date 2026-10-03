@@ -96,8 +96,22 @@ Screens are built from the components in `packages/ui`; `/dev/components` shows 
 
 | Workflow | Trigger | Checks |
 |---|---|---|
-| `ci.yml` | pull requests, pushes to `main` | lint, translation check, typecheck, unit tests against PostgreSQL, end-to-end tests with accessibility checks and screenshots, backup round trip with the image, license check, dependency audit, DCO sign-off |
-| `image.yml` | pushes to `main`, pull requests that change `docker/` | image build for amd64 and arm64, not published |
+| `ci.yml` | pull requests, pushes to `main`, manual | see below |
+| `image.yml` | pushes to `main`, release tags `v*`, manual | image build for amd64 and arm64, not published |
+| `api.yml` | pull requests | compares the API description with the base branch |
 | `audit.yml` | Mondays 05:00 UTC, manual | `pnpm audit` on `main`; fails on any known vulnerability and lists the findings in the job summary |
+
+`ci.yml` has two lanes. A newer push to the same pull request or branch cancels the running workflow.
+
+- Fast lane, for draft pull requests: lint, reference and translation checks, typecheck, script tests, unit tests of the packages affected since the base branch (Turborepo `--affected`, split into three shards against PostgreSQL), license check, dependency audit, DCO sign-off.
+- Full lane, when a pull request is ready for review, on every push to it, on `main` and on manual runs: the fast lane with all unit tests, plus the expensive jobs below. On a pull request they run only when their area changed; changes to workflows or shared dependencies (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json`, `.nvmrc`, `packages/config/`) run all of them, and `main` always runs all of them.
+
+| Job | Runs on pull requests when these change |
+|---|---|
+| End-to-end, accessibility and visual tests | `apps/web/`, `packages/ui/`, `packages/tokens/` |
+| Sign-in through identity providers | identity, authentication and sign-in code in server, API and web client, `apps/web/e2e/idp/`, the end-to-end setup, `docker/idp/`, `docker/compose.dev.yml` |
+| Backup round trip (builds the image for amd64 only) | `packages/server/src/backup/`, `packages/server/drizzle/`, `apps/worker/src/cli/`, `docker/`, `scripts/backup-roundtrip.sh` |
+
+The job `Scope` decides the lane and the areas (`scripts/ci-scope.ts`) and lists them in its summary. The job `CI result` fails when any job failed or was cancelled and passes when the others passed or were skipped; it is the one check branch protection needs. The pnpm store, the Turborepo cache and Docker layers are cached between runs; on `main` the unit tests ignore cached results.
 
 Dependabot proposes dependency updates weekly (`.github/dependabot.yml`).
