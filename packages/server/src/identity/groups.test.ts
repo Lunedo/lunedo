@@ -161,6 +161,16 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
   }
 
   it("grants access through a rule at sign-in and removes only that access when the person leaves the group", async () => {
+    const home = await organization();
+    const homeGroup = `group-${randomUUID()}`;
+    await test.services.mappingRules.create(accountPrincipal(home.owner), generic, {
+      target: "organization",
+      group: { id: homeGroup, name: "Staff" },
+      organizationId: home.id,
+      role: null,
+      synchronizedGroup: false,
+      homeOrganization: true,
+    });
     const org = await organization();
     const group = `group-${randomUUID()}`;
     await test.services.mappingRules.create(accountPrincipal(org.owner), generic, {
@@ -176,15 +186,18 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
       sub: subject,
       email: `${subject.slice(0, 8)}@generic.example`,
       name: "Grace",
-      groups: [group],
-      group_names: ["Engineering"],
+      groups: [group, homeGroup],
+      group_names: ["Engineering", "Staff"],
     };
+    const left = { ...claims, groups: [homeGroup], group_names: ["Staff"] };
     const person = await signedInAccount(await signIn(claims));
     expect(await membership(org.id, person)).toBe("member");
     expect(await roles(person)).toEqual([{ scope: "organization", role: "administrator" }]);
+    expect((await test.services.accounts.get(person))?.homeOrganizationId).toBe(home.id);
 
-    await signedInAccount(await signIn({ ...claims, groups: [], group_names: [] }));
+    await signedInAccount(await signIn(left));
     expect(await membership(org.id, person)).toBeNull();
+    expect(await membership(home.id, person)).toBe("member");
     expect(await roles(person)).toEqual([]);
 
     await test.database.transaction((tx) =>
@@ -195,9 +208,97 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
       }),
     );
     await signedInAccount(await signIn(claims));
-    await signedInAccount(await signIn({ ...claims, groups: [], group_names: [] }));
+    await signedInAccount(await signIn(left));
     expect(await membership(org.id, person)).toBe("member");
     expect(await roles(person)).toEqual([]);
+  });
+
+  async function homeOf(accountId: string) {
+    return (await test.services.accounts.get(accountId))?.homeOrganizationId ?? null;
+  }
+
+  async function withoutOrganizationNotices(accountId: string) {
+    const result = await test.pool.query(
+      "select 1 from notifications where type = 'account.withoutOrganization' and target_id = $1",
+      [accountId],
+    );
+    return result.rowCount;
+  }
+
+  it("makes the first organization a rule leads into the home organization, preferring a rule that names one", async () => {
+    const first = await organization();
+    const second = await organization();
+    const firstGroup = `group-${randomUUID()}`;
+    const secondGroup = `group-${randomUUID()}`;
+    await test.services.mappingRules.create(accountPrincipal(first.owner), generic, {
+      target: "organization",
+      group: { id: firstGroup, name: "First" },
+      organizationId: first.id,
+      role: null,
+      synchronizedGroup: false,
+      homeOrganization: false,
+    });
+    await test.services.mappingRules.create(accountPrincipal(second.owner), generic, {
+      target: "organization",
+      group: { id: secondGroup, name: "Second" },
+      organizationId: second.id,
+      role: null,
+      synchronizedGroup: false,
+      homeOrganization: false,
+    });
+    const claims = (groups: string[]) => {
+      const subject = randomUUID();
+      return { sub: subject, email: `${subject.slice(0, 8)}@generic.example`, groups };
+    };
+
+    const only = await signedInAccount(await signIn(claims([secondGroup])));
+    expect(await homeOf(only)).toBe(second.id);
+    expect(await withoutOrganizationNotices(only)).toBe(0);
+
+    const rules = await test.services.mappingRules.list(generic);
+    const named = rules.find((rule) => rule.group.id === secondGroup);
+    if (!named) throw new Error("The rule was not found");
+    await test.services.mappingRules.update(accountPrincipal(second.owner), generic, named.id, {
+      target: "organization",
+      group: { id: secondGroup, name: "Second" },
+      organizationId: second.id,
+      role: null,
+      synchronizedGroup: false,
+      homeOrganization: true,
+    });
+    const both = await signedInAccount(await signIn(claims([firstGroup, secondGroup])));
+    expect(await homeOf(both)).toBe(second.id);
+    expect(await membership(first.id, both)).toBe("member");
+  });
+
+  it("gives an account with a standard membership but no home organization one at its next sign-in", async () => {
+    const collaborating = await organization();
+    const member = await organization();
+    const subject = randomUUID();
+    const claims = { sub: subject, email: `${subject.slice(0, 8)}@generic.example`, groups: [] };
+    const person = await signedInAccount(await signIn(claims));
+    expect(await homeOf(person)).toBeNull();
+    await test.pool.query(
+      "insert into memberships (id, organization_id, account_id, kind, created_at) values (gen_random_uuid(), $1, $3, 'collaborator', now() - interval '2 days'), (gen_random_uuid(), $2, $3, 'member', now() - interval '1 day')",
+      [collaborating.id, member.id, person],
+    );
+    expect(await homeOf(person)).toBeNull();
+
+    await signedInAccount(await signIn(claims));
+    expect(await homeOf(person)).toBe(member.id);
+  });
+
+  it("never sets a home organization from a collaborator membership alone", async () => {
+    const collaborating = await organization();
+    const subject = randomUUID();
+    const claims = { sub: subject, email: `${subject.slice(0, 8)}@generic.example`, groups: [] };
+    const person = await signedInAccount(await signIn(claims));
+    await test.pool.query(
+      "insert into memberships (id, organization_id, account_id, kind) values (gen_random_uuid(), $1, $2, 'collaborator')",
+      [collaborating.id, person],
+    );
+    await signedInAccount(await signIn(claims));
+    expect(await homeOf(person)).toBeNull();
   });
 
   it("applies rules when an existing account is linked with its password", async () => {

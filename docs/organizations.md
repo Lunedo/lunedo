@@ -14,7 +14,9 @@ Self-service creation of organizations is the instance setting `organizations.se
 
 ## Memberships
 
-Every standard account has exactly one home organization and is a member of it. An account can be a member of further organizations, with a different role in each.
+A standard account has at most one home organization and is a member of it. The home organization decides two things: whose administrators manage the account itself (second factor, sessions, deactivation), and whose defaults apply to the person's own settings. An account can be a member of further organizations, with a different role in each.
+
+When an account without a home organization becomes a member of an organization for the first time, through a mapping rule or by hand, that organization becomes its home organization (audited as `account.organizationAssigned`). Collaborator and guest memberships never set it. An account that is a member somewhere but has no home organization gets one at its next sign-in or synchronization by the same rule.
 
 | Kind | Who | Limits |
 |---|---|---|

@@ -687,7 +687,7 @@ describe.skipIf(!baseUrl)("API tokens and service accounts", () => {
     it("tell the owners once when the last responsible person leaves, without changing permissions", async () => {
       const org = await organization();
       const creator = await member(org.id, { integrationsAndApi: "manage" });
-      const visitor = await standard(null);
+      const visitor = await standard((await organization()).id);
       await test.database.transaction((tx) =>
         test.services.memberships.add(tx, SYSTEM, {
           organizationId: org.id,

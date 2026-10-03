@@ -6,7 +6,7 @@ import { instanceAdministratorIds } from "../auth/emergency-recipients.js";
 import type { Executor, Transaction } from "../database/database.js";
 import type { NotificationService } from "../notifications/service.js";
 import { groupMembers, groups, memberships, roleAssignments } from "../organizations/access-schema.js";
-import type { MembershipService } from "../organizations/memberships.js";
+import { claimHomeOrganization, type MembershipService } from "../organizations/memberships.js";
 import type { RoleService } from "../organizations/roles.js";
 import type { ProviderGroup } from "./adapter.js";
 import {
@@ -70,6 +70,7 @@ interface DesiredGrant {
   organizationId: string | null;
   role: RoleKey | null;
   groupId: string | null;
+  home: number | null;
 }
 
 function roleKey(role: RoleKey): string {
@@ -324,6 +325,8 @@ export class GroupMappingService {
         builtInRole: mappingRules.builtInRole,
         customRoleId: mappingRules.customRoleId,
         pagehallGroupId: mappingRules.pagehallGroupId,
+        homeOrganization: mappingRules.homeOrganization,
+        position: mappingRules.position,
       })
       .from(identities)
       .innerJoin(identityGroups, eq(identityGroups.identityId, identities.id))
@@ -348,21 +351,28 @@ export class GroupMappingService {
       if (row.target === "instance") {
         if (!role) continue;
         const key = `role:instance:${roleKey(role)}`;
-        desired.set(key, { key, kind: "role", organizationId: null, role, groupId: null });
+        desired.set(key, { key, kind: "role", organizationId: null, role, groupId: null, home: null });
         continue;
       }
       const organizationId = row.organizationId ?? "";
       const membership = `membership:${organizationId}`;
+      const earlier = desired.get(membership)?.home ?? null;
+      const home = row.homeOrganization
+        ? earlier === null
+          ? row.position
+          : Math.min(earlier, row.position)
+        : earlier;
       desired.set(membership, {
         key: membership,
         kind: "membership",
         organizationId,
         role: null,
         groupId: null,
+        home,
       });
       if (role) {
         const key = `role:${organizationId}:${roleKey(role)}`;
-        desired.set(key, { key, kind: "role", organizationId, role, groupId: null });
+        desired.set(key, { key, kind: "role", organizationId, role, groupId: null, home: null });
       }
       if (row.pagehallGroupId) {
         const key = `group:${row.pagehallGroupId}`;
@@ -372,6 +382,7 @@ export class GroupMappingService {
           organizationId,
           role: null,
           groupId: row.pagehallGroupId,
+          home: null,
         });
       }
     }
@@ -390,7 +401,9 @@ export class GroupMappingService {
     const currentKeys = new Set(current.map((grant) => grant.key));
     const desiredKeys = new Set(desired.map((grant) => grant.key));
     const order = { membership: 0, role: 1, groupMember: 2 } as const;
-    for (const grant of desired.sort((a, b) => order[a.kind] - order[b.kind])) {
+    const rank = (grant: DesiredGrant) => grant.home ?? Number.MAX_SAFE_INTEGER;
+    if (account.home === null) await this.#claimHome(tx, accountId, desired, rank);
+    for (const grant of desired.sort((a, b) => order[a.kind] - order[b.kind] || rank(a) - rank(b))) {
       if (currentKeys.has(grant.key)) continue;
       try {
         await tx.transaction(async (savepoint) => {
@@ -405,13 +418,17 @@ export class GroupMappingService {
         });
       }
     }
+    const [{ home } = { home: null }] = await tx
+      .select({ home: accounts.homeOrganizationId })
+      .from(accounts)
+      .where(eq(accounts.id, accountId));
     const removal = { groupMember: 0, role: 1, membership: 2 } as const;
     for (const grant of current
       .filter((item) => !desiredKeys.has(item.key))
       .sort((a, b) => removal[a.kind] - removal[b.kind])) {
       try {
         await tx.transaction(async (savepoint) => {
-          await this.#revoke(savepoint, accountId, account.home, grant, report);
+          await this.#revoke(savepoint, accountId, home, grant, report);
         });
       } catch (error) {
         report.warnings.push({
@@ -422,6 +439,29 @@ export class GroupMappingService {
         });
       }
     }
+  }
+
+  async #claimHome(
+    tx: Transaction,
+    accountId: string,
+    desired: DesiredGrant[],
+    rank: (grant: DesiredGrant) => number,
+  ): Promise<void> {
+    const held = await tx
+      .select({ organizationId: memberships.organizationId })
+      .from(memberships)
+      .where(and(eq(memberships.accountId, accountId), eq(memberships.kind, "member")))
+      .orderBy(asc(memberships.createdAt), asc(memberships.id));
+    if (held.length === 0) return;
+    const heldIds = new Set(held.map((row) => row.organizationId));
+    const preferred = desired
+      .filter((grant) => grant.kind === "membership" && grant.home !== null)
+      .sort((a, b) => rank(a) - rank(b))
+      .find((grant) => heldIds.has(grant.organizationId ?? ""));
+    const organizationId = preferred?.organizationId ?? held[0]?.organizationId;
+    if (!organizationId) return;
+    const event = await claimHomeOrganization(tx, accountId, organizationId);
+    if (event) await this.#audit.record(tx, event);
   }
 
   async #grant(tx: Transaction, accountId: string, grant: DesiredGrant, report: SyncReport): Promise<void> {

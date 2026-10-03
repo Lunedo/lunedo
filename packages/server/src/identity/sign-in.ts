@@ -19,6 +19,7 @@ import { secondFactorsOf } from "../auth/two-factor.js";
 import { secretsEqual } from "../crypto/constant-time.js";
 import type { Database, Transaction } from "../database/database.js";
 import type { NotificationService } from "../notifications/service.js";
+import { memberships } from "../organizations/access-schema.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import { organizationDomains } from "../organizations/schema.js";
 import type { SettingsService } from "../settings/service.js";
@@ -486,16 +487,6 @@ export class ProviderSignInService {
           name: profile.displayName ?? email,
           homeOrganizationId: home,
         });
-        if (home === null) {
-          const notified = await this.#notifications.notify(tx, {
-            type: "account.withoutOrganization",
-            recipients: await instanceAdministratorIds(tx),
-            organizationId: null,
-            targetId: account.id,
-            params: { accountName: account.name, email: account.email, providerName: provider.name },
-          });
-          mailIds.push(...notified.mailIds);
-        }
         const [created] = await tx
           .insert(identities)
           .values({
@@ -516,6 +507,21 @@ export class ProviderSignInService {
           accountId: account.id,
           groups: input.groups,
         });
+        const [membership] = await tx
+          .select({ id: memberships.id })
+          .from(memberships)
+          .where(eq(memberships.accountId, account.id))
+          .limit(1);
+        if (!membership) {
+          const notified = await this.#notifications.notify(tx, {
+            type: "account.withoutOrganization",
+            recipients: await instanceAdministratorIds(tx),
+            organizationId: null,
+            targetId: account.id,
+            params: { accountName: account.name, email: account.email, providerName: provider.name },
+          });
+          mailIds.push(...notified.mailIds);
+        }
         const scope = home ? { scope: { type: "organization" as const, id: home } } : {};
         await this.#audit.record(tx, {
           name: "account.createdAtSignIn",

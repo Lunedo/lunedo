@@ -282,6 +282,50 @@ describe.skipIf(!baseUrl)("organizations", () => {
     });
   });
 
+  it("makes the first standard membership the home organization, never a guest or collaborator one", async () => {
+    const first = await organization();
+    const second = await organization();
+    const person = await standard(null);
+    const add = (organizationId: string, kind: "member" | "collaborator" | "guest") =>
+      test.database.transaction((tx) =>
+        test.services.memberships.add(tx, accountPrincipal(first.owner), {
+          organizationId,
+          accountId: person,
+          kind,
+        }),
+      );
+    const home = async () => (await test.services.accounts.get(person))?.homeOrganizationId;
+    const without = async () =>
+      (await test.services.overview.listAccounts({ limit: 200 }, { withoutOrganization: true })).items.map(
+        (item) => item.id,
+      );
+
+    expect(await without()).toContain(person);
+    await add(second.id, "guest");
+    expect(await home()).toBeNull();
+    await test.pool.query("delete from memberships where account_id = $1", [person]);
+    await add(second.id, "collaborator");
+    expect(await home()).toBeNull();
+    expect(await without()).not.toContain(person);
+
+    await add(first.id, "member");
+    expect(await home()).toBe(first.id);
+    const audited = await test.pool.query(
+      "select actor_type, fields from audit_events where name = 'account.organizationAssigned' and target_id = $1",
+      [person],
+    );
+    expect(audited.rows).toEqual([{ actor_type: "system", fields: { organizationId: first.id } }]);
+    const listed = await test.services.overview.listAccounts({ limit: 200 });
+    expect(listed.items.find((item) => item.id === person)?.organizations).toEqual([
+      { id: first.id, name: expect.any(String), home: true },
+      { id: second.id, name: expect.any(String), home: false },
+    ]);
+
+    const third = await organization();
+    await add(third.id, "member");
+    expect(await home()).toBe(first.id);
+  });
+
   it("registers accounts in the organization of an assigned domain only when allowed", async () => {
     const org = await organization();
     const domain = `${randomUUID().slice(0, 8)}.example`;

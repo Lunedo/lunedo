@@ -56,6 +56,28 @@ function actorId(actor: Principal): string | null {
   return actor.type === "account" ? actor.id : null;
 }
 
+export async function claimHomeOrganization(
+  tx: Transaction,
+  accountId: string,
+  organizationId: string,
+): Promise<Event | null> {
+  const claimed = await tx
+    .update(accounts)
+    .set({ homeOrganizationId: organizationId })
+    .where(
+      and(eq(accounts.id, accountId), eq(accounts.type, "standard"), isNull(accounts.homeOrganizationId)),
+    )
+    .returning({ id: accounts.id });
+  if (claimed.length === 0) return null;
+  return {
+    name: "account.organizationAssigned",
+    actor: SYSTEM,
+    targetId: accountId,
+    fields: { organizationId },
+    scope: scopeOf(organizationId),
+  };
+}
+
 export async function lockOrganization(tx: Transaction, organizationId: string): Promise<void> {
   const locked = await tx.execute(sql`select id from organizations where id = ${organizationId} for update`);
   if (locked.rows.length === 0) throw new OrganizationError("notFound", "The organization does not exist");
@@ -195,8 +217,13 @@ export class MembershipService {
       fields: { kind: input.kind, expiresAt: input.expiresAt?.toISOString() ?? null },
       scope: scopeOf(input.organizationId),
     };
-    if (options.collect) options.collect.push(event);
-    else await this.#audit.record(tx, event);
+    const events = [event];
+    if (input.kind === "member") {
+      const assigned = await claimHomeOrganization(tx, input.accountId, input.organizationId);
+      if (assigned) events.push(assigned);
+    }
+    if (options.collect) options.collect.push(...events);
+    else await this.#audit.recordMany(tx, events);
   }
 
   async #checkRank(
