@@ -170,7 +170,27 @@ for (const provider of identityProviders) {
     }) => {
       const synchronize = provider.name === "keycloak";
       const owner = await ownerApi(browser);
-      const organizationId = await firstOrganization(owner.request);
+      const homeId = await firstOrganization(owner.request);
+      const accounts = await owner.request.get(
+        `/api/v1/instance/accounts?q=${encodeURIComponent(TEST_USERS[user].email)}`,
+      );
+      const [account] = (
+        (await accounts.json()) as { items: { id: string; homeOrganizationId: string | null }[] }
+      ).items;
+      if (!account) throw new Error("The account from the first sign-in was not found");
+      if (account.homeOrganizationId === null) {
+        const assigned = await owner.request.post(`/api/v1/instance/accounts/${account.id}/organization`, {
+          headers,
+          data: { organizationId: homeId },
+        });
+        expect(assigned.status(), await assigned.text()).toBe(204);
+      }
+      const organization = await owner.request.post("/api/v1/organizations", {
+        headers,
+        data: { name: `E2E ${provider.name} engineering ${Date.now()}` },
+      });
+      expect(organization.status(), await organization.text()).toBe(201);
+      const organizationId = ((await organization.json()) as { id: string }).id;
       const groupId = await provider.groupId("engineering");
       const created = await owner.request.post(
         `/api/v1/instance/identity-providers/${providerId}/mapping-rules`,
@@ -212,6 +232,7 @@ for (const provider of identityProviders) {
       await signInThroughProvider(second, provider, user);
       await expect(second.getByRole("heading", { level: 1 })).toBeVisible();
       expect(await organizationIds(again)).not.toContain(organizationId);
+      expect(await organizationIds(again)).toContain(homeId);
       await again.close();
     });
 
