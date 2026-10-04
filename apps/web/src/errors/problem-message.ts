@@ -89,6 +89,9 @@ const KNOWN = new Set([
   "providerInitiatedSignIn",
   "invalidSamlMetadata",
   "invalidCertificate",
+  "confirmationMismatch",
+  "anonymizeSelf",
+  "notPlaceholder",
 ]);
 
 const DIRECTORY_PROBLEMS: Record<string, string> = {

@@ -1013,7 +1013,10 @@
     "invalidSamlMetadataDetail": "Pagehall konnte die SAML-Metadaten nicht verwenden: {detail}. Prüfe, ob die Adresse oder Datei die Metadaten des Identitätsanbieters enthält, und versuche es erneut.",
     "invalidCertificate": "Diese Datei ist kein CA-Zertifikat, das Pagehall verwenden kann. Lade das Zertifikat der Stelle hoch, die das Zertifikat des Verzeichnisservers ausgestellt hat, im PEM-Format.",
     "directoryInvalidCredentials": "Der Anmeldename oder das Passwort ist nicht korrekt. Prüfe beides und versuche es erneut. Wenn du dein Passwort vergessen hast, setze es auf dem in deiner Organisation üblichen Weg zurück oder wende dich an die IT.",
-    "directoryUnavailable": "Das Verzeichnis war nicht erreichbar. Versuche es in ein paar Minuten erneut; wenn es weiter scheitert, wende dich an die IT."
+    "directoryUnavailable": "Das Verzeichnis war nicht erreichbar. Versuche es in ein paar Minuten erneut; wenn es weiter scheitert, wende dich an die IT.",
+    "confirmationMismatch": "Der eingegebene Name passt nicht zum Konto. Gib den Namen genau wie angezeigt ein und versuche es erneut.",
+    "anonymizeSelf": "Du kannst dein eigenes Konto nicht anonymisieren. Bitte eine andere Person aus der Administration.",
+    "notPlaceholder": "Dieses Konto ist kein Platzhalter mehr oder wurde bereits zusammengeführt. Lade die Seite neu."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -2767,6 +2770,57 @@
     "uploadMetadata": "Die Metadatendatei konnte nicht gespeichert werden",
     "uploadCaCertificate": "Das CA-Zertifikat konnte nicht gespeichert werden",
     "removeCaCertificate": "Das CA-Zertifikat konnte nicht entfernt werden",
-    "testDirectory": "Das Verzeichnis konnte nicht getestet werden"
+    "testDirectory": "Das Verzeichnis konnte nicht getestet werden",
+    "createPlaceholder": "Der Platzhalter konnte nicht angelegt werden",
+    "mergePlaceholder": "Der Platzhalter konnte nicht zusammengeführt werden",
+    "changeHomeOrganization": "Die Heimatorganisation wurde nicht geändert",
+    "anonymize": "Das Konto wurde nicht anonymisiert"
+  },
+  "lifecycle": {
+    "placeholder": {
+      "add": "Platzhalter anlegen",
+      "title": "Platzhalter anlegen",
+      "description": "Ein Platzhalter steht für eine Person, die noch kein Konto hat, zum Beispiel die Autorin oder den Autor importierter Inhalte. Er kann sich nicht anmelden.",
+      "name": "Name",
+      "email": "E-Mail-Adresse",
+      "emailHint": "Meldet sich die Person mit dieser Adresse über einen Anbieter an und bestätigt der Anbieter sie, wird der Platzhalter zu ihrem Konto.",
+      "create": "Platzhalter anlegen",
+      "created": "Platzhalter für {name} angelegt"
+    },
+    "merge": {
+      "title": "Mit einem Konto zusammenführen",
+      "description": "Überträgt die Mitgliedschaften, Gruppen und Organisationsrollen des Platzhalters auf das gewählte Konto. Nutze das, wenn sich die Person mit einer anderen Adresse angemeldet hat.",
+      "account": "Konto",
+      "search": "Name oder E-Mail suchen",
+      "noAccounts": "Kein aktives Konto passt",
+      "notOwn": "Du kannst einen Platzhalter nicht mit deinem eigenen Konto zusammenführen.",
+      "action": "Zusammenführen",
+      "done": "{placeholder} mit {account} zusammengeführt: {memberships, plural, one {# Mitgliedschaft} other {# Mitgliedschaften}}, {groups, plural, one {# Gruppe} other {# Gruppen}}, {roles, plural, one {# Rolle} other {# Rollen}}"
+    },
+    "home": {
+      "title": "Heimatorganisation",
+      "description": "Die Heimatorganisation bestimmt, wessen Administration das Konto verwaltet und wessen Standards für seine Einstellungen gelten. Die Person und die Administration beider Organisationen werden benachrichtigt.",
+      "action": "Heimatorganisation ändern",
+      "changed": "{organization} ist jetzt die Heimatorganisation",
+      "newHome": "Neue Heimatorganisation"
+    },
+    "anonymize": {
+      "title": "Konto anonymisieren",
+      "summary": "Entfernt Name, E-Mail-Adresse und Profil endgültig. Inhalte zeigen danach eine ehemalige Person.",
+      "open": "Anonymisieren …",
+      "irreversible": "Das lässt sich nicht rückgängig machen",
+      "removesProfile": "Name, E-Mail-Adresse, Anmeldenamen und Profil von {name} werden entfernt. Das Konto erscheint als ehemalige Person mit einer kurzen ID.",
+      "deletesAccess": "Verknüpfte Anmeldungen, Sitzungen, API-Tokens, Passkeys, zweite Faktoren und persönliche Einstellungen werden gelöscht.",
+      "endsMemberships": "Alle Mitgliedschaften, Rollen und Gruppenmitgliedschaften enden.",
+      "keepsContent": "Seiten, Kommentare und Versionen bleiben und zeigen die ehemalige Person.",
+      "auditLog": "Das Audit-Protokoll behält die Ereignisse nur mit der Konto-ID; die persönlichen Daten darin werden unlesbar.",
+      "copies": "Kopien des Audit-Protokolls, die exportiert oder an andere Systeme gestreamt wurden, liegen außerhalb von Pagehall und behalten die Daten. Lösche sie bei Bedarf dort.",
+      "reason": "Grund",
+      "reasonHint": "Bleibt im Audit-Protokoll. Nenne die Person nicht, zum Beispiel: Löschanfrage vom 1. Oktober 2026.",
+      "confirm": "Gib {name} zur Bestätigung ein",
+      "reauthentication": "Danach bittet Pagehall dich, mit deinem Passwort, Passkey oder Authenticator-Code zu bestätigen.",
+      "action": "Anonymisieren",
+      "done": "Das Konto wurde anonymisiert"
+    }
   }
 }

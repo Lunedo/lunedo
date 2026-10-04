@@ -56,7 +56,10 @@ afterEach(() => {
   window.history.replaceState(null, "", "/");
 });
 
-function api(resetResult: () => { status?: number; body?: unknown }) {
+function api(
+  resetResult: () => { status?: number; body?: unknown },
+  overrides: Record<string, (request: { path: string }) => { status?: number; body?: unknown }> = {},
+) {
   return mockApi({
     "GET /api/v1/instance/info": () => ({
       body: {
@@ -117,6 +120,14 @@ function api(resetResult: () => { status?: number; body?: unknown }) {
               },
             ],
           },
+          {
+            organizationId: RESEARCH,
+            name: "Research",
+            kind: "member",
+            expiresAt: null,
+            home: false,
+            roles: [],
+          },
         ],
         sessions: [
           {
@@ -148,6 +159,19 @@ function api(resetResult: () => { status?: number; body?: unknown }) {
       body: { items: [{ id: ORGANIZATION, name: "Platform Team", slug: "platform" }], nextCursor: null },
     }),
     [`POST /api/v1/instance/accounts/${MAX}/organization`]: () => ({ status: 204 }),
+    [`POST /api/v1/instance/accounts/${MAX}/anonymize`]: () => ({
+      body: { endedSessions: 1, removedIdentities: 0, endedMemberships: 2 },
+    }),
+    [`PUT /api/v1/accounts/${MAX}/home-organization`]: () => ({ status: 204 }),
+    "POST /api/v1/instance/accounts/placeholders": () => ({
+      status: 201,
+      body: {
+        id: "01929b1e-0000-7000-8000-0000000000ab",
+        name: "Imported Author",
+        email: "imported@example.org",
+      },
+    }),
+    ...overrides,
   });
 }
 
@@ -233,6 +257,149 @@ describe("the accounts page", () => {
     ).toBeTruthy();
     expect(requests.find((request) => request.path.endsWith("/second-factor/reset"))?.body).toEqual({
       reason: "Lost phone, confirmed by call",
+    });
+  });
+
+  it("anonymizes an account only after the reason and the typed name", async () => {
+    const { requests } = api(() => ({ body: { endedSessions: 0 } }));
+    const table = await renderAccounts();
+    await userEvent.click(await within(table).findByText("Max Member"));
+    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    await userEvent.click(within(panel).getByRole("button", { name: "Anonymize…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Anonymize account" });
+    expect(
+      within(dialog).getByText(/exported or streamed to other systems are outside Pagehall/),
+    ).toBeTruthy();
+    const confirm = within(dialog).getByRole("button", { name: "Anonymize" }) as HTMLButtonElement;
+    expect(confirm.disabled).toBe(true);
+    await userEvent.type(within(dialog).getByLabelText("Reason"), "Erasure request of 1 October 2026");
+    await userEvent.type(within(dialog).getByLabelText("Type Max Member to confirm"), "Max");
+    expect(confirm.disabled).toBe(true);
+    await userEvent.type(within(dialog).getByLabelText("Type Max Member to confirm"), " Member");
+    expect(confirm.disabled).toBe(false);
+    await userEvent.click(confirm);
+    expect(await screen.findByText("The account was anonymized")).toBeTruthy();
+    expect(requests.find((request) => request.path.endsWith(`/accounts/${MAX}/anonymize`))?.body).toEqual({
+      reason: "Erasure request of 1 October 2026",
+      confirmation: "Max Member",
+    });
+  });
+
+  it("adds a placeholder with a name and an e-mail address", async () => {
+    const { requests } = api(() => ({ body: { endedSessions: 0 } }));
+    await renderAccounts();
+    await userEvent.click(await screen.findByRole("button", { name: "Add placeholder" }));
+    const dialog = await screen.findByRole("dialog", { name: "Add placeholder" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create placeholder" }));
+    expect(requests.some((request) => request.path.endsWith("/placeholders"))).toBe(false);
+    await userEvent.type(within(dialog).getByLabelText("Name"), "Imported Author");
+    await userEvent.type(within(dialog).getByLabelText("E-mail address"), "imported@example.org");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create placeholder" }));
+    expect(await screen.findByText("Placeholder for Imported Author created")).toBeTruthy();
+    expect(requests.find((request) => request.path.endsWith("/placeholders"))?.body).toEqual({
+      name: "Imported Author",
+      email: "imported@example.org",
+    });
+  });
+
+  it("changes the home organization to another organization the account belongs to", async () => {
+    const { requests } = api(() => ({ body: { endedSessions: 0 } }), {
+      "GET /api/v1/instance/accounts": () => ({
+        body: {
+          items: [{ ...account(MAX, "Max Member", "max@example.org"), homeOrganizationId: ORGANIZATION }],
+          nextCursor: null,
+        },
+      }),
+      [`GET /api/v1/instance/accounts/${MAX}`]: () => ({
+        body: {
+          account: { ...account(MAX, "Max Member", "max@example.org"), homeOrganizationId: ORGANIZATION },
+          memberships: [
+            {
+              organizationId: ORGANIZATION,
+              name: "Platform Team",
+              kind: "member",
+              expiresAt: null,
+              home: true,
+              roles: [],
+            },
+            {
+              organizationId: RESEARCH,
+              name: "Research",
+              kind: "member",
+              expiresAt: null,
+              home: false,
+              roles: [],
+            },
+          ],
+          sessions: [],
+          tokens: [],
+          twoFactor: { totp: true, passkeys: 0, recoveryCodes: 10 },
+        },
+      }),
+    });
+    const table = await renderAccounts();
+    await userEvent.click(await within(table).findByText("Max Member"));
+    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    const change = (await within(panel).findByRole("button", {
+      name: "Change home organization",
+    })) as HTMLButtonElement;
+    expect(change.disabled).toBe(true);
+    await userEvent.click(within(panel).getByRole("combobox", { name: "New home organization" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Research" }));
+    await userEvent.click(change);
+    expect(await screen.findByText("Research is the home organization now")).toBeTruthy();
+    expect(
+      requests.find((request) => request.path.endsWith(`/accounts/${MAX}/home-organization`))?.body,
+    ).toEqual({
+      organizationId: RESEARCH,
+    });
+  });
+
+  it("merges a placeholder into another account but not into the own one", async () => {
+    const PLACEHOLDER = "01929b1e-0000-7000-8000-0000000000ab";
+    const placeholder = {
+      ...account(PLACEHOLDER, "Imported Author", "imported@example.org"),
+      state: "placeholder",
+    };
+    const { requests } = api(() => ({ body: { endedSessions: 0 } }), {
+      "GET /api/v1/instance/accounts": (request) => ({
+        body: {
+          items: request.path.includes("state=active")
+            ? [account(OLIVIA.id, OLIVIA.name, OLIVIA.email), account(MAX, "Max Member", "max@example.org")]
+            : [placeholder],
+          nextCursor: null,
+        },
+      }),
+      [`GET /api/v1/instance/accounts/${PLACEHOLDER}`]: () => ({
+        body: {
+          account: placeholder,
+          memberships: [],
+          sessions: [],
+          tokens: [],
+          twoFactor: { totp: false, passkeys: 0, recoveryCodes: 0 },
+        },
+      }),
+      [`POST /api/v1/instance/accounts/${PLACEHOLDER}/merge`]: () => ({
+        body: { memberships: 1, groups: 0, roles: 0 },
+      }),
+    });
+    const table = await renderAccounts();
+    await userEvent.click(await within(table).findByText("Imported Author"));
+    const panel = await screen.findByRole("dialog", { name: "Imported Author" });
+    const field = await within(panel).findByRole("combobox", { name: "Account" });
+    await userEvent.type(field, "o");
+    await userEvent.click(await screen.findByRole("option", { name: /Olivia Owner/ }));
+    expect(
+      await within(panel).findByText("You cannot merge a placeholder into your own account."),
+    ).toBeTruthy();
+    expect((within(panel).getByRole("button", { name: "Merge" }) as HTMLButtonElement).disabled).toBe(true);
+    await userEvent.clear(field);
+    await userEvent.type(field, "m");
+    await userEvent.click(await screen.findByRole("option", { name: /Max Member/ }));
+    await userEvent.click(within(panel).getByRole("button", { name: "Merge" }));
+    expect(await screen.findByText(/Imported Author merged into Max Member/)).toBeTruthy();
+    expect(requests.find((request) => request.path.endsWith(`/${PLACEHOLDER}/merge`))?.body).toEqual({
+      accountId: MAX,
     });
   });
 

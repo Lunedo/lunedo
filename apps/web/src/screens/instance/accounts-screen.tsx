@@ -17,12 +17,13 @@ import {
 } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { House, Info, UserRound } from "lucide-react";
+import { House, Info, UserPlus, UserRound } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { instanceKeys, instanceOrganizationsQuery } from "../../api/instance-queries.js";
 import { request } from "../../api/request.js";
+import { formerUser } from "../../components/audit-presentation.js";
 import { AccountIdentities } from "../../components/linked-identities.js";
 import { useServerTable } from "../../components/table-state.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
@@ -31,6 +32,12 @@ import { translateKey } from "../../i18n/translate.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState, useSession } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
+import {
+  AnonymizeDialog,
+  HomeOrganizationChange,
+  MergePlaceholder,
+  PlaceholderDialog,
+} from "./account-lifecycle.js";
 
 const STATE_BADGES = {
   active: "success",
@@ -43,7 +50,9 @@ const STATE_BADGES = {
 type AccountPage = Awaited<ReturnType<typeof fetchAccounts>>;
 type Account = AccountPage["items"][number];
 
-type AccountFilter = "all" | "withoutOrganization";
+const STATE_FILTERS = ["active", "deactivated", "placeholder", "anonymized"] as const;
+
+type AccountFilter = "all" | "withoutOrganization" | (typeof STATE_FILTERS)[number];
 
 function fetchAccounts(search: string, cursor: string | null, filter: AccountFilter = "all") {
   return request(() =>
@@ -54,10 +63,15 @@ function fetchAccounts(search: string, cursor: string | null, filter: AccountFil
           ...(search ? { q: search } : {}),
           ...(cursor ? { cursor } : {}),
           ...(filter === "withoutOrganization" ? { withoutOrganization: "true" as const } : {}),
+          ...(filter !== "all" && filter !== "withoutOrganization" ? { state: filter } : {}),
         },
       },
     }),
   );
+}
+
+function accountName(t: TFunction, account: { id: string; name: string; state: string }): string {
+  return account.state === "anonymized" ? formerUser(t, account.id) : account.name;
 }
 
 export function instanceRoleName(t: TFunction, role: { builtInRole: string | null; name?: string | null }) {
@@ -72,6 +86,9 @@ export function InstanceAccountsScreen() {
     fetchAccounts(search, cursor, filter),
   );
   const [open, setOpen] = useState<Account | null>(null);
+  const [creating, setCreating] = useState(false);
+  const queryClient = useQueryClient();
+  const manage = useOrganizationState().can("instance.accounts.manage");
 
   return (
     <SettingsPage
@@ -91,13 +108,35 @@ export function InstanceAccountsScreen() {
               options={[
                 { value: "all", label: t("instance.accounts.filterAll") },
                 { value: "withoutOrganization", label: t("instance.accounts.withoutOrganization") },
+                ...STATE_FILTERS.map((state) => ({
+                  value: state,
+                  label: t(`instance.accounts.states.${state}`),
+                })),
               ]}
             />
           </div>
         }
         filtersActive={filter !== "all"}
         onResetFilters={() => setFilter("all")}
+        {...(manage
+          ? {
+              actions: (
+                <Button variant="secondary" icon={UserPlus} onClick={() => setCreating(true)}>
+                  {t("lifecycle.placeholder.add")}
+                </Button>
+              ),
+            }
+          : {})}
       />
+      {creating ? (
+        <PlaceholderDialog
+          onClose={() => setCreating(false)}
+          onCreated={async () => {
+            setCreating(false);
+            await queryClient.invalidateQueries({ queryKey: instanceKeys.accounts });
+          }}
+        />
+      ) : null}
       {table.query.isError ? (
         <LoadError
           what={t("failures.loadAccounts")}
@@ -120,7 +159,7 @@ export function InstanceAccountsScreen() {
               header: t("members.name"),
               cell: (account) => (
                 <div className="flex min-w-0 flex-col">
-                  <span className="font-medium">{account.name}</span>
+                  <span className="font-medium">{accountName(t, account)}</span>
                   <span className="text-sm text-text-muted">{account.email ?? "—"}</span>
                 </div>
               ),
@@ -221,7 +260,7 @@ function AccountOrganizations({ organizations }: { organizations: Account["organ
   );
 }
 
-type PanelAction = "deactivate" | "reactivate" | "endSessions" | "reset";
+type PanelAction = "deactivate" | "reactivate" | "endSessions" | "reset" | "anonymize";
 
 function AccountPanel({ account, onClose }: { account: Account; onClose: () => void }) {
   const { t } = useTranslation();
@@ -248,7 +287,7 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
     await queryClient.invalidateQueries({ queryKey: instanceKeys.accounts });
   };
 
-  const run = async (kind: Exclude<PanelAction, "reset">) => {
+  const run = async (kind: Exclude<PanelAction, "reset" | "anonymize">) => {
     const accountId = account.id;
     try {
       if (kind === "deactivate")
@@ -288,7 +327,12 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
   );
 
   return (
-    <Drawer open onOpenChange={(next) => (next ? undefined : onClose())} title={account.name} size="panel">
+    <Drawer
+      open
+      onOpenChange={(next) => (next ? undefined : onClose())}
+      title={accountName(t, account)}
+      size="panel"
+    >
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-1 text-sm">
           <span>{account.email ?? "—"}</span>
@@ -315,8 +359,39 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
             </div>
           </div>
         ) : null}
-        {manage && account.type === "standard" && current.homeOrganizationId === null ? (
+        {manage &&
+        account.type === "standard" &&
+        current.state === "active" &&
+        current.homeOrganizationId === null ? (
           <AssignOrganization accountId={account.id} onAssigned={refresh} />
+        ) : null}
+        {manage && current.state === "placeholder" ? (
+          <PanelSection title={t("lifecycle.merge.title")}>
+            <MergePlaceholder
+              placeholder={{ id: account.id, name: account.name }}
+              ownAccountId={session.account?.id ?? null}
+              onMerged={async () => {
+                await refresh();
+                onClose();
+              }}
+            />
+          </PanelSection>
+        ) : null}
+        {manage &&
+        current.state === "active" &&
+        account.type === "standard" &&
+        current.homeOrganizationId !== null &&
+        detail.data ? (
+          <PanelSection title={t("lifecycle.home.title")}>
+            <HomeOrganizationChange
+              accountId={account.id}
+              memberships={detail.data.memberships}
+              onChanged={async () => {
+                await refresh();
+                await detail.refetch();
+              }}
+            />
+          </PanelSection>
         ) : null}
         {detail.isError ? (
           <LoadError what={t("failures.loadAccount")} error={detail.error} onRetry={() => detail.refetch()} />
@@ -412,7 +487,32 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
             </PanelSection>
           </>
         ) : null}
+        {manage &&
+        !own &&
+        current.state !== "anonymized" &&
+        (account.type === "standard" || account.type === "guest") ? (
+          <section className="flex flex-col gap-2 rounded-md border border-danger p-4">
+            <h3 className="font-semibold">{t("lifecycle.anonymize.title")}</h3>
+            <p className="text-sm text-text-muted">{t("lifecycle.anonymize.summary")}</p>
+            <div>
+              <Button variant="danger" size="sm" onClick={() => setAction("anonymize")}>
+                {t("lifecycle.anonymize.open")}
+              </Button>
+            </div>
+          </section>
+        ) : null}
       </div>
+      {action === "anonymize" ? (
+        <AnonymizeDialog
+          account={{ id: account.id, name: current.name }}
+          onClose={() => setAction(null)}
+          onDone={async () => {
+            setAction(null);
+            await refresh();
+            onClose();
+          }}
+        />
+      ) : null}
       <ConfirmDialog
         open={action === "deactivate" || action === "reactivate" || action === "endSessions"}
         onOpenChange={(next) => {
@@ -442,7 +542,7 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
         cancelLabel={t("common.cancel")}
         destructive={action !== "reactivate"}
         onConfirm={async () => {
-          if (action && action !== "reset") await run(action);
+          if (action && action !== "reset" && action !== "anonymize") await run(action);
         }}
       />
       {action === "reset" ? (

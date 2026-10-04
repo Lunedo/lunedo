@@ -1013,7 +1013,10 @@
     "invalidSamlMetadataDetail": "Pagehall could not use the SAML metadata: {detail}. Check that the address or file contains the metadata of the identity provider and try again.",
     "invalidCertificate": "This file is not a CA certificate Pagehall can use. Upload the certificate of the authority that issued the directory server's certificate, in PEM format.",
     "directoryInvalidCredentials": "The sign-in name or the password is not correct. Check both and try again. If you forgot your password, reset it the way your organization usually does or contact IT.",
-    "directoryUnavailable": "The directory could not be reached. Try again in a few minutes; if it keeps failing, contact IT."
+    "directoryUnavailable": "The directory could not be reached. Try again in a few minutes; if it keeps failing, contact IT.",
+    "confirmationMismatch": "The typed name does not match the account. Type the name exactly as shown, then try again.",
+    "anonymizeSelf": "You cannot anonymize your own account. Ask another administrator.",
+    "notPlaceholder": "This account is not a placeholder anymore, or it was merged already. Reload the page."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -2770,6 +2773,57 @@
     "uploadMetadata": "The metadata file could not be saved",
     "uploadCaCertificate": "The CA certificate could not be saved",
     "removeCaCertificate": "The CA certificate could not be removed",
-    "testDirectory": "The directory could not be tested"
+    "testDirectory": "The directory could not be tested",
+    "createPlaceholder": "The placeholder could not be created",
+    "mergePlaceholder": "The placeholder could not be merged",
+    "changeHomeOrganization": "The home organization was not changed",
+    "anonymize": "The account was not anonymized"
+  },
+  "lifecycle": {
+    "placeholder": {
+      "add": "Add placeholder",
+      "title": "Add placeholder",
+      "description": "A placeholder stands for a person who has no account yet, for example the author of imported content. It cannot sign in.",
+      "name": "Name",
+      "email": "E-mail address",
+      "emailHint": "When the person signs in through a provider with this address and the provider verifies it, the placeholder becomes their account.",
+      "create": "Create placeholder",
+      "created": "Placeholder for {name} created"
+    },
+    "merge": {
+      "title": "Merge into an account",
+      "description": "Moves the memberships, groups and organization roles of the placeholder to the account you choose. Use this when the person signed in with another address.",
+      "account": "Account",
+      "search": "Search name or e-mail",
+      "noAccounts": "No active account matches",
+      "notOwn": "You cannot merge a placeholder into your own account.",
+      "action": "Merge",
+      "done": "{placeholder} merged into {account}: {memberships, plural, one {# membership} other {# memberships}}, {groups, plural, one {# group} other {# groups}}, {roles, plural, one {# role} other {# roles}}"
+    },
+    "home": {
+      "title": "Home organization",
+      "description": "The home organization decides whose administrators manage the account and whose defaults apply to its settings. The person and the administrators of both organizations are notified.",
+      "action": "Change home organization",
+      "changed": "{organization} is the home organization now",
+      "newHome": "New home organization"
+    },
+    "anonymize": {
+      "title": "Anonymize account",
+      "summary": "Removes name, e-mail address and profile for good. Content then shows a former user.",
+      "open": "Anonymize…",
+      "irreversible": "This cannot be undone",
+      "removesProfile": "Name, e-mail address, sign-in names and profile of {name} are removed. The account shows as a former user with a short ID.",
+      "deletesAccess": "Linked sign-ins, sessions, API tokens, passkeys, second factors and personal settings are deleted.",
+      "endsMemberships": "All memberships, roles and group memberships end.",
+      "keepsContent": "Pages, comments and history stay and show the former user.",
+      "auditLog": "The audit log keeps the events with the account ID only; its personal data there becomes unreadable.",
+      "copies": "Copies of the audit log that were exported or streamed to other systems are outside Pagehall and keep the data. Remove them there if needed.",
+      "reason": "Reason",
+      "reasonHint": "Kept in the audit log. Do not name the person, for example: erasure request of 1 October 2026.",
+      "confirm": "Type {name} to confirm",
+      "reauthentication": "Next, Pagehall asks you to confirm with your password, passkey or authenticator code.",
+      "action": "Anonymize",
+      "done": "The account was anonymized"
+    }
   }
 }

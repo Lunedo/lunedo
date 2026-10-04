@@ -1,0 +1,348 @@
+import { accountNameSchema, emailSchema } from "@pagehall/shared";
+import {
+  Button,
+  Combobox,
+  type ComboboxItem,
+  Dialog,
+  Field,
+  Input,
+  Notice,
+  Select,
+  Textarea,
+  useToast,
+} from "@pagehall/ui";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { api } from "../../api/client.js";
+import { request } from "../../api/request.js";
+import { problemMessage } from "../../errors/problem-message.js";
+
+export function PlaceholderDialog({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: () => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    const found: { name?: string; email?: string } = {};
+    if (!accountNameSchema.safeParse(name).success) found.name = t("validation.required");
+    if (!emailSchema.safeParse(email.trim()).success) found.email = t("validation.email");
+    setErrors(found);
+    if (found.name || found.email) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await request(() =>
+        api.POST("/api/v1/instance/accounts/placeholders", {
+          body: { name: name.trim(), email: email.trim() },
+        }),
+      );
+      toast({ title: t("lifecycle.placeholder.created", { name: name.trim() }), variant: "success" });
+      await onCreated();
+    } catch (failure) {
+      setError(problemMessage(t, failure));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      title={t("lifecycle.placeholder.title")}
+      size="md"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            {t("common.cancel")}
+          </Button>
+          <Button variant="primary" loading={busy} onClick={() => void submit()}>
+            {t("lifecycle.placeholder.create")}
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <p className="text-sm text-text-muted">{t("lifecycle.placeholder.description")}</p>
+        {error ? (
+          <Notice variant="danger" title={t("failures.createPlaceholder")}>
+            {error}
+          </Notice>
+        ) : null}
+        <Field label={t("lifecycle.placeholder.name")} {...(errors.name ? { error: errors.name } : {})}>
+          <Input value={name} autoComplete="off" onChange={(event) => setName(event.target.value)} />
+        </Field>
+        <Field
+          label={t("lifecycle.placeholder.email")}
+          hint={t("lifecycle.placeholder.emailHint")}
+          {...(errors.email ? { error: errors.email } : {})}
+        >
+          <Input
+            type="email"
+            value={email}
+            autoComplete="off"
+            onChange={(event) => setEmail(event.target.value)}
+          />
+        </Field>
+      </div>
+    </Dialog>
+  );
+}
+
+async function searchAccounts(query: string, except: string): Promise<ComboboxItem[]> {
+  const page = await request(() =>
+    api.GET("/api/v1/instance/accounts", {
+      params: { query: { limit: 20, state: "active", ...(query ? { q: query } : {}) } },
+    }),
+  );
+  return page.items
+    .filter((item) => item.id !== except && (item.type === "standard" || item.type === "guest"))
+    .map((item) => ({ value: item.id, label: item.name, description: item.email ?? undefined }));
+}
+
+export function MergePlaceholder({
+  placeholder,
+  ownAccountId,
+  onMerged,
+}: {
+  placeholder: { id: string; name: string };
+  ownAccountId: string | null;
+  onMerged: () => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const [target, setTarget] = useState<ComboboxItem | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const own = target !== null && target.value === ownAccountId;
+
+  const merge = async () => {
+    if (!target || own) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const moved = await request(() =>
+        api.POST("/api/v1/instance/accounts/{accountId}/merge", {
+          params: { path: { accountId: placeholder.id } },
+          body: { accountId: target.value },
+        }),
+      );
+      toast({
+        title: t("lifecycle.merge.done", { placeholder: placeholder.name, account: target.label, ...moved }),
+        variant: "success",
+      });
+      await onMerged();
+    } catch (failure) {
+      setError(problemMessage(t, failure));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm text-text-muted">{t("lifecycle.merge.description")}</p>
+      {error ? (
+        <Notice variant="danger" title={t("failures.mergePlaceholder")}>
+          {error}
+        </Notice>
+      ) : null}
+      <Field label={t("lifecycle.merge.account")} {...(own ? { error: t("lifecycle.merge.notOwn") } : {})}>
+        <Combobox
+          value={target?.value ?? null}
+          selectedItem={target}
+          onValueChange={(_value, item) => setTarget(item)}
+          placeholder={t("lifecycle.merge.search")}
+          emptyText={t("lifecycle.merge.noAccounts")}
+          load={async (query) => ({
+            items: await searchAccounts(query.trim(), placeholder.id),
+            nextCursor: null,
+          })}
+        />
+      </Field>
+      <div>
+        <Button
+          variant="primary"
+          size="sm"
+          loading={busy}
+          disabled={!target || own}
+          onClick={() => void merge()}
+        >
+          {t("lifecycle.merge.action")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function HomeOrganizationChange({
+  accountId,
+  memberships,
+  onChanged,
+}: {
+  accountId: string;
+  memberships: { organizationId: string; name: string; kind: string; home: boolean }[];
+  onChanged: () => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const candidates = memberships.filter((membership) => membership.kind === "member");
+  const current = candidates.find((membership) => membership.home)?.organizationId ?? "";
+  const [organizationId, setOrganizationId] = useState(current);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  if (candidates.length < 2) return null;
+
+  const change = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await request(() =>
+        api.PUT("/api/v1/accounts/{accountId}/home-organization", {
+          params: { path: { accountId } },
+          body: { organizationId },
+        }),
+      );
+      const name = candidates.find((membership) => membership.organizationId === organizationId)?.name ?? "";
+      toast({ title: t("lifecycle.home.changed", { organization: name }), variant: "success" });
+      await onChanged();
+    } catch (failure) {
+      setError(problemMessage(t, failure));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm text-text-muted">{t("lifecycle.home.description")}</p>
+      {error ? (
+        <Notice variant="danger" title={t("failures.changeHomeOrganization")}>
+          {error}
+        </Notice>
+      ) : null}
+      <Field label={t("lifecycle.home.newHome")}>
+        <Select
+          aria-label={t("lifecycle.home.newHome")}
+          value={organizationId}
+          onValueChange={setOrganizationId}
+          options={candidates.map((membership) => ({
+            value: membership.organizationId,
+            label: membership.name,
+          }))}
+        />
+      </Field>
+      <div>
+        <Button
+          variant="secondary"
+          size="sm"
+          loading={busy}
+          disabled={organizationId === current}
+          onClick={() => void change()}
+        >
+          {t("lifecycle.home.action")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function AnonymizeDialog({
+  account,
+  onClose,
+  onDone,
+}: {
+  account: { id: string; name: string };
+  onClose: () => void;
+  onDone: () => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const [reason, setReason] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const ready = reason.trim().length > 0 && confirmation.trim() === account.name.trim();
+
+  const submit = async () => {
+    if (!ready) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await request(() =>
+        api.POST("/api/v1/instance/accounts/{accountId}/anonymize", {
+          params: { path: { accountId: account.id } },
+          body: { reason: reason.trim(), confirmation },
+        }),
+      );
+      toast({ title: t("lifecycle.anonymize.done"), variant: "success" });
+      await onDone();
+    } catch (failure) {
+      setError(problemMessage(t, failure));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      title={t("lifecycle.anonymize.title")}
+      size="md"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            {t("common.cancel")}
+          </Button>
+          <Button variant="dangerPrimary" loading={busy} disabled={!ready} onClick={() => void submit()}>
+            {t("lifecycle.anonymize.action")}
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <Notice variant="danger" title={t("lifecycle.anonymize.irreversible")}>
+          <ul className="list-disc ps-5">
+            <li>{t("lifecycle.anonymize.removesProfile", { name: account.name })}</li>
+            <li>{t("lifecycle.anonymize.deletesAccess")}</li>
+            <li>{t("lifecycle.anonymize.endsMemberships")}</li>
+            <li>{t("lifecycle.anonymize.keepsContent")}</li>
+            <li>{t("lifecycle.anonymize.auditLog")}</li>
+          </ul>
+        </Notice>
+        <Notice variant="warning">{t("lifecycle.anonymize.copies")}</Notice>
+        {error ? (
+          <Notice variant="danger" title={t("failures.anonymize")}>
+            {error}
+          </Notice>
+        ) : null}
+        <Field label={t("lifecycle.anonymize.reason")} hint={t("lifecycle.anonymize.reasonHint")}>
+          <Textarea value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} />
+        </Field>
+        <Field label={t("lifecycle.anonymize.confirm", { name: account.name })}>
+          <Input
+            value={confirmation}
+            autoComplete="off"
+            onChange={(event) => setConfirmation(event.target.value)}
+          />
+        </Field>
+        <p className="text-sm text-text-muted">{t("lifecycle.anonymize.reauthentication")}</p>
+      </div>
+    </Dialog>
+  );
+}
