@@ -39,15 +39,15 @@ export async function createTestServices(
   const logger = createLogger({ service: "test", level: "silent" });
   await runMigrations(pool, { logger });
   const database = createDatabase(pool);
-  const audit = new AuditLog({ database });
-  const settings = new SettingsService({ database, logger, onChange: auditSettingChanges(audit) });
   const keyRing = new KeyRingHolder(
     new EnvKeyProvider(new Secret(formatKeyEntry(1, randomBytes(32)))),
     logger,
   );
   await keyRing.reload();
-  const mail = new CapturingTransport();
   const encryption = new Encryption(() => keyRing.ring);
+  const audit = new AuditLog({ database, encryption });
+  const settings = new SettingsService({ database, logger, onChange: auditSettingChanges(audit) });
+  const mail = new CapturingTransport();
   const build = () =>
     createAccountServices({
       database,

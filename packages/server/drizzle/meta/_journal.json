@@ -148,6 +148,13 @@
       "when": 1791107772713,
       "tag": "0020_saml_and_ldap",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791117472250,
+      "tag": "0021_audit_personal_data",
+      "breakpoints": true
     }
   ]
 }

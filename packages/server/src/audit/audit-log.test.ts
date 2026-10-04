@@ -1,12 +1,16 @@
+import { randomBytes } from "node:crypto";
 import { uuidv7 } from "@pagehall/shared";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { Encryption } from "../crypto/envelope.js";
+import { formatKeyEntry, parseKeyRing } from "../crypto/key-ring.js";
 import { createDatabase, type Database } from "../database/database.js";
 import { createDatabasePool, type DatabasePool } from "../database/pool.js";
 import { runWithRequestContext } from "../observability/request-context.js";
 import { AuditLog, type AuditScope } from "./audit-log.js";
 import { auditCatalog } from "./catalog.js";
-import { auditChains, auditEvents } from "./schema.js";
+import { AuditReader } from "./reader.js";
+import { auditChains, auditEvents, auditSubjectKeys } from "./schema.js";
 
 const databaseUrl = inject("databaseUrl");
 
@@ -32,11 +36,14 @@ describe.skipIf(!databaseUrl)("AuditLog", () => {
   let pool: DatabasePool;
   let database: Database;
   let audit: AuditLog;
+  let encryption: Encryption;
 
   beforeAll(() => {
     pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
     database = createDatabase(pool);
-    audit = new AuditLog({ database });
+    const ring = parseKeyRing(formatKeyEntry(1, randomBytes(32)));
+    encryption = new Encryption(() => ring);
+    audit = new AuditLog({ database, encryption });
   });
 
   afterAll(async () => {
@@ -95,9 +102,13 @@ describe.skipIf(!databaseUrl)("AuditLog", () => {
       actorType: "account",
       targetType: "account",
       requestId: "request-1",
-      clientIp: "203.0.113.7",
-      userAgent: "Agent/1.0",
+      clientIp: null,
+      userAgent: null,
     });
+    const [readable] = await (audit.sealer as NonNullable<typeof audit.sealer>).unseal(database, [
+      { ...(first as NonNullable<typeof first>), formerSubjects: [] },
+    ]);
+    expect(readable).toMatchObject({ clientIp: "203.0.113.7", userAgent: "Agent/1.0" });
     expect(first?.previousHash.equals(Buffer.alloc(32))).toBe(true);
     expect(second?.previousHash.equals(first?.hash ?? Buffer.alloc(0))).toBe(true);
     expect(second?.requestId).toBeNull();
@@ -229,13 +240,112 @@ describe.skipIf(!databaseUrl)("AuditLog", () => {
     });
     await pool.query("update accounts set name = 'Olivia Renamed' where id = $1", [accountId]);
     const [event] = await eventsOf(scope);
-    expect(event?.labels).toEqual({ actor: "Olivia Owner", references: { [accountId]: "Olivia Owner" } });
+    expect(event?.labels).toBeNull();
+    expect(JSON.stringify(event)).not.toContain("Olivia");
+    const [readable] = await (audit.sealer as NonNullable<typeof audit.sealer>).unseal(database, [
+      { ...(event as NonNullable<typeof event>), formerSubjects: [] },
+    ]);
+    expect(readable?.labels).toEqual({ actor: "Olivia Owner", references: { [accountId]: "Olivia Owner" } });
     expect(await verifyScope(audit, scope)).toMatchObject({ entries: 1, broken: null });
 
     await tamper(sql`update audit_events set labels = '{"actor":"Mallory"}' where id = ${event?.id}`);
     expect(await verifyScope(audit, scope)).toMatchObject({
       broken: { sequence: 1, problem: "the content does not match its hash" },
     });
+  });
+
+  it("keeps personal data readable only while the key of the account exists", async () => {
+    const scope = newScope();
+    const accountId = uuidv7();
+    const email = `${accountId}@example.org`;
+    await pool.query(
+      `insert into accounts (id, type, state, name, email) values ($1, 'standard', 'active', 'Petra Personal', $2)`,
+      [accountId, email],
+    );
+    await runWithRequestContext({ requestId: "r", clientIp: "198.51.100.23" }, async () => {
+      await audit.recordAlone({
+        name: "account.created",
+        actor: { type: "account", id: accountId },
+        targetId: accountId,
+        fields: { type: "standard", email },
+        scope,
+      });
+    });
+    const raw = JSON.stringify(await eventsOf(scope));
+    for (const value of ["Petra", email, "198.51.100.23"]) expect(raw).not.toContain(value);
+
+    const reader = new AuditReader({
+      database,
+      audit,
+      authorization: { authorize: async () => true } as never,
+    });
+    const before = await reader.list({ type: "system" }, { scope });
+    expect(before.items[0]).toMatchObject({
+      fields: { type: "standard", email },
+      labels: { actor: "Petra Personal", target: "Petra Personal" },
+      clientIp: "198.51.100.23",
+      formerSubjects: [],
+    });
+
+    await database.transaction(async (tx) =>
+      (audit.sealer as NonNullable<typeof audit.sealer>).destroy(tx, accountId),
+    );
+    const keys = await database
+      .select()
+      .from(auditSubjectKeys)
+      .where(eq(auditSubjectKeys.subjectId, accountId));
+    expect(keys).toEqual([]);
+    const after = await reader.list({ type: "system" }, { scope });
+    expect(after.items[0]).toMatchObject({
+      fields: { type: "standard" },
+      labels: null,
+      clientIp: null,
+      formerSubjects: [accountId],
+    });
+    expect(JSON.stringify(after.items[0])).not.toContain(email);
+    expect(await verifyScope(audit, scope)).toMatchObject({ entries: 1, broken: null });
+  });
+
+  it("detects a sealed part moved to another event", async () => {
+    const scope = newScope();
+    const accountId = uuidv7();
+    await pool.query(
+      `insert into accounts (id, type, state, name, email) values ($1, 'standard', 'active', 'Moved Person', $2)`,
+      [accountId, `${accountId}@example.org`],
+    );
+    for (let i = 0; i < 2; i++) {
+      await audit.recordAlone({
+        name: "account.passwordChanged",
+        actor: { type: "account", id: accountId },
+        targetId: accountId,
+        fields: { endedSessions: i },
+        scope,
+      });
+    }
+    const [first, second] = await eventsOf(scope);
+    const [moved] = await (audit.sealer as NonNullable<typeof audit.sealer>).unseal(database, [
+      { ...(second as NonNullable<typeof second>), sealed: first?.sealed, formerSubjects: [] },
+    ]);
+    expect(moved?.formerSubjects).toEqual([accountId]);
+    expect(moved?.labels).toBeNull();
+  });
+
+  it("refuses to store personal data without encryption", async () => {
+    const scope = newScope();
+    const accountId = uuidv7();
+    await pool.query(
+      `insert into accounts (id, type, state, name, email) values ($1, 'standard', 'active', 'Plain Person', $2)`,
+      [accountId, `${accountId}@example.org`],
+    );
+    const plain = new AuditLog({ database });
+    await expect(plain.recordAlone(signIn(scope, accountId))).rejects.toThrow("need encryption");
+    await plain.recordAlone({
+      name: "account.passwordChanged",
+      targetId: uuidv7(),
+      fields: { endedSessions: 0 },
+      scope,
+    });
+    expect(await eventsOf(scope)).toHaveLength(1);
   });
 
   it("reports the first entry whose content was changed", async () => {
@@ -287,7 +397,7 @@ describe.skipIf(!databaseUrl)("AuditLog", () => {
   it("removes old entries and keeps an anchor so the rest still verifies", async () => {
     const scope = newScope();
     let now = new Date("2025-01-01T00:00:00Z");
-    const clocked = new AuditLog({ database, clock: () => now });
+    const clocked = new AuditLog({ database, clock: () => now, encryption });
     for (let i = 0; i < 3; i++) await clocked.recordAlone(signIn(scope));
     now = new Date("2026-06-01T00:00:00Z");
     for (let i = 0; i < 2; i++) await clocked.recordAlone(signIn(scope));
@@ -314,7 +424,7 @@ describe.skipIf(!databaseUrl)("AuditLog", () => {
   it("removes everything when all entries expired and continues the chain afterwards", async () => {
     const scope = newScope();
     let now = new Date("2025-01-01T00:00:00Z");
-    const clocked = new AuditLog({ database, clock: () => now });
+    const clocked = new AuditLog({ database, clock: () => now, encryption });
     for (let i = 0; i < 2; i++) await clocked.recordAlone(signIn(scope));
     expect(await clocked.removeBefore(new Date("2026-01-01T00:00:00Z"), { scopes: [scope] })).toBe(2);
     expect(await verifyScope(clocked, scope)).toMatchObject({ entries: 0, broken: null });

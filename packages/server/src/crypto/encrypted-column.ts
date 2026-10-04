@@ -25,6 +25,7 @@ export interface EncryptedColumn {
  * a test compares this list with the `encrypted()` columns of the schema.
  */
 export const encryptedColumns: readonly EncryptedColumn[] = [
+  { table: "audit_subject_keys", idColumn: "subject_id", column: "key" },
   { table: "identity_provider_credentials", idColumn: "id", column: "secret" },
   { table: "identity_provider_secrets", idColumn: "provider_id", column: "directory_key" },
   { table: "instance_secrets", idColumn: "name", column: "value" },

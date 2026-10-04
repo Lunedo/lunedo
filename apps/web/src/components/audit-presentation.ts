@@ -34,15 +34,25 @@ export function actionLabel(t: TFunction, item: AuditItem): string {
   return translateKey(t, item.labelKey);
 }
 
+export function formerUser(t: TFunction, id: string): string {
+  return t("audit.formerUser", { id: id.slice(0, 8) });
+}
+
 export function actorLabel(t: TFunction, item: AuditItem): string {
   if (item.actor.name) return item.actor.name;
+  if (item.actor.former && item.actor.id) return formerUser(t, item.actor.id);
   if (item.actor.type === "account") return t("audit.deletedAccount");
   return translateKey(t, `audit.actorTypes.${item.actor.type}`);
 }
 
 export function scopeLabel(t: TFunction, item: AuditItem): string {
   if (item.scope.type === "instance") return t("audit.instanceScope");
-  if (item.scope.type === "account") return item.scope.name ?? t("audit.deletedAccount");
+  if (item.scope.type === "account") {
+    if (item.scope.name) return item.scope.name;
+    return item.scope.id && item.formerAccounts.includes(item.scope.id)
+      ? formerUser(t, item.scope.id)
+      : t("audit.deletedAccount");
+  }
   return item.scope.name ?? t("audit.deletedOrganization");
 }
 
@@ -54,6 +64,7 @@ export function targetTypeLabel(t: TFunction, type: string): string {
 export function targetLabel(t: TFunction, item: AuditItem): string {
   if (item.changeKind === "setting" && item.target.id) return settingLabel(t, item.target.id);
   if (item.target.name) return item.target.name;
+  if (item.target.former && item.target.id) return formerUser(t, item.target.id);
   return targetTypeLabel(t, item.target.type);
 }
 
@@ -90,8 +101,11 @@ export function formatAuditValue(
       .join(", ");
   }
   const text = String(value);
-  if (isUuid(text))
-    return item.references[text.toLowerCase()] ?? item.references[text] ?? t("audit.unknownReference");
+  if (isUuid(text)) {
+    const id = text.toLowerCase();
+    if (item.formerAccounts.includes(id)) return formerUser(t, id);
+    return item.references[id] ?? item.references[text] ?? t("audit.unknownReference");
+  }
   if (ISO_DATE.test(text)) return format.dateTime(text);
   const valueKey = `audit.values.${text}`;
   return has(t, valueKey) ? translateKey(t, valueKey) : text;

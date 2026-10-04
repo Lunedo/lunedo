@@ -2,11 +2,18 @@ import { createHash } from "node:crypto";
 import { and, asc, desc, eq, gte, lt, lte, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { type Principal, SYSTEM } from "../accounts/principal.js";
+import type { Encryption } from "../crypto/envelope.js";
 import type { Database, Transaction } from "../database/database.js";
 import { currentRequestContext } from "../observability/request-context.js";
 import { INSTANCE_SCOPE_ID, type SettingChangeHandler } from "../settings/service.js";
-import { type AuditEventFields, type AuditEventName, auditCatalog } from "./catalog.js";
-import { resolveAuditLabels } from "./labels.js";
+import {
+  type AuditEventDefinition,
+  type AuditEventFields,
+  type AuditEventName,
+  auditCatalog,
+} from "./catalog.js";
+import { type AuditLabels, resolveAuditLabels } from "./labels.js";
+import { AuditSealer, PersonalDataMissingKeyError, type SealedParts } from "./personal-data.js";
 import { auditChains, auditEvents } from "./schema.js";
 
 export interface AuditScope {
@@ -42,6 +49,7 @@ interface HashedContent {
   targetId: string | null;
   fields: unknown;
   labels: unknown;
+  sealed?: unknown;
   occurredAt: Date;
   requestId: string | null;
   clientIp: string | null;
@@ -61,8 +69,9 @@ function canonicalJson(value: unknown): string {
 }
 
 export function hashAuditEntry(entry: HashedContent): Buffer {
+  const sealed = entry.sealed === null || entry.sealed === undefined ? null : entry.sealed;
   const content = canonicalJson([
-    1,
+    sealed === null ? 1 : 2,
     entry.scopeType,
     entry.scopeId,
     entry.sequence,
@@ -77,7 +86,11 @@ export function hashAuditEntry(entry: HashedContent): Buffer {
     entry.clientIp,
     entry.userAgent,
     entry.previousHash.toString("hex"),
-    ...(entry.labels === null || entry.labels === undefined ? [] : [entry.labels]),
+    ...(sealed === null
+      ? entry.labels === null || entry.labels === undefined
+        ? []
+        : [entry.labels]
+      : [entry.labels ?? null, sealed]),
   ]);
   return createHash("sha256").update(content, "utf8").digest();
 }
@@ -93,13 +106,25 @@ export interface AuditVerification {
   broken: { sequence: number; id: string | null; problem: string } | null;
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function subjectOf(id: string | null): string | null {
+  return id && UUID.test(id) ? id.toLowerCase() : null;
+}
+
 export class AuditLog {
   readonly #database: Database;
   readonly #clock: () => Date;
+  readonly #sealer: AuditSealer | undefined;
 
-  constructor(options: { database: Database; clock?: () => Date }) {
+  constructor(options: { database: Database; clock?: () => Date; encryption?: Encryption }) {
     this.#database = options.database;
     this.#clock = options.clock ?? (() => new Date());
+    this.#sealer = options.encryption ? new AuditSealer(options.encryption) : undefined;
+  }
+
+  get sealer(): AuditSealer | undefined {
+    return this.#sealer;
   }
 
   async record<TName extends AuditEventName>(tx: Transaction, input: AuditEventInput<TName>): Promise<void> {
@@ -111,7 +136,7 @@ export class AuditLog {
       throw new Error(`Audit event ${input.name} cannot be performed by ${actor.type}`);
     }
     const scope = input.scope ?? INSTANCE_AUDIT_SCOPE;
-    const labels = await resolveAuditLabels(tx, {
+    const resolved = await resolveAuditLabels(tx, {
       actor,
       targetType: definition.target,
       targetId: input.targetId,
@@ -128,21 +153,41 @@ export class AuditLog {
       .for("update");
     if (!head) throw new Error("The audit chain head is missing");
 
+    const sequence = head.lastSequence + 1;
+    const personal = this.#separate(definition, {
+      actor,
+      targetId: input.targetId,
+      fields: fields as Record<string, unknown>,
+      labels: resolved.labels,
+      accountReferences: resolved.accountReferences,
+      clientIp: storable(context?.clientIp),
+      userAgent: storable(context?.userAgent, USER_AGENT_MAX_LENGTH),
+    });
+    let sealed: Record<string, string> | null = null;
+    if (personal.subjects.size > 0) {
+      if (!this.#sealer) throw new PersonalDataMissingKeyError();
+      sealed = await this.#sealer.seal(
+        tx,
+        { scopeType: scope.type, scopeId: scope.id, sequence },
+        personal.subjects,
+      );
+    }
     const content: HashedContent = {
       scopeType: scope.type,
       scopeId: scope.id,
-      sequence: head.lastSequence + 1,
+      sequence,
       name: input.name,
       actorType: actor.type,
       actorId: actor.type === "account" ? actor.id : null,
       targetType: definition.target,
       targetId: input.targetId,
-      fields,
-      labels,
+      fields: personal.fields,
+      labels: personal.labels,
+      sealed,
       occurredAt: this.#clock(),
       requestId: storable(context?.requestId),
-      clientIp: storable(context?.clientIp),
-      userAgent: storable(context?.userAgent, USER_AGENT_MAX_LENGTH),
+      clientIp: personal.clientIp,
+      userAgent: personal.userAgent,
       previousHash: head.lastHash ?? GENESIS_HASH,
     };
     const hash = hashAuditEntry(content);
@@ -156,6 +201,80 @@ export class AuditLog {
       .update(auditChains)
       .set({ lastSequence: content.sequence, lastHash: hash, updatedAt: new Date() })
       .where(chain);
+  }
+
+  #separate(
+    definition: AuditEventDefinition,
+    event: {
+      actor: Principal;
+      targetId: string | null;
+      fields: Record<string, unknown>;
+      labels: AuditLabels | null;
+      accountReferences: string[];
+      clientIp: string | null;
+      userAgent: string | null;
+    },
+  ) {
+    const subjects = new Map<string, { accountId: string | null; parts: SealedParts }>();
+    const partOf = (subjectId: string, accountId: string | null): SealedParts => {
+      const existing = subjects.get(subjectId);
+      if (existing) return existing.parts;
+      const parts: SealedParts = {};
+      subjects.set(subjectId, { accountId, parts });
+      return parts;
+    };
+    const labels: AuditLabels = { ...(event.labels ?? {}) };
+    const fields = { ...event.fields };
+    const actorAccount = event.actor.type === "account" ? subjectOf(event.actor.id) : null;
+    const personalTarget =
+      definition.target === "account" || definition.target === "invitation"
+        ? subjectOf(event.targetId)
+        : null;
+    const targetAccount = definition.target === "account" ? personalTarget : null;
+    if (actorAccount && labels.actor !== undefined) {
+      partOf(actorAccount, actorAccount).actor = labels.actor;
+      delete labels.actor;
+    }
+    if (personalTarget && labels.target !== undefined) {
+      partOf(personalTarget, targetAccount).target = labels.target;
+      delete labels.target;
+    }
+    if (labels.references) {
+      const references = { ...labels.references };
+      for (const id of event.accountReferences) {
+        const name = references[id];
+        if (name === undefined) continue;
+        const parts = partOf(id, id);
+        parts.references = { ...parts.references, [id]: name };
+        delete references[id];
+      }
+      if (Object.keys(references).length > 0) labels.references = references;
+      else delete labels.references;
+    }
+    for (const [field, owner] of Object.entries(definition.personal ?? {})) {
+      const subject = owner === "actor" ? actorAccount : personalTarget;
+      if (!subject || fields[field] === undefined) continue;
+      const parts = partOf(subject, owner === "actor" ? actorAccount : targetAccount);
+      parts.fields = { ...parts.fields, [field]: fields[field] };
+      delete fields[field];
+    }
+    let clientIp = event.clientIp;
+    let userAgent = event.userAgent;
+    const visitor = actorAccount ?? targetAccount;
+    if (visitor && (clientIp !== null || userAgent !== null)) {
+      const parts = partOf(visitor, visitor);
+      if (clientIp !== null) parts.clientIp = clientIp;
+      if (userAgent !== null) parts.userAgent = userAgent;
+      clientIp = null;
+      userAgent = null;
+    }
+    return {
+      subjects,
+      labels: Object.keys(labels).length > 0 ? labels : null,
+      fields,
+      clientIp,
+      userAgent,
+    };
   }
 
   async recordMany(tx: Transaction, inputs: AuditEventInput<AuditEventName>[]): Promise<void> {

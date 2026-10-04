@@ -383,6 +383,7 @@ export class InvitationService {
         scope: scopeOf(invitation.organizationId),
       });
       await this.#audit.recordMany(tx, events);
+      await this.#audit.sealer?.linkSubject(tx, invitation.id, accountId);
       return { accountId, organizationId: invitation.organizationId, accountCreated: !existing };
     });
   }

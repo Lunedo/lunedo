@@ -2569,7 +2569,8 @@
       "starttls": "STARTTLS",
       "view": "View",
       "manage": "Manage"
-    }
+    },
+    "formerUser": "Former user {id}"
   },
   "actions": {
     "instance_organizations_view": "View organizations",

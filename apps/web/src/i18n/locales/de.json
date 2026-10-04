@@ -2566,7 +2566,8 @@
       "starttls": "STARTTLS",
       "view": "Ansehen",
       "manage": "Verwalten"
-    }
+    },
+    "formerUser": "Ehemalige Person {id}"
   },
   "actions": {
     "instance_organizations_view": "Organisationen ansehen",

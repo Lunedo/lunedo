@@ -29,11 +29,12 @@ function event(patch: Partial<AuditItem>): AuditItem {
     userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
     labelKey: "audit.events.settings.changed",
     changeKind: "setting",
-    actor: { type: "account", id: OLIVIA, name: "Olivia Owner" },
-    target: { type: "setting", id: "branding.accentColor", name: null },
+    actor: { type: "account", id: OLIVIA, name: "Olivia Owner", former: false },
+    target: { type: "setting", id: "branding.accentColor", name: null, former: false },
     scope: { type: "instance", id: null, name: null },
     changes: [{ property: "value", old: "violet", new: "blue" }],
     references: {},
+    formerAccounts: [],
     ...patch,
   } as AuditItem;
 }
@@ -47,8 +48,8 @@ const ROLE_ASSIGNED = event({
   targetId: "01929b1e-9e5c-7f40-b16d-5e4f3a2b7c8d",
   labelKey: "audit.events.role.assigned",
   changeKind: "fields",
-  actor: { type: "account", id: GONE, name: null },
-  target: { type: "roleAssignment", id: "01929b1e-9e5c-7f40-b16d-5e4f3a2b7c8d", name: null },
+  actor: { type: "account", id: GONE, name: null, former: false },
+  target: { type: "roleAssignment", id: "01929b1e-9e5c-7f40-b16d-5e4f3a2b7c8d", name: null, former: false },
   scope: { type: "organization", id: "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f", name: "Platform Team" },
   changes: [
     { property: "role", old: null, new: "Handbook editors" },
@@ -99,6 +100,27 @@ describe("the audit log", () => {
     expect(table.textContent).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/);
   });
 
+  it("shows anonymized accounts as former users with a short ID", async () => {
+    mockApi({
+      "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
+      "GET /api/v1/instance/audit-events": () => ({
+        body: {
+          items: [
+            {
+              ...ROLE_ASSIGNED,
+              actor: { type: "account", id: GONE, name: null, former: true },
+              formerAccounts: [GONE],
+            },
+          ],
+          nextCursor: null,
+        },
+      }),
+    });
+    const table = await renderLog();
+    expect(await within(table).findByText(`Former user ${GONE.slice(0, 8)}`)).toBeTruthy();
+    expect(within(table).queryByText("Deleted account")).toBeNull();
+  });
+
   it("opens every detail of an event in a side panel", async () => {
     const table = await renderLog();
     await userEvent.click(await within(table).findByText("Platform Team"));
@@ -131,19 +153,19 @@ describe("audit presentation of personal and notification settings", () => {
           items: [
             event({
               id: "01929b1f-5fc2-7fa6-97c3-bea0a18bd2e5",
-              target: { type: "setting", id: "appearance.textSize", name: null },
+              target: { type: "setting", id: "appearance.textSize", name: null, former: false },
               scope: { type: "account", id: OLIVIA, name: "Olivia Owner" },
               changes: [{ property: "value", old: 0.9375, new: 1 }],
             }),
             event({
               id: "01929b1f-5fc2-7fa6-97c3-bea0a18bd2e6",
-              target: { type: "setting", id: "appearance.colorMode", name: null },
+              target: { type: "setting", id: "appearance.colorMode", name: null, former: false },
               scope: { type: "account", id: OLIVIA, name: "Olivia Owner" },
               changes: [{ property: "value", old: "dark", new: "light" }],
             }),
             event({
               id: "01929b1f-5fc2-7fa6-97c3-bea0a18bd2e7",
-              target: { type: "setting", id: "notifications.guestExpiring", name: null },
+              target: { type: "setting", id: "notifications.guestExpiring", name: null, former: false },
               changes: [
                 { property: "value", old: { inApp: true, email: true }, new: { inApp: true, email: false } },
               ],

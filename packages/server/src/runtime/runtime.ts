@@ -155,7 +155,7 @@ export async function createServerRuntime(options: {
       ] as SettingDefinition<never>[]),
       ...(options.settings ?? []),
     );
-    const audit = new AuditLog({ database });
+    const audit = new AuditLog({ database, encryption });
     const settings = new SettingsService({ database, logger, onChange: auditSettingChanges(audit) });
     await settings.enableCache(listener);
 

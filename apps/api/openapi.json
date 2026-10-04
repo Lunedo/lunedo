@@ -6115,12 +6115,17 @@
                                   "string",
                                   "null"
                                 ]
+                              },
+                              "former": {
+                                "type": "boolean",
+                                "description": "Whether the account was anonymized; its name and other personal data are gone."
                               }
                             },
                             "required": [
                               "type",
                               "id",
-                              "name"
+                              "name",
+                              "former"
                             ],
                             "additionalProperties": false,
                             "description": "Who acted."
@@ -6145,12 +6150,17 @@
                                   "string",
                                   "null"
                                 ]
+                              },
+                              "former": {
+                                "type": "boolean",
+                                "description": "Whether the object is an anonymized account; its name and other personal data are gone."
                               }
                             },
                             "required": [
                               "type",
                               "id",
-                              "name"
+                              "name",
+                              "former"
                             ],
                             "additionalProperties": false,
                             "description": "What the event is about."
@@ -6227,6 +6237,13 @@
                               "type": "string"
                             },
                             "description": "Names of accounts, organizations, groups and roles that the fields refer to, by ID."
+                          },
+                          "formerAccounts": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Anonymized accounts the event refers to, shown as former users with their ID."
                           }
                         },
                         "required": [
@@ -6250,7 +6267,8 @@
                           "target",
                           "scope",
                           "changes",
-                          "references"
+                          "references",
+                          "formerAccounts"
                         ],
                         "additionalProperties": false,
                         "description": "An entry of the audit log."
@@ -6298,12 +6316,14 @@
                       "actor": {
                         "type": "account",
                         "id": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
-                        "name": "Olivia Owner"
+                        "name": "Olivia Owner",
+                        "former": false
                       },
                       "target": {
                         "type": "roleAssignment",
                         "id": "01929b1e-9e5c-7f40-b16d-5e4f3a2b7c8d",
-                        "name": null
+                        "name": null,
+                        "former": false
                       },
                       "scope": {
                         "type": "organization",
@@ -6329,7 +6349,8 @@
                       ],
                       "references": {
                         "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9e": "Editors"
-                      }
+                      },
+                      "formerAccounts": []
                     }
                   ],
                   "nextCursor": null
@@ -14474,12 +14495,17 @@
                                   "string",
                                   "null"
                                 ]
+                              },
+                              "former": {
+                                "type": "boolean",
+                                "description": "Whether the account was anonymized; its name and other personal data are gone."
                               }
                             },
                             "required": [
                               "type",
                               "id",
-                              "name"
+                              "name",
+                              "former"
                             ],
                             "additionalProperties": false,
                             "description": "Who acted."
@@ -14504,12 +14530,17 @@
                                   "string",
                                   "null"
                                 ]
+                              },
+                              "former": {
+                                "type": "boolean",
+                                "description": "Whether the object is an anonymized account; its name and other personal data are gone."
                               }
                             },
                             "required": [
                               "type",
                               "id",
-                              "name"
+                              "name",
+                              "former"
                             ],
                             "additionalProperties": false,
                             "description": "What the event is about."
@@ -14586,6 +14617,13 @@
                               "type": "string"
                             },
                             "description": "Names of accounts, organizations, groups and roles that the fields refer to, by ID."
+                          },
+                          "formerAccounts": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Anonymized accounts the event refers to, shown as former users with their ID."
                           }
                         },
                         "required": [
@@ -14609,7 +14647,8 @@
                           "target",
                           "scope",
                           "changes",
-                          "references"
+                          "references",
+                          "formerAccounts"
                         ],
                         "additionalProperties": false,
                         "description": "An entry of the audit log."
@@ -14657,12 +14696,14 @@
                       "actor": {
                         "type": "account",
                         "id": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
-                        "name": "Olivia Owner"
+                        "name": "Olivia Owner",
+                        "former": false
                       },
                       "target": {
                         "type": "roleAssignment",
                         "id": "01929b1e-9e5c-7f40-b16d-5e4f3a2b7c8d",
-                        "name": null
+                        "name": null,
+                        "former": false
                       },
                       "scope": {
                         "type": "organization",
@@ -14688,7 +14729,8 @@
                       ],
                       "references": {
                         "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9e": "Editors"
-                      }
+                      },
+                      "formerAccounts": []
                     }
                   ],
                   "nextCursor": null
@@ -60212,12 +60254,17 @@
                                   "string",
                                   "null"
                                 ]
+                              },
+                              "former": {
+                                "type": "boolean",
+                                "description": "Whether the account was anonymized; its name and other personal data are gone."
                               }
                             },
                             "required": [
                               "type",
                               "id",
-                              "name"
+                              "name",
+                              "former"
                             ],
                             "additionalProperties": false,
                             "description": "Who acted."
@@ -60242,12 +60289,17 @@
                                   "string",
                                   "null"
                                 ]
+                              },
+                              "former": {
+                                "type": "boolean",
+                                "description": "Whether the object is an anonymized account; its name and other personal data are gone."
                               }
                             },
                             "required": [
                               "type",
                               "id",
-                              "name"
+                              "name",
+                              "former"
                             ],
                             "additionalProperties": false,
                             "description": "What the event is about."
@@ -60324,6 +60376,13 @@
                               "type": "string"
                             },
                             "description": "Names of accounts, organizations, groups and roles that the fields refer to, by ID."
+                          },
+                          "formerAccounts": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Anonymized accounts the event refers to, shown as former users with their ID."
                           }
                         },
                         "required": [
@@ -60347,7 +60406,8 @@
                           "target",
                           "scope",
                           "changes",
-                          "references"
+                          "references",
+                          "formerAccounts"
                         ],
                         "additionalProperties": false,
                         "description": "An entry of the audit log."
@@ -60395,12 +60455,14 @@
                       "actor": {
                         "type": "account",
                         "id": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
-                        "name": "Olivia Owner"
+                        "name": "Olivia Owner",
+                        "former": false
                       },
                       "target": {
                         "type": "roleAssignment",
                         "id": "01929b1e-9e5c-7f40-b16d-5e4f3a2b7c8d",
-                        "name": null
+                        "name": null,
+                        "former": false
                       },
                       "scope": {
                         "type": "organization",
@@ -60426,7 +60488,8 @@
                       ],
                       "references": {
                         "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9e": "Editors"
-                      }
+                      },
+                      "formerAccounts": []
                     }
                   ],
                   "nextCursor": null

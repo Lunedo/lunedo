@@ -5,7 +5,13 @@ export {
   instance,
   setupCompletedThrough,
 } from "../accounts/schema.js";
-export { auditChains, auditEvents, auditScopeType, principalType } from "../audit/schema.js";
+export {
+  auditChains,
+  auditEvents,
+  auditScopeType,
+  auditSubjectKeys,
+  principalType,
+} from "../audit/schema.js";
 export {
   accountTokenPurpose,
   accountTokens,

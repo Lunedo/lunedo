@@ -23,12 +23,15 @@ export type AuditVisibility = "instance" | "organization";
 
 export type AuditChangeKind = "setting" | "fields";
 
+export type PersonalDataOwner = "actor" | "target";
+
 export interface AuditEventDefinition<TFields extends z.ZodObject = z.ZodObject> {
   actor: readonly PrincipalType[];
   target: AuditTargetType;
   fields: TFields;
   visibility: AuditVisibility;
   change?: AuditChangeKind;
+  personal?: Readonly<Record<string, PersonalDataOwner>>;
 }
 
 function event<TFields extends z.ZodObject>(
@@ -323,6 +326,7 @@ export const auditCatalog = {
       homeOrganizationId: z.uuid().nullable().optional(),
     }),
     visibility: "organization",
+    personal: { email: "target" },
   }),
   "account.passwordChanged": event({
     actor: ["account", "system"],
@@ -347,12 +351,14 @@ export const auditCatalog = {
     target: "account",
     fields: z.object({ newEmail: z.string() }),
     visibility: "organization",
+    personal: { newEmail: "target" },
   }),
   "account.emailChanged": event({
     actor: ["anonymous", "account"],
     target: "account",
     fields: z.object({ previousEmail: z.string(), newEmail: z.string() }),
     visibility: "organization",
+    personal: { previousEmail: "target", newEmail: "target" },
   }),
   "twoFactor.totpAdded": event({
     actor: ["account", "anonymous"],
@@ -435,6 +441,7 @@ export const auditCatalog = {
     target: "instance",
     fields: z.object({ recipient: z.string(), delivered: z.boolean() }),
     visibility: "instance",
+    personal: { recipient: "actor" },
   }),
   "settings.changed": event({
     actor: ["account", "anonymous", "system"],
@@ -581,6 +588,7 @@ export const auditCatalog = {
     target: "invitation",
     fields: z.object({ email: z.string(), kind: z.string(), expiresAt: z.iso.datetime() }),
     visibility: "organization",
+    personal: { email: "target" },
   }),
   "invitation.accepted": event({
     actor: ["anonymous", "account"],

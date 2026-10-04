@@ -12,6 +12,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { principalTypes } from "../accounts/principal.js";
+import { encrypted } from "../crypto/encrypted-column.js";
 import { bytes, primaryId } from "../database/columns.js";
 
 export const auditScopeType = pgEnum("audit_scope_type", ["instance", "organization"]);
@@ -45,6 +46,7 @@ export const auditEvents = pgTable(
     targetId: text(),
     fields: jsonb().notNull(),
     labels: jsonb(),
+    sealed: jsonb(),
     occurredAt: timestamp({ withTimezone: true, mode: "date" }).notNull(),
     requestId: text(),
     clientIp: text(),
@@ -58,4 +60,15 @@ export const auditEvents = pgTable(
     index().on(table.actorId).where(sql`${table.actorId} is not null`),
     index().on(table.targetType, table.targetId),
   ],
+);
+
+export const auditSubjectKeys = pgTable(
+  "audit_subject_keys",
+  {
+    subjectId: uuid().primaryKey(),
+    accountId: uuid(),
+    key: encrypted().notNull(),
+    createdAt: timestamp({ withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [index().on(table.accountId)],
 );
