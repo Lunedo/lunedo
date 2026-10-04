@@ -204,7 +204,10 @@ describe("screens that cannot load", () => {
     });
     window.history.replaceState(null, "", `/settings/organizations/${ORGANIZATION.id}/service-accounts`);
     const i18n = await initI18n(["en"]);
-    render(<App i18n={i18n} queryClient={createQueryClient()} />);
+    const queryClient = createQueryClient();
+    const defaults = queryClient.getDefaultOptions();
+    queryClient.setDefaultOptions({ ...defaults, queries: { ...defaults.queries, retryDelay: 0 } });
+    render(<App i18n={i18n} queryClient={queryClient} />);
 
     const alert = await screen.findByText("This page could not be loaded", {}, { timeout: 5000 });
     const notice = alert.closest("[role=alert], div") as HTMLElement;
