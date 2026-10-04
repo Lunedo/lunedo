@@ -15,7 +15,7 @@
     "dev:reset": "node scripts/reset-dev.ts",
     "dev:apps": "turbo run dev --concurrency=20",
     "build": "turbo run build",
-    "lint": "biome ci . && eslint",
+    "lint": "biome ci . && node --max-old-space-size=4096 node_modules/eslint/bin/eslint.js",
     "format": "biome format --write .",
     "typecheck": "tsc -p tsconfig.json && turbo run typecheck",
     "test": "node --test \"scripts/*.test.ts\" && turbo run test",
