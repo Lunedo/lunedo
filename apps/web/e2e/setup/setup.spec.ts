@@ -104,7 +104,7 @@ test("sets up a fresh instance and signs in the owner with a second factor", asy
   await expect(page.getByText("The mail server accepted the test mail.")).toBeVisible();
   await waitForMail(OWNER.email, /test/i);
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("SMTP settings saved. Pagehall sends through SMTP.")).toBeVisible();
+  await expect(page.getByText("SMTP settings saved. Pagehall sends through SMTP.").first()).toBeVisible();
   await page.goto("/settings/instance/general");
   await expect(page.getByRole("heading", { name: "General" })).toBeVisible();
   await expect(page.getByText("E-mail is not set up")).toBeHidden();
