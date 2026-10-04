@@ -9,8 +9,11 @@ import {
 import { BASE_URL, OWNER, OWNER_STORAGE, readState } from "../support/environment.js";
 import { freshTotp, linkFrom, waitForMail } from "../support/helpers.js";
 import {
+  createKeycloakUser,
+  deleteKeycloakUser,
   type IdentityProviderFixture,
   identityProviders,
+  signInAtKeycloak,
   TEST_DOMAIN,
   TEST_USERS,
   type TestUserName,
@@ -56,6 +59,7 @@ async function createProvider(
   const response = await request.post("/api/v1/instance/identity-providers", {
     headers,
     data: {
+      type: "oidc",
       name: `E2E ${provider.name}`,
       config: {
         preset: "generic",
@@ -265,28 +269,32 @@ for (const provider of identityProviders) {
 
 test.describe("linking an existing account", () => {
   const provider = identityProviders[0];
-  if (!provider) return;
+  if (provider?.name !== "keycloak") return;
   let providerId = "";
-  const password = "a long passphrase of bob";
+  let username = "";
+  const person = { name: "Link Example", password: "a long passphrase of the linked person" };
+  const email = () => `${username}@${TEST_DOMAIN}`;
 
   test.beforeAll(async ({ browser }) => {
+    username = `link-${Date.now().toString(36)}`;
+    await createKeycloakUser(username, { email: email(), firstName: "Link", lastName: "Example" });
     const owner = await ownerApi(browser);
     providerId = await createProvider(owner.request, provider, true);
     const organizationId = await firstOrganization(owner.request);
     const invited = await owner.request.post(`/api/v1/organizations/${organizationId}/invitations`, {
       headers,
-      data: { email: TEST_USERS.bob.email, kind: "member" },
+      data: { email: email(), kind: "member" },
     });
     expect(invited.status()).toBeLessThan(300);
     await owner.close();
-    const mail = await waitForMail(TEST_USERS.bob.email, /invit/i);
+    const mail = await waitForMail(email(), /invit/i);
     const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
     const page = await context.newPage();
     await page.goto(linkFrom(mail.text).replace(/^https?:\/\/[^/]+/, ""));
     await page.getByRole("button", { name: "Accept invitation" }).click();
-    await page.getByLabel("Name", { exact: true }).fill(TEST_USERS.bob.name);
-    await page.getByLabel("Password", { exact: true }).fill(password);
-    await page.getByLabel("Repeat the password").fill(password);
+    await page.getByLabel("Name", { exact: true }).fill(person.name);
+    await page.getByLabel("Password", { exact: true }).fill(person.password);
+    await page.getByLabel("Repeat the password").fill(person.password);
     await page.getByRole("button", { name: "Create account" }).click();
     await expect(page.getByText("Your account is ready. Sign in to start.")).toBeVisible();
     await context.close();
@@ -297,17 +305,22 @@ test.describe("linking an existing account", () => {
     if (providerId)
       await owner.request.delete(`/api/v1/instance/identity-providers/${providerId}`, { headers });
     await owner.close();
+    if (username) await deleteKeycloakUser(username);
   });
 
   test("links only after the password of the existing account", async ({ browser }) => {
     const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
     const page = await context.newPage();
-    await signInThroughProvider(page, provider, "bob");
+    await page.goto("/sign-in");
+    await page.getByLabel("Work e-mail address or sign-in name").fill(email());
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: `Continue with E2E ${provider.name}` }).click();
+    await signInAtKeycloak(page, username);
     await expect(page.getByRole("heading", { name: `Link your E2E ${provider.name} account` })).toBeVisible();
-    await page.getByLabel(`Password of ${TEST_USERS.bob.name}`).fill("not the password");
+    await page.getByLabel(`Password of ${person.name}`).fill("not the password");
     await page.getByRole("button", { name: "Confirm and link" }).click();
     await expect(page.getByText("The e-mail address or the password is not correct.")).toBeVisible();
-    await page.getByLabel(`Password of ${TEST_USERS.bob.name}`).fill(password);
+    await page.getByLabel(`Password of ${person.name}`).fill(person.password);
     await page.getByRole("button", { name: "Confirm and link" }).click();
     await expect(page).not.toHaveURL(/\/sign-in/);
     const identities = await context.request.get("/api/v1/account/identities");
