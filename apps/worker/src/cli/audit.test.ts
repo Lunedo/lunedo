@@ -15,6 +15,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { verifyAuditLog } from "./audit.js";
 
 const baseUrl = testDatabaseBaseUrl();
+const DATABASE_HOOK_TIMEOUT_MS = 60_000;
 
 describe.skipIf(!baseUrl)("pagehall audit verify", () => {
   let database: TemporaryDatabase;
@@ -24,12 +25,12 @@ describe.skipIf(!baseUrl)("pagehall audit verify", () => {
     database = await createTemporaryDatabase(baseUrl ?? "", "pagehall_cli_test");
     pool = createDatabasePool({ connectionString: database.url, applicationName: "pagehall-test" });
     await runMigrations(pool, { logger: createLogger({ service: "test", level: "silent" }) });
-  });
+  }, DATABASE_HOOK_TIMEOUT_MS);
 
   afterAll(async () => {
     await pool?.end();
     await database?.drop();
-  });
+  }, DATABASE_HOOK_TIMEOUT_MS);
 
   async function run() {
     const lines: string[] = [];
