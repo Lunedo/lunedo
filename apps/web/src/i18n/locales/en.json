@@ -45,7 +45,9 @@
       "previewSplit": "{accounts} of them have an account already, {later} get one at their next sign-in.",
       "removeTitle": "Remove mapping rule",
       "removeDescription": "Members of {name} lose what this rule granted at their next sign-in or sync. Access granted by hand stays.",
-      "hint": "Rules apply at every sign-in and sync. Removing someone from the group in {provider} removes what the rule granted. Groups created by rules are read-only in Pagehall."
+      "hint": "Rules apply at every sign-in and sync. Removing someone from the group in {provider} removes what the rule granted. Groups created by rules are read-only in Pagehall.",
+      "byNameTitle": "Groups are identified by their names",
+      "byName": "{provider} sends group names, not identifiers. Renaming a group in {provider} breaks every rule for it until the rule is changed here."
     },
     "sync": {
       "now": "Sync now",
@@ -233,7 +235,9 @@
       "metadataRefreshFailed": "Metadata of {name} could not be refreshed at {time}: {error}. Pagehall keeps using the last good metadata. Check the metadata address or upload the file again.",
       "caExpiring": "The CA certificate of {name} expires on {date}",
       "caExpiringAction": "Upload the new CA certificate of the directory in the provider's connection settings before then, or Pagehall can no longer connect to the directory.",
-      "openSettings": "Open settings"
+      "openSettings": "Open settings",
+      "noGraphTitle": "{name} cannot read groups through Microsoft Graph",
+      "noGraph": "Entra ID leaves out the groups of people in more than 150 groups. Without access to Microsoft Graph, these accounts lose their groups and the access the rules give. Add the client ID of an app registration and its credential."
     },
     "tabs": {
       "mapping": "Group mapping",
@@ -327,7 +331,23 @@
         "signInName": "Attribute for the sign-in name",
         "displayName": "Attribute for the display name",
         "groups": "Attribute for groups",
-        "optionalHint": "Optional. Leave empty if the identity provider does not send it."
+        "optionalHint": "Optional. Leave empty if the identity provider does not send it.",
+        "groupValues": "Group values",
+        "groupValuesHint": {
+          "adfs": "In the claim rules of the relying party trust, send Token-Groups as SIDs. SIDs stay the same when a group is renamed.",
+          "generic": "What the groups attribute contains. Identifiers stay the same when a group is renamed."
+        },
+        "groupValueOptions": {
+          "adfs": {
+            "identifiers": "SIDs (Token-Groups as SIDs)",
+            "names": "Names (Token-Groups – Unqualified Names)"
+          },
+          "generic": {
+            "identifiers": "Identifiers",
+            "names": "Names"
+          }
+        },
+        "namesWarning": "With group names, renaming a group in the provider breaks the rules for it. Use identifiers if the provider can send them."
       }
     },
     "accounts": {
@@ -436,7 +456,9 @@
       "displayName": "Display name",
       "groups": "Groups",
       "noGroups": "No groups",
-      "claims": "Claims"
+      "claims": "Claims and attributes",
+      "noClaims": "The provider sent no claims or attributes.",
+      "claimsHint": "Tokens, hashes and secrets are never shown."
     },
     "wizard": {
       "title": "Add identity provider",
@@ -448,7 +470,8 @@
         "connection": "Connection",
         "attributes": "User attributes",
         "accounts": "Accounts",
-        "test": "Test"
+        "test": "Test",
+        "directory": "Microsoft Graph"
       },
       "typeTitle": "Which provider do you use?",
       "connectionTitle": "Connect {type}",
@@ -517,7 +540,9 @@
       },
       "caHint": "Optional. Only needed when the server certificate was issued by your own certificate authority.",
       "caFailedTitle": "The provider is saved, but the CA certificate is not",
-      "caFailedAction": "Continue and upload the right CA certificate in the test step or in the connection settings."
+      "caFailedAction": "Continue and upload the right CA certificate in the test step or in the connection settings.",
+      "graphHint": "SAML assertions from Entra ID carry at most 150 groups. With an app registration that has the application permissions GroupMember.Read.All and User.Read.All, Pagehall loads the rest through Microsoft Graph and also synchronizes accounts in the background. You can skip this step and add it later in the settings.",
+      "graphApp": "App registration"
     },
     "types": {
       "oidc": "OIDC",
@@ -668,7 +693,8 @@
         "serviceAccount": "Check the DN and the password of the service account, then test again.",
         "search": "Check the base DNs and the filters, then test again."
       },
-      "sample": "Person found"
+      "sample": "Person found",
+      "attributes": "Attributes the directory returned"
     }
   },
   "identities": {

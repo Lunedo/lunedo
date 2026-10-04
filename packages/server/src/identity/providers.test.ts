@@ -79,11 +79,21 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
   it("declares what each provider can do with its configuration", async () => {
     const credential = { kind: "clientSecret" as const, secret: "x", expiresAt: null };
     const generic = await instanceProvider();
-    expect(generic.capabilities).toEqual({ groups: false, directorySync: false, disabledAccounts: false });
+    expect(generic.capabilities).toEqual({
+      groups: false,
+      directorySync: false,
+      disabledAccounts: false,
+      groupsByName: false,
+    });
     const withGroups = await test.services.identityProviders.update(SYSTEM, generic.id, {
       config: { ...GENERIC, claims: { groups: "groups" } },
     });
-    expect(withGroups.capabilities).toEqual({ groups: true, directorySync: false, disabledAccounts: false });
+    expect(withGroups.capabilities).toEqual({
+      groups: true,
+      directorySync: false,
+      disabledAccounts: false,
+      groupsByName: false,
+    });
     const entra = await test.services.identityProviders.create(SYSTEM, {
       type: "oidc",
       name: "Entra ID",
@@ -94,6 +104,7 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
       groups: true,
       directorySync: true,
       disabledAccounts: true,
+      groupsByName: false,
     });
     const google = await test.services.identityProviders.create(SYSTEM, {
       type: "oidc",
@@ -105,6 +116,7 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
       groups: false,
       directorySync: false,
       disabledAccounts: false,
+      groupsByName: false,
     });
     const withDirectory = await test.services.identityProviders.update(SYSTEM, google.provider.id, {
       config: { ...google.provider.config, directory: { method: "adminRole" } },
@@ -113,6 +125,7 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
       groups: true,
       directorySync: false,
       disabledAccounts: false,
+      groupsByName: false,
     });
   });
 

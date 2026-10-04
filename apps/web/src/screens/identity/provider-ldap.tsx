@@ -30,7 +30,7 @@ import { problemMessage } from "../../errors/problem-message.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { FileButton, readFileText } from "./file-button.js";
 import { useLdapUpdate, useStoreProvider } from "./provider-config.js";
-import { Entry } from "./provider-test.js";
+import { Entry, ReceivedClaims } from "./provider-test.js";
 
 export const CERTIFICATE_TYPES = ".pem,.crt,.cer,application/x-pem-file,application/x-x509-ca-cert";
 
@@ -621,6 +621,9 @@ function DirectoryTestOutcome({
             />
           </dl>
         </Section>
+      ) : null}
+      {sample ? (
+        <ReceivedClaims claims={result.attributes} title={t("identityProviders.directoryTest.attributes")} />
       ) : null}
     </div>
   );

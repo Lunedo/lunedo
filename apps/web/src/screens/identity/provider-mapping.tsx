@@ -9,6 +9,7 @@ import {
   Field,
   IconButton,
   Menu,
+  Notice,
   SegmentedControl,
   Select,
   type SelectOption,
@@ -125,6 +126,11 @@ export function MappingTab({ provider, canManage }: { provider: IdentityProvider
 
   return (
     <div className="flex flex-col gap-4">
+      {provider.capabilities.groupsByName ? (
+        <Notice variant="warning" title={t("identityProviders.mapping.byNameTitle")}>
+          {t("identityProviders.mapping.byName", { provider: provider.name })}
+        </Notice>
+      ) : null}
       <TableToolbar
         search={{
           value: search,
@@ -424,6 +430,11 @@ function RuleDialog({
     >
       <div className="flex flex-col gap-4">
         {error ? <FailureNotice what={t("failures.saveMappingRule")} error={error} /> : null}
+        {provider.capabilities.groupsByName ? (
+          <Notice variant="warning" title={t("identityProviders.mapping.byNameTitle")}>
+            {t("identityProviders.mapping.byName", { provider: provider.name })}
+          </Notice>
+        ) : null}
         <Field
           label={t("identityProviders.mapping.group", { provider: provider.name })}
           hint={t("identityProviders.mapping.groupHint", { provider: provider.name })}

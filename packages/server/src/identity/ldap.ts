@@ -22,6 +22,7 @@ import {
   type StartedAuthorization,
   type SynchronizedAccount,
 } from "./adapter.js";
+import { receivedClaims } from "./claims.js";
 import {
   checkTransport,
   connectionFailure,
@@ -48,7 +49,7 @@ const AD_FAILURES: Record<string, DirectorySignInFailure> = {
 };
 
 export function ldapCapabilities(_config: LdapConfig): ProviderCapabilities {
-  return { groups: true, directorySync: true, disabledAccounts: true };
+  return { groups: true, directorySync: true, disabledAccounts: true, groupsByName: false };
 }
 
 export function guidFromBytes(bytes: Buffer): string {
@@ -564,13 +565,23 @@ export class LdapAdapter implements IdentityProviderAdapter {
           sizeLimit: 1,
         });
         const user = entry ? this.#user(ldap, entry) : null;
-        if (!user) {
+        if (!entry || !user) {
           steps.push({ step: "search", ok: false, detail: "No person matches the search" });
-          return { steps, sample: null };
+          return { steps, sample: null, attributes: [] };
         }
         const groups = await this.#groupsOf(session, ldap, user);
         steps.push({ step: "search", ok: true, detail: null });
-        return { steps, sample: { ...user.profile, groups } };
+        const received = new Map(
+          attributes.map((name) => [
+            name,
+            binary.includes(name) ? entry.buffers(name).map(guidFromBytes) : entry.values(name),
+          ]),
+        );
+        return {
+          steps,
+          sample: { ...user.profile, groups },
+          attributes: receivedClaims(received).filter((claim) => claim.values.length > 0),
+        };
       });
     } catch (error) {
       if (!(error instanceof DirectoryConnectionError)) throw error;
@@ -601,7 +612,7 @@ export class LdapAdapter implements IdentityProviderAdapter {
           failed("search");
           break;
       }
-      return { steps, sample: null };
+      return { steps, sample: null, attributes: [] };
     }
   }
 }

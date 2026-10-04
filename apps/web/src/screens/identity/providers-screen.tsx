@@ -119,6 +119,22 @@ export function ProviderWarnings({ providers }: { providers: IdentityProvider[] 
             </Notice>,
           );
         }
+        if (provider.warnings.includes("noGraphCredential")) {
+          notices.push(
+            <Notice
+              key={`${provider.id}-graph`}
+              variant="warning"
+              title={t("identityProviders.warnings.noGraphTitle", { name: provider.name })}
+              action={
+                <Button size="sm" variant="secondary" onClick={() => open(provider, "settings")}>
+                  {t("identityProviders.warnings.openSettings")}
+                </Button>
+              }
+            >
+              {t("identityProviders.warnings.noGraph")}
+            </Notice>,
+          );
+        }
         if (
           provider.type === "ldap" &&
           provider.warnings.includes("caCertificateExpiring") &&

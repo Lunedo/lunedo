@@ -1,4 +1,5 @@
 import type { LdapConfig, OidcConfig, SamlConfig } from "@pagehall/shared";
+import type { ReceivedClaim } from "./claims.js";
 import type { identityCredentialKinds, identityProviderTypes } from "./schema.js";
 
 export type IdentityProviderType = (typeof identityProviderTypes)[number];
@@ -42,6 +43,7 @@ export interface ProviderCapabilities {
   groups: boolean;
   directorySync: boolean;
   disabledAccounts: boolean;
+  groupsByName: boolean;
 }
 
 export interface ProviderGroup {
@@ -95,6 +97,7 @@ export type DirectoryTestStep = "connection" | "certificate" | "serviceAccount" 
 export interface DirectoryTestResult {
   steps: { step: DirectoryTestStep; ok: boolean; detail: string | null }[];
   sample: ProviderProfile | null;
+  attributes: ReceivedClaim[];
 }
 
 export interface RedirectSignInResult {
@@ -102,7 +105,7 @@ export interface RedirectSignInResult {
   methods: string[];
   authTime: number | null;
   providerSessionId: string | null;
-  claimNames: string[];
+  claims: ReceivedClaim[];
   assertion?: { id: string; expiresAt: Date };
 }
 

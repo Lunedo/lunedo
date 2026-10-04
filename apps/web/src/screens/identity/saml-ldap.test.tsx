@@ -99,7 +99,7 @@ function samlProvider(patch: Record<string, unknown> = {}, metadata: Record<stri
         createdAt: "2026-10-01T00:00:00.000Z",
       },
     ],
-    capabilities: { groups: true, directorySync: false, disabledAccounts: false },
+    capabilities: { groups: true, directorySync: false, disabledAccounts: false, groupsByName: false },
     warnings: [],
     config: {
       preset: "adfs",
@@ -121,6 +121,7 @@ function samlProvider(patch: Record<string, unknown> = {}, metadata: Record<stri
         displayName: null,
         groups: "http://schemas.xmlsoap.org/claims/Group",
       },
+      groupValues: "names",
     },
     saml: {
       entityId: "https://wiki.example.org/api/v1/auth/providers/saml",
@@ -162,7 +163,7 @@ function ldapProvider(patch: Record<string, unknown> = {}, config: Record<string
         createdAt: "2026-10-01T00:00:00.000Z",
       },
     ],
-    capabilities: { groups: true, directorySync: true, disabledAccounts: true },
+    capabilities: { groups: true, directorySync: true, disabledAccounts: true, groupsByName: false },
     warnings: [],
     config: {
       preset: "activeDirectory",
@@ -377,6 +378,7 @@ describe("adding an LDAP directory", () => {
                   displayName: "Lena Hofer",
                   groups: [{ id: "CN=Redaktion-Wien,OU=Groups", name: "Redaktion Wien" }],
                 },
+                attributes: [{ name: "department", values: ["Redaktion"] }],
               },
             }
           : {
@@ -390,6 +392,7 @@ describe("adding an LDAP directory", () => {
                   },
                 ],
                 sample: null,
+                attributes: [],
               },
             },
     });
@@ -423,6 +426,8 @@ describe("adding an LDAP directory", () => {
     expect(await screen.findByText("The directory works")).toBeTruthy();
     expect(screen.getByText("Lena Hofer")).toBeTruthy();
     expect(screen.getByText("Redaktion Wien")).toBeTruthy();
+    expect(screen.getByText("Attributes the directory returned")).toBeTruthy();
+    expect(screen.getByText("department")).toBeTruthy();
     expect(requests.filter((request) => request.path === `${BASE}/${LDAP}/directory-test`).length).toBe(2);
   });
 
@@ -433,6 +438,7 @@ describe("adding an LDAP directory", () => {
         body: {
           steps: [{ step: "connection", ok: false, detail: "dc01.verlag.example:636 did not answer" }],
           sample: null,
+          attributes: [],
         },
       }),
     });
@@ -556,6 +562,82 @@ describe("SAML and LDAP providers in the list and the details", () => {
           ?.config,
       ).toMatchObject({ preset: "adfs", idpInitiated: true, requireSignedResponse: false }),
     );
+  });
+
+  it("shows the attributes a test sign-in received", async () => {
+    const flow = "01929b1e-0000-7000-8000-0000000000c9";
+    adminApi({
+      [`GET ${BASE}/${SAML}`]: () => ({ body: samlProvider() }),
+      [`GET ${BASE}/${SAML}/test-results/${flow}`]: () => ({
+        body: {
+          subject: "33221100-5544-7766-8899-aabbccddeeff",
+          email: "lena.hofer@verlag.example",
+          emailVerified: true,
+          signInName: null,
+          displayName: "Lena Hofer",
+          groups: [{ id: "S-1-5-21-1-2-3-1105", name: null }],
+          claims: [
+            { name: "objectGUID", values: ["ABEiM0RVZneImaq7zN3u/w=="] },
+            {
+              name: "http://schemas.microsoft.com/ws/2008/06/identity/claims/groupsid",
+              values: ["S-1-5-21-1-2-3-1105"],
+            },
+          ],
+        },
+      }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${SAML}?tab=overview&providerTest=${flow}`);
+    expect(await screen.findByText("Sign-in worked")).toBeTruthy();
+    expect(screen.getByText("Received 2 claims and 1 group.")).toBeTruthy();
+    expect(screen.getByText("objectGUID")).toBeTruthy();
+    expect(screen.getByText("ABEiM0RVZneImaq7zN3u/w==")).toBeTruthy();
+    expect(screen.getByText("Tokens, hashes and secrets are never shown.")).toBeTruthy();
+  });
+
+  it("switches ADFS groups to SIDs and warns while they are names", async () => {
+    const { requests } = adminApi({
+      [`GET ${BASE}/${SAML}`]: () => ({ body: samlProvider() }),
+      [`GET ${BASE}`]: () => ({ body: [samlProvider()] }),
+      [`PATCH ${BASE}/${SAML}`]: (request) => ({
+        body: samlProvider({ config: (request.body as { config: unknown }).config }),
+      }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${SAML}?tab=settings`);
+    expect(await screen.findByText(/renaming a group in the provider breaks the rules for it/)).toBeTruthy();
+    await userEvent.click(screen.getByRole("combobox", { name: "Group values" }));
+    await userEvent.click(await screen.findByRole("option", { name: "SIDs (Token-Groups as SIDs)" }));
+    await waitFor(() =>
+      expect(
+        (bodyOf(requests, "PATCH", `${BASE}/${SAML}`) as { config: Record<string, unknown> } | undefined)
+          ?.config,
+      ).toMatchObject({
+        groupValues: "identifiers",
+        attributes: { groups: "http://schemas.microsoft.com/ws/2008/06/identity/claims/groupsid" },
+      }),
+    );
+  });
+
+  it("asks for the Graph app of an Entra ID SAML provider as a step of the assistant", async () => {
+    const entra = samlProvider({
+      name: "Entra ID SAML",
+      warnings: ["noGraphCredential"],
+      config: {
+        ...samlProvider().config,
+        preset: "entraId",
+        tenantId: "3f2a9c1e-7b4d-4e8a-9c21-5d6f0a8b2e17",
+        authority: "https://login.microsoftonline.com",
+        graphUrl: "https://graph.microsoft.com",
+        graphClientId: null,
+        emailSource: "email",
+      },
+    });
+    adminApi({ [`GET ${BASE}/${SAML}`]: () => ({ body: entra }) });
+    await renderPath(`/settings/instance/sign-in-providers/new?providerId=${SAML}&step=3`);
+    expect(await screen.findByRole("heading", { name: "Microsoft Graph" })).toBeTruthy();
+    expect(screen.getByText("Entra ID SAML cannot read groups through Microsoft Graph")).toBeTruthy();
+    expect(screen.getByLabelText("Client ID for Microsoft Graph")).toBeTruthy();
+    const steps = screen.getByRole("navigation", { name: "Steps" });
+    expect(within(steps).getAllByRole("button")).toHaveLength(6);
   });
 
   it("manages the CA certificate, the second factor and the service account password of a directory", async () => {

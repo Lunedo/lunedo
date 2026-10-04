@@ -182,6 +182,15 @@ export const directoryTestSchema = z
   .strict()
   .describe("What to look up in the directory.");
 
+const receivedClaimsSchema = z
+  .array(
+    z.object({
+      name: z.string().describe("Name of the claim or attribute."),
+      values: z.array(z.string()).describe("Its values as text."),
+    }),
+  )
+  .describe("Claims or attributes as received, without tokens, hashes or secrets.");
+
 export const directoryTestResultSchema = z
   .object({
     steps: z
@@ -208,6 +217,7 @@ export const directoryTestResultSchema = z
       })
       .nullable()
       .describe("The person found, or null."),
+    attributes: receivedClaimsSchema,
   })
   .describe("Result of the directory test.");
 
@@ -325,6 +335,9 @@ const providerBase = {
       disabledAccounts: z
         .boolean()
         .describe("Whether accounts disabled or deleted in the provider are detected without a sign-in."),
+      groupsByName: z
+        .boolean()
+        .describe("Whether groups are identified by their names, so that renaming a group breaks its rules."),
     })
     .describe("What the provider can do with its current configuration."),
   deactivatedAt: z.iso
@@ -341,6 +354,7 @@ const providerBase = {
         "credentialExpired",
         "metadataRefreshFailed",
         "caCertificateExpiring",
+        "noGraphCredential",
       ]),
     )
     .describe("Problems that need attention."),
@@ -515,7 +529,7 @@ export const testResultSchema = z
         .array(z.object({ id: z.string(), name: z.string().nullable() }))
         .nullable()
         .describe("Groups from the token, or null when the token carries none."),
-      claimNames: z.array(z.string()).describe("Names of all claims in the ID token."),
+      claims: receivedClaimsSchema,
     }),
     z.object({ error: z.string().describe("Why the test sign-in failed.") }),
   ])

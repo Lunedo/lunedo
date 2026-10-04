@@ -87,6 +87,7 @@ function provider(preset: "entraId" | "generic" | "google" = "entraId") {
       groups: preset !== "google",
       directorySync: preset === "entraId",
       disabledAccounts: preset === "entraId",
+      groupsByName: false,
     },
     deactivatedAt: null,
     createdAt: "2026-09-01T08:00:00.000Z",
@@ -176,6 +177,29 @@ describe("group mapping", () => {
     expect(within(table).getByText("Platform Team")).toBeTruthy();
     expect(within(table).getByText("Group not found")).toBeTruthy();
     expect(within(table).getAllByText("Instance role")).toHaveLength(1);
+  });
+
+  it("warns in the list and the dialog that renaming a group breaks rules that use its name", async () => {
+    const byName = provider("generic");
+    adminApi({
+      [`GET ${BASE}`]: () => ({
+        body: { ...byName, capabilities: { ...byName.capabilities, groupsByName: true } },
+      }),
+      [`GET ${BASE}/mapping-rules`]: () => ({ body: [rule()] }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
+    await screen.findByRole("table", { name: "Mapping rules" });
+    expect(screen.getAllByText("Groups are identified by their names")).toHaveLength(1);
+    await userEvent.click(screen.getByRole("button", { name: "Add rule" }));
+    const dialog = await screen.findByRole("dialog", { name: "Add mapping rule" });
+    expect(within(dialog).getByText(/Renaming a group in Keycloak breaks every rule for it/)).toBeTruthy();
+  });
+
+  it("does not warn about renaming when groups have identifiers", async () => {
+    adminApi({ [`GET ${BASE}/mapping-rules`]: () => ({ body: [rule()] }) });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
+    await screen.findByRole("table", { name: "Mapping rules" });
+    expect(screen.queryByText("Groups are identified by their names")).toBeNull();
   });
 
   it("adds a rule after showing who gains access", { timeout: 15_000 }, async () => {

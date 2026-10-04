@@ -204,6 +204,14 @@ export const ENTRA_SAML_CLAIMS = {
   methods: "http://schemas.microsoft.com/claims/authnmethodsreferences",
 } as const;
 
+export const ADFS_GROUP_CLAIMS = {
+  sids: "http://schemas.microsoft.com/ws/2008/06/identity/claims/groupsid",
+  names: "http://schemas.xmlsoap.org/claims/Group",
+} as const;
+
+export const samlGroupValues = ["identifiers", "names"] as const;
+export type SamlGroupValues = (typeof samlGroupValues)[number];
+
 export const SAML_METADATA_REFRESH_HOURS = 24;
 
 const samlMetadataSourceSchema = z.discriminatedUnion("source", [
@@ -257,8 +265,9 @@ export const samlAdfsConfigSchema = z
       email: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
       signInName: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn",
       displayName: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name",
-      groups: "http://schemas.xmlsoap.org/claims/Group",
+      groups: ADFS_GROUP_CLAIMS.sids,
     }),
+    groupValues: z.enum(samlGroupValues).default("identifiers"),
   })
   .strict();
 
@@ -273,6 +282,7 @@ export const samlGenericConfigSchema = z
       displayName: null,
       groups: null,
     }),
+    groupValues: z.enum(samlGroupValues).default("names"),
   })
   .strict();
 

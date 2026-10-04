@@ -25,6 +25,7 @@ import {
   type StartedAuthorization,
   type SynchronizedAccount,
 } from "./adapter.js";
+import { receivedClaims } from "./claims.js";
 import { DirectoryClients, type GraphConfig } from "./directory.js";
 import {
   attributeOf,
@@ -71,9 +72,15 @@ export function samlEntityId(baseUrl: string, providerId: string): string {
 export function samlCapabilities(config: SamlConfig, graphCredential: boolean): ProviderCapabilities {
   if (config.preset === "entraId") {
     const directorySync = config.graphClientId !== null && graphCredential;
-    return { groups: true, directorySync, disabledAccounts: directorySync };
+    return { groups: true, directorySync, disabledAccounts: directorySync, groupsByName: false };
   }
-  return { groups: config.attributes.groups !== null, directorySync: false, disabledAccounts: false };
+  const groups = config.attributes.groups !== null;
+  return {
+    groups,
+    directorySync: false,
+    disabledAccounts: false,
+    groupsByName: groups && config.groupValues === "names",
+  };
 }
 
 function graphConfig(config: SamlConfig): GraphConfig | null {
@@ -443,7 +450,7 @@ export class SamlAdapter implements IdentityProviderAdapter {
       methods,
       authTime: Math.floor(assertion.authnInstant / 1000),
       providerSessionId: null,
-      claimNames: [...assertion.attributes.keys()].sort(),
+      claims: receivedClaims(assertion.attributes),
       assertion: { id: assertion.id, expiresAt: assertion.expiresAt },
     };
   }
@@ -485,7 +492,10 @@ export class SamlAdapter implements IdentityProviderAdapter {
     }
     if (!subject) throw new ProviderResponseError("The assertion has no identifier");
     const groups = config.attributes.groups
-      ? (attributes.get(config.attributes.groups) ?? []).map((id) => ({ id, name: id }))
+      ? (attributes.get(config.attributes.groups) ?? []).map((id) => ({
+          id,
+          name: config.groupValues === "names" ? id : null,
+        }))
       : null;
     return {
       subject,

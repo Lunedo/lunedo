@@ -68,7 +68,8 @@ export type ProviderWarning =
   | "credentialExpiring"
   | "credentialExpired"
   | "metadataRefreshFailed"
-  | "caCertificateExpiring";
+  | "caCertificateExpiring"
+  | "noGraphCredential";
 
 export type CredentialKind = "clientSecret" | "certificate" | "samlSigning" | "bindPassword";
 
@@ -553,13 +554,10 @@ export class IdentityProviderService {
         now,
       ),
     );
-    if (type === "saml" && config.preset === "entraId" && "graphClientId" in config && config.graphClientId) {
-      for (const warning of warningsOf(
-        credentials.filter((credential) => groupOf(credential.kind) === "client"),
-        now,
-      )) {
-        warnings.add(warning);
-      }
+    if (type === "saml" && config.preset === "entraId" && "graphClientId" in config) {
+      const graph = credentials.filter((credential) => groupOf(credential.kind) === "client");
+      if (!config.graphClientId || graph.length === 0) warnings.add("noGraphCredential");
+      else for (const warning of warningsOf(graph, now)) warnings.add(warning);
     }
     return [...warnings];
   }

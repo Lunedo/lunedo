@@ -277,4 +277,26 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
     const refreshed = await test.services.identityProviders.refreshSamlMetadata(SYSTEM, id);
     expect(refreshed.warnings).not.toContain("metadataRefreshFailed");
   });
+
+  it("warns about Entra ID providers that cannot read groups through Graph", async () => {
+    const { provider: created } = await test.services.identityProviders.create(SYSTEM, {
+      type: "saml",
+      name: "Entra SAML",
+      config: { preset: "entraId", tenantId: randomUUID(), metadata: { source: "file" } },
+      metadataXml: idp.metadata(),
+    });
+    expect(created.warnings).toContain("noGraphCredential");
+    const withClient = await test.services.identityProviders.update(SYSTEM, created.id, {
+      config: { ...created.config, graphClientId: "graph-client" },
+    });
+    expect(withClient.warnings).toContain("noGraphCredential");
+    await test.services.identityProviders.addCredential(SYSTEM, created.id, {
+      kind: "clientSecret",
+      secret: "graph-secret",
+      expiresAt: null,
+    });
+    const ready = await test.services.identityProviders.get(created.id);
+    expect(ready.warnings).not.toContain("noGraphCredential");
+    expect(ready.capabilities.directorySync).toBe(true);
+  });
 });

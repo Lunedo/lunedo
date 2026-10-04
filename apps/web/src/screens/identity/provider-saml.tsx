@@ -1,3 +1,4 @@
+import { ADFS_GROUP_CLAIMS, type SamlGroupValues, samlGroupValues } from "@pagehall/shared";
 import { Badge, Button, buttonClassName, Notice, Section, Select, SettingRow, Switch } from "@pagehall/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Download, FileUp, Lock, RefreshCw } from "lucide-react";
@@ -320,25 +321,41 @@ export function SamlConnectionFields({
         onChange={(encryptedAssertions) => update((current) => ({ ...current, encryptedAssertions }))}
       />
       {config.preset === "entraId" ? (
-        <div className="px-4 py-3">
-          <AutoSaveTextField
-            label={t("identityProviders.saml.graphClientId")}
-            hint={t("identityProviders.saml.graphClientIdHint")}
-            value={config.graphClientId ?? ""}
-            schema={z.union([z.literal(""), z.string().trim().min(1).max(500)])}
-            disabled={!canManage}
-            className="font-mono"
-            onSave={(value) =>
-              update((current) =>
-                current.preset === "entraId"
-                  ? { ...current, graphClientId: value === "" ? null : value }
-                  : current,
-              )
-            }
-          />
-        </div>
+        <SamlGraphClientField provider={provider} canManage={canManage} />
       ) : null}
     </>
+  );
+}
+
+export function SamlGraphClientField({
+  provider,
+  canManage,
+}: {
+  provider: SamlProvider;
+  canManage: boolean;
+}) {
+  const { t } = useTranslation();
+  const update = useSamlUpdate(provider);
+  const config = provider.config;
+  if (config.preset !== "entraId") return null;
+  return (
+    <div className="px-4 py-3">
+      <AutoSaveTextField
+        label={t("identityProviders.saml.graphClientId")}
+        hint={t("identityProviders.saml.graphClientIdHint")}
+        value={config.graphClientId ?? ""}
+        schema={z.union([z.literal(""), z.string().trim().min(1).max(500)])}
+        disabled={!canManage}
+        className="font-mono"
+        onSave={(value) =>
+          update((current) =>
+            current.preset === "entraId"
+              ? { ...current, graphClientId: value === "" ? null : value }
+              : current,
+          )
+        }
+      />
+    </div>
   );
 }
 
@@ -441,6 +458,47 @@ export function SamlAttributeFields({ provider, canManage }: { provider: SamlPro
           ))}
         </div>
       )}
+      {config.preset !== "entraId" ? (
+        <SettingRow
+          label={t("identityProviders.attributes.saml.groupValues")}
+          description={t(`identityProviders.attributes.saml.groupValuesHint.${config.preset}`)}
+          control={
+            <Select
+              aria-label={t("identityProviders.attributes.saml.groupValues")}
+              value={config.groupValues}
+              disabled={!canManage}
+              onValueChange={(value) =>
+                void tracker("groupValues").run(() =>
+                  update((current) => {
+                    if (current.preset === "entraId") return current;
+                    const groupValues = value as SamlGroupValues;
+                    if (current.preset === "generic") return { ...current, groupValues };
+                    return {
+                      ...current,
+                      groupValues,
+                      attributes: {
+                        ...config.attributes,
+                        ...current.attributes,
+                        groups: groupValues === "names" ? ADFS_GROUP_CLAIMS.names : ADFS_GROUP_CLAIMS.sids,
+                      },
+                    };
+                  }),
+                )
+              }
+              options={samlGroupValues.map((value) => ({
+                value,
+                label: t(`identityProviders.attributes.saml.groupValueOptions.${config.preset}.${value}`),
+              }))}
+            />
+          }
+          status={<SaveIndicator tracker={tracker("groupValues")} />}
+        />
+      ) : null}
+      {config.preset !== "entraId" && config.groupValues === "names" ? (
+        <div className="px-4 py-3">
+          <Notice variant="warning">{t("identityProviders.attributes.saml.namesWarning")}</Notice>
+        </div>
+      ) : null}
     </>
   );
 }

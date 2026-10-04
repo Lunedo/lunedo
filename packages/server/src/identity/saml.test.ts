@@ -1,12 +1,17 @@
 import { randomUUID } from "node:crypto";
 import { inflateRawSync } from "node:zlib";
-import { ENTRA_SAML_CLAIMS, type SamlConfigInput, samlConfigSchema } from "@pagehall/shared";
+import {
+  ADFS_GROUP_CLAIMS,
+  ENTRA_SAML_CLAIMS,
+  type SamlConfigInput,
+  samlConfigSchema,
+} from "@pagehall/shared";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createFakeSamlIdp, type FakeSamlIdp, PERSISTENT } from "../testing/fakes/saml-idp.js";
 import type { ProviderCredential, SamlProviderDefinition } from "./adapter.js";
 import { ProviderPolicyError, ProviderResponseError } from "./adapter.js";
 import { generateCertificate } from "./certificates.js";
-import { SamlAdapter, samlEntityId, samlPaths } from "./saml.js";
+import { SamlAdapter, samlCapabilities, samlEntityId, samlPaths } from "./saml.js";
 import { parseSamlMetadata, SamlMetadataError } from "./saml-metadata.js";
 
 const BASE = "https://wiki.pagehall.test";
@@ -355,6 +360,68 @@ describe("SAML sign-in", () => {
       }),
     );
     expect(result.profile.subject).toBe("33221100-5544-7766-8899-aabbccddeeff");
+  });
+
+  it("reads ADFS groups as SIDs by default and treats names as names only when chosen", async () => {
+    const guid = Buffer.from("00112233445566778899aabbccddeeff", "hex").toString("base64");
+    const sid = "S-1-5-21-1004336348-1177238915-682003330-1105";
+    const attributes = {
+      objectGUID: [guid],
+      [ADFS_GROUP_CLAIMS.sids]: [sid],
+      [ADFS_GROUP_CLAIMS.names]: ["Editors"],
+    };
+    const bySid = await start(provider({ preset: "adfs" } as Partial<SamlConfigInput>));
+    const result = await bySid.complete(
+      await idp.response({
+        nameId: "x",
+        audience: bySid.audience,
+        recipient: bySid.acs,
+        requestId: bySid.requestId,
+        attributes,
+      }),
+    );
+    expect(result.profile.groups).toEqual([{ id: sid, name: null }]);
+    const definition = provider({ preset: "adfs" } as Partial<SamlConfigInput>);
+    expect(samlCapabilities(definition.config, false).groupsByName).toBe(false);
+
+    const named = provider({
+      preset: "adfs",
+      groupValues: "names",
+      attributes: {
+        email: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+        groups: ADFS_GROUP_CLAIMS.names,
+      },
+    } as Partial<SamlConfigInput>);
+    expect(samlCapabilities(named.config, false).groupsByName).toBe(true);
+    const byName = await start(named);
+    const namedResult = await byName.complete(
+      await idp.response({
+        nameId: "x",
+        audience: byName.audience,
+        recipient: byName.acs,
+        requestId: byName.requestId,
+        attributes,
+      }),
+    );
+    expect(namedResult.profile.groups).toEqual([{ id: "Editors", name: "Editors" }]);
+  });
+
+  it("reports the attributes it received without hashes, tokens or secrets", async () => {
+    const flow = await start(provider());
+    const result = await flow.complete(
+      await idp.response({
+        ...person,
+        attributes: { ...person.attributes, access_token: ["secret-value"], passwordHash: ["x"] },
+        audience: flow.audience,
+        recipient: flow.acs,
+        requestId: flow.requestId,
+      }),
+    );
+    expect(result.claims).toEqual([
+      { name: "email", values: ["ada@pagehall.test"] },
+      { name: "groups", values: ["staff"] },
+    ]);
+    expect(JSON.stringify(result.claims)).not.toContain("secret-value");
   });
 });
 

@@ -1,6 +1,6 @@
 # Identity providers
 
-People can sign in through OpenID Connect providers such as Microsoft Entra ID, Google Workspace, Keycloak or Authentik, in addition to passwords and passkeys. SAML and LDAP follow on the same framework.
+People can sign in through OpenID Connect providers such as Microsoft Entra ID, Google Workspace, Keycloak or Authentik, in addition to passwords and passkeys, through SAML 2.0 providers such as Entra ID and ADFS, and through LDAP directories such as Active Directory and OpenLDAP.
 
 ## Configured for the whole instance
 
@@ -60,6 +60,26 @@ Presets:
 | Other providers | configured | `sub` | Claim names for e-mail address, sign-in name, display name and groups are configurable. |
 
 Providers must be reached through HTTPS. Microsoft Graph and the Google Directory API are only called on their own hosts: the Graph endpoint of the Microsoft cloud of the provider's authority, `admin.googleapis.com` and `oauth2.googleapis.com`. `PAGEHALL_INSECURE_IDENTITY_PROVIDERS=true` allows HTTP, other issuers for the presets and other directory hosts, for development and tests only.
+
+## SAML
+
+Pagehall is the service provider. Its entity ID and metadata are at `{instance URL}/api/v1/auth/providers/{providerId}/saml/metadata`, and responses arrive at `…/saml/acs`. The assertion must always be signed; a signature over the whole response is required only when the provider setting `requireSignedResponse` is on. Each assertion is accepted once. Sign-in started at the identity provider is off by default (`idpInitiated`).
+
+Presets:
+
+- Microsoft Entra ID: the person is identified by tenant ID and object ID. Groups come as object IDs. Assertions carry at most 150 groups; for people in more groups, Entra ID sends a link instead, and Pagehall reads the groups through Microsoft Graph. This needs the client ID of an app registration (`graphClientId`) and its client secret or certificate, which the setup assistant asks for as a step of its own. Without them, the provider shows the warning `noGraphCredential`: accounts with many groups lose their groups and what the rules give them.
+- ADFS: the person is identified by `objectGUID`. Groups come as SIDs by default: add the claim rule "Token-Groups as SIDs" (claim type `http://schemas.microsoft.com/ws/2008/06/identity/claims/groupsid`). Group names ("Token-Groups – Unqualified Names") remain possible with `groupValues: "names"`.
+- Other providers: identifier, e-mail address, sign-in name, display name and groups come from configurable attributes; `groupValues` says whether the groups attribute carries identifiers or names.
+
+When the group values are names, the provider reports `capabilities.groupsByName`, and the rule list and the rule dialog warn that renaming a group in the provider breaks its rules.
+
+## LDAP
+
+Directories are reached through LDAPS or StartTLS with a service account. People sign in with their directory password on the Pagehall sign-in page. Active Directory identifies people and groups by `objectGUID`; other directories by `entryUUID`.
+
+## Testing a provider
+
+The setup assistant and the provider page test a provider with a real sign-in (OpenID Connect and SAML) or a directory lookup (LDAP). Nothing is saved and no account is created. The result shows the identifier, the profile, the groups, and the claims or attributes as received. Tokens, assertions in raw form, hashes, nonces and secrets are never shown.
 
 ## Identities
 

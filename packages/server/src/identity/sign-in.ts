@@ -45,6 +45,7 @@ import {
   type ProviderProfile,
   ProviderResponseError,
 } from "./adapter.js";
+import type { ReceivedClaim } from "./claims.js";
 import type { GroupMappingService } from "./groups.js";
 import type { IdentityProviderService, SignInProvider } from "./providers.js";
 import { callbackPath } from "./providers.js";
@@ -121,7 +122,7 @@ export interface TestResult {
   signInName: string | null;
   displayName: string | null;
   groups: { id: string; name: string | null }[] | null;
-  claimNames: string[];
+  claims: ReceivedClaim[];
 }
 
 export interface SignInOptions {
@@ -386,7 +387,7 @@ export class ProviderSignInService {
         signInName: profile.signInName,
         displayName: profile.displayName,
         groups: profile.groups,
-        claimNames: result.claimNames,
+        claims: result.claims,
       };
       await this.#database.update(providerFlows).set({ result: test }).where(eq(providerFlows.id, flow.id));
       return { kind: "tested", flowId: flow.id, returnTo: flow.returnTo };

@@ -27,11 +27,12 @@ import {
   CertificateCreated,
   type CredentialDraft,
   CredentialFields,
+  CredentialsList,
   credentialInput,
   emptyCredentialDraft,
 } from "./provider-credentials.js";
 import { DirectoryTest, LdapAttributeFields, LdapSecondFactorFields } from "./provider-ldap.js";
-import { SamlAttributeFields, SamlServiceProviderFields } from "./provider-saml.js";
+import { SamlAttributeFields, SamlGraphClientField, SamlServiceProviderFields } from "./provider-saml.js";
 import { StartTestButton, TestResult } from "./provider-test.js";
 import {
   type CommonStepProps,
@@ -50,9 +51,13 @@ import { providerPath } from "./providers-screen.js";
 
 const instanceRoute = getRouteApi("/app/settings/instance/sign-in-providers/new");
 
-type Step = "type" | "connection" | "attributes" | "accounts" | "test";
+type Step = "type" | "connection" | "attributes" | "directory" | "accounts" | "test";
 
-const STEPS: Step[] = ["type", "connection", "attributes", "accounts", "test"];
+function stepsFor(samlEntraId: boolean): Step[] {
+  return samlEntraId
+    ? ["type", "connection", "attributes", "directory", "accounts", "test"]
+    : ["type", "connection", "attributes", "accounts", "test"];
+}
 
 type Choice = "entraId" | "google" | "oidc" | "saml" | "ldap";
 
@@ -97,17 +102,12 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const state = useOrganizationState();
-  const steps = STEPS;
   const providerId = search.providerId;
   const provider = useQuery({
     ...providerQuery(providerId ?? ""),
     enabled: Boolean(providerId),
   });
   const [localStep, setLocalStep] = useState(0);
-  const index = providerId
-    ? Math.min(Math.max(search.step ?? 2, 2), steps.length - 1)
-    : Math.min(localStep, 1);
-  const step = steps[index] ?? "type";
   const [draft, setDraft] = useState<WizardDraft>({
     choice: "entraId",
     name: DEFAULT_NAMES.entraId,
@@ -116,6 +116,16 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
     saml: emptySamlDraft(),
     directory: emptyDirectoryDraft(),
   });
+  const saved = provider.data;
+  const steps = stepsFor(
+    saved
+      ? saved.type === "saml" && saved.config.preset === "entraId"
+      : draft.choice === "saml" && draft.saml.preset === "entraId",
+  );
+  const index = providerId
+    ? Math.min(Math.max(search.step ?? 2, 2), steps.length - 1)
+    : Math.min(localStep, 1);
+  const step = steps[index] ?? "type";
   const canManage = state.can("instance.signIn.manage");
   const listPath = { to: "/settings/instance/sign-in-providers" as const };
   const goTo = (target: number) => {
@@ -235,6 +245,7 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
               <SavedProviderStep
                 provider={provider.data}
                 step={step}
+                testStep={steps.indexOf("test")}
                 canManage={canManage}
                 flowId={search.providerTest}
                 isLast={index === steps.length - 1}
@@ -478,6 +489,7 @@ function OidcConnectionStep({
 function SavedProviderStep({
   provider,
   step,
+  testStep,
   canManage,
   flowId,
   isLast,
@@ -487,6 +499,7 @@ function SavedProviderStep({
 }: {
   provider: IdentityProvider;
   step: Step;
+  testStep: number;
   canManage: boolean;
   flowId: string | undefined;
   isLast: boolean;
@@ -522,6 +535,28 @@ function SavedProviderStep({
           </Section>
         </>
       ) : null}
+      {step === "directory" && provider.type === "saml" ? (
+        <>
+          <h2 className="font-semibold text-lg">{t("identityProviders.wizard.stepNames.directory")}</h2>
+          <Notice variant="info">{t("identityProviders.wizard.graphHint")}</Notice>
+          {provider.warnings.includes("noGraphCredential") ? (
+            <Notice
+              variant="warning"
+              title={t("identityProviders.warnings.noGraphTitle", { name: provider.name })}
+            >
+              {t("identityProviders.warnings.noGraph")}
+            </Notice>
+          ) : null}
+          <Section title={t("identityProviders.wizard.graphApp")}>
+            <SamlGraphClientField provider={provider} canManage={canManage} />
+          </Section>
+          <Section title={t("identityProviders.credentials.title")}>
+            <div className="px-4 py-3">
+              <CredentialsList provider={provider} canManage={canManage} />
+            </div>
+          </Section>
+        </>
+      ) : null}
       {step === "accounts" ? (
         <>
           <h2 className="font-semibold text-lg">{t("identityProviders.wizard.stepNames.accounts")}</h2>
@@ -554,9 +589,7 @@ function SavedProviderStep({
               <StartTestButton
                 provider={provider}
                 variant="primary"
-                returnTo={() =>
-                  `${globalThis.location.pathname}?providerId=${provider.id}&step=${STEPS.indexOf("test")}`
-                }
+                returnTo={() => `${globalThis.location.pathname}?providerId=${provider.id}&step=${testStep}`}
               />
               {flowId ? <TestResult provider={provider} flowId={flowId} /> : null}
             </>

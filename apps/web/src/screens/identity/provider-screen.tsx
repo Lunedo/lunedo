@@ -178,6 +178,14 @@ function Overview({
   return (
     <div className="flex flex-col gap-6">
       {flowId ? <TestResult provider={provider} flowId={flowId} /> : null}
+      {provider.warnings.includes("noGraphCredential") ? (
+        <Notice
+          variant="warning"
+          title={t("identityProviders.warnings.noGraphTitle", { name: provider.name })}
+        >
+          {t("identityProviders.warnings.noGraph")}
+        </Notice>
+      ) : null}
       <OverviewTiles provider={provider} />
       {provider.type === "saml" ? <SamlMetadataSection provider={provider} canManage={canManage} /> : null}
       <Section title={t("identityProviders.overview.connection")}>

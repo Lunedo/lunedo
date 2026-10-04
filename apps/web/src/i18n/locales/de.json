@@ -45,7 +45,9 @@
       "previewSplit": "{accounts} davon haben schon ein Konto, {later} erhalten eines bei ihrer nächsten Anmeldung.",
       "removeTitle": "Zuordnungsregel entfernen",
       "removeDescription": "Mitglieder von {name} verlieren bei ihrer nächsten Anmeldung oder Synchronisierung, was diese Regel gewährt hat. Von Hand vergebener Zugriff bleibt.",
-      "hint": "Regeln gelten bei jeder Anmeldung und Synchronisierung. Wer in {provider} aus der Gruppe entfernt wird, verliert, was die Regel gewährt hat. Gruppen, die Regeln anlegen, sind in Pagehall schreibgeschützt."
+      "hint": "Regeln gelten bei jeder Anmeldung und Synchronisierung. Wer in {provider} aus der Gruppe entfernt wird, verliert, was die Regel gewährt hat. Gruppen, die Regeln anlegen, sind in Pagehall schreibgeschützt.",
+      "byNameTitle": "Gruppen werden über ihre Namen erkannt",
+      "byName": "{provider} sendet Gruppennamen statt Kennungen. Wird eine Gruppe in {provider} umbenannt, greift keine Regel für sie mehr, bis die Regel hier angepasst ist."
     },
     "sync": {
       "now": "Jetzt synchronisieren",
@@ -233,7 +235,9 @@
       "metadataRefreshFailed": "Die Metadaten von {name} konnten am {time} nicht aktualisiert werden: {error}. Pagehall verwendet weiter die letzten gültigen Metadaten. Prüfe die Metadatenadresse oder lade die Datei erneut hoch.",
       "caExpiring": "Das CA-Zertifikat von {name} läuft am {date} ab",
       "caExpiringAction": "Lade vorher das neue CA-Zertifikat des Verzeichnisses in den Verbindungseinstellungen des Anbieters hoch, sonst kann Pagehall das Verzeichnis nicht mehr erreichen.",
-      "openSettings": "Einstellungen öffnen"
+      "openSettings": "Einstellungen öffnen",
+      "noGraphTitle": "{name} kann Gruppen nicht über Microsoft Graph lesen",
+      "noGraph": "Entra ID lässt die Gruppen von Personen in mehr als 150 Gruppen weg. Ohne Zugriff auf Microsoft Graph verlieren diese Konten ihre Gruppen und den Zugriff aus den Regeln. Trage die Client-ID einer App-Registrierung und ihr Anmeldegeheimnis ein."
     },
     "tabs": {
       "mapping": "Gruppenzuordnung",
@@ -327,7 +331,23 @@
         "signInName": "Attribut für den Anmeldenamen",
         "displayName": "Attribut für den Anzeigenamen",
         "groups": "Attribut für Gruppen",
-        "optionalHint": "Optional. Leer lassen, wenn der Identitätsanbieter es nicht schickt."
+        "optionalHint": "Optional. Leer lassen, wenn der Identitätsanbieter es nicht schickt.",
+        "groupValues": "Gruppenwerte",
+        "groupValuesHint": {
+          "adfs": "Sende in den Anspruchsregeln der Vertrauensstellung Token-Groups as SIDs. SIDs bleiben gleich, wenn eine Gruppe umbenannt wird.",
+          "generic": "Was das Gruppenattribut enthält. Kennungen bleiben gleich, wenn eine Gruppe umbenannt wird."
+        },
+        "groupValueOptions": {
+          "adfs": {
+            "identifiers": "SIDs (Token-Groups as SIDs)",
+            "names": "Namen (Token-Groups – Unqualified Names)"
+          },
+          "generic": {
+            "identifiers": "Kennungen",
+            "names": "Namen"
+          }
+        },
+        "namesWarning": "Mit Gruppennamen greifen die Regeln einer Gruppe nicht mehr, sobald sie im Anbieter umbenannt wird. Nutze Kennungen, wenn der Anbieter sie senden kann."
       }
     },
     "accounts": {
@@ -436,7 +456,9 @@
       "displayName": "Anzeigename",
       "groups": "Gruppen",
       "noGroups": "Keine Gruppen",
-      "claims": "Claims"
+      "claims": "Claims und Attribute",
+      "noClaims": "Der Anbieter hat keine Claims oder Attribute gesendet.",
+      "claimsHint": "Tokens, Hashwerte und Geheimnisse werden nie angezeigt."
     },
     "wizard": {
       "title": "Identitätsanbieter hinzufügen",
@@ -448,7 +470,8 @@
         "connection": "Verbindung",
         "attributes": "Benutzerattribute",
         "accounts": "Konten",
-        "test": "Test"
+        "test": "Test",
+        "directory": "Microsoft Graph"
       },
       "typeTitle": "Welchen Anbieter verwendest du?",
       "connectionTitle": "{type} verbinden",
@@ -517,7 +540,9 @@
       },
       "caHint": "Optional. Nur nötig, wenn das Serverzertifikat von deiner eigenen Zertifizierungsstelle ausgestellt wurde.",
       "caFailedTitle": "Der Anbieter ist gespeichert, das CA-Zertifikat aber nicht",
-      "caFailedAction": "Mach weiter und lade das richtige CA-Zertifikat im Testschritt oder in den Verbindungseinstellungen hoch."
+      "caFailedAction": "Mach weiter und lade das richtige CA-Zertifikat im Testschritt oder in den Verbindungseinstellungen hoch.",
+      "graphHint": "SAML-Assertions aus Entra ID enthalten höchstens 150 Gruppen. Mit einer App-Registrierung mit den Anwendungsberechtigungen GroupMember.Read.All und User.Read.All lädt Pagehall den Rest über Microsoft Graph und synchronisiert Konten im Hintergrund. Du kannst diesen Schritt überspringen und ihn später in den Einstellungen nachholen.",
+      "graphApp": "App-Registrierung"
     },
     "types": {
       "oidc": "OIDC",
@@ -668,7 +693,8 @@
         "serviceAccount": "Prüfe DN und Passwort des Dienstkontos und teste dann erneut.",
         "search": "Prüfe die Basis-DNs und die Filter und teste dann erneut."
       },
-      "sample": "Gefundene Person"
+      "sample": "Gefundene Person",
+      "attributes": "Attribute aus dem Verzeichnis"
     }
   },
   "identities": {

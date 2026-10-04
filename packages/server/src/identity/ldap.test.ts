@@ -365,6 +365,10 @@ describe("LDAP and Active Directory", () => {
       ["search", true],
     ]);
     expect(passed.sample?.email).toBe("alice@corp.example");
+    expect(passed.attributes).toContainEqual({ name: "mail", values: ["alice@corp.example"] });
+    expect(passed.attributes.find((attribute) => attribute.name === "objectGUID")?.values).toEqual([
+      passed.sample?.subject,
+    ]);
     const wrong = [{ ...credentials[0], secret: "wrong" } as ProviderCredential];
     const failed = await adapter.testDirectory(adProvider(), wrong, null);
     expect(failed.steps.map((step) => [step.step, step.ok])).toEqual([

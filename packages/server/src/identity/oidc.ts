@@ -21,6 +21,7 @@ import {
   type StartedAuthorization,
   type SynchronizedAccount,
 } from "./adapter.js";
+import { receivedClaims } from "./claims.js";
 import { type DirectoryAccount, DirectoryClients, googleReadsUsers } from "./directory.js";
 
 const DISCOVERY_CACHE_MS = 10 * 60 * 1000;
@@ -42,17 +43,23 @@ export function oidcIssuer(config: OidcConfig): string {
 export function oidcCapabilities(config: OidcConfig, directoryKey: boolean): ProviderCapabilities {
   switch (config.preset) {
     case "entraId":
-      return { groups: true, directorySync: true, disabledAccounts: true };
+      return { groups: true, directorySync: true, disabledAccounts: true, groupsByName: false };
     case "google": {
       const directorySync = config.directory !== null && directoryKey;
       return {
         groups: config.directory !== null,
         directorySync,
         disabledAccounts: directorySync && googleReadsUsers(config),
+        groupsByName: false,
       };
     }
     case "generic":
-      return { groups: config.claims.groups !== null, directorySync: false, disabledAccounts: false };
+      return {
+        groups: config.claims.groups !== null,
+        directorySync: false,
+        disabledAccounts: false,
+        groupsByName: false,
+      };
   }
 }
 
@@ -357,7 +364,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
             : [],
           authTime: typeof claims.auth_time === "number" ? claims.auth_time : null,
           providerSessionId: typeof claims.sid === "string" ? claims.sid : null,
-          claimNames: Object.keys(claims).sort(),
+          claims: receivedClaims(claims),
         };
       } catch (error) {
         if (isInvalidClient(error)) {

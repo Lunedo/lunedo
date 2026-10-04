@@ -78,7 +78,7 @@ export function TestResult({ provider, flowId }: { provider: IdentityProvider; f
     <div className="flex flex-col gap-4">
       <Notice variant="success" title={t("identityProviders.test.worked")}>
         {t("identityProviders.test.summary", {
-          claims: data.claimNames.length,
+          claims: data.claims.length,
           groups: groups?.length ?? 0,
         })}
       </Notice>
@@ -108,10 +108,40 @@ export function TestResult({ provider, flowId }: { provider: IdentityProvider; f
                   t("identityProviders.test.noGroups")
             }
           />
-          <Entry label={t("identityProviders.test.claims")} value={data.claimNames.join(", ")} mono />
         </dl>
       </Section>
+      <ReceivedClaims claims={data.claims} title={t("identityProviders.test.claims")} />
     </div>
+  );
+}
+
+export function ReceivedClaims({
+  claims,
+  title,
+}: {
+  claims: { name: string; values: string[] }[];
+  title: string;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Section title={title}>
+      {claims.length === 0 ? (
+        <p className="px-4 py-3 text-sm text-text-muted">{t("identityProviders.test.noClaims")}</p>
+      ) : (
+        <dl className="flex flex-col gap-2 px-4 py-3 text-sm">
+          {claims.map((claim) => (
+            <div
+              key={claim.name}
+              className="grid grid-cols-1 gap-x-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
+            >
+              <dt className="break-all font-mono text-text-muted">{claim.name}</dt>
+              <dd className="break-all font-mono">{claim.values.join(", ") || t("common.unknown")}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      <p className="px-4 pb-3 text-sm text-text-muted">{t("identityProviders.test.claimsHint")}</p>
+    </Section>
   );
 }
 
