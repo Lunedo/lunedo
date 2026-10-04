@@ -693,10 +693,13 @@ export class ScimService {
         const [stored] = existing
           ? await tx
               .update(providerGroups)
-              .set({ name, missingSince: null, updatedAt: new Date() })
+              .set({ name, missingSince: null, seenAt: new Date(), updatedAt: new Date() })
               .where(eq(providerGroups.id, existing.id))
               .returning()
-          : await tx.insert(providerGroups).values({ providerId: provider.id, externalId, name }).returning();
+          : await tx
+              .insert(providerGroups)
+              .values({ providerId: provider.id, externalId, name, seenAt: new Date() })
+              .returning();
         if (!stored) throw new Error("The group was not stored");
         await this.#audit.record(tx, {
           name: "scim.groupChanged",
@@ -865,7 +868,7 @@ export class ScimService {
     await this.#database.transaction(async (tx) => {
       await tx
         .update(providerGroups)
-        .set({ name, updatedAt: new Date() })
+        .set({ name, seenAt: new Date(), updatedAt: new Date() })
         .where(eq(providerGroups.id, group.id));
       report.changes.push({
         kind: "groupRenamed",

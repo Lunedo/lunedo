@@ -220,6 +220,7 @@ export const providerGroups = pgTable(
       .references(() => identityProviders.id, { onDelete: "cascade" }),
     externalId: text().notNull(),
     name: text(),
+    seenAt: timestampColumn(),
     missingSince: timestampColumn(),
     ...timestamps(),
   },

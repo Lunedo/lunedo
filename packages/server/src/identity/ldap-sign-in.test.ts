@@ -234,6 +234,10 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
     const signedIn = await signIn(id, String(ada.attributes.mail?.[0]));
     if (signedIn.kind !== "signedIn") throw new Error(`Signed in expected, got ${signedIn.kind}`);
     expect(await membership(org.id, signedIn.signedIn.session.accountId)).toBe(true);
+    const suggested = await test.services.mappingRules.searchGroups(id, "");
+    expect(suggested.map((group) => group.name).sort()).toEqual(
+      [String(admins.attributes.cn?.[0]), String(users.attributes.cn?.[0])].sort(),
+    );
   });
 
   it("matches a rule of Active Directory for nested members at sign-in and in a sync", async () => {

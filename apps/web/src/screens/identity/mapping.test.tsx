@@ -202,13 +202,20 @@ describe("group mapping", () => {
         body: { ...byName, capabilities: { ...byName.capabilities, groupsByName: true } },
       }),
       [`GET ${BASE}/mapping-rules`]: () => ({ body: [] }),
-      [`GET ${BASE}/groups`]: () => ({ body: [] }),
+      [`GET ${BASE}/groups`]: (request) => ({
+        body:
+          request.path.includes("q=pagehall") || !request.path.includes("q=")
+            ? [{ id: "pagehall-staff", name: "Pagehall staff", members: null, accounts: 3, mapped: false }]
+            : [],
+      }),
     });
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
     await userEvent.click(await screen.findByRole("button", { name: "Add rule" }));
     const dialog = await screen.findByRole("dialog", { name: "Add mapping rule" });
+    expect(within(dialog).getByText(/Suggests the groups Pagehall has seen at sign-ins/)).toBeTruthy();
     await userEvent.type(within(dialog).getByRole("combobox", { name: /^Group in/ }), "pagehall-users");
-    expect(await screen.findByRole("option", { name: /Use this text as group ID/ })).toBeTruthy();
+    expect(await screen.findByRole("option", { name: /Pagehall staff/ })).toBeTruthy();
+    expect(screen.getByRole("option", { name: /Use this text as group value/ })).toBeTruthy();
   });
 
   it("offers only groups found in the directory of the provider", async () => {
@@ -222,7 +229,7 @@ describe("group mapping", () => {
     expect(within(dialog).getByText(/Pagehall stores the ID of the group/)).toBeTruthy();
     await userEvent.type(within(dialog).getByRole("combobox", { name: /^Group in/ }), "pagehall-users");
     expect(await screen.findByText(/No group with this name found/)).toBeTruthy();
-    expect(screen.queryByRole("option", { name: /Use this text as group ID/ })).toBeNull();
+    expect(screen.queryByRole("option", { name: /Use this text as group value/ })).toBeNull();
   });
 
   it("does not warn about renaming when groups have identifiers", async () => {

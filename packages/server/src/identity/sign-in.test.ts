@@ -710,6 +710,30 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     );
   });
 
+  it("suggests the groups seen at sign-in, with their names, but not values only typed into a rule", async () => {
+    const id = await provider({ accountCreation: true });
+    const staff = randomUUID();
+    const typed = `typed-${randomUUID().slice(0, 8)}`;
+    await test.services.mappingRules.create(SYSTEM, id, {
+      target: "instance",
+      group: { id: typed, name: null },
+      role: { builtIn: "securityAuditor" },
+    });
+    expect(await test.services.mappingRules.searchGroups(id, "")).toEqual([]);
+    const result = await signIn(id, {
+      sub: randomUUID(),
+      email: `s.${randomUUID()}@example.org`,
+      groups: [staff],
+      group_names: ["Staff"],
+    });
+    expect(result.kind).toBe("signedIn");
+    expect(await test.services.mappingRules.searchGroups(id, "")).toEqual([
+      expect.objectContaining({ id: staff, name: "Staff", accounts: 1 }),
+    ]);
+    expect(await test.services.mappingRules.searchGroups(id, "sta")).toHaveLength(1);
+    expect(await test.services.mappingRules.searchGroups(id, typed)).toEqual([]);
+  });
+
   it("requires one of the configured groups when accounts are created", async () => {
     const id = await provider({ accountCreation: true, requiredGroups: ["wiki-users"] });
     expect(

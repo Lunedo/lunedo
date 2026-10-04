@@ -184,17 +184,23 @@ export class MappingRuleService {
       await this.#roles.checkGrantable(actor, "organization", input.organizationId, input.role, tx);
   }
 
+  #hasDirectory(provider: ProviderDefinition): boolean {
+    return this.#adapters.get(provider.type)?.hasDirectory?.(provider) === true;
+  }
+
   async #providerGroup(
     tx: Transaction,
     providerId: string,
     group: { id: string; name: string | null },
+    fromDirectory: boolean,
   ): Promise<{ id: string; name: string | null }> {
+    const seen = fromDirectory ? { seenAt: new Date() } : {};
     const [row] = await tx
       .insert(providerGroups)
-      .values({ providerId, externalId: group.id, name: group.name })
+      .values({ providerId, externalId: group.id, name: group.name, ...seen })
       .onConflictDoUpdate({
         target: [providerGroups.providerId, providerGroups.externalId],
-        set: { updatedAt: new Date(), ...(group.name ? { name: group.name } : {}) },
+        set: { updatedAt: new Date(), ...seen, ...(group.name ? { name: group.name } : {}) },
       })
       .returning({ id: providerGroups.id, name: providerGroups.name });
     if (!row) throw new Error("The provider group was not stored");
@@ -254,7 +260,12 @@ export class MappingRuleService {
   }
 
   async #values(tx: Transaction, actor: Principal, provider: ProviderDefinition, input: MappingRuleInput) {
-    const providerGroup = await this.#providerGroup(tx, provider.id, input.group);
+    const providerGroup = await this.#providerGroup(
+      tx,
+      provider.id,
+      input.group,
+      this.#hasDirectory(provider),
+    );
     const role = input.role;
     if (role && "customRoleId" in role) {
       const [custom] = await tx
@@ -512,32 +523,35 @@ export class MappingRuleService {
 
   async searchGroups(providerId: string, query: string): Promise<ProviderGroupMatch[]> {
     const provider = await this.#provider(providerId);
-    const loaded = await this.#providers.definition(provider.id);
     const adapter = this.#adapters.get(provider.type);
     const term = query.trim();
-    let matches: { id: string; name: string | null; members: number | null }[];
+    const escaped = term.replace(/[\\%_]/g, (character) => `\\${character}`);
+    const seen = (
+      await this.#database
+        .select({ id: providerGroups.externalId, name: providerGroups.name })
+        .from(providerGroups)
+        .where(
+          and(
+            eq(providerGroups.providerId, provider.id),
+            isNotNull(providerGroups.seenAt),
+            isNull(providerGroups.missingSince),
+            term === ""
+              ? undefined
+              : or(
+                  ilike(providerGroups.name, `%${escaped}%`),
+                  ilike(providerGroups.externalId, `%${escaped}%`),
+                ),
+          ),
+        )
+        .orderBy(asc(providerGroups.name), asc(providerGroups.externalId))
+        .limit(SEARCH_LIMIT)
+    ).map((row) => ({ ...row, members: null }));
+    let matches: { id: string; name: string | null; members: number | null }[] = seen;
     if (adapter?.hasDirectory?.(provider) && adapter.searchGroups && term !== "") {
-      matches = await adapter.searchGroups(provider, loaded?.credentials ?? [], term);
-    } else {
-      const escaped = term.replace(/[\\%_]/g, (character) => `\\${character}`);
-      matches = (
-        await this.#database
-          .select({ id: providerGroups.externalId, name: providerGroups.name })
-          .from(providerGroups)
-          .where(
-            and(
-              eq(providerGroups.providerId, provider.id),
-              term === ""
-                ? undefined
-                : or(
-                    ilike(providerGroups.name, `%${escaped}%`),
-                    ilike(providerGroups.externalId, `%${escaped}%`),
-                  ),
-            ),
-          )
-          .orderBy(asc(providerGroups.name), asc(providerGroups.externalId))
-          .limit(SEARCH_LIMIT)
-      ).map((row) => ({ ...row, members: null }));
+      const loaded = await this.#providers.definition(provider.id);
+      const found = await adapter.searchGroups(provider, loaded?.credentials ?? [], term);
+      const ids = new Set(found.map((match) => match.id));
+      matches = [...found, ...seen.filter((match) => !ids.has(match.id))].slice(0, SEARCH_LIMIT);
     }
     if (matches.length === 0) return [];
     const known = await this.#database

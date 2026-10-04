@@ -204,6 +204,7 @@ export class GroupMappingService {
           .set({
             ...(renamed ? { name: group.name } : {}),
             missingSince: null,
+            seenAt: new Date(),
             updatedAt: new Date(),
           })
           .where(eq(providerGroups.id, existing.id));
@@ -212,10 +213,10 @@ export class GroupMappingService {
       }
       const [inserted] = await tx
         .insert(providerGroups)
-        .values({ providerId, externalId: group.id, name: group.name })
+        .values({ providerId, externalId: group.id, name: group.name, seenAt: new Date() })
         .onConflictDoUpdate({
           target: [providerGroups.providerId, providerGroups.externalId],
-          set: { missingSince: null, updatedAt: new Date() },
+          set: { missingSince: null, seenAt: new Date(), updatedAt: new Date() },
         })
         .returning({ id: providerGroups.id });
       if (inserted) ids.push(inserted.id);
