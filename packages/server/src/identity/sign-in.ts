@@ -28,7 +28,7 @@ import {
   type SignInThrottle,
   type ThrottleSubjects,
 } from "../auth/throttle.js";
-import { secondFactorsOf } from "../auth/two-factor.js";
+import { hasSecondFactor, secondFactorsOf } from "../auth/two-factor.js";
 import { secretsEqual } from "../crypto/constant-time.js";
 import type { Database, Transaction } from "../database/database.js";
 import type { NotificationService } from "../notifications/service.js";
@@ -53,6 +53,7 @@ import { callbackPath } from "./providers.js";
 import { SamlAdapter, samlPaths } from "./saml.js";
 import {
   identities,
+  identityProviders,
   providerFlows,
   providerLogoutTokens,
   type SignInRefusalReason,
@@ -68,7 +69,7 @@ const STARTS_PER_CLIENT = 20;
 const LOGOUTS_PER_CLIENT = 60;
 const REFERENCE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
-export type ProviderFlowPurpose = "signIn" | "reauthentication" | "test";
+export type ProviderFlowPurpose = "signIn" | "reauthentication" | "test" | "linkConfirmation";
 
 export interface StartedFlow {
   url: string;
@@ -106,6 +107,7 @@ export interface SamlReceipt {
 export type CallbackResult =
   | { kind: "signedIn"; signedIn: SignedIn; returnTo: string | null }
   | { kind: "linkRequired"; pendingToken: string }
+  | { kind: "linkConfirmed" }
   | {
       kind: "secondFactorRequired";
       pendingToken: string;
@@ -157,11 +159,18 @@ export interface SignInRefusal {
   createdAt: Date;
 }
 
-export interface LinkInfo {
+export interface LinkWays {
+  password: boolean;
+  passkey: boolean;
+  providers: { id: string; name: string; directory: boolean }[];
+}
+
+export interface LinkInfo extends LinkWays {
   providerName: string;
   email: string | null;
   accountName: string;
   factors: ("totp" | "passkey" | "recoveryCode")[];
+  confirmed: boolean;
 }
 
 function reference(): string {
@@ -272,6 +281,7 @@ export class ProviderSignInService {
     sessionId?: string | null;
     accountId?: string | null;
     clientIp?: string | undefined;
+    challengeId?: string | null;
   }): Promise<StartedFlow> {
     await this.#limit("providerStart", input.clientIp, STARTS_PER_CLIENT);
     const { provider, credentials } = await this.#load(input.providerId, input.purpose);
@@ -299,7 +309,7 @@ export class ProviderSignInService {
       state,
       nonce,
       codeChallenge: await client.calculatePKCECodeChallenge(codeVerifier),
-      reauthenticate: input.purpose === "reauthentication",
+      reauthenticate: input.purpose === "reauthentication" || input.purpose === "linkConfirmation",
     });
     const url = started.url;
     await this.#database.insert(providerFlows).values({
@@ -312,6 +322,7 @@ export class ProviderSignInService {
       requestId: started.requestId,
       redirectUri,
       sessionId: input.sessionId ?? null,
+      challengeId: input.challengeId ?? null,
       returnTo: input.returnTo ?? null,
       expiresAt: new Date(this.#clock().getTime() + FLOW_LIFETIME_MS),
     });
@@ -399,6 +410,17 @@ export class ProviderSignInService {
 
     if (flow.purpose === "reauthentication") {
       return this.#reauthenticate(flow, provider.id, profile, result.authTime);
+    }
+    if (flow.purpose === "linkConfirmation") {
+      return this.#confirmLink(
+        flow,
+        provider,
+        profile,
+        result.authTime,
+        result.methods,
+        input.client,
+        started,
+      );
     }
 
     const { groups, failed: groupsFailed } = await this.#groups(provider, credentials, profile);
@@ -514,7 +536,10 @@ export class ProviderSignInService {
       if (existing?.state === "placeholder") placeholder = existing;
       else if (existing) {
         if (!canSignIn(existing)) throw new Refused("accountInactive");
-        if (!existing.passwordHash) throw new Refused("linkUnavailable");
+        const ways = await this.#linkWays(existing);
+        if (!ways.password && !ways.passkey && ways.providers.length === 0) {
+          throw new Refused("linkUnavailable");
+        }
         const payload: PendingIdentity = {
           providerId: provider.id,
           subject: profile.subject,
@@ -765,15 +790,155 @@ export class ProviderSignInService {
     return { kind: "refused", reference: code, reason: input.reason };
   }
 
-  async linkInfo(pendingToken: string): Promise<LinkInfo> {
+  async #linkWays(account: Account): Promise<LinkWays> {
+    const factors = await secondFactorsOf(this.#database, account.id);
+    const linked = await this.#database
+      .select({ id: identityProviders.id, name: identityProviders.name, type: identityProviders.type })
+      .from(identities)
+      .innerJoin(identityProviders, eq(identityProviders.id, identities.providerId))
+      .where(and(eq(identities.accountId, account.id), isNull(identityProviders.deactivatedAt)))
+      .orderBy(identityProviders.name);
+    return {
+      password: await this.#signIn.passwordConfirmsLink(account),
+      passkey: factors.passkeys > 0,
+      providers: linked.map((row) => ({ id: row.id, name: row.name, directory: row.type === "ldap" })),
+    };
+  }
+
+  async #pendingLink(pendingToken: string) {
     const pending = await this.#challenges.findByToken(pendingToken, "identityLink");
     const account = pending?.accountId ? await this.#accounts.get(pending.accountId) : null;
     const identity = pending?.payload as PendingIdentity | undefined;
-    if (!pending || !account || !identity) throw new ChallengeExpiredError();
+    if (!pending || !account || !canSignIn(account) || !identity) throw new ChallengeExpiredError();
+    return { pending, account, identity };
+  }
+
+  async #linkedSubject(accountId: string, providerId: string): Promise<string> {
+    const [identity] = await this.#database
+      .select({ subject: identities.subject })
+      .from(identities)
+      .where(and(eq(identities.providerId, providerId), eq(identities.accountId, accountId)));
+    if (!identity) throw new OrganizationError("notFound", "The account is not linked to this provider");
+    return identity.subject;
+  }
+
+  async startLinkConfirmation(input: {
+    pendingToken: string;
+    providerId: string;
+    baseUrl: string;
+    clientIp?: string | undefined;
+  }): Promise<StartedFlow> {
+    const { pending, account } = await this.#pendingLink(input.pendingToken);
+    await this.#linkedSubject(account.id, input.providerId);
+    return this.start({
+      providerId: input.providerId,
+      purpose: "linkConfirmation",
+      baseUrl: input.baseUrl,
+      clientIp: input.clientIp,
+      challengeId: pending.id,
+    });
+  }
+
+  async #finishLink(
+    pendingId: string,
+    account: Account,
+    factorRequired: boolean,
+    client: ClientInfo,
+    started: Date,
+  ): Promise<{ signedIn: SignedIn } | { confirmed: true }> {
+    const factors = await secondFactorsOf(this.#database, account.id);
+    if (factorRequired && hasSecondFactor(factors)) {
+      await this.#signIn.markIdentityLinkConfirmed(pendingId, "identityProvider");
+      return { confirmed: true };
+    }
+    const kind = factorRequired ? "secondFactorSetup" : "full";
+    return { signedIn: await this.#signIn.completeIdentityLink(pendingId, [], kind, client, started) };
+  }
+
+  async #confirmLink(
+    flow: typeof providerFlows.$inferSelect,
+    provider: ProviderDefinition,
+    profile: ProviderProfile,
+    authTime: number | null,
+    methods: readonly string[],
+    client: ClientInfo,
+    started: Date,
+  ): Promise<CallbackResult> {
+    const pending = flow.challengeId
+      ? await this.#challenges.findById(flow.challengeId, "identityLink")
+      : null;
+    const account = pending?.accountId ? await this.#accounts.get(pending.accountId) : null;
+    if (!pending || !canSignIn(account)) throw new ChallengeExpiredError();
+    const [identity] = await this.#database
+      .select({ accountId: identities.accountId })
+      .from(identities)
+      .where(and(eq(identities.providerId, provider.id), eq(identities.subject, profile.subject)));
+    const fresh = authTime !== null && authTime * 1000 >= flow.createdAt.getTime() - AUTH_TIME_TOLERANCE_MS;
+    if (identity?.accountId !== account.id || !fresh) {
+      await this.#challenges.recordFailure(pending.id);
+      await this.#audit.recordAlone({
+        name: "auth.signInFailed",
+        actor: ANONYMOUS,
+        targetId: account.id,
+        fields: { reason: "invalidCredentials", method: "identityProvider" },
+      });
+      throw new ChallengeExpiredError();
+    }
+    const outcome = await this.#finishLink(
+      pending.id,
+      account,
+      needsPagehallFactor(provider.config.secondFactor, methods),
+      client,
+      started,
+    );
+    if ("confirmed" in outcome) return { kind: "linkConfirmed" };
+    return { kind: "signedIn", signedIn: outcome.signedIn, returnTo: null };
+  }
+
+  async confirmLinkWithDirectory(input: {
+    pendingToken: string;
+    providerId: string;
+    password: string;
+    client: ClientInfo;
+  }): Promise<{ signedIn: SignedIn } | { confirmed: true }> {
+    const started = await this.#databaseNow();
+    const { pending, account } = await this.#pendingLink(input.pendingToken);
+    const subjects = { email: `link:${account.id}`, clientIp: input.client.ip };
+    await this.#checkDirectoryAttempt(subjects);
+    const { provider, credentials } = await this.#load(input.providerId, "signIn");
+    const adapter = this.#adapter(provider.type);
+    if (provider.type !== "ldap" || !adapter.verifyPassword) {
+      throw new OrganizationError("invalidInput", "This provider confirms the identity through its own page");
+    }
+    const subject = await this.#linkedSubject(account.id, provider.id);
+    let valid = false;
+    if (directoryPasswordSchema.safeParse(input.password).success) {
+      try {
+        valid = await adapter.verifyPassword(provider, credentials, subject, input.password);
+      } catch (error) {
+        if (!(error instanceof DirectorySignInError)) throw error;
+      }
+    }
+    if (!valid) {
+      await this.#challenges.recordFailure(pending.id);
+      await this.#directoryFailure(subjects, "invalidCredentials");
+      throw new InvalidCredentialsError();
+    }
+    await this.#throttle?.recordSuccess(subjects.email);
+    const factorRequired =
+      provider.config.secondFactor.mode === "pagehall" ||
+      (await this.#signIn.secondFactorRequired(account.id));
+    return this.#finishLink(pending.id, account, factorRequired, input.client, started);
+  }
+
+  async linkInfo(pendingToken: string): Promise<LinkInfo> {
+    const { pending, account, identity } = await this.#pendingLink(pendingToken);
     const loaded = await this.#providers.definition(identity.providerId);
     if (!loaded) throw new ChallengeExpiredError();
     const factors = await secondFactorsOf(this.#database, account.id);
     return {
+      ...(await this.#linkWays(account)),
+      confirmed: pending.methods.includes("identityProvider"),
       providerName: loaded.provider.name,
       email: identity.email,
       accountName: account.name,

@@ -37,8 +37,12 @@ import {
   identityParams,
   identitySchema,
   linkConfirmationSchema,
+  linkDirectoryResultSchema,
+  linkDirectorySchema,
   linkIdentitySchema,
   linkInfoSchema,
+  linkPasskeyOptionsSchema,
+  linkProviderSchema,
   logoutBodySchema,
   providerIdParams,
   reauthenticateSchema,
@@ -192,6 +196,7 @@ export class ProviderAuthController {
       case "signedIn":
         await setSessionCookie(this.context, reply, result.signedIn.token);
         setCookie(reply, COOKIES.lastProvider, providerId, LAST_PROVIDER_MAX_AGE_SECONDS);
+        clearCookie(reply, COOKIES.link);
         location = result.returnTo ?? "/";
         break;
       case "reauthenticated":
@@ -207,6 +212,9 @@ export class ProviderAuthController {
         break;
       case "linkRequired":
         setCookie(reply, COOKIES.link, result.pendingToken, LINK_MAX_AGE_SECONDS);
+        location = "/sign-in/link";
+        break;
+      case "linkConfirmed":
         location = "/sign-in/link";
         break;
       case "refused":
@@ -406,22 +414,114 @@ export class ProviderAuthController {
     tags: [TAG],
     status: 200,
     response: { description: "Options for the browser.", schema: requestOptionsSchema },
+    body: linkPasskeyOptionsSchema,
     errors: ["challengeExpired"],
   })
-  async linkPasskeyOptions(@Req() request: FastifyRequest) {
-    return this.#services.signIn.identityLinkPasskeyOptions(this.#linkToken(request));
+  async linkPasskeyOptions(
+    @Body() body: z.output<typeof linkPasskeyOptionsSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.signIn.identityLinkPasskeyOptions(this.#linkToken(request), body.use);
+  }
+
+  @Post("auth/link/provider")
+  @PublicRoute()
+  @ApiRoute({
+    summary: "Confirm a link through a linked provider",
+    description:
+      "Starts a fresh sign-in at a provider that is already linked to the account. Pagehall asks the provider to sign the person in again and checks that it happened just now.",
+    tags: [TAG],
+    status: 200,
+    body: linkProviderSchema,
+    response: { description: "The provider address to open.", schema: startedSchema },
+    errors: ["challengeExpired", "notFound", "rateLimited"],
+  })
+  async linkWithProvider(
+    @Body() body: z.output<typeof linkProviderSchema>,
+    @Req() request: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const started = await this.#services.providerSignIn.startLinkConfirmation({
+      pendingToken: this.#linkToken(request),
+      providerId: body.providerId,
+      baseUrl: await baseUrlOf(this.context, request),
+      clientIp: request.ip,
+    });
+    setCookie(reply, COOKIES.providerFlow, started.browserToken, PROVIDER_FLOW_MAX_AGE_SECONDS);
+    return { url: started.url };
+  }
+
+  @Post("auth/link/directory")
+  @PublicRoute()
+  @ApiRoute({
+    summary: "Confirm a link with a directory password",
+    description:
+      "For accounts linked to an LDAP or Active Directory provider. Pagehall checks the password with a bind, then links and signs in, or asks for the second factor of the account first.",
+    tags: [TAG],
+    status: 200,
+    body: linkDirectorySchema,
+    response: { description: "The outcome.", schema: linkDirectoryResultSchema },
+    errors: [
+      "challengeExpired",
+      "invalidCredentials",
+      "notFound",
+      "locked",
+      "rateLimited",
+      "providerUnavailable",
+    ],
+  })
+  async linkWithDirectory(
+    @Body() body: z.output<typeof linkDirectorySchema>,
+    @Req() request: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const device = ensureDeviceCookie(request, reply, generateToken);
+    const result = await this.#services.providerSignIn
+      .confirmLinkWithDirectory({
+        pendingToken: this.#linkToken(request),
+        providerId: body.providerId,
+        password: body.password,
+        client: clientOf(request, device),
+      })
+      .catch((error: unknown) => {
+        if (!(error instanceof ProviderResponseError)) throw error;
+        this.context.logger.warn(
+          { providerId: body.providerId, reason: error.message },
+          "Directory link failed",
+        );
+        throw new ProblemException(
+          "providerUnavailable",
+          "The directory could not be reached. Try again in a few minutes or contact IT.",
+        );
+      });
+    if (!("signedIn" in result)) return { status: "confirmed" as const };
+    clearCookie(reply, COOKIES.link);
+    await setSessionCookie(this.context, reply, result.signedIn.token);
+    return {
+      status: "signedIn" as const,
+      sessionKind: result.signedIn.session.kind,
+      account: await this.#describe(result.signedIn.session.accountId),
+    };
   }
 
   @Post("auth/link")
   @PublicRoute()
   @ApiRoute({
     summary: "Link the identity to the existing account",
-    description: "Confirms with the password and the second factor of the existing account, then signs in.",
+    description:
+      "Confirms with the password and the second factor of the existing account, with one of its passkeys, or with the second factor after a linked provider confirmed the link, then signs in.",
     tags: [TAG],
     status: 200,
     body: linkConfirmationSchema,
     response: { description: "The session.", schema: signedInSchema },
-    errors: ["challengeExpired", "invalidCredentials", "invalidSecondFactor", "locked", "rateLimited"],
+    errors: [
+      "challengeExpired",
+      "invalidCredentials",
+      "invalidSecondFactor",
+      "passwordSignInDisabled",
+      "locked",
+      "rateLimited",
+    ],
   })
   async link(
     @Body() body: z.output<typeof linkConfirmationSchema>,
@@ -436,7 +536,8 @@ export class ProviderAuthController {
       : null;
     const result = await this.#services.signIn.confirmIdentityLink({
       pendingToken: this.#linkToken(request),
-      password: body.password,
+      password: body.password ?? null,
+      passkey: (body.passkey as AuthenticationResponseJSON | undefined) ?? null,
       factor,
       client: clientOf(request, device),
     });

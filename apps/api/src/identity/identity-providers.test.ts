@@ -230,6 +230,21 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
       email: existing.email,
       factors: [],
     });
+    expect((await browser.get("/api/v1/auth/link")).json()).toMatchObject({
+      password: true,
+      passkey: false,
+      providers: [],
+      confirmed: false,
+    });
+    expect((await browser.post("/api/v1/auth/link", {})).json()).toMatchObject({
+      code: "invalidCredentials",
+    });
+    expect((await browser.post("/api/v1/auth/link/provider", { providerId })).json()).toMatchObject({
+      code: "notFound",
+    });
+    expect(
+      (await browser.post("/api/v1/auth/link/directory", { providerId, password: "secret" })).json(),
+    ).toMatchObject({ code: "invalidInput" });
     expect((await browser.post("/api/v1/auth/link", { password: "wrong password" })).statusCode).toBe(401);
     const linked = await browser.post("/api/v1/auth/link", { password: existing.password });
     expect(linked.json()).toMatchObject({ status: "signedIn", account: { id: existing.id } });

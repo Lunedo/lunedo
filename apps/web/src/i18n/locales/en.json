@@ -1125,7 +1125,7 @@
         },
         "linkUnavailable": {
           "title": "Your account cannot be linked by you",
-          "cause": "An account with your address exists but has no password, so you cannot confirm that it is yours.",
+          "cause": "An account with your address exists, but it has no password, passkey or other sign-in you could confirm it with.",
           "action": "ask an administrator to link your sign-in to the account."
         },
         "invalidResponse": {
@@ -1156,7 +1156,14 @@
       "notMine": "This is not my account",
       "notMineTitle": "This is not my account",
       "notMineDescription": "Then the e-mail address of your {provider} account matches someone else's Pagehall account. Do not link them.",
-      "notMineReference": "Send this reference to an administrator, who can check the address:"
+      "notMineReference": "Send this reference to an administrator, who can check the address:",
+      "confirmedTitle": "Your provider confirmed it is you",
+      "confirmedDescription": "Enter the second factor of your Pagehall account to finish linking.",
+      "confirmWith": "Confirm with a way you already sign in with:",
+      "orConfirmWith": "or confirm with a way you already sign in with",
+      "withPasskey": "Confirm with a passkey",
+      "withProvider": "Confirm with {provider}",
+      "directoryPassword": "Password at {provider}"
     },
     "emergency": {
       "link": "Emergency sign-in for the instance owner",

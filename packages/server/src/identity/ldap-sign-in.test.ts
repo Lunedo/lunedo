@@ -1,8 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { InvalidCredentialsError, LockedError, RateLimitedError } from "../auth/errors.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
+import { type FakeOidcProvider, startFakeOidcProvider } from "../testing/fake-oidc.js";
 import { FakeLdapDirectory, type FakeLdapEntry } from "../testing/fakes/ldap-directory.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { type CallbackResult, DirectorySignInRefusedError } from "./sign-in.js";
@@ -37,13 +39,17 @@ function group(name: string, members: string[]): FakeLdapEntry {
 describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
   const directory = new FakeLdapDirectory([{ dn: SERVICE_DN, password: SERVICE_PASSWORD, attributes: {} }]);
   let test: TestServices;
+  let idp: FakeOidcProvider;
 
   beforeAll(async () => {
     test = await createTestServices(baseUrl ?? "", { directoryConnector: directory.connector });
     await test.pool.query("insert into instance (id, setup_completed_at) values (1, now())");
+    await test.settings.set(instanceUrlSetting, {}, "instance", "https://wiki.example.org");
+    idp = await startFakeOidcProvider();
   });
 
   afterAll(async () => {
+    await idp?.close();
     await test?.close();
   });
 
@@ -285,6 +291,59 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
     const rerun = await test.services.providerSync.runDetails(id, confirmed.runId ?? "");
     expect(rerun).toMatchObject({ status: "failed", heldDeactivations: 3 });
     expect(await states(linked.map((item) => item.accountId))).toEqual(Array(5).fill("active"));
+  });
+
+  it("links a sign-in of another provider to a directory account after its directory password", async () => {
+    const { id, domain } = await provider();
+    const [moved] = await people(id, domain, 1);
+    if (!moved) throw new Error("Account expected");
+    await test.pool.query("delete from identity_provider_domains where domain = $1", [domain]);
+    const { provider: entra } = await test.services.identityProviders.create(SYSTEM, {
+      type: "oidc",
+      name: "Cloud",
+      config: { preset: "generic", issuer: idp.issuer, clientId: idp.clientId, domains: [domain] },
+      credential: { kind: "clientSecret", secret: idp.clientSecret, expiresAt: null },
+    });
+    const started = await test.services.providerSignIn.start({
+      providerId: entra.id,
+      purpose: "signIn",
+      baseUrl: "https://pagehall.test",
+    });
+    const callback = await idp.authorize(started.url, {
+      sub: randomUUID(),
+      email: String(moved.entry.attributes.mail?.[0]),
+    });
+    const result = await test.services.providerSignIn.callback({
+      providerId: entra.id,
+      query: callback.searchParams,
+      browserToken: started.browserToken,
+      client: {},
+    });
+    if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
+    expect(await test.services.providerSignIn.linkInfo(result.pendingToken)).toMatchObject({
+      password: false,
+      providers: [{ id, name: "Directory", directory: true }],
+    });
+    await expect(
+      test.services.providerSignIn.confirmLinkWithDirectory({
+        pendingToken: result.pendingToken,
+        providerId: id,
+        password: "wrong password",
+        client: {},
+      }),
+    ).rejects.toThrow(InvalidCredentialsError);
+    const linked = await test.services.providerSignIn.confirmLinkWithDirectory({
+      pendingToken: result.pendingToken,
+      providerId: id,
+      password: PASSWORD,
+      client: {},
+    });
+    if (!("signedIn" in linked)) throw new Error("Signed in expected");
+    expect(linked.signedIn.session).toMatchObject({ accountId: moved.accountId, kind: "full" });
+    const identities = await test.pool.query("select 1 from identities where account_id = $1", [
+      moved.accountId,
+    ]);
+    expect(identities.rowCount).toBe(2);
   });
 
   it("refuses an empty password before asking the directory", async () => {

@@ -132,6 +132,27 @@ export class ChallengeStore {
     });
   }
 
+  async addMethod(id: string, method: SignInMethod): Promise<void> {
+    await this.#database
+      .update(authChallenges)
+      .set({ methods: sql`array_append(array_remove(${authChallenges.methods}, ${method}), ${method})` })
+      .where(eq(authChallenges.id, id));
+  }
+
+  async findById(id: string, purpose: ChallengePurpose): Promise<Challenge | null> {
+    const [row] = await this.#database
+      .select(columns)
+      .from(authChallenges)
+      .where(
+        and(
+          eq(authChallenges.id, id),
+          eq(authChallenges.purpose, purpose),
+          gt(authChallenges.expiresAt, this.#clock()),
+        ),
+      );
+    return row ?? null;
+  }
+
   async recordFailure(id: string): Promise<void> {
     await this.#database.transaction(async (tx) => {
       const [row] = await tx

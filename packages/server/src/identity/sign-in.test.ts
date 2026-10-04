@@ -7,13 +7,15 @@ import {
   ChallengeExpiredError,
   InvalidCredentialsError,
   InvalidSecondFactorError,
+  PasswordSignInDisabledError,
   RateLimitedError,
 } from "../auth/errors.js";
-import { twoFactorRequiredSetting } from "../auth/settings.js";
+import { passwordSignInSetting, twoFactorRequiredSetting } from "../auth/settings.js";
 import { ForbiddenError } from "../authorization/service.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { type FakeOidcProvider, startFakeOidcProvider, type TokenOverrides } from "../testing/fake-oidc.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
+import { VirtualAuthenticator } from "../testing/webauthn.js";
 import { type CallbackResult, needsPagehallFactor } from "./sign-in.js";
 
 const baseUrl = testDatabaseBaseUrl();
@@ -425,6 +427,207 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
       client: {},
     });
     expect(linked.session).toMatchObject({ accountId: existing.id, kind: "secondFactorSetup" });
+  });
+
+  async function accountFromProvider(secondFactor?: { mode: "provider" | "pagehall" }) {
+    const domain = `${randomUUID().slice(0, 8)}.example`;
+    const first = await provider({
+      accountCreation: true,
+      domains: [domain],
+      ...(secondFactor ? { secondFactor } : {}),
+    });
+    const subject = randomUUID();
+    const email = `moved@${domain}`;
+    const created = await signIn(first, { sub: subject, email });
+    if (created.kind !== "signedIn" && created.kind !== "secondFactorRequired") {
+      throw new Error(`Account expected, got ${created.kind}`);
+    }
+    const [row] = (
+      await test.pool.query<{ account_id: string }>(
+        "select account_id from identities where provider_id = $1 and subject = $2",
+        [first, subject],
+      )
+    ).rows;
+    await releaseDomains([domain]);
+    const second = await provider({ domains: [domain] });
+    return { first, subject, email, accountId: row?.account_id ?? "", second };
+  }
+
+  async function linkedProviders(accountId: string) {
+    const result = await test.pool.query<{ provider_id: string }>(
+      "select provider_id from identities where account_id = $1",
+      [accountId],
+    );
+    return result.rows.map((row) => row.provider_id).sort();
+  }
+
+  async function confirmThrough(providerId: string, pendingToken: string, subject: string, authTime: number) {
+    const started = await test.services.providerSignIn.startLinkConfirmation({
+      pendingToken,
+      providerId,
+      baseUrl: BASE,
+    });
+    const authorization = new URL(started.url).searchParams;
+    expect(authorization.get("prompt")).toBe("login");
+    expect(authorization.get("max_age")).toBe("0");
+    const callback = await idp.authorize(started.url, { sub: subject, auth_time: authTime });
+    return test.services.providerSignIn.callback({
+      providerId,
+      query: callback.searchParams,
+      browserToken: started.browserToken,
+      client: {},
+    });
+  }
+
+  it("links an account without a password after a fresh sign-in through a provider it is linked to", async () => {
+    const moved = await accountFromProvider();
+    const result = await signIn(moved.second, { sub: randomUUID(), email: moved.email });
+    if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
+    expect(await test.services.providerSignIn.linkInfo(result.pendingToken)).toMatchObject({
+      password: false,
+      passkey: false,
+      providers: [{ id: moved.first, name: "Test provider", directory: false }],
+      confirmed: false,
+    });
+    await expect(
+      test.services.signIn.confirmIdentityLink({
+        pendingToken: result.pendingToken,
+        factor: null,
+        client: {},
+      }),
+    ).rejects.toThrow(InvalidCredentialsError);
+
+    const now = Math.floor(Date.now() / 1000);
+    await expect(confirmThrough(moved.first, result.pendingToken, moved.subject, now - 3600)).rejects.toThrow(
+      ChallengeExpiredError,
+    );
+    await expect(confirmThrough(moved.first, result.pendingToken, randomUUID(), now)).rejects.toThrow(
+      ChallengeExpiredError,
+    );
+    expect(await linkedProviders(moved.accountId)).toEqual([moved.first]);
+
+    const confirmed = await confirmThrough(moved.first, result.pendingToken, moved.subject, now);
+    if (confirmed.kind !== "signedIn") throw new Error(`Signed in expected, got ${confirmed.kind}`);
+    expect(confirmed.signedIn.session).toMatchObject({
+      accountId: moved.accountId,
+      kind: "full",
+      methods: ["identityProvider"],
+    });
+    expect(await linkedProviders(moved.accountId)).toEqual([moved.first, moved.second].sort());
+  });
+
+  it("asks for the Pagehall second factor after a provider confirmed a link and the provider needs one", async () => {
+    const moved = await accountFromProvider({ mode: "pagehall" });
+    const setup = await test.services.totp.begin(moved.accountId, { issuer: "Test", account: moved.email });
+    if (!setup) throw new Error("TOTP was not started");
+    const secret = Secret.fromBase32(setup.secret);
+    await test.services.totp.verify(test.database, moved.accountId, TOTP.generate({ secret }), {
+      confirming: true,
+    });
+    const result = await signIn(moved.second, { sub: randomUUID(), email: moved.email });
+    if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
+
+    const confirmed = await confirmThrough(
+      moved.first,
+      result.pendingToken,
+      moved.subject,
+      Math.floor(Date.now() / 1000),
+    );
+    expect(confirmed).toEqual({ kind: "linkConfirmed" });
+    expect(await test.services.providerSignIn.linkInfo(result.pendingToken)).toMatchObject({
+      confirmed: true,
+      factors: ["totp"],
+    });
+    expect(await linkedProviders(moved.accountId)).toEqual([moved.first]);
+    await expect(
+      test.services.signIn.confirmIdentityLink({
+        pendingToken: result.pendingToken,
+        factor: null,
+        client: {},
+      }),
+    ).rejects.toThrow(InvalidSecondFactorError);
+    const linked = await test.services.signIn.confirmIdentityLink({
+      pendingToken: result.pendingToken,
+      factor: { type: "totp", code: TOTP.generate({ secret, timestamp: Date.now() + 30_000 }) },
+      client: {},
+    });
+    expect(linked.session).toMatchObject({ kind: "full", methods: ["identityProvider", "totp"] });
+    expect(await linkedProviders(moved.accountId)).toEqual([moved.first, moved.second].sort());
+  });
+
+  it("links an account without a password with one of its passkeys", async () => {
+    const moved = await accountFromProvider();
+    const authenticator = new VirtualAuthenticator();
+    const account = await test.services.accounts.get(moved.accountId);
+    const options = await test.services.webauthn.registrationOptions({
+      id: moved.accountId,
+      email: moved.email,
+      name: account?.name ?? "",
+    });
+    const origin = "https://wiki.example.org";
+    await test.services.webauthn.register(test.database, {
+      accountId: moved.accountId,
+      response: authenticator.register(options, origin),
+      expectedChallenge: options.challenge,
+      name: "Laptop",
+    });
+    const result = await signIn(moved.second, { sub: randomUUID(), email: moved.email });
+    if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
+    expect(await test.services.providerSignIn.linkInfo(result.pendingToken)).toMatchObject({ passkey: true });
+
+    const unverified = await test.services.signIn.identityLinkPasskeyOptions(result.pendingToken, "signIn");
+    expect(unverified.userVerification).toBe("required");
+    await expect(
+      test.services.signIn.confirmIdentityLink({
+        pendingToken: result.pendingToken,
+        passkey: authenticator.assert(unverified, origin, { userVerified: false }),
+        factor: null,
+        client: {},
+      }),
+    ).rejects.toThrow(InvalidCredentialsError);
+    const verified = await test.services.signIn.identityLinkPasskeyOptions(result.pendingToken, "signIn");
+    const linked = await test.services.signIn.confirmIdentityLink({
+      pendingToken: result.pendingToken,
+      passkey: authenticator.assert(verified, origin),
+      factor: null,
+      client: {},
+    });
+    expect(linked.session).toMatchObject({
+      accountId: moved.accountId,
+      kind: "full",
+      methods: ["passkey", "identityProvider"],
+    });
+  });
+
+  it("accepts a password for linking only while it is a way to sign in", async () => {
+    const org = await organization();
+    const existing = await account(org);
+    const id = await provider({});
+    const result = await signIn(id, { sub: randomUUID(), email: existing.email });
+    if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
+    await test.settings.set(passwordSignInSetting, {}, "instance", false);
+    try {
+      expect(await test.services.providerSignIn.linkInfo(result.pendingToken)).toMatchObject({
+        password: false,
+      });
+      await expect(
+        test.services.signIn.confirmIdentityLink({
+          pendingToken: result.pendingToken,
+          password: PASSWORD,
+          factor: null,
+          client: {},
+        }),
+      ).rejects.toThrow(PasswordSignInDisabledError);
+    } finally {
+      await test.settings.set(passwordSignInSetting, {}, "instance", true);
+    }
+  });
+
+  it("refuses linking when the account has no way to confirm it", async () => {
+    const moved = await accountFromProvider();
+    await test.pool.query("delete from identities where account_id = $1", [moved.accountId]);
+    const result = await signIn(moved.second, { sub: randomUUID(), email: moved.email });
+    expect(result).toMatchObject({ kind: "refused", reason: "linkUnavailable" });
   });
 
   it("records a reference when the person says the account is not theirs", async () => {

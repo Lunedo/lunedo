@@ -29,7 +29,7 @@ export const identityCredentialKinds = [
   "samlSigning",
   "bindPassword",
 ] as const;
-export const providerFlowPurposes = ["signIn", "reauthentication", "test"] as const;
+export const providerFlowPurposes = ["signIn", "reauthentication", "test", "linkConfirmation"] as const;
 
 export const identityProviderType = pgEnum("identity_provider_type", identityProviderTypes);
 export const identityProviderPreset = pgEnum("identity_provider_preset", identityProviderPresets);
@@ -153,6 +153,7 @@ export const providerFlows = pgTable(
     redirectUri: text().notNull(),
     consumedAt: timestampColumn(),
     sessionId: uuid(),
+    challengeId: uuid(),
     returnTo: text(),
     result: jsonb(),
     expiresAt: timestampColumn().notNull(),

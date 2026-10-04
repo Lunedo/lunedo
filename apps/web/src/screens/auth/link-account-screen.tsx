@@ -12,7 +12,7 @@ import {
 } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { BadgeCheck, Fingerprint, KeyRound } from "lucide-react";
+import { BadgeCheck, Fingerprint, KeyRound, LogIn } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -39,7 +39,9 @@ export const linkQuery = {
   retry: false,
 };
 
-const linkForm = z.object({ password: passwordSchema, code: z.string() });
+const linkForm = z.object({ password: z.string(), code: z.string() });
+
+type Provider = { id: string; name: string; directory: boolean };
 
 export function LinkAccountScreen() {
   const { t } = useTranslation();
@@ -53,8 +55,15 @@ export function LinkAccountScreen() {
   const [error, setError] = useState<string | null>(null);
   const [reference, setReference] = useState<string | null>(null);
   const [declining, setDeclining] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [directory, setDirectory] = useState<Provider | null>(null);
+  const [directoryPassword, setDirectoryPassword] = useState("");
   const form = useSchemaForm(linkForm, { defaultValues: { password: "", code: "" } });
   const active = factor ?? factors[0] ?? null;
+  const confirmed = pending.data?.confirmed ?? false;
+  const withPassword = !confirmed && (pending.data?.password ?? false);
+  const withPasskey = !confirmed && (pending.data?.passkey ?? false) && passkeysSupported();
+  const providers = confirmed ? [] : (pending.data?.providers ?? []);
 
   const finish = async (sessionKind: string) => {
     queryClient.removeQueries({ queryKey: linkQuery.queryKey });
@@ -66,6 +75,10 @@ export function LinkAccountScreen() {
   const submit = form.handleSubmit(async (values) => {
     setError(null);
     try {
+      if (!confirmed && !passwordSchema.safeParse(values.password).success) {
+        form.setError("password", { message: t("validation.required") });
+        return;
+      }
       let second: LinkFactor = null;
       if (active === "totp") {
         const code = totpCodeSchema.min(1).safeParse(values.code);
@@ -84,14 +97,18 @@ export function LinkAccountScreen() {
         second = { type: "recoveryCode", code: code.data };
       }
       if (active === "passkey") {
-        const options = await request(() => api.POST("/api/v1/auth/link/passkey-options"), {
-          sessionHandling: false,
-        });
+        const options = await request(
+          () => api.POST("/api/v1/auth/link/passkey-options", { body: { use: "secondFactor" } }),
+          { sessionHandling: false },
+        );
         const response = await getPasskeyAssertion(options);
         second = { type: "passkey", response: response as never };
       }
       const result = await request(
-        () => api.POST("/api/v1/auth/link", { body: { password: values.password, factor: second } }),
+        () =>
+          api.POST("/api/v1/auth/link", {
+            body: confirmed ? { factor: second } : { password: values.password, factor: second },
+          }),
         { sessionHandling: false },
       );
       await finish(result.sessionKind);
@@ -101,6 +118,59 @@ export function LinkAccountScreen() {
       form.resetField("code");
     }
   });
+
+  const run = async (key: string, work: () => Promise<void>) => {
+    setBusy(key);
+    setError(null);
+    try {
+      await work();
+    } catch (failure) {
+      setError(isPasskeyCancelled(failure) ? t("auth.passkeyCancelled") : problemMessage(t, failure));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const confirmWithPasskey = () =>
+    run("passkey", async () => {
+      const options = await request(
+        () => api.POST("/api/v1/auth/link/passkey-options", { body: { use: "signIn" } }),
+        { sessionHandling: false },
+      );
+      const response = await getPasskeyAssertion(options);
+      const result = await request(
+        () => api.POST("/api/v1/auth/link", { body: { passkey: response as never } }),
+        { sessionHandling: false },
+      );
+      await finish(result.sessionKind);
+    });
+
+  const confirmWithProvider = (provider: Provider) =>
+    run(provider.id, async () => {
+      const started = await request(
+        () => api.POST("/api/v1/auth/link/provider", { body: { providerId: provider.id } }),
+        { sessionHandling: false },
+      );
+      globalThis.location.assign(started.url);
+    });
+
+  const confirmWithDirectory = (provider: Provider) =>
+    run(provider.id, async () => {
+      const result = await request(
+        () =>
+          api.POST("/api/v1/auth/link/directory", {
+            body: { providerId: provider.id, password: directoryPassword },
+          }),
+        { sessionHandling: false },
+      );
+      setDirectoryPassword("");
+      if (result.status === "signedIn") {
+        await finish(result.sessionKind);
+        return;
+      }
+      setDirectory(null);
+      await pending.refetch();
+    });
 
   const decline = async () => {
     setDeclining(true);
@@ -156,51 +226,118 @@ export function LinkAccountScreen() {
           {error}
         </Notice>
       ) : null}
-      <form className="flex flex-col gap-4" onSubmit={submitWith(submit)} noValidate>
-        <Field
-          label={t("auth.link.password", { name: data.accountName })}
-          error={form.formState.errors.password?.message}
-        >
-          <PasswordInput autoComplete="current-password" autoFocus {...form.register("password")} />
-        </Field>
-        {factors.length > 1 ? (
-          <SegmentedControl
-            label={t("auth.link.secondFactor")}
-            value={active ?? "totp"}
-            onValueChange={(value) => {
-              setFactor(value as Factor);
-              form.resetField("code");
-            }}
-            options={factors.map((value) => ({ value, label: t(`auth.link.factors.${value}`) }))}
-          />
-        ) : null}
-        {active === "totp" || active === "recoveryCode" ? (
-          <Field
-            label={active === "totp" ? t("auth.authenticatorCode") : t("auth.recoveryCode")}
-            error={form.formState.errors.code?.message}
-          >
-            <Input
-              autoComplete="one-time-code"
-              {...(active === "totp" ? { inputMode: "numeric" as const } : {})}
-              {...form.register("code")}
+      {confirmed ? (
+        <Notice variant="info" title={t("auth.link.confirmedTitle")}>
+          {t("auth.link.confirmedDescription")}
+        </Notice>
+      ) : null}
+      {withPassword || confirmed ? (
+        <form className="flex flex-col gap-4" onSubmit={submitWith(submit)} noValidate>
+          {withPassword ? (
+            <Field
+              label={t("auth.link.password", { name: data.accountName })}
+              error={form.formState.errors.password?.message}
+            >
+              <PasswordInput autoComplete="current-password" autoFocus {...form.register("password")} />
+            </Field>
+          ) : null}
+          {factors.length > 1 ? (
+            <SegmentedControl
+              label={t("auth.link.secondFactor")}
+              value={active ?? "totp"}
+              onValueChange={(value) => {
+                setFactor(value as Factor);
+                form.resetField("code");
+              }}
+              options={factors.map((value) => ({ value, label: t(`auth.link.factors.${value}`) }))}
             />
-          </Field>
-        ) : null}
-        {active === "passkey" ? <Notice variant="info">{t("auth.link.passkeyHint")}</Notice> : null}
-        <p className="text-sm text-text-muted">
-          {t("auth.link.afterwards", { provider: data.providerName })}
-        </p>
-        <Button
-          type="submit"
-          variant="primary"
-          size="lg"
-          block
-          {...(active === "passkey" ? { icon: Fingerprint } : {})}
-          loading={form.formState.isSubmitting}
-        >
-          {t("auth.link.confirm")}
-        </Button>
-      </form>
+          ) : null}
+          {active === "totp" || active === "recoveryCode" ? (
+            <Field
+              label={active === "totp" ? t("auth.authenticatorCode") : t("auth.recoveryCode")}
+              error={form.formState.errors.code?.message}
+            >
+              <Input
+                autoComplete="one-time-code"
+                {...(active === "totp" ? { inputMode: "numeric" as const } : {})}
+                {...form.register("code")}
+              />
+            </Field>
+          ) : null}
+          {active === "passkey" ? <Notice variant="info">{t("auth.link.passkeyHint")}</Notice> : null}
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            block
+            {...(active === "passkey" ? { icon: Fingerprint } : {})}
+            loading={form.formState.isSubmitting}
+          >
+            {t("auth.link.confirm")}
+          </Button>
+        </form>
+      ) : null}
+      {withPasskey || providers.length > 0 ? (
+        <div className="flex flex-col gap-3">
+          {withPassword ? (
+            <p className="text-center text-sm text-text-muted">{t("auth.link.orConfirmWith")}</p>
+          ) : (
+            <p className="text-sm text-text-muted">{t("auth.link.confirmWith")}</p>
+          )}
+          {withPasskey ? (
+            <Button
+              variant="secondary"
+              block
+              icon={Fingerprint}
+              loading={busy === "passkey"}
+              onClick={() => void confirmWithPasskey()}
+            >
+              {t("auth.link.withPasskey")}
+            </Button>
+          ) : null}
+          {providers.map((provider) =>
+            provider.directory && directory?.id === provider.id ? (
+              <form
+                key={provider.id}
+                className="flex flex-col gap-3 rounded-md border border-border p-3"
+                noValidate
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void confirmWithDirectory(provider);
+                }}
+              >
+                <Field label={t("auth.link.directoryPassword", { provider: provider.name })}>
+                  <PasswordInput
+                    autoComplete="current-password"
+                    autoFocus
+                    value={directoryPassword}
+                    onChange={(event) => setDirectoryPassword(event.target.value)}
+                  />
+                </Field>
+                <Button type="submit" variant="primary" block loading={busy === provider.id}>
+                  {t("auth.link.confirm")}
+                </Button>
+              </form>
+            ) : (
+              <Button
+                key={provider.id}
+                variant="secondary"
+                block
+                icon={LogIn}
+                loading={busy === provider.id}
+                onClick={() =>
+                  provider.directory ? setDirectory(provider) : void confirmWithProvider(provider)
+                }
+              >
+                <span className="truncate" title={provider.name}>
+                  {t("auth.link.withProvider", { provider: provider.name })}
+                </span>
+              </Button>
+            ),
+          )}
+        </div>
+      ) : null}
+      <p className="text-sm text-text-muted">{t("auth.link.afterwards", { provider: data.providerName })}</p>
       <p className="text-center text-sm">
         <button
           type="button"

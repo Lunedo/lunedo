@@ -1125,7 +1125,7 @@
         },
         "linkUnavailable": {
           "title": "Du kannst dein Konto nicht selbst verknüpfen",
-          "cause": "Es gibt ein Konto mit deiner Adresse, aber ohne Passwort. Deshalb kannst du nicht bestätigen, dass es deines ist.",
+          "cause": "Es gibt ein Konto mit deiner Adresse, aber ohne Passwort, Passkey oder andere Anmeldung, mit der du es bestätigen könntest.",
           "action": "Bitte deine Administration, deine Anmeldung mit dem Konto zu verknüpfen."
         },
         "invalidResponse": {
@@ -1156,7 +1156,14 @@
       "notMine": "Das ist nicht mein Konto",
       "notMineTitle": "Das ist nicht mein Konto",
       "notMineDescription": "Dann stimmt die E-Mail-Adresse deines {provider}-Kontos mit dem Pagehall-Konto einer anderen Person überein. Verknüpfe sie nicht.",
-      "notMineReference": "Schick diese Referenz an deine Administration, die die Adresse prüfen kann:"
+      "notMineReference": "Schick diese Referenz an deine Administration, die die Adresse prüfen kann:",
+      "confirmedTitle": "Dein Anbieter hat bestätigt, dass du es bist",
+      "confirmedDescription": "Gib den zweiten Faktor deines Pagehall-Kontos ein, um die Verknüpfung abzuschließen.",
+      "confirmWith": "Bestätige mit einem Weg, mit dem du dich schon anmeldest:",
+      "orConfirmWith": "oder bestätige mit einem Weg, mit dem du dich schon anmeldest",
+      "withPasskey": "Mit Passkey bestätigen",
+      "withProvider": "Mit {provider} bestätigen",
+      "directoryPassword": "Passwort bei {provider}"
     },
     "emergency": {
       "link": "Notfall-Anmeldung für die Instanz-Ownerin oder den Instanz-Owner",

@@ -11,6 +11,7 @@ const OLIVIA = {
   name: "Olivia Owner",
 };
 const PROVIDER = "01929b1e-0000-7000-8000-0000000000a1";
+const OTHER_PROVIDER = "01929b1e-0000-7000-8000-0000000000a2";
 const MAX = "01929b1e-0000-7000-8000-0000000000cc";
 
 type Handler = (request: RecordedRequest) => { status?: number; body?: unknown };
@@ -191,7 +192,7 @@ describe("the sign-in page", () => {
 });
 
 describe("linking an existing account", () => {
-  function linkApi() {
+  function linkApi(info: Record<string, unknown> = {}, overrides: Record<string, Handler> = {}) {
     return signedOutApi(
       {},
       {
@@ -201,6 +202,11 @@ describe("linking an existing account", () => {
             email: "lena@example.org",
             accountName: "Lena Hofer",
             factors: ["totp"],
+            password: true,
+            passkey: false,
+            providers: [],
+            confirmed: false,
+            ...info,
           },
         }),
         "POST /api/v1/auth/link": (request) =>
@@ -208,9 +214,69 @@ describe("linking an existing account", () => {
             ? { body: { status: "signedIn", sessionKind: "full", account: OLIVIA } }
             : problem(401, "invalidCredentials"),
         "POST /api/v1/auth/link/decline": () => ({ body: { reference: "01JB7R2T9QW4" } }),
+        ...overrides,
       },
     );
   }
+
+  it("offers the providers linked to an account without a password and opens a fresh sign-in", async () => {
+    const { requests } = linkApi(
+      {
+        password: false,
+        factors: [],
+        providers: [
+          { id: PROVIDER, name: "Active Directory", directory: true },
+          { id: OTHER_PROVIDER, name: "Okta", directory: false },
+        ],
+      },
+      {
+        "POST /api/v1/auth/link/provider": () => ({ body: { url: "https://okta.example/authorize" } }),
+        "POST /api/v1/auth/link/directory": () => ({
+          body: { status: "signedIn", sessionKind: "full", account: OLIVIA },
+        }),
+      },
+    );
+    await renderPath("/sign-in/link");
+    expect(await screen.findByText("Confirm with a way you already sign in with:")).toBeTruthy();
+    expect(screen.queryByLabelText("Password of Lena Hofer")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Confirm with Okta" }));
+    await waitFor(() =>
+      expect(requests.find((request) => request.path === "/api/v1/auth/link/provider")?.body).toEqual({
+        providerId: OTHER_PROVIDER,
+      }),
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Confirm with Active Directory" }));
+    await userEvent.type(await screen.findByLabelText("Password at Active Directory"), "directory secret");
+    await userEvent.click(screen.getByRole("button", { name: "Confirm and link" }));
+    await waitFor(() =>
+      expect(requests.find((request) => request.path === "/api/v1/auth/link/directory")?.body).toEqual({
+        providerId: PROVIDER,
+        password: "directory secret",
+      }),
+    );
+  });
+
+  it("asks only for the second factor after a linked provider confirmed the link", async () => {
+    const { requests } = linkApi(
+      { password: false, confirmed: true, providers: [{ id: PROVIDER, name: "Okta", directory: false }] },
+      {
+        "POST /api/v1/auth/link": () => ({
+          body: { status: "signedIn", sessionKind: "full", account: OLIVIA },
+        }),
+      },
+    );
+    await renderPath("/sign-in/link");
+    expect(await screen.findByText("Your provider confirmed it is you")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Confirm with Okta" })).toBeNull();
+    await userEvent.type(screen.getByLabelText("Code from your authenticator app"), "654321");
+    await userEvent.click(screen.getByRole("button", { name: "Confirm and link" }));
+    await waitFor(() =>
+      expect(
+        requests.find((request) => request.method === "POST" && request.path === "/api/v1/auth/link")?.body,
+      ).toEqual({ factor: { type: "totp", code: "654321" } }),
+    );
+  });
 
   it("links only with the password and the second factor of the account", async () => {
     const { requests } = linkApi();

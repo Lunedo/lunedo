@@ -14,7 +14,7 @@ import {
   signInRefusalReferenceSchema,
 } from "@pagehall/shared";
 import { z } from "zod";
-import { secondFactorSchema, signedInSchema } from "../auth/schemas.js";
+import { authenticationResponseSchema, secondFactorSchema, signedInSchema } from "../auth/schemas.js";
 import { inputTimestamp, timestamp, uuid } from "../http/schemas.js";
 
 export const removalPreviewSchema = z
@@ -524,17 +524,85 @@ export const linkInfoSchema = z
     accountName: z.string().describe("Name of the existing account."),
     factors: z
       .array(z.enum(["totp", "passkey", "recoveryCode"]))
-      .describe("Second factors of the account. One of them is required when the list is not empty."),
+      .describe(
+        "Second factors of the account. One of them is required with the password, or after a provider confirmed the link when that provider needs a Pagehall second factor.",
+      ),
+    password: z.boolean().describe("Whether the password of the account can confirm the link."),
+    passkey: z.boolean().describe("Whether a passkey of the account can confirm the link."),
+    providers: z
+      .array(
+        z.object({
+          id: uuid("ID of the provider."),
+          name: z.string().describe("Name of the provider."),
+          directory: z
+            .boolean()
+            .describe("Whether it is a directory that confirms with its password instead of its own page."),
+        }),
+      )
+      .describe(
+        "Providers already linked to the account; a fresh sign-in through one of them confirms the link.",
+      ),
+    confirmed: z
+      .boolean()
+      .describe(
+        "Whether a linked provider confirmed the link already and only the second factor is missing.",
+      ),
   })
   .describe("An identity waiting to be linked to an existing account.");
 
 export const linkConfirmationSchema = z
   .object({
-    password: z.string().min(1).max(PASSWORD_MAX_LENGTH).describe("Password of the existing account."),
+    password: z
+      .string()
+      .min(1)
+      .max(PASSWORD_MAX_LENGTH)
+      .optional()
+      .describe("Password of the existing account, when it confirms with its password."),
+    passkey: authenticationResponseSchema
+      .optional()
+      .describe(
+        "Answer of a passkey of the existing account with user verification, when it confirms with it.",
+      ),
     factor: secondFactorSchema.nullable().optional().describe("Second factor of the existing account."),
   })
   .strict()
-  .describe("Confirmation with the password and the second factor of the existing account.");
+  .describe(
+    "Confirmation with the password or a passkey of the existing account, or the second factor after a linked provider confirmed the link.",
+  );
+
+export const linkPasskeyOptionsSchema = z
+  .object({
+    use: z
+      .enum(["signIn", "secondFactor"])
+      .default("secondFactor")
+      .describe(
+        "Whether the passkey confirms the link on its own or as the second factor after the password.",
+      ),
+  })
+  .strict()
+  .describe("What the passkey is for.");
+
+export const linkProviderSchema = z
+  .object({ providerId: uuid("Provider linked to the account that confirms the link.") })
+  .strict()
+  .describe("A provider to confirm the link with a fresh sign-in.");
+
+export const linkDirectorySchema = z
+  .object({
+    providerId: uuid("Directory provider linked to the account."),
+    password: z.string().max(1024).describe("Directory password."),
+  })
+  .strict()
+  .describe("Confirmation of the link with the directory password.");
+
+export const linkDirectoryResultSchema = z
+  .discriminatedUnion("status", [
+    signedInSchema.describe("Linked and signed in."),
+    z
+      .object({ status: z.literal("confirmed") })
+      .describe("The directory confirmed the link; the second factor of the account is required next."),
+  ])
+  .describe("The outcome of the confirmation.");
 
 export const referenceSchema = z
   .object({ reference: z.string().describe("Reference for administrators, for example `7KQ2-M9XA`.") })

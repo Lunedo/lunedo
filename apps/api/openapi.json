@@ -7020,14 +7020,58 @@
                           "recoveryCode"
                         ]
                       },
-                      "description": "Second factors of the account. One of them is required when the list is not empty."
+                      "description": "Second factors of the account. One of them is required with the password, or after a provider confirmed the link when that provider needs a Pagehall second factor."
+                    },
+                    "password": {
+                      "type": "boolean",
+                      "description": "Whether the password of the account can confirm the link."
+                    },
+                    "passkey": {
+                      "type": "boolean",
+                      "description": "Whether a passkey of the account can confirm the link."
+                    },
+                    "providers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the provider."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Name of the provider."
+                          },
+                          "directory": {
+                            "type": "boolean",
+                            "description": "Whether it is a directory that confirms with its password instead of its own page."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "directory"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Providers already linked to the account; a fresh sign-in through one of them confirms the link."
+                    },
+                    "confirmed": {
+                      "type": "boolean",
+                      "description": "Whether a linked provider confirmed the link already and only the second factor is missing."
                     }
                   },
                   "required": [
                     "providerName",
                     "email",
                     "accountName",
-                    "factors"
+                    "factors",
+                    "password",
+                    "passkey",
+                    "providers",
+                    "confirmed"
                   ],
                   "additionalProperties": false,
                   "description": "An identity waiting to be linked to an existing account."
@@ -7060,7 +7104,7 @@
       "post": {
         "operationId": "providerAuth.link",
         "summary": "Link the identity to the existing account",
-        "description": "Confirms with the password and the second factor of the existing account, then signs in.",
+        "description": "Confirms with the password and the second factor of the existing account, with one of its passkeys, or with the second factor after a linked provider confirmed the link, then signs in.",
         "tags": [
           "Identity providers"
         ],
@@ -7075,10 +7119,86 @@
                 "type": "object",
                 "properties": {
                   "password": {
+                    "description": "Password of the existing account, when it confirms with its password.",
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 256,
-                    "description": "Password of the existing account."
+                    "maxLength": 256
+                  },
+                  "passkey": {
+                    "description": "Answer of a passkey of the existing account with user verification, when it confirms with it.",
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "maxLength": 1024,
+                        "pattern": "^[A-Za-z0-9_-]*$"
+                      },
+                      "rawId": {
+                        "type": "string",
+                        "maxLength": 1024,
+                        "pattern": "^[A-Za-z0-9_-]*$"
+                      },
+                      "type": {
+                        "type": "string",
+                        "const": "public-key"
+                      },
+                      "authenticatorAttachment": {
+                        "type": "string",
+                        "enum": [
+                          "platform",
+                          "cross-platform"
+                        ]
+                      },
+                      "clientExtensionResults": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string",
+                          "maxLength": 64
+                        },
+                        "additionalProperties": {
+                          "$ref": "#/components/schemas/Schema113ae44d8375"
+                        }
+                      },
+                      "response": {
+                        "type": "object",
+                        "properties": {
+                          "clientDataJSON": {
+                            "type": "string",
+                            "maxLength": 4096,
+                            "pattern": "^[A-Za-z0-9_-]*$"
+                          },
+                          "authenticatorData": {
+                            "type": "string",
+                            "maxLength": 4096,
+                            "pattern": "^[A-Za-z0-9_-]*$"
+                          },
+                          "signature": {
+                            "type": "string",
+                            "maxLength": 1024,
+                            "pattern": "^[A-Za-z0-9_-]*$"
+                          },
+                          "userHandle": {
+                            "type": "string",
+                            "maxLength": 256,
+                            "pattern": "^[A-Za-z0-9_-]*$"
+                          }
+                        },
+                        "required": [
+                          "clientDataJSON",
+                          "authenticatorData",
+                          "signature"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "rawId",
+                      "type",
+                      "clientExtensionResults",
+                      "response"
+                    ],
+                    "additionalProperties": false
                   },
                   "factor": {
                     "description": "Second factor of the existing account.",
@@ -7218,11 +7338,8 @@
                     ]
                   }
                 },
-                "required": [
-                  "password"
-                ],
                 "additionalProperties": false,
-                "description": "Confirmation with the password and the second factor of the existing account."
+                "description": "Confirmation with the password or a passkey of the existing account, or the second factor after a linked provider confirmed the link."
               }
             }
           }
@@ -7365,7 +7482,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `passwordSignInDisabled`: Sign-in with a password is turned off.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -7378,6 +7495,14 @@
                       "title": "The request failed the cross-site request check",
                       "status": 403,
                       "code": "csrfRejected"
+                    }
+                  },
+                  "passwordSignInDisabled": {
+                    "value": {
+                      "type": "urn:pagehall:problem:passwordSignInDisabled",
+                      "title": "Sign-in with a password is turned off",
+                      "status": 403,
+                      "code": "passwordSignInDisabled"
                     }
                   }
                 }
@@ -7491,6 +7616,285 @@
         }
       }
     },
+    "/api/v1/auth/link/directory": {
+      "post": {
+        "operationId": "providerAuth.linkWithDirectory",
+        "summary": "Confirm a link with a directory password",
+        "description": "For accounts linked to an LDAP or Active Directory provider. Pagehall checks the password with a bind, then links and signs in, or asks for the second factor of the account first.",
+        "tags": [
+          "Identity providers"
+        ],
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "providerId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Directory provider linked to the account."
+                  },
+                  "password": {
+                    "type": "string",
+                    "maxLength": 1024,
+                    "description": "Directory password."
+                  }
+                },
+                "required": [
+                  "providerId",
+                  "password"
+                ],
+                "additionalProperties": false,
+                "description": "Confirmation of the link with the directory password."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The outcome.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "const": "signedIn"
+                        },
+                        "sessionKind": {
+                          "type": "string"
+                        },
+                        "account": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "email": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "standard",
+                                    "guest",
+                                    "portal",
+                                    "service"
+                                  ],
+                                  "description": "Kind of account."
+                                },
+                                "homeOrganizationId": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Organization the account belongs to, or null."
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "email",
+                                "name",
+                                "type",
+                                "homeOrganizationId"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "sessionKind",
+                        "account"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Linked and signed in."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "const": "confirmed"
+                        }
+                      },
+                      "required": [
+                        "status"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The directory confirmed the link; the second factor of the account is required next."
+                    }
+                  ],
+                  "description": "The outcome of the confirmation."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`challengeExpired`: The sign-in step expired. `invalidCredentials`: The credentials are not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "challengeExpired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:challengeExpired",
+                      "title": "The sign-in step expired",
+                      "status": 401,
+                      "code": "challengeExpired"
+                    }
+                  },
+                  "invalidCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidCredentials",
+                      "title": "The credentials are not valid",
+                      "status": 401,
+                      "code": "invalidCredentials"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`locked`: Too many failed attempts. `rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "locked": {
+                    "value": {
+                      "type": "urn:pagehall:problem:locked",
+                      "title": "Too many failed attempts",
+                      "status": 429,
+                      "code": "locked"
+                    }
+                  },
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "`providerUnavailable`: The identity provider could not be reached.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "providerUnavailable": {
+                    "value": {
+                      "type": "urn:pagehall:problem:providerUnavailable",
+                      "title": "The identity provider could not be reached",
+                      "status": 502,
+                      "code": "providerUnavailable"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/link/passkey-options": {
       "post": {
         "operationId": "providerAuth.linkPasskeyOptions",
@@ -7501,6 +7905,29 @@
         "x-pagehall-internal": true,
         "x-stability-level": "alpha",
         "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "use": {
+                    "default": "secondFactor",
+                    "description": "Whether the passkey confirms the link on its own or as the second factor after the password.",
+                    "type": "string",
+                    "enum": [
+                      "signIn",
+                      "secondFactor"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "description": "What the passkey is for."
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Options for the browser.",
@@ -7570,6 +7997,26 @@
               }
             }
           },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "401": {
             "description": "`challengeExpired`: The sign-in step expired.",
             "content": {
@@ -7604,6 +8051,164 @@
                       "title": "The request failed the cross-site request check",
                       "status": 403,
                       "code": "csrfRejected"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/link/provider": {
+      "post": {
+        "operationId": "providerAuth.linkWithProvider",
+        "summary": "Confirm a link through a linked provider",
+        "description": "Starts a fresh sign-in at a provider that is already linked to the account. Pagehall asks the provider to sign the person in again and checks that it happened just now.",
+        "tags": [
+          "Identity providers"
+        ],
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "providerId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Provider linked to the account that confirms the link."
+                  }
+                },
+                "required": [
+                  "providerId"
+                ],
+                "additionalProperties": false,
+                "description": "A provider to confirm the link with a fresh sign-in."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The provider address to open.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "description": "Address of the provider to open in the browser."
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The started sign-in."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`challengeExpired`: The sign-in step expired.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "challengeExpired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:challengeExpired",
+                      "title": "The sign-in step expired",
+                      "status": 401,
+                      "code": "challengeExpired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
                     }
                   }
                 }
