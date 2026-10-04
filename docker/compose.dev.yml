@@ -117,6 +117,12 @@ services:
       start_period: 60s
       retries: 30
 
+  openldap:
+    profiles: [idp]
+    build: ./idp/openldap
+    ports:
+      - "127.0.0.1:3389:389"
+
   authentik-postgres:
     profiles: [idp]
     image: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea

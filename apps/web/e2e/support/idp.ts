@@ -39,7 +39,8 @@ const env = (name: string, fallback: string) => process.env[name] || fallback;
 
 async function json<T>(response: Response, action: string): Promise<T> {
   if (!response.ok) throw new Error(`${action} failed with ${response.status}: ${await response.text()}`);
-  return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
+  const text = await response.text();
+  return (text === "" ? undefined : JSON.parse(text)) as T;
 }
 
 const KEYCLOAK_URL = env("PAGEHALL_E2E_KEYCLOAK_URL", "http://keycloak.localhost:8080");
@@ -280,3 +281,95 @@ export const authentik: IdentityProviderFixture = {
 };
 
 export const identityProviders: readonly IdentityProviderFixture[] = [keycloak, authentik];
+
+export const KEYCLOAK_SAML_METADATA_URL = `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/saml/descriptor`;
+
+export async function registerKeycloakSamlClient(serviceProviderMetadata: string): Promise<string> {
+  const converted = await fetch(
+    `${KEYCLOAK_URL}/admin/realms/${KEYCLOAK_REALM}/client-description-converter`,
+    {
+      method: "POST",
+      headers: { authorization: `Bearer ${await keycloakToken()}`, "content-type": "application/xml" },
+      body: serviceProviderMetadata,
+    },
+  );
+  const client = await json<{ clientId: string; attributes?: Record<string, string> }>(
+    converted,
+    "Keycloak client conversion",
+  );
+  for (const existing of await keycloakAdmin<{ id: string }[]>(
+    "GET",
+    `/clients?clientId=${encodeURIComponent(client.clientId)}`,
+  )) {
+    await keycloakAdmin("DELETE", `/clients/${existing.id}`);
+  }
+  await keycloakAdmin("POST", "/clients", {
+    ...client,
+    attributes: {
+      ...client.attributes,
+      "saml.force.post.binding": "true",
+      "saml.server.signature": "false",
+      "saml.assertion.signature": "true",
+      "saml.signature.algorithm": "RSA_SHA256",
+      saml_name_id_format: "persistent",
+    },
+    protocolMappers: [
+      {
+        name: "email",
+        protocol: "saml",
+        protocolMapper: "saml-user-property-mapper",
+        config: { "user.attribute": "email", "attribute.name": "email", "attribute.nameformat": "Basic" },
+      },
+      {
+        name: "groups",
+        protocol: "saml",
+        protocolMapper: "saml-group-membership-mapper",
+        config: {
+          "attribute.name": "groups",
+          "full.path": "false",
+          single: "false",
+          "attribute.nameformat": "Basic",
+        },
+      },
+    ],
+  });
+  return client.clientId;
+}
+
+export async function removeKeycloakClient(clientId: string): Promise<void> {
+  for (const existing of await keycloakAdmin<{ id: string }[]>(
+    "GET",
+    `/clients?clientId=${encodeURIComponent(clientId)}`,
+  )) {
+    await keycloakAdmin("DELETE", `/clients/${existing.id}`);
+  }
+}
+
+export async function createKeycloakUser(
+  username: string,
+  details: { email: string; firstName: string; lastName: string },
+): Promise<void> {
+  await keycloakAdmin("POST", "/users", {
+    username,
+    ...details,
+    enabled: true,
+    emailVerified: true,
+    credentials: [{ type: "password", value: TEST_PASSWORD, temporary: false }],
+  });
+}
+
+export async function deleteKeycloakUser(username: string): Promise<void> {
+  for (const user of await keycloakAdmin<{ id: string }[]>("GET", `/users?username=${username}&exact=true`)) {
+    await keycloakAdmin("DELETE", `/users/${user.id}`);
+  }
+}
+
+export async function signInAtKeycloak(
+  page: Page,
+  username: string,
+  password = TEST_PASSWORD,
+): Promise<void> {
+  await page.locator("#username").fill(username);
+  await page.locator("#password").fill(password);
+  await page.locator("#kc-login").click();
+}

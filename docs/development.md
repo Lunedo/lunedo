@@ -41,7 +41,7 @@ To run everything on the host instead, start PostgreSQL, set `PAGEHALL_DATABASE_
 
 ### Identity providers for development and tests
 
-Keycloak and Authentik run as OIDC providers with test users and groups. They belong to the Compose profile `idp` and start only on request, because Authentik needs its own database and both take a minute to start:
+Keycloak and Authentik run as OIDC providers with test users and groups, Keycloak also as SAML provider, and OpenLDAP as directory. They belong to the Compose profile `idp` and start only on request, because Authentik needs its own database and both take a minute to start:
 
 ```sh
 pnpm dev:idp
@@ -71,6 +71,19 @@ Both providers send the stable group IDs in the `groups` claim and the group nam
 Back-channel logout goes to the URL in `PAGEHALL_KEYCLOAK_BACKCHANNEL_LOGOUT_URL` and `PAGEHALL_AUTHENTIK_BACKCHANNEL_LOGOUT_URL` when the providers start; tests set it through the administration interfaces. The providers reach Pagehall on the host as `host.docker.internal`.
 
 `apps/web/e2e/support/idp.ts` drives both providers in end-to-end tests: it signs in through their login forms, disables and enables users, changes group memberships and group names, sets the back-channel logout URL and restores the initial state. The tests in `apps/web/e2e/idp` run when `PAGEHALL_E2E_IDP=1` is set, for example `PAGEHALL_E2E_IDP=1 pnpm --filter @pagehall/web exec playwright test --project=idp`.
+
+Keycloak also serves as SAML identity provider. Its metadata is at `http://keycloak.localhost:8080/realms/pagehall/protocol/saml/descriptor`. The SAML client is not part of the realm, because its entity ID contains the ID of the Pagehall provider: the end-to-end tests create the provider, load Pagehall's service provider metadata from `/api/v1/auth/providers/{id}/saml/metadata` and register it through the Keycloak administration API. To try SAML by hand, import the same metadata under Clients, Import client in the Keycloak administration, turn on "Force POST binding" and add the mappers `email` (user property) and `groups` (group list, without full path).
+
+OpenLDAP runs in the same profile on `ldap://localhost:3389` (`ldap://openldap:389` from the `app` container), built from `docker/idp/openldap` with the base `dc=example,dc=org`. Pagehall connects with the service account `cn=pagehall,ou=service,dc=example,dc=org` and the password `pagehall-ldap-service-password`; the administrator is `cn=admin,dc=example,dc=org` with the password `admin`. The plain connection works only because the development environment sets `PAGEHALL_INSECURE_IDENTITY_PROVIDERS`. People live under `ou=people`, groups under `ou=groups`, and the user filter is the default `(objectClass=inetOrgPerson)`:
+
+| User | E-mail | Groups |
+|---|---|---|
+| `lena` | `lena@directory.example.org` | staff, platform, and engineering through platform |
+| `max` | `max@directory.example.org` | staff, platform, and engineering through platform |
+| `nora` | `nora@directory.example.org` | staff; tests disable this account |
+| `otto` | `otto@directory.example.org` | none; disabled through `employeeType: disabled` |
+
+All of them have the password `pagehall-test-password`. Active Directory specifics (the nested group matching rule, `userAccountControl`, `accountExpires` and the sub-codes of failed binds) are tested against a fake directory in `packages/server/src/testing/fakes/ldap-directory.ts`, which evaluates real LDAP filters.
 
 Microsoft Graph and the Google Directory API are replaced in tests by small local fakes in `packages/server/src/testing/fakes`, exported from `@pagehall/server/testing`. `startFakeGraph()` and `startFakeGoogleDirectory()` start them on a free port inside a test; `node --import ./packages/server/src/testing/ts-resolve.mjs packages/server/src/testing/fakes/serve.ts` runs both as a process on ports 4320 and 4321 (`PAGEHALL_FAKE_GRAPH_PORT`, `PAGEHALL_FAKE_GOOGLE_PORT`). They issue application tokens (client credentials for Graph, a service account assertion for Google), page their results like the real APIs (`@odata.nextLink`, `nextPageToken`) and contain a person with 250 groups for the Entra ID group overage, nested groups, a disabled and a suspended account. Tests change their data directly or through `/_fake/...` requests.
 
@@ -144,7 +157,7 @@ Screens are built from the components in `packages/ui`; `/dev/components` shows 
 | Job | Runs on pull requests when these change |
 |---|---|
 | End-to-end, accessibility and visual tests | `apps/web/`, `packages/ui/`, `packages/tokens/` |
-| Sign-in through identity providers | identity, authentication and sign-in code in server, API and web client, `apps/web/e2e/idp/`, the end-to-end setup, `docker/idp/`, `docker/compose.dev.yml` |
+| Sign-in through identity providers | identity, authentication and sign-in code in server, API and web client including SAML and LDAP, the shared provider configuration, `apps/web/e2e/idp/`, the end-to-end setup, `docker/idp/`, `docker/compose.dev.yml` |
 | Backup round trip (builds the image for amd64 only) | `packages/server/src/backup/`, `packages/server/drizzle/`, `apps/worker/src/cli/`, `docker/`, `scripts/backup-roundtrip.sh` |
 
 The job `Scope` decides the lane and the areas (`scripts/ci-scope.ts`) and lists them in its summary. The job `CI result` fails when any job failed or was cancelled and passes when the others passed or were skipped; it is the one check branch protection needs. The pnpm store, the Turborepo cache and Docker layers are cached between runs; on `main` the unit tests ignore cached results.

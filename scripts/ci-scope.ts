@@ -32,6 +32,7 @@ export const identityProviderPaths = [
   "packages/server/src/auth/",
   "packages/server/src/testing/fake-oidc.ts",
   "packages/server/src/testing/fakes/",
+  "packages/shared/src/identity-providers.ts",
   "apps/api/src/identity/",
   "apps/api/src/auth/",
   "apps/web/src/screens/auth/",
