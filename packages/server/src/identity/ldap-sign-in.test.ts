@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
-import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
+import { ANONYMOUS, accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { InvalidCredentialsError, LockedError, RateLimitedError } from "../auth/errors.js";
+import { runWithRequestContext } from "../observability/request-context.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { type FakeOidcProvider, startFakeOidcProvider } from "../testing/fake-oidc.js";
 import { FakeLdapDirectory, type FakeLdapEntry } from "../testing/fakes/ldap-directory.js";
@@ -492,6 +493,23 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
       }),
     ).rejects.toSatisfy((error) => error instanceof LockedError || error instanceof RateLimitedError);
     expect(directory.binds.filter((bind) => bind.dn === locked.entry.dn).length).toBe(binds);
+  });
+
+  it("signs a person in to the placeholder an administrator created for them", async () => {
+    const { id, domain } = await provider();
+    const dave = person(`dave-${randomUUID().slice(0, 6)}`, domain);
+    directory.entries.push(dave);
+    const email = String(dave.attributes.mail?.[0]);
+    const placeholder = await test.services.accountLifecycle.createPlaceholder(SYSTEM, {
+      name: "Dave",
+      email,
+    });
+    const result = await runWithRequestContext({ requestId: randomUUID(), actor: ANONYMOUS }, () =>
+      signIn(id, email),
+    );
+    if (result.kind !== "signedIn") throw new Error(`Signed in expected, got ${result.kind}`);
+    expect(result.signedIn.session.accountId).toBe(placeholder.id);
+    expect((await test.services.accounts.get(placeholder.id))?.state).toBe("active");
   });
 
   it("refuses an empty password before asking the directory", async () => {

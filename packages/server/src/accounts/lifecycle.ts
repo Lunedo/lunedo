@@ -32,7 +32,7 @@ import { OrganizationError } from "../organizations/organizations.js";
 import { settingValues } from "../settings/schema.js";
 import { apiTokens } from "../tokens/schema.js";
 import { withUniqueEmail } from "./accounts.js";
-import type { Principal } from "./principal.js";
+import { type Principal, SYSTEM } from "./principal.js";
 import { accounts, instance } from "./schema.js";
 
 const MANAGE_ACCOUNTS = "instance.accounts.manage";
@@ -125,6 +125,7 @@ export class AccountLifecycleService {
     const counts = await this.#holdings(tx, placeholderId);
     await this.#audit.record(tx, {
       name: "account.placeholderMerged",
+      actor: SYSTEM,
       targetId: placeholderId,
       fields: { placeholderId, via: "signIn", ...counts },
     });

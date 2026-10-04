@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Secret, TOTP } from "otpauth";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
-import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
+import { ANONYMOUS, accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import {
   ChallengeExpiredError,
   InvalidCredentialsError,
@@ -12,6 +12,7 @@ import {
 } from "../auth/errors.js";
 import { passwordSignInSetting, twoFactorRequiredSetting } from "../auth/settings.js";
 import { ForbiddenError } from "../authorization/service.js";
+import { runWithRequestContext } from "../observability/request-context.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { type FakeOidcProvider, startFakeOidcProvider, type TokenOverrides } from "../testing/fake-oidc.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
@@ -116,6 +117,46 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
       client: {},
     });
   }
+
+  it("signs a person in to the placeholder an administrator created for them", async () => {
+    const org = await organization();
+    const domain = `${randomUUID().slice(0, 8)}.example.org`;
+    const id = await provider({ accountCreation: true, domains: [domain] });
+    const email = `dave@${domain}`;
+    const placeholder = await test.services.accountLifecycle.createPlaceholder(SYSTEM, {
+      name: "Dave",
+      email,
+    });
+    await test.pool.query(
+      "insert into memberships (id, organization_id, account_id, kind) values (gen_random_uuid(), $1, $2, 'member')",
+      [org, placeholder.id],
+    );
+    const group = randomUUID();
+    for (const homeOrganization of [true, false]) {
+      await test.services.mappingRules.create(SYSTEM, id, {
+        target: "organization",
+        group: { id: group, name: "Staff" },
+        organizationId: org,
+        role: { builtIn: "administrator" },
+        synchronizedGroup: homeOrganization,
+        homeOrganization,
+      });
+    }
+    const result = await runWithRequestContext({ requestId: randomUUID(), actor: ANONYMOUS }, () =>
+      signIn(id, { sub: randomUUID(), email, name: "Dave Example", groups: [group] }),
+    );
+    if (result.kind !== "signedIn") throw new Error(`Signed in expected, got ${result.kind}`);
+    expect(result.signedIn.session.accountId).toBe(placeholder.id);
+    expect(await test.services.accounts.get(placeholder.id)).toMatchObject({
+      state: "active",
+      name: "Dave Example",
+    });
+    const events = await test.pool.query(
+      "select name from audit_events where target_id = $1 and name = 'account.placeholderMerged'",
+      [placeholder.id],
+    );
+    expect(events.rowCount).toBe(1);
+  });
 
   it("creates an account at the first sign-in and signs it in again by its identifier", async () => {
     const org = await organization();

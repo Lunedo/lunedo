@@ -4,8 +4,9 @@ import type { AddressInfo } from "node:net";
 import { inflateRawSync } from "node:zlib";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
-import { SYSTEM } from "../accounts/principal.js";
+import { ANONYMOUS, SYSTEM } from "../accounts/principal.js";
 import { ChallengeExpiredError } from "../auth/errors.js";
+import { runWithRequestContext } from "../observability/request-context.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createFakeSamlIdp, type FakeSamlIdp } from "../testing/fakes/saml-idp.js";
@@ -109,6 +110,21 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
       client: {},
     });
   }
+
+  it("signs a person in to the placeholder an administrator created for them", async () => {
+    const { id, domain } = await provider();
+    const email = `dave@${domain}`;
+    const placeholder = await test.services.accountLifecycle.createPlaceholder(SYSTEM, {
+      name: "Dave",
+      email,
+    });
+    const result = await runWithRequestContext({ requestId: randomUUID(), actor: ANONYMOUS }, () =>
+      signIn(id, { nameId: randomUUID(), email }),
+    );
+    if (result.kind !== "signedIn") throw new Error(`Signed in expected, got ${result.kind}`);
+    expect(result.signedIn.session.accountId).toBe(placeholder.id);
+    expect((await test.services.accounts.get(placeholder.id))?.state).toBe("active");
+  });
 
   it("signs a person in through a request Pagehall started and recognizes them again", async () => {
     const { id, domain } = await provider({ fromUrl: true });
