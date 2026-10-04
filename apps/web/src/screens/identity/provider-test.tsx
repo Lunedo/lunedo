@@ -1,7 +1,7 @@
 import { Button, Notice, Section, Skeleton } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Play } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   type IdentityProvider,
@@ -24,6 +24,13 @@ export function StartTestButton({
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    const restored = (event: PageTransitionEvent) => {
+      if (event.persisted) setBusy(false);
+    };
+    globalThis.addEventListener("pageshow", restored);
+    return () => globalThis.removeEventListener("pageshow", restored);
+  }, []);
   return (
     <div className="flex flex-col items-start gap-2">
       <Button
@@ -68,11 +75,14 @@ export function TestResult({ provider, flowId }: { provider: IdentityProvider; f
   if ("error" in data) {
     return (
       <Notice variant="danger" title={t("identityProviders.test.failed")}>
-        <p>{data.error}</p>
-        <p>{t("identityProviders.test.failedAction")}</p>
+        <div className="flex flex-col gap-2">
+          <p className="break-words">{data.error}</p>
+          <p>{t(`identityProviders.test.failures.${data.reason}`, { provider: provider.name })}</p>
+        </div>
       </Notice>
     );
   }
+  const entraId = provider.type !== "ldap" && provider.config.preset === "entraId";
   const groups = data.groups;
   return (
     <div className="flex flex-col gap-4">
@@ -82,6 +92,13 @@ export function TestResult({ provider, flowId }: { provider: IdentityProvider; f
           groups: groups?.length ?? 0,
         })}
       </Notice>
+      {data.email === null ? (
+        <Notice variant="warning" title={t("identityProviders.test.noEmailTitle")}>
+          {entraId
+            ? t("identityProviders.test.noEmailEntraId", { provider: provider.name })
+            : t("identityProviders.test.noEmail", { provider: provider.name })}
+        </Notice>
+      ) : null}
       {!data.emailVerified && data.email ? (
         <Notice variant="warning" title={t("identityProviders.test.unverifiedTitle")}>
           {t("identityProviders.test.unverified", { email: data.email })}

@@ -129,6 +129,53 @@ export interface TestResult {
   claims: ReceivedClaim[];
 }
 
+export const testFailureReasons = [
+  "providerRefused",
+  "userNotAssigned",
+  "consentRequired",
+  "unknownApplication",
+  "invalidClient",
+  "otherTenant",
+  "domainNotAllowed",
+  "browserChanged",
+  "invalidResponse",
+] as const;
+export type TestFailureReason = (typeof testFailureReasons)[number];
+
+export interface TestFailure {
+  error: string;
+  reason: TestFailureReason;
+}
+
+const PROVIDER_ERROR_REASONS: [RegExp, TestFailureReason][] = [
+  [/\bAADSTS50105\b/, "userNotAssigned"],
+  [/\bAADSTS(65001|90094|90095)\b/, "consentRequired"],
+  [/\bAADSTS700016\b/, "unknownApplication"],
+];
+
+function providerRefusal(query: URLSearchParams): TestFailure {
+  const description = query.get("error_description") ?? "";
+  const error = `${query.get("error") ?? "error"}${description ? `: ${description}` : ""}`.slice(0, 500);
+  const reason =
+    PROVIDER_ERROR_REASONS.find(([pattern]) => pattern.test(description))?.[1] ?? "providerRefused";
+  return { error, reason };
+}
+
+function testFailure(error: ProviderPolicyError | ProviderResponseError): TestFailure {
+  if (error instanceof ProviderPolicyError) {
+    return {
+      error: error.message,
+      reason:
+        error.reason === "otherTenant" || error.reason === "domainNotAllowed"
+          ? error.reason
+          : "invalidResponse",
+    };
+  }
+  if (error.message.startsWith("No credential was accepted"))
+    return { error: error.message, reason: "invalidClient" };
+  return { error: error.message, reason: "invalidResponse" };
+}
+
 export interface SignInOptions {
   emailStep: boolean;
   directProvider: SignInProvider | null;
@@ -355,12 +402,20 @@ export class ProviderSignInService {
       !input.browserToken ||
       !secretsEqual(hashState(input.browserToken).toString("hex"), flow.browserHash.toString("hex"))
     ) {
-      throw new ChallengeExpiredError();
+      if (flow.purpose !== "test") throw new ChallengeExpiredError();
+      return this.#testFailed(flow, {
+        error: "The test sign-in returned in another browser or after the browser cookie was lost",
+        reason: "browserChanged",
+      });
     }
     const { provider, credentials } = await this.#load(flow.providerId, flow.purpose);
     const callbackUrl = new URL(flow.redirectUri);
     callbackUrl.search = input.query.toString();
 
+    if (input.query.has("error") && flow.purpose === "test") {
+      await this.#forgetResponse(flow.id);
+      return this.#testFailed(flow, providerRefusal(input.query));
+    }
     let result: Awaited<ReturnType<IdentityProviderAdapter["completeSignIn"]>>;
     try {
       if (input.query.has("error")) throw new ProviderResponseError("The provider refused the sign-in");
@@ -378,13 +433,7 @@ export class ProviderSignInService {
     } catch (error) {
       if (!(error instanceof ProviderPolicyError) && !(error instanceof ProviderResponseError)) throw error;
       await this.#forgetResponse(flow.id);
-      if (flow.purpose === "test") {
-        await this.#database
-          .update(providerFlows)
-          .set({ result: { error: error.message } })
-          .where(eq(providerFlows.id, flow.id));
-        return { kind: "tested", flowId: flow.id, returnTo: flow.returnTo };
-      }
+      if (flow.purpose === "test") return this.#testFailed(flow, testFailure(error));
       const reason =
         error instanceof ProviderPolicyError && error.reason === "domainNotAllowed"
           ? "domainNotAllowed"
@@ -998,7 +1047,15 @@ export class ProviderSignInService {
     return { reference: result.kind === "refused" ? result.reference : "" };
   }
 
-  async testResult(flowId: string, sessionId: string): Promise<TestResult | { error: string } | null> {
+  async #testFailed(
+    flow: { id: string; returnTo: string | null },
+    failure: TestFailure,
+  ): Promise<CallbackResult> {
+    await this.#database.update(providerFlows).set({ result: failure }).where(eq(providerFlows.id, flow.id));
+    return { kind: "tested", flowId: flow.id, returnTo: flow.returnTo };
+  }
+
+  async testResult(flowId: string, sessionId: string): Promise<TestResult | TestFailure | null> {
     const [flow] = await this.#database
       .select({ result: providerFlows.result })
       .from(providerFlows)
@@ -1009,7 +1066,10 @@ export class ProviderSignInService {
           eq(providerFlows.sessionId, sessionId),
         ),
       );
-    return (flow?.result as TestResult | { error: string } | null | undefined) ?? null;
+    const result = flow?.result as TestResult | TestFailure | { error: string } | null | undefined;
+    if (!result) return null;
+    if ("error" in result && !("reason" in result)) return { error: result.error, reason: "invalidResponse" };
+    return result;
   }
 
   async signInOptions(lastProviderId: string | null): Promise<SignInOptions> {

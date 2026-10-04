@@ -184,13 +184,16 @@ export {
   ScimTokenService,
   type ScimTokenSummary,
 } from "./identity/scim-tokens.js";
-export type {
-  CallbackResult,
-  LinkInfo,
-  SignInOptions,
-  SignInRefusal,
-  SignInStep,
-  TestResult,
+export {
+  type CallbackResult,
+  type LinkInfo,
+  type SignInOptions,
+  type SignInRefusal,
+  type SignInStep,
+  type TestFailure,
+  type TestFailureReason,
+  type TestResult,
+  testFailureReasons,
 } from "./identity/sign-in.js";
 export {
   ProviderSyncService,

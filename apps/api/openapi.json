@@ -60922,11 +60922,27 @@
                       "properties": {
                         "error": {
                           "type": "string",
-                          "description": "Why the test sign-in failed."
+                          "description": "What failed, as the provider or Pagehall reported it."
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "providerRefused",
+                            "userNotAssigned",
+                            "consentRequired",
+                            "unknownApplication",
+                            "invalidClient",
+                            "otherTenant",
+                            "domainNotAllowed",
+                            "browserChanged",
+                            "invalidResponse"
+                          ],
+                          "description": "Why the test sign-in failed, so that the interface can say what to do."
                         }
                       },
                       "required": [
-                        "error"
+                        "error",
+                        "reason"
                       ],
                       "additionalProperties": false
                     }

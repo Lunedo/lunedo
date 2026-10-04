@@ -3,7 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App, createQueryClient } from "../../app.js";
 import { initI18n } from "../../i18n/index.js";
+import { navigateTo } from "../../session/provider-sign-in.js";
 import { mockApi, problem, type RecordedRequest } from "../../testing/render.js";
+
+vi.mock("../../session/provider-sign-in.js", async (original) => ({
+  ...(await original<typeof import("../../session/provider-sign-in.js")>()),
+  navigateTo: vi.fn(),
+}));
 
 const OLIVIA = {
   id: "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
@@ -485,6 +491,70 @@ describe("the sign-in settings of the instance", () => {
       { use: "this" },
       { use: "newest" },
     ]);
+  });
+
+  it("explains a failed test sign-in and what to do in the assistant", async () => {
+    const flow = "01929b1e-0000-7000-8000-0000000000f1";
+    adminApi({
+      [`GET /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({ body: provider() }),
+      [`GET /api/v1/instance/identity-providers/${PROVIDER}/test-results/${flow}`]: () => ({
+        body: {
+          error:
+            "access_denied: AADSTS50105: The signed in user is not assigned to a role for the application.",
+          reason: "userNotAssigned",
+        },
+      }),
+    });
+    await renderPath(
+      `/settings/instance/sign-in-providers/new?providerId=${PROVIDER}&step=4&providerTest=${flow}`,
+    );
+    expect(await screen.findByText("The test sign-in failed")).toBeTruthy();
+    expect(screen.getByText(/AADSTS50105/)).toBeTruthy();
+    expect(
+      screen.getByText(/Assign the person or one of their groups to the enterprise application/),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Start test sign-in" })).toBeTruthy();
+  });
+
+  it("says when a test sign-in brought no e-mail address and suggests the user principal name", async () => {
+    const flow = "01929b1e-0000-7000-8000-0000000000f2";
+    adminApi({
+      [`GET /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({ body: provider() }),
+      [`GET /api/v1/instance/identity-providers/${PROVIDER}/test-results/${flow}`]: () => ({
+        body: {
+          subject: "tenant:object",
+          email: null,
+          emailVerified: false,
+          signInName: "alice@example.onmicrosoft.com",
+          displayName: "alice",
+          groups: [],
+          claims: [],
+        },
+      }),
+    });
+    await renderPath(
+      `/settings/instance/sign-in-providers/new?providerId=${PROVIDER}&step=4&providerTest=${flow}`,
+    );
+    expect(await screen.findByText("The provider sent no e-mail address")).toBeTruthy();
+    expect(screen.getByText(/Choose User principal name as the source of the e-mail address/)).toBeTruthy();
+  });
+
+  it("does not keep the test button loading when the browser comes back to the page", async () => {
+    adminApi({
+      [`GET /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({ body: provider() }),
+      [`POST /api/v1/instance/identity-providers/${PROVIDER}/test`]: () => ({
+        body: { url: "https://login.example/authorize" },
+      }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/new?providerId=${PROVIDER}&step=4`);
+    const start = await screen.findByRole("button", { name: "Start test sign-in" });
+    await userEvent.click(start);
+    await waitFor(() => expect(navigateTo).toHaveBeenCalledWith("https://login.example/authorize"));
+    expect(start.hasAttribute("disabled")).toBe(true);
+    const restored = new Event("pageshow");
+    Object.defineProperty(restored, "persisted", { value: true });
+    window.dispatchEvent(restored);
+    await waitFor(() => expect(start.hasAttribute("disabled")).toBe(false));
   });
 
   it("deactivates a provider instead of removing it and activates it again", async () => {

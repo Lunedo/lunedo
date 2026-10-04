@@ -476,7 +476,6 @@
       "worked": "Die Anmeldung hat funktioniert",
       "summary": "{claims, plural, one {# Claim} other {# Claims}} und {groups, plural, one {# Gruppe} other {# Gruppen}} empfangen.",
       "failed": "Die Testanmeldung ist fehlgeschlagen",
-      "failedAction": "Prüfe Client-ID, Zugang und Weiterleitungs-URI bei deinem Anbieter und teste erneut.",
       "unverifiedTitle": "Die E-Mail-Adresse liegt nicht in den Domains des Anbieters",
       "unverified": "{email} liegt in keiner der eingerichteten Domains. Pagehall verknüpft dafür keine Konten und legt keine an.",
       "received": "Was Pagehall empfangen hat",
@@ -488,7 +487,21 @@
       "noGroups": "Keine Gruppen",
       "claims": "Claims und Attribute",
       "noClaims": "Der Anbieter hat keine Claims oder Attribute gesendet.",
-      "claimsHint": "Tokens, Hashwerte und Geheimnisse werden nie angezeigt."
+      "claimsHint": "Tokens, Hashwerte und Geheimnisse werden nie angezeigt.",
+      "failures": {
+        "providerRefused": "{provider} hat die Anmeldung abgelehnt. Prüfe die Meldung oben, korrigiere die Einstellung bei {provider} oder in Pagehall und starte den Test erneut.",
+        "userNotAssigned": "Das Testkonto ist der Anwendung nicht zugewiesen. Weise die Person oder eine ihrer Gruppen der Unternehmensanwendung bei {provider} zu oder schalte die Zuweisungspflicht aus und teste erneut.",
+        "consentRequired": "Für die angefragten Berechtigungen fehlt die Zustimmung. Erteile bei {provider} die Administratorzustimmung für die App-Registrierung und teste erneut.",
+        "unknownApplication": "{provider} kennt die Client-ID nicht. Übernimm die Anwendungs-ID (Client-ID) der App-Registrierung in Pagehall und teste erneut.",
+        "invalidClient": "{provider} hat keine Zugangsdaten von Pagehall angenommen. Hinterlege den aktuellen geheimen Clientschlüssel oder lade das Zertifikat von Pagehall bei {provider} hoch und teste erneut.",
+        "otherTenant": "Das Testkonto gehört zu einem anderen Mandanten als dem in Pagehall eingestellten. Prüfe die Mandanten-ID oder melde dich mit einem Konto des eingestellten Mandanten an.",
+        "domainNotAllowed": "Das Konto gehört zu keiner Domain des Anbieters. Ergänze seine Domain beim Anbieter oder teste mit einem Konto einer eingestellten Domain.",
+        "browserChanged": "Die Anmeldung kam in einem anderen Browser zurück oder der Browser hat das Cookie von Pagehall unterwegs verloren. Starte den Test in diesem Browser erneut und schließe ihn bei {provider} ab, ohne den Browser zu wechseln.",
+        "invalidResponse": "Pagehall konnte die Antwort von {provider} nicht annehmen. Prüfe die Meldung oben und die Einstellungen bei {provider}, etwa die Redirect-URI und das Signaturzertifikat, und teste erneut."
+      },
+      "noEmailTitle": "Der Anbieter hat keine E-Mail-Adresse gesendet",
+      "noEmailEntraId": "Ohne Adresse kann Pagehall kein Konto anlegen oder verknüpfen. Wähle unter Benutzerattribute den Benutzerprinzipalnamen als Quelle der E-Mail-Adresse oder hinterlege die E-Mail-Adresse der Person in {provider}.",
+      "noEmail": "Ohne Adresse kann Pagehall kein Konto anlegen oder verknüpfen. Hinterlege die E-Mail-Adresse der Person in {provider} oder wähle unter Benutzerattribute den Claim oder das Attribut, das sie enthält."
     },
     "wizard": {
       "title": "Identitätsanbieter hinzufügen",

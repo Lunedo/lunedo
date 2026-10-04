@@ -1,4 +1,4 @@
-import { PASSWORD_MAX_LENGTH, signInRefusalReasons } from "@pagehall/server";
+import { PASSWORD_MAX_LENGTH, signInRefusalReasons, testFailureReasons } from "@pagehall/server";
 import {
   caCertificateSchema,
   clientSecretSchema,
@@ -660,7 +660,12 @@ export const testResultSchema = z
         .describe("Groups from the token, or null when the token carries none."),
       claims: receivedClaimsSchema,
     }),
-    z.object({ error: z.string().describe("Why the test sign-in failed.") }),
+    z.object({
+      error: z.string().describe("What failed, as the provider or Pagehall reported it."),
+      reason: z
+        .enum(testFailureReasons)
+        .describe("Why the test sign-in failed, so that the interface can say what to do."),
+    }),
   ])
   .describe("What Pagehall received from the provider.");
 

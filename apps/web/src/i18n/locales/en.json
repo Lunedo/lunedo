@@ -476,7 +476,6 @@
       "worked": "Sign-in worked",
       "summary": "Received {claims, plural, one {# claim} other {# claims}} and {groups, plural, one {# group} other {# groups}}.",
       "failed": "The test sign-in failed",
-      "failedAction": "Check the client ID, the credential and the redirect URI at your provider, then test again.",
       "unverifiedTitle": "The e-mail address is not in the provider's domains",
       "unverified": "{email} is not in one of the configured domains. Pagehall does not link or create accounts for it.",
       "received": "What Pagehall received",
@@ -488,7 +487,21 @@
       "noGroups": "No groups",
       "claims": "Claims and attributes",
       "noClaims": "The provider sent no claims or attributes.",
-      "claimsHint": "Tokens, hashes and secrets are never shown."
+      "claimsHint": "Tokens, hashes and secrets are never shown.",
+      "failures": {
+        "providerRefused": "{provider} refused the sign-in. Check the message above, correct the setting at {provider} or in Pagehall, then start the test again.",
+        "userNotAssigned": "The test account is not assigned to the application. Assign the person or one of their groups to the enterprise application at {provider}, or turn off the assignment requirement, then test again.",
+        "consentRequired": "The application has no consent for the requested permissions. Grant admin consent for the app registration at {provider}, then test again.",
+        "unknownApplication": "{provider} does not know the client ID. Copy the application (client) ID of the app registration into Pagehall, then test again.",
+        "invalidClient": "{provider} did not accept any credential of Pagehall. Add the current client secret or upload Pagehall's certificate at {provider}, then test again.",
+        "otherTenant": "The test account belongs to another tenant than the one set in Pagehall. Check the tenant ID, or sign in with an account of the configured tenant.",
+        "domainNotAllowed": "The account is not in one of the provider's domains. Add its domain to the provider, or test with an account of a configured domain.",
+        "browserChanged": "The sign-in came back in another browser, or the browser lost Pagehall's cookie on the way. Start the test again in this browser and finish it at {provider} without switching browsers.",
+        "invalidResponse": "Pagehall could not accept the answer of {provider}. Check the message above and the settings at {provider}, such as the redirect URI and the signing certificate, then test again."
+      },
+      "noEmailTitle": "The provider sent no e-mail address",
+      "noEmailEntraId": "Without an address, Pagehall cannot create or link an account. Choose User principal name as the source of the e-mail address under User attributes, or set the e-mail address of the person in {provider}.",
+      "noEmail": "Without an address, Pagehall cannot create or link an account. Set the e-mail address of the person in {provider}, or choose the claim or attribute that carries it under User attributes."
     },
     "wizard": {
       "title": "Add identity provider",

@@ -734,6 +734,53 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     expect(await test.services.mappingRules.searchGroups(id, typed)).toEqual([]);
   });
 
+  it("explains a failed test sign-in with the message of the provider and a reason", async () => {
+    const id = await provider({});
+    const failedTest = async (query: (state: string) => URLSearchParams, browserToken?: string) => {
+      const started = await test.services.providerSignIn.start({
+        providerId: id,
+        purpose: "test",
+        baseUrl: BASE,
+      });
+      const state = new URL(started.url).searchParams.get("state") ?? "";
+      const result = await test.services.providerSignIn.callback({
+        providerId: id,
+        query: query(state),
+        browserToken: browserToken ?? started.browserToken,
+        client: {},
+      });
+      if (result.kind !== "tested") throw new Error(`Tested expected, got ${result.kind}`);
+      return (
+        await test.pool.query<{ result: unknown }>("select result from provider_flows where id = $1", [
+          result.flowId,
+        ])
+      ).rows[0]?.result;
+    };
+    expect(
+      await failedTest(
+        (state) =>
+          new URLSearchParams({
+            state,
+            error: "access_denied",
+            error_description:
+              "AADSTS50105: The signed in user is not assigned to a role for the application.",
+          }),
+      ),
+    ).toEqual({
+      error: "access_denied: AADSTS50105: The signed in user is not assigned to a role for the application.",
+      reason: "userNotAssigned",
+    });
+    expect(await failedTest((state) => new URLSearchParams({ state, error: "server_error" }))).toEqual({
+      error: "server_error",
+      reason: "providerRefused",
+    });
+    expect(
+      await failedTest((state) => new URLSearchParams({ state, code: "x" }), "another browser"),
+    ).toMatchObject({
+      reason: "browserChanged",
+    });
+  });
+
   it("requires one of the configured groups when accounts are created", async () => {
     const id = await provider({ accountCreation: true, requiredGroups: ["wiki-users"] });
     expect(
