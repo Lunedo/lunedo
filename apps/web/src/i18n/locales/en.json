@@ -1005,6 +1005,7 @@
     "invalidInvitation": "This invitation was sent to another e-mail address. Sign in with that address or ask for a new invitation.",
     "accountDetailsRequired": "A name and a password are missing. Enter both.",
     "notGuest": "The account is not a guest, so this action does not apply. Reload the page.",
+    "guestMembership": "Guest and portal accounts can only join an organization as guests. Invite the person as a guest, or ask them to use a standard account.",
     "notMember": "The account is not a member, so this action does not apply. Reload the page.",
     "invalidCredentials": "The e-mail address or the password is not correct.",
     "invalidSecondFactor": "The code is not correct. Enter the current code.",

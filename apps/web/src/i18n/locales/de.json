@@ -1005,6 +1005,7 @@
     "invalidInvitation": "Diese Einladung ging an eine andere E-Mail-Adresse. Melde dich mit dieser Adresse an oder bitte um eine neue Einladung.",
     "accountDetailsRequired": "Name und Passwort fehlen. Gib beides ein.",
     "notGuest": "Das Konto ist kein Gast, deshalb passt diese Aktion nicht. Lade die Seite neu.",
+    "guestMembership": "Gast- und Portalkonten können einer Organisation nur als Gäste beitreten. Lade die Person als Gast ein oder bitte sie, ein Standardkonto zu verwenden.",
     "notMember": "Das Konto ist kein Mitglied, deshalb passt diese Aktion nicht. Lade die Seite neu.",
     "invalidCredentials": "Die E-Mail-Adresse oder das Passwort ist nicht korrekt.",
     "invalidSecondFactor": "Der Code ist nicht korrekt. Gib den aktuellen Code ein.",

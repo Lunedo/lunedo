@@ -14795,7 +14795,7 @@
             "description": "Done. The response has no body."
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `guestMembership`: Guest and portal accounts can only be guests. `invalidInput`: The request is not valid.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -14808,6 +14808,14 @@
                       "title": "The request carries both a session and an API token",
                       "status": 400,
                       "code": "ambiguousCredentials"
+                    }
+                  },
+                  "guestMembership": {
+                    "value": {
+                      "type": "urn:pagehall:problem:guestMembership",
+                      "title": "Guest and portal accounts can only be guests",
+                      "status": 400,
+                      "code": "guestMembership"
                     }
                   },
                   "invalidInput": {

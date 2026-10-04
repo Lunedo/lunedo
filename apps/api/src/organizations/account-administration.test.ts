@@ -126,6 +126,27 @@ describe.skipIf(!databaseBaseUrl)("account administration", () => {
     expect((await client.get(`/api/v1/instance/accounts/${account.id}`)).statusCode).toBe(403);
   });
 
+  it("refuses to make a guest account a member through the organization assignment", async () => {
+    const guest = await test.runtime.database.transaction((tx) =>
+      test.runtime.services.accounts.create(tx, {
+        type: "guest",
+        email: "assigned-guest@example.org",
+        name: "Guest",
+        password: null,
+        homeOrganizationId: null,
+      }),
+    );
+    const response = await owner.post(`/api/v1/instance/accounts/${guest.id}/organization`, {
+      organizationId,
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: "guestMembership" });
+    const memberships = await test.runtime.pool.query("select 1 from memberships where account_id = $1", [
+      guest.id,
+    ]);
+    expect(memberships.rowCount).toBe(0);
+  });
+
   it("ends the sessions of another account and reactivates a deactivated one", async () => {
     const { account, client } = await member("sessions@example.org");
     const ended = await owner.post(`/api/v1/accounts/${account.id}/sessions/end`);

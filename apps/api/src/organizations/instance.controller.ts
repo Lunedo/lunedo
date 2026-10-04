@@ -731,7 +731,7 @@ export class InstanceController {
       .strict()
       .describe("The organization to assign."),
     bodyExample: { organizationId: "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9e" },
-    errors: ["notFound", "accountHasOrganization"],
+    errors: ["notFound", "accountHasOrganization", "guestMembership"],
   })
   async assignOrganization(
     @Param("accountId") accountId: string,

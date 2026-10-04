@@ -30,6 +30,7 @@ const KNOWN = new Set([
   "invalidInvitation",
   "accountDetailsRequired",
   "notGuest",
+  "guestMembership",
   "notMember",
   "invalidCredentials",
   "invalidSecondFactor",

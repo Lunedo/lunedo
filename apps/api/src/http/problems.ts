@@ -29,6 +29,7 @@ export const problems = {
   accountDetailsRequired: { status: 400, title: "The account details are missing" },
   accountRequired: { status: 400, title: "An account is required" },
   notGuest: { status: 400, title: "The account is not a guest" },
+  guestMembership: { status: 400, title: "Guest and portal accounts can only be guests" },
   notMember: { status: 400, title: "The account is not a member" },
   confirmationMismatch: { status: 400, title: "The confirmation does not match" },
   anonymizeSelf: { status: 400, title: "An account cannot anonymize itself" },
