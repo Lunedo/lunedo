@@ -176,6 +176,13 @@
       "when": 1791120677695,
       "tag": "0024_graph_mail",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791125053883,
+      "tag": "0025_sign_in_sync_trigger",
+      "breakpoints": true
     }
   ]
 }

@@ -18,6 +18,7 @@ import {
   mappingRules,
   providerGrants,
   providerGroups,
+  providerSyncRuns,
 } from "./schema.js";
 import { withheldRoles } from "./withheld.js";
 
@@ -294,6 +295,16 @@ export class GroupMappingService {
       mailIds.push(...(await this.groupReadFailed(tx, link.identityId, link.accountId)));
     await this.reconcile(tx, link.accountId, report);
     mailIds.push(...report.mailIds);
+    if (report.warnings.length > 0) {
+      await tx.insert(providerSyncRuns).values({
+        providerId: link.providerId,
+        trigger: "signIn",
+        status: "warnings",
+        finishedAt: new Date(),
+        changes: report.changes,
+        warnings: report.warnings,
+      });
+    }
     return report;
   }
 
@@ -402,14 +413,25 @@ export class GroupMappingService {
 
   async reconcile(tx: Transaction, accountId: string, report: SyncReport): Promise<void> {
     const [account] = await tx
-      .select({ state: accounts.state, home: accounts.homeOrganizationId })
+      .select({ state: accounts.state, type: accounts.type, home: accounts.homeOrganizationId })
       .from(accounts)
       .where(eq(accounts.id, accountId))
       .for("update");
     if (account?.state !== "active") return;
-    const desired = await this.#desired(tx, accountId);
     const current = await tx.select().from(providerGrants).where(eq(providerGrants.accountId, accountId));
     const currentKeys = new Set(current.map((grant) => grant.key));
+    let desired = await this.#desired(tx, accountId);
+    if (account.type !== "standard") {
+      for (const grant of desired.filter((item) => !currentKeys.has(item.key))) {
+        report.warnings.push({
+          kind: "grantRefused",
+          accountId,
+          ruleId: null,
+          detail: `${grant.key}: Rules grant nothing to ${account.type} accounts`,
+        });
+      }
+      desired = [];
+    }
     const desiredKeys = new Set(desired.map((grant) => grant.key));
     const order = { membership: 0, role: 1, groupMember: 2 } as const;
     const rank = (grant: DesiredGrant) => grant.home ?? Number.MAX_SAFE_INTEGER;

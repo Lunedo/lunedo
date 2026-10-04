@@ -53698,9 +53698,10 @@
                               "schedule",
                               "manual",
                               "scim",
-                              "reconciliation"
+                              "reconciliation",
+                              "signIn"
                             ],
-                            "description": "What started the run: the schedule, a person, a SCIM request of the provider, or the daily reconciliation while SCIM is on."
+                            "description": "What started the run: the schedule, a person, a SCIM request of the provider, the daily reconciliation while SCIM is on, or a sign-in whose rules could not all be applied."
                           },
                           "status": {
                             "type": "string",
@@ -53984,9 +53985,10 @@
                         "schedule",
                         "manual",
                         "scim",
-                        "reconciliation"
+                        "reconciliation",
+                        "signIn"
                       ],
-                      "description": "What started the run: the schedule, a person, a SCIM request of the provider, or the daily reconciliation while SCIM is on."
+                      "description": "What started the run: the schedule, a person, a SCIM request of the provider, the daily reconciliation while SCIM is on, or a sign-in whose rules could not all be applied."
                     },
                     "status": {
                       "type": "string",

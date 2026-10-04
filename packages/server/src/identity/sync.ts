@@ -59,7 +59,7 @@ export const PROVIDER_SYNC_RETENTION_SCHEDULE = "23 3 * * *";
 
 const SILENT_RUN_MINUTES = 5;
 
-export type SyncTrigger = "schedule" | "manual" | "scim" | "reconciliation";
+export type SyncTrigger = "schedule" | "manual" | "scim" | "reconciliation" | "signIn";
 
 export const SCIM_RECONCILIATION_MINUTES = 24 * 60;
 export type SyncStatus = "running" | "succeeded" | "warnings" | "failed" | "cancelled";

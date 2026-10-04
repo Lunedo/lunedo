@@ -276,7 +276,7 @@ export const auditCatalog = {
     target: "identityProvider",
     fields: z.object({
       runId: z.uuid(),
-      trigger: z.enum(["schedule", "manual", "scim", "reconciliation"]),
+      trigger: z.enum(["schedule", "manual", "scim", "reconciliation", "signIn"]),
       status: z.enum(["succeeded", "warnings", "failed", "cancelled"]),
       changes: z.number().int().nonnegative(),
       warnings: z.number().int().nonnegative(),

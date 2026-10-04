@@ -461,6 +461,77 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
     expect(await roles(existing.id)).toEqual([{ scope: "organization", role: "administrator" }]);
   });
 
+  it("grants nothing through rules to a guest account and shows the refusal in the sync log", async () => {
+    const org = await organization();
+    const group = `group-${randomUUID()}`;
+    await test.services.mappingRules.create(accountPrincipal(org.owner), generic, {
+      target: "organization",
+      group: { id: group, name: "All Staff" },
+      organizationId: org.id,
+      role: { builtIn: "administrator" },
+      synchronizedGroup: false,
+      homeOrganization: false,
+    });
+    const guest = await test.database.transaction((tx) =>
+      test.services.accounts.create(tx, {
+        type: "guest",
+        email: `${randomUUID().slice(0, 8)}@generic.example`,
+        name: "Contractor",
+        password: "a long test passphrase",
+        homeOrganizationId: null,
+      }),
+    );
+    const result = await signIn({ sub: randomUUID(), email: guest.email, groups: [group] });
+    if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
+
+    await test.services.signIn.confirmIdentityLink({
+      pendingToken: result.pendingToken,
+      password: "a long test passphrase",
+      factor: null,
+      client: {},
+    });
+    expect(await membership(org.id, guest.id)).toBeNull();
+    expect(await roles(guest.id)).toEqual([]);
+    const logged = await test.pool.query<{ trigger: string; status: string; warnings: unknown[] }>(
+      "select trigger, status, warnings from provider_sync_runs where provider_id = $1 and warnings @> $2::jsonb",
+      [generic, JSON.stringify([{ kind: "grantRefused", accountId: guest.id }])],
+    );
+    expect(logged.rows).toEqual([expect.objectContaining({ trigger: "signIn", status: "warnings" })]);
+  });
+
+  it("refuses standard memberships for guest and portal accounts on every path", async () => {
+    const org = await organization();
+    const guest = await test.database.transaction((tx) =>
+      test.services.accounts.create(tx, {
+        type: "guest",
+        email: `${randomUUID()}@example.org`,
+        name: "Guest",
+        password: null,
+        homeOrganizationId: null,
+      }),
+    );
+    const portal = await test.pool.query<{ id: string }>(
+      "insert into accounts (id, type, state, name) values (gen_random_uuid(), 'portal', 'active', 'Portal') returning id",
+    );
+    for (const accountId of [guest.id, portal.rows[0]?.id ?? ""]) {
+      for (const kind of ["member", "collaborator"] as const) {
+        await expect(
+          test.database.transaction((tx) =>
+            test.services.memberships.add(tx, SYSTEM, { organizationId: org.id, accountId, kind }),
+          ),
+        ).rejects.toMatchObject({ code: "guestMembership" });
+      }
+    }
+    await test.database.transaction((tx) =>
+      test.services.memberships.add(tx, SYSTEM, {
+        organizationId: org.id,
+        accountId: guest.id,
+        kind: "guest",
+      }),
+    );
+    expect(await membership(org.id, guest.id)).toBe("guest");
+  });
+
   it("removes what the rules granted when an identity is unlinked", async () => {
     const home = await organization();
     const other = await organization();

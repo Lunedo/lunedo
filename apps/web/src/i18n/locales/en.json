@@ -77,7 +77,8 @@
         "schedule": "Schedule",
         "manual": "Manual",
         "scim": "SCIM",
-        "reconciliation": "Reconciliation"
+        "reconciliation": "Reconciliation",
+        "signIn": "Sign-in"
       },
       "statuses": {
         "running": "Running",

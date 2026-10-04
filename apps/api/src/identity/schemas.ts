@@ -745,9 +745,9 @@ const syncRunShape = {
   id: uuid("ID of the run."),
   providerId: uuid("ID of the provider."),
   trigger: z
-    .enum(["schedule", "manual", "scim", "reconciliation"])
+    .enum(["schedule", "manual", "scim", "reconciliation", "signIn"])
     .describe(
-      "What started the run: the schedule, a person, a SCIM request of the provider, or the daily reconciliation while SCIM is on.",
+      "What started the run: the schedule, a person, a SCIM request of the provider, the daily reconciliation while SCIM is on, or a sign-in whose rules could not all be applied.",
     ),
   status: z.enum(["running", "succeeded", "warnings", "failed", "cancelled"]).describe("Result of the run."),
   startedAt: timestamp("When the run started."),

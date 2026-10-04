@@ -195,6 +195,18 @@ export class MembershipService {
     },
     options: { collect?: AuditEvents } = {},
   ): Promise<void> {
+    if (input.kind !== "guest") {
+      const [account] = await tx
+        .select({ type: accounts.type })
+        .from(accounts)
+        .where(eq(accounts.id, input.accountId));
+      if (account?.type === "guest" || account?.type === "portal") {
+        throw new OrganizationError(
+          "guestMembership",
+          "Guest and portal accounts can only hold guest memberships",
+        );
+      }
+    }
     const inserted = await tx
       .insert(memberships)
       .values({

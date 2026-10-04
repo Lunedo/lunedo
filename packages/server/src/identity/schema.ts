@@ -317,7 +317,7 @@ export const providerDeactivations = pgTable("provider_deactivations", {
   createdAt: timestampColumn().notNull().defaultNow(),
 });
 
-export const syncTriggers = ["schedule", "manual", "scim", "reconciliation"] as const;
+export const syncTriggers = ["schedule", "manual", "scim", "reconciliation", "signIn"] as const;
 export const syncTrigger = pgEnum("provider_sync_trigger", syncTriggers);
 export const syncStatuses = ["running", "succeeded", "warnings", "failed", "cancelled"] as const;
 export const syncStatus = pgEnum("provider_sync_status", syncStatuses);

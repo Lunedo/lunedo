@@ -1,0 +1,1 @@
+ALTER TYPE "public"."provider_sync_trigger" ADD VALUE 'signIn';
