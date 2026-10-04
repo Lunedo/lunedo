@@ -195,6 +195,36 @@ describe("group mapping", () => {
     expect(within(dialog).getByText(/Renaming a group in Keycloak breaks every rule for it/)).toBeTruthy();
   });
 
+  it("takes the group value as text when the provider has no directory to search", async () => {
+    const byName = provider("generic");
+    adminApi({
+      [`GET ${BASE}`]: () => ({
+        body: { ...byName, capabilities: { ...byName.capabilities, groupsByName: true } },
+      }),
+      [`GET ${BASE}/mapping-rules`]: () => ({ body: [] }),
+      [`GET ${BASE}/groups`]: () => ({ body: [] }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
+    await userEvent.click(await screen.findByRole("button", { name: "Add rule" }));
+    const dialog = await screen.findByRole("dialog", { name: "Add mapping rule" });
+    await userEvent.type(within(dialog).getByRole("combobox", { name: /^Group in/ }), "pagehall-users");
+    expect(await screen.findByRole("option", { name: /Use this text as group ID/ })).toBeTruthy();
+  });
+
+  it("offers only groups found in the directory of the provider", async () => {
+    adminApi({
+      [`GET ${BASE}/mapping-rules`]: () => ({ body: [] }),
+      [`GET ${BASE}/groups`]: () => ({ body: [] }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
+    await userEvent.click(await screen.findByRole("button", { name: "Add rule" }));
+    const dialog = await screen.findByRole("dialog", { name: "Add mapping rule" });
+    expect(within(dialog).getByText(/Pagehall stores the ID of the group/)).toBeTruthy();
+    await userEvent.type(within(dialog).getByRole("combobox", { name: /^Group in/ }), "pagehall-users");
+    expect(await screen.findByText(/No group with this name found/)).toBeTruthy();
+    expect(screen.queryByRole("option", { name: /Use this text as group ID/ })).toBeNull();
+  });
+
   it("does not warn about renaming when groups have identifiers", async () => {
     adminApi({ [`GET ${BASE}/mapping-rules`]: () => ({ body: [rule()] }) });
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);

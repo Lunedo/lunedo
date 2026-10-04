@@ -350,6 +350,7 @@ function RuleDialog({
     ...(instanceRoles.data ?? []).map((custom) => ({ value: `${CUSTOM}${custom.id}`, label: custom.name })),
   ];
 
+  const directory = provider.capabilities.directorySync;
   const ready = group !== null && (target === "instance" || organization !== null);
   const groupInput = group
     ? { id: group.value, name: group.label === group.value ? null : group.label }
@@ -437,14 +438,26 @@ function RuleDialog({
         ) : null}
         <Field
           label={t("identityProviders.mapping.group", { provider: provider.name })}
-          hint={t("identityProviders.mapping.groupHint", { provider: provider.name })}
+          hint={
+            directory
+              ? t("identityProviders.mapping.groupHintDirectory", { provider: provider.name })
+              : t("identityProviders.mapping.groupHint", { provider: provider.name })
+          }
         >
           <Combobox
             value={group?.value ?? null}
             selectedItem={group}
             onValueChange={(_value, item) => setGroup(item)}
-            placeholder={t("identityProviders.mapping.groupPlaceholder")}
-            emptyText={t("identityProviders.mapping.noGroups")}
+            placeholder={
+              directory
+                ? t("identityProviders.mapping.groupPlaceholderDirectory")
+                : t("identityProviders.mapping.groupPlaceholder")
+            }
+            emptyText={
+              directory
+                ? t("identityProviders.mapping.noGroupsDirectory")
+                : t("identityProviders.mapping.noGroups")
+            }
             load={async (query) => {
               const found = await searchProviderGroups(provider.id, query.trim());
               const items: ComboboxItem[] = found.map((entry) => ({
@@ -461,7 +474,7 @@ function RuleDialog({
                 keywords: [entry.id],
               }));
               const typed = query.trim();
-              if (typed && !items.some((item) => item.value === typed)) {
+              if (!directory && typed && !items.some((item) => item.value === typed)) {
                 items.push({
                   value: typed,
                   label: typed,

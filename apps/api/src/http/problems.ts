@@ -77,6 +77,10 @@ export const problems = {
   syncNotRunning: { status: 409, title: "The run is not running anymore" },
   syncNotHeld: { status: 409, title: "The run holds no deactivations to confirm" },
   providerUnavailable: { status: 502, title: "The identity provider could not be reached" },
+  providerGroupNotFound: {
+    status: 400,
+    title: "The group does not exist in the directory of the identity provider",
+  },
   groupManagedByProvider: { status: 409, title: "The group is managed by an identity provider" },
   lastCredential: { status: 409, title: "The last credential cannot be removed" },
   lastSignInMethod: { status: 409, title: "The last way to sign in cannot be removed" },

@@ -27,7 +27,14 @@ import {
 } from "./schemas.js";
 
 const TAG = "Identity providers";
-const RULE_ERRORS = ["roleNotFound", "roleNotAssignable", "groupNameTaken", "forbidden"] as const;
+const RULE_ERRORS = [
+  "roleNotFound",
+  "roleNotAssignable",
+  "groupNameTaken",
+  "providerGroupNotFound",
+  "providerUnavailable",
+  "forbidden",
+] as const;
 
 @Controller("api/v1/instance/identity-providers/:providerId")
 @InternalRoute()

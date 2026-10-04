@@ -1,5 +1,5 @@
 import { type MappingRuleInput, mappingRuleInputSchema } from "@pagehall/shared";
-import { and, asc, count, eq, ilike, inArray, max, or, sql } from "drizzle-orm";
+import { and, asc, count, eq, ilike, inArray, isNotNull, isNull, max, or, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
@@ -322,9 +322,35 @@ export class MappingRuleService {
     return report;
   }
 
+  async #resolveGroup(provider: ProviderDefinition, input: MappingRuleInput): Promise<MappingRuleInput> {
+    const adapter = this.#adapters.get(provider.type);
+    if (!adapter?.hasDirectory?.(provider) || !adapter.readGroup) return input;
+    const [known] = await this.#database
+      .select({ id: providerGroups.externalId, name: providerGroups.name })
+      .from(providerGroups)
+      .where(
+        and(
+          eq(providerGroups.providerId, provider.id),
+          eq(providerGroups.externalId, input.group.id),
+          isNotNull(providerGroups.name),
+          isNull(providerGroups.missingSince),
+        ),
+      );
+    if (known) return { ...input, group: { id: known.id, name: known.name } };
+    const loaded = await this.#providers.definition(provider.id);
+    const found = await adapter.readGroup(provider, loaded?.credentials ?? [], input.group.id);
+    if (!found) {
+      throw new OrganizationError(
+        "providerGroupNotFound",
+        "The group does not exist in the directory of the identity provider",
+      );
+    }
+    return { ...input, group: { id: found.id, name: found.name } };
+  }
+
   async create(actor: Principal, providerId: string, input: unknown): Promise<MappingRule> {
-    const parsed = this.#parse(input);
     const provider = await this.#provider(providerId);
+    const parsed = await this.#resolveGroup(provider, this.#parse(input));
     return this.#database.transaction(async (tx) => {
       await tx.execute(sql`select 1 from identity_providers where id = ${provider.id} for update`);
       await this.#authorize(tx, actor, parsed);
@@ -385,8 +411,13 @@ export class MappingRuleService {
   }
 
   async update(actor: Principal, providerId: string, ruleId: string, input: unknown): Promise<MappingRule> {
-    const parsed = this.#parse(input);
     const provider = await this.#provider(providerId);
+    const requested = this.#parse(input);
+    const [stored] = await this.#rules(this.#database, provider.id, ruleId);
+    const parsed =
+      stored?.group.id === requested.group.id
+        ? { ...requested, group: { id: stored.group.id, name: stored.group.name } }
+        : await this.#resolveGroup(provider, requested);
     return this.#database.transaction(async (tx) => {
       const previous = await this.#existing(tx, provider.id, ruleId);
       await this.#authorize(tx, actor, this.#inputOf(previous));

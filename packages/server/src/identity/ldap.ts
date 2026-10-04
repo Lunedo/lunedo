@@ -1,4 +1,4 @@
-import type { LdapConfig } from "@pagehall/shared";
+import { isUuid, type LdapConfig } from "@pagehall/shared";
 import { escapeFilter, Filter, ResultCodeError } from "ldapts";
 import {
   type CallbackInput,
@@ -500,10 +500,12 @@ export class LdapAdapter implements IdentityProviderAdapter {
     credentials: readonly ProviderCredential[],
     groupId: string,
   ): Promise<ProviderGroup | null> {
+    const id = groupId.toLowerCase();
+    if (!isUuid(id)) return null;
     return this.#serviceSession(provider, credentials, async (session, ldap) => {
       const filter = this.#isActiveDirectory(ldap)
-        ? `(objectGUID=${Filter.escape(guidToBytes(groupId))})`
-        : escapeFilter`(entryUUID=${groupId})`;
+        ? `(objectGUID=${Filter.escape(guidToBytes(id))})`
+        : escapeFilter`(entryUUID=${id})`;
       const { attributes, binary } = this.#groupAttributes(ldap);
       const [entry] = await session.search(ldap.config.groupBaseDn, {
         scope: "sub",

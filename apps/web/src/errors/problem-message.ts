@@ -60,6 +60,7 @@ const KNOWN = new Set([
   "invalidServiceAccountKey",
   "roleNameTaken",
   "groupNameTaken",
+  "providerGroupNotFound",
   "alreadyMember",
   "alreadyAssigned",
   "lastOwner",

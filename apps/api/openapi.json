@@ -47564,7 +47564,7 @@
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `roleNotAssignable`: The role cannot be assigned.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `providerGroupNotFound`: The group does not exist in the directory of the identity provider. `roleNotAssignable`: The role cannot be assigned.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -47585,6 +47585,14 @@
                       "title": "The request is not valid",
                       "status": 400,
                       "code": "invalidInput"
+                    }
+                  },
+                  "providerGroupNotFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:providerGroupNotFound",
+                      "title": "The group does not exist in the directory of the identity provider",
+                      "status": 400,
+                      "code": "providerGroupNotFound"
                     }
                   },
                   "roleNotAssignable": {
@@ -47717,6 +47725,26 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "`providerUnavailable`: The identity provider could not be reached.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "providerUnavailable": {
+                    "value": {
+                      "type": "urn:pagehall:problem:providerUnavailable",
+                      "title": "The identity provider could not be reached",
+                      "status": 502,
+                      "code": "providerUnavailable"
                     }
                   }
                 }
@@ -48324,7 +48352,7 @@
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `roleNotAssignable`: The role cannot be assigned.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `providerGroupNotFound`: The group does not exist in the directory of the identity provider. `roleNotAssignable`: The role cannot be assigned.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -48345,6 +48373,14 @@
                       "title": "The request is not valid",
                       "status": 400,
                       "code": "invalidInput"
+                    }
+                  },
+                  "providerGroupNotFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:providerGroupNotFound",
+                      "title": "The group does not exist in the directory of the identity provider",
+                      "status": 400,
+                      "code": "providerGroupNotFound"
                     }
                   },
                   "roleNotAssignable": {
@@ -48477,6 +48513,26 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "`providerUnavailable`: The identity provider could not be reached.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "providerUnavailable": {
+                    "value": {
+                      "type": "urn:pagehall:problem:providerUnavailable",
+                      "title": "The identity provider could not be reached",
+                      "status": 502,
+                      "code": "providerUnavailable"
                     }
                   }
                 }

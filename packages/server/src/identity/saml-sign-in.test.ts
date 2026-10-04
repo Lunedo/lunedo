@@ -34,7 +34,9 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
         response.writeHead(503).end();
         return;
       }
-      response.writeHead(200, { "content-type": "application/samlmetadata+xml" }).end(`${metadataPrefix}${idp.metadata()}`);
+      response
+        .writeHead(200, { "content-type": "application/samlmetadata+xml" })
+        .end(`${metadataPrefix}${idp.metadata()}`);
     });
     await new Promise<void>((resolve) => metadataServer.listen(0, "127.0.0.1", resolve));
     metadataUrl = `http://127.0.0.1:${(metadataServer.address() as AddressInfo).port}/metadata`;

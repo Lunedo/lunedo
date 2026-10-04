@@ -992,6 +992,7 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
     const dave = await account(null);
     await link(entra, dave.id, `${GRAPH_TENANT_ID}:${GRAPH_IDS.dave}`);
     const missing = randomUUID();
+    graph.data.groups.push({ id: missing, displayName: "Gone", securityEnabled: true });
     const rule = await test.services.mappingRules.create(accountPrincipal(org.owner), entra, {
       target: "organization",
       group: { id: missing, name: "Gone" },
@@ -1008,6 +1009,10 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
       synchronizedGroup: false,
       homeOrganization: false,
     });
+    graph.data.groups.splice(
+      graph.data.groups.findIndex((group) => group.id === missing),
+      1,
+    );
     const run = await test.services.providerSync.run(entra, "manual");
     expect(run?.status).toBe("warnings");
     const details = await test.services.providerSync.runDetails(entra, run?.id ?? "");
@@ -1020,7 +1025,7 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
   });
 
   it("follows a renamed group in the directory during synchronization", async () => {
-    graph.renameGroup(GRAPH_IDS.platform, "Platform Team");
+    graph.renameGroup(GRAPH_IDS.platform, "Platform");
     const org = await organization();
     await test.services.mappingRules.create(accountPrincipal(org.owner), entra, {
       target: "organization",
@@ -1030,6 +1035,8 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
       synchronizedGroup: false,
       homeOrganization: false,
     });
+    await test.services.providerSync.run(entra, "manual");
+    graph.renameGroup(GRAPH_IDS.platform, "Platform Team");
     const run = await test.services.providerSync.run(entra, "manual");
     const details = await test.services.providerSync.runDetails(entra, run?.id ?? "");
     expect(details?.changes).toContainEqual(

@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
-import type { OidcConfig } from "@pagehall/shared";
 import {
   ENTRA_AUTHORITY,
   GOOGLE_DIRECTORY,
   GOOGLE_TOKEN_URL,
   googleServiceAccountKeySchema,
+  isUuid,
   MICROSOFT_GRAPH,
+  type OidcConfig,
 } from "@pagehall/shared";
 import { importPKCS8, SignJWT } from "jose";
 import { type ProviderCredential, type ProviderGroup, ProviderResponseError } from "./adapter.js";
@@ -248,14 +249,19 @@ export class DirectoryClients {
     credentials: readonly ProviderCredential[],
     groupId: string,
   ): Promise<ProviderGroup | null> {
+    const id = groupId.toLowerCase();
+    if (!isUuid(id)) return null;
     const result = await this.#graphGet(
       providerId,
       config,
       credentials,
-      `${config.graphUrl}/v1.0/groups/${encodeURIComponent(groupId)}?$select=id,displayName`,
+      `${config.graphUrl}/v1.0/groups/${id}?$select=id,displayName`,
     );
     if (result.status === 404) return null;
-    return { id: groupId, name: stringValue(result.body.displayName) };
+    return {
+      id: stringValue(result.body.id)?.toLowerCase() ?? id,
+      name: stringValue(result.body.displayName),
+    };
   }
 
   async graphSearchGroups(
@@ -436,7 +442,10 @@ export class DirectoryClients {
       `groups/${encodeURIComponent(groupId)}`,
     );
     if (result.status === 404) return null;
-    return { id: groupId, name: stringValue(result.body.name) ?? stringValue(result.body.email) };
+    return {
+      id: stringValue(result.body.id) ?? groupId,
+      name: stringValue(result.body.name) ?? stringValue(result.body.email),
+    };
   }
 
   async googleSearchGroups(

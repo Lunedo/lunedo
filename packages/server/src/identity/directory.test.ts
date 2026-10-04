@@ -42,6 +42,7 @@ function recordingFetch() {
   return { requests, fetch: fetch as typeof globalThis.fetch };
 }
 
+const GRAPH_GROUP = randomUUID();
 const credentials = [
   { id: randomUUID(), kind: "clientSecret" as const, secret: "secret", keyId: null, certificate: null },
 ];
@@ -51,8 +52,8 @@ describe("directory clients", () => {
     const recorded = recordingFetch();
     const clients = new DirectoryClients({ allowInsecure: true, fetch: recorded.fetch });
     const providerId = randomUUID();
-    await clients.graphGroup(providerId, entra("https://graph.one.example"), credentials, "group");
-    await clients.graphGroup(providerId, entra("https://graph.two.example"), credentials, "group");
+    await clients.graphGroup(providerId, entra("https://graph.one.example"), credentials, GRAPH_GROUP);
+    await clients.graphGroup(providerId, entra("https://graph.two.example"), credentials, GRAPH_GROUP);
     const reads = recorded.requests.filter((request) => request.url.includes("/v1.0/groups/"));
     expect(reads.map((read) => [new URL(read.url).host, read.authorization])).toEqual([
       ["graph.one.example", "Bearer token-1"],
@@ -64,7 +65,7 @@ describe("directory clients", () => {
     const recorded = recordingFetch();
     const clients = new DirectoryClients({ allowInsecure: false, fetch: recorded.fetch });
     await expect(
-      clients.graphGroup(randomUUID(), entra("https://collector.example"), credentials, "group"),
+      clients.graphGroup(randomUUID(), entra("https://collector.example"), credentials, GRAPH_GROUP),
     ).rejects.toThrow(ProviderResponseError);
     await expect(
       clients.googleGroup(

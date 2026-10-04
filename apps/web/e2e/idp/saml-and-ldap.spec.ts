@@ -89,6 +89,22 @@ async function mapGroup(
   expect(response.status(), await response.text()).toBe(201);
 }
 
+async function groupByName(
+  request: APIRequestContext,
+  providerId: string,
+  name: string,
+): Promise<{ id: string; name: string }> {
+  const response = await request.get(
+    `/api/v1/instance/identity-providers/${providerId}/groups?q=${encodeURIComponent(name)}`,
+  );
+  expect(response.status(), await response.text()).toBe(200);
+  const found = ((await response.json()) as { id: string; name: string | null }[]).find(
+    (group) => group.name === name,
+  );
+  if (!found) throw new Error(`The directory has no group named ${name}`);
+  return { id: found.id, name };
+}
+
 async function account(request: APIRequestContext, email: string) {
   const response = await request.get(`/api/v1/instance/accounts?q=${encodeURIComponent(email)}`);
   const [found] = (
@@ -266,11 +282,26 @@ test.describe("sign-in through LDAP (OpenLDAP)", () => {
     providerId = ((await response.json()) as { provider: { id: string } }).provider.id;
     homeId = await firstOrganization(owner.request);
     engineeringId = await newOrganization(owner.request, "E2E LDAP engineering");
-    await mapGroup(owner.request, providerId, { id: await groupId("staff"), name: "staff" }, homeId, true);
+    const refused = await owner.request.post(
+      `/api/v1/instance/identity-providers/${providerId}/mapping-rules`,
+      {
+        headers,
+        data: {
+          target: "instance",
+          group: { id: "engineering", name: null },
+          role: { builtIn: "administrator" },
+        },
+      },
+    );
+    expect(refused.status()).toBe(400);
+    expect(((await refused.json()) as { code: string }).code).toBe("providerGroupNotFound");
+    const staff = await groupByName(owner.request, providerId, "staff");
+    expect(staff.id).toBe(await groupId("staff"));
+    await mapGroup(owner.request, providerId, staff, homeId, true);
     await mapGroup(
       owner.request,
       providerId,
-      { id: await groupId("engineering"), name: "engineering" },
+      await groupByName(owner.request, providerId, "engineering"),
       engineeringId,
       false,
     );

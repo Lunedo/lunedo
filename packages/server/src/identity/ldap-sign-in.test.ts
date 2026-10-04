@@ -7,6 +7,7 @@ import { testDatabaseBaseUrl } from "../testing/database.js";
 import { type FakeOidcProvider, startFakeOidcProvider } from "../testing/fake-oidc.js";
 import { FakeLdapDirectory, type FakeLdapEntry } from "../testing/fakes/ldap-directory.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
+import { guidFromBytes, guidToBytes } from "./ldap.js";
 import { type CallbackResult, DirectorySignInRefusedError } from "./sign-in.js";
 
 const baseUrl = testDatabaseBaseUrl();
@@ -144,6 +145,117 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
     expect(run?.status).toBe("succeeded");
     expect(await membership(org.id, accountId)).toBe(false);
     expect(await membership(home.id, accountId)).toBe(true);
+  });
+
+  async function activeDirectoryProvider() {
+    const domain = `${randomUUID().slice(0, 8)}.example.org`;
+    const base = `OU=${domain},DC=corp,DC=example`;
+    const { provider: created } = await test.services.identityProviders.create(SYSTEM, {
+      type: "ldap",
+      name: "Active Directory",
+      config: {
+        preset: "activeDirectory",
+        url: "ldaps://dc01.corp.example",
+        bindDn: SERVICE_DN,
+        userBaseDn: `OU=People,${base}`,
+        groupBaseDn: `OU=Groups,${base}`,
+        domains: [domain],
+        accountCreation: { enabled: true, requiredGroups: [] },
+        secondFactor: { mode: "provider" },
+      },
+      credential: { kind: "bindPassword", secret: SERVICE_PASSWORD },
+    });
+    const adPerson = (name: string): FakeLdapEntry => ({
+      dn: `CN=${name},OU=People,${base}`,
+      password: PASSWORD,
+      attributes: {
+        objectClass: ["user"],
+        objectCategory: ["person"],
+        objectGUID: [guidToBytes(randomUUID())],
+        userPrincipalName: [`${name}@${domain}`],
+        sAMAccountName: [name],
+        mail: [`${name}@${domain}`],
+        displayName: [name],
+        userAccountControl: ["512"],
+        accountExpires: ["0"],
+      },
+    });
+    const adGroup = (name: string, members: string[]): FakeLdapEntry => ({
+      dn: `CN=${name},OU=Groups,${base}`,
+      attributes: {
+        objectClass: ["group"],
+        objectGUID: [guidToBytes(randomUUID())],
+        cn: [name],
+        member: members,
+      },
+    });
+    return { id: created.id, domain, adPerson, adGroup };
+  }
+
+  async function ruleFor(
+    providerId: string,
+    organizationId: string,
+    owner: string,
+    group: { id: string; name: string | null },
+  ) {
+    return test.services.mappingRules.create(accountPrincipal(owner), providerId, {
+      target: "organization",
+      group,
+      organizationId,
+      role: null,
+      synchronizedGroup: false,
+      homeOrganization: true,
+    });
+  }
+
+  it("stores the directory's ID of a group chosen by name and matches it for nested members", async () => {
+    const { id, domain } = await provider();
+    const ada = person(`ada-${randomUUID().slice(0, 6)}`, domain);
+    const users = group(`pagehall-users-${randomUUID().slice(0, 6)}`, [ada.dn]);
+    const admins = group(`pagehall-admins-${randomUUID().slice(0, 6)}`, [users.dn]);
+    directory.entries.push(ada, users, admins);
+    const org = await organization();
+    const name = String(admins.attributes.cn?.[0]);
+    await expect(ruleFor(id, org.id, org.owner, { id: name, name: null })).rejects.toMatchObject({
+      code: "providerGroupNotFound",
+    });
+    const [match] = await test.services.mappingRules.searchGroups(id, name);
+    expect(match).toMatchObject({ id: String(admins.attributes.entryUUID?.[0]), name });
+    const rule = await ruleFor(id, org.id, org.owner, {
+      id: String(match?.id).toUpperCase(),
+      name: null,
+    });
+    expect(rule.group).toMatchObject({ id: match?.id, name });
+    const signedIn = await signIn(id, String(ada.attributes.mail?.[0]));
+    if (signedIn.kind !== "signedIn") throw new Error(`Signed in expected, got ${signedIn.kind}`);
+    expect(await membership(org.id, signedIn.signedIn.session.accountId)).toBe(true);
+  });
+
+  it("matches a rule of Active Directory for nested members at sign-in and in a sync", async () => {
+    const ad = await activeDirectoryProvider();
+    const alice = ad.adPerson(`alice-${randomUUID().slice(0, 6)}`);
+    const users = ad.adGroup("pagehall-users", [alice.dn]);
+    const admins = ad.adGroup("pagehall-admins", [users.dn]);
+    directory.entries.push(alice, users, admins);
+    const org = await organization();
+    await expect(
+      ruleFor(ad.id, org.id, org.owner, { id: "pagehall-admins", name: null }),
+    ).rejects.toMatchObject({ code: "providerGroupNotFound" });
+    const [match] = await test.services.mappingRules.searchGroups(ad.id, "pagehall-admins");
+    expect(match?.id).toBe(guidFromBytes(admins.attributes.objectGUID?.[0] as Buffer));
+    const rule = await ruleFor(ad.id, org.id, org.owner, { id: String(match?.id), name: null });
+    expect(rule.group.name).toBe("pagehall-admins");
+    const signedIn = await signIn(ad.id, String(alice.attributes.userPrincipalName?.[0]));
+    if (signedIn.kind !== "signedIn") throw new Error(`Signed in expected, got ${signedIn.kind}`);
+    const accountId = signedIn.signedIn.session.accountId;
+    expect(await membership(org.id, accountId)).toBe(true);
+
+    users.attributes.member = [];
+    expect((await test.services.providerSync.run(ad.id, "manual"))?.status).toBe("succeeded");
+    expect(await membership(org.id, accountId)).toBe(false);
+    users.attributes.member = [alice.dn];
+    expect((await test.services.providerSync.run(ad.id, "manual"))?.status).toBe("succeeded");
+    expect(await membership(org.id, accountId)).toBe(true);
   });
 
   it("deactivates a disabled person at the next sync and reactivates them when enabled again", async () => {
