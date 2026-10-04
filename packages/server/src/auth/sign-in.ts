@@ -656,6 +656,10 @@ export class SignInService {
       ...(hasSecondFactor(factors) && factor ? [factor.type] : []),
       "identityProvider",
     ];
+    const kind =
+      !hasSecondFactor(factors) && (await this.secondFactorRequired(account.id))
+        ? "secondFactorSetup"
+        : "full";
     const mailIds: string[] = [];
     let result: SignedIn;
     try {
@@ -692,7 +696,7 @@ export class SignInService {
           targetId: account.id,
           fields: { providerId: identity.providerId, via: "signIn" },
         });
-        return this.#createSession(tx, account, methods, "full", input.client, mailIds, started, {
+        return this.#createSession(tx, account, methods, kind, input.client, mailIds, started, {
           providerId: identity.providerId,
           identityId: linked.id,
           providerSessionId: identity.providerSessionId,

@@ -9,6 +9,7 @@ import {
   InvalidSecondFactorError,
   RateLimitedError,
 } from "../auth/errors.js";
+import { twoFactorRequiredSetting } from "../auth/settings.js";
 import { ForbiddenError } from "../authorization/service.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { type FakeOidcProvider, startFakeOidcProvider, type TokenOverrides } from "../testing/fake-oidc.js";
@@ -408,6 +409,22 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     });
     const again = await signIn(id, { sub: subject, email: existing.email });
     expect(again.kind === "signedIn" && again.signedIn.session.accountId).toBe(existing.id);
+  });
+
+  it("asks to set up the required second factor after linking an account that has none", async () => {
+    const org = await organization();
+    await test.settings.set(twoFactorRequiredSetting, { organization: org }, "organization", true);
+    const existing = await account(org);
+    const id = await provider({});
+    const result = await signIn(id, { sub: randomUUID(), email: existing.email });
+    if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
+    const linked = await test.services.signIn.confirmIdentityLink({
+      pendingToken: result.pendingToken,
+      password: PASSWORD,
+      factor: null,
+      client: {},
+    });
+    expect(linked.session).toMatchObject({ accountId: existing.id, kind: "secondFactorSetup" });
   });
 
   it("records a reference when the person says the account is not theirs", async () => {
