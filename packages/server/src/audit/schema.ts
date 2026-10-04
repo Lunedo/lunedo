@@ -68,7 +68,11 @@ export const auditSubjectKeys = pgTable(
     subjectId: uuid().primaryKey(),
     accountId: uuid(),
     key: encrypted().notNull(),
+    addressDigest: text(),
     createdAt: timestamp({ withTimezone: true, mode: "date" }).notNull().defaultNow(),
   },
-  (table) => [index().on(table.accountId)],
+  (table) => [
+    index().on(table.accountId),
+    index().on(table.addressDigest).where(sql`${table.addressDigest} is not null`),
+  ],
 );

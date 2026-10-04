@@ -190,6 +190,13 @@
       "when": 1791125589086,
       "tag": "0026_sync_deactivation_hold",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1791126147661,
+      "tag": "0027_audit_subject_address",
+      "breakpoints": true
     }
   ]
 }

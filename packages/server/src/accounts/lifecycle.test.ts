@@ -257,10 +257,37 @@ describe.skipIf(!baseUrl)("placeholders and anonymization", () => {
     const name = `Anna Erasure ${marker}`;
     const email = `anna.${marker}@${domain}`;
     const signInName = `anna-${marker}`;
+    const placeholderEmail = `anna.old.${marker}@other.example`;
+    const aliasEmail = `anna.alias.${marker}@${domain}`;
     const ip = `198.51.100.${Math.floor(Math.random() * 200) + 20}`;
-    const result = await signIn({ sub: randomUUID(), email, name, preferred_username: signInName }, ip);
+    const invitation = await test.services.invitations.create(accountPrincipal(org.owner), org.id, {
+      email,
+      kind: "member",
+    });
+    await test.pool.query("update invitations set expires_at = now() - interval '31 days' where id = $1", [
+      invitation.id,
+    ]);
+    await test.services.invitations.cleanup();
+    const subject = randomUUID();
+    const result = await signIn({ sub: subject, email, name, preferred_username: signInName }, ip);
     if (result.kind !== "signedIn") throw new Error(`Signed in expected, got ${result.kind}`);
     const accountId = result.signedIn.session.accountId;
+    const placeholder = await test.services.accountLifecycle.createPlaceholder(
+      accountPrincipal(administrator),
+      { name, email: placeholderEmail },
+    );
+    await test.services.accountLifecycle.mergePlaceholder(
+      accountPrincipal(administrator),
+      placeholder.id,
+      accountId,
+    );
+    await test.pool.query("update identities set email = $1 where account_id = $2", [aliasEmail, accountId]);
+    await test.pool.query(
+      `insert into sign_in_refusals (id, reference, provider_id, reason, subject, email, display_name)
+       values (gen_random_uuid(), $1, $2, 'accountInactive', $3, $4, $5),
+              (gen_random_uuid(), $6, $2, 'accountInactive', $3, null, $5)`,
+      [`R-${marker}-1`, providerId, subject, aliasEmail, name, `R-${marker}-2`],
+    );
     await test.database.transaction((tx) =>
       test.services.memberships.add(tx, SYSTEM, { organizationId: org.id, accountId, kind: "member" }),
     );
@@ -328,12 +355,36 @@ describe.skipIf(!baseUrl)("placeholders and anonymization", () => {
       const rows = await test.pool.query<{ row: string }>(`select t::text as row from "${table}" t`);
       for (const { row } of rows.rows) {
         const text = row.toLowerCase();
-        for (const value of [name, email, signInName, ip]) {
+        for (const value of [name, email, signInName, ip, placeholderEmail, aliasEmail]) {
           if (text.includes(value.toLowerCase())) found.push(`${table}: ${value}: ${row.slice(0, 400)}`);
         }
       }
     }
     expect(found).toEqual([]);
+    const sealed = await test.pool.query<{
+      scopeType: string;
+      scopeId: string;
+      sequence: number;
+      labels: unknown;
+      fields: unknown;
+      clientIp: string | null;
+      userAgent: string | null;
+      sealed: unknown;
+    }>(
+      `select scope_type as "scopeType", scope_id as "scopeId", sequence::int as sequence, labels, fields,
+         client_ip as "clientIp", user_agent as "userAgent", sealed
+       from audit_events where sealed is not null`,
+    );
+    const opened = await test.services.audit.sealer?.unseal(
+      test.database,
+      sealed.rows.map((row) => ({ ...row, formerSubjects: [] })),
+    );
+    const readable = JSON.stringify(opened ?? []).toLowerCase();
+    expect(
+      [name, email, signInName, ip, placeholderEmail, aliasEmail].filter((value) =>
+        readable.includes(value.toLowerCase()),
+      ),
+    ).toEqual([]);
     expect((await test.services.audit.verify()).every((chain) => chain.broken === null)).toBe(true);
 
     const events = await test.services.auditReader.list(accountPrincipal(administrator), {

@@ -1,8 +1,9 @@
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
-import { eq, inArray, or } from "drizzle-orm";
+import { createCipheriv, createDecipheriv, createHmac, randomBytes } from "node:crypto";
+import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import type { Encryption } from "../crypto/envelope.js";
 import { KEY_LENGTH } from "../crypto/key-ring.js";
 import type { Executor, Transaction } from "../database/database.js";
+import { instanceSecrets } from "../mail/schema.js";
 import { auditSubjectKeys } from "./schema.js";
 
 export interface SealedParts {
@@ -29,6 +30,8 @@ export interface UnsealedEntry {
 }
 
 const FORMAT_VERSION = 1;
+const ADDRESS_KEY = "auditAddressKey";
+const ADDRESS_KEY_CONTEXT = `instance_secrets.value:${ADDRESS_KEY}`;
 const IV_LENGTH = 12;
 const TAG_LENGTH = 16;
 
@@ -201,6 +204,62 @@ export class AuditSealer {
       userAgent,
       formerSubjects: formerSubjects.sort(),
     };
+  }
+
+  async #addressKey(tx: Transaction): Promise<Buffer> {
+    const read = async () => {
+      const [row] = await tx
+        .select({ value: instanceSecrets.value })
+        .from(instanceSecrets)
+        .where(eq(instanceSecrets.name, ADDRESS_KEY));
+      return row
+        ? Buffer.from(this.#encryption.decryptString(row.value, ADDRESS_KEY_CONTEXT), "base64")
+        : null;
+    };
+    const stored = await read();
+    if (stored) return stored;
+    const fresh = randomBytes(KEY_LENGTH);
+    await tx
+      .insert(instanceSecrets)
+      .values({
+        name: ADDRESS_KEY,
+        value: this.#encryption.encrypt(fresh.toString("base64"), ADDRESS_KEY_CONTEXT),
+      })
+      .onConflictDoNothing();
+    fresh.fill(0);
+    const created = await read();
+    if (!created) throw new Error("The audit address key is missing");
+    return created;
+  }
+
+  async #digests(tx: Transaction, addresses: readonly string[]): Promise<string[]> {
+    const normalized = [...new Set(addresses.map((address) => address.trim().toLowerCase()))].filter(Boolean);
+    if (normalized.length === 0) return [];
+    const key = await this.#addressKey(tx);
+    try {
+      return normalized.map((address) => createHmac("sha256", key).update(address, "utf8").digest("hex"));
+    } finally {
+      key.fill(0);
+    }
+  }
+
+  async tagAddress(tx: Transaction, subjectId: string, address: string): Promise<void> {
+    const [digest] = await this.#digests(tx, [address]);
+    if (!digest) return;
+    await tx
+      .update(auditSubjectKeys)
+      .set({ addressDigest: digest })
+      .where(and(eq(auditSubjectKeys.subjectId, subjectId), isNull(auditSubjectKeys.accountId)));
+  }
+
+  async destroyByAddress(tx: Transaction, addresses: readonly string[]): Promise<number> {
+    const digests = await this.#digests(tx, addresses);
+    if (digests.length === 0) return 0;
+    const removed = await tx
+      .delete(auditSubjectKeys)
+      .where(inArray(auditSubjectKeys.addressDigest, digests))
+      .returning({ subjectId: auditSubjectKeys.subjectId });
+    return removed.length;
   }
 
   async linkSubject(tx: Transaction, subjectId: string, accountId: string): Promise<void> {

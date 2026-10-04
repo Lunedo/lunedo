@@ -328,8 +328,15 @@ export class AccountLifecycleService {
         );
       await tx
         .update(accounts)
-        .set({ email: null, mergedIntoId: accountId, homeOrganizationId: null, updatedAt: new Date() })
+        .set({
+          name: formerUserName(placeholderId),
+          email: null,
+          mergedIntoId: accountId,
+          homeOrganizationId: null,
+          updatedAt: new Date(),
+        })
         .where(eq(accounts.id, placeholderId));
+      await this.#audit.sealer?.linkSubject(tx, placeholderId, accountId);
       events.push({
         name: "account.placeholderMerged",
         actor,
@@ -402,7 +409,12 @@ export class AccountLifecycleService {
       const removedIdentities = await tx
         .delete(identities)
         .where(eq(identities.accountId, target.id))
-        .returning({ id: identities.id });
+        .returning({
+          id: identities.id,
+          providerId: identities.providerId,
+          subject: identities.subject,
+          email: identities.email,
+        });
       events.push({
         name: "account.anonymized",
         actor,
@@ -420,6 +432,7 @@ export class AccountLifecycleService {
       await this.#erase(
         tx,
         target,
+        removedIdentities,
         sessionIps.flatMap((row) => (row.clientIp ? [row.clientIp] : [])),
       );
       return {
@@ -433,9 +446,22 @@ export class AccountLifecycleService {
   async #erase(
     tx: Transaction,
     target: { id: string; email: string | null },
+    linked: { providerId: string; subject: string; email: string | null }[],
     clientIps: string[],
   ): Promise<void> {
     const id = target.id;
+    const addresses = [
+      ...new Set(
+        [target.email, ...linked.map((identity) => identity.email)].flatMap((address) =>
+          address ? [address.trim().toLowerCase()] : [],
+        ),
+      ),
+    ];
+    const lowerAddress = (column: typeof invitations.email | typeof signInRefusals.email) =>
+      sql`lower(${column}) in (${sql.join(
+        addresses.map((address) => sql`${address}`),
+        sql`, `,
+      )})`;
     for (const table of [
       authChallenges,
       accountTokens,
@@ -458,18 +484,26 @@ export class AccountLifecycleService {
         ),
       );
     await tx.delete(settingValues).where(and(eq(settingValues.level, "user"), eq(settingValues.scopeId, id)));
-    const invited = target.email
-      ? await tx
-          .delete(invitations)
-          .where(sql`lower(${invitations.email}) = lower(${target.email})`)
-          .returning({ id: invitations.id })
-      : [];
+    const invited =
+      addresses.length > 0
+        ? await tx
+            .delete(invitations)
+            .where(lowerAddress(invitations.email))
+            .returning({ id: invitations.id })
+        : [];
     await tx
       .delete(signInRefusals)
       .where(
-        target.email
-          ? or(eq(signInRefusals.accountId, id), sql`lower(${signInRefusals.email}) = lower(${target.email})`)
-          : eq(signInRefusals.accountId, id),
+        or(
+          eq(signInRefusals.accountId, id),
+          addresses.length > 0 ? lowerAddress(signInRefusals.email) : undefined,
+          ...linked.map((identity) =>
+            and(
+              eq(signInRefusals.providerId, identity.providerId),
+              eq(signInRefusals.subject, identity.subject),
+            ),
+          ),
+        ),
       );
     if (target.email) {
       await tx
@@ -504,6 +538,7 @@ export class AccountLifecycleService {
     if (sealer) {
       await sealer.destroy(tx, id);
       for (const invitation of invited) await sealer.destroySubject(tx, invitation.id);
+      await sealer.destroyByAddress(tx, addresses);
     }
   }
 

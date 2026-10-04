@@ -489,12 +489,19 @@ export class InvitationService {
   }
 
   async cleanup(): Promise<number> {
-    const invitationsRemoved = await this.#database
-      .delete(invitations)
-      .where(sql`${invitations.expiresAt} < now() - interval '30 days'`);
+    const invitationsRemoved = await this.#database.transaction(async (tx) => {
+      const removed = await tx
+        .delete(invitations)
+        .where(sql`${invitations.expiresAt} < now() - interval '30 days'`)
+        .returning({ id: invitations.id, email: invitations.email });
+      const sealer = this.#audit.sealer;
+      if (sealer)
+        for (const invitation of removed) await sealer.tagAddress(tx, invitation.id, invitation.email);
+      return removed.length;
+    });
     const tokensRemoved = await this.#database
       .delete(registrationTokens)
       .where(sql`${registrationTokens.usedAt} is not null or ${registrationTokens.expiresAt} < now()`);
-    return (invitationsRemoved.rowCount ?? 0) + (tokensRemoved.rowCount ?? 0);
+    return invitationsRemoved + (tokensRemoved.rowCount ?? 0);
   }
 }
