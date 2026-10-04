@@ -8,9 +8,12 @@ import {
   type Principal,
   publicApiDocumentationSetting,
   type Resource,
+  ScimError,
+  ScimTokenRejectedError,
   SetupNotFoundError,
   TokenRejectedError,
 } from "@pagehall/server";
+import { isUuid } from "@pagehall/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { API_ROUTE, type ApiRouteDefinition } from "../http/api-route.js";
@@ -20,6 +23,8 @@ import { bearerToken } from "../http/request.js";
 import { ROUTE_ACCESS, type RouteAccess } from "./route-access.js";
 
 type AccountPrincipal = Extract<Principal, { type: "account" }>;
+
+const SCIM_REJECTED_PER_MINUTE = 30;
 
 @Injectable()
 export class RouteAccessGuard implements CanActivate {
@@ -64,6 +69,9 @@ export class RouteAccessGuard implements CanActivate {
         return this.#permission(request, reply, this.#services(), access);
       case "apiDocumentation":
         return this.#documentation(request, reply);
+      case "scimToken":
+        await this.#scim(request, reply, this.#services(), access.param);
+        return true;
       case "setupCode": {
         if (await this.#services().setup.isComplete()) throw new SetupNotFoundError();
         return true;
@@ -111,6 +119,33 @@ export class RouteAccessGuard implements CanActivate {
       if (error instanceof TokenRejectedError)
         reply.header("www-authenticate", 'Bearer error="invalid_token"');
       throw error;
+    }
+  }
+
+  async #scim(
+    request: FastifyRequest,
+    reply: FastifyReply,
+    services: AccountServices,
+    param: string,
+  ): Promise<void> {
+    const providerId = ((request.params ?? {}) as Record<string, string | undefined>)[param] ?? "";
+    const token = bearerToken(request);
+    try {
+      if (!isUuid(providerId) || !token) throw new ScimTokenRejectedError();
+      await services.scimTokens.authenticate(providerId.toLowerCase(), token);
+      (request.params as Record<string, string>)[param] = providerId.toLowerCase();
+    } catch (error) {
+      if (!(error instanceof ScimTokenRejectedError)) throw error;
+      const limit = await services.rateLimiter.consume(
+        `scimRejected:client:${request.ip}`,
+        SCIM_REJECTED_PER_MINUTE,
+        60,
+      );
+      if (!limit.allowed) {
+        throw new ScimError(429, "tooMany", "Too many requests with a wrong token", limit.retryAfterSeconds);
+      }
+      reply.header("www-authenticate", 'Bearer realm="SCIM"');
+      throw new ScimError(401, null, "The bearer token is missing, expired or belongs to another provider");
     }
   }
 

@@ -50,6 +50,11 @@ function isSamlResponse(request: FastifyRequest): boolean {
 
 export async function configureApp(app: NestFastifyApplication, context: ApiContext): Promise<void> {
   const fastify = app.getHttpAdapter().getInstance();
+  fastify.addContentTypeParser(
+    "application/scim+json",
+    { parseAs: "string" },
+    fastify.getDefaultJsonParser("error", "error"),
+  );
 
   fastify.addHook("onRequest", async (request, reply) => {
     const userAgent = request.headers["user-agent"];

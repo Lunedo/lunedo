@@ -57,6 +57,7 @@ import {
   SamlMetadataSection,
   SamlServiceProviderFields,
 } from "./provider-saml.js";
+import { ScimTab } from "./provider-scim.js";
 import { SyncSettings, SyncTab, syncSummary } from "./provider-sync.js";
 import { StartTestButton, TestResult } from "./provider-test.js";
 
@@ -77,9 +78,10 @@ export const providerTabs: ProviderTab[] = [
     value: "mapping",
     labelKey: "identityProviders.tabs.mapping",
     component: MappingTab,
-    available: (provider) => provider.capabilities.groups,
+    available: (provider) => provider.capabilities.groups || provider.scim,
   },
   { value: "sync", labelKey: "identityProviders.tabs.sync", component: SyncTab, available: () => true },
+  { value: "scim", labelKey: "identityProviders.tabs.scim", component: ScimTab, available: () => true },
 ];
 
 async function toBase64(file: File): Promise<string> {

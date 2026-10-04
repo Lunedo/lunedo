@@ -35,7 +35,7 @@ export const providerSyncJob = defineJob({
   name: "identity-providers.synchronize",
   payload: z.object({
     providerId: z.uuid(),
-    trigger: z.enum(["schedule", "manual"]),
+    trigger: z.enum(["schedule", "manual", "reconciliation"]),
     actorId: z.uuid().nullable(),
   }),
   retryLimit: 0,
@@ -59,7 +59,9 @@ export const PROVIDER_SYNC_RETENTION_SCHEDULE = "23 3 * * *";
 
 const SILENT_RUN_MINUTES = 5;
 
-export type SyncTrigger = "schedule" | "manual";
+export type SyncTrigger = "schedule" | "manual" | "scim" | "reconciliation";
+
+export const SCIM_RECONCILIATION_MINUTES = 24 * 60;
 export type SyncStatus = "running" | "succeeded" | "warnings" | "failed" | "cancelled";
 
 export interface SyncRunSummary {
@@ -160,22 +162,25 @@ export class ProviderSyncService {
       .select({
         id: identityProviders.id,
         config: identityProviders.config,
-        lastStart: sql<Date | null>`(select max(${providerSyncRuns.startedAt}) from ${providerSyncRuns}
-          where ${providerSyncRuns.providerId} = ${identityProviders.id} and ${providerSyncRuns.trigger} = 'schedule')`,
+        lastStart: sql<Date | null>`(select max(r.started_at) from provider_sync_runs r
+          where r.provider_id = ${identityProviders}.id and r.trigger in ('schedule', 'reconciliation'))`,
+        scim: sql<boolean>`exists (select 1 from scim_tokens t where t.provider_id = ${identityProviders}.id
+          and (t.expires_at is null or t.expires_at > now()))`,
       })
       .from(identityProviders);
     let queued = 0;
     for (const row of providers) {
       const loaded = await this.#providers.definition(row.id);
       if (!loaded?.active || !this.#adapterFor(loaded.provider)) continue;
-      const interval = loaded.provider.config.sync.intervalMinutes * 60 * 1000;
+      const minutes = row.scim ? SCIM_RECONCILIATION_MINUTES : loaded.provider.config.sync.intervalMinutes;
+      const interval = minutes * 60 * 1000;
       const last = row.lastStart ? new Date(row.lastStart).getTime() : 0;
       if (Date.now() - last < interval) continue;
       const slot = Math.floor(Date.now() / interval);
       await this.#jobs.enqueue(
         providerSyncJob,
-        { providerId: row.id, trigger: "schedule", actorId: null },
-        { idempotencyKey: `${row.id}:${slot}` },
+        { providerId: row.id, trigger: row.scim ? "reconciliation" : "schedule", actorId: null },
+        { idempotencyKey: `${row.id}:${row.scim ? "reconciliation" : "schedule"}:${slot}` },
       );
       queued++;
     }

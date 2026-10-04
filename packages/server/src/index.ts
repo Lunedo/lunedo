@@ -169,6 +169,21 @@ export {
 } from "./identity/providers.js";
 export type { CertificateInfo } from "./identity/saml-metadata.js";
 export { signInRefusalReasons } from "./identity/schema.js";
+export { SCIM_REQUESTS_PER_MINUTE, type ScimPage, ScimService } from "./identity/scim.js";
+export {
+  resourceTypes as scimResourceTypes,
+  ScimError,
+  schemaDefinitions as scimSchemaDefinitions,
+  scimErrorBody,
+  serviceProviderConfig as scimServiceProviderConfig,
+} from "./identity/scim-protocol.js";
+export {
+  type CreatedScimToken,
+  SCIM_TOKEN_OVERLAP_DAYS,
+  ScimTokenRejectedError,
+  ScimTokenService,
+  type ScimTokenSummary,
+} from "./identity/scim-tokens.js";
 export type {
   CallbackResult,
   LinkInfo,

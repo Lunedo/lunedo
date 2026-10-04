@@ -16714,6 +16714,10 @@
                             "additionalProperties": false,
                             "description": "What the provider can do with its current configuration."
                           },
+                          "scim": {
+                            "type": "boolean",
+                            "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                          },
                           "deactivatedAt": {
                             "anyOf": [
                               {
@@ -17350,6 +17354,7 @@
                           "credentials",
                           "directoryKey",
                           "capabilities",
+                          "scim",
                           "deactivatedAt",
                           "warnings",
                           "createdAt",
@@ -17479,6 +17484,10 @@
                             ],
                             "additionalProperties": false,
                             "description": "What the provider can do with its current configuration."
+                          },
+                          "scim": {
+                            "type": "boolean",
+                            "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                           },
                           "deactivatedAt": {
                             "anyOf": [
@@ -18336,6 +18345,7 @@
                           "credentials",
                           "directoryKey",
                           "capabilities",
+                          "scim",
                           "deactivatedAt",
                           "warnings",
                           "createdAt",
@@ -18466,6 +18476,10 @@
                             ],
                             "additionalProperties": false,
                             "description": "What the provider can do with its current configuration."
+                          },
+                          "scim": {
+                            "type": "boolean",
+                            "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                           },
                           "deactivatedAt": {
                             "anyOf": [
@@ -18951,6 +18965,7 @@
                           "credentials",
                           "directoryKey",
                           "capabilities",
+                          "scim",
                           "deactivatedAt",
                           "warnings",
                           "createdAt",
@@ -21113,6 +21128,10 @@
                               "additionalProperties": false,
                               "description": "What the provider can do with its current configuration."
                             },
+                            "scim": {
+                              "type": "boolean",
+                              "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                            },
                             "deactivatedAt": {
                               "anyOf": [
                                 {
@@ -21749,6 +21768,7 @@
                             "credentials",
                             "directoryKey",
                             "capabilities",
+                            "scim",
                             "deactivatedAt",
                             "warnings",
                             "createdAt",
@@ -21878,6 +21898,10 @@
                               ],
                               "additionalProperties": false,
                               "description": "What the provider can do with its current configuration."
+                            },
+                            "scim": {
+                              "type": "boolean",
+                              "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                             },
                             "deactivatedAt": {
                               "anyOf": [
@@ -22735,6 +22759,7 @@
                             "credentials",
                             "directoryKey",
                             "capabilities",
+                            "scim",
                             "deactivatedAt",
                             "warnings",
                             "createdAt",
@@ -22865,6 +22890,10 @@
                               ],
                               "additionalProperties": false,
                               "description": "What the provider can do with its current configuration."
+                            },
+                            "scim": {
+                              "type": "boolean",
+                              "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                             },
                             "deactivatedAt": {
                               "anyOf": [
@@ -23350,6 +23379,7 @@
                             "credentials",
                             "directoryKey",
                             "capabilities",
+                            "scim",
                             "deactivatedAt",
                             "warnings",
                             "createdAt",
@@ -23865,6 +23895,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
                         "deactivatedAt": {
                           "anyOf": [
@@ -24502,6 +24536,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -24631,6 +24666,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
                         "deactivatedAt": {
                           "anyOf": [
@@ -25488,6 +25527,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -25618,6 +25658,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
                         "deactivatedAt": {
                           "anyOf": [
@@ -26103,6 +26147,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -27928,6 +27973,10 @@
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
                         },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
                         "deactivatedAt": {
                           "anyOf": [
                             {
@@ -28564,6 +28613,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -28693,6 +28743,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
                         "deactivatedAt": {
                           "anyOf": [
@@ -29550,6 +29604,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -29680,6 +29735,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
                         "deactivatedAt": {
                           "anyOf": [
@@ -30165,6 +30224,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -30474,6 +30534,10 @@
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
                         },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
                         "deactivatedAt": {
                           "anyOf": [
                             {
@@ -31110,6 +31174,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -31239,6 +31304,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
                         "deactivatedAt": {
                           "anyOf": [
@@ -32096,6 +32165,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -32226,6 +32296,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
                         "deactivatedAt": {
                           "anyOf": [
@@ -32711,6 +32785,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -32993,6 +33068,10 @@
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
                         },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
                         "deactivatedAt": {
                           "anyOf": [
                             {
@@ -33629,6 +33708,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -33758,6 +33838,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
                         "deactivatedAt": {
                           "anyOf": [
@@ -34615,6 +34699,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -34745,6 +34830,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
                         "deactivatedAt": {
                           "anyOf": [
@@ -35230,6 +35319,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -35533,6 +35623,10 @@
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
                         },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
                         "deactivatedAt": {
                           "anyOf": [
                             {
@@ -36169,6 +36263,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -36298,6 +36393,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
                         "deactivatedAt": {
                           "anyOf": [
@@ -37155,6 +37254,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -37285,6 +37385,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
                         "deactivatedAt": {
                           "anyOf": [
@@ -37770,6 +37874,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -38732,6 +38837,10 @@
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
                         },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
                         "deactivatedAt": {
                           "anyOf": [
                             {
@@ -39368,6 +39477,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -39497,6 +39607,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
                         "deactivatedAt": {
                           "anyOf": [
@@ -40354,6 +40468,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -40484,6 +40599,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
                         "deactivatedAt": {
                           "anyOf": [
@@ -40969,6 +41088,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -42597,6 +42717,10 @@
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
                         },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
                         "deactivatedAt": {
                           "anyOf": [
                             {
@@ -43233,6 +43357,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -43362,6 +43487,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
                         "deactivatedAt": {
                           "anyOf": [
@@ -44219,6 +44348,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -44349,6 +44479,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
                         "deactivatedAt": {
                           "anyOf": [
@@ -44834,6 +44968,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -47448,6 +47583,10 @@
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
                         },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
                         "deactivatedAt": {
                           "anyOf": [
                             {
@@ -48084,6 +48223,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -48213,6 +48353,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
                         "deactivatedAt": {
                           "anyOf": [
@@ -49070,6 +49214,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -49200,6 +49345,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
                         "deactivatedAt": {
                           "anyOf": [
@@ -49685,6 +49834,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -49986,6 +50136,10 @@
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
                         },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
                         "deactivatedAt": {
                           "anyOf": [
                             {
@@ -50622,6 +50776,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -50751,6 +50906,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
                         "deactivatedAt": {
                           "anyOf": [
@@ -51608,6 +51767,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -51738,6 +51898,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
                         "deactivatedAt": {
                           "anyOf": [
@@ -52223,6 +52387,7 @@
                         "credentials",
                         "directoryKey",
                         "capabilities",
+                        "scim",
                         "deactivatedAt",
                         "warnings",
                         "createdAt",
@@ -52372,6 +52537,849 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/identity-providers/{providerId}/scim": {
+      "get": {
+        "operationId": "identityProviders.scimStatus",
+        "summary": "Show the SCIM connection of a provider",
+        "tags": [
+          "Identity providers"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.signIn.view",
+          "resource": "instance"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the identity provider.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The SCIM endpoint, its tokens and recent activity.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "description": "Base URL of the SCIM endpoint of this provider, to enter as tenant URL."
+                    },
+                    "tokens": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the token."
+                          },
+                          "prefix": {
+                            "type": "string",
+                            "description": "First characters of the token, to recognize it."
+                          },
+                          "expiresAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When the token stops working after a renewal, or null. ISO 8601 timestamp in UTC."
+                          },
+                          "lastUsedAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When the provider last used the token, or null. ISO 8601 timestamp in UTC."
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When the token was created. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "prefix",
+                          "expiresAt",
+                          "lastUsedAt",
+                          "createdAt"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A SCIM token."
+                      },
+                      "description": "Valid tokens, oldest first."
+                    },
+                    "lastRequestAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the provider last sent a request, or null. ISO 8601 timestamp in UTC."
+                    },
+                    "lastDay": {
+                      "type": "object",
+                      "properties": {
+                        "requests": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Requests that changed something or failed."
+                        },
+                        "changes": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Changes accepted."
+                        },
+                        "failed": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Requests refused."
+                        }
+                      },
+                      "required": [
+                        "requests",
+                        "changes",
+                        "failed"
+                      ],
+                      "additionalProperties": false,
+                      "description": "SCIM activity of the last 24 hours."
+                    }
+                  },
+                  "required": [
+                    "url",
+                    "tokens",
+                    "lastRequestAt",
+                    "lastDay"
+                  ],
+                  "additionalProperties": false,
+                  "description": "SCIM provisioning of a provider. SCIM is on while the provider has a token."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/identity-providers/{providerId}/scim/tokens": {
+      "post": {
+        "operationId": "identityProviders.createScimToken",
+        "summary": "Create a SCIM token",
+        "description": "The token is shown only in this response. Creating the first token turns SCIM on for the provider.\n\nRequires the permission `instance.signIn.manage` on the instance. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Identity providers"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.signIn.manage",
+          "resource": "instance"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the identity provider.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the token."
+                    },
+                    "prefix": {
+                      "type": "string",
+                      "description": "First characters of the token, to recognize it."
+                    },
+                    "expiresAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the token stops working after a renewal, or null. ISO 8601 timestamp in UTC."
+                    },
+                    "lastUsedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the provider last used the token, or null. ISO 8601 timestamp in UTC."
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the token was created. ISO 8601 timestamp in UTC."
+                    },
+                    "token": {
+                      "type": "string",
+                      "description": "The secret token. It is shown only this once."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "prefix",
+                    "expiresAt",
+                    "lastUsedAt",
+                    "createdAt",
+                    "token"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A new SCIM token."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "reauthenticationRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:reauthenticationRequired",
+                      "title": "Confirm your identity first",
+                      "status": 403,
+                      "code": "reauthenticationRequired"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/identity-providers/{providerId}/scim/tokens/{tokenId}": {
+      "delete": {
+        "operationId": "identityProviders.removeScimToken",
+        "summary": "Remove a SCIM token",
+        "description": "The token stops working at once. Without tokens, SCIM is off for the provider.\n\nRequires the permission `instance.signIn.manage` on the instance. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Identity providers"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.signIn.manage",
+          "resource": "instance"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the identity provider.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tokenId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the SCIM token.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "reauthenticationRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:reauthenticationRequired",
+                      "title": "Confirm your identity first",
+                      "status": 403,
+                      "code": "reauthenticationRequired"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/identity-providers/{providerId}/scim/tokens/{tokenId}/renew": {
+      "post": {
+        "operationId": "identityProviders.renewScimToken",
+        "summary": "Renew a SCIM token",
+        "description": "Creates a new token. The old one keeps working for seven days, so the new one can be entered at the provider without an interruption.\n\nRequires the permission `instance.signIn.manage` on the instance. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Identity providers"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.signIn.manage",
+          "resource": "instance"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the identity provider.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tokenId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the SCIM token.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The new token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the token."
+                    },
+                    "prefix": {
+                      "type": "string",
+                      "description": "First characters of the token, to recognize it."
+                    },
+                    "expiresAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the token stops working after a renewal, or null. ISO 8601 timestamp in UTC."
+                    },
+                    "lastUsedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the provider last used the token, or null. ISO 8601 timestamp in UTC."
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the token was created. ISO 8601 timestamp in UTC."
+                    },
+                    "token": {
+                      "type": "string",
+                      "description": "The secret token. It is shown only this once."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "prefix",
+                    "expiresAt",
+                    "lastUsedAt",
+                    "createdAt",
+                    "token"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A new SCIM token."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "reauthenticationRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:reauthenticationRequired",
+                      "title": "Confirm your identity first",
+                      "status": 403,
+                      "code": "reauthenticationRequired"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
                     }
                   }
                 }
@@ -52688,9 +53696,11 @@
                             "type": "string",
                             "enum": [
                               "schedule",
-                              "manual"
+                              "manual",
+                              "scim",
+                              "reconciliation"
                             ],
-                            "description": "What started the run."
+                            "description": "What started the run: the schedule, a person, a SCIM request of the provider, or the daily reconciliation while SCIM is on."
                           },
                           "status": {
                             "type": "string",
@@ -52972,9 +53982,11 @@
                       "type": "string",
                       "enum": [
                         "schedule",
-                        "manual"
+                        "manual",
+                        "scim",
+                        "reconciliation"
                       ],
-                      "description": "What started the run."
+                      "description": "What started the run: the schedule, a person, a SCIM request of the provider, or the daily reconciliation while SCIM is on."
                     },
                     "status": {
                       "type": "string",
@@ -53053,7 +54065,11 @@
                               "groupRenamed",
                               "profileUpdated",
                               "accountDeactivated",
-                              "accountReactivated"
+                              "accountReactivated",
+                              "homeOrganizationChanged",
+                              "accountCreated",
+                              "groupCreated",
+                              "groupDeleted"
                             ],
                             "description": "Kind of change."
                           },
@@ -53111,7 +54127,8 @@
                               "grantRefused",
                               "removalRefused",
                               "accountFailed",
-                              "deactivationRefused"
+                              "deactivationRefused",
+                              "memberUnknown"
                             ],
                             "description": "Kind of warning."
                           },

@@ -445,3 +445,44 @@ export async function reauthenticateWithDirectory(providerId: string, password: 
 export function hasDirectory(provider: IdentityProvider): boolean {
   return provider.capabilities.directorySync;
 }
+
+export type ScimStatus =
+  paths["/api/v1/instance/identity-providers/{providerId}/scim"]["get"]["responses"]["200"]["content"]["application/json"];
+export type CreatedScimToken =
+  paths["/api/v1/instance/identity-providers/{providerId}/scim/tokens"]["post"]["responses"]["201"]["content"]["application/json"];
+
+export function scimStatusQuery(providerId: string) {
+  return queryOptions({
+    queryKey: [...identityKeys.provider(providerId), "scim"] as const,
+    queryFn: () =>
+      request(() =>
+        api.GET("/api/v1/instance/identity-providers/{providerId}/scim", {
+          params: { path: { providerId } },
+        }),
+      ),
+  });
+}
+
+export function createScimToken(providerId: string) {
+  return request(() =>
+    api.POST("/api/v1/instance/identity-providers/{providerId}/scim/tokens", {
+      params: { path: { providerId } },
+    }),
+  );
+}
+
+export function renewScimToken(providerId: string, tokenId: string) {
+  return request(() =>
+    api.POST("/api/v1/instance/identity-providers/{providerId}/scim/tokens/{tokenId}/renew", {
+      params: { path: { providerId, tokenId } },
+    }),
+  );
+}
+
+export async function removeScimToken(providerId: string, tokenId: string): Promise<void> {
+  await request(() =>
+    api.DELETE("/api/v1/instance/identity-providers/{providerId}/scim/tokens/{tokenId}", {
+      params: { path: { providerId, tokenId } },
+    }),
+  );
+}

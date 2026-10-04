@@ -41,6 +41,45 @@ export const removalPreviewSchema = z
 
 export const providerIdParams = z.object({ providerId: uuid("ID of the identity provider.") }).strict();
 
+export const scimTokenParams = z
+  .object({
+    providerId: uuid("ID of the identity provider."),
+    tokenId: uuid("ID of the SCIM token."),
+  })
+  .strict();
+
+const scimTokenShape = {
+  id: uuid("ID of the token."),
+  prefix: z.string().describe("First characters of the token, to recognize it."),
+  expiresAt: timestamp("When the token stops working after a renewal, or null.").nullable(),
+  lastUsedAt: timestamp("When the provider last used the token, or null.").nullable(),
+  createdAt: timestamp("When the token was created."),
+};
+
+export const scimStatusSchema = z
+  .object({
+    url: z.string().describe("Base URL of the SCIM endpoint of this provider, to enter as tenant URL."),
+    tokens: z
+      .array(z.object(scimTokenShape).describe("A SCIM token."))
+      .describe("Valid tokens, oldest first."),
+    lastRequestAt: timestamp("When the provider last sent a request, or null.").nullable(),
+    lastDay: z
+      .object({
+        requests: z.number().int().describe("Requests that changed something or failed."),
+        changes: z.number().int().describe("Changes accepted."),
+        failed: z.number().int().describe("Requests refused."),
+      })
+      .describe("SCIM activity of the last 24 hours."),
+  })
+  .describe("SCIM provisioning of a provider. SCIM is on while the provider has a token.");
+
+export const createdScimTokenSchema = z
+  .object({
+    ...scimTokenShape,
+    token: z.string().describe("The secret token. It is shown only this once."),
+  })
+  .describe("A new SCIM token.");
+
 export const credentialParams = z
   .object({
     providerId: uuid("ID of the identity provider."),
@@ -340,6 +379,7 @@ const providerBase = {
         .describe("Whether groups are identified by their names, so that renaming a group breaks its rules."),
     })
     .describe("What the provider can do with its current configuration."),
+  scim: z.boolean().describe("Whether SCIM is on: the provider has a SCIM token and sends changes at once."),
   deactivatedAt: z.iso
     .datetime()
     .nullable()
@@ -704,7 +744,11 @@ export const syncRequestedSchema = z
 const syncRunShape = {
   id: uuid("ID of the run."),
   providerId: uuid("ID of the provider."),
-  trigger: z.enum(["schedule", "manual"]).describe("What started the run."),
+  trigger: z
+    .enum(["schedule", "manual", "scim", "reconciliation"])
+    .describe(
+      "What started the run: the schedule, a person, a SCIM request of the provider, or the daily reconciliation while SCIM is on.",
+    ),
   status: z.enum(["running", "succeeded", "warnings", "failed", "cancelled"]).describe("Result of the run."),
   startedAt: timestamp("When the run started."),
   finishedAt: timestamp("When the run finished.").nullable(),
@@ -734,6 +778,10 @@ export const syncRunDetailsSchema = z
               "profileUpdated",
               "accountDeactivated",
               "accountReactivated",
+              "homeOrganizationChanged",
+              "accountCreated",
+              "groupCreated",
+              "groupDeleted",
             ])
             .describe("Kind of change."),
           accountId: uuid("ID of the account.").nullable(),
@@ -749,7 +797,14 @@ export const syncRunDetailsSchema = z
       .array(
         z.object({
           kind: z
-            .enum(["missingGroup", "grantRefused", "removalRefused", "accountFailed", "deactivationRefused"])
+            .enum([
+              "missingGroup",
+              "grantRefused",
+              "removalRefused",
+              "accountFailed",
+              "deactivationRefused",
+              "memberUnknown",
+            ])
             .describe("Kind of warning."),
           accountId: uuid("ID of the account.").nullable(),
           ruleId: uuid("ID of the rule.").nullable(),

@@ -32,7 +32,10 @@ export type SyncChangeKind =
   | "profileUpdated"
   | "accountDeactivated"
   | "accountReactivated"
-  | "homeOrganizationChanged";
+  | "homeOrganizationChanged"
+  | "accountCreated"
+  | "groupCreated"
+  | "groupDeleted";
 
 export interface SyncChange {
   kind: SyncChangeKind;
@@ -46,7 +49,8 @@ export type SyncWarningKind =
   | "grantRefused"
   | "removalRefused"
   | "accountFailed"
-  | "deactivationRefused";
+  | "deactivationRefused"
+  | "memberUnknown";
 
 export interface SyncWarning {
   kind: SyncWarningKind;

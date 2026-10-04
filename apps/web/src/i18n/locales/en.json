@@ -53,7 +53,7 @@
       "now": "Sync now",
       "started": "Synchronization started. Results appear here in about a minute.",
       "signInOnly": {
-        "generic": "Profile and groups of this provider update at every sign-in. It has no directory Pagehall could synchronize with in the background; a SCIM connection, planned for a later version, will send changes at once.",
+        "generic": "Profile and groups of this provider update at every sign-in. It has no directory Pagehall could synchronize with in the background; with a SCIM connection, the provider sends changes at once.",
         "google": "Google Workspace is only used to sign in. Turn on group synchronization in the settings to read groups and synchronize them in the background.",
         "entraId": "This provider is only read at sign-in.",
         "saml": "Profile and groups of this provider update at every sign-in. SAML has no directory Pagehall could synchronize with in the background.",
@@ -75,7 +75,9 @@
       "seconds": "{value} s",
       "triggers": {
         "schedule": "Schedule",
-        "manual": "Manual"
+        "manual": "Manual",
+        "scim": "SCIM",
+        "reconciliation": "Reconciliation"
       },
       "statuses": {
         "running": "Running",
@@ -107,14 +109,19 @@
         "groupRenamed": "Group renamed",
         "profileUpdated": "Profile updated",
         "accountDeactivated": "Account deactivated",
-        "accountReactivated": "Account reactivated"
+        "accountReactivated": "Account reactivated",
+        "homeOrganizationChanged": "Home organization changed",
+        "accountCreated": "Account created",
+        "groupCreated": "Group created",
+        "groupDeleted": "Group deleted"
       },
       "warningKinds": {
         "missingGroup": "Group no longer exists",
         "grantRefused": "Grant refused",
         "removalRefused": "Removal refused",
         "accountFailed": "Account could not be updated",
-        "deactivationRefused": "Deactivation refused"
+        "deactivationRefused": "Deactivation refused",
+        "memberUnknown": "Unknown member"
       },
       "settingsTitle": "Synchronization",
       "interval": "Sync interval",
@@ -244,7 +251,8 @@
       "sync": "Sync log",
       "label": "Provider sections",
       "overview": "Overview",
-      "settings": "Settings"
+      "settings": "Settings",
+      "scim": "SCIM"
     },
     "overview": {
       "summary": "Summary",
@@ -695,6 +703,39 @@
       },
       "sample": "Person found",
       "attributes": "Attributes the directory returned"
+    },
+    "scim": {
+      "intro": "With SCIM, the provider sends changes of people and groups to Pagehall at once instead of waiting for the next sign-in or synchronization. Accounts are created before the first sign-in and deactivated, never deleted.",
+      "entraSetup": "Entra ID needs P1 or higher. In the enterprise application, open Provisioning, choose Automatic, enter the URL below as tenant URL and the token as secret token. In the attribute mappings for users, map objectId to externalId.",
+      "genericSetup": "Enter the URL below and the token as bearer token at your provider. externalId must carry the identifier the provider uses at sign-in.",
+      "connection": "Connection",
+      "url": "Tenant URL",
+      "urlHint": "The SCIM endpoint of this provider.",
+      "tokens": "Secret tokens",
+      "noTokens": "No token yet. SCIM is off until you create one.",
+      "createdOn": "Created {date}",
+      "lastUsed": "last used {time}",
+      "neverUsed": "not used yet",
+      "expiresOn": "stops working {time}",
+      "renew": "Renew",
+      "create": "Create token",
+      "status": "Status",
+      "lastRequest": "Last request from the provider",
+      "lastRequestDetail": "{time} · in the last 24 hours {changes, plural, one {# change} other {# changes}} accepted, {failed, plural, one {# request} other {# requests}} refused",
+      "noRequests": "No request yet. Test the connection at the provider.",
+      "off": "Off",
+      "withErrors": "Refused requests",
+      "receiving": "Receiving",
+      "waiting": "Waiting for requests",
+      "leads": "While SCIM is on, it leads: the background synchronization of this provider runs once a day as a reconciliation. The sync log shows SCIM requests with their changes and errors.",
+      "createdTitle": "New SCIM token",
+      "onlyOnce": "Copy the token now and enter it at the provider. Pagehall shows it only this once.",
+      "secretToken": "Secret token",
+      "overlap": "The previous token keeps working for seven days, so the provider is not interrupted while you change it.",
+      "removeTitle": "Remove this token?",
+      "removeDescription": "Requests with this token are refused at once.",
+      "removeLast": "Requests with this token are refused at once. Without a token, SCIM is off and the background synchronization returns to its interval.",
+      "removed": "Token removed"
     }
   },
   "identities": {
@@ -2349,7 +2390,10 @@
         "metadataRefreshFailed": "SAML metadata could not be refreshed",
         "caCertificateChanged": "CA certificate of the directory changed",
         "synchronized": "Provider synchronized",
-        "syncCancelled": "Synchronization cancelled"
+        "syncCancelled": "Synchronization cancelled",
+        "scimTokenCreated": "SCIM token created",
+        "scimTokenRenewed": "SCIM token renewed",
+        "scimTokenRemoved": "SCIM token removed"
       },
       "mappingRule": {
         "created": "Mapping rule created",
@@ -2468,6 +2512,10 @@
       },
       "audit": {
         "exported": "Audit log exported"
+      },
+      "scim": {
+        "userChanged": "Account changed through SCIM",
+        "groupChanged": "Group changed through SCIM"
       }
     },
     "action": "Action",
@@ -2568,7 +2616,16 @@
       "groups": "Groups",
       "roles": "Roles",
       "removedIdentities": "Removed identities",
-      "endedMemberships": "Ended memberships"
+      "endedMemberships": "Ended memberships",
+      "prefix": "Token begins with",
+      "previousExpiresAt": "Previous token works until",
+      "operation": "Operation",
+      "attributes": "Attributes",
+      "externalId": "External ID",
+      "membersAdded": "Members added",
+      "membersRemoved": "Members removed",
+      "groupId": "Group",
+      "providerId": "Identity provider"
     },
     "values": {
       "account": "Account",
@@ -2595,7 +2652,14 @@
       "merged": "Merged",
       "anonymized": "Anonymized",
       "signIn": "Sign-in",
-      "administrator": "Administrator"
+      "administrator": "Administrator",
+      "scim": "SCIM",
+      "reconciliation": "Reconciliation",
+      "created": "Created",
+      "updated": "Updated",
+      "deleted": "Deleted",
+      "deactivated": "Deactivated",
+      "reactivated": "Reactivated"
     },
     "formerUser": "Former user {id}"
   },
@@ -2777,7 +2841,11 @@
     "createPlaceholder": "The placeholder could not be created",
     "mergePlaceholder": "The placeholder could not be merged",
     "changeHomeOrganization": "The home organization was not changed",
-    "anonymize": "The account was not anonymized"
+    "anonymize": "The account was not anonymized",
+    "loadScim": "The SCIM connection could not be loaded",
+    "createScimToken": "The SCIM token could not be created",
+    "renewScimToken": "The SCIM token could not be renewed",
+    "removeScimToken": "The SCIM token could not be removed"
   },
   "lifecycle": {
     "placeholder": {

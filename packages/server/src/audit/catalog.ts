@@ -97,7 +97,7 @@ export const auditCatalog = {
   "identity.linked": event({
     actor: ["account", "system"],
     target: "account",
-    fields: z.object({ providerId: z.uuid(), via: z.enum(["signIn", "administrator"]) }),
+    fields: z.object({ providerId: z.uuid(), via: z.enum(["signIn", "administrator", "scim"]) }),
     visibility: "organization",
   }),
   "identity.unlinked": event({
@@ -219,6 +219,52 @@ export const auditCatalog = {
     fields: mappingRuleFields,
     visibility: "organization",
   }),
+  "identityProvider.scimTokenCreated": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({ credentialId: z.uuid(), prefix: z.string() }),
+    visibility: "instance",
+  }),
+  "identityProvider.scimTokenRenewed": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({
+      credentialId: z.uuid(),
+      prefix: z.string(),
+      previousCredentialId: z.uuid(),
+      previousExpiresAt: z.iso.datetime(),
+    }),
+    visibility: "instance",
+  }),
+  "identityProvider.scimTokenRemoved": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({ credentialId: z.uuid(), prefix: z.string() }),
+    visibility: "instance",
+  }),
+  "scim.userChanged": event({
+    actor: ["system"],
+    target: "account",
+    fields: z.object({
+      providerId: z.uuid(),
+      operation: z.enum(["created", "updated", "deactivated", "reactivated"]),
+      attributes: z.array(z.string()),
+    }),
+    visibility: "organization",
+  }),
+  "scim.groupChanged": event({
+    actor: ["system"],
+    target: "identityProvider",
+    fields: z.object({
+      groupId: z.uuid(),
+      externalId: z.string(),
+      name: z.string().nullable(),
+      operation: z.enum(["created", "updated", "deleted"]),
+      membersAdded: z.number().int().nonnegative(),
+      membersRemoved: z.number().int().nonnegative(),
+    }),
+    visibility: "instance",
+  }),
   "identityProvider.syncCancelled": event({
     actor: ["account"],
     target: "identityProvider",
@@ -230,7 +276,7 @@ export const auditCatalog = {
     target: "identityProvider",
     fields: z.object({
       runId: z.uuid(),
-      trigger: z.enum(["schedule", "manual"]),
+      trigger: z.enum(["schedule", "manual", "scim", "reconciliation"]),
       status: z.enum(["succeeded", "warnings", "failed", "cancelled"]),
       changes: z.number().int().nonnegative(),
       warnings: z.number().int().nonnegative(),

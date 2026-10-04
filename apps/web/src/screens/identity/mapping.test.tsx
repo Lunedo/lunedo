@@ -202,6 +202,68 @@ describe("group mapping", () => {
     expect(screen.queryByText("Groups are identified by their names")).toBeNull();
   });
 
+  it("creates a SCIM token, shows it once, renews it and removes the old one", async () => {
+    let tokens: {
+      id: string;
+      prefix: string;
+      expiresAt: string | null;
+      lastUsedAt: string | null;
+      createdAt: string;
+    }[] = [];
+    const status = () => ({
+      body: {
+        url: `https://wiki.example.org/scim/v2/${PROVIDER}`,
+        tokens,
+        lastRequestAt: null,
+        lastDay: { requests: 0, changes: 0, failed: 0 },
+      },
+    });
+    const first = {
+      id: "01929b1e-0000-7000-8000-00000000a001",
+      prefix: "phscim_AbCdEf",
+      expiresAt: null,
+      lastUsedAt: null,
+      createdAt: "2026-10-04T08:00:00.000Z",
+    };
+    const second = { ...first, id: "01929b1e-0000-7000-8000-00000000a002", prefix: "phscim_GhIjKl" };
+    const { requests } = adminApi({
+      [`GET ${BASE}/scim`]: status,
+      [`POST ${BASE}/scim/tokens`]: () => {
+        tokens = [first];
+        return { status: 201, body: { ...first, token: "phscim_AbCdEf-the-secret" } };
+      },
+      [`POST ${BASE}/scim/tokens/${first.id}/renew`]: () => {
+        tokens = [{ ...first, expiresAt: "2026-10-11T08:00:00.000Z" }, second];
+        return { status: 201, body: { ...second, token: "phscim_GhIjKl-the-new-secret" } };
+      },
+      [`DELETE ${BASE}/scim/tokens/${first.id}`]: () => {
+        tokens = [second];
+        return { status: 204 };
+      },
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=scim`);
+    expect(await screen.findByDisplayValue(`https://wiki.example.org/scim/v2/${PROVIDER}`)).toBeTruthy();
+    expect(screen.getByText("No token yet. SCIM is off until you create one.")).toBeTruthy();
+    expect(screen.getByText(/map objectId to externalId/)).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Create token" }));
+    const created = await screen.findByRole("dialog", { name: "New SCIM token" });
+    expect(within(created).getByDisplayValue("phscim_AbCdEf-the-secret")).toBeTruthy();
+    await userEvent.click(within(created).getByRole("button", { name: "Done" }));
+    expect(screen.queryByDisplayValue("phscim_AbCdEf-the-secret")).toBeNull();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Renew" }));
+    const renewed = await screen.findByRole("dialog", { name: "New SCIM token" });
+    expect(within(renewed).getByDisplayValue("phscim_GhIjKl-the-new-secret")).toBeTruthy();
+    expect(within(renewed).getByText(/keeps working for seven days/)).toBeTruthy();
+    await userEvent.click(within(renewed).getByRole("button", { name: "Done" }));
+    const old = (await screen.findByText("phscim_AbCdEf…")).closest("li") as HTMLElement;
+    await userEvent.click(within(old).getByRole("button", { name: "Remove" }));
+    const confirm = await screen.findByRole("dialog", { name: "Remove this token?" });
+    await userEvent.click(within(confirm).getByRole("button", { name: "Remove" }));
+    await waitFor(() => expect(requests.some((request) => request.method === "DELETE")).toBe(true));
+    expect(await screen.findByText("Token removed")).toBeTruthy();
+  });
+
   it("adds a rule after showing who gains access", { timeout: 15_000 }, async () => {
     let rules: unknown[] = [];
     const { requests } = adminApi({

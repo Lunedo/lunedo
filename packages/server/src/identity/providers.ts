@@ -60,6 +60,7 @@ import {
   mappingRules,
   providerSyncRuns,
   samlMetadata,
+  scimTokens,
 } from "./schema.js";
 import { accountsWithoutOtherSignIn } from "./sign-in-ways.js";
 
@@ -107,6 +108,7 @@ interface ProviderSummaryBase {
   credentials: CredentialSummary[];
   directoryKey: boolean;
   capabilities: ProviderCapabilities;
+  scim: boolean;
   deactivatedAt: Date | null;
   warnings: ProviderWarning[];
   createdAt: Date;
@@ -457,6 +459,21 @@ export class IdentityProviderService {
             .select()
             .from(identityProviderCaCertificates)
             .where(inArray(identityProviderCaCertificates.providerId, ids));
+    const scim = new Set(
+      ids.length === 0
+        ? []
+        : (
+            await executor
+              .selectDistinct({ providerId: scimTokens.providerId })
+              .from(scimTokens)
+              .where(
+                and(
+                  inArray(scimTokens.providerId, ids),
+                  or(isNull(scimTokens.expiresAt), sql`${scimTokens.expiresAt} > now()`),
+                ),
+              )
+          ).map((row) => row.providerId),
+    );
     const now = this.#clock();
     return rows.map((row): ProviderSummary => {
       const own = credentials.get(row.id) ?? [];
@@ -468,6 +485,7 @@ export class IdentityProviderService {
         logoRef: logos.find((logo) => logo.providerId === row.id)?.ref ?? null,
         credentials: own,
         directoryKey,
+        scim: scim.has(row.id),
         deactivatedAt: row.deactivatedAt,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,

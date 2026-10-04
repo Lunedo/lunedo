@@ -52,6 +52,7 @@ export {
   providerSyncRuns,
   samlAssertions,
   samlMetadata,
+  scimTokens,
   signInRefusalReason,
   signInRefusals,
   syncStatus,

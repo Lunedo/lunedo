@@ -106,9 +106,34 @@ export const identities = pgTable(
     groupsReadAt: timestampColumn(),
     groupsReadFailedAt: timestampColumn(),
     groupsWithheldNotifiedAt: timestampColumn(),
+    scimUserName: text(),
+    scimExternalId: text(),
     ...timestamps(),
   },
-  (table) => [uniqueIndex().on(table.providerId, table.subject), index().on(table.accountId)],
+  (table) => [
+    uniqueIndex().on(table.providerId, table.subject),
+    index().on(table.accountId),
+    uniqueIndex("identities_provider_scim_user_name_unique")
+      .on(table.providerId, sql`lower(${table.scimUserName})`)
+      .where(sql`${table.scimUserName} is not null`),
+  ],
+);
+
+export const scimTokens = pgTable(
+  "scim_tokens",
+  {
+    id: primaryId(),
+    providerId: uuid()
+      .notNull()
+      .references(() => identityProviders.id, { onDelete: "cascade" }),
+    tokenHash: bytes().notNull(),
+    prefix: text().notNull(),
+    expiresAt: timestampColumn(),
+    lastUsedAt: timestampColumn(),
+    createdBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    createdAt: timestampColumn().notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex().on(table.tokenHash), index().on(table.providerId)],
 );
 
 export const providerFlows = pgTable(
@@ -292,7 +317,7 @@ export const providerDeactivations = pgTable("provider_deactivations", {
   createdAt: timestampColumn().notNull().defaultNow(),
 });
 
-export const syncTriggers = ["schedule", "manual"] as const;
+export const syncTriggers = ["schedule", "manual", "scim", "reconciliation"] as const;
 export const syncTrigger = pgEnum("provider_sync_trigger", syncTriggers);
 export const syncStatuses = ["running", "succeeded", "warnings", "failed", "cancelled"] as const;
 export const syncStatus = pgEnum("provider_sync_status", syncStatuses);

@@ -36,6 +36,8 @@ import {
   samlMetadataRefreshJob,
 } from "./identity/providers.js";
 import { SamlAdapter } from "./identity/saml.js";
+import { ScimService } from "./identity/scim.js";
+import { ScimTokenService } from "./identity/scim-tokens.js";
 import { ProviderSignInService } from "./identity/sign-in.js";
 import {
   PROVIDER_SYNC_RETENTION_SCHEDULE,
@@ -117,6 +119,8 @@ export interface AccountServices {
   groupMapping: GroupMappingService;
   mappingRules: MappingRuleService;
   providerSync: ProviderSyncService;
+  scim: ScimService;
+  scimTokens: ScimTokenService;
 }
 
 export function createAccountServices(options: {
@@ -306,6 +310,19 @@ export function createAccountServices(options: {
     throttle,
     lifecycle: accountLifecycle,
   });
+  const scim = new ScimService({
+    database,
+    providers: identityProviders,
+    accounts,
+    organizations,
+    mapping: groupMapping,
+    memberships,
+    administration,
+    lifecycle: accountLifecycle,
+    audit,
+    rateLimiter,
+  });
+  const scimTokens = new ScimTokenService({ database, audit });
   const security = new AccountSecurityService({
     database,
     accounts,
@@ -377,6 +394,8 @@ export function createAccountServices(options: {
     groupMapping,
     mappingRules,
     providerSync,
+    scim,
+    scimTokens,
   };
 }
 

@@ -16,6 +16,7 @@ import {
   addedCredentialSchema,
   caCertificateUploadSchema,
   createdProviderSchema,
+  createdScimTokenSchema,
   createProviderSchema,
   credentialInputSchema,
   credentialParams,
@@ -27,12 +28,15 @@ import {
   refusalSchema,
   removalPreviewSchema,
   samlMetadataUploadSchema,
+  scimStatusSchema,
+  scimTokenParams,
   startedSchema,
   testResultParams,
   testResultSchema,
   testStartSchema,
   updateProviderSchema,
 } from "./schemas.js";
+import { scimPath } from "./scim.controller.js";
 
 const TAG = "Identity providers";
 
@@ -372,6 +376,74 @@ export class IdentityProvidersController {
     body: z.output<typeof credentialInputSchema>,
   ) {
     return this.#services.identityProviders.addCredential(actorOf(request), providerId, credentialOf(body));
+  }
+
+  @Get("instance/identity-providers/:providerId/scim")
+  @Permission("instance.signIn.view")
+  @ApiRoute({
+    summary: "Show the SCIM connection of a provider",
+    tags: [TAG],
+    params: providerIdParams,
+    response: { description: "The SCIM endpoint, its tokens and recent activity.", schema: scimStatusSchema },
+    errors: ["notFound"],
+  })
+  async scimStatus(@Param("providerId") providerId: string, @Req() request: FastifyRequest) {
+    await this.#services.identityProviders.get(providerId);
+    const base = (await baseUrlOf(this.context, request)).replace(/\/+$/, "");
+    return { url: `${base}${scimPath(providerId)}`, ...(await this.#services.scimTokens.status(providerId)) };
+  }
+
+  @Post("instance/identity-providers/:providerId/scim/tokens")
+  @Permission("instance.signIn.manage", { type: "instance" }, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "Create a SCIM token",
+    description:
+      "The token is shown only in this response. Creating the first token turns SCIM on for the provider.",
+    tags: [TAG],
+    status: 201,
+    params: providerIdParams,
+    response: { description: "The token.", schema: createdScimTokenSchema },
+    errors: ["notFound", "reauthenticationRequired"],
+  })
+  async createScimToken(@Param("providerId") providerId: string, @Req() request: FastifyRequest) {
+    return this.#services.scimTokens.create(actorOf(request), providerId);
+  }
+
+  @Post("instance/identity-providers/:providerId/scim/tokens/:tokenId/renew")
+  @Permission("instance.signIn.manage", { type: "instance" }, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "Renew a SCIM token",
+    description:
+      "Creates a new token. The old one keeps working for seven days, so the new one can be entered at the provider without an interruption.",
+    tags: [TAG],
+    status: 201,
+    params: scimTokenParams,
+    response: { description: "The new token.", schema: createdScimTokenSchema },
+    errors: ["notFound", "reauthenticationRequired"],
+  })
+  async renewScimToken(
+    @Param("providerId") providerId: string,
+    @Param("tokenId") tokenId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.scimTokens.renew(actorOf(request), providerId, tokenId);
+  }
+
+  @Delete("instance/identity-providers/:providerId/scim/tokens/:tokenId")
+  @Permission("instance.signIn.manage", { type: "instance" }, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "Remove a SCIM token",
+    description: "The token stops working at once. Without tokens, SCIM is off for the provider.",
+    tags: [TAG],
+    params: scimTokenParams,
+    errors: ["notFound", "reauthenticationRequired"],
+  })
+  async removeScimToken(
+    @Param("providerId") providerId: string,
+    @Param("tokenId") tokenId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    await this.#services.scimTokens.remove(actorOf(request), providerId, tokenId);
   }
 
   @Delete("instance/identity-providers/:providerId/credentials/:credentialId")

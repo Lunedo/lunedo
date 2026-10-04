@@ -134,6 +134,20 @@ When the groups of a person cannot be read at sign-in or during a synchronizatio
 
 The rule dialog searches the provider's groups (the directory, or the groups seen at sign-in for generic providers) and shows beforehand who gains access.
 
+## SCIM
+
+Every provider can receive SCIM 2.0 requests for users and groups at `{instance URL}/scim/v2/{providerId}`, shown in the SCIM tab of the provider. SCIM is on while the provider has a token. The token is created in the tab, shown once and stored as a hash; it works only for its own provider. "Renew" creates a new token and keeps the old one working for seven days, so the new one can be entered at the provider without an interruption; "Remove" stops a token at once. Creating, renewing and removing tokens is audited (`identityProvider.scimTokenCreated`, `.scimTokenRenewed`, `.scimTokenRemoved`). Requests are limited to 1200 per minute and provider; requests with a wrong token are limited per client address.
+
+Set up Microsoft Entra ID (needs Entra ID P1 or higher): in the enterprise application of Pagehall, open Provisioning, choose Automatic, enter the URL as tenant URL and the token as secret token, and test the connection. In the attribute mappings for users, map `objectId` to `externalId`; Pagehall identifies people by tenant and object ID, as at sign-in, and refuses users without it. Groups keep the default mapping, where `externalId` is the object ID of the group.
+
+- Users are the identities of the provider. A new user becomes a standard account that has not signed in yet, with the identity already linked, so the first sign-in through the provider signs it in. Its e-mail address must lie in one of the provider's domains. The home organization comes from the e-mail domain or, once the user is in groups, from the mapping rules, as at sign-in. No e-mail is sent. When a placeholder has the address, it becomes the account. An existing account with the address is never linked by SCIM; it is linked when the person signs in.
+- Users are found by `userName`, `externalId`, `id` and `emails.value` with filters of the form `attribute eq "value"`. PATCH accepts the formats Entra ID sends, including capitalized operations, `"True"` and `"False"` as text and paths such as `emails[type eq "work"].value`. Attributes Pagehall does not use, such as roles or the enterprise extension, are ignored; SCIM never grants a role by itself.
+- `active: false` and `DELETE` deactivate the account, they never delete it. `active: true` reactivates it only if this provider deactivated it.
+- Groups are the groups Pagehall knows from the provider; mapping rules refer to them by `externalId`. Member changes, also in batches, apply the rules at once. Deleting a group removes what its rules granted and marks its rules as pointing to a missing group.
+- Every request that changed something or failed appears in the sync log with the trigger "SCIM", with its changes and errors; tokens never appear there or in the audit log. Changes are audited as `scim.userChanged` and `scim.groupChanged`.
+
+While SCIM is on, SCIM leads: the background synchronization of the provider runs once a day as a reconciliation, shown with the trigger "Reconciliation" in the sync log, instead of at its configured interval.
+
 ## Deactivating and removing a provider
 
 Deactivate a provider to stop it without losing anything: nobody can sign in through it, the sign-in page no longer offers it, a running synchronization stops and no new one starts, and the sessions that came from it end. Settings, credentials, identities, rules, groups and access stay, and everything works again once the provider is activated (`identityProvider.deactivated`, `identityProvider.activated`).
