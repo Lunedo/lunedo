@@ -9,6 +9,12 @@ export {
 export { AccountAdministrationService, type IdentitySummary } from "./accounts/administration.js";
 export { instanceNameSetting, instanceUrlSetting } from "./accounts/instance-settings.js";
 export {
+  AccountLifecycleService,
+  type Anonymization,
+  formerUserName,
+  type PlaceholderMerge,
+} from "./accounts/lifecycle.js";
+export {
   type AccountDetail,
   type AccountMembership,
   AccountOverviewService,

@@ -219,6 +219,33 @@ const providerCredentialExpiring = defineNotificationType({
   }),
 });
 
+const homeOrganizationChanged = defineNotificationType({
+  type: "account.homeOrganizationChanged",
+  targetType: "account",
+  params: notificationParamSchemas["account.homeOrganizationChanged"],
+  setting: settingOf("account.homeOrganizationChanged"),
+  async visible(context) {
+    if (context.targetId === context.recipientId) return true;
+    return (
+      context.organizationId !== null &&
+      context.can("organization.members.view", { type: "organization", id: context.organizationId })
+    );
+  },
+  mail: (params) => ({ template: "homeOrganizationChanged", params }),
+});
+
+const mailCredentialExpiring = defineNotificationType({
+  type: "mail.credentialExpiring",
+  targetType: "instance",
+  params: notificationParamSchemas["mail.credentialExpiring"],
+  setting: settingOf("mail.credentialExpiring"),
+  visible: async (context) => context.can("instance.settings.view", { type: "instance" }),
+  mail: (params, locale) => ({
+    template: "mailCredentialExpiring",
+    params: { date: formatDay(params.expiresAt, locale) },
+  }),
+});
+
 export const builtinNotificationTypes = [
   apiTokenExpiring,
   apiTokenUnused,
@@ -232,4 +259,6 @@ export const builtinNotificationTypes = [
   accountWithoutOrganization,
   accountRolesWithheld,
   providerCredentialExpiring,
+  homeOrganizationChanged,
+  mailCredentialExpiring,
 ];

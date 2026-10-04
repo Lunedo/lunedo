@@ -6,6 +6,7 @@ import { instanceAdministratorIds } from "../auth/emergency-recipients.js";
 import type { Executor, Transaction } from "../database/database.js";
 import type { NotificationService } from "../notifications/service.js";
 import { groupMembers, groups, memberships, roleAssignments } from "../organizations/access-schema.js";
+import type { HomeOrganizationService } from "../organizations/home.js";
 import { claimHomeOrganization, type MembershipService } from "../organizations/memberships.js";
 import type { RoleService } from "../organizations/roles.js";
 import type { ProviderGroup } from "./adapter.js";
@@ -30,7 +31,8 @@ export type SyncChangeKind =
   | "groupRenamed"
   | "profileUpdated"
   | "accountDeactivated"
-  | "accountReactivated";
+  | "accountReactivated"
+  | "homeOrganizationChanged";
 
 export interface SyncChange {
   kind: SyncChangeKind;
@@ -56,10 +58,11 @@ export interface SyncWarning {
 export interface SyncReport {
   changes: SyncChange[];
   warnings: SyncWarning[];
+  mailIds: string[];
 }
 
 export function emptyReport(): SyncReport {
-  return { changes: [], warnings: [] };
+  return { changes: [], warnings: [], mailIds: [] };
 }
 
 type RoleKey = { builtIn: "owner" | "administrator" | "securityAuditor" } | { customRoleId: string };
@@ -112,17 +115,20 @@ export class GroupMappingService {
   readonly #memberships: MembershipService;
   readonly #audit: AuditLog;
   readonly #notifications: NotificationService | undefined;
+  readonly #home: HomeOrganizationService | undefined;
 
   constructor(options: {
     roles: RoleService;
     memberships: MembershipService;
     audit: AuditLog;
     notifications?: NotificationService;
+    home?: HomeOrganizationService;
   }) {
     this.#roles = options.roles;
     this.#memberships = options.memberships;
     this.#audit = options.audit;
     this.#notifications = options.notifications;
+    this.#home = options.home;
   }
 
   async dispatch(mailIds: readonly string[]): Promise<void> {
@@ -283,6 +289,7 @@ export class GroupMappingService {
     else if (link.groupsFailed)
       mailIds.push(...(await this.groupReadFailed(tx, link.identityId, link.accountId)));
     await this.reconcile(tx, link.accountId, report);
+    mailIds.push(...report.mailIds);
     return report;
   }
 
@@ -619,13 +626,34 @@ export class GroupMappingService {
     }
     if (grant.kind === "membership" && grant.organizationId) {
       const organizationId = grant.organizationId;
-      const keep = home === organizationId || (await this.#holdsOtherAccess(tx, organizationId, accountId));
+      const [current] = await tx
+        .select({ home: accounts.homeOrganizationId })
+        .from(accounts)
+        .where(eq(accounts.id, accountId));
+      const wasHome = (current?.home ?? home) === organizationId;
+      const keep = (wasHome && !this.#home) || (await this.#holdsOtherAccess(tx, organizationId, accountId));
       if (!keep) {
         const removed = await this.#memberships.remove(SYSTEM, organizationId, accountId, "providerRule", {
           tx,
+          releaseHome: wasHome,
         });
         if (removed) {
           report.changes.push({ kind: "membershipRemoved", accountId, organizationId, detail: null });
+        }
+        if (removed && wasHome && this.#home) {
+          report.mailIds.push(
+            ...(await this.#home.moveAfterLoss(tx, SYSTEM, accountId, organizationId, "providerRule")),
+          );
+          const [moved] = await tx
+            .select({ home: accounts.homeOrganizationId })
+            .from(accounts)
+            .where(eq(accounts.id, accountId));
+          report.changes.push({
+            kind: "homeOrganizationChanged",
+            accountId,
+            organizationId: moved?.home ?? null,
+            detail: organizationId,
+          });
         }
       }
       await forget();

@@ -4886,6 +4886,201 @@
         }
       }
     },
+    "/api/v1/accounts/{accountId}/home-organization": {
+      "put": {
+        "operationId": "accounts.changeHomeOrganization",
+        "summary": "Change the home organization of an account",
+        "description": "Makes another organization the account is a member of its home organization. Instance administrators and administrators of the current home organization can do this. The person and the administrators of both organizations are notified.\n\nRequires the permission `account.homeOrganization.change` on the account in `accountId`.",
+        "tags": [
+          "Accounts"
+        ],
+        "x-pagehall-permission": {
+          "action": "account.homeOrganization.change",
+          "resource": "account",
+          "parameter": "accountId"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "organizationId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of the new home organization."
+                  }
+                },
+                "required": [
+                  "organizationId"
+                ],
+                "additionalProperties": false,
+                "description": "The new home organization."
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `notMember`: The account is not a member.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "notMember": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notMember",
+                      "title": "The account is not a member",
+                      "status": 400,
+                      "code": "notMember"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/accounts/{accountId}/identities": {
       "get": {
         "operationId": "providerAuth.identities",
@@ -13039,6 +13234,21 @@
                 "false"
               ]
             }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "description": "Only accounts in this lifecycle state.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "deactivated",
+                "anonymized",
+                "placeholder"
+              ]
+            }
           }
         ],
         "responses": {
@@ -14043,6 +14253,486 @@
         }
       }
     },
+    "/api/v1/instance/accounts/{accountId}/anonymize": {
+      "post": {
+        "operationId": "instance.anonymize",
+        "summary": "Anonymize an account",
+        "description": "Removes the name, e-mail address, sign-in names and profile of the account for good, and deletes its identities, sessions, tokens, passkeys, second factors and personal settings. Its memberships end. The account stays as a former user with its ID; content keeps this pseudonym, and the audit log can no longer show its personal data. Copies of the audit log exported or streamed before are outside Pagehall. Needs a signed-in session with a recent confirmation of identity.\n\nRequires the permission `instance.accounts.manage` on the instance. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Instance"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.accounts.manage",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the account.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500,
+                    "description": "Why the account is anonymized, 1 to 500 characters. Kept in the audit log; do not name the person."
+                  },
+                  "confirmation": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "description": "The current name of the account, typed to confirm."
+                  }
+                },
+                "required": [
+                  "reason",
+                  "confirmation"
+                ],
+                "additionalProperties": false,
+                "description": "Confirmation of the anonymization."
+              },
+              "example": {
+                "reason": "Erasure request of 1 October 2026",
+                "confirmation": "Erika Example"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "What was removed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "endedSessions": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Sessions that ended."
+                    },
+                    "removedIdentities": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Linked identities that were removed."
+                    },
+                    "endedMemberships": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Memberships that ended."
+                    }
+                  },
+                  "required": [
+                    "endedSessions",
+                    "removedIdentities",
+                    "endedMemberships"
+                  ],
+                  "additionalProperties": false,
+                  "description": "What the anonymization removed."
+                },
+                "example": {
+                  "endedSessions": 1,
+                  "removedIdentities": 1,
+                  "endedMemberships": 2
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`anonymizeSelf`: An account cannot anonymize itself. `confirmationMismatch`: The confirmation does not match. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "anonymizeSelf": {
+                    "value": {
+                      "type": "urn:pagehall:problem:anonymizeSelf",
+                      "title": "An account cannot anonymize itself",
+                      "status": 400,
+                      "code": "anonymizeSelf"
+                    }
+                  },
+                  "confirmationMismatch": {
+                    "value": {
+                      "type": "urn:pagehall:problem:confirmationMismatch",
+                      "title": "The confirmation does not match",
+                      "status": 400,
+                      "code": "confirmationMismatch"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "reauthenticationRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:reauthenticationRequired",
+                      "title": "Confirm your identity first",
+                      "status": 403,
+                      "code": "reauthenticationRequired"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`instanceOwner`: The instance owner cannot be changed this way. `lastOwner`: The last owner cannot leave.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "instanceOwner": {
+                    "value": {
+                      "type": "urn:pagehall:problem:instanceOwner",
+                      "title": "The instance owner cannot be changed this way",
+                      "status": 409,
+                      "code": "instanceOwner"
+                    }
+                  },
+                  "lastOwner": {
+                    "value": {
+                      "type": "urn:pagehall:problem:lastOwner",
+                      "title": "The last owner cannot leave",
+                      "status": 409,
+                      "code": "lastOwner"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/accounts/{accountId}/merge": {
+      "post": {
+        "operationId": "instance.mergePlaceholder",
+        "summary": "Merge a placeholder into an account",
+        "description": "Moves the memberships, group memberships and organization roles of the placeholder to the account. The placeholder keeps its ID and points to the account. Nobody can merge a placeholder into their own account. Needs a recent confirmation of identity.\n\nRequires the permission `instance.accounts.manage` on the instance. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Instance"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.accounts.manage",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the placeholder.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "accountId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of the account that takes over the placeholder."
+                  }
+                },
+                "required": [
+                  "accountId"
+                ],
+                "additionalProperties": false,
+                "description": "The account to merge the placeholder into."
+              },
+              "example": {
+                "accountId": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "What moved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "memberships": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Memberships the placeholder had."
+                    },
+                    "groups": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Group memberships the placeholder had."
+                    },
+                    "roles": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Role assignments the placeholder had."
+                    }
+                  },
+                  "required": [
+                    "memberships",
+                    "groups",
+                    "roles"
+                  ],
+                  "additionalProperties": false,
+                  "description": "What moved from the placeholder to the account."
+                },
+                "example": {
+                  "memberships": 1,
+                  "groups": 2,
+                  "roles": 0
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "reauthenticationRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:reauthenticationRequired",
+                      "title": "Confirm your identity first",
+                      "status": 403,
+                      "code": "reauthenticationRequired"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`notPlaceholder`: The account is not a placeholder that can be merged.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notPlaceholder": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notPlaceholder",
+                      "title": "The account is not a placeholder that can be merged",
+                      "status": 409,
+                      "code": "notPlaceholder"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/instance/accounts/{accountId}/organization": {
       "post": {
         "operationId": "instance.assignOrganization",
@@ -14222,6 +14912,225 @@
                       "title": "The account belongs to an organization already",
                       "status": 409,
                       "code": "accountHasOrganization"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/accounts/placeholders": {
+      "post": {
+        "operationId": "instance.createPlaceholder",
+        "summary": "Create a placeholder",
+        "description": "Creates an account for a person who has not signed in yet, for example the author of imported content. When the person signs in through a provider with this e-mail address and the provider verifies it, the placeholder becomes their account; otherwise an administrator merges it.\n\nRequires the permission `instance.accounts.manage` on the instance.",
+        "tags": [
+          "Instance"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.accounts.manage",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "description": "Name of the person, as content will show it."
+                  },
+                  "email": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "format": "email",
+                    "description": "E-mail address of the person. A verified sign-in with this address turns the placeholder into the account."
+                  }
+                },
+                "required": [
+                  "name",
+                  "email"
+                ],
+                "additionalProperties": false,
+                "description": "A person who has no account yet."
+              },
+              "example": {
+                "name": "Erika Example",
+                "email": "erika@example.com"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The placeholder.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the placeholder."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Name."
+                    },
+                    "email": {
+                      "type": "string",
+                      "description": "E-mail address."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "email"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A placeholder."
+                },
+                "example": {
+                  "id": "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9f",
+                  "name": "Erika Example",
+                  "email": "erika@example.com"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`emailInUse`: The e-mail address is in use.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "emailInUse": {
+                    "value": {
+                      "type": "urn:pagehall:problem:emailInUse",
+                      "title": "The e-mail address is in use",
+                      "status": 409,
+                      "code": "emailInUse"
                     }
                   }
                 }

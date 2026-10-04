@@ -40,6 +40,14 @@ export interface MailTemplates {
     clientIp: string | null;
   };
   providerCredentialExpiring: { instanceName: string; providerName: string; date: string };
+  homeOrganizationChanged: {
+    instanceName: string;
+    accountName: string;
+    previousOrganizationName: string | null;
+    organizationName: string | null;
+    reason: "providerRule" | "manual";
+  };
+  mailCredentialExpiring: { instanceName: string; date: string };
   accountRolesWithheld: { instanceName: string; accountName: string; providerName: string; roles: number };
   accountWithoutOrganization: {
     instanceName: string;
@@ -217,6 +225,28 @@ const catalogs: Record<Language, Catalog> = {
         "Assign an organization in the account list of the instance settings, filtered by accounts without an organization.",
       ],
     }),
+    homeOrganizationChanged: ({
+      instanceName,
+      accountName,
+      previousOrganizationName,
+      organizationName,
+      reason,
+    }) => ({
+      subject: `Home organization of ${accountName} on ${instanceName} changed`,
+      paragraphs: [
+        `${organizationName ? `The home organization of ${accountName} on ${instanceName} is now ${organizationName}` : `${accountName} on ${instanceName} has no home organization anymore`}${previousOrganizationName ? `; before, it was ${previousOrganizationName}` : ""}.`,
+        reason === "providerRule"
+          ? "The mapping rule or the group at the identity provider that gave this membership no longer applies."
+          : "An administrator changed it.",
+        "The home organization decides whose administrators manage the account and whose defaults apply to its settings.",
+      ],
+    }),
+    mailCredentialExpiring: ({ instanceName, date }) => ({
+      subject: `E-mail on ${instanceName} stops on ${date}`,
+      paragraphs: [
+        `The client secret or certificate that ${instanceName} uses to send e-mail through Microsoft Graph expires on ${date}. Add a new one in the e-mail settings before then, or Pagehall can no longer send e-mail.`,
+      ],
+    }),
     providerCredentialExpiring: ({ instanceName, providerName, date }) => ({
       subject: `Credential of ${providerName} on ${instanceName} expires soon`,
       paragraphs: [
@@ -364,6 +394,28 @@ const catalogs: Record<Language, Catalog> = {
       paragraphs: [
         `${accountName}${email ? ` (${email})` : ""} hat sich zum ersten Mal über ${providerName} bei ${instanceName} angemeldet. Weder eine Zuordnungsregel noch eine Domain einer Organisation hat das Konto zum Mitglied einer Organisation gemacht.`,
         "Weisen Sie in der Kontenliste der Instanz-Einstellungen eine Organisation zu, gefiltert nach Konten ohne Organisation.",
+      ],
+    }),
+    homeOrganizationChanged: ({
+      instanceName,
+      accountName,
+      previousOrganizationName,
+      organizationName,
+      reason,
+    }) => ({
+      subject: `Heimatorganisation von ${accountName} auf ${instanceName} geändert`,
+      paragraphs: [
+        `${organizationName ? `Die Heimatorganisation von ${accountName} auf ${instanceName} ist jetzt ${organizationName}` : `${accountName} hat auf ${instanceName} keine Heimatorganisation mehr`}${previousOrganizationName ? `; vorher war es ${previousOrganizationName}` : ""}.`,
+        reason === "providerRule"
+          ? "Die Zuordnungsregel oder die Gruppe beim Identitätsanbieter, aus der diese Mitgliedschaft kam, gilt nicht mehr."
+          : "Eine Administratorin oder ein Administrator hat sie geändert.",
+        "Die Heimatorganisation bestimmt, wessen Administration das Konto verwaltet und wessen Standards für seine Einstellungen gelten.",
+      ],
+    }),
+    mailCredentialExpiring: ({ instanceName, date }) => ({
+      subject: `E-Mail-Versand auf ${instanceName} endet am ${date}`,
+      paragraphs: [
+        `Das Client-Secret oder Zertifikat, mit dem ${instanceName} E-Mails über Microsoft Graph sendet, läuft am ${date} ab. Fügen Sie vorher in den E-Mail-Einstellungen neue Zugangsdaten hinzu, sonst kann Pagehall keine E-Mails mehr senden.`,
       ],
     }),
     providerCredentialExpiring: ({ instanceName, providerName, date }) => ({

@@ -1,4 +1,13 @@
-import { Bot, KeyRound, ShieldAlert, ShieldCheck, UserRound, UserRoundX } from "lucide-react";
+import {
+  Bot,
+  Building2,
+  KeyRound,
+  Mail,
+  ShieldAlert,
+  ShieldCheck,
+  UserRound,
+  UserRoundX,
+} from "lucide-react";
 import { notificationTypes } from "./notification-types.js";
 import type { NotificationItem } from "./notifications-api.js";
 
@@ -49,6 +58,13 @@ notificationTypes.register(
     icon: ShieldAlert,
     link: () => ({ to: "/settings/instance/sign-in-providers" }),
   },
+  {
+    id: "account.homeOrganizationChanged",
+    icon: Building2,
+    link: (item) =>
+      item.organizationId ? inOrganization(item, "/members") : { to: "/settings/preferences" },
+  },
+  { id: "mail.credentialExpiring", icon: Mail, link: () => ({ to: "/settings/instance/mail" }) },
   {
     id: "identityProvider.credentialExpiring",
     icon: KeyRound,

@@ -199,6 +199,10 @@ export class AuditSealer {
     await tx.update(auditSubjectKeys).set({ accountId }).where(eq(auditSubjectKeys.subjectId, subjectId));
   }
 
+  async destroySubject(tx: Transaction, subjectId: string): Promise<void> {
+    await tx.delete(auditSubjectKeys).where(eq(auditSubjectKeys.subjectId, subjectId));
+  }
+
   async destroy(tx: Transaction, accountId: string): Promise<number> {
     const removed = await tx
       .delete(auditSubjectKeys)

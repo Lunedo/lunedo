@@ -243,6 +243,7 @@ export class MembershipService {
     actor: Principal,
     organizationId: string,
     accountId: string,
+    reason: "removed" | "anonymized" = "removed",
   ): Promise<Event[]> {
     const events: Event[] = [];
     const removedAssignments = await tx
@@ -268,7 +269,7 @@ export class MembershipService {
           role: assignment.builtInRole ?? assignment.customRoleId ?? "",
           principalKind: "account",
           principalId: accountId,
-          reason: "removed",
+          reason,
         },
         scope: scopeOf(organizationId),
       });
@@ -286,7 +287,7 @@ export class MembershipService {
         name: "group.memberRemoved",
         actor,
         targetId: removed.groupId,
-        fields: { accountId, reason: "removed" },
+        fields: { accountId, reason },
         scope: scopeOf(organizationId),
       });
     }
@@ -358,7 +359,7 @@ export class MembershipService {
     organizationId: string,
     accountId: string,
     reason: "removed" | "left" | "providerRule" = "removed",
-    options: { tx?: Transaction } = {},
+    options: { tx?: Transaction; releaseHome?: boolean } = {},
   ): Promise<boolean> {
     const run = async (tx: Transaction) => {
       await lockOrganization(tx, organizationId);
@@ -371,7 +372,7 @@ export class MembershipService {
         .select({ home: accounts.homeOrganizationId })
         .from(accounts)
         .where(eq(accounts.id, accountId));
-      if (account?.home === organizationId) {
+      if (account?.home === organizationId && !options.releaseHome) {
         throw new OrganizationError(
           "homeOrganization",
           "An account cannot leave its home organization; deactivate the account instead",
@@ -399,6 +400,69 @@ export class MembershipService {
       return true;
     };
     return options.tx ? run(options.tx) : this.#database.transaction(run);
+  }
+
+  async endAll(
+    tx: Transaction,
+    actor: Principal,
+    accountId: string,
+  ): Promise<{ events: AuditEvents; ended: number }> {
+    const held = await tx
+      .select({ organizationId: memberships.organizationId, kind: memberships.kind })
+      .from(memberships)
+      .where(eq(memberships.accountId, accountId))
+      .orderBy(asc(memberships.organizationId));
+    const events: Event[] = [];
+    for (const membership of held) {
+      await lockOrganization(tx, membership.organizationId);
+      if (
+        (await ownerCount(tx, membership.organizationId)) > 0 &&
+        (await ownerCount(tx, membership.organizationId, { accountId })) === 0
+      ) {
+        throw new LastOwnerError();
+      }
+      await tx
+        .delete(memberships)
+        .where(
+          and(
+            eq(memberships.organizationId, membership.organizationId),
+            eq(memberships.accountId, accountId),
+          ),
+        );
+      events.push({
+        name: "membership.removed",
+        actor,
+        targetId: accountId,
+        fields: { kind: membership.kind, reason: "anonymized" },
+        scope: scopeOf(membership.organizationId),
+      });
+      events.push(...(await this.#detach(tx, actor, membership.organizationId, accountId, "anonymized")));
+    }
+    const instanceRoles = await tx
+      .delete(roleAssignments)
+      .where(and(eq(roleAssignments.principalKind, "account"), eq(roleAssignments.principalId, accountId)))
+      .returning({
+        id: roleAssignments.id,
+        organizationId: roleAssignments.organizationId,
+        builtInRole: roleAssignments.builtInRole,
+        customRoleId: roleAssignments.customRoleId,
+      });
+    for (const assignment of instanceRoles) {
+      events.push({
+        name: "role.unassigned",
+        actor,
+        targetId: assignment.id,
+        fields: {
+          role: assignment.builtInRole ?? assignment.customRoleId ?? "",
+          principalKind: "account",
+          principalId: accountId,
+          reason: "anonymized",
+        },
+        ...(assignment.organizationId ? { scope: scopeOf(assignment.organizationId) } : {}),
+      });
+    }
+    events.push(...(await this.#releaseGuests(tx, actor, accountId)));
+    return { events, ended: held.length };
   }
 
   async expire(organizationId: string, accountId: string): Promise<boolean> {

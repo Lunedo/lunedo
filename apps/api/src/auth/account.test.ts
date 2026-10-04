@@ -286,14 +286,20 @@ describe.skipIf(!databaseBaseUrl)("account security", () => {
       const notice = test.mail.sent.findLast((mail) => mail.to === "old.address@example.org");
       expect(notice?.subject).toBe("Your e-mail address on Test wiki was changed");
       expect(notice?.text).toContain("New.Address@example.org");
-      const changed = await test.runtime.pool.query(
-        "select actor_type, actor_id, fields from audit_events where name = 'account.emailChanged' and target_id = $1",
+      const stored = await test.runtime.pool.query<{ fields: unknown; sealed: unknown }>(
+        "select fields, sealed from audit_events where name = 'account.emailChanged' and target_id = $1",
         [account.id],
       );
-      expect(changed.rows).toEqual([
+      expect(stored.rows).toHaveLength(1);
+      expect(JSON.stringify(stored.rows)).not.toContain("address@example.org");
+      const changed = await test.runtime.services.auditReader.list(
+        { type: "system" },
+        { name: "account.emailChanged", targetId: account.id },
+      );
+      expect(changed.items).toMatchObject([
         {
-          actor_type: "account",
-          actor_id: account.id,
+          actorType: "account",
+          actorId: account.id,
           fields: { previousEmail: "old.address@example.org", newEmail: "New.Address@example.org" },
         },
       ]);

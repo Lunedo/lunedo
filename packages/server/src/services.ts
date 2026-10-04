@@ -1,5 +1,6 @@
 import { AccountService } from "./accounts/accounts.js";
 import { AccountAdministrationService } from "./accounts/administration.js";
+import { AccountLifecycleService } from "./accounts/lifecycle.js";
 import { AccountOverviewService } from "./accounts/overview.js";
 import { AuditLog } from "./audit/audit-log.js";
 import { AuditReader } from "./audit/reader.js";
@@ -59,6 +60,7 @@ import { NotificationService } from "./notifications/service.js";
 import { builtinNotificationTypes } from "./notifications/types.js";
 import { BreakGlassService } from "./organizations/break-glass.js";
 import { GroupService } from "./organizations/groups.js";
+import { HomeOrganizationService } from "./organizations/home.js";
 import { InvitationService, registrationRequestJob } from "./organizations/invitations.js";
 import {
   ORGANIZATION_EXPIRY_SCHEDULE,
@@ -96,7 +98,9 @@ export interface AccountServices {
   authorization: AuthorizationService;
   organizations: OrganizationService;
   memberships: MembershipService;
+  homeOrganizations: HomeOrganizationService;
   administration: AccountAdministrationService;
+  accountLifecycle: AccountLifecycleService;
   overview: AccountOverviewService;
   roles: RoleService;
   groups: GroupService;
@@ -171,7 +175,14 @@ export function createAccountServices(options: {
     authorization,
     registry: new NotificationRegistry().register(...builtinNotificationTypes),
   });
-  const groupMapping = new GroupMappingService({ roles, memberships, audit, notifications });
+  const homeOrganizations = new HomeOrganizationService({ database, audit, authorization, notifications });
+  const groupMapping = new GroupMappingService({
+    roles,
+    memberships,
+    audit,
+    notifications,
+    home: homeOrganizations,
+  });
   const identityProviders = new IdentityProviderService({
     database,
     audit,
@@ -190,6 +201,13 @@ export function createAccountServices(options: {
     mapping: groupMapping,
     settings,
     memberships,
+  });
+  const accountLifecycle = new AccountLifecycleService({
+    database,
+    audit,
+    authorization,
+    memberships,
+    encryption,
   });
   const breakGlass = new BreakGlassService({ database, audit, notifications, settings });
   const emergencyRecipients = new EmergencyRecipientsService({ database, settings, authorization });
@@ -286,6 +304,7 @@ export function createAccountServices(options: {
     settings,
     rateLimiter,
     throttle,
+    lifecycle: accountLifecycle,
   });
   const security = new AccountSecurityService({
     database,
@@ -339,7 +358,9 @@ export function createAccountServices(options: {
     authorization,
     organizations,
     memberships,
+    homeOrganizations,
     administration,
+    accountLifecycle,
     overview,
     roles,
     groups,

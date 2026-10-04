@@ -1776,7 +1776,9 @@
       "serviceAccountUnattended": "Service account without responsible person",
       "breakGlassStarted": "Break-glass access started",
       "signInNewBrowser": "Sign-in from a new browser",
-      "apiTokenUnused": "API token unused"
+      "apiTokenUnused": "API token unused",
+      "accountHomeOrganizationChanged": "Home organization changed",
+      "mailCredentialExpiring": "E-mail credential expires soon"
     },
     "types": {
       "identityProvider": {
@@ -1784,7 +1786,8 @@
       },
       "account": {
         "withoutOrganization": "{accountName} signed in through {providerName} for the first time and is not a member of any organization yet. Assign one in the account list.",
-        "rolesWithheld": "The groups of {accountName} could not be read from {providerName} for too long, so {roles, plural, one {# administrative role is} other {# administrative roles are}} paused. Check the connection to the provider."
+        "rolesWithheld": "The groups of {accountName} could not be read from {providerName} for too long, so {roles, plural, one {# administrative role is} other {# administrative roles are}} paused. Check the connection to the provider.",
+        "homeOrganizationChanged": "The home organization of {accountName} is now {organizationName, select, null {none} other {{organizationName}}}, before it was {previousOrganizationName, select, null {none} other {{previousOrganizationName}}}. {reason, select, providerRule {The mapping rule or group that gave the membership no longer applies.} other {An administrator changed it.}}"
       },
       "auth": {
         "emergencySignIn": "{accountName} used the emergency sign-in with password: {browser} on {operatingSystem}, {clientIp}."
@@ -1808,6 +1811,9 @@
       },
       "signIn": {
         "newBrowser": "Your account was signed in from a new browser: {browser} on {operatingSystem}, {clientIp}."
+      },
+      "mail": {
+        "credentialExpiring": "The client secret or certificate for sending e-mail through Microsoft Graph expires on {expiresAt}. Add a new one in the e-mail settings before then."
       }
     }
   },
@@ -2373,7 +2379,11 @@
         "reactivated": "Account reactivated",
         "sessionsEnded": "All sessions ended",
         "deactivatedByProvider": "Account deactivated by the provider",
-        "reactivatedByProvider": "Account reactivated by the provider"
+        "reactivatedByProvider": "Account reactivated by the provider",
+        "homeOrganizationChanged": "Home organization changed",
+        "placeholderCreated": "Placeholder created",
+        "placeholderMerged": "Placeholder merged",
+        "anonymized": "Account anonymized"
       },
       "twoFactor": {
         "totpAdded": "Authenticator app added",
@@ -2547,7 +2557,15 @@
       "timeZone": "Time zone",
       "to": "To",
       "type": "Type",
-      "username": "User name"
+      "username": "User name",
+      "previousOrganizationId": "Previous organization",
+      "placeholderId": "Placeholder",
+      "via": "Through",
+      "memberships": "Memberships",
+      "groups": "Groups",
+      "roles": "Roles",
+      "removedIdentities": "Removed identities",
+      "endedMemberships": "Ended memberships"
     },
     "values": {
       "account": "Account",
@@ -2568,7 +2586,13 @@
       "tls": "TLS",
       "starttls": "STARTTLS",
       "view": "View",
-      "manage": "Manage"
+      "manage": "Manage",
+      "providerRule": "Mapping rule",
+      "manual": "By hand",
+      "merged": "Merged",
+      "anonymized": "Anonymized",
+      "signIn": "Sign-in",
+      "administrator": "Administrator"
     },
     "formerUser": "Former user {id}"
   },

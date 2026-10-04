@@ -10,6 +10,8 @@ import {
 } from "@pagehall/server";
 import {
   accentColors,
+  accountNameSchema,
+  emailSchema,
   idSchema,
   setupStepSchemas,
   smtpInputSchema,
@@ -199,8 +201,58 @@ const accountListQuerySchema = searchQuerySchema
       .enum(["true", "false"])
       .optional()
       .describe("With true, only accounts without any current membership in an organization."),
+    state: z
+      .enum(["active", "deactivated", "anonymized", "placeholder"])
+      .optional()
+      .describe("Only accounts in this lifecycle state."),
   })
   .strict();
+
+const placeholderSchema = z
+  .object({
+    name: accountNameSchema.describe("Name of the person, as content will show it."),
+    email: emailSchema.describe(
+      "E-mail address of the person. A verified sign-in with this address turns the placeholder into the account.",
+    ),
+  })
+  .strict()
+  .describe("A person who has no account yet.");
+
+const mergeSchema = z
+  .object({ accountId: uuid("ID of the account that takes over the placeholder.") })
+  .strict()
+  .describe("The account to merge the placeholder into.");
+
+const mergedSchema = z
+  .object({
+    memberships: z.number().int().describe("Memberships the placeholder had."),
+    groups: z.number().int().describe("Group memberships the placeholder had."),
+    roles: z.number().int().describe("Role assignments the placeholder had."),
+  })
+  .describe("What moved from the placeholder to the account.");
+
+const anonymizeSchema = z
+  .object({
+    reason: z
+      .string()
+      .trim()
+      .min(1)
+      .max(500)
+      .describe(
+        "Why the account is anonymized, 1 to 500 characters. Kept in the audit log; do not name the person.",
+      ),
+    confirmation: z.string().max(200).describe("The current name of the account, typed to confirm."),
+  })
+  .strict()
+  .describe("Confirmation of the anonymization.");
+
+const anonymizedSchema = z
+  .object({
+    endedSessions: z.number().int().describe("Sessions that ended."),
+    removedIdentities: z.number().int().describe("Linked identities that were removed."),
+    endedMemberships: z.number().int().describe("Memberships that ended."),
+  })
+  .describe("What the anonymization removed.");
 
 @Controller("api/v1/instance")
 export class InstanceController {
@@ -349,8 +401,103 @@ export class InstanceController {
     return toApiPage(
       await this.#services.overview.listAccounts(pageRequest(query, nameCursor), {
         withoutOrganization: query.withoutOrganization === "true",
+        ...(query.state ? { state: query.state } : {}),
       }),
     );
+  }
+
+  @Post("accounts/placeholders")
+  @Permission("instance.accounts.manage")
+  @ApiRoute({
+    summary: "Create a placeholder",
+    description:
+      "Creates an account for a person who has not signed in yet, for example the author of imported content. When the person signs in through a provider with this e-mail address and the provider verifies it, the placeholder becomes their account; otherwise an administrator merges it.",
+    tags: [TAG],
+    status: 201,
+    body: placeholderSchema,
+    bodyExample: { name: "Erika Example", email: "erika@example.com" },
+    response: {
+      description: "The placeholder.",
+      schema: z
+        .object({
+          id: uuid("ID of the placeholder."),
+          name: z.string().describe("Name."),
+          email: z.string().describe("E-mail address."),
+        })
+        .describe("A placeholder."),
+      example: {
+        id: "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9f",
+        name: "Erika Example",
+        email: "erika@example.com",
+      },
+    },
+    errors: ["emailInUse"],
+  })
+  async createPlaceholder(@Body() body: z.output<typeof placeholderSchema>, @Req() request: FastifyRequest) {
+    return this.#services.accountLifecycle.createPlaceholder(actorOf(request), body);
+  }
+
+  @Post("accounts/:accountId/merge")
+  @Permission("instance.accounts.manage", { type: "instance" }, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "Merge a placeholder into an account",
+    description:
+      "Moves the memberships, group memberships and organization roles of the placeholder to the account. The placeholder keeps its ID and points to the account. Nobody can merge a placeholder into their own account. Needs a recent confirmation of identity.",
+    tags: [TAG],
+    status: 200,
+    params: z.object({ accountId: uuid("ID of the placeholder.") }).strict(),
+    body: mergeSchema,
+    bodyExample: { accountId: "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c" },
+    response: {
+      description: "What moved.",
+      schema: mergedSchema,
+      example: { memberships: 1, groups: 2, roles: 0 },
+    },
+    errors: ["notPlaceholder", "notFound", "reauthenticationRequired"],
+  })
+  async mergePlaceholder(
+    @Param("accountId") placeholderId: string,
+    @Body() body: z.output<typeof mergeSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.accountLifecycle.mergePlaceholder(actorOf(request), placeholderId, body.accountId);
+  }
+
+  @Post("accounts/:accountId/anonymize")
+  @Permission(
+    "instance.accounts.manage",
+    { type: "instance" },
+    { recentAuthentication: true, sessionOnly: true },
+  )
+  @ApiRoute({
+    summary: "Anonymize an account",
+    description:
+      "Removes the name, e-mail address, sign-in names and profile of the account for good, and deletes its identities, sessions, tokens, passkeys, second factors and personal settings. Its memberships end. The account stays as a former user with its ID; content keeps this pseudonym, and the audit log can no longer show its personal data. Copies of the audit log exported or streamed before are outside Pagehall. Needs a signed-in session with a recent confirmation of identity.",
+    tags: [TAG],
+    status: 200,
+    params: z.object({ accountId: uuid("ID of the account.") }).strict(),
+    body: anonymizeSchema,
+    bodyExample: { reason: "Erasure request of 1 October 2026", confirmation: "Erika Example" },
+    response: {
+      description: "What was removed.",
+      schema: anonymizedSchema,
+      example: { endedSessions: 1, removedIdentities: 1, endedMemberships: 2 },
+    },
+    errors: [
+      "confirmationMismatch",
+      "anonymizeSelf",
+      "instanceOwner",
+      "lastOwner",
+      "notFound",
+      "reauthenticationRequired",
+    ],
+  })
+  async anonymize(
+    @Param("accountId") accountId: string,
+    @Body() body: z.output<typeof anonymizeSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.accountLifecycle.anonymize(actorOf(request), accountId, body);
   }
 
   @Post("accounts/:accountId/organization")

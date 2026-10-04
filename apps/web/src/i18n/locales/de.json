@@ -1773,7 +1773,9 @@
       "serviceAccountUnattended": "Dienstkonto ohne verantwortliche Person",
       "breakGlassStarted": "Notfallzugriff begonnen",
       "signInNewBrowser": "Anmeldung in einem neuen Browser",
-      "apiTokenUnused": "API-Token ungenutzt"
+      "apiTokenUnused": "API-Token ungenutzt",
+      "accountHomeOrganizationChanged": "Heimatorganisation geändert",
+      "mailCredentialExpiring": "Zugangsdaten für E-Mail laufen bald ab"
     },
     "types": {
       "identityProvider": {
@@ -1781,7 +1783,8 @@
       },
       "account": {
         "withoutOrganization": "{accountName} hat sich zum ersten Mal über {providerName} angemeldet und ist noch in keiner Organisation Mitglied. Weise in der Kontenliste eine zu.",
-        "rolesWithheld": "Die Gruppen von {accountName} konnten zu lange nicht aus {providerName} gelesen werden, deshalb {roles, plural, one {ist # administrative Rolle} other {sind # administrative Rollen}} ausgesetzt. Prüfe die Verbindung zum Anbieter."
+        "rolesWithheld": "Die Gruppen von {accountName} konnten zu lange nicht aus {providerName} gelesen werden, deshalb {roles, plural, one {ist # administrative Rolle} other {sind # administrative Rollen}} ausgesetzt. Prüfe die Verbindung zum Anbieter.",
+        "homeOrganizationChanged": "Die Heimatorganisation von {accountName} ist jetzt {organizationName, select, null {keine} other {{organizationName}}}, vorher war es {previousOrganizationName, select, null {keine} other {{previousOrganizationName}}}. {reason, select, providerRule {Die Zuordnungsregel oder Gruppe, aus der die Mitgliedschaft kam, gilt nicht mehr.} other {Die Administration hat sie geändert.}}"
       },
       "auth": {
         "emergencySignIn": "{accountName} hat die Notfall-Anmeldung mit Passwort verwendet: {browser} auf {operatingSystem}, {clientIp}."
@@ -1805,6 +1808,9 @@
       },
       "signIn": {
         "newBrowser": "Dein Konto wurde in einem neuen Browser angemeldet: {browser} auf {operatingSystem}, {clientIp}."
+      },
+      "mail": {
+        "credentialExpiring": "Das Client-Secret oder Zertifikat für den E-Mail-Versand über Microsoft Graph läuft am {expiresAt} ab. Füge vorher in den E-Mail-Einstellungen neue Zugangsdaten hinzu."
       }
     }
   },
@@ -2370,7 +2376,11 @@
         "reactivated": "Konto reaktiviert",
         "sessionsEnded": "Alle Sitzungen beendet",
         "deactivatedByProvider": "Konto vom Anbieter deaktiviert",
-        "reactivatedByProvider": "Konto vom Anbieter reaktiviert"
+        "reactivatedByProvider": "Konto vom Anbieter reaktiviert",
+        "homeOrganizationChanged": "Heimatorganisation geändert",
+        "placeholderCreated": "Platzhalter angelegt",
+        "placeholderMerged": "Platzhalter zusammengeführt",
+        "anonymized": "Konto anonymisiert"
       },
       "twoFactor": {
         "totpAdded": "Authenticator-App hinzugefügt",
@@ -2544,7 +2554,15 @@
       "timeZone": "Zeitzone",
       "to": "Bis",
       "type": "Typ",
-      "username": "Benutzername"
+      "username": "Benutzername",
+      "previousOrganizationId": "Vorherige Organisation",
+      "placeholderId": "Platzhalter",
+      "via": "Über",
+      "memberships": "Mitgliedschaften",
+      "groups": "Gruppen",
+      "roles": "Rollen",
+      "removedIdentities": "Entfernte Identitäten",
+      "endedMemberships": "Beendete Mitgliedschaften"
     },
     "values": {
       "account": "Konto",
@@ -2565,7 +2583,13 @@
       "tls": "TLS",
       "starttls": "STARTTLS",
       "view": "Ansehen",
-      "manage": "Verwalten"
+      "manage": "Verwalten",
+      "providerRule": "Zuordnungsregel",
+      "manual": "Von Hand",
+      "merged": "Zusammengeführt",
+      "anonymized": "Anonymisiert",
+      "signIn": "Anmeldung",
+      "administrator": "Administration"
     },
     "formerUser": "Ehemalige Person {id}"
   },

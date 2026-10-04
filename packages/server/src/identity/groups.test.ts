@@ -273,6 +273,138 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
     expect(await membership(first.id, both)).toBe("member");
   });
 
+  async function homeChangeNotices(accountId: string) {
+    const result = await test.pool.query<{ recipient_id: string; organization_id: string | null }>(
+      "select recipient_id, organization_id from notifications where type = 'account.homeOrganizationChanged' and target_id = $1",
+      [accountId],
+    );
+    return result.rows;
+  }
+
+  it("moves the home organization on when the rule that gave it no longer applies", async () => {
+    const first = await organization();
+    const second = await organization();
+    const firstGroup = `group-${randomUUID()}`;
+    const secondGroup = `group-${randomUUID()}`;
+    for (const [org, group, home] of [
+      [first, firstGroup, true],
+      [second, secondGroup, false],
+    ] as const) {
+      await test.services.mappingRules.create(accountPrincipal(org.owner), generic, {
+        target: "organization",
+        group: { id: group, name: group },
+        organizationId: org.id,
+        role: null,
+        synchronizedGroup: false,
+        homeOrganization: home,
+      });
+    }
+    const subject = randomUUID();
+    const claims = (groups: string[]) => ({
+      sub: subject,
+      email: `${subject.slice(0, 8)}@generic.example`,
+      groups,
+    });
+    const person = await signedInAccount(await signIn(claims([firstGroup, secondGroup])));
+    expect(await homeOf(person)).toBe(first.id);
+
+    await signedInAccount(await signIn(claims([secondGroup])));
+    expect(await membership(first.id, person)).toBeNull();
+    expect(await homeOf(person)).toBe(second.id);
+    const notices = await homeChangeNotices(person);
+    expect(notices).toContainEqual({ recipient_id: person, organization_id: null });
+    expect(notices).toContainEqual({ recipient_id: first.owner, organization_id: first.id });
+    expect(notices).toContainEqual({ recipient_id: second.owner, organization_id: second.id });
+    const events = await test.pool.query<{ scope_id: string; fields: unknown }>(
+      "select scope_id, fields from audit_events where name = 'account.homeOrganizationChanged' and target_id = $1",
+      [person],
+    );
+    expect(events.rows.map((row) => row.scope_id).sort()).toEqual([first.id, second.id].sort());
+    expect(events.rows[0]?.fields).toEqual({
+      previousOrganizationId: first.id,
+      organizationId: second.id,
+      reason: "providerRule",
+    });
+
+    const outside = await signIn(claims([]));
+    expect(outside.kind).toBe("signedIn");
+    expect(await membership(second.id, person)).toBeNull();
+    expect(await homeOf(person)).toBeNull();
+  });
+
+  it("keeps the home organization while the person holds other access there", async () => {
+    const org = await organization();
+    const group = `group-${randomUUID()}`;
+    await test.services.mappingRules.create(accountPrincipal(org.owner), generic, {
+      target: "organization",
+      group: { id: group, name: group },
+      organizationId: org.id,
+      role: null,
+      synchronizedGroup: false,
+      homeOrganization: true,
+    });
+    const subject = randomUUID();
+    const claims = (groups: string[]) => ({
+      sub: subject,
+      email: `${subject.slice(0, 8)}@generic.example`,
+      groups,
+    });
+    const person = await signedInAccount(await signIn(claims([group])));
+    await test.services.roles.assign(accountPrincipal(org.owner), {
+      scope: "organization",
+      organizationId: org.id,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: person },
+    });
+    await signedInAccount(await signIn(claims([])));
+    expect(await membership(org.id, person)).toBe("member");
+    expect(await homeOf(person)).toBe(org.id);
+    expect(await homeChangeNotices(person)).toEqual([]);
+  });
+
+  it("lets administrators of the home organization and of the instance change it by hand", async () => {
+    const first = await organization();
+    const second = await organization();
+    const person = await account(first.id);
+    await test.database.transaction((tx) =>
+      test.services.memberships.add(tx, SYSTEM, {
+        organizationId: second.id,
+        accountId: person.id,
+        kind: "member",
+      }),
+    );
+    await expect(
+      test.services.homeOrganizations.change(accountPrincipal(second.owner), person.id, second.id),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+    const third = await organization();
+    await expect(
+      test.services.homeOrganizations.change(accountPrincipal(first.owner), person.id, third.id),
+    ).rejects.toMatchObject({ code: "notMember" });
+
+    await test.services.homeOrganizations.change(accountPrincipal(first.owner), person.id, second.id);
+    expect(await homeOf(person.id)).toBe(second.id);
+    const notices = await homeChangeNotices(person.id);
+    expect(notices).toContainEqual({ recipient_id: person.id, organization_id: null });
+    expect(notices).toContainEqual({ recipient_id: second.owner, organization_id: second.id });
+    const [event] = (
+      await test.pool.query<{ fields: { reason: string }; actor_id: string }>(
+        "select fields, actor_id from audit_events where name = 'account.homeOrganizationChanged' and target_id = $1",
+        [person.id],
+      )
+    ).rows;
+    expect(event).toMatchObject({ fields: { reason: "manual" }, actor_id: first.owner });
+
+    const administrator = await account(null);
+    await test.services.roles.assign(SYSTEM, {
+      scope: "instance",
+      organizationId: null,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: administrator.id },
+    });
+    await test.services.homeOrganizations.change(accountPrincipal(administrator.id), person.id, first.id);
+    expect(await homeOf(person.id)).toBe(first.id);
+  });
+
   it("gives an account with a standard membership but no home organization one at its next sign-in", async () => {
     const collaborating = await organization();
     const member = await organization();

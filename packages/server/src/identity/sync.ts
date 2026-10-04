@@ -75,7 +75,7 @@ export interface SyncRunSummary {
   error: string | null;
 }
 
-export interface SyncRunDetails extends SyncRunSummary, SyncReport {
+export interface SyncRunDetails extends SyncRunSummary, Omit<SyncReport, "mailIds"> {
   references: Record<string, string>;
 }
 
@@ -325,6 +325,7 @@ export class ProviderSyncService {
         },
       });
     });
+    await this.#mapping.dispatch(report.mailIds);
     const [summary] = await this.#summaries(eq(providerSyncRuns.id, runId));
     return summary ?? null;
   }

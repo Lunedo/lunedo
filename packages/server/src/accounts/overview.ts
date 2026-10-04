@@ -100,7 +100,7 @@ export class AccountOverviewService {
 
   async listAccounts(
     page: PageRequest,
-    filter: { withoutOrganization?: boolean } = {},
+    filter: { withoutOrganization?: boolean; state?: Account["state"] } = {},
   ): Promise<Page<AdministeredAccount>> {
     const result = await this.#accounts.list(page, filter);
     const details = await this.#details(result.items.map((item) => item.id));

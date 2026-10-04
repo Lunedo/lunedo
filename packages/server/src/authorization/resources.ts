@@ -147,6 +147,10 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
         ...instanceArea("accounts", "manage"),
         rule: "homeOrganizationAdministrator",
       },
+      "account.homeOrganization.change": {
+        ...instanceArea("accounts", "manage"),
+        rule: "homeOrganizationAdministrator",
+      },
     },
     rules: {
       self: async (context) => context.resource.id === context.accountId,

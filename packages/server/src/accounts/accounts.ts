@@ -1,5 +1,5 @@
 import { accountNameSchema, emailSchema } from "@pagehall/shared";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import type { AuditEvents, AuditLog } from "../audit/audit-log.js";
 import type { PasswordHasher, PasswordProblem } from "../auth/passwords.js";
 import { passwordProblem } from "../auth/passwords.js";
@@ -102,7 +102,7 @@ export class AccountService {
 
   async list(
     page: PageRequest = FIRST_PAGE,
-    filter: { withoutOrganization?: boolean } = {},
+    filter: { withoutOrganization?: boolean; state?: AccountState } = {},
   ): Promise<Page<Omit<Account, "passwordHash">>> {
     const { passwordHash: _passwordHash, ...columns } = accountColumns;
     const sortName = sql<string>`lower(${accounts.name})`;
@@ -113,6 +113,8 @@ export class AccountService {
         and(
           afterKey([sortName, accounts.id], page.after),
           matchesSearch([accounts.name, accounts.email], page.search),
+          isNull(accounts.mergedIntoId),
+          filter.state ? eq(accounts.state, filter.state) : undefined,
           filter.withoutOrganization
             ? sql`not exists (select 1 from memberships m where m.account_id = ${accounts.id}
                 and (m.expires_at is null or m.expires_at > now()))`

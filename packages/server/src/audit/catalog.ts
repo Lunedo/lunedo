@@ -250,6 +250,46 @@ export const auditCatalog = {
     fields: z.object({ organizationId: z.uuid() }),
     visibility: "organization",
   }),
+  "account.homeOrganizationChanged": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({
+      previousOrganizationId: z.uuid().nullable(),
+      organizationId: z.uuid().nullable(),
+      reason: z.enum(["providerRule", "manual"]),
+    }),
+    visibility: "organization",
+  }),
+  "account.placeholderCreated": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({ email: z.string() }),
+    visibility: "instance",
+    personal: { email: "target" },
+  }),
+  "account.placeholderMerged": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({
+      placeholderId: z.uuid(),
+      via: z.enum(["signIn", "administrator"]),
+      memberships: z.number().int().nonnegative(),
+      groups: z.number().int().nonnegative(),
+      roles: z.number().int().nonnegative(),
+    }),
+    visibility: "organization",
+  }),
+  "account.anonymized": event({
+    actor: ["account"],
+    target: "account",
+    fields: z.object({
+      reason: z.string().min(1).max(500),
+      endedSessions: z.number().int().nonnegative(),
+      removedIdentities: z.number().int().nonnegative(),
+      endedMemberships: z.number().int().nonnegative(),
+    }),
+    visibility: "organization",
+  }),
   "account.reactivatedByProvider": event({
     actor: ["system"],
     target: "account",
@@ -497,7 +537,10 @@ export const auditCatalog = {
   "membership.removed": event({
     actor: ["account", "system"],
     target: "account",
-    fields: z.object({ kind: z.string(), reason: z.enum(["removed", "left", "expired", "providerRule"]) }),
+    fields: z.object({
+      kind: z.string(),
+      reason: z.enum(["removed", "left", "expired", "providerRule", "merged", "anonymized"]),
+    }),
     visibility: "organization",
   }),
   "role.created": event({
@@ -537,7 +580,7 @@ export const auditCatalog = {
       role: z.string(),
       principalKind: z.string(),
       principalId: z.uuid().nullable(),
-      reason: z.enum(["removed", "expired", "providerRule"]),
+      reason: z.enum(["removed", "expired", "providerRule", "merged", "anonymized"]),
     }),
     visibility: "organization",
   }),
@@ -568,7 +611,10 @@ export const auditCatalog = {
   "group.memberRemoved": event({
     actor: ["account", "system"],
     target: "group",
-    fields: z.object({ accountId: z.uuid(), reason: z.enum(["removed", "expired", "providerRule"]) }),
+    fields: z.object({
+      accountId: z.uuid(),
+      reason: z.enum(["removed", "expired", "providerRule", "merged", "anonymized"]),
+    }),
     visibility: "organization",
   }),
   "group.managerAdded": event({

@@ -6,6 +6,7 @@ import { ZodError } from "zod";
 import type { Account, AccountService } from "../accounts/accounts.js";
 import { EmailInUseError } from "../accounts/accounts.js";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
+import type { AccountLifecycleService } from "../accounts/lifecycle.js";
 import { ANONYMOUS, accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { ChallengeStore } from "../auth/challenges.js";
@@ -211,6 +212,7 @@ export class ProviderSignInService {
   readonly #rateLimiter: RateLimiter;
   readonly #throttle: SignInThrottle | undefined;
   readonly #mapping: GroupMappingService;
+  readonly #lifecycle: AccountLifecycleService | undefined;
   readonly #clock: () => Date;
 
   constructor(options: {
@@ -227,6 +229,7 @@ export class ProviderSignInService {
     rateLimiter: RateLimiter;
     throttle?: SignInThrottle;
     mapping: GroupMappingService;
+    lifecycle?: AccountLifecycleService;
     clock?: () => Date;
   }) {
     this.#database = options.database;
@@ -242,6 +245,7 @@ export class ProviderSignInService {
     this.#rateLimiter = options.rateLimiter;
     this.#throttle = options.throttle;
     this.#mapping = options.mapping;
+    this.#lifecycle = options.lifecycle;
     this.#clock = options.clock ?? (() => new Date());
   }
 
@@ -504,9 +508,11 @@ export class ProviderSignInService {
       );
     }
 
+    let placeholder: Account | null = null;
     if (input.emailVerified && profile.email) {
       const existing = await this.#accounts.findByEmail(profile.email);
-      if (existing) {
+      if (existing?.state === "placeholder") placeholder = existing;
+      else if (existing) {
         if (!canSignIn(existing)) throw new Refused("accountInactive");
         if (!existing.passwordHash) throw new Refused("linkUnavailable");
         const payload: PendingIdentity = {
@@ -536,20 +542,27 @@ export class ProviderSignInService {
       if (!creation.requiredGroups.some((group) => held.has(group))) throw new Refused("groupRequired");
     }
     const email = profile.email;
-    const home =
-      (await this.#mapping.homeOrganizationFor(
-        this.#database,
-        provider.id,
-        (input.groups ?? []).map((group) => group.id),
-      )) ?? (await this.#homeOrganization(email));
+    const ruleHome = await this.#mapping.homeOrganizationFor(
+      this.#database,
+      provider.id,
+      (input.groups ?? []).map((group) => group.id),
+    );
+    const home = ruleHome ?? (await this.#homeOrganization(email));
     return this.#withSession(
       null,
       async (tx, mailIds) => {
-        const account = await this.#accounts.createFromProvider(tx, {
-          email,
-          name: profile.displayName ?? email,
-          homeOrganizationId: home,
-        });
+        const account = placeholder
+          ? await this.#adopt(
+              tx,
+              placeholder,
+              profile.displayName ?? placeholder.name,
+              ruleHome ? null : home,
+            )
+          : await this.#accounts.createFromProvider(tx, {
+              email,
+              name: profile.displayName ?? email,
+              homeOrganizationId: ruleHome ? null : home,
+            });
         const [created] = await tx
           .insert(identities)
           .values({
@@ -586,13 +599,15 @@ export class ProviderSignInService {
           mailIds.push(...notified.mailIds);
         }
         const scope = home ? { scope: { type: "organization" as const, id: home } } : {};
-        await this.#audit.record(tx, {
-          name: "account.createdAtSignIn",
-          actor: SYSTEM,
-          targetId: account.id,
-          fields: { providerId: provider.id, organizationId: home },
-          ...scope,
-        });
+        if (!placeholder) {
+          await this.#audit.record(tx, {
+            name: "account.createdAtSignIn",
+            actor: SYSTEM,
+            targetId: account.id,
+            fields: { providerId: provider.id, organizationId: home },
+            ...scope,
+          });
+        }
         await this.#audit.record(tx, {
           name: "identity.linked",
           actor: SYSTEM,
@@ -604,6 +619,23 @@ export class ProviderSignInService {
       },
       input,
     );
+  }
+
+  async #adopt(
+    tx: Transaction,
+    placeholder: Account,
+    name: string,
+    homeOrganizationId: string | null,
+  ): Promise<Account> {
+    if (
+      !this.#lifecycle ||
+      !(await this.#lifecycle.adoptPlaceholder(tx, placeholder.id, { name, homeOrganizationId }))
+    ) {
+      throw new Refused("accountInactive");
+    }
+    const account = await this.#accounts.get(placeholder.id, tx);
+    if (!account) throw new Refused("accountInactive");
+    return account;
   }
 
   async #homeOrganization(email: string): Promise<string | null> {
