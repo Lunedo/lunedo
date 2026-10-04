@@ -66,6 +66,14 @@ notificationTypes.register(
   },
   { id: "mail.credentialExpiring", icon: Mail, link: () => ({ to: "/settings/instance/mail" }) },
   {
+    id: "identityProvider.syncHeld",
+    icon: ShieldAlert,
+    link: (item) => ({
+      to: "/settings/instance/sign-in-providers/$providerId",
+      params: { providerId: (item.params as { providerId: string }).providerId },
+    }),
+  },
+  {
     id: "identityProvider.credentialExpiring",
     icon: KeyRound,
     link: (item) => ({

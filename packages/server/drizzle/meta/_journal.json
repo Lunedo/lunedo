@@ -183,6 +183,13 @@
       "when": 1791125053883,
       "tag": "0025_sign_in_sync_trigger",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791125589086,
+      "tag": "0026_sync_deactivation_hold",
+      "breakpoints": true
     }
   ]
 }

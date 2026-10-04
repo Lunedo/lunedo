@@ -77,6 +77,7 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
           authority: graph.url,
           graphUrl: graph.url,
           domains: ["entra.example"],
+          sync: { intervalMinutes: 60, deactivationLimitPercent: 100 },
         },
         credential: { kind: "clientSecret", secret: GRAPH_CLIENT_SECRET, expiresAt: null },
       })
@@ -1184,6 +1185,7 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
         preset: "google",
         clientId: "google-client",
         domains: [domain],
+        sync: { intervalMinutes: 60, deactivationLimitPercent: 100 },
         directory: { url: google.url, tokenUrl: `${google.url}/token`, ...directory },
       },
       credential: { kind: "clientSecret", secret: "google-secret", expiresAt: null },

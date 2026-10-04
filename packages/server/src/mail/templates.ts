@@ -40,6 +40,7 @@ export interface MailTemplates {
     clientIp: string | null;
   };
   providerCredentialExpiring: { instanceName: string; providerName: string; date: string };
+  providerSyncHeld: { instanceName: string; providerName: string; deactivations: number; accounts: number };
   homeOrganizationChanged: {
     instanceName: string;
     accountName: string;
@@ -253,6 +254,13 @@ const catalogs: Record<Language, Catalog> = {
         `A client secret or certificate of the identity provider ${providerName} on ${instanceName} expires on ${date}. Add a new credential in the provider settings and register it with the provider before then, or sign-in through ${providerName} stops working.`,
       ],
     }),
+    providerSyncHeld: ({ instanceName, providerName, deactivations, accounts }) => ({
+      subject: `Synchronization of ${providerName} on ${instanceName} stopped`,
+      paragraphs: [
+        `The synchronization with ${providerName} would have deactivated ${deactivations} of ${accounts} accounts at once. It stopped and deactivated nobody, because a changed search base, a moved directory unit or missing read permissions look the same as people leaving.`,
+        "Check the provider settings and the directory. If the people really left, confirm the run in the sync log of the provider.",
+      ],
+    }),
     signInNewBrowser: ({ instanceName, browser, operatingSystem, clientIp }) => ({
       subject: `New sign-in to ${instanceName}`,
       paragraphs: [
@@ -422,6 +430,13 @@ const catalogs: Record<Language, Catalog> = {
       subject: `Zugangsdaten von ${providerName} auf ${instanceName} laufen bald ab`,
       paragraphs: [
         `Ein Client-Secret oder Zertifikat des Identitätsanbieters ${providerName} auf ${instanceName} läuft am ${date} ab. Fügen Sie vorher in den Einstellungen des Anbieters neue Zugangsdaten hinzu und hinterlegen Sie sie beim Anbieter, sonst funktioniert die Anmeldung über ${providerName} nicht mehr.`,
+      ],
+    }),
+    providerSyncHeld: ({ instanceName, providerName, deactivations, accounts }) => ({
+      subject: `Synchronisierung von ${providerName} auf ${instanceName} angehalten`,
+      paragraphs: [
+        `Die Synchronisierung mit ${providerName} hätte ${deactivations} von ${accounts} Konten auf einmal deaktiviert. Sie wurde angehalten und hat niemanden deaktiviert, denn eine geänderte Suchbasis, eine verschobene Organisationseinheit oder fehlende Leserechte sehen genauso aus wie ausgeschiedene Personen.`,
+        "Prüfen Sie die Einstellungen des Anbieters und das Verzeichnis. Wenn die Personen wirklich ausgeschieden sind, bestätigen Sie den Lauf im Sync-Protokoll des Anbieters.",
       ],
     }),
     signInNewBrowser: ({ instanceName, browser, operatingSystem, clientIp }) => ({

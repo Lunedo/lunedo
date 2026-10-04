@@ -9,6 +9,7 @@ import {
   PresenceFilter,
   SubstringFilter,
 } from "ldapts";
+import { DirectoryConnectionError } from "../../identity/adapter.js";
 import type {
   DirectoryConnector,
   DirectoryEntry,
@@ -54,6 +55,7 @@ export class FakeLdapDirectory {
   readonly binds: FakeBind[] = [];
   readonly filters: string[] = [];
   readonly targets: DirectoryTarget[] = [];
+  readonly missingBases = new Set<string>();
 
   constructor(entries: FakeLdapEntry[] = []) {
     this.entries.push(...entries);
@@ -110,6 +112,9 @@ export class FakeLdapDirectory {
 
   search(base: string, search: DirectorySearch): FakeLdapEntry[] {
     this.filters.push(search.filter);
+    if (search.scope === "sub" && this.missingBases.has(normalize(base))) {
+      throw new DirectoryConnectionError("searchFailed", `The search base ${base} does not exist`);
+    }
     const filter = FilterParser.parseString(search.filter);
     const scoped = this.entries.filter((entry) =>
       search.scope === "base"

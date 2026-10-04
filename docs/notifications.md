@@ -16,6 +16,7 @@ The notification center is the core channel: it always works, also without a mai
 | `signIn.newBrowser` | The account itself | The account |
 | `auth.emergencySignIn` | Instance owner and instance administrators | The owner account |
 | `identityProvider.credentialExpiring` | Instance owner for instance providers, owners of the organization for organization providers | The identity provider |
+| `identityProvider.syncHeld` | Instance owner and instance administrators | The identity provider |
 
 Event types register in the `NotificationRegistry` with a parameter schema, a visibility rule, the mail they render and their preference setting, so later features add their own without changing the core. Their parameters are defined in `@pagehall/shared`, so that the web client renders them with the same types.
 

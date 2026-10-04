@@ -299,6 +299,7 @@ export function createAccountServices(options: {
     audit,
     settings,
     jobs,
+    notifications,
   });
   const providerSignIn = new ProviderSignInService({
     database,
@@ -462,12 +463,13 @@ export async function workAccountJobs(
     if (refreshed > 0) job.logger.info({ refreshed }, "SAML metadata refreshed");
   });
   await jobs.work(providerSyncJob, async (job) => {
-    const { providerId, trigger, actorId } = job.payload;
+    const { providerId, trigger, actorId, confirmedRunId } = job.payload;
     const run = await services.providerSync.run(
       providerId,
       trigger,
       actorId ? { type: "account", id: actorId } : undefined,
       job.signal,
+      confirmedRunId,
     );
     if (run) job.logger.info({ providerId, status: run.status }, "Identity provider synchronized");
   });

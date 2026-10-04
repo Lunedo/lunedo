@@ -310,6 +310,23 @@ describe("LDAP and Active Directory", () => {
     expect(results[0]?.profile?.groups?.map((group) => group.name)).toEqual(["staff"]);
   });
 
+  it("fails a synchronization whose user search base does not exist instead of reporting everyone as removed", async () => {
+    const ada = openLdapUser("ada");
+    const directory = openLdap([ada]);
+    directory.missingBases.add("ou=people,dc=example,dc=org");
+    const adapter = new LdapAdapter({ allowInsecure: false, connector: directory.connector });
+    const results = async () => {
+      const collected = [];
+      for await (const result of adapter.synchronizeAccounts(genericProvider(), credentials, [
+        String(ada.attributes.entryUUID?.[0]),
+      ])) {
+        collected.push(result);
+      }
+      return collected;
+    };
+    await expect(results()).rejects.toThrow(/does not exist/);
+  });
+
   it("detects disabled and expired accounts of Active Directory in a synchronization", async () => {
     const directory = activeDirectory();
     const adapter = new LdapAdapter({ allowInsecure: false, connector: directory.connector });

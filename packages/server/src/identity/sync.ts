@@ -4,9 +4,11 @@ import type { AccountAdministrationService } from "../accounts/administration.js
 import { type Principal, SYSTEM } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
+import { instanceAdministratorIds } from "../auth/emergency-recipients.js";
 import type { Database } from "../database/database.js";
 import { FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
 import { defineJob, type JobQueue } from "../jobs/job-queue.js";
+import type { NotificationService } from "../notifications/service.js";
 import type { MembershipService } from "../organizations/memberships.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import { defineSetting } from "../settings/definition.js";
@@ -37,6 +39,7 @@ export const providerSyncJob = defineJob({
     providerId: z.uuid(),
     trigger: z.enum(["schedule", "manual", "reconciliation"]),
     actorId: z.uuid().nullable(),
+    confirmedRunId: z.uuid().nullable().default(null),
   }),
   retryLimit: 0,
   expireInSeconds: 60 * 60,
@@ -75,6 +78,8 @@ export interface SyncRunSummary {
   changeCount: number;
   warningCount: number;
   error: string | null;
+  heldDeactivations: number | null;
+  confirmedAt: Date | null;
 }
 
 export interface SyncRunDetails extends SyncRunSummary, Omit<SyncReport, "mailIds"> {
@@ -107,6 +112,7 @@ export class ProviderSyncService {
   readonly #audit: AuditLog;
   readonly #settings: SettingsService;
   readonly #jobs: JobQueue | undefined;
+  readonly #notifications: NotificationService | undefined;
 
   constructor(options: {
     database: Database;
@@ -118,6 +124,7 @@ export class ProviderSyncService {
     audit: AuditLog;
     settings: SettingsService;
     jobs: JobQueue | undefined;
+    notifications?: NotificationService;
   }) {
     this.#database = options.database;
     this.#providers = options.providers;
@@ -128,6 +135,7 @@ export class ProviderSyncService {
     this.#audit = options.audit;
     this.#settings = options.settings;
     this.#jobs = options.jobs;
+    this.#notifications = options.notifications;
   }
 
   #adapterFor(provider: ProviderDefinition): IdentityProviderAdapter | null {
@@ -149,10 +157,55 @@ export class ProviderSyncService {
     }
     const actorId = actor.type === "account" ? actor.id : null;
     if (this.#jobs) {
-      await this.#jobs.enqueue(providerSyncJob, { providerId, trigger: "manual", actorId });
+      await this.#jobs.enqueue(providerSyncJob, {
+        providerId,
+        trigger: "manual",
+        actorId,
+        confirmedRunId: null,
+      });
       return { runId: null };
     }
     const run = await this.run(providerId, "manual", actor);
+    return { runId: run?.id ?? null };
+  }
+
+  async confirm(actor: Principal, providerId: string, runId: string): Promise<{ runId: string | null }> {
+    await this.#providers.get(providerId);
+    const actorId = actor.type === "account" ? actor.id : null;
+    const confirmed = await this.#database.transaction(async (tx) => {
+      const [run] = await tx
+        .update(providerSyncRuns)
+        .set({ confirmedAt: sql`now()`, confirmedBy: actorId })
+        .where(
+          and(
+            eq(providerSyncRuns.id, runId),
+            eq(providerSyncRuns.providerId, providerId),
+            isNotNull(providerSyncRuns.heldDeactivations),
+            isNull(providerSyncRuns.confirmedAt),
+          ),
+        )
+        .returning({ held: providerSyncRuns.heldDeactivations });
+      if (!run) return false;
+      await this.#audit.record(tx, {
+        name: "identityProvider.syncConfirmed",
+        actor,
+        targetId: providerId,
+        fields: { runId, deactivations: run.held ?? 0 },
+      });
+      return true;
+    });
+    if (!confirmed) {
+      throw new OrganizationError("syncNotHeld", "The run holds no deactivations to confirm");
+    }
+    if (this.#jobs) {
+      await this.#jobs.enqueue(
+        providerSyncJob,
+        { providerId, trigger: "manual", actorId, confirmedRunId: runId },
+        { idempotencyKey: `${providerId}:confirmed:${runId}` },
+      );
+      return { runId: null };
+    }
+    const run = await this.run(providerId, "manual", actor, undefined, runId);
     return { runId: run?.id ?? null };
   }
 
@@ -179,7 +232,12 @@ export class ProviderSyncService {
       const slot = Math.floor(Date.now() / interval);
       await this.#jobs.enqueue(
         providerSyncJob,
-        { providerId: row.id, trigger: row.scim ? "reconciliation" : "schedule", actorId: null },
+        {
+          providerId: row.id,
+          trigger: row.scim ? "reconciliation" : "schedule",
+          actorId: null,
+          confirmedRunId: null,
+        },
         { idempotencyKey: `${row.id}:${row.scim ? "reconciliation" : "schedule"}:${slot}` },
       );
       queued++;
@@ -227,6 +285,7 @@ export class ProviderSyncService {
     trigger: SyncTrigger,
     actor: Principal = SYSTEM,
     signal?: AbortSignal,
+    confirmedRunId: string | null = null,
   ): Promise<SyncRunSummary | null> {
     await this.#database
       .update(providerSyncRuns)
@@ -254,6 +313,8 @@ export class ProviderSyncService {
     const report = emptyReport();
     let failure: string | null = null;
     let cancelled = false;
+    let held: number | null = null;
+    let notifyHeld: { providerName: string; accounts: number } | null = null;
     const stopRequested = async (): Promise<boolean> => signal?.aborted === true || this.#beat(runId);
     try {
       const loaded = await this.#providers.definition(providerId);
@@ -262,11 +323,20 @@ export class ProviderSyncService {
       const provider = loaded.provider;
       const adapter = this.#adapterFor(provider);
       if (!adapter?.synchronizeAccounts) throw new Error("The provider has no directory to synchronize with");
+      const allowed = confirmedRunId ? await this.#useConfirmation(providerId, confirmedRunId, runId) : 0;
       const linked = await this.#database
-        .select({ id: identities.id, accountId: identities.accountId, subject: identities.subject })
+        .select({
+          id: identities.id,
+          accountId: identities.accountId,
+          subject: identities.subject,
+          state: accounts.state,
+        })
         .from(identities)
+        .innerJoin(accounts, eq(accounts.id, identities.accountId))
         .where(eq(identities.providerId, providerId));
       const bySubject = new Map(linked.map((identity) => [identity.subject, identity]));
+      const pending = new Map<string, "disabled" | "deleted">();
+      let found = 0;
       for await (const result of adapter.synchronizeAccounts(
         provider,
         loaded.credentials,
@@ -278,6 +348,11 @@ export class ProviderSyncService {
         }
         const identity = bySubject.get(result.subject);
         if (!identity) continue;
+        if (result.state !== "deleted") found++;
+        if (result.state === "disabled" || result.state === "deleted") {
+          if (identity.state === "active") pending.set(identity.accountId, result.state);
+          continue;
+        }
         try {
           await this.#apply(provider, identity, result, report);
         } catch (error) {
@@ -293,7 +368,29 @@ export class ProviderSyncService {
           await this.#mapping.dispatch(mailIds);
         }
       }
-      if (!cancelled) await this.#refreshMappedGroups(provider, adapter, loaded.credentials, report);
+      if (!cancelled) {
+        const active = new Set(linked.filter((row) => row.state === "active").map((row) => row.accountId));
+        const limit = provider.config.sync.deactivationLimitPercent;
+        const tooMany = pending.size * 100 > limit * active.size;
+        const noneFound = pending.size > 0 && found === 0;
+        if ((tooMany || noneFound) && pending.size > allowed) {
+          held = pending.size;
+          report.warnings.push({
+            kind: noneFound ? "noAccountsFound" : "deactivationLimit",
+            accountId: null,
+            ruleId: null,
+            detail: `${pending.size}/${active.size}`,
+          });
+          failure = noneFound
+            ? `The directory returned none of the ${linked.length} linked accounts, so the run deactivated nobody`
+            : `The run would deactivate ${pending.size} of ${active.size} accounts, more than ${limit} %, so it deactivated nobody`;
+          notifyHeld = { providerName: provider.name, accounts: active.size };
+        } else {
+          for (const [accountId, state] of pending)
+            await this.#deactivate(provider, accountId, state, report);
+          await this.#refreshMappedGroups(provider, adapter, loaded.credentials, report);
+        }
+      }
     } catch (error) {
       failure = message(error);
     }
@@ -314,8 +411,24 @@ export class ProviderSyncService {
           changes: report.changes,
           warnings: report.warnings,
           error: failure,
+          heldDeactivations: held,
         })
         .where(eq(providerSyncRuns.id, runId));
+      if (notifyHeld && held !== null && this.#notifications) {
+        const notified = await this.#notifications.notify(tx, {
+          type: "identityProvider.syncHeld",
+          recipients: await instanceAdministratorIds(tx),
+          organizationId: null,
+          targetId: providerId,
+          params: {
+            providerName: notifyHeld.providerName,
+            providerId,
+            deactivations: held,
+            accounts: notifyHeld.accounts,
+          },
+        });
+        report.mailIds.push(...notified.mailIds);
+      }
       await this.#audit.record(tx, {
         name: "identityProvider.synchronized",
         actor,
@@ -333,6 +446,22 @@ export class ProviderSyncService {
     await this.#mapping.dispatch(report.mailIds);
     const [summary] = await this.#summaries(eq(providerSyncRuns.id, runId));
     return summary ?? null;
+  }
+
+  async #useConfirmation(providerId: string, confirmedRunId: string, runId: string): Promise<number> {
+    const [confirmed] = await this.#database
+      .update(providerSyncRuns)
+      .set({ confirmedRunId: runId })
+      .where(
+        and(
+          eq(providerSyncRuns.id, confirmedRunId),
+          eq(providerSyncRuns.providerId, providerId),
+          isNotNull(providerSyncRuns.confirmedAt),
+          isNull(providerSyncRuns.confirmedRunId),
+        ),
+      )
+      .returning({ held: providerSyncRuns.heldDeactivations });
+    return confirmed?.held ?? 0;
   }
 
   async #apply(
@@ -518,6 +647,8 @@ export class ProviderSyncService {
       changeCount: Array.isArray(row.changes) ? row.changes.length : 0,
       warningCount: Array.isArray(row.warnings) ? row.warnings.length : 0,
       error: row.error,
+      heldDeactivations: row.heldDeactivations,
+      confirmedAt: row.confirmedAt,
     };
   }
 

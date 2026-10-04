@@ -243,6 +243,26 @@ export class ProviderGroupsController {
     }
   }
 
+  @Post("sync-runs/:runId/confirm")
+  @Permission("instance.signIn.manage")
+  @ApiRoute({
+    summary: "Confirm the deactivations a run held back",
+    description:
+      "A run stops and deactivates nobody when it would deactivate more than the configured share of the provider's accounts, or when the directory returns none of them. Confirming starts a new run that may deactivate up to as many accounts as the held run would have. Each held run can be confirmed once.",
+    tags: [TAG],
+    status: 202,
+    params: runParams,
+    response: { description: "The requested synchronization.", schema: syncRequestedSchema },
+    errors: ["syncNotHeld"],
+  })
+  async confirmRun(
+    @Param("providerId") providerId: string,
+    @Param("runId") runId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.providerSync.confirm(actorOf(request), providerId, runId);
+  }
+
   @Get("sync-runs/:runId")
   @Permission("instance.signIn.view")
   @ApiRoute({

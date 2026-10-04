@@ -338,6 +338,10 @@ export const providerSyncRuns = pgTable(
     changes: jsonb().notNull().default([]),
     warnings: jsonb().notNull().default([]),
     error: text(),
+    heldDeactivations: integer(),
+    confirmedAt: timestampColumn(),
+    confirmedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    confirmedRunId: uuid(),
   },
   (table) => [
     index().on(table.providerId, table.startedAt),

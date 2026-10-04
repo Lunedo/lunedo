@@ -359,6 +359,14 @@ export async function cancelSync(providerId: string, runId: string): Promise<voi
   );
 }
 
+export function confirmSync(providerId: string, runId: string) {
+  return request(() =>
+    api.POST("/api/v1/instance/identity-providers/{providerId}/sync-runs/{runId}/confirm", {
+      params: { path: { providerId, runId } },
+    }),
+  );
+}
+
 export function startSync(providerId: string) {
   return request(() =>
     api.POST("/api/v1/instance/identity-providers/{providerId}/sync", { params: { path: { providerId } } }),

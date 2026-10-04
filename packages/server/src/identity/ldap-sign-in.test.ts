@@ -63,7 +63,7 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
     return { id: created.id, owner: owner.id };
   }
 
-  async function provider(secondFactor: "pagehall" | "provider" = "provider") {
+  async function provider(secondFactor: "pagehall" | "provider" = "provider", deactivationLimitPercent = 20) {
     const domain = `${randomUUID().slice(0, 8)}.example.org`;
     const { provider: created } = await test.services.identityProviders.create(SYSTEM, {
       type: "ldap",
@@ -78,6 +78,7 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
         accountCreation: { enabled: true, requiredGroups: [] },
         secondFactor: { mode: secondFactor },
         disabled: { attribute: "employeeType", values: ["disabled"] },
+        sync: { intervalMinutes: 60, deactivationLimitPercent },
       },
       credential: { kind: "bindPassword", secret: SERVICE_PASSWORD },
     });
@@ -140,7 +141,7 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
   });
 
   it("deactivates a disabled person at the next sync and reactivates them when enabled again", async () => {
-    const { id, domain } = await provider();
+    const { id, domain } = await provider("provider", 100);
     const ben = person(`ben-${randomUUID().slice(0, 6)}`, domain);
     directory.entries.push(ben);
     const first = await signIn(id, String(ben.attributes.mail?.[0]));
@@ -157,14 +158,133 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
   });
 
   it("deactivates a person who is no longer in the directory", async () => {
-    const { id, domain } = await provider();
-    const gone = person(`gone-${randomUUID().slice(0, 6)}`, domain);
-    directory.entries.push(gone);
-    const first = await signIn(id, String(gone.attributes.mail?.[0]));
-    if (first.kind !== "signedIn") throw new Error("Signed in expected");
-    directory.entries.splice(directory.entries.indexOf(gone), 1);
+    const { id, domain } = await provider("provider", 100);
+    const [gone] = await people(id, domain, 2);
+    directory.entries.splice(directory.entries.indexOf(gone?.entry as FakeLdapEntry), 1);
     await test.services.providerSync.run(id, "manual");
-    expect((await test.services.accounts.get(first.signedIn.session.accountId))?.state).toBe("deactivated");
+    expect((await test.services.accounts.get(gone?.accountId ?? ""))?.state).toBe("deactivated");
+  });
+
+  async function people(providerId: string, domain: string, count: number) {
+    const created: { entry: FakeLdapEntry; accountId: string }[] = [];
+    for (let index = 0; index < count; index++) {
+      const entry = person(`p${index}-${randomUUID().slice(0, 6)}`, domain);
+      directory.entries.push(entry);
+      const result = await signIn(providerId, String(entry.attributes.mail?.[0]));
+      if (result.kind !== "signedIn") throw new Error("Signed in expected");
+      created.push({ entry, accountId: result.signedIn.session.accountId });
+    }
+    return created;
+  }
+
+  async function states(accountIds: string[]) {
+    return Promise.all(accountIds.map(async (id) => (await test.services.accounts.get(id))?.state));
+  }
+
+  async function heldNotices(providerId: string) {
+    const result = await test.pool.query<{ recipient_id: string; params: Record<string, unknown> }>(
+      "select recipient_id, params from notifications where type = 'identityProvider.syncHeld' and target_id = $1",
+      [providerId],
+    );
+    return result.rows;
+  }
+
+  async function instanceOwner() {
+    const owner = await test.database.transaction((tx) =>
+      test.services.accounts.createStandard(tx, {
+        email: `${randomUUID()}@owner.example`,
+        name: "Instance owner",
+        password: "a long test passphrase",
+        homeOrganizationId: null,
+      }),
+    );
+    await test.pool.query("update instance set owner_account_id = $1", [owner.id]);
+    return owner.id;
+  }
+
+  it("fails a sync whose user search base does not exist and deactivates nobody", async () => {
+    const { id, domain } = await provider("provider", 100);
+    const linked = await people(id, domain, 2);
+    directory.missingBases.add("ou=people,dc=example,dc=org");
+    try {
+      const run = await test.services.providerSync.run(id, "manual");
+      expect(run?.status).toBe("failed");
+      expect(run?.error).toContain("does not exist");
+    } finally {
+      directory.missingBases.clear();
+    }
+    expect(await states(linked.map((item) => item.accountId))).toEqual(["active", "active"]);
+  });
+
+  it("fails a sync that finds none of the linked people, deactivates nobody and notifies administrators", async () => {
+    const owner = await instanceOwner();
+    const { id, domain } = await provider("provider", 100);
+    const linked = await people(id, domain, 2);
+    for (const item of linked) directory.entries.splice(directory.entries.indexOf(item.entry), 1);
+
+    const run = await test.services.providerSync.run(id, "manual");
+    expect(run).toMatchObject({ status: "failed", heldDeactivations: 2, confirmedAt: null });
+    const details = await test.services.providerSync.runDetails(id, run?.id ?? "");
+    expect(details?.warnings).toEqual([expect.objectContaining({ kind: "noAccountsFound", detail: "2/2" })]);
+    expect(await states(linked.map((item) => item.accountId))).toEqual(["active", "active"]);
+    expect(await heldNotices(id)).toEqual([
+      expect.objectContaining({ recipient_id: owner, params: expect.objectContaining({ deactivations: 2 }) }),
+    ]);
+  });
+
+  it("holds a sync that would deactivate more than the share set for the provider until it is confirmed", async () => {
+    const owner = await instanceOwner();
+    const { id, domain } = await provider();
+    const linked = await people(id, domain, 5);
+    expect(await states(linked.map((item) => item.accountId))).toEqual(Array(5).fill("active"));
+    directory.entries.splice(directory.entries.indexOf(linked[0]?.entry as FakeLdapEntry), 1);
+
+    const allowed = await test.services.providerSync.run(id, "manual");
+    expect(allowed?.status).toBe("succeeded");
+    expect(await states([linked[0]?.accountId ?? ""])).toEqual(["deactivated"]);
+
+    for (const item of linked.slice(1, 3)) directory.entries.splice(directory.entries.indexOf(item.entry), 1);
+    const held = await test.services.providerSync.run(id, "manual");
+    expect(held).toMatchObject({ status: "failed", heldDeactivations: 2 });
+    const details = await test.services.providerSync.runDetails(id, held?.id ?? "");
+    expect(details?.warnings).toEqual([
+      expect.objectContaining({ kind: "deactivationLimit", detail: "2/4" }),
+    ]);
+    expect(await states(linked.slice(1).map((item) => item.accountId))).toEqual(Array(4).fill("active"));
+    await expect(test.services.providerSync.run(id, "schedule")).resolves.toMatchObject({ status: "failed" });
+
+    const confirmed = await test.services.providerSync.confirm(accountPrincipal(owner), id, held?.id ?? "");
+    expect(await states(linked.slice(1).map((item) => item.accountId))).toEqual([
+      "deactivated",
+      "deactivated",
+      "active",
+      "active",
+    ]);
+    expect(confirmed.runId).not.toBeNull();
+    const audit = await test.pool.query(
+      "select 1 from audit_events where name = 'identityProvider.syncConfirmed' and target_id = $1",
+      [id],
+    );
+    expect(audit.rowCount).toBe(1);
+    await expect(
+      test.services.providerSync.confirm(accountPrincipal(owner), id, held?.id ?? ""),
+    ).rejects.toMatchObject({ code: "syncNotHeld" });
+  });
+
+  it("lets a confirmed run deactivate no more accounts than the run that was held", async () => {
+    const owner = await instanceOwner();
+    const { id, domain } = await provider();
+    const linked = await people(id, domain, 5);
+    directory.entries.splice(directory.entries.indexOf(linked[0]?.entry as FakeLdapEntry), 1);
+    directory.entries.splice(directory.entries.indexOf(linked[1]?.entry as FakeLdapEntry), 1);
+    const held = await test.services.providerSync.run(id, "manual");
+    expect(held?.heldDeactivations).toBe(2);
+
+    directory.entries.splice(directory.entries.indexOf(linked[2]?.entry as FakeLdapEntry), 1);
+    const confirmed = await test.services.providerSync.confirm(accountPrincipal(owner), id, held?.id ?? "");
+    const rerun = await test.services.providerSync.runDetails(id, confirmed.runId ?? "");
+    expect(rerun).toMatchObject({ status: "failed", heldDeactivations: 3 });
+    expect(await states(linked.map((item) => item.accountId))).toEqual(Array(5).fill("active"));
   });
 
   it("refuses an empty password before asking the directory", async () => {

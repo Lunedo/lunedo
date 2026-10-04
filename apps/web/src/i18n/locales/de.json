@@ -100,6 +100,13 @@
       "changesTitle": "Änderungen",
       "warningsTitle": "Warnungen",
       "noWarnings": "Keine Warnungen",
+      "heldTitle": "Deaktivierungen zurückgehalten",
+      "heldDescription": "Der Lauf hätte {count, plural, one {# Konto} other {# Konten}} auf einmal deaktiviert und wurde angehalten, ohne jemanden zu deaktivieren. Eine falsche Suchbasis, eine verschobene Organisationseinheit oder fehlende Leserechte sehen genauso aus wie ausgeschiedene Personen. Prüfe zuerst den Anbieter; wenn die Personen wirklich ausgeschieden sind, bestätige den Lauf.",
+      "heldConfirmed": "Eine Administratorin oder ein Administrator hat am {time} die Deaktivierung von bis zu {count, plural, one {# Konto} other {# Konten}} bestätigt.",
+      "confirm": "Deaktivierungen bestätigen",
+      "confirmTitle": "Diese Konten deaktivieren?",
+      "confirmDescription": "Ein neuer Lauf startet und darf bis zu {count, plural, one {# Konto} other {# Konten}} deaktivieren. Ihre Sitzungen enden und ihre persönlichen API-Tokens werden widerrufen. Die Konten kommen zurück, sobald sie beim Anbieter wieder aktiv sind; widerrufene Tokens nicht.",
+      "confirmed": "Der bestätigte Lauf startet in Kürze.",
       "changeKinds": {
         "membershipAdded": "Mitgliedschaft hinzugefügt",
         "membershipRemoved": "Mitgliedschaft entfernt",
@@ -122,11 +129,15 @@
         "removalRefused": "Entfernen abgelehnt",
         "accountFailed": "Konto konnte nicht aktualisiert werden",
         "deactivationRefused": "Deaktivierung abgelehnt",
-        "memberUnknown": "Unbekanntes Mitglied"
+        "memberUnknown": "Unbekanntes Mitglied",
+        "deactivationLimit": "Zu viele Deaktivierungen auf einmal",
+        "noAccountsFound": "Kein verknüpftes Konto gefunden"
       },
       "settingsTitle": "Synchronisierung",
       "interval": "Sync-Intervall",
       "intervalHint": "Gruppen und Kontostatus werden auch bei jeder Anmeldung aktualisiert.",
+      "deactivationLimit": "Größter Anteil, der auf einmal deaktiviert wird",
+      "deactivationLimitHint": "Ein Lauf, der mehr Konten dieses Anbieters auf einmal deaktivieren würde, hält an, deaktiviert niemanden und benachrichtigt die Instanz-Administration, die ihn im Sync-Protokoll bestätigen kann.",
       "whenDisabled": "Wenn ein Konto deaktiviert wird",
       "whenDisabledHint": "Konten, die in {provider} deaktiviert oder gelöscht werden, werden in Pagehall deaktiviert und wieder aktiviert, wenn sie wieder aktiv sind. Pagehall löscht nie Konten.",
       "deactivate": "In Pagehall deaktivieren",
@@ -1017,6 +1028,7 @@
     "providerUnavailable": "Der Identitätsanbieter war nicht erreichbar oder hat unerwartet geantwortet. Vielleicht ist er gerade nicht verfügbar oder seine Einstellungen haben sich geändert. Versuch es gleich noch einmal; wenn es weiter scheitert, bitte deine Administration, den Anbieter zu prüfen.",
     "providerDeactivated": "Dieser Anbieter ist deaktiviert, deshalb kann sich niemand darüber anmelden und nichts wird synchronisiert. Melde dich auf einem anderen Weg an oder bitte deine Administration, den Anbieter wieder zu aktivieren.",
     "syncNotRunning": "Der Lauf ist schon beendet, es gibt nichts abzubrechen. Lade das Sync-Protokoll neu, um sein Ergebnis zu sehen.",
+    "syncNotHeld": "Dieser Lauf hält keine Deaktivierungen zurück, oder jemand hat ihn schon bestätigt. Lade das Sync-Protokoll neu, um seinen aktuellen Stand zu sehen.",
     "syncUnavailable": "Pagehall kann das Verzeichnis dieses Anbieters nicht lesen, deshalb werden Konten bei der Anmeldung aktualisiert. Richte das Verzeichnis in den Einstellungen des Anbieters ein, um zu synchronisieren.",
     "invalidServiceAccountKey": "Der Schlüssel des Dienstkontos konnte nicht gelesen werden. Lade in Google Cloud einen neuen JSON-Schlüssel für das Dienstkonto herunter und lade ihn erneut hoch.",
     "roleNameTaken": "Eine Rolle mit diesem Namen gibt es bereits. Wähle einen anderen Namen.",
@@ -1811,6 +1823,7 @@
     },
     "events": {
       "identityProviderCredentialExpiring": "Zugang eines Identitätsanbieters läuft bald ab",
+      "identityProviderSyncHeld": "Synchronisierung vor Deaktivierungen angehalten",
       "authEmergencySignIn": "Notfall-Anmeldung verwendet",
       "accountWithoutOrganization": "Neues Konto ohne Organisation",
       "accountRolesWithheld": "Administrative Rollen ausgesetzt",
@@ -1827,7 +1840,8 @@
     },
     "types": {
       "identityProvider": {
-        "credentialExpiring": "Der Zugang von {providerName} läuft am {expiresAt} ab. Füge vorher einen neuen hinzu, sonst funktioniert die Anmeldung darüber nicht mehr."
+        "credentialExpiring": "Der Zugang von {providerName} läuft am {expiresAt} ab. Füge vorher einen neuen hinzu, sonst funktioniert die Anmeldung darüber nicht mehr.",
+        "syncHeld": "Die Synchronisierung mit {providerName} hätte {deactivations} von {accounts} Konten auf einmal deaktiviert und wurde angehalten. Prüfe den Anbieter und bestätige den Lauf im Sync-Protokoll, wenn die Personen wirklich ausgeschieden sind."
       },
       "account": {
         "withoutOrganization": "{accountName} hat sich zum ersten Mal über {providerName} angemeldet und ist noch in keiner Organisation Mitglied. Weise in der Kontenliste eine zu.",
@@ -2480,6 +2494,7 @@
         "caCertificateChanged": "CA-Zertifikat des Verzeichnisses geändert",
         "synchronized": "Anbieter synchronisiert",
         "syncCancelled": "Synchronisierung abgebrochen",
+        "syncConfirmed": "Zurückgehaltene Deaktivierungen bestätigt",
         "scimTokenCreated": "SCIM-Token erstellt",
         "scimTokenRenewed": "SCIM-Token erneuert",
         "scimTokenRemoved": "SCIM-Token entfernt"
@@ -2849,6 +2864,7 @@
     "loadSyncRun": "Der Lauf konnte nicht geladen werden",
     "startSync": "Die Synchronisierung konnte nicht gestartet werden",
     "cancelSync": "Der Lauf konnte nicht abgebrochen werden",
+    "confirmSync": "Der Lauf konnte nicht bestätigt werden",
     "saveDirectoryKey": "Der Schlüssel des Dienstkontos konnte nicht gespeichert werden",
     "removeDirectoryKey": "Der Schlüssel des Dienstkontos konnte nicht entfernt werden",
     "unlinkIdentity": "Die Identität konnte nicht getrennt werden",

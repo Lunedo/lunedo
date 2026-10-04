@@ -74,6 +74,7 @@ export const problems = {
   accountDisabled: { status: 403, title: "The directory account is disabled" },
   outsideSignInHours: { status: 403, title: "Sign-in is not allowed at this time" },
   syncNotRunning: { status: 409, title: "The run is not running anymore" },
+  syncNotHeld: { status: 409, title: "The run holds no deactivations to confirm" },
   providerUnavailable: { status: 502, title: "The identity provider could not be reached" },
   groupManagedByProvider: { status: 409, title: "The group is managed by an identity provider" },
   lastCredential: { status: 409, title: "The last credential cannot be removed" },

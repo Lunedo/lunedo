@@ -271,6 +271,12 @@ export const auditCatalog = {
     fields: z.object({ runId: z.uuid() }),
     visibility: "instance",
   }),
+  "identityProvider.syncConfirmed": event({
+    actor: ["account"],
+    target: "identityProvider",
+    fields: z.object({ runId: z.uuid(), deactivations: z.number().int() }),
+    visibility: "instance",
+  }),
   "identityProvider.synchronized": event({
     actor: ["account", "system"],
     target: "identityProvider",

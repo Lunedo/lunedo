@@ -1,9 +1,12 @@
+import { SYNC_DEACTIVATION_LIMIT_PERCENT } from "@pagehall/shared";
 import {
   Badge,
   type BadgeVariant,
   Button,
+  ConfirmDialog,
   Drawer,
   DurationSelect,
+  Input,
   Notice,
   Section,
   SegmentedControl,
@@ -24,6 +27,7 @@ import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import {
   cancelSync,
+  confirmSync,
   hasDirectory,
   type IdentityProvider,
   identityKeys,
@@ -219,7 +223,18 @@ function RunDetail({
   const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const [cancelling, setCancelling] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const run = useQuery({ ...syncRunQuery(providerId, runId), throwOnError: false });
+  const confirm = async () => {
+    try {
+      await confirmSync(providerId, runId);
+      toast({ title: t("identityProviders.sync.confirmed"), variant: "success" });
+      setConfirming(false);
+      await queryClient.invalidateQueries({ queryKey: ["identityProviders", providerId, "syncRuns"] });
+    } catch (failure) {
+      showFailure(t("failures.confirmSync"), failure);
+    }
+  };
   const cancel = async () => {
     setCancelling(true);
     try {
@@ -263,6 +278,37 @@ function RunDetail({
           {detail.error}
         </Notice>
       ) : null}
+      {detail.heldDeactivations !== null ? (
+        <Notice variant="warning" title={t("identityProviders.sync.heldTitle")}>
+          <div className="flex flex-col gap-2">
+            <span>
+              {detail.confirmedAt
+                ? t("identityProviders.sync.heldConfirmed", {
+                    count: detail.heldDeactivations,
+                    time: format.dateTime(detail.confirmedAt),
+                  })
+                : t("identityProviders.sync.heldDescription", { count: detail.heldDeactivations })}
+            </span>
+            {canManage && !detail.confirmedAt ? (
+              <div>
+                <Button variant="secondary" onClick={() => setConfirming(true)}>
+                  {t("identityProviders.sync.confirm")}
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        </Notice>
+      ) : null}
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title={t("identityProviders.sync.confirmTitle")}
+        description={t("identityProviders.sync.confirmDescription", { count: detail.heldDeactivations ?? 0 })}
+        confirmLabel={t("identityProviders.sync.confirm")}
+        cancelLabel={t("common.cancel")}
+        destructive
+        onConfirm={confirm}
+      />
       <section className="flex flex-col gap-2">
         <h3 className="font-semibold">{t("identityProviders.sync.changesTitle")}</h3>
         {detail.changes.length === 0 ? (
@@ -317,6 +363,7 @@ export function SyncSettings({ provider, canManage }: { provider: IdentityProvid
   const { t, i18n } = useTranslation();
   const update = useProviderUpdate(provider);
   const interval = useSaveState();
+  const limit = useSaveState();
   const config = provider.config;
   const capabilities = provider.capabilities;
   const google = provider.type === "oidc" && config.preset === "google";
@@ -340,12 +387,37 @@ export function SyncSettings({ provider, canManage }: { provider: IdentityProvid
               onValueChange={(minutes) => {
                 if (minutes === null) return;
                 void interval.run(() =>
-                  update.config((current) => ({ ...current, sync: { intervalMinutes: minutes } })),
+                  update.config((current) => ({
+                    ...current,
+                    sync: { ...current.sync, intervalMinutes: minutes },
+                  })),
                 );
               }}
             />
           }
           status={<SaveIndicator tracker={interval} />}
+        />
+      ) : null}
+      {capabilities.directorySync ? (
+        <SettingRow
+          label={t("identityProviders.sync.deactivationLimit")}
+          description={t("identityProviders.sync.deactivationLimitHint")}
+          control={
+            <PercentField
+              label={t("identityProviders.sync.deactivationLimit")}
+              value={config.sync.deactivationLimitPercent}
+              disabled={!canManage}
+              onSave={(percent) =>
+                limit.run(() =>
+                  update.config((current) => ({
+                    ...current,
+                    sync: { ...current.sync, deactivationLimitPercent: percent },
+                  })),
+                )
+              }
+            />
+          }
+          status={<SaveIndicator tracker={limit} />}
         />
       ) : null}
       {capabilities.disabledAccounts ? (
@@ -357,6 +429,60 @@ export function SyncSettings({ provider, canManage }: { provider: IdentityProvid
       ) : null}
       {google ? <GoogleDirectory provider={provider} canManage={canManage} /> : null}
     </Section>
+  );
+}
+
+function PercentField({
+  label,
+  value,
+  disabled,
+  onSave,
+}: {
+  label: string;
+  value: number;
+  disabled: boolean;
+  onSave: (percent: number) => Promise<unknown>;
+}) {
+  const { t } = useTranslation();
+  const [draft, setDraft] = useState(String(value));
+  const [error, setError] = useState<string | null>(null);
+  const { minimum, maximum } = SYNC_DEACTIVATION_LIMIT_PERCENT;
+  const commit = async () => {
+    const parsed = z.coerce.number().int().min(minimum).max(maximum).safeParse(draft.trim());
+    if (!parsed.success) {
+      setError(t("validation.range", { minimum, maximum }));
+      return;
+    }
+    setError(null);
+    if (parsed.data !== value) await onSave(parsed.data);
+  };
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <Input
+          aria-label={label}
+          aria-invalid={error !== null}
+          className="w-20"
+          inputMode="numeric"
+          value={draft}
+          disabled={disabled}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={() => void commit()}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              void commit();
+            }
+          }}
+        />
+        <span className="text-text-muted">%</span>
+      </div>
+      {error ? (
+        <span role="alert" className="text-danger text-sm">
+          {error}
+        </span>
+      ) : null}
+    </div>
   );
 }
 

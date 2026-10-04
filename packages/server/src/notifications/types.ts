@@ -219,6 +219,22 @@ const providerCredentialExpiring = defineNotificationType({
   }),
 });
 
+const providerSyncHeld = defineNotificationType({
+  type: "identityProvider.syncHeld",
+  targetType: "identityProvider",
+  params: notificationParamSchemas["identityProvider.syncHeld"],
+  setting: settingOf("identityProvider.syncHeld"),
+  visible: async (context) => context.can("instance.signIn.view", { type: "instance" }),
+  mail: (params) => ({
+    template: "providerSyncHeld",
+    params: {
+      providerName: params.providerName,
+      deactivations: params.deactivations,
+      accounts: params.accounts,
+    },
+  }),
+});
+
 const homeOrganizationChanged = defineNotificationType({
   type: "account.homeOrganizationChanged",
   targetType: "account",
@@ -259,6 +275,7 @@ export const builtinNotificationTypes = [
   accountWithoutOrganization,
   accountRolesWithheld,
   providerCredentialExpiring,
+  providerSyncHeld,
   homeOrganizationChanged,
   mailCredentialExpiring,
 ];

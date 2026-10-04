@@ -130,6 +130,55 @@ describe("directory connections", () => {
     expect(received[1]?.includes(Buffer.from("1.3.6.1.4.1.1466.20037"))).toBe(true);
   });
 
+  it("fails a subtree search whose base does not exist and returns nothing for a missing entry", async () => {
+    const reply = (id: Buffer, operation: number, code: number) => {
+      const result = Buffer.from([operation, 7, 0x0a, 1, code, 0x04, 0, 0x04, 0]);
+      const body = Buffer.concat([Buffer.from([0x02, id.length]), id, result]);
+      return Buffer.concat([Buffer.from([0x30, body.length]), body]);
+    };
+    const server = createNetServer((socket) => {
+      let pending = Buffer.alloc(0);
+      socket.on("data", (data) => {
+        pending = Buffer.concat([pending, data]);
+        while (pending.length >= 2) {
+          const first = pending[1] ?? 0;
+          const lengthBytes = first & 0x80 ? first & 0x7f : 0;
+          if (pending.length < 2 + lengthBytes) return;
+          const length = lengthBytes ? pending.readUIntBE(2, lengthBytes) : first;
+          const start = 2 + lengthBytes;
+          if (pending.length < start + length) return;
+          const message = pending.subarray(start, start + length);
+          pending = pending.subarray(start + length);
+          const id = message.subarray(2, 2 + (message[1] ?? 0));
+          const operation = message[2 + id.length];
+          if (operation === 0x60) socket.write(reply(id, 0x61, 0));
+          else if (operation === 0x63) socket.write(reply(id, 0x65, 32));
+          else socket.end();
+        }
+      });
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const port = (server.address() as AddressInfo).port;
+    const session = ldaptsConnector({
+      url: `ldap://127.0.0.1:${port}`,
+      startTls: false,
+      caCertificates: null,
+      allowInsecure: true,
+    });
+    try {
+      await session.bind("cn=service", "password");
+      const search = { filter: "(objectClass=*)", attributes: ["cn"] };
+      await expect(session.search("ou=moved,dc=example", { ...search, scope: "sub" })).rejects.toMatchObject({
+        reason: "searchFailed",
+        message: expect.stringContaining("does not exist"),
+      });
+      await expect(session.search("cn=gone,dc=example", { ...search, scope: "base" })).resolves.toEqual([]);
+    } finally {
+      await session.close();
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
   it("refuses a plain connection without the insecure flag before connecting", () => {
     expect(() =>
       ldaptsConnector({

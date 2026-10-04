@@ -16824,7 +16824,8 @@
                                   },
                                   "sync": {
                                     "default": {
-                                      "intervalMinutes": 60
+                                      "intervalMinutes": 60,
+                                      "deactivationLimitPercent": 20
                                     },
                                     "type": "object",
                                     "properties": {
@@ -16833,10 +16834,17 @@
                                         "type": "integer",
                                         "minimum": 15,
                                         "maximum": 1440
+                                      },
+                                      "deactivationLimitPercent": {
+                                        "default": 20,
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 100
                                       }
                                     },
                                     "required": [
-                                      "intervalMinutes"
+                                      "intervalMinutes",
+                                      "deactivationLimitPercent"
                                     ],
                                     "additionalProperties": false
                                   },
@@ -16990,7 +16998,8 @@
                                   },
                                   "sync": {
                                     "default": {
-                                      "intervalMinutes": 60
+                                      "intervalMinutes": 60,
+                                      "deactivationLimitPercent": 20
                                     },
                                     "type": "object",
                                     "properties": {
@@ -16999,10 +17008,17 @@
                                         "type": "integer",
                                         "minimum": 15,
                                         "maximum": 1440
+                                      },
+                                      "deactivationLimitPercent": {
+                                        "default": 20,
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 100
                                       }
                                     },
                                     "required": [
-                                      "intervalMinutes"
+                                      "intervalMinutes",
+                                      "deactivationLimitPercent"
                                     ],
                                     "additionalProperties": false
                                   },
@@ -17183,7 +17199,8 @@
                                   },
                                   "sync": {
                                     "default": {
-                                      "intervalMinutes": 60
+                                      "intervalMinutes": 60,
+                                      "deactivationLimitPercent": 20
                                     },
                                     "type": "object",
                                     "properties": {
@@ -17192,10 +17209,17 @@
                                         "type": "integer",
                                         "minimum": 15,
                                         "maximum": 1440
+                                      },
+                                      "deactivationLimitPercent": {
+                                        "default": 20,
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 100
                                       }
                                     },
                                     "required": [
-                                      "intervalMinutes"
+                                      "intervalMinutes",
+                                      "deactivationLimitPercent"
                                     ],
                                     "additionalProperties": false
                                   },
@@ -17623,7 +17647,8 @@
                                   },
                                   "sync": {
                                     "default": {
-                                      "intervalMinutes": 60
+                                      "intervalMinutes": 60,
+                                      "deactivationLimitPercent": 20
                                     },
                                     "type": "object",
                                     "properties": {
@@ -17632,10 +17657,17 @@
                                         "type": "integer",
                                         "minimum": 15,
                                         "maximum": 1440
+                                      },
+                                      "deactivationLimitPercent": {
+                                        "default": 20,
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 100
                                       }
                                     },
                                     "required": [
-                                      "intervalMinutes"
+                                      "intervalMinutes",
+                                      "deactivationLimitPercent"
                                     ],
                                     "additionalProperties": false
                                   },
@@ -17822,7 +17854,8 @@
                                   },
                                   "sync": {
                                     "default": {
-                                      "intervalMinutes": 60
+                                      "intervalMinutes": 60,
+                                      "deactivationLimitPercent": 20
                                     },
                                     "type": "object",
                                     "properties": {
@@ -17831,10 +17864,17 @@
                                         "type": "integer",
                                         "minimum": 15,
                                         "maximum": 1440
+                                      },
+                                      "deactivationLimitPercent": {
+                                        "default": 20,
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 100
                                       }
                                     },
                                     "required": [
-                                      "intervalMinutes"
+                                      "intervalMinutes",
+                                      "deactivationLimitPercent"
                                     ],
                                     "additionalProperties": false
                                   },
@@ -18069,7 +18109,8 @@
                                   },
                                   "sync": {
                                     "default": {
-                                      "intervalMinutes": 60
+                                      "intervalMinutes": 60,
+                                      "deactivationLimitPercent": 20
                                     },
                                     "type": "object",
                                     "properties": {
@@ -18078,10 +18119,17 @@
                                         "type": "integer",
                                         "minimum": 15,
                                         "maximum": 1440
+                                      },
+                                      "deactivationLimitPercent": {
+                                        "default": 20,
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 100
                                       }
                                     },
                                     "required": [
-                                      "intervalMinutes"
+                                      "intervalMinutes",
+                                      "deactivationLimitPercent"
                                     ],
                                     "additionalProperties": false
                                   },
@@ -18594,7 +18642,8 @@
                                   },
                                   "sync": {
                                     "default": {
-                                      "intervalMinutes": 60
+                                      "intervalMinutes": 60,
+                                      "deactivationLimitPercent": 20
                                     },
                                     "type": "object",
                                     "properties": {
@@ -18603,10 +18652,17 @@
                                         "type": "integer",
                                         "minimum": 15,
                                         "maximum": 1440
+                                      },
+                                      "deactivationLimitPercent": {
+                                        "default": 20,
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 100
                                       }
                                     },
                                     "required": [
-                                      "intervalMinutes"
+                                      "intervalMinutes",
+                                      "deactivationLimitPercent"
                                     ],
                                     "additionalProperties": false
                                   },
@@ -18743,7 +18799,8 @@
                                   },
                                   "sync": {
                                     "default": {
-                                      "intervalMinutes": 60
+                                      "intervalMinutes": 60,
+                                      "deactivationLimitPercent": 20
                                     },
                                     "type": "object",
                                     "properties": {
@@ -18752,10 +18809,17 @@
                                         "type": "integer",
                                         "minimum": 15,
                                         "maximum": 1440
+                                      },
+                                      "deactivationLimitPercent": {
+                                        "default": 20,
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 100
                                       }
                                     },
                                     "required": [
-                                      "intervalMinutes"
+                                      "intervalMinutes",
+                                      "deactivationLimitPercent"
                                     ],
                                     "additionalProperties": false
                                   },
@@ -19174,7 +19238,8 @@
                               },
                               "sync": {
                                 "default": {
-                                  "intervalMinutes": 60
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20
                                 },
                                 "type": "object",
                                 "properties": {
@@ -19183,6 +19248,12 @@
                                     "type": "integer",
                                     "minimum": 15,
                                     "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
                                   }
                                 },
                                 "additionalProperties": false
@@ -19324,7 +19395,8 @@
                               },
                               "sync": {
                                 "default": {
-                                  "intervalMinutes": 60
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20
                                 },
                                 "type": "object",
                                 "properties": {
@@ -19333,6 +19405,12 @@
                                     "type": "integer",
                                     "minimum": 15,
                                     "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
                                   }
                                 },
                                 "additionalProperties": false
@@ -19496,7 +19574,8 @@
                               },
                               "sync": {
                                 "default": {
-                                  "intervalMinutes": 60
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20
                                 },
                                 "type": "object",
                                 "properties": {
@@ -19505,6 +19584,12 @@
                                     "type": "integer",
                                     "minimum": 15,
                                     "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
                                   }
                                 },
                                 "additionalProperties": false
@@ -19849,7 +19934,8 @@
                               },
                               "sync": {
                                 "default": {
-                                  "intervalMinutes": 60
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20
                                 },
                                 "type": "object",
                                 "properties": {
@@ -19858,6 +19944,12 @@
                                     "type": "integer",
                                     "minimum": 15,
                                     "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
                                   }
                                 },
                                 "additionalProperties": false
@@ -20030,7 +20122,8 @@
                               },
                               "sync": {
                                 "default": {
-                                  "intervalMinutes": 60
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20
                                 },
                                 "type": "object",
                                 "properties": {
@@ -20039,6 +20132,12 @@
                                     "type": "integer",
                                     "minimum": 15,
                                     "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
                                   }
                                 },
                                 "additionalProperties": false
@@ -20253,7 +20352,8 @@
                               },
                               "sync": {
                                 "default": {
-                                  "intervalMinutes": 60
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20
                                 },
                                 "type": "object",
                                 "properties": {
@@ -20262,6 +20362,12 @@
                                     "type": "integer",
                                     "minimum": 15,
                                     "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
                                   }
                                 },
                                 "additionalProperties": false
@@ -20608,7 +20714,8 @@
                               },
                               "sync": {
                                 "default": {
-                                  "intervalMinutes": 60
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20
                                 },
                                 "type": "object",
                                 "properties": {
@@ -20617,6 +20724,12 @@
                                     "type": "integer",
                                     "minimum": 15,
                                     "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
                                   }
                                 },
                                 "additionalProperties": false
@@ -20739,7 +20852,8 @@
                               },
                               "sync": {
                                 "default": {
-                                  "intervalMinutes": 60
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20
                                 },
                                 "type": "object",
                                 "properties": {
@@ -20748,6 +20862,12 @@
                                     "type": "integer",
                                     "minimum": 15,
                                     "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
                                   }
                                 },
                                 "additionalProperties": false
@@ -21238,7 +21358,8 @@
                                     },
                                     "sync": {
                                       "default": {
-                                        "intervalMinutes": 60
+                                        "intervalMinutes": 60,
+                                        "deactivationLimitPercent": 20
                                       },
                                       "type": "object",
                                       "properties": {
@@ -21247,10 +21368,17 @@
                                           "type": "integer",
                                           "minimum": 15,
                                           "maximum": 1440
+                                        },
+                                        "deactivationLimitPercent": {
+                                          "default": 20,
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 100
                                         }
                                       },
                                       "required": [
-                                        "intervalMinutes"
+                                        "intervalMinutes",
+                                        "deactivationLimitPercent"
                                       ],
                                       "additionalProperties": false
                                     },
@@ -21404,7 +21532,8 @@
                                     },
                                     "sync": {
                                       "default": {
-                                        "intervalMinutes": 60
+                                        "intervalMinutes": 60,
+                                        "deactivationLimitPercent": 20
                                       },
                                       "type": "object",
                                       "properties": {
@@ -21413,10 +21542,17 @@
                                           "type": "integer",
                                           "minimum": 15,
                                           "maximum": 1440
+                                        },
+                                        "deactivationLimitPercent": {
+                                          "default": 20,
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 100
                                         }
                                       },
                                       "required": [
-                                        "intervalMinutes"
+                                        "intervalMinutes",
+                                        "deactivationLimitPercent"
                                       ],
                                       "additionalProperties": false
                                     },
@@ -21597,7 +21733,8 @@
                                     },
                                     "sync": {
                                       "default": {
-                                        "intervalMinutes": 60
+                                        "intervalMinutes": 60,
+                                        "deactivationLimitPercent": 20
                                       },
                                       "type": "object",
                                       "properties": {
@@ -21606,10 +21743,17 @@
                                           "type": "integer",
                                           "minimum": 15,
                                           "maximum": 1440
+                                        },
+                                        "deactivationLimitPercent": {
+                                          "default": 20,
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 100
                                         }
                                       },
                                       "required": [
-                                        "intervalMinutes"
+                                        "intervalMinutes",
+                                        "deactivationLimitPercent"
                                       ],
                                       "additionalProperties": false
                                     },
@@ -22037,7 +22181,8 @@
                                     },
                                     "sync": {
                                       "default": {
-                                        "intervalMinutes": 60
+                                        "intervalMinutes": 60,
+                                        "deactivationLimitPercent": 20
                                       },
                                       "type": "object",
                                       "properties": {
@@ -22046,10 +22191,17 @@
                                           "type": "integer",
                                           "minimum": 15,
                                           "maximum": 1440
+                                        },
+                                        "deactivationLimitPercent": {
+                                          "default": 20,
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 100
                                         }
                                       },
                                       "required": [
-                                        "intervalMinutes"
+                                        "intervalMinutes",
+                                        "deactivationLimitPercent"
                                       ],
                                       "additionalProperties": false
                                     },
@@ -22236,7 +22388,8 @@
                                     },
                                     "sync": {
                                       "default": {
-                                        "intervalMinutes": 60
+                                        "intervalMinutes": 60,
+                                        "deactivationLimitPercent": 20
                                       },
                                       "type": "object",
                                       "properties": {
@@ -22245,10 +22398,17 @@
                                           "type": "integer",
                                           "minimum": 15,
                                           "maximum": 1440
+                                        },
+                                        "deactivationLimitPercent": {
+                                          "default": 20,
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 100
                                         }
                                       },
                                       "required": [
-                                        "intervalMinutes"
+                                        "intervalMinutes",
+                                        "deactivationLimitPercent"
                                       ],
                                       "additionalProperties": false
                                     },
@@ -22483,7 +22643,8 @@
                                     },
                                     "sync": {
                                       "default": {
-                                        "intervalMinutes": 60
+                                        "intervalMinutes": 60,
+                                        "deactivationLimitPercent": 20
                                       },
                                       "type": "object",
                                       "properties": {
@@ -22492,10 +22653,17 @@
                                           "type": "integer",
                                           "minimum": 15,
                                           "maximum": 1440
+                                        },
+                                        "deactivationLimitPercent": {
+                                          "default": 20,
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 100
                                         }
                                       },
                                       "required": [
-                                        "intervalMinutes"
+                                        "intervalMinutes",
+                                        "deactivationLimitPercent"
                                       ],
                                       "additionalProperties": false
                                     },
@@ -23008,7 +23176,8 @@
                                     },
                                     "sync": {
                                       "default": {
-                                        "intervalMinutes": 60
+                                        "intervalMinutes": 60,
+                                        "deactivationLimitPercent": 20
                                       },
                                       "type": "object",
                                       "properties": {
@@ -23017,10 +23186,17 @@
                                           "type": "integer",
                                           "minimum": 15,
                                           "maximum": 1440
+                                        },
+                                        "deactivationLimitPercent": {
+                                          "default": 20,
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 100
                                         }
                                       },
                                       "required": [
-                                        "intervalMinutes"
+                                        "intervalMinutes",
+                                        "deactivationLimitPercent"
                                       ],
                                       "additionalProperties": false
                                     },
@@ -23157,7 +23333,8 @@
                                     },
                                     "sync": {
                                       "default": {
-                                        "intervalMinutes": 60
+                                        "intervalMinutes": 60,
+                                        "deactivationLimitPercent": 20
                                       },
                                       "type": "object",
                                       "properties": {
@@ -23166,10 +23343,17 @@
                                           "type": "integer",
                                           "minimum": 15,
                                           "maximum": 1440
+                                        },
+                                        "deactivationLimitPercent": {
+                                          "default": 20,
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 100
                                         }
                                       },
                                       "required": [
-                                        "intervalMinutes"
+                                        "intervalMinutes",
+                                        "deactivationLimitPercent"
                                       ],
                                       "additionalProperties": false
                                     },
@@ -24006,7 +24190,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -24015,10 +24200,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -24172,7 +24364,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -24181,10 +24374,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -24365,7 +24565,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -24374,10 +24575,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -24805,7 +25013,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -24814,10 +25023,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -25004,7 +25220,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -25013,10 +25230,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -25251,7 +25475,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -25260,10 +25485,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -25776,7 +26008,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -25785,10 +26018,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -25925,7 +26165,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -25934,10 +26175,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -26391,7 +26639,8 @@
                               },
                               "sync": {
                                 "default": {
-                                  "intervalMinutes": 60
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20
                                 },
                                 "type": "object",
                                 "properties": {
@@ -26400,6 +26649,12 @@
                                     "type": "integer",
                                     "minimum": 15,
                                     "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
                                   }
                                 },
                                 "additionalProperties": false
@@ -26541,7 +26796,8 @@
                               },
                               "sync": {
                                 "default": {
-                                  "intervalMinutes": 60
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20
                                 },
                                 "type": "object",
                                 "properties": {
@@ -26550,6 +26806,12 @@
                                     "type": "integer",
                                     "minimum": 15,
                                     "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
                                   }
                                 },
                                 "additionalProperties": false
@@ -26713,7 +26975,8 @@
                               },
                               "sync": {
                                 "default": {
-                                  "intervalMinutes": 60
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20
                                 },
                                 "type": "object",
                                 "properties": {
@@ -26722,6 +26985,12 @@
                                     "type": "integer",
                                     "minimum": 15,
                                     "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
                                   }
                                 },
                                 "additionalProperties": false
@@ -26944,7 +27213,8 @@
                               },
                               "sync": {
                                 "default": {
-                                  "intervalMinutes": 60
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20
                                 },
                                 "type": "object",
                                 "properties": {
@@ -26953,6 +27223,12 @@
                                     "type": "integer",
                                     "minimum": 15,
                                     "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
                                   }
                                 },
                                 "additionalProperties": false
@@ -27125,7 +27401,8 @@
                               },
                               "sync": {
                                 "default": {
-                                  "intervalMinutes": 60
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20
                                 },
                                 "type": "object",
                                 "properties": {
@@ -27134,6 +27411,12 @@
                                     "type": "integer",
                                     "minimum": 15,
                                     "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
                                   }
                                 },
                                 "additionalProperties": false
@@ -27348,7 +27631,8 @@
                               },
                               "sync": {
                                 "default": {
-                                  "intervalMinutes": 60
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20
                                 },
                                 "type": "object",
                                 "properties": {
@@ -27357,6 +27641,12 @@
                                     "type": "integer",
                                     "minimum": 15,
                                     "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
                                   }
                                 },
                                 "additionalProperties": false
@@ -27561,7 +27851,8 @@
                               },
                               "sync": {
                                 "default": {
-                                  "intervalMinutes": 60
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20
                                 },
                                 "type": "object",
                                 "properties": {
@@ -27570,6 +27861,12 @@
                                     "type": "integer",
                                     "minimum": 15,
                                     "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
                                   }
                                 },
                                 "additionalProperties": false
@@ -27692,7 +27989,8 @@
                               },
                               "sync": {
                                 "default": {
-                                  "intervalMinutes": 60
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20
                                 },
                                 "type": "object",
                                 "properties": {
@@ -27701,6 +27999,12 @@
                                     "type": "integer",
                                     "minimum": 15,
                                     "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
                                   }
                                 },
                                 "additionalProperties": false
@@ -28083,7 +28387,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -28092,10 +28397,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -28249,7 +28561,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -28258,10 +28571,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -28442,7 +28762,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -28451,10 +28772,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -28882,7 +29210,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -28891,10 +29220,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -29081,7 +29417,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -29090,10 +29427,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -29328,7 +29672,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -29337,10 +29682,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -29853,7 +30205,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -29862,10 +30215,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -30002,7 +30362,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -30011,10 +30372,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -30644,7 +31012,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -30653,10 +31022,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -30810,7 +31186,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -30819,10 +31196,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -31003,7 +31387,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -31012,10 +31397,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -31443,7 +31835,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -31452,10 +31845,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -31642,7 +32042,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -31651,10 +32052,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -31889,7 +32297,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -31898,10 +32307,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -32414,7 +32830,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -32423,10 +32840,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -32563,7 +32987,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -32572,10 +32997,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -33178,7 +33610,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -33187,10 +33620,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -33344,7 +33784,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -33353,10 +33794,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -33537,7 +33985,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -33546,10 +33995,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -33977,7 +34433,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -33986,10 +34443,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -34176,7 +34640,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -34185,10 +34650,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -34423,7 +34895,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -34432,10 +34905,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -34948,7 +35428,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -34957,10 +35438,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -35097,7 +35585,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -35106,10 +35595,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -35733,7 +36229,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -35742,10 +36239,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -35899,7 +36403,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -35908,10 +36413,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -36092,7 +36604,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -36101,10 +36614,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -36532,7 +37052,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -36541,10 +37062,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -36731,7 +37259,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -36740,10 +37269,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -36978,7 +37514,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -36987,10 +37524,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -37503,7 +38047,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -37512,10 +38057,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -37652,7 +38204,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -37661,10 +38214,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -38947,7 +39507,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -38956,10 +39517,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -39113,7 +39681,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -39122,10 +39691,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -39306,7 +39882,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -39315,10 +39892,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -39746,7 +40330,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -39755,10 +40340,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -39945,7 +40537,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -39954,10 +40547,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -40192,7 +40792,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -40201,10 +40802,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -40717,7 +41325,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -40726,10 +41335,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -40866,7 +41482,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -40875,10 +41492,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -42827,7 +43451,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -42836,10 +43461,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -42993,7 +43625,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -43002,10 +43635,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -43186,7 +43826,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -43195,10 +43836,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -43626,7 +44274,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -43635,10 +44284,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -43825,7 +44481,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -43834,10 +44491,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -44072,7 +44736,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -44081,10 +44746,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -44597,7 +45269,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -44606,10 +45279,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -44746,7 +45426,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -44755,10 +45436,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -47693,7 +48381,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -47702,10 +48391,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -47859,7 +48555,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -47868,10 +48565,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -48052,7 +48756,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -48061,10 +48766,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -48492,7 +49204,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -48501,10 +49214,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -48691,7 +49411,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -48700,10 +49421,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -48938,7 +49666,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -48947,10 +49676,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -49463,7 +50199,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -49472,10 +50209,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -49612,7 +50356,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -49621,10 +50366,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -50246,7 +50998,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -50255,10 +51008,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -50412,7 +51172,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -50421,10 +51182,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -50605,7 +51373,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -50614,10 +51383,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -51045,7 +51821,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -51054,10 +51831,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -51244,7 +52028,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -51253,10 +52038,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -51491,7 +52283,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -51500,10 +52293,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -52016,7 +52816,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -52025,10 +52826,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -52165,7 +52973,8 @@
                                 },
                                 "sync": {
                                   "default": {
-                                    "intervalMinutes": 60
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20
                                   },
                                   "type": "object",
                                   "properties": {
@@ -52174,10 +52983,17 @@
                                       "type": "integer",
                                       "minimum": 15,
                                       "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
                                     }
                                   },
                                   "required": [
-                                    "intervalMinutes"
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -53762,6 +54578,31 @@
                               "string",
                               "null"
                             ]
+                          },
+                          "heldDeactivations": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "How many accounts the run would have deactivated when it stopped to protect them, or null. Such a run deactivated nobody until an administrator confirms it."
+                          },
+                          "confirmedAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When an administrator confirmed the held deactivations, or null. ISO 8601 timestamp in UTC."
                           }
                         },
                         "required": [
@@ -53774,7 +54615,9 @@
                           "durationMs",
                           "changeCount",
                           "warningCount",
-                          "error"
+                          "error",
+                          "heldDeactivations",
+                          "confirmedAt"
                         ],
                         "additionalProperties": false,
                         "description": "A run of the synchronization."
@@ -54050,6 +54893,31 @@
                         "null"
                       ]
                     },
+                    "heldDeactivations": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "How many accounts the run would have deactivated when it stopped to protect them, or null. Such a run deactivated nobody until an administrator confirms it."
+                    },
+                    "confirmedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When an administrator confirmed the held deactivations, or null. ISO 8601 timestamp in UTC."
+                    },
                     "changes": {
                       "type": "array",
                       "items": {
@@ -54130,7 +54998,9 @@
                               "removalRefused",
                               "accountFailed",
                               "deactivationRefused",
-                              "memberUnknown"
+                              "memberUnknown",
+                              "deactivationLimit",
+                              "noAccountsFound"
                             ],
                             "description": "Kind of warning."
                           },
@@ -54198,6 +55068,8 @@
                     "changeCount",
                     "warningCount",
                     "error",
+                    "heldDeactivations",
+                    "confirmedAt",
                     "changes",
                     "warnings",
                     "references"
@@ -54493,6 +55365,227 @@
                       "title": "The run is not running anymore",
                       "status": 409,
                       "code": "syncNotRunning"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/identity-providers/{providerId}/sync-runs/{runId}/confirm": {
+      "post": {
+        "operationId": "providerGroups.confirmRun",
+        "summary": "Confirm the deactivations a run held back",
+        "description": "A run stops and deactivates nobody when it would deactivate more than the configured share of the provider's accounts, or when the directory returns none of them. Confirming starts a new run that may deactivate up to as many accounts as the held run would have. Each held run can be confirmed once.\n\nRequires the permission `instance.signIn.manage` on the instance.",
+        "tags": [
+          "Identity providers"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.signIn.manage",
+          "resource": "instance"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the identity provider.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the sync run.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The requested synchronization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "runId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "ID of the run when it ran at once."
+                    }
+                  },
+                  "required": [
+                    "runId"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The requested synchronization. With a job queue the run appears in the sync log shortly; otherwise it runs at once."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`syncNotHeld`: The run holds no deactivations to confirm.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "syncNotHeld": {
+                    "value": {
+                      "type": "urn:pagehall:problem:syncNotHeld",
+                      "title": "The run holds no deactivations to confirm",
+                      "status": 409,
+                      "code": "syncNotHeld"
                     }
                   }
                 }

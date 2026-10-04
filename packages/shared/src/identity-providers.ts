@@ -27,6 +27,7 @@ export const MICROSOFT_GRAPH = "https://graph.microsoft.com";
 export const GOOGLE_DIRECTORY = "https://admin.googleapis.com";
 export const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 export const SYNC_INTERVAL_MINUTES = { minimum: 15, default: 60, maximum: 1440 } as const;
+export const SYNC_DEACTIVATION_LIMIT_PERCENT = { minimum: 1, default: 20, maximum: 100 } as const;
 export const googleDirectoryMethods = ["adminRole", "delegation"] as const;
 export type GoogleDirectoryMethod = (typeof googleDirectoryMethods)[number];
 
@@ -68,8 +69,19 @@ const syncSchema = z
       .min(SYNC_INTERVAL_MINUTES.minimum)
       .max(SYNC_INTERVAL_MINUTES.maximum)
       .default(SYNC_INTERVAL_MINUTES.default),
+    deactivationLimitPercent: z
+      .number()
+      .int()
+      .min(SYNC_DEACTIVATION_LIMIT_PERCENT.minimum)
+      .max(SYNC_DEACTIVATION_LIMIT_PERCENT.maximum)
+      .default(SYNC_DEACTIVATION_LIMIT_PERCENT.default),
   })
   .strict();
+
+const syncDefaults = {
+  intervalMinutes: SYNC_INTERVAL_MINUTES.default,
+  deactivationLimitPercent: SYNC_DEACTIVATION_LIMIT_PERCENT.default,
+};
 
 export const secondFactorModes = ["provider", "providerProof", "pagehall"] as const;
 export type SecondFactorMode = (typeof secondFactorModes)[number];
@@ -86,7 +98,7 @@ const commonShape = {
   domains: z.array(domainSchema).max(50).default([]),
   idTokenAlgorithm: z.enum(idTokenAlgorithms).default("RS256"),
   accountCreation: accountCreationSchema.default({ enabled: false, requiredGroups: [] }),
-  sync: syncSchema.default({ intervalMinutes: SYNC_INTERVAL_MINUTES.default }),
+  sync: syncSchema.default(syncDefaults),
   secondFactor: secondFactorSchema.default({ mode: "provider", proofValues: ["mfa"] }),
 };
 
@@ -240,7 +252,7 @@ const samlCommonShape = {
   requireSignedResponse: z.boolean().default(false),
   encryptedAssertions: z.boolean().default(false),
   accountCreation: accountCreationSchema.default({ enabled: false, requiredGroups: [] }),
-  sync: syncSchema.default({ intervalMinutes: SYNC_INTERVAL_MINUTES.default }),
+  sync: syncSchema.default(syncDefaults),
   secondFactor: secondFactorSchema.default({ mode: "provider", proofValues: ["mfa"] }),
 };
 
@@ -312,7 +324,7 @@ const ldapCommonShape = {
   groupBaseDn: distinguishedName,
   domains: z.array(domainSchema).max(50).default([]),
   accountCreation: accountCreationSchema.default({ enabled: false, requiredGroups: [] }),
-  sync: syncSchema.default({ intervalMinutes: SYNC_INTERVAL_MINUTES.default }),
+  sync: syncSchema.default(syncDefaults),
   secondFactor: z
     .object({ mode: z.enum(ldapSecondFactorModes).default("pagehall") })
     .strict()

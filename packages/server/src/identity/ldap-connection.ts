@@ -158,7 +158,10 @@ export const ldaptsConnector: DirectoryConnector = (target) => {
         return result.searchEntries.map((entry) => entryOf(entry as Record<string, unknown>));
       } catch (error) {
         if (error instanceof ResultCodeError) {
-          if (error.code === 32) return [];
+          if (error.code === 32 && search.scope === "base") return [];
+          if (error.code === 32) {
+            throw new DirectoryConnectionError("searchFailed", `The search base ${base} does not exist`);
+          }
           throw new DirectoryConnectionError("searchFailed", `The directory search failed: ${error.message}`);
         }
         throw connectionFailure(error);

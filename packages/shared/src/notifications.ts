@@ -65,6 +65,12 @@ export const notificationParamSchemas = {
     expiresAt: instant,
     providerId: idSchema,
   }),
+  "identityProvider.syncHeld": z.object({
+    providerName: z.string(),
+    providerId: idSchema,
+    deactivations: z.number().int(),
+    accounts: z.number().int(),
+  }),
   "signIn.newBrowser": z.object({
     browser: z.string().nullable(),
     operatingSystem: z.string().nullable(),

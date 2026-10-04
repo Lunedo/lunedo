@@ -51,7 +51,9 @@ export type SyncWarningKind =
   | "removalRefused"
   | "accountFailed"
   | "deactivationRefused"
-  | "memberUnknown";
+  | "memberUnknown"
+  | "deactivationLimit"
+  | "noAccountsFound";
 
 export interface SyncWarning {
   kind: SyncWarningKind;

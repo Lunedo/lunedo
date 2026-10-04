@@ -54,6 +54,7 @@ const KNOWN = new Set([
   "providerDeactivated",
   "accountHasOrganization",
   "syncNotRunning",
+  "syncNotHeld",
   "providerUnavailable",
   "invalidServiceAccountKey",
   "roleNameTaken",

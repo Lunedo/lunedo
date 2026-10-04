@@ -117,6 +117,8 @@ Providers with a directory (Entra ID, and Google Workspace with group synchroniz
 
 An account that the provider disabled or deleted is deactivated: its sessions and personal API tokens end. Pagehall never deletes accounts. When the provider enables the account again, Pagehall reactivates it, but only if this provider deactivated it.
 
+A wrong search base, a moved directory unit or a service account that lost its read permission look the same as everyone leaving, and deactivation revokes API tokens for good. So a run that would deactivate more than a share of the provider's active accounts at once (`config.sync.deactivationLimitPercent`, 1 to 100, default 20), or that finds none of the linked accounts it would deactivate, stops: it deactivates nobody, ends as failed with a warning, and notifies the instance owner and administrators (`identityProvider.syncHeld`). An administrator who checked that the people really left confirms the run in the sync log (`identityProvider.syncConfirmed`). Confirming starts a new run that may deactivate up to as many accounts as the held one; each held run can be confirmed once. For LDAP and Active Directory, a user or group search base that does not exist fails the run instead of returning no entries.
+
 Every run is kept in the sync log with trigger, result, duration, changes and warnings, for `identityProviders.syncLogRetentionDays` days (instance, default 90).
 
 ## Mapping rules
@@ -170,4 +172,4 @@ The instance owner can always sign in with password and second factor. When pass
 
 ## Audit events
 
-`identityProvider.created`, `.updated`, `.deactivated`, `.activated`, `.removed`, `.credentialAdded`, `.credentialRemoved`, `.logoChanged`, `.directoryKeyChanged`, `.synchronized` with the result of the run; `mappingRule.created`, `.updated`, `.removed`; `account.deactivatedByProvider`, `account.reactivatedByProvider`; memberships, roles and group members changed by rules, with the reason `providerRule`; `auth.signedIn` with `providerId`, `auth.signInRefused` with reason and reference, `auth.providerSignedOut`, `auth.emergencySignIn`; `identity.linked`, `identity.unlinked`; `account.createdAtSignIn`.
+`identityProvider.created`, `.updated`, `.deactivated`, `.activated`, `.removed`, `.credentialAdded`, `.credentialRemoved`, `.logoChanged`, `.directoryKeyChanged`, `.synchronized` with the result of the run, `.syncConfirmed`; `mappingRule.created`, `.updated`, `.removed`; `account.deactivatedByProvider`, `account.reactivatedByProvider`; memberships, roles and group members changed by rules, with the reason `providerRule`; `auth.signedIn` with `providerId`, `auth.signInRefused` with reason and reference, `auth.providerSignedOut`, `auth.emergencySignIn`; `identity.linked`, `identity.unlinked`; `account.createdAtSignIn`.

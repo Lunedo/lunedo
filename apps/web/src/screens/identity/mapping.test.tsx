@@ -44,7 +44,7 @@ function provider(preset: "entraId" | "generic" | "google" = "entraId") {
     domains: ["example.org"],
     idTokenAlgorithm: "RS256",
     accountCreation: { enabled: true, requiredGroups: [] },
-    sync: { intervalMinutes: 60 },
+    sync: { intervalMinutes: 60, deactivationLimitPercent: 20 },
     secondFactor: { mode: "provider", proofValues: ["mfa"] },
   };
   return {
@@ -416,6 +416,67 @@ describe("the sync log", () => {
     await userEvent.click(await within(panel).findByRole("button", { name: "Cancel run" }));
     await waitFor(() =>
       expect(requests.some((entry) => entry.path === `${BASE}/sync-runs/${RUN}/cancel`)).toBe(true),
+    );
+  });
+
+  it("confirms the deactivations a run held back", async () => {
+    const held = {
+      id: RUN,
+      providerId: PROVIDER,
+      trigger: "schedule",
+      status: "failed",
+      startedAt: "2026-10-02T11:52:00.000Z",
+      finishedAt: "2026-10-02T11:52:10.000Z",
+      durationMs: 10_000,
+      changeCount: 0,
+      warningCount: 1,
+      error: "The run would deactivate 40 of 120 accounts, more than 20 %, so it deactivated nobody",
+      heldDeactivations: 40,
+      confirmedAt: null,
+    };
+    const { requests } = adminApi({
+      [`GET ${BASE}/mapping-rules`]: () => ({ body: [] }),
+      [`GET ${BASE}/sync-runs`]: () => ({ body: { items: [held], nextCursor: null } }),
+      [`GET ${BASE}/sync-runs/${RUN}`]: () => ({
+        body: {
+          ...held,
+          changes: [],
+          warnings: [{ kind: "deactivationLimit", accountId: null, ruleId: null, detail: "40/120" }],
+          references: {},
+        },
+      }),
+      [`POST ${BASE}/sync-runs/${RUN}/confirm`]: () => ({ status: 202, body: { runId: null } }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=sync`);
+    await userEvent.click(await screen.findByRole("row", { name: /Show the run of/ }));
+    const panel = await screen.findByRole("dialog", { name: "Synchronization run" });
+    expect(await within(panel).findByText("Too many deactivations at once")).toBeTruthy();
+    expect(within(panel).getByText(/would have deactivated 40 accounts at once/)).toBeTruthy();
+    await userEvent.click(within(panel).getByRole("button", { name: "Confirm deactivations" }));
+    const dialog = await screen.findByRole("dialog", { name: "Deactivate these accounts?" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Confirm deactivations" }));
+    await waitFor(() =>
+      expect(requests.some((entry) => entry.path === `${BASE}/sync-runs/${RUN}/confirm`)).toBe(true),
+    );
+  });
+
+  it("saves the largest share a run may deactivate at once", async () => {
+    const { requests } = adminApi({
+      [`PATCH ${BASE}`]: (request) => ({
+        body: { ...provider(), config: (request.body as { config: unknown }).config },
+      }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=settings`);
+    const field = await screen.findByRole("textbox", { name: "Largest share deactivated at once" });
+    await userEvent.clear(field);
+    await userEvent.type(field, "0{Enter}");
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    await userEvent.clear(field);
+    await userEvent.type(field, "35{Enter}");
+    await waitFor(() =>
+      expect(requests.find((entry) => entry.method === "PATCH" && entry.path === BASE)?.body).toMatchObject({
+        config: { sync: { intervalMinutes: 60, deactivationLimitPercent: 35 } },
+      }),
     );
   });
 

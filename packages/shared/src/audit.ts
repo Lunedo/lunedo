@@ -20,6 +20,7 @@ export const auditEventNames = [
   "identityProvider.caCertificateChanged",
   "identityProvider.synchronized",
   "identityProvider.syncCancelled",
+  "identityProvider.syncConfirmed",
   "identityProvider.scimTokenCreated",
   "identityProvider.scimTokenRenewed",
   "identityProvider.scimTokenRemoved",

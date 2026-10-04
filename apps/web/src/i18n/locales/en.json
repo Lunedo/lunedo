@@ -100,6 +100,13 @@
       "changesTitle": "Changes",
       "warningsTitle": "Warnings",
       "noWarnings": "No warnings",
+      "heldTitle": "Deactivations held back",
+      "heldDescription": "The run would have deactivated {count, plural, one {# account} other {# accounts}} at once and stopped without deactivating anyone. A wrong search base, a moved directory unit or missing read permissions look the same as people leaving. Check the provider first; if the people really left, confirm the run.",
+      "heldConfirmed": "An administrator confirmed the deactivation of up to {count, plural, one {# account} other {# accounts}} on {time}.",
+      "confirm": "Confirm deactivations",
+      "confirmTitle": "Deactivate these accounts?",
+      "confirmDescription": "A new run starts and may deactivate up to {count, plural, one {# account} other {# accounts}}. Their sessions end and their personal API tokens are revoked. Accounts come back when they are enabled in the provider again; revoked tokens do not.",
+      "confirmed": "The confirmed run starts shortly.",
       "changeKinds": {
         "membershipAdded": "Membership added",
         "membershipRemoved": "Membership removed",
@@ -122,11 +129,15 @@
         "removalRefused": "Removal refused",
         "accountFailed": "Account could not be updated",
         "deactivationRefused": "Deactivation refused",
-        "memberUnknown": "Unknown member"
+        "memberUnknown": "Unknown member",
+        "deactivationLimit": "Too many deactivations at once",
+        "noAccountsFound": "No linked account found"
       },
       "settingsTitle": "Synchronization",
       "interval": "Sync interval",
       "intervalHint": "Groups and account status are also updated at every sign-in.",
+      "deactivationLimit": "Largest share deactivated at once",
+      "deactivationLimitHint": "A run that would deactivate more of this provider's accounts at once stops, deactivates nobody and notifies the instance administrators, who can confirm it in the sync log.",
       "whenDisabled": "When an account is disabled",
       "whenDisabledHint": "Accounts disabled or deleted in {provider} are deactivated in Pagehall and reactivated when enabled again. Pagehall never deletes accounts.",
       "deactivate": "Deactivate in Pagehall",
@@ -1017,6 +1028,7 @@
     "providerUnavailable": "The identity provider could not be reached or answered in an unexpected way. It may be down or its settings may have changed. Try again in a moment; if it keeps failing, ask your administrator to check the provider.",
     "providerDeactivated": "This provider is deactivated, so nobody can sign in or synchronize through it. Sign in another way, or ask your administrators to activate the provider again.",
     "syncNotRunning": "The run has already finished, so there is nothing to cancel. Reload the sync log to see its result.",
+    "syncNotHeld": "This run holds no deactivations to confirm, or someone confirmed it already. Reload the sync log to see its current state.",
     "syncUnavailable": "This provider has no directory Pagehall can read, so its accounts update when people sign in. Set up the directory in the provider settings to synchronize.",
     "invalidServiceAccountKey": "The service account key could not be read. Download a new JSON key for the service account in Google Cloud and upload it again.",
     "roleNameTaken": "A role with this name already exists. Choose a different name.",
@@ -1814,6 +1826,7 @@
     },
     "events": {
       "identityProviderCredentialExpiring": "Provider credential expires soon",
+      "identityProviderSyncHeld": "Synchronization stopped before deactivating accounts",
       "authEmergencySignIn": "Emergency sign-in used",
       "accountWithoutOrganization": "New account without organization",
       "accountRolesWithheld": "Administrative roles paused",
@@ -1830,7 +1843,8 @@
     },
     "types": {
       "identityProvider": {
-        "credentialExpiring": "The credential of {providerName} expires on {expiresAt}. Add a new one before then, or sign-in through it stops working."
+        "credentialExpiring": "The credential of {providerName} expires on {expiresAt}. Add a new one before then, or sign-in through it stops working.",
+        "syncHeld": "The synchronization with {providerName} would have deactivated {deactivations} of {accounts} accounts at once and stopped. Check the provider, then confirm the run in the sync log if the people really left."
       },
       "account": {
         "withoutOrganization": "{accountName} signed in through {providerName} for the first time and is not a member of any organization yet. Assign one in the account list.",
@@ -2483,6 +2497,7 @@
         "caCertificateChanged": "CA certificate of the directory changed",
         "synchronized": "Provider synchronized",
         "syncCancelled": "Synchronization cancelled",
+        "syncConfirmed": "Held deactivations confirmed",
         "scimTokenCreated": "SCIM token created",
         "scimTokenRenewed": "SCIM token renewed",
         "scimTokenRemoved": "SCIM token removed"
@@ -2852,6 +2867,7 @@
     "loadSyncRun": "The run could not be loaded",
     "startSync": "The synchronization could not be started",
     "cancelSync": "The run could not be cancelled",
+    "confirmSync": "The run could not be confirmed",
     "saveDirectoryKey": "The service account key could not be saved",
     "removeDirectoryKey": "The service account key could not be removed",
     "unlinkIdentity": "The identity could not be unlinked",

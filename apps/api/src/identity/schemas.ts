@@ -756,6 +756,14 @@ const syncRunShape = {
   changeCount: z.number().int().describe("Number of changes."),
   warningCount: z.number().int().describe("Number of warnings."),
   error: z.string().nullable().describe("Why the run failed, or null."),
+  heldDeactivations: z
+    .number()
+    .int()
+    .nullable()
+    .describe(
+      "How many accounts the run would have deactivated when it stopped to protect them, or null. Such a run deactivated nobody until an administrator confirms it.",
+    ),
+  confirmedAt: timestamp("When an administrator confirmed the held deactivations, or null.").nullable(),
 };
 
 export const syncRunSchema = z.object(syncRunShape).describe("A run of the synchronization.");
@@ -804,6 +812,8 @@ export const syncRunDetailsSchema = z
               "accountFailed",
               "deactivationRefused",
               "memberUnknown",
+              "deactivationLimit",
+              "noAccountsFound",
             ])
             .describe("Kind of warning."),
           accountId: uuid("ID of the account.").nullable(),
