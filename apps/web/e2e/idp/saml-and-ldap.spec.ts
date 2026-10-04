@@ -257,6 +257,7 @@ test.describe("sign-in through LDAP (OpenLDAP)", () => {
           accountCreation: { enabled: true, requiredGroups: [] },
           secondFactor: { mode: "provider" },
           disabled: { attribute: "employeeType", values: ["disabled"] },
+          sync: { intervalMinutes: 60, deactivationLimitPercent: 100 },
         },
         credential: { kind: "bindPassword", secret: LDAP_SERVICE.password },
       },
