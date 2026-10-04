@@ -44,7 +44,7 @@ function provider(preset: "entraId" | "generic" | "google" = "entraId") {
     domains: ["example.org"],
     idTokenAlgorithm: "RS256",
     accountCreation: { enabled: true, requiredGroups: [] },
-    sync: { intervalMinutes: 60, deactivationLimitPercent: 20 },
+    sync: { intervalMinutes: 60, deactivationLimitPercent: 20, deactivationLimitAccounts: 5 },
     secondFactor: { mode: "provider", proofValues: ["mfa"] },
   };
   return {
@@ -505,8 +505,16 @@ describe("the sync log", () => {
     await userEvent.type(field, "35{Enter}");
     await waitFor(() =>
       expect(requests.find((entry) => entry.method === "PATCH" && entry.path === BASE)?.body).toMatchObject({
-        config: { sync: { intervalMinutes: 60, deactivationLimitPercent: 35 } },
+        config: { sync: { intervalMinutes: 60, deactivationLimitPercent: 35, deactivationLimitAccounts: 5 } },
       }),
+    );
+    const minimum = screen.getByRole("textbox", { name: "Accounts a run may always deactivate" });
+    await userEvent.clear(minimum);
+    await userEvent.type(minimum, "12{Enter}");
+    await waitFor(() =>
+      expect(
+        requests.filter((entry) => entry.method === "PATCH" && entry.path === BASE).at(-1)?.body,
+      ).toMatchObject({ config: { sync: { deactivationLimitAccounts: 12 } } }),
     );
   });
 

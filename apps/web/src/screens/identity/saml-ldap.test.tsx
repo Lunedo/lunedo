@@ -112,7 +112,7 @@ function samlProvider(patch: Record<string, unknown> = {}, metadata: Record<stri
       requireSignedResponse: false,
       encryptedAssertions: false,
       accountCreation: { enabled: false, requiredGroups: [] },
-      sync: { intervalMinutes: 60, deactivationLimitPercent: 20 },
+      sync: { intervalMinutes: 60, deactivationLimitPercent: 20, deactivationLimitAccounts: 5 },
       secondFactor: { mode: "provider", proofValues: ["mfa"] },
       identifierAttribute: "objectGUID",
       attributes: {
@@ -174,7 +174,7 @@ function ldapProvider(patch: Record<string, unknown> = {}, config: Record<string
       groupBaseDn: "OU=Groups,DC=verlag,DC=example",
       domains: ["verlag.example"],
       accountCreation: { enabled: false, requiredGroups: [] },
-      sync: { intervalMinutes: 60, deactivationLimitPercent: 20 },
+      sync: { intervalMinutes: 60, deactivationLimitPercent: 20, deactivationLimitAccounts: 5 },
       secondFactor: { mode: "pagehall" },
       userFilter: "(&(objectCategory=person)(objectClass=user))",
       groupFilter: "(objectClass=group)",

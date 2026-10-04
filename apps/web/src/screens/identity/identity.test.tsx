@@ -368,7 +368,7 @@ function provider(patch: Record<string, unknown> = {}) {
       graphUrl: "https://graph.microsoft.com",
       emailSource: "email",
       signInNameSource: "userPrincipalName",
-      sync: { intervalMinutes: 60, deactivationLimitPercent: 20 },
+      sync: { intervalMinutes: 60, deactivationLimitPercent: 20, deactivationLimitAccounts: 5 },
       secondFactor: { mode: "provider", proofValues: ["mfa"] },
     },
     issuer: "https://login.microsoftonline.com/3f2a9c1e-7b4d-4e8a-9c21-5d6f0a8b2e17/v2.0",

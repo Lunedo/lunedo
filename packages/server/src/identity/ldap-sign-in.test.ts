@@ -71,7 +71,11 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
     return { id: created.id, owner: owner.id };
   }
 
-  async function provider(secondFactor: "pagehall" | "provider" = "provider", deactivationLimitPercent = 20) {
+  async function provider(
+    secondFactor: "pagehall" | "provider" = "provider",
+    deactivationLimitPercent = 20,
+    deactivationLimitAccounts = 5,
+  ) {
     const domain = `${randomUUID().slice(0, 8)}.example.org`;
     const { provider: created } = await test.services.identityProviders.create(SYSTEM, {
       type: "ldap",
@@ -86,7 +90,7 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
         accountCreation: { enabled: true, requiredGroups: [] },
         secondFactor: { mode: secondFactor },
         disabled: { attribute: "employeeType", values: ["disabled"] },
-        sync: { intervalMinutes: 60, deactivationLimitPercent },
+        sync: { intervalMinutes: 60, deactivationLimitPercent, deactivationLimitAccounts },
       },
       credential: { kind: "bindPassword", secret: SERVICE_PASSWORD },
     });
@@ -351,9 +355,24 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
     ]);
   });
 
+  it("deactivates more than the share at once while the run stays within the minimum number of accounts", async () => {
+    const { id, domain } = await provider("provider", 20, 3);
+    const linked = await people(id, domain, 5);
+    for (const item of linked.slice(0, 3)) directory.entries.splice(directory.entries.indexOf(item.entry), 1);
+    const run = await test.services.providerSync.run(id, "manual");
+    expect(run).toMatchObject({ status: "succeeded", heldDeactivations: null });
+    expect(await states(linked.map((item) => item.accountId))).toEqual([
+      "deactivated",
+      "deactivated",
+      "deactivated",
+      "active",
+      "active",
+    ]);
+  });
+
   it("holds a sync that would deactivate more than the share set for the provider until it is confirmed", async () => {
     const owner = await instanceOwner();
-    const { id, domain } = await provider();
+    const { id, domain } = await provider("provider", 20, 1);
     const linked = await people(id, domain, 5);
     expect(await states(linked.map((item) => item.accountId))).toEqual(Array(5).fill("active"));
     directory.entries.splice(directory.entries.indexOf(linked[0]?.entry as FakeLdapEntry), 1);
@@ -392,7 +411,7 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
 
   it("lets a confirmed run deactivate no more accounts than the run that was held", async () => {
     const owner = await instanceOwner();
-    const { id, domain } = await provider();
+    const { id, domain } = await provider("provider", 20, 1);
     const linked = await people(id, domain, 5);
     directory.entries.splice(directory.entries.indexOf(linked[0]?.entry as FakeLdapEntry), 1);
     directory.entries.splice(directory.entries.indexOf(linked[1]?.entry as FakeLdapEntry), 1);

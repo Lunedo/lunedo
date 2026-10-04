@@ -371,7 +371,9 @@ export class ProviderSyncService {
       if (!cancelled) {
         const active = new Set(linked.filter((row) => row.state === "active").map((row) => row.accountId));
         const limit = provider.config.sync.deactivationLimitPercent;
-        const tooMany = pending.size * 100 > limit * active.size;
+        const tooMany =
+          pending.size * 100 > limit * active.size &&
+          pending.size > provider.config.sync.deactivationLimitAccounts;
         const noneFound = pending.size > 0 && found === 0;
         if ((tooMany || noneFound) && pending.size > allowed) {
           held = pending.size;
@@ -383,7 +385,7 @@ export class ProviderSyncService {
           });
           failure = noneFound
             ? `The directory returned none of the ${linked.length} linked accounts, so the run deactivated nobody`
-            : `The run would deactivate ${pending.size} of ${active.size} accounts, more than ${limit} %, so it deactivated nobody`;
+            : `The run would deactivate ${pending.size} of ${active.size} accounts, more than ${limit} % and more than ${provider.config.sync.deactivationLimitAccounts} accounts, so it deactivated nobody`;
           notifyHeld = { providerName: provider.name, accounts: active.size };
         } else {
           for (const [accountId, state] of pending)

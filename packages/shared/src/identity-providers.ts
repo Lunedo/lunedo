@@ -28,6 +28,7 @@ export const GOOGLE_DIRECTORY = "https://admin.googleapis.com";
 export const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 export const SYNC_INTERVAL_MINUTES = { minimum: 15, default: 60, maximum: 1440 } as const;
 export const SYNC_DEACTIVATION_LIMIT_PERCENT = { minimum: 1, default: 20, maximum: 100 } as const;
+export const SYNC_DEACTIVATION_LIMIT_ACCOUNTS = { minimum: 0, default: 5, maximum: 100_000 } as const;
 export const googleDirectoryMethods = ["adminRole", "delegation"] as const;
 export type GoogleDirectoryMethod = (typeof googleDirectoryMethods)[number];
 
@@ -75,12 +76,19 @@ const syncSchema = z
       .min(SYNC_DEACTIVATION_LIMIT_PERCENT.minimum)
       .max(SYNC_DEACTIVATION_LIMIT_PERCENT.maximum)
       .default(SYNC_DEACTIVATION_LIMIT_PERCENT.default),
+    deactivationLimitAccounts: z
+      .number()
+      .int()
+      .min(SYNC_DEACTIVATION_LIMIT_ACCOUNTS.minimum)
+      .max(SYNC_DEACTIVATION_LIMIT_ACCOUNTS.maximum)
+      .default(SYNC_DEACTIVATION_LIMIT_ACCOUNTS.default),
   })
   .strict();
 
 const syncDefaults = {
   intervalMinutes: SYNC_INTERVAL_MINUTES.default,
   deactivationLimitPercent: SYNC_DEACTIVATION_LIMIT_PERCENT.default,
+  deactivationLimitAccounts: SYNC_DEACTIVATION_LIMIT_ACCOUNTS.default,
 };
 
 export const secondFactorModes = ["provider", "providerProof", "pagehall"] as const;

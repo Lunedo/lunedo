@@ -1,4 +1,4 @@
-import { SYNC_DEACTIVATION_LIMIT_PERCENT } from "@pagehall/shared";
+import { SYNC_DEACTIVATION_LIMIT_ACCOUNTS, SYNC_DEACTIVATION_LIMIT_PERCENT } from "@pagehall/shared";
 import {
   Badge,
   type BadgeVariant,
@@ -364,6 +364,7 @@ export function SyncSettings({ provider, canManage }: { provider: IdentityProvid
   const update = useProviderUpdate(provider);
   const interval = useSaveState();
   const limit = useSaveState();
+  const minimum = useSaveState();
   const config = provider.config;
   const capabilities = provider.capabilities;
   const google = provider.type === "oidc" && config.preset === "google";
@@ -403,9 +404,11 @@ export function SyncSettings({ provider, canManage }: { provider: IdentityProvid
           label={t("identityProviders.sync.deactivationLimit")}
           description={t("identityProviders.sync.deactivationLimitHint")}
           control={
-            <PercentField
+            <LimitField
               label={t("identityProviders.sync.deactivationLimit")}
               value={config.sync.deactivationLimitPercent}
+              range={SYNC_DEACTIVATION_LIMIT_PERCENT}
+              unit="%"
               disabled={!canManage}
               onSave={(percent) =>
                 limit.run(() =>
@@ -420,6 +423,30 @@ export function SyncSettings({ provider, canManage }: { provider: IdentityProvid
           status={<SaveIndicator tracker={limit} />}
         />
       ) : null}
+      {capabilities.directorySync ? (
+        <SettingRow
+          label={t("identityProviders.sync.deactivationMinimum")}
+          description={t("identityProviders.sync.deactivationMinimumHint")}
+          control={
+            <LimitField
+              label={t("identityProviders.sync.deactivationMinimum")}
+              value={config.sync.deactivationLimitAccounts}
+              range={SYNC_DEACTIVATION_LIMIT_ACCOUNTS}
+              unit={t("identityProviders.sync.accountsUnit")}
+              disabled={!canManage}
+              onSave={(accounts) =>
+                minimum.run(() =>
+                  update.config((current) => ({
+                    ...current,
+                    sync: { ...current.sync, deactivationLimitAccounts: accounts },
+                  })),
+                )
+              }
+            />
+          }
+          status={<SaveIndicator tracker={minimum} />}
+        />
+      ) : null}
       {capabilities.disabledAccounts ? (
         <SettingRow
           label={t("identityProviders.sync.whenDisabled")}
@@ -432,21 +459,25 @@ export function SyncSettings({ provider, canManage }: { provider: IdentityProvid
   );
 }
 
-function PercentField({
+function LimitField({
   label,
   value,
+  range,
+  unit,
   disabled,
   onSave,
 }: {
   label: string;
   value: number;
+  range: { minimum: number; maximum: number };
+  unit: string;
   disabled: boolean;
-  onSave: (percent: number) => Promise<unknown>;
+  onSave: (value: number) => Promise<unknown>;
 }) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState(String(value));
   const [error, setError] = useState<string | null>(null);
-  const { minimum, maximum } = SYNC_DEACTIVATION_LIMIT_PERCENT;
+  const { minimum, maximum } = range;
   const commit = async () => {
     const parsed = z.coerce.number().int().min(minimum).max(maximum).safeParse(draft.trim());
     if (!parsed.success) {
@@ -475,7 +506,7 @@ function PercentField({
             }
           }}
         />
-        <span className="text-text-muted">%</span>
+        <span className="text-text-muted">{unit}</span>
       </div>
       {error ? (
         <span role="alert" className="text-danger text-sm">
