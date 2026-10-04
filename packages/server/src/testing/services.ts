@@ -32,15 +32,21 @@ export interface TestServices {
 
 export async function createTestServices(
   baseUrl: string,
-  options: { configuredInstanceUrl?: string; directoryConnector?: DirectoryConnector } = {},
+  options: {
+    configuredInstanceUrl?: string;
+    directoryConnector?: DirectoryConnector;
+    masterKey?: Buffer;
+    beforeMigrations?: (url: string) => Promise<unknown>;
+  } = {},
 ): Promise<TestServices> {
   const temporary: TemporaryDatabase = await createTemporaryDatabase(baseUrl, "pagehall_services_test");
+  await options.beforeMigrations?.(temporary.url);
   const pool = createDatabasePool({ connectionString: temporary.url, applicationName: "pagehall-test" });
   const logger = createLogger({ service: "test", level: "silent" });
   await runMigrations(pool, { logger });
   const database = createDatabase(pool);
   const keyRing = new KeyRingHolder(
-    new EnvKeyProvider(new Secret(formatKeyEntry(1, randomBytes(32)))),
+    new EnvKeyProvider(new Secret(formatKeyEntry(1, options.masterKey ?? randomBytes(32)))),
     logger,
   );
   await keyRing.reload();
