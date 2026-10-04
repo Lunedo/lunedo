@@ -18,6 +18,7 @@ const context: ApiContext = {
   readiness: {},
   webRoot: undefined,
   trustedProxies: [],
+  configuredInstanceUrl: undefined,
   services: undefined,
   settings: undefined,
   settingsRegistry: undefined,

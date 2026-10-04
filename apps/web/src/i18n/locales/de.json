@@ -1318,7 +1318,9 @@
       "description": "Die Adresse und der Name, die alle sehen.",
       "url": "Adresse",
       "urlHint": "Wird in Links, E-Mails und für Passkeys verwendet.",
-      "name": "Name der Instanz"
+      "name": "Name der Instanz",
+      "notHttpsTitle": "Die Adresse verwendet kein HTTPS",
+      "notHttps": "Die meisten Identitätsanbieter akzeptieren nur HTTPS-Redirect-URIs, und Browser behalten das Anmelde-Cookie nur über HTTPS. Verwende eine HTTPS-Adresse, etwa über einen Reverse Proxy, außer du testest nur auf diesem Computer."
     },
     "owner": {
       "title": "Owner-Konto",

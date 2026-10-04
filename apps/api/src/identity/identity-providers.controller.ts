@@ -1,10 +1,5 @@
 import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Req, Res } from "@nestjs/common";
-import {
-  type CredentialInput,
-  instanceUrlSetting,
-  LOGO_MAX_BYTES,
-  type ProviderSummary,
-} from "@pagehall/server";
+import { type CredentialInput, LOGO_MAX_BYTES, type ProviderSummary } from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission, PublicRoute } from "../access/route-access.js";
@@ -13,6 +8,7 @@ import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { COOKIES, PROVIDER_FLOW_MAX_AGE_SECONDS, setCookie } from "../http/cookies.js";
 import { ownOrigin } from "../http/csrf.js";
+import { instanceUrlOf } from "../http/instance-url.js";
 import { notFound } from "../http/problems.js";
 import { actorOf, sessionOf } from "../http/request.js";
 import { uuid } from "../http/schemas.js";
@@ -92,8 +88,7 @@ function credentialOf(body: z.output<typeof credentialInputSchema>): CredentialI
 }
 
 export async function baseUrlOf(context: ApiContext, request: FastifyRequest): Promise<string> {
-  const configured = context.settings ? await context.settings.get(instanceUrlSetting, {}) : "";
-  return configured || ownOrigin(request);
+  return (await instanceUrlOf(context)) || ownOrigin(request);
 }
 
 @Controller("api/v1")

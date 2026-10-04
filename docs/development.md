@@ -39,6 +39,23 @@ Dependencies are installed when the `app` container starts. After pulling change
 
 To run everything on the host instead, start PostgreSQL, set `PAGEHALL_DATABASE_URL` and run `pnpm dev:apps`.
 
+### Behind a public HTTPS address
+
+Cloud identity providers such as Microsoft Entra ID accept only HTTPS redirect URIs. To test against them, put a tunnel or reverse proxy with a public HTTPS hostname in front of the Vite dev server, for example a Cloudflare Tunnel to `http://localhost:5173`, and start the environment with that address:
+
+```sh
+PAGEHALL_INSTANCE_URL=https://pagehall-test.example.org pnpm dev
+```
+
+With a public address in `PAGEHALL_INSTANCE_URL`:
+
+- Vite accepts requests for that hostname and connects hot reload through it (`wss`, port 443).
+- The Vite proxy forwards `/api` with `X-Forwarded-For`, and with the protocol and host of the instance URL. The API trusts these headers only from the dev proxy in the same container (`PAGEHALL_TRUSTED_PROXIES=127.0.0.1,::1` in `docker/compose.dev.yml`); requests to the published port 3000 come from another address and keep their own.
+- Until the setup assistant stores the instance URL, the API uses the configured one for redirect URIs and for the origin check of state-changing requests. Use the same address in the assistant.
+- Cookies are always `Secure` and use the `__Host-` prefix, so the browser keeps them over HTTPS and on `localhost`, but not on other plain HTTP addresses.
+
+Open Pagehall under the public address while it is set: hot reload goes through the tunnel also when the page is opened on `localhost`. Leave `PAGEHALL_INSTANCE_URL` empty for purely local work.
+
 ### Identity providers for development and tests
 
 Keycloak and Authentik run as OIDC providers with test users and groups, Keycloak also as SAML provider, and OpenLDAP as directory. They belong to the Compose profile `idp` and start only on request, because Authentik needs its own database and both take a minute to start:

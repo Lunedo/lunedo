@@ -1318,7 +1318,9 @@
       "description": "The address and name people see.",
       "url": "Address",
       "urlHint": "Used in links, e-mails and for passkeys.",
-      "name": "Instance name"
+      "name": "Instance name",
+      "notHttpsTitle": "The address does not use HTTPS",
+      "notHttps": "Most identity providers accept only HTTPS redirect URIs, and browsers keep the sign-in cookie only over HTTPS. Use an HTTPS address, for example through a reverse proxy, unless you only test on this computer."
     },
     "owner": {
       "title": "Owner account",
