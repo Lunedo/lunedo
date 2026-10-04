@@ -95,7 +95,7 @@ test("sets up a fresh instance and signs in the owner with a second factor", asy
   await page.goto("/settings/instance/general");
   await expect(page.getByText("E-mail is not set up")).toBeVisible();
   await page.getByRole("link", { name: "Set up e-mail" }).click();
-  await page.getByLabel("Server").fill(SMTP_HOST);
+  await page.getByLabel("Server", { exact: true }).fill(SMTP_HOST);
   await page.getByLabel("Port").fill(String(SMTP_PORT));
   await page.getByRole("radiogroup", { name: "Security" }).getByRole("radio", { name: /None/ }).click();
   await page.getByLabel("Sender address").fill("wiki@pagehall.test");
