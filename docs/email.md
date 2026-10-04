@@ -24,8 +24,12 @@ Services such as SendGrid, Mailgun, Amazon SES, Postmark and Brevo are used thro
 
 Exchange Online is moving away from SMTP with passwords. With Microsoft Graph, Pagehall sends through `sendMail` of one sender mailbox, with an app registration of its own:
 
-1. In the Entra admin center, create an app registration for e-mail only, separate from the one for sign-in. Do not grant it the API permission `Mail.Send` in Entra ID: granted there, it lets the app send as every mailbox of the tenant.
-2. In Exchange Online, allow the app to send only as the sender mailbox, with RBAC for applications: create a service principal for the app (`New-ServicePrincipal`), a management scope that contains only the sender mailbox (`New-ManagementScope`), and assign the role `Application Mail.Send` with that scope (`New-ManagementRoleAssignment -Role "Application Mail.Send" -App … -CustomResourceScope …`). An application access policy that restricts the app to a mail-enabled security group with the mailbox works as well, but Microsoft recommends RBAC for applications.
+1. In the Entra admin center, create an app registration for e-mail only, separate from the one for sign-in.
+2. Give the app the right to send. There are two ways:
+   - Recommended: grant it only for the sender mailbox, in Exchange Online with RBAC for applications, and not in Entra ID. Create a service principal for the app (`New-ServicePrincipal`), a management scope that contains only the sender mailbox (`New-ManagementScope`), and assign the role `Application Mail.Send` with that scope (`New-ManagementRoleAssignment -Role "Application Mail.Send" -App … -CustomResourceScope …`). A tenant that has never been customized needs `Enable-OrganizationCustomization` first, which can take several hours to complete.
+   - Simple: grant `Mail.Send` as an application permission in Entra ID, with admin consent. The app can then send as every mailbox of the tenant.
+
+   Pagehall cannot see which way was chosen. It sends only as the sender mailbox, but it does not know whether the app is limited to it.
 3. In Pagehall, enter the directory (tenant) ID, the application (client) ID and the sender mailbox, optionally a sender name, and add a client secret or let Pagehall create a certificate, whose public part is uploaded to the app registration. Secrets and private keys are stored with envelope encryption and never returned. As with identity providers, several credentials can exist during a renewal, the last one cannot be removed while Graph sends, and the holders of the instance settings area are notified 30 and 7 days before the last one expires (`mail.credentialExpiring`).
 
 The authority and the Graph endpoint default to the global Microsoft cloud; other Microsoft clouds can be set, other hosts only with `PAGEHALL_INSECURE_IDENTITY_PROVIDERS` for development. A test mail can be sent with settings before they are saved. Errors name what failed and what to do:
@@ -33,7 +37,7 @@ The authority and the Graph endpoint default to the global Microsoft cloud; othe
 | Code | Meaning |
 |---|---|
 | `graphMailboxNotAllowed` | Exchange Online blocked the app for this mailbox: add it to the management scope or the access policy. |
-| `graphPermissionMissing` | The app has no permission to send: assign `Application Mail.Send` in Exchange Online. |
+| `graphPermissionMissing` | The app has no permission to send: assign `Application Mail.Send` in Exchange Online or grant `Mail.Send` in Entra ID. |
 | `graphMailboxUnknown` | The sender mailbox does not exist or has no Exchange Online mailbox. |
 | `graphCredentialExpired` | The client secret has expired: add a new one. |
 | `graphCredentialInvalid` | Entra ID refused the secret or certificate. |

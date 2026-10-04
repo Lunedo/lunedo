@@ -166,10 +166,11 @@ export function GraphMailForm({
 
   return (
     <div className="flex flex-col gap-4">
-      <Notice variant="warning" title={t("mail.graph.scopeTitle")}>
+      <Notice variant="warning" title={t("mail.graph.permissionTitle")}>
         <div className="flex flex-col gap-2">
-          <p>{t("mail.graph.scope")}</p>
-          <p className="font-semibold">{t("mail.graph.noEntraPermission")}</p>
+          <p>{t("mail.graph.permission")}</p>
+          <p>{t("mail.graph.permissionRecommended")}</p>
+          <p>{t("mail.graph.permissionSimple")}</p>
         </div>
       </Notice>
       <Notice variant="info">{t("mail.graph.setup")}</Notice>

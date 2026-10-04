@@ -112,7 +112,9 @@ describe("the e-mail settings", () => {
     });
     await renderMail();
     await userEvent.click(await screen.findByRole("radio", { name: "Microsoft Graph" }));
-    expect(await screen.findByText(/Do not grant the permission Mail.Send in Entra ID itself/)).toBeTruthy();
+    expect(await screen.findByText(/It cannot see how the permission was granted/)).toBeTruthy();
+    expect(screen.getByText(/run Enable-OrganizationCustomization first/)).toBeTruthy();
+    expect(screen.getByText(/can then send as every mailbox of the tenant/)).toBeTruthy();
     await userEvent.type(screen.getByLabelText("Directory (tenant) ID"), TENANT);
     await userEvent.type(screen.getByLabelText("Client ID"), "client-id");
     await userEvent.type(screen.getByLabelText("Sender mailbox"), "wiki@example.org");

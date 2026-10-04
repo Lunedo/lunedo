@@ -1903,12 +1903,13 @@
     "saveTogether": "Tenant, app and sender are only valid together, so they are saved with one button.",
     "graph": {
       "title": "Microsoft Graph",
-      "scopeTitle": "Limit the app to the one sender mailbox",
-      "scope": "Pagehall sends only through sendMail of the sender mailbox. Give the app the right to send in Exchange Online, limited to this mailbox: with RBAC for applications, assign the role Application Mail.Send with a management scope that contains only this mailbox, or use an application access policy.",
-      "noEntraPermission": "Do not grant the permission Mail.Send in Entra ID itself. Granted there, it lets the app send as every mailbox of the tenant.",
+      "permissionTitle": "Grant the app the right to send",
+      "permission": "Pagehall sends only through sendMail of the sender mailbox. It cannot see how the permission was granted, so it cannot tell whether the app is limited to this mailbox.",
+      "permissionRecommended": "Recommended: grant the permission only for this mailbox in Exchange Online. With RBAC for applications, assign the role Application Mail.Send with a management scope that contains only this mailbox, and do not grant Mail.Send in Entra ID. In a new tenant, run Enable-OrganizationCustomization first; this can take several hours.",
+      "permissionSimple": "Simple: grant Mail.Send as an application permission in Entra ID. The app can then send as every mailbox of the tenant.",
       "setup": "Create an app registration for e-mail only, separate from sign-in. Enter its tenant and client ID, the sender mailbox and a client secret or a certificate that Pagehall creates.",
       "sender": "Sender mailbox",
-      "senderHint": "The only mailbox the app may send as.",
+      "senderHint": "The mailbox Pagehall sends as.",
       "senderName": "Sender name",
       "senderNameHint": "Optional. Without it, the name of the mailbox is shown.",
       "credentials": "Client secret or certificate",
@@ -1941,7 +1942,7 @@
       },
       "graphPermissionMissing": {
         "cause": "The app has no permission to send e-mail.",
-        "action": "Assign the role Application Mail.Send to the app in Exchange Online, limited to the sender mailbox, then test again."
+        "action": "Assign the role Application Mail.Send to the app in Exchange Online, limited to the sender mailbox, or grant Mail.Send in Entra ID, then test again."
       },
       "graphMailboxUnknown": {
         "cause": "The sender mailbox does not exist in the tenant or has no Exchange Online mailbox.",
