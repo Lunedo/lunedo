@@ -1300,16 +1300,13 @@
     "continue": "Continue",
     "back": "Back",
     "finish": "Finish setup",
-    "skipAndFinish": "Skip and finish setup",
     "failed": "The setup could not be loaded",
-    "notReady": "Complete all required steps before finishing the setup.",
     "steps": {
       "systemCheck": "System check",
       "instance": "Instance",
       "owner": "Owner account",
       "keyBackup": "Keys",
-      "organization": "Organization",
-      "mail": "E-mail"
+      "organization": "Organization"
     },
     "code": {
       "name": "Setup code",
@@ -1437,12 +1434,6 @@
       "timeZone": "Default time zone",
       "formats": "Formats",
       "formatsHint": "Proposed for the language and time zone. Everyone can change them for themselves later."
-    },
-    "mail": {
-      "title": "E-mail",
-      "description": "Optional. Without e-mail, notifications stay in the app. You can set it up later.",
-      "save": "Save mail server",
-      "saved": "The mail server was saved."
     }
   },
   "preferences": {
@@ -2371,7 +2362,10 @@
       "identity": "Instance",
       "localeDefaults": "Language and region",
       "organizations": "Organizations",
-      "retention": "Retention and API"
+      "retention": "Retention and API",
+      "mailMissingTitle": "E-mail is not set up",
+      "mailMissing": "Pagehall sends no invitations and no e-mail notifications until a mail server or Microsoft Graph is set up. Notifications still appear in the app.",
+      "mailSettings": "Set up e-mail"
     },
     "organizations": {
       "search": "Search by name or short name",

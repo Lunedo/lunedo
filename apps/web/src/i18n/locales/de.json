@@ -1300,16 +1300,13 @@
     "continue": "Weiter",
     "back": "Zurück",
     "finish": "Einrichtung abschließen",
-    "skipAndFinish": "Überspringen und Einrichtung abschließen",
     "failed": "Die Einrichtung konnte nicht geladen werden",
-    "notReady": "Schließe alle erforderlichen Schritte ab, bevor du die Einrichtung beendest.",
     "steps": {
       "systemCheck": "Systemprüfung",
       "instance": "Instanz",
       "owner": "Owner-Konto",
       "keyBackup": "Schlüssel",
-      "organization": "Organisation",
-      "mail": "E-Mail"
+      "organization": "Organisation"
     },
     "code": {
       "name": "Setup-Code",
@@ -1437,12 +1434,6 @@
       "timeZone": "Standardzeitzone",
       "formats": "Formate",
       "formatsHint": "Passend zu Sprache und Zeitzone vorgeschlagen. Alle können sie später für sich ändern."
-    },
-    "mail": {
-      "title": "E-Mail",
-      "description": "Optional. Ohne E-Mail bleiben Benachrichtigungen in der App. Du kannst das später einrichten.",
-      "save": "Mailserver speichern",
-      "saved": "Der Mailserver wurde gespeichert."
     }
   },
   "preferences": {
@@ -2368,7 +2359,10 @@
       "identity": "Instanz",
       "localeDefaults": "Sprache und Region",
       "organizations": "Organisationen",
-      "retention": "Aufbewahrung und API"
+      "retention": "Aufbewahrung und API",
+      "mailMissingTitle": "E-Mail ist nicht eingerichtet",
+      "mailMissing": "Pagehall versendet keine Einladungen und keine Benachrichtigungen per E-Mail, bis ein Mailserver oder Microsoft Graph eingerichtet ist. Benachrichtigungen erscheinen weiterhin in der App.",
+      "mailSettings": "E-Mail einrichten"
     },
     "organizations": {
       "search": "Nach Name oder Kurzname suchen",

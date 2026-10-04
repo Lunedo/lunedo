@@ -394,39 +394,6 @@ export function keyBackupStep(deps: SetupStepDependencies): SetupStep {
   };
 }
 
-export function mailStep(deps: SetupStepDependencies): SetupStep {
-  return {
-    id: "mail",
-    order: 60,
-    required: false,
-    async describe() {
-      return { smtp: await deps.mail.smtpConfiguration(), passwordSet: await deps.mail.hasSmtpPassword() };
-    },
-    actions: {
-      save: defineSetupAction({
-        input: setupStepSchemas.mail.actions.save.input,
-        async run(context, input) {
-          const { password, ...configuration } = input;
-          await deps.mail.configureSmtp(configuration, password, { tx: context.tx });
-          await context.complete();
-          return {};
-        },
-      }),
-      test: defineSetupAction({
-        input: setupStepSchemas.mail.actions.test.input,
-        async run(_context, input) {
-          const { to, language, password, ...configuration } = input;
-          const result = await deps.mail.sendTest(to, language, {
-            configuration,
-            password,
-          });
-          return { body: result };
-        },
-      }),
-    },
-  };
-}
-
 export function organizationStep(deps: SetupStepDependencies): SetupStep {
   return {
     id: "organization",
@@ -506,6 +473,5 @@ export function builtinSetupSteps(deps: SetupStepDependencies): SetupStep[] {
     ownerStep(deps),
     keyBackupStep(deps),
     organizationStep(deps),
-    mailStep(deps),
   ];
 }

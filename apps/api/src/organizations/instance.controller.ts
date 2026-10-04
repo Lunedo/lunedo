@@ -28,7 +28,7 @@ import {
   idSchema,
   type MailMethod,
   mailMethods,
-  setupStepSchemas,
+  smtpConfigurationSchema,
   smtpInputSchema,
   smtpTestInputSchema,
   smtpTestResultSchema,
@@ -282,8 +282,10 @@ const graphMailTestSchema = z
   .strict()
   .describe("A test e-mail through Microsoft Graph.");
 
-const mailSettingsSchema = setupStepSchemas.mail.details
-  .extend({
+const mailSettingsSchema = z
+  .object({
+    smtp: smtpConfigurationSchema.nullable(),
+    passwordSet: z.boolean(),
     method: z.enum(mailMethods).describe("How e-mail is sent."),
     graph: graphMailSchema.nullable(),
     graphCredentials: z

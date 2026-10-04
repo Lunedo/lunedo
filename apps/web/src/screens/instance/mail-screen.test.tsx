@@ -139,3 +139,45 @@ describe("the e-mail settings", () => {
     expect(within(document.body).queryByText("Pagehall sends through Microsoft Graph.")).toBeNull();
   });
 });
+
+describe("the instance overview", () => {
+  async function renderGeneral() {
+    window.history.replaceState(null, "", "/settings/instance/general");
+    const i18n = await initI18n(["en"]);
+    render(<App i18n={i18n} queryClient={createQueryClient()} />);
+  }
+
+  it("says that nothing is sent while e-mail is not set up and links to the e-mail settings", async () => {
+    api({ "GET /api/v1/instance/settings": () => ({ body: { items: [], nextCursor: null } }) });
+    await renderGeneral();
+    expect(await screen.findByText("E-mail is not set up")).toBeTruthy();
+    expect(screen.getByText(/sends no invitations and no e-mail notifications/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Set up e-mail" }).getAttribute("href")).toBe(
+      "/settings/instance/mail",
+    );
+  });
+
+  it("shows no notice once a mail server is set up", async () => {
+    api({
+      "GET /api/v1/instance/settings": () => ({ body: { items: [], nextCursor: null } }),
+      "GET /api/v1/instance/mail": () => ({
+        body: {
+          smtp: {
+            host: "smtp.example.org",
+            port: 587,
+            security: "starttls",
+            username: null,
+            from: "wiki@example.org",
+          },
+          passwordSet: false,
+          method: "smtp",
+          graph: null,
+          graphCredentials: [],
+        },
+      }),
+    });
+    await renderGeneral();
+    expect(await screen.findByRole("heading", { name: "General" })).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText("E-mail is not set up")).toBeNull());
+  });
+});

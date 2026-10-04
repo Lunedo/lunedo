@@ -36,7 +36,12 @@ const FORMAT_FIELDS: { name: keyof Formats; key: string; labelKey: string }[] = 
   { name: "firstDayOfWeek", key: "locale.firstDayOfWeek", labelKey: "preferences.firstDayOfWeek" },
 ];
 
-export function OrganizationStep({ details, back, onDone }: StepProps<"organization">) {
+export function OrganizationStep({
+  details,
+  back,
+  onDone,
+  submitLabel,
+}: StepProps<"organization"> & { submitLabel?: string }) {
   const { t, i18n } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const existing = details.organization;
@@ -128,7 +133,7 @@ export function OrganizationStep({ details, back, onDone }: StepProps<"organizat
       <div className="flex justify-between gap-2">
         {back}
         <Button type="submit" variant="primary" loading={form.formState.isSubmitting}>
-          {t("setup.continue")}
+          {submitLabel ?? t("setup.continue")}
         </Button>
       </div>
     </form>

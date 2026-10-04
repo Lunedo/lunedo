@@ -152,13 +152,6 @@ export const setupStepSchemas = {
       },
     },
   },
-  mail: {
-    details: z.object({ smtp: smtpConfigurationSchema.nullable(), passwordSet: z.boolean() }),
-    actions: {
-      save: { input: smtpInputSchema, result: empty },
-      test: { input: smtpTestInputSchema, result: smtpTestResultSchema },
-    },
-  },
 } as const;
 
 export type SetupStepId = keyof typeof setupStepSchemas;
