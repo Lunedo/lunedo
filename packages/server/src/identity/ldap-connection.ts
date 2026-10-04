@@ -9,6 +9,7 @@ const PAGE_SIZE = 500;
 
 export interface DirectoryEntry {
   dn: string;
+  names(): string[];
   values(attribute: string): string[];
   buffers(attribute: string): Buffer[];
 }
@@ -98,6 +99,7 @@ function entryOf(raw: Record<string, unknown>): DirectoryEntry {
   };
   return {
     dn: String(raw.dn ?? ""),
+    names: () => Object.keys(raw).filter((name) => name !== "dn"),
     values: (attribute) =>
       list(attribute).flatMap((value) => {
         const text = Buffer.isBuffer(value) ? value.toString("utf8") : String(value);

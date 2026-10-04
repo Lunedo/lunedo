@@ -358,6 +358,13 @@ export const activeDirectoryConfigSchema = z
     userFilter: ldapFilter.default("(&(objectCategory=person)(objectClass=user))"),
     groupFilter: ldapFilter.default("(objectClass=group)"),
     signInAttribute: z.enum(["userPrincipalName", "sAMAccountName", "mail"]).default("userPrincipalName"),
+    attributes: z
+      .object({
+        email: ldapAttributeName.default("mail"),
+        displayName: ldapAttributeName.default("displayName"),
+      })
+      .strict()
+      .default({ email: "mail", displayName: "displayName" }),
   })
   .strict();
 

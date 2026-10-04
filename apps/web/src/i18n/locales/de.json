@@ -669,6 +669,13 @@
         "groupName": "Attribut für Gruppennamen"
       },
       "attributeInvalid": "Gib einen LDAP-Attributnamen wie mail ein.",
+      "testPerson": "Testperson",
+      "testPersonHint": "Anmeldename einer Person im Verzeichnis. Pagehall liest alle Attribute, die das Verzeichnis für diese Person liefert, damit du unten daraus wählen kannst.",
+      "readAttributes": "Attribute lesen",
+      "attributesRead": "{count, plural, one {Das Verzeichnis hat # Attribut für diese Person geliefert.} other {Das Verzeichnis hat # Attribute für diese Person geliefert.}}",
+      "attributeChoiceHint": "Lies die Attribute einer Testperson, um aus allen Attributen des Verzeichnisses zu wählen.",
+      "attributeExample": "Wert der Testperson: {value}",
+      "attributeNotReturned": "Das Verzeichnis hat für die Testperson keinen Wert dieses Attributs geliefert. Wähle ein anderes Attribut oder prüfe die Person im Verzeichnis.",
       "groupMembership": "Gruppenmitgliedschaft",
       "groupMembershipHint": "Wo das Verzeichnis festhält, wer zu einer Gruppe gehört.",
       "memberships": {

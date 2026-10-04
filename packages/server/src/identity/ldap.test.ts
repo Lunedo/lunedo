@@ -388,6 +388,42 @@ describe("LDAP and Active Directory", () => {
     expect(await adapter.verifyPassword(adProvider(), credentials, subject, "wrong")).toBe(false);
   });
 
+  it("returns every readable attribute of the test person but no passwords or binary values", async () => {
+    const directory = activeDirectory();
+    const alice = directory.find("CN=alice,OU=People,DC=corp,DC=example");
+    if (!alice) throw new Error("Alice expected");
+    alice.attributes.cn = ["Alice Admin"];
+    alice.attributes.department = ["Editorial"];
+    alice.attributes.unicodePwd = ["secret"];
+    alice.attributes.objectSid = [
+      Buffer.from([1, 5, 0, 0, 0, 0, 0, 5, 21, 0, 0, 0, 0xff]).toString("latin1"),
+    ];
+    const adapter = new LdapAdapter({ allowInsecure: false, connector: directory.connector });
+    const result = await adapter.testDirectory(adProvider(), credentials, "alice@corp.example");
+    const names = result.attributes.map((attribute) => attribute.name);
+    expect(names).toEqual(expect.arrayContaining(["cn", "department", "displayName", "mail", "objectGUID"]));
+    expect(names).not.toContain("unicodePwd");
+    expect(names).not.toContain("objectSid");
+    expect(result.attributes.find((attribute) => attribute.name === "objectGUID")?.values).toEqual([
+      result.sample?.subject,
+    ]);
+  });
+
+  it("reads the e-mail address and the display name of Active Directory from the chosen attributes", async () => {
+    const directory = activeDirectory();
+    const alice = directory.find("CN=alice,OU=People,DC=corp,DC=example");
+    if (!alice) throw new Error("Alice expected");
+    alice.attributes.cn = ["Alice Admin"];
+    alice.attributes.mail = [];
+    const adapter = new LdapAdapter({ allowInsecure: false, connector: directory.connector });
+    const provider = adProvider({ attributes: { email: "userPrincipalName", displayName: "cn" } });
+    const result = await adapter.authenticate(provider, credentials, {
+      signInName: "alice@corp.example",
+      password: PASSWORD,
+    });
+    expect(result.profile).toMatchObject({ email: "alice@corp.example", displayName: "Alice Admin" });
+  });
+
   it("reports which step of the directory test failed", async () => {
     const directory = activeDirectory();
     const adapter = new LdapAdapter({ allowInsecure: false, connector: directory.connector });

@@ -159,6 +159,7 @@ export class FakeLdapDirectory {
         this.search(base, search).map(
           (entry): DirectoryEntry => ({
             dn: entry.dn,
+            names: () => Object.keys(entry.attributes),
             values: (attribute) =>
               valuesOf(entry, attribute).map((value) =>
                 Buffer.isBuffer(value) ? value.toString("utf8") : value,

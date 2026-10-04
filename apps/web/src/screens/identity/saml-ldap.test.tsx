@@ -179,6 +179,7 @@ function ldapProvider(patch: Record<string, unknown> = {}, config: Record<string
       userFilter: "(&(objectCategory=person)(objectClass=user))",
       groupFilter: "(objectClass=group)",
       signInAttribute: "userPrincipalName",
+      attributes: { email: "mail", displayName: "displayName" },
       ...config,
     },
     ldap: { caCertificate: null },
@@ -742,6 +743,58 @@ describe("SAML and LDAP providers in the list and the details", () => {
       kind: "samlSigning",
       validDays: 730,
     });
+  });
+
+  it("offers every attribute the directory returns for a test person", async () => {
+    let current = ldapProvider();
+    const { requests } = adminApi({
+      [`GET ${BASE}/${LDAP}`]: () => ({ body: current }),
+      [`PATCH ${BASE}/${LDAP}`]: (request) => {
+        current = { ...current, config: (request.body as { config: typeof current.config }).config };
+        return { body: current };
+      },
+      [`POST ${BASE}/${LDAP}/directory-test`]: () => ({
+        body: {
+          steps: [
+            { step: "connection", ok: true, detail: null },
+            { step: "certificate", ok: true, detail: null },
+            { step: "serviceAccount", ok: true, detail: null },
+            { step: "search", ok: true, detail: null },
+          ],
+          sample: {
+            subject: "972e766c-c3f5-49d6-96f6-d904e89e292c",
+            email: null,
+            signInName: "alice@pagehall.lab",
+            displayName: "Alice Admin",
+            groups: [],
+          },
+          attributes: [
+            { name: "cn", values: ["Alice Admin"] },
+            { name: "objectGUID", values: ["972e766c-c3f5-49d6-96f6-d904e89e292c"] },
+            { name: "userPrincipalName", values: ["alice@pagehall.lab"] },
+          ],
+        },
+      }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/new?providerId=${LDAP}&step=2`);
+    expect(
+      (await screen.findAllByText(/Read the attributes of a test person to choose/)).length,
+    ).toBeGreaterThan(0);
+    await userEvent.type(screen.getByLabelText("Test person"), "alice@pagehall.lab");
+    await userEvent.click(screen.getByRole("button", { name: "Read attributes" }));
+    expect(await screen.findByText("The directory returned 3 attributes for this person.")).toBeTruthy();
+    expect(
+      screen.getAllByText(/The directory returned no value of this attribute for the test person/),
+    ).toHaveLength(2);
+    await userEvent.click(screen.getByRole("combobox", { name: "Attribute for the e-mail address" }));
+    await userEvent.click(await screen.findByRole("option", { name: /userPrincipalName/ }));
+    await waitFor(() =>
+      expect(
+        (bodyOf(requests, "PATCH", `${BASE}/${LDAP}`) as { config: { attributes: unknown } } | undefined)
+          ?.config.attributes,
+      ).toEqual({ email: "userPrincipalName", displayName: "displayName" }),
+    );
+    expect(await screen.findByText("Value of the test person: alice@pagehall.lab")).toBeTruthy();
   });
 
   it("refuses an ldaps:// address while StartTLS is on instead of turning StartTLS off", async () => {

@@ -19318,6 +19318,34 @@
                                       "sAMAccountName",
                                       "mail"
                                     ]
+                                  },
+                                  "attributes": {
+                                    "default": {
+                                      "email": "mail",
+                                      "displayName": "displayName"
+                                    },
+                                    "type": "object",
+                                    "properties": {
+                                      "email": {
+                                        "default": "mail",
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 100,
+                                        "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                      },
+                                      "displayName": {
+                                        "default": "displayName",
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 100,
+                                        "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                      }
+                                    },
+                                    "required": [
+                                      "email",
+                                      "displayName"
+                                    ],
+                                    "additionalProperties": false
                                   }
                                 },
                                 "required": [
@@ -19333,7 +19361,8 @@
                                   "secondFactor",
                                   "userFilter",
                                   "groupFilter",
-                                  "signInAttribute"
+                                  "signInAttribute",
+                                  "attributes"
                                 ],
                                 "additionalProperties": false
                               },
@@ -21382,6 +21411,30 @@
                                   "sAMAccountName",
                                   "mail"
                                 ]
+                              },
+                              "attributes": {
+                                "default": {
+                                  "email": "mail",
+                                  "displayName": "displayName"
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "email": {
+                                    "default": "mail",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                  },
+                                  "displayName": {
+                                    "default": "displayName",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                  }
+                                },
+                                "additionalProperties": false
                               }
                             },
                             "required": [
@@ -23850,6 +23903,34 @@
                                         "sAMAccountName",
                                         "mail"
                                       ]
+                                    },
+                                    "attributes": {
+                                      "default": {
+                                        "email": "mail",
+                                        "displayName": "displayName"
+                                      },
+                                      "type": "object",
+                                      "properties": {
+                                        "email": {
+                                          "default": "mail",
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 100,
+                                          "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                        },
+                                        "displayName": {
+                                          "default": "displayName",
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 100,
+                                          "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                        }
+                                      },
+                                      "required": [
+                                        "email",
+                                        "displayName"
+                                      ],
+                                      "additionalProperties": false
                                     }
                                   },
                                   "required": [
@@ -23865,7 +23946,8 @@
                                     "secondFactor",
                                     "userFilter",
                                     "groupFilter",
-                                    "signInAttribute"
+                                    "signInAttribute",
+                                    "attributes"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -26681,6 +26763,34 @@
                                     "sAMAccountName",
                                     "mail"
                                   ]
+                                },
+                                "attributes": {
+                                  "default": {
+                                    "email": "mail",
+                                    "displayName": "displayName"
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "email": {
+                                      "default": "mail",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    },
+                                    "displayName": {
+                                      "default": "displayName",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    }
+                                  },
+                                  "required": [
+                                    "email",
+                                    "displayName"
+                                  ],
+                                  "additionalProperties": false
                                 }
                               },
                               "required": [
@@ -26696,7 +26806,8 @@
                                 "secondFactor",
                                 "userFilter",
                                 "groupFilter",
-                                "signInAttribute"
+                                "signInAttribute",
+                                "attributes"
                               ],
                               "additionalProperties": false
                             },
@@ -28516,6 +28627,30 @@
                                   "sAMAccountName",
                                   "mail"
                                 ]
+                              },
+                              "attributes": {
+                                "default": {
+                                  "email": "mail",
+                                  "displayName": "displayName"
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "email": {
+                                    "default": "mail",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                  },
+                                  "displayName": {
+                                    "default": "displayName",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                  }
+                                },
+                                "additionalProperties": false
                               }
                             },
                             "required": [
@@ -30876,6 +31011,34 @@
                                     "sAMAccountName",
                                     "mail"
                                   ]
+                                },
+                                "attributes": {
+                                  "default": {
+                                    "email": "mail",
+                                    "displayName": "displayName"
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "email": {
+                                      "default": "mail",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    },
+                                    "displayName": {
+                                      "default": "displayName",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    }
+                                  },
+                                  "required": [
+                                    "email",
+                                    "displayName"
+                                  ],
+                                  "additionalProperties": false
                                 }
                               },
                               "required": [
@@ -30891,7 +31054,8 @@
                                 "secondFactor",
                                 "userFilter",
                                 "groupFilter",
-                                "signInAttribute"
+                                "signInAttribute",
+                                "attributes"
                               ],
                               "additionalProperties": false
                             },
@@ -33500,6 +33664,34 @@
                                     "sAMAccountName",
                                     "mail"
                                   ]
+                                },
+                                "attributes": {
+                                  "default": {
+                                    "email": "mail",
+                                    "displayName": "displayName"
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "email": {
+                                      "default": "mail",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    },
+                                    "displayName": {
+                                      "default": "displayName",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    }
+                                  },
+                                  "required": [
+                                    "email",
+                                    "displayName"
+                                  ],
+                                  "additionalProperties": false
                                 }
                               },
                               "required": [
@@ -33515,7 +33707,8 @@
                                 "secondFactor",
                                 "userFilter",
                                 "groupFilter",
-                                "signInAttribute"
+                                "signInAttribute",
+                                "attributes"
                               ],
                               "additionalProperties": false
                             },
@@ -36097,6 +36290,34 @@
                                     "sAMAccountName",
                                     "mail"
                                   ]
+                                },
+                                "attributes": {
+                                  "default": {
+                                    "email": "mail",
+                                    "displayName": "displayName"
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "email": {
+                                      "default": "mail",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    },
+                                    "displayName": {
+                                      "default": "displayName",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    }
+                                  },
+                                  "required": [
+                                    "email",
+                                    "displayName"
+                                  ],
+                                  "additionalProperties": false
                                 }
                               },
                               "required": [
@@ -36112,7 +36333,8 @@
                                 "secondFactor",
                                 "userFilter",
                                 "groupFilter",
-                                "signInAttribute"
+                                "signInAttribute",
+                                "attributes"
                               ],
                               "additionalProperties": false
                             },
@@ -38715,6 +38937,34 @@
                                     "sAMAccountName",
                                     "mail"
                                   ]
+                                },
+                                "attributes": {
+                                  "default": {
+                                    "email": "mail",
+                                    "displayName": "displayName"
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "email": {
+                                      "default": "mail",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    },
+                                    "displayName": {
+                                      "default": "displayName",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    }
+                                  },
+                                  "required": [
+                                    "email",
+                                    "displayName"
+                                  ],
+                                  "additionalProperties": false
                                 }
                               },
                               "required": [
@@ -38730,7 +38980,8 @@
                                 "secondFactor",
                                 "userFilter",
                                 "groupFilter",
-                                "signInAttribute"
+                                "signInAttribute",
+                                "attributes"
                               ],
                               "additionalProperties": false
                             },
@@ -41992,6 +42243,34 @@
                                     "sAMAccountName",
                                     "mail"
                                   ]
+                                },
+                                "attributes": {
+                                  "default": {
+                                    "email": "mail",
+                                    "displayName": "displayName"
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "email": {
+                                      "default": "mail",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    },
+                                    "displayName": {
+                                      "default": "displayName",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    }
+                                  },
+                                  "required": [
+                                    "email",
+                                    "displayName"
+                                  ],
+                                  "additionalProperties": false
                                 }
                               },
                               "required": [
@@ -42007,7 +42286,8 @@
                                 "secondFactor",
                                 "userFilter",
                                 "groupFilter",
-                                "signInAttribute"
+                                "signInAttribute",
+                                "attributes"
                               ],
                               "additionalProperties": false
                             },
@@ -45935,6 +46215,34 @@
                                     "sAMAccountName",
                                     "mail"
                                   ]
+                                },
+                                "attributes": {
+                                  "default": {
+                                    "email": "mail",
+                                    "displayName": "displayName"
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "email": {
+                                      "default": "mail",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    },
+                                    "displayName": {
+                                      "default": "displayName",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    }
+                                  },
+                                  "required": [
+                                    "email",
+                                    "displayName"
+                                  ],
+                                  "additionalProperties": false
                                 }
                               },
                               "required": [
@@ -45950,7 +46258,8 @@
                                 "secondFactor",
                                 "userFilter",
                                 "groupFilter",
-                                "signInAttribute"
+                                "signInAttribute",
+                                "attributes"
                               ],
                               "additionalProperties": false
                             },
@@ -50920,6 +51229,34 @@
                                     "sAMAccountName",
                                     "mail"
                                   ]
+                                },
+                                "attributes": {
+                                  "default": {
+                                    "email": "mail",
+                                    "displayName": "displayName"
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "email": {
+                                      "default": "mail",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    },
+                                    "displayName": {
+                                      "default": "displayName",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    }
+                                  },
+                                  "required": [
+                                    "email",
+                                    "displayName"
+                                  ],
+                                  "additionalProperties": false
                                 }
                               },
                               "required": [
@@ -50935,7 +51272,8 @@
                                 "secondFactor",
                                 "userFilter",
                                 "groupFilter",
-                                "signInAttribute"
+                                "signInAttribute",
+                                "attributes"
                               ],
                               "additionalProperties": false
                             },
@@ -53536,6 +53874,34 @@
                                     "sAMAccountName",
                                     "mail"
                                   ]
+                                },
+                                "attributes": {
+                                  "default": {
+                                    "email": "mail",
+                                    "displayName": "displayName"
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "email": {
+                                      "default": "mail",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    },
+                                    "displayName": {
+                                      "default": "displayName",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    }
+                                  },
+                                  "required": [
+                                    "email",
+                                    "displayName"
+                                  ],
+                                  "additionalProperties": false
                                 }
                               },
                               "required": [
@@ -53551,7 +53917,8 @@
                                 "secondFactor",
                                 "userFilter",
                                 "groupFilter",
-                                "signInAttribute"
+                                "signInAttribute",
+                                "attributes"
                               ],
                               "additionalProperties": false
                             },

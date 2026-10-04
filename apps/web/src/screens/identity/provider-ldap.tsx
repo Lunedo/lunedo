@@ -29,7 +29,12 @@ import {
   setCaCertificate,
   testDirectory,
 } from "../../api/identity-queries.js";
-import { AutoSaveTextField, SaveIndicator, useSaveStates } from "../../components/auto-save.js";
+import {
+  AutoSaveTextField,
+  SaveIndicator,
+  type SaveTracker,
+  useSaveStates,
+} from "../../components/auto-save.js";
 import { useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
@@ -332,6 +337,7 @@ export function LdapAttributeFields({ provider, canManage }: { provider: LdapPro
   const tracker = useSaveStates();
   const config = provider.config;
   const options = SIGN_IN_ATTRIBUTES[config.preset];
+  const [found, setFound] = useState<FoundAttribute[]>([]);
   return (
     <>
       <SettingRow
@@ -365,27 +371,63 @@ export function LdapAttributeFields({ provider, canManage }: { provider: LdapPro
         }
         status={<SaveIndicator tracker={tracker("signInAttribute")} />}
       />
+      <div className="px-4 py-3">
+        <TestPersonLookup provider={provider} onFound={setFound} />
+      </div>
+      {config.preset === "activeDirectory"
+        ? (["email", "displayName"] as const).map((attribute) => (
+            <AttributeSelect
+              key={attribute}
+              label={t(`identityProviders.ldap.attributes.${attribute}`)}
+              value={config.attributes[attribute]}
+              found={found}
+              disabled={!canManage}
+              tracker={tracker(attribute)}
+              onSave={(value) =>
+                update((current) =>
+                  current.preset === "activeDirectory"
+                    ? { ...current, attributes: { ...config.attributes, [attribute]: value } }
+                    : current,
+                )
+              }
+            />
+          ))
+        : null}
       {config.preset === "generic" ? (
         <>
+          {(["email", "signInName", "displayName"] as const).map((attribute) => (
+            <AttributeSelect
+              key={attribute}
+              label={t(`identityProviders.ldap.attributes.${attribute}`)}
+              value={config.attributes[attribute]}
+              found={found}
+              disabled={!canManage}
+              tracker={tracker(attribute)}
+              onSave={(value) =>
+                update((current) =>
+                  current.preset === "generic"
+                    ? { ...current, attributes: { ...config.attributes, [attribute]: value } }
+                    : current,
+                )
+              }
+            />
+          ))}
           <div className="grid grid-cols-1 gap-4 px-4 py-3 sm:grid-cols-2">
-            {(["email", "signInName", "displayName", "groupName"] as const).map((attribute) => (
-              <AutoSaveTextField
-                key={attribute}
-                label={t(`identityProviders.ldap.attributes.${attribute}`)}
-                value={config.attributes[attribute]}
-                schema={ldapAttribute}
-                invalidMessage={t("identityProviders.ldap.attributeInvalid")}
-                disabled={!canManage}
-                className="font-mono"
-                onSave={(value) =>
-                  update((current) =>
-                    current.preset === "generic"
-                      ? { ...current, attributes: { ...config.attributes, [attribute]: value } }
-                      : current,
-                  )
-                }
-              />
-            ))}
+            <AutoSaveTextField
+              label={t("identityProviders.ldap.attributes.groupName")}
+              value={config.attributes.groupName}
+              schema={ldapAttribute}
+              invalidMessage={t("identityProviders.ldap.attributeInvalid")}
+              disabled={!canManage}
+              className="font-mono"
+              onSave={(value) =>
+                update((current) =>
+                  current.preset === "generic"
+                    ? { ...current, attributes: { ...config.attributes, groupName: value } }
+                    : current,
+                )
+              }
+            />
           </div>
           <SettingRow
             label={t("identityProviders.ldap.groupMembership")}
@@ -416,6 +458,139 @@ export function LdapAttributeFields({ provider, canManage }: { provider: LdapPro
         </>
       ) : null}
     </>
+  );
+}
+
+interface FoundAttribute {
+  name: string;
+  example: string | null;
+}
+
+function AttributeSelect({
+  label,
+  value,
+  found,
+  disabled,
+  tracker,
+  onSave,
+}: {
+  label: string;
+  value: string;
+  found: FoundAttribute[];
+  disabled: boolean;
+  tracker: SaveTracker;
+  onSave: (value: string) => Promise<unknown>;
+}) {
+  const { t } = useTranslation();
+  const names = new Map<string, FoundAttribute>();
+  for (const attribute of [{ name: value, example: null }, ...found]) {
+    const key = attribute.name.toLowerCase();
+    const known = names.get(key);
+    names.set(key, { name: known?.name ?? attribute.name, example: known?.example ?? attribute.example });
+  }
+  const fromDirectory = found.find((attribute) => attribute.name.toLowerCase() === value.toLowerCase());
+  return (
+    <SettingRow
+      label={label}
+      description={
+        found.length === 0
+          ? t("identityProviders.ldap.attributeChoiceHint")
+          : fromDirectory
+            ? t("identityProviders.ldap.attributeExample", { value: fromDirectory.example ?? "" })
+            : t("identityProviders.ldap.attributeNotReturned")
+      }
+      control={
+        <Select
+          aria-label={label}
+          value={names.get(value.toLowerCase())?.name ?? value}
+          disabled={disabled}
+          onValueChange={(next) => void tracker.run(() => onSave(next))}
+          options={[...names.values()].map((attribute) => ({
+            value: attribute.name,
+            label: attribute.name,
+            ...(attribute.example ? { example: attribute.example } : {}),
+          }))}
+        />
+      }
+      status={<SaveIndicator tracker={tracker} />}
+    />
+  );
+}
+
+function TestPersonLookup({
+  provider,
+  onFound,
+}: {
+  provider: LdapProvider;
+  onFound: (attributes: FoundAttribute[]) => void;
+}) {
+  const { t } = useTranslation();
+  const [signInName, setSignInName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<{ title: string; detail: string | null; action: string } | null>(
+    null,
+  );
+  const [count, setCount] = useState<number | null>(null);
+  const run = async () => {
+    setBusy(true);
+    setProblem(null);
+    setCount(null);
+    try {
+      const result = await testDirectory(provider.id, signInName.trim() === "" ? null : signInName.trim());
+      const failed = result.steps.find((step) => !step.ok);
+      if (failed) {
+        setProblem({
+          title: t("identityProviders.directoryTest.failed", {
+            step: t(`identityProviders.directoryTest.steps.${failed.step}`),
+          }),
+          detail: failed.detail,
+          action: t(`identityProviders.directoryTest.actions.${failed.step}`),
+        });
+        return;
+      }
+      const attributes = result.attributes.map((attribute) => ({
+        name: attribute.name,
+        example: attribute.values[0] ?? null,
+      }));
+      setCount(attributes.length);
+      onFound(attributes);
+    } catch (failure) {
+      setProblem({
+        title: t("failures.testDirectory"),
+        detail: null,
+        action: problemMessage(t, failure),
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1">
+          <Field
+            label={t("identityProviders.ldap.testPerson")}
+            hint={t("identityProviders.ldap.testPersonHint")}
+          >
+            <Input value={signInName} onChange={(event) => setSignInName(event.target.value)} />
+          </Field>
+        </div>
+        <Button variant="secondary" loading={busy} onClick={() => void run()}>
+          {t("identityProviders.ldap.readAttributes")}
+        </Button>
+      </div>
+      {problem ? (
+        <Notice variant="danger" title={problem.title}>
+          <div className="flex flex-col gap-2">
+            {problem.detail ? <p>{problem.detail}</p> : null}
+            <p>{problem.action}</p>
+          </div>
+        </Notice>
+      ) : null}
+      {count !== null ? (
+        <Notice variant="success">{t("identityProviders.ldap.attributesRead", { count })}</Notice>
+      ) : null}
+    </div>
   );
 }
 

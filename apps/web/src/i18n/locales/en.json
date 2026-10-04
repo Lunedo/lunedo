@@ -669,6 +669,13 @@
         "groupName": "Attribute for group names"
       },
       "attributeInvalid": "Enter an LDAP attribute name such as mail.",
+      "testPerson": "Test person",
+      "testPersonHint": "Sign-in name of a person in the directory. Pagehall reads every attribute the directory returns for this person, so you can choose from them below.",
+      "readAttributes": "Read attributes",
+      "attributesRead": "{count, plural, one {The directory returned # attribute for this person.} other {The directory returned # attributes for this person.}}",
+      "attributeChoiceHint": "Read the attributes of a test person to choose from every attribute the directory returns.",
+      "attributeExample": "Value of the test person: {value}",
+      "attributeNotReturned": "The directory returned no value of this attribute for the test person. Choose another attribute or check the person in the directory.",
       "groupMembership": "Group membership",
       "groupMembershipHint": "Where the directory records who belongs to a group.",
       "memberships": {

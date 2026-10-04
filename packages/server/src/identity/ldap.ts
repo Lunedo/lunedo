@@ -78,6 +78,14 @@ export function activeDirectoryFailure(message: string): DirectorySignInFailure 
   return (code && AD_FAILURES[code]) || "invalidCredentials";
 }
 
+function isText(value: string): boolean {
+  for (const character of value) {
+    const code = character.codePointAt(0) ?? 0;
+    if (code === 0xfffd || (code < 0x20 && code !== 0x09 && code !== 0x0a && code !== 0x0d)) return false;
+  }
+  return true;
+}
+
 function and(...filters: string[]): string {
   return `(&${filters.join("")})`;
 }
@@ -174,19 +182,17 @@ export class LdapAdapter implements IdentityProviderAdapter {
   #userAttributes(provider: LdapProviderDefinition): { attributes: string[]; binary: string[] } {
     const config = provider.config;
     if (config.preset === "activeDirectory") {
-      return {
-        attributes: [
-          "objectGUID",
-          "mail",
-          "userPrincipalName",
-          "sAMAccountName",
-          "displayName",
-          "cn",
-          "userAccountControl",
-          "accountExpires",
-        ],
-        binary: ["objectGUID"],
-      };
+      const attributes = new Set([
+        "objectGUID",
+        config.attributes.email,
+        "userPrincipalName",
+        "sAMAccountName",
+        config.attributes.displayName,
+        "cn",
+        "userAccountControl",
+        "accountExpires",
+      ]);
+      return { attributes: [...attributes], binary: ["objectGUID"] };
     }
     const attributes = new Set([
       "entryUUID",
@@ -218,9 +224,9 @@ export class LdapAdapter implements IdentityProviderAdapter {
         subject: guidFromBytes(guid),
         profile: {
           subject: guidFromBytes(guid),
-          email: entry.values("mail")[0] ?? null,
+          email: entry.values(config.attributes.email)[0] ?? null,
           signInName,
-          displayName: entry.values("displayName")[0] ?? entry.values("cn")[0] ?? null,
+          displayName: entry.values(config.attributes.displayName)[0] ?? entry.values("cn")[0] ?? null,
         },
         disabled: (control & ACCOUNT_DISABLED) !== 0 || expired,
         memberOf: [],
@@ -562,7 +568,7 @@ export class LdapAdapter implements IdentityProviderAdapter {
         const [entry] = await session.search(ldap.config.userBaseDn, {
           scope: "sub",
           filter: signInName ? this.#signInFilter(ldap, signInName.trim()) : ldap.config.userFilter,
-          attributes,
+          attributes: ["*", ...attributes],
           binaryAttributes: binary,
           sizeLimit: 1,
         });
@@ -573,10 +579,16 @@ export class LdapAdapter implements IdentityProviderAdapter {
         }
         const groups = await this.#groupsOf(session, ldap, user);
         steps.push({ step: "search", ok: true, detail: null });
+        const names = new Map<string, string>();
+        for (const name of [...entry.names(), ...attributes]) {
+          if (!names.has(name.toLowerCase())) names.set(name.toLowerCase(), name);
+        }
         const received = new Map(
-          attributes.map((name) => [
+          [...names.values()].map((name) => [
             name,
-            binary.includes(name) ? entry.buffers(name).map(guidFromBytes) : entry.values(name),
+            binary.includes(name)
+              ? entry.buffers(name).map(guidFromBytes)
+              : entry.values(name).filter(isText),
           ]),
         );
         return {
