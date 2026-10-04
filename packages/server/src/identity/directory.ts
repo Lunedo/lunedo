@@ -14,6 +14,7 @@ import { requestGraphToken } from "./graph-token.js";
 
 const REQUEST_TIMEOUT_MS = 10_000;
 const GRAPH_PAGE_SIZE = 999;
+const GRAPH_IDS_PER_REQUEST = 1000;
 const GOOGLE_PAGE_SIZE = 200;
 const GOOGLE_GROUP_SCOPE = "https://www.googleapis.com/auth/admin.directory.group.readonly";
 const GOOGLE_USER_SCOPE = "https://www.googleapis.com/auth/admin.directory.user.readonly";
@@ -241,6 +242,34 @@ export class DirectoryClients {
       const id = stringValue(item.id);
       return id ? [{ id, name: stringValue(item.displayName) }] : [];
     });
+  }
+
+  async graphGroupNames(
+    providerId: string,
+    config: EntraConfig,
+    credentials: readonly ProviderCredential[],
+    groupIds: readonly string[],
+  ): Promise<ProviderGroup[]> {
+    const ids = [...new Set(groupIds.map((id) => id.toLowerCase()).filter(isUuid))];
+    const named: ProviderGroup[] = [];
+    for (let start = 0; start < ids.length; start += GRAPH_IDS_PER_REQUEST) {
+      const token = await this.#graphToken(providerId, config, credentials);
+      const response = await this.#request(
+        `${config.graphUrl}/v1.0/directoryObjects/getByIds?$select=id,displayName`,
+        {
+          method: "POST",
+          headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+          body: JSON.stringify({ ids: ids.slice(start, start + GRAPH_IDS_PER_REQUEST), types: ["group"] }),
+        },
+      );
+      if (!response.ok) throw new ProviderResponseError(`Microsoft Graph answered ${response.status}`);
+      const value = ((await response.json()) as { value?: unknown }).value;
+      for (const item of Array.isArray(value) ? (value as Record<string, unknown>[]) : []) {
+        const id = stringValue(item.id)?.toLowerCase();
+        if (id) named.push({ id, name: stringValue(item.displayName) });
+      }
+    }
+    return named;
   }
 
   async graphGroup(

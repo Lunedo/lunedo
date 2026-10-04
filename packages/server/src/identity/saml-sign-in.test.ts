@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { inflateRawSync } from "node:zlib";
+import { ENTRA_SAML_CLAIMS } from "@pagehall/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { ANONYMOUS, SYSTEM } from "../accounts/principal.js";
@@ -9,6 +10,13 @@ import { ChallengeExpiredError } from "../auth/errors.js";
 import { runWithRequestContext } from "../observability/request-context.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
+import {
+  GRAPH_CLIENT_ID,
+  GRAPH_CLIENT_SECRET,
+  GRAPH_IDS,
+  GRAPH_TENANT_ID,
+  startFakeGraph,
+} from "../testing/fakes/microsoft-graph.js";
 import { createFakeSamlIdp, type FakeSamlIdp } from "../testing/fakes/saml-idp.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { samlEntityId, samlPaths } from "./saml.js";
@@ -317,6 +325,78 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
     });
     if (fromFile.type !== "saml") throw new Error("SAML provider expected");
     expect(fromFile.saml.identityProvider?.entityId).toBe(idp.entityId);
+  });
+
+  it("reads the names of Entra ID groups through Graph at sign-in and follows a rename", async () => {
+    const graph = await startFakeGraph();
+    try {
+      const domain = `${randomUUID().slice(0, 8)}.example.org`;
+      const { provider: created } = await test.services.identityProviders.create(SYSTEM, {
+        type: "saml",
+        name: "Entra SAML with Graph",
+        config: {
+          preset: "entraId",
+          tenantId: GRAPH_TENANT_ID,
+          authority: graph.url,
+          graphUrl: graph.url,
+          graphClientId: GRAPH_CLIENT_ID,
+          metadata: { source: "file" },
+          domains: [domain],
+          accountCreation: { enabled: true, requiredGroups: [] },
+        },
+        metadataXml: idp.metadata(),
+      });
+      await test.services.identityProviders.addCredential(SYSTEM, created.id, {
+        kind: "clientSecret",
+        secret: GRAPH_CLIENT_SECRET,
+        expiresAt: null,
+      });
+      const signInWithGroups = async () => {
+        const started = await test.services.providerSignIn.start({
+          providerId: created.id,
+          purpose: "signIn",
+          baseUrl: BASE,
+        });
+        const samlResponse = await idp.response({
+          ...target(created.id),
+          nameId: randomUUID(),
+          attributes: {
+            [ENTRA_SAML_CLAIMS.tenantId]: [GRAPH_TENANT_ID],
+            [ENTRA_SAML_CLAIMS.objectId]: [GRAPH_IDS.olga],
+            [ENTRA_SAML_CLAIMS.email]: [`olga@${domain}`],
+            [ENTRA_SAML_CLAIMS.groups]: [GRAPH_IDS.engineering],
+          },
+          requestId: requestIdOf(started.url),
+        });
+        const receipt = await test.services.providerSignIn.receiveSamlResponse({
+          providerId: created.id,
+          samlResponse,
+          relayState: new URL(started.url).searchParams.get("RelayState"),
+        });
+        const result = await test.services.providerSignIn.callback({
+          providerId: created.id,
+          query: new URLSearchParams({ state: receipt.state }),
+          browserToken: started.browserToken,
+          client: {},
+        });
+        expect(result.kind).toBe("signedIn");
+      };
+      const name = async () =>
+        (
+          await test.pool.query<{ name: string | null }>(
+            "select name from provider_groups where provider_id = $1 and external_id = $2",
+            [created.id, GRAPH_IDS.engineering],
+          )
+        ).rows[0]?.name;
+      graph.renameGroup(GRAPH_IDS.engineering, "Engineering");
+      await signInWithGroups();
+      expect(await name()).toBe("Engineering");
+      graph.renameGroup(GRAPH_IDS.engineering, "Engineering Department");
+      await signInWithGroups();
+      expect(await name()).toBe("Engineering Department");
+    } finally {
+      await graph.close();
+    }
   });
 
   it("warns about Entra ID providers that cannot read groups through Graph", async () => {

@@ -176,6 +176,11 @@ export interface IdentityProviderAdapter {
     subjects: readonly string[],
   ): AsyncIterable<SynchronizedAccount>;
   hasDirectory?(provider: ProviderDefinition): boolean;
+  readGroupNames?(
+    provider: ProviderDefinition,
+    credentials: readonly ProviderCredential[],
+    groupIds: readonly string[],
+  ): Promise<ProviderGroup[]>;
   readGroup?(
     provider: ProviderDefinition,
     credentials: readonly ProviderCredential[],

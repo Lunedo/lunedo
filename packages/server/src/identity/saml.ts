@@ -585,6 +585,16 @@ export class SamlAdapter implements IdentityProviderAdapter {
     }
   }
 
+  async readGroupNames(
+    provider: ProviderDefinition,
+    credentials: readonly ProviderCredential[],
+    groupIds: readonly string[],
+  ): Promise<ProviderGroup[]> {
+    const graph = this.#graph(provider);
+    if (!graph) return [];
+    return this.#directory.graphGroupNames(graph.id, graph.config, graphCredentials(credentials), groupIds);
+  }
+
   async readGroup(
     provider: ProviderDefinition,
     credentials: readonly ProviderCredential[],

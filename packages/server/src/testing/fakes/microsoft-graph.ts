@@ -329,6 +329,14 @@ export async function startFakeGraph(
         return { status: 200, body: { value: groups.map((group) => group.id) } };
       }
     }
+    if (collection === "directoryObjects" && id === "getByIds" && request.method === "POST") {
+      const ids = jsonBody<{ ids: string[] }>(request).ids;
+      const groups = ids.flatMap((groupId) => {
+        const group = findGroup(groupId);
+        return group ? [{ "@odata.type": "#microsoft.graph.group", ...group }] : [];
+      });
+      return { status: 200, body: { value: groups.map((group) => select(group, request)) } };
+    }
     if (collection === "groups") {
       if (!id) return list(filterGroups(request) as unknown as Record<string, unknown>[], request);
       const group = findGroup(id);

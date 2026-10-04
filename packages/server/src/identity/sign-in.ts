@@ -42,6 +42,7 @@ import {
   type DirectoryTestResult,
   type IdentityProviderAdapter,
   type ProviderDefinition,
+  type ProviderGroup,
   ProviderPolicyError,
   type ProviderProfile,
   ProviderResponseError,
@@ -460,14 +461,36 @@ export class ProviderSignInService {
     credentials: Parameters<IdentityProviderAdapter["completeSignIn"]>[1],
     profile: ProviderProfile,
   ): Promise<{ groups: ProviderProfile["groups"]; failed: boolean }> {
-    if (profile.groups !== null) return { groups: profile.groups, failed: false };
     const adapter = this.#adapter(provider.type);
+    if (profile.groups !== null) {
+      return { groups: await this.#withNames(adapter, provider, credentials, profile.groups), failed: false };
+    }
     if (!adapter.readGroups) return { groups: null, failed: false };
     try {
       return { groups: await adapter.readGroups(provider, credentials, profile.subject), failed: false };
     } catch {
       return { groups: null, failed: true };
     }
+  }
+
+  async #withNames(
+    adapter: IdentityProviderAdapter,
+    provider: ProviderDefinition,
+    credentials: Parameters<IdentityProviderAdapter["completeSignIn"]>[1],
+    groups: ProviderGroup[],
+  ): Promise<ProviderGroup[]> {
+    const unnamed = groups.filter((group) => group.name === null).map((group) => group.id);
+    if (unnamed.length === 0 || !adapter.readGroupNames || !adapter.hasDirectory?.(provider)) return groups;
+    let named: ProviderGroup[];
+    try {
+      named = await adapter.readGroupNames(provider, credentials, unnamed);
+    } catch {
+      return groups;
+    }
+    const names = new Map(named.map((group) => [group.id.toLowerCase(), group.name]));
+    return groups.map((group) =>
+      group.name === null ? { ...group, name: names.get(group.id.toLowerCase()) ?? null } : group,
+    );
   }
 
   #emailVerified(domains: readonly string[], email: string | null): boolean {

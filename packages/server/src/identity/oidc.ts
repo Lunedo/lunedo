@@ -235,6 +235,16 @@ export class OidcAdapter implements IdentityProviderAdapter {
     }
   }
 
+  async readGroupNames(
+    provider: ProviderDefinition,
+    credentials: readonly ProviderCredential[],
+    groupIds: readonly string[],
+  ): Promise<ProviderGroup[]> {
+    const config = expectType(provider, "oidc").config;
+    if (config.preset !== "entraId") return [];
+    return this.#directory.graphGroupNames(provider.id, config, credentials, groupIds);
+  }
+
   async readGroup(
     provider: ProviderDefinition,
     credentials: readonly ProviderCredential[],
