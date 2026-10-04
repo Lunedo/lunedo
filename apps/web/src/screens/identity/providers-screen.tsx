@@ -20,9 +20,10 @@ import { useTranslation } from "react-i18next";
 import {
   type IdentityProvider,
   identityKeys,
-  type ProviderPreset,
+  type ProviderType,
   providerLogoUrl,
   providersQuery,
+  providerTypes,
   removeProvider,
 } from "../../api/identity-queries.js";
 import { SettingsList } from "../../components/settings-list.js";
@@ -32,7 +33,7 @@ import { useOrganizationState } from "../../shell/shell-context.js";
 import { useInstanceSettingsEditor } from "../instance/general-screen.js";
 import { SettingsPage } from "../settings/settings-page.js";
 import { EmergencyRecipients } from "./emergency-recipients.js";
-import { credentialStatus, presetLabel } from "./provider-labels.js";
+import { credentialStatus, providerPresetLabel, typeLabel } from "./provider-labels.js";
 
 export function providerPath(providerId: string, search?: Record<string, string>) {
   return {
@@ -53,43 +54,95 @@ export function ProviderGlyph({ provider }: { provider: Pick<IdentityProvider, "
   );
 }
 
-export function CredentialWarnings({ providers }: { providers: IdentityProvider[] }) {
+const CREDENTIAL_WARNINGS = new Set(["noCredential", "credentialExpiring", "credentialExpired"]);
+
+export function ProviderWarnings({ providers }: { providers: IdentityProvider[] }) {
   const { t } = useTranslation();
   const format = useFormat();
   const navigate = useNavigate();
-  const affected = providers.filter((provider) => provider.warnings.length > 0);
-  if (affected.length === 0) return null;
+  const open = (provider: IdentityProvider, tab: string) => void navigate(providerPath(provider.id, { tab }));
   return (
-    <div className="flex flex-col gap-3">
-      {affected.map((provider) => {
-        const status = credentialStatus(t, format, provider);
-        const expired =
-          provider.warnings.includes("credentialExpired") || provider.warnings.includes("noCredential");
-        return (
-          <Notice
-            key={provider.id}
-            variant={expired ? "danger" : "warning"}
-            title={t(expired ? "identityProviders.warnings.stopped" : "identityProviders.warnings.expiring", {
-              name: provider.name,
-              status: status.label,
-            })}
-            action={
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => void navigate(providerPath(provider.id, { tab: "overview" }))}
-              >
-                {t("identityProviders.warnings.renew")}
-              </Button>
-            }
-          >
-            {t(
-              expired
-                ? "identityProviders.warnings.stoppedAction"
-                : "identityProviders.warnings.expiringAction",
-            )}
-          </Notice>
-        );
+    <div className="flex flex-col gap-3 empty:hidden">
+      {providers.flatMap((provider) => {
+        const notices = [];
+        if (provider.warnings.some((warning) => CREDENTIAL_WARNINGS.has(warning))) {
+          const status = credentialStatus(t, format, provider);
+          const expired =
+            provider.warnings.includes("credentialExpired") || provider.warnings.includes("noCredential");
+          notices.push(
+            <Notice
+              key={`${provider.id}-credential`}
+              variant={expired ? "danger" : "warning"}
+              title={t(
+                expired ? "identityProviders.warnings.stopped" : "identityProviders.warnings.expiring",
+                {
+                  name: provider.name,
+                  status: status.label,
+                },
+              )}
+              action={
+                <Button size="sm" variant="secondary" onClick={() => open(provider, "overview")}>
+                  {t("identityProviders.warnings.renew")}
+                </Button>
+              }
+            >
+              {t(
+                expired
+                  ? "identityProviders.warnings.stoppedAction"
+                  : "identityProviders.warnings.expiringAction",
+              )}
+            </Notice>,
+          );
+        }
+        if (
+          provider.type === "saml" &&
+          provider.warnings.includes("metadataRefreshFailed") &&
+          provider.saml.identityProvider?.refreshFailedAt
+        ) {
+          const metadata = provider.saml.identityProvider;
+          notices.push(
+            <Notice
+              key={`${provider.id}-metadata`}
+              variant="warning"
+              title={t("identityProviders.warnings.metadataTitle", { name: provider.name })}
+              action={
+                <Button size="sm" variant="secondary" onClick={() => open(provider, "overview")}>
+                  {t("identityProviders.openDetails")}
+                </Button>
+              }
+            >
+              {t("identityProviders.warnings.metadataRefreshFailed", {
+                name: provider.name,
+                time: format.time(metadata.refreshFailedAt ?? metadata.fetchedAt),
+                error: metadata.refreshError ?? t("common.unknown"),
+              })}
+            </Notice>,
+          );
+        }
+        if (
+          provider.type === "ldap" &&
+          provider.warnings.includes("caCertificateExpiring") &&
+          provider.ldap.caCertificate
+        ) {
+          notices.push(
+            <Notice
+              key={`${provider.id}-ca`}
+              variant="warning"
+              title={t("identityProviders.warnings.caExpiring", {
+                name: provider.name,
+                date: format.date(provider.ldap.caCertificate.expiresAt),
+              })}
+              action={
+                <Button size="sm" variant="secondary" onClick={() => open(provider, "settings")}>
+                  {t("identityProviders.warnings.openSettings")}
+                </Button>
+              }
+            >
+              {t("identityProviders.warnings.caExpiringAction")}
+            </Notice>,
+          );
+        }
+        return notices;
       })}
     </div>
   );
@@ -108,12 +161,12 @@ export function ProvidersTable({
   const queryClient = useQueryClient();
   const showFailure = useFailureToast();
   const [search, setSearch] = useState("");
-  const [preset, setPreset] = useState<ProviderPreset | "all">("all");
+  const [type, setType] = useState<ProviderType | "all">("all");
   const [removing, setRemoving] = useState<IdentityProvider | null>(null);
   const query = search.trim().toLocaleLowerCase();
   const rows = providers.filter(
     (provider) =>
-      (preset === "all" || provider.config.preset === preset) &&
+      (type === "all" || provider.type === type) &&
       (query === "" ||
         provider.name.toLocaleLowerCase().includes(query) ||
         provider.config.domains.some((domain) => domain.includes(query))),
@@ -128,22 +181,19 @@ export function ProvidersTable({
           <div className="w-field max-w-full">
             <Select
               aria-label={t("identityProviders.filterType")}
-              value={preset}
-              onValueChange={(value) => setPreset(value as ProviderPreset | "all")}
+              value={type}
+              onValueChange={(value) => setType(value as ProviderType | "all")}
               options={[
                 { value: "all", label: t("identityProviders.allTypes") },
-                ...(["entraId", "google", "generic"] as const).map((value) => ({
-                  value,
-                  label: presetLabel(t, value),
-                })),
+                ...providerTypes.map((value) => ({ value, label: typeLabel(t, value) })),
               ]}
             />
           </div>
         }
-        filtersActive={search !== "" || preset !== "all"}
+        filtersActive={search !== "" || type !== "all"}
         onResetFilters={() => {
           setSearch("");
-          setPreset("all");
+          setType("all");
         }}
       />
       <Table
@@ -170,7 +220,12 @@ export function ProvidersTable({
           {
             key: "type",
             header: t("identityProviders.columns.type"),
-            cell: (provider) => presetLabel(t, provider.config.preset),
+            cell: (provider) => (
+              <span className="flex min-w-0 flex-col">
+                <span>{typeLabel(t, provider.type)}</span>
+                <TruncatedText text={providerPresetLabel(t, provider)} className="text-sm text-text-muted" />
+              </span>
+            ),
           },
           {
             key: "domains",
@@ -291,7 +346,7 @@ export function InstanceProvidersScreen() {
           />
         ) : (
           <>
-            <CredentialWarnings providers={providers.data} />
+            <ProviderWarnings providers={providers.data} />
             <ProvidersTable providers={providers.data} canManage={canManage} />
             <p className="text-sm text-text-muted">{t("identityProviders.domainHint")}</p>
           </>

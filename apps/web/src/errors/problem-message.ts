@@ -81,7 +81,20 @@ const KNOWN = new Set([
   "internalError",
   "busy",
   "networkError",
+  "passwordExpired",
+  "passwordMustChange",
+  "accountLocked",
+  "accountDisabled",
+  "outsideSignInHours",
+  "providerInitiatedSignIn",
+  "invalidSamlMetadata",
+  "invalidCertificate",
 ]);
+
+const DIRECTORY_PROBLEMS: Record<string, string> = {
+  invalidCredentials: "problems.directoryInvalidCredentials",
+  providerUnavailable: "problems.directoryUnavailable",
+};
 
 export function problemKey(error: unknown): string {
   if (error instanceof ApiError && KNOWN.has(error.code)) return `problems.${error.code}`;
@@ -101,8 +114,16 @@ export function problemMessage(t: TFunction, error: unknown): string {
   if ((error.code === "rateLimited" || error.code === "locked") && problem.retryAfterSeconds) {
     return translateKey(t, `problems.${error.code}Retry`, { seconds: problem.retryAfterSeconds });
   }
+  if (error.code === "invalidSamlMetadata" && problem.detail) {
+    return t("problems.invalidSamlMetadataDetail", { detail: problem.detail });
+  }
   if (error.code === "settingLocked" && problem.lockedBy) {
     return t("problems.settingLockedBy", { level: translateKey(t, `settings.levels.${problem.lockedBy}`) });
   }
   return translateKey(t, problemKey(error));
+}
+
+export function directoryProblemMessage(t: TFunction, error: unknown): string {
+  const key = error instanceof ApiError ? DIRECTORY_PROBLEMS[error.code] : undefined;
+  return key ? translateKey(t, key) : problemMessage(t, error);
 }

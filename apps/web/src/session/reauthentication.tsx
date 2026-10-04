@@ -6,10 +6,14 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { api } from "../api/client.js";
-import { ownIdentitiesQuery } from "../api/identity-queries.js";
+import {
+  type LinkedIdentity,
+  ownIdentitiesQuery,
+  reauthenticateWithDirectory,
+} from "../api/identity-queries.js";
 import { queryKeys, sessionQuery } from "../api/queries.js";
 import { request, setReauthenticationHandler } from "../api/request.js";
-import { problemMessage } from "../errors/problem-message.js";
+import { directoryProblemMessage, problemMessage } from "../errors/problem-message.js";
 import { submitWith, useSchemaForm } from "../forms/use-schema-form.js";
 import { getPasskeyAssertion, isPasskeyCancelled, passkeysSupported } from "./passkeys.js";
 import { startProviderReauthentication } from "./provider-sign-in.js";
@@ -41,6 +45,10 @@ function finish(confirmed: boolean) {
 }
 
 const passwordForm = z.object({ password: passwordSchema });
+
+function isDirectoryIdentity(identity: LinkedIdentity): boolean {
+  return identity.providerType === "ldap";
+}
 const codeForm = z.object({ code: totpCodeSchema.min(1) });
 
 export function ReauthenticationHost() {
@@ -69,7 +77,9 @@ function ReauthenticationDialog() {
   });
   const session = useQuery({ ...sessionQuery, throwOnError: false });
   const identities = useQuery({ ...ownIdentitiesQuery, throwOnError: false });
-  const providers = identities.data ?? [];
+  const providers: LinkedIdentity[] = identities.data ?? [];
+  const redirected = providers.filter((identity) => !isDirectoryIdentity(identity));
+  const directories = providers.filter(isDirectoryIdentity);
   const signedInWithProvider = session.data?.methods.includes("identityProvider") ?? false;
   const methods: Method[] =
     providers.length > 0 && signedInWithProvider ? ["provider", "password"] : ["password"];
@@ -178,12 +188,25 @@ function ReauthenticationDialog() {
         ) : null}
         {method === "provider" ? (
           <div className="flex flex-col gap-4">
-            <Notice variant="info">{t("reauthentication.providerHint")}</Notice>
+            {directories.map((identity) => (
+              <DirectoryConfirm
+                key={identity.id}
+                identity={identity}
+                onConfirmed={async () => {
+                  await queryClient.invalidateQueries({ queryKey: queryKeys.session });
+                  finish(true);
+                }}
+                onError={setError}
+              />
+            ))}
+            {redirected.length > 0 ? (
+              <Notice variant="info">{t("reauthentication.providerHint")}</Notice>
+            ) : null}
             <div className="flex flex-wrap justify-end gap-2">
               <Button variant="secondary" onClick={() => finish(false)}>
                 {t("common.cancel")}
               </Button>
-              {providers.map((identity) => (
+              {redirected.map((identity) => (
                 <Button
                   key={identity.id}
                   variant="primary"
@@ -230,6 +253,44 @@ function ReauthenticationDialog() {
         ) : null}
       </div>
     </Dialog>
+  );
+}
+
+function DirectoryConfirm({
+  identity,
+  onConfirmed,
+  onError,
+}: {
+  identity: LinkedIdentity;
+  onConfirmed: () => Promise<void>;
+  onError: (message: string | null) => void;
+}) {
+  const { t } = useTranslation();
+  const form = useSchemaForm(passwordForm, { defaultValues: { password: "" } });
+  const submit = form.handleSubmit(async ({ password }) => {
+    onError(null);
+    try {
+      await reauthenticateWithDirectory(identity.providerId, password);
+      await onConfirmed();
+    } catch (failure) {
+      onError(directoryProblemMessage(t, failure));
+      form.resetField("password");
+    }
+  });
+  return (
+    <form className="flex flex-col gap-3" onSubmit={submitWith(submit)} noValidate>
+      <Field
+        label={t("reauthentication.directoryPassword", { name: identity.providerName })}
+        error={form.formState.errors.password?.message}
+      >
+        <PasswordInput autoComplete="current-password" autoFocus {...form.register("password")} />
+      </Field>
+      <div className="flex justify-end">
+        <Button variant="primary" type="submit" loading={form.formState.isSubmitting}>
+          {t("reauthentication.withDirectory", { name: identity.providerName })}
+        </Button>
+      </div>
+    </form>
   );
 }
 

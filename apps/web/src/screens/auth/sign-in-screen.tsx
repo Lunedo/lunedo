@@ -19,6 +19,7 @@ import { getPasskeyAssertion, isPasskeyCancelled, passkeysSupported } from "../.
 import { startProviderSignIn } from "../../session/provider-sign-in.js";
 import { safeRedirect } from "../../session/redirect.js";
 import { AuthCard } from "./auth-layout.js";
+import { DirectorySignInForm, type DirectoryTarget, secondFactors } from "./directory-sign-in.js";
 
 const route = getRouteApi("/public/sign-in");
 
@@ -31,6 +32,7 @@ const PROVIDER_ERRORS = new Set([
   "passwordSignInDisabled",
   "invalidCredentials",
   "providerUnavailable",
+  "providerInitiatedSignIn",
 ]);
 
 export function providerErrorMessage(t: (key: string) => string, code: string): string {
@@ -38,14 +40,6 @@ export function providerErrorMessage(t: (key: string) => string, code: string): 
 }
 
 type Step = { email: string; next: DiscoveredStep };
-
-type SecondFactor = "totp" | "passkey" | "recoveryCode";
-
-function secondFactors(factors: readonly string[]): SecondFactor[] {
-  return factors.filter((factor): factor is SecondFactor =>
-    ["totp", "passkey", "recoveryCode"].includes(factor),
-  );
-}
 
 export function SignInScreen() {
   const { t } = useTranslation();
@@ -59,6 +53,7 @@ export function SignInScreen() {
   const [passkeyBusy, setPasskeyBusy] = useState(false);
   const [providerBusy, setProviderBusy] = useState<string | null>(null);
   const [emergency, setEmergency] = useState(false);
+  const [shortcut, setShortcut] = useState<DirectoryTarget | null>(null);
   const emailStep = useSchemaForm(emailForm, { defaultValues: { email: "" } });
   const passwordStep = useSchemaForm(passwordForm, { defaultValues: { password: "" } });
   const name = info.data?.organization?.name ?? info.data?.name ?? "";
@@ -142,6 +137,7 @@ export function SignInScreen() {
 
   const changeEmail = () => {
     setStep(null);
+    setShortcut(null);
     setError(null);
     passwordStep.reset();
   };
@@ -164,7 +160,7 @@ export function SignInScreen() {
       <UserRound aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="truncate font-medium text-text">{step.email}</span>
-        {step.next.step === "provider" ? (
+        {step.next.step === "provider" || step.next.step === "directory" ? (
           <span className="text-sm text-text-muted">
             {t("auth.discover.domainUses", { domain: step.email.split("@")[1] ?? "", name: step.next.name })}
           </span>
@@ -215,15 +211,44 @@ export function SignInScreen() {
       ) : null}
       {data && !data.emailStep && data.directProvider ? (
         <>
-          <ProviderButton
-            provider={data.directProvider}
-            busy={providerBusy === data.directProvider.id}
-            onClick={() => void signInWithProvider(data.directProvider?.id ?? "")}
-          />
+          {data.directProvider.type === "ldap" ? (
+            <DirectorySignInForm
+              target={{
+                providerId: data.directProvider.id,
+                name: data.directProvider.name,
+                signInName: null,
+                email: null,
+              }}
+              redirect={search.redirect}
+              onSignedIn={signedIn}
+            />
+          ) : (
+            <ProviderButton
+              provider={data.directProvider}
+              busy={providerBusy === data.directProvider.id}
+              onClick={() => void signInWithProvider(data.directProvider?.id ?? "")}
+            />
+          )}
           {passkeyButton}
         </>
       ) : null}
-      {data?.emailStep && !step ? (
+      {shortcut && !step ? (
+        <>
+          <div className="flex items-center gap-3 rounded-md border border-border px-3 py-2">
+            <UserRound aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
+            <span className="min-w-0 flex-1 truncate font-medium text-text">{shortcut.name}</span>
+            <button
+              type="button"
+              className="font-medium text-accent text-sm hover:underline focus-visible:focus-ring"
+              onClick={changeEmail}
+            >
+              {t("auth.discover.change")}
+            </button>
+          </div>
+          <DirectorySignInForm target={shortcut} redirect={search.redirect} onSignedIn={signedIn} />
+        </>
+      ) : null}
+      {data?.emailStep && !step && !shortcut ? (
         <>
           <form className="flex flex-col gap-4" onSubmit={submitWith(discover)} noValidate>
             <Field label={t("auth.workEmail")} error={emailStep.formState.errors.email?.message}>
@@ -261,7 +286,16 @@ export function SignInScreen() {
                 type="button"
                 className="font-medium text-accent hover:underline focus-visible:focus-ring"
                 disabled={providerBusy !== null}
-                onClick={() => void signInWithProvider(data.lastProvider?.id ?? "")}
+                onClick={() => {
+                  const last = data.lastProvider;
+                  if (!last) return;
+                  if (last.type === "ldap") {
+                    setError(null);
+                    setShortcut({ providerId: last.id, name: last.name, signInName: null, email: null });
+                    return;
+                  }
+                  void signInWithProvider(last.id);
+                }}
               >
                 {data.lastProvider.name}
               </button>
@@ -281,6 +315,21 @@ export function SignInScreen() {
             }}
             busy={providerBusy === step.next.providerId}
             onClick={() => void signInWithProvider(step.next.step === "provider" ? step.next.providerId : "")}
+          />
+        </>
+      ) : null}
+      {step?.next.step === "directory" ? (
+        <>
+          {identity}
+          <DirectorySignInForm
+            target={{
+              providerId: step.next.providerId,
+              name: step.next.name,
+              signInName: step.next.signInName,
+              email: step.email,
+            }}
+            redirect={search.redirect}
+            onSignedIn={signedIn}
           />
         </>
       ) : null}

@@ -1,4 +1,4 @@
-import { clientSecretSchema } from "@pagehall/shared";
+import { clientSecretSchema, directoryPasswordSchema } from "@pagehall/shared";
 import {
   Badge,
   Button,
@@ -14,6 +14,7 @@ import {
   Select,
 } from "@pagehall/ui";
 import { useQueryClient } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 import { Download, FileKey2, KeyRound, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -30,21 +31,57 @@ import { useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 
+export type CredentialKind = CredentialInput["kind"];
+
 export type CredentialDraft =
   | { kind: "clientSecret"; secret: string; expiresOn: string }
-  | { kind: "certificate"; validDays: number };
+  | { kind: "certificate"; validDays: number }
+  | { kind: "samlSigning"; validDays: number }
+  | { kind: "bindPassword"; secret: string };
 
 export const CERTIFICATE_DAYS = [365, 730, 1095] as const;
 
-export function emptyCredentialDraft(): CredentialDraft {
+export function emptyCredentialDraft(kind: CredentialKind = "clientSecret"): CredentialDraft {
+  if (kind === "certificate" || kind === "samlSigning") return { kind, validDays: 730 };
+  if (kind === "bindPassword") return { kind, secret: "" };
   return { kind: "clientSecret", secret: "", expiresOn: "" };
+}
+
+export function credentialKinds(provider: Pick<IdentityProvider, "type" | "config">): CredentialKind[] {
+  if (provider.type === "ldap") return ["bindPassword"];
+  if (provider.type === "saml") {
+    return provider.config.preset === "entraId"
+      ? ["samlSigning", "clientSecret", "certificate"]
+      : ["samlSigning"];
+  }
+  return ["clientSecret", "certificate"];
+}
+
+export function credentialKindLabel(
+  t: TFunction,
+  provider: Pick<IdentityProvider, "type">,
+  kind: CredentialKind,
+): string {
+  if (provider.type === "saml" && (kind === "clientSecret" || kind === "certificate")) {
+    return t(`identityProviders.credentials.graphKinds.${kind}`);
+  }
+  return t(`identityProviders.credentials.kinds.${kind}`);
+}
+
+function isCertificate(kind: CredentialKind): boolean {
+  return kind === "certificate" || kind === "samlSigning";
 }
 
 export function credentialInput(
   draft: CredentialDraft,
 ): { ok: true; value: CredentialInput } | { ok: false; field: "secret" | "expiresOn" } {
-  if (draft.kind === "certificate")
-    return { ok: true, value: { kind: "certificate", validDays: draft.validDays } };
+  if (draft.kind === "certificate" || draft.kind === "samlSigning") {
+    return { ok: true, value: { kind: draft.kind, validDays: draft.validDays } };
+  }
+  if (draft.kind === "bindPassword") {
+    if (!directoryPasswordSchema.safeParse(draft.secret).success) return { ok: false, field: "secret" };
+    return { ok: true, value: { kind: "bindPassword", secret: draft.secret } };
+  }
   if (!clientSecretSchema.safeParse(draft.secret).success) return { ok: false, field: "secret" };
   if (draft.expiresOn && Number.isNaN(Date.parse(`${draft.expiresOn}T00:00:00Z`))) {
     return { ok: false, field: "expiresOn" };
@@ -59,42 +96,48 @@ export function credentialInput(
   };
 }
 
-export function downloadCertificate(pem: string, name: string): void {
-  const url = URL.createObjectURL(new Blob([pem], { type: "application/x-pem-file" }));
+export function fileNameOf(name: string, extension: string): string {
+  return `${name.replace(/[^\w.-]+/g, "-").toLowerCase()}.${extension}`;
+}
+
+export function downloadFile(content: string, fileName: string, type: string): void {
+  const url = URL.createObjectURL(new Blob([content], { type }));
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${name.replace(/[^\w.-]+/g, "-").toLowerCase()}.pem`;
+  link.download = fileName;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+export function downloadCertificate(pem: string, name: string): void {
+  downloadFile(pem, fileNameOf(name, "pem"), "application/x-pem-file");
 }
 
 export function CredentialFields({
   draft,
   onChange,
   invalid,
+  kinds = ["clientSecret", "certificate"],
+  kindLabel,
 }: {
   draft: CredentialDraft;
   onChange: (draft: CredentialDraft) => void;
   invalid: "secret" | "expiresOn" | null;
+  kinds?: CredentialKind[];
+  kindLabel?: (kind: CredentialKind) => string;
 }) {
   const { t } = useTranslation();
+  const label = kindLabel ?? ((kind: CredentialKind) => t(`identityProviders.credentials.kinds.${kind}`));
   return (
     <div className="flex flex-col gap-4">
-      <SegmentedControl
-        label={t("identityProviders.credentials.kind")}
-        value={draft.kind}
-        onValueChange={(kind) =>
-          onChange(
-            kind === "certificate"
-              ? { kind: "certificate", validDays: 730 }
-              : { kind: "clientSecret", secret: "", expiresOn: "" },
-          )
-        }
-        options={[
-          { value: "clientSecret", label: t("identityProviders.credentials.kinds.clientSecret") },
-          { value: "certificate", label: t("identityProviders.credentials.kinds.certificate") },
-        ]}
-      />
+      {kinds.length > 1 ? (
+        <SegmentedControl
+          label={t("identityProviders.credentials.kind")}
+          value={draft.kind}
+          onValueChange={(kind) => onChange(emptyCredentialDraft(kind as CredentialKind))}
+          options={kinds.map((kind) => ({ value: kind, label: label(kind) }))}
+        />
+      ) : null}
       {draft.kind === "clientSecret" ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field
@@ -120,24 +163,40 @@ export function CredentialFields({
             />
           </Field>
         </div>
-      ) : (
-        <div className="flex flex-col gap-2">
-          <Field
-            label={t("identityProviders.credentials.validity")}
-            hint={t("identityProviders.credentials.certificateHint")}
-          >
-            <Select
-              aria-label={t("identityProviders.credentials.validity")}
-              value={String(draft.validDays)}
-              onValueChange={(value) => onChange({ kind: "certificate", validDays: Number(value) })}
-              options={CERTIFICATE_DAYS.map((days) => ({
-                value: String(days),
-                label: t("identityProviders.credentials.years", { count: days / 365 }),
-              }))}
-            />
-          </Field>
-        </div>
-      )}
+      ) : null}
+      {draft.kind === "bindPassword" ? (
+        <Field
+          label={t("identityProviders.credentials.bindPassword")}
+          hint={t("identityProviders.credentials.bindPasswordHint")}
+          {...(invalid === "secret" ? { error: t("validation.required") } : {})}
+        >
+          <PasswordInput
+            autoComplete="new-password"
+            value={draft.secret}
+            onChange={(event) => onChange({ kind: "bindPassword", secret: event.target.value })}
+          />
+        </Field>
+      ) : null}
+      {draft.kind === "certificate" || draft.kind === "samlSigning" ? (
+        <Field
+          label={t("identityProviders.credentials.validity")}
+          hint={
+            draft.kind === "samlSigning"
+              ? t("identityProviders.credentials.signingHint")
+              : t("identityProviders.credentials.certificateHint")
+          }
+        >
+          <Select
+            aria-label={t("identityProviders.credentials.validity")}
+            value={String(draft.validDays)}
+            onValueChange={(value) => onChange({ kind: draft.kind, validDays: Number(value) })}
+            options={CERTIFICATE_DAYS.map((days) => ({
+              value: String(days),
+              label: t("identityProviders.credentials.years", { count: days / 365 }),
+            }))}
+          />
+        </Field>
+      ) : null}
     </div>
   );
 }
@@ -155,17 +214,17 @@ export function CredentialsList({ provider, canManage }: { provider: IdentityPro
     <div className="flex flex-col gap-3">
       {credentials.length === 0 ? (
         <Notice variant="danger" title={t("identityProviders.credentials.noneTitle")}>
-          {t("identityProviders.credentials.noneDescription")}
+          {t(`identityProviders.credentials.noneDescriptions.${provider.type}`)}
         </Notice>
       ) : null}
       <List label={t("identityProviders.credentials.title")}>
         {credentials.map((credential, index) => (
           <ListRow
             key={credential.id}
-            icon={credential.kind === "certificate" ? FileKey2 : KeyRound}
+            icon={isCertificate(credential.kind) ? FileKey2 : KeyRound}
             title={
               <span className="flex flex-wrap items-center gap-2">
-                {t(`identityProviders.credentials.kinds.${credential.kind}`)}
+                {credentialKindLabel(t, provider, credential.kind)}
                 {index === 0 && credentials.length > 1 ? (
                   <Badge variant="accent">{t("identityProviders.credentials.newest")}</Badge>
                 ) : null}
@@ -179,7 +238,7 @@ export function CredentialsList({ provider, canManage }: { provider: IdentityPro
             })}
             actions={
               <span className="flex flex-wrap gap-2">
-                {credential.kind === "certificate" ? (
+                {isCertificate(credential.kind) ? (
                   <Button
                     variant="secondary"
                     size="sm"
@@ -202,11 +261,13 @@ export function CredentialsList({ provider, canManage }: { provider: IdentityPro
       {canManage ? (
         <div>
           <Button variant="secondary" icon={Plus} onClick={() => setAdding(true)}>
-            {t("identityProviders.credentials.add")}
+            {t(`identityProviders.credentials.addFor.${provider.type}`)}
           </Button>
         </div>
       ) : null}
-      <p className="text-sm text-text-muted">{t("identityProviders.credentials.renewHint")}</p>
+      <p className="text-sm text-text-muted">
+        {t(`identityProviders.credentials.renewHints.${provider.type}`)}
+      </p>
       {adding ? (
         <AddCredentialDialog
           provider={provider}
@@ -237,6 +298,32 @@ export function CredentialsList({ provider, canManage }: { provider: IdentityPro
   );
 }
 
+export function CertificateCreated({ pem, name, kind }: { pem: string; name: string; kind: CredentialKind }) {
+  const { t } = useTranslation();
+  const signing = kind === "samlSigning";
+  return (
+    <div className="flex flex-col gap-3">
+      <Notice
+        variant="success"
+        title={
+          signing
+            ? t("identityProviders.credentials.signingCreated")
+            : t("identityProviders.credentials.certificateCreated")
+        }
+      >
+        {signing
+          ? t("identityProviders.credentials.signingUpload")
+          : t("identityProviders.credentials.certificateUpload")}
+      </Notice>
+      <div>
+        <Button variant="secondary" icon={Download} onClick={() => downloadCertificate(pem, name)}>
+          {t("identityProviders.credentials.download")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function AddCredentialDialog({
   provider,
   onClose,
@@ -247,7 +334,8 @@ function AddCredentialDialog({
   onAdded: () => void;
 }) {
   const { t } = useTranslation();
-  const [draft, setDraft] = useState<CredentialDraft>(emptyCredentialDraft());
+  const kinds = credentialKinds(provider);
+  const [draft, setDraft] = useState<CredentialDraft>(emptyCredentialDraft(kinds[0]));
   const [invalid, setInvalid] = useState<"secret" | "expiresOn" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -277,7 +365,7 @@ function AddCredentialDialog({
       open
       onOpenChange={(next) => (next ? undefined : onClose())}
       title={t("identityProviders.credentials.addTitle", { name: provider.name })}
-      description={t("identityProviders.credentials.addDescription")}
+      description={t(`identityProviders.credentials.addDescriptions.${provider.type}`)}
       size="md"
       footer={
         certificate ? (
@@ -290,7 +378,7 @@ function AddCredentialDialog({
               {t("common.cancel")}
             </Button>
             <Button variant="primary" loading={busy} onClick={() => void save()}>
-              {t("identityProviders.credentials.save")}
+              {t(`identityProviders.credentials.saveFor.${provider.type}`)}
             </Button>
           </>
         )
@@ -302,22 +390,15 @@ function AddCredentialDialog({
         </Notice>
       ) : null}
       {certificate ? (
-        <div className="flex flex-col gap-3">
-          <Notice variant="success" title={t("identityProviders.credentials.certificateCreated")}>
-            {t("identityProviders.credentials.certificateUpload")}
-          </Notice>
-          <div>
-            <Button
-              variant="secondary"
-              icon={Download}
-              onClick={() => downloadCertificate(certificate, provider.name)}
-            >
-              {t("identityProviders.credentials.download")}
-            </Button>
-          </div>
-        </div>
+        <CertificateCreated pem={certificate} name={provider.name} kind={draft.kind} />
       ) : (
-        <CredentialFields draft={draft} onChange={setDraft} invalid={invalid} />
+        <CredentialFields
+          draft={draft}
+          onChange={setDraft}
+          invalid={invalid}
+          kinds={kinds}
+          kindLabel={(kind) => credentialKindLabel(t, provider, kind)}
+        />
       )}
     </Dialog>
   );

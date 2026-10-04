@@ -1,17 +1,15 @@
-import { domainSchema, identityProviderNameSchema } from "@pagehall/shared";
 import { Button, classNames, Field, Input, Notice, Section, Skeleton } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Check, KeyRound } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { Check, KeyRound } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import {
   createProvider,
   type IdentityProvider,
   identityKeys,
-  type ProviderConfigInput,
-  type ProviderPreset,
+  type OidcConfigInput,
   providerQuery,
 } from "../../api/identity-queries.js";
 import { LoadError } from "../../errors/failure.js";
@@ -22,19 +20,32 @@ import {
   AccountFields,
   AttributeFields,
   LinkFields,
-  parseList,
   RedirectUriField,
   SecondFactorFields,
 } from "./provider-config.js";
 import {
+  CertificateCreated,
   type CredentialDraft,
   CredentialFields,
   credentialInput,
-  downloadCertificate,
   emptyCredentialDraft,
 } from "./provider-credentials.js";
-import { presetLabel } from "./provider-labels.js";
+import { DirectoryTest, LdapAttributeFields, LdapSecondFactorFields } from "./provider-ldap.js";
+import { SamlAttributeFields, SamlServiceProviderFields } from "./provider-saml.js";
 import { StartTestButton, TestResult } from "./provider-test.js";
+import {
+  type CommonStepProps,
+  type DirectoryDraft,
+  DomainsField,
+  emptyDirectoryDraft,
+  emptySamlDraft,
+  LdapConnectionStep,
+  NameField,
+  SamlConnectionStep,
+  type SamlDraft,
+  validateCommon,
+  WizardFooter,
+} from "./provider-wizard-steps.js";
 import { providerPath } from "./providers-screen.js";
 
 const instanceRoute = getRouteApi("/app/settings/instance/sign-in-providers/new");
@@ -42,6 +53,10 @@ const instanceRoute = getRouteApi("/app/settings/instance/sign-in-providers/new"
 type Step = "type" | "connection" | "attributes" | "accounts" | "test";
 
 const STEPS: Step[] = ["type", "connection", "attributes", "accounts", "test"];
+
+type Choice = "entraId" | "google" | "oidc" | "saml" | "ldap";
+
+const CHOICES: Choice[] = ["entraId", "google", "oidc", "saml", "ldap"];
 
 interface WizardSearch {
   providerId?: string | undefined;
@@ -54,17 +69,29 @@ export function InstanceProviderWizardScreen() {
   return <ProviderWizard search={search} />;
 }
 
-interface ConnectionDraft {
-  preset: ProviderPreset;
-  name: string;
+interface OidcDraft {
   clientId: string;
   tenantId: string;
   issuer: string;
-  domains: string;
   credential: CredentialDraft;
 }
 
-const DEFAULT_NAMES: Record<ProviderPreset, string> = { entraId: "Microsoft", google: "Google", generic: "" };
+interface WizardDraft {
+  choice: Choice;
+  name: string;
+  domains: string;
+  oidc: OidcDraft;
+  saml: SamlDraft;
+  directory: DirectoryDraft;
+}
+
+const DEFAULT_NAMES: Record<Choice, string> = {
+  entraId: "Microsoft",
+  google: "Google",
+  oidc: "",
+  saml: "",
+  ldap: "",
+};
 
 function ProviderWizard({ search }: { search: WizardSearch }) {
   const { t } = useTranslation();
@@ -81,14 +108,13 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
     ? Math.min(Math.max(search.step ?? 2, 2), steps.length - 1)
     : Math.min(localStep, 1);
   const step = steps[index] ?? "type";
-  const [draft, setDraft] = useState<ConnectionDraft>({
-    preset: "entraId",
+  const [draft, setDraft] = useState<WizardDraft>({
+    choice: "entraId",
     name: DEFAULT_NAMES.entraId,
-    clientId: "",
-    tenantId: "",
-    issuer: "",
     domains: "",
-    credential: emptyCredentialDraft(),
+    oidc: { clientId: "", tenantId: "", issuer: "", credential: emptyCredentialDraft() },
+    saml: emptySamlDraft(),
+    directory: emptyDirectoryDraft(),
   });
   const canManage = state.can("instance.signIn.manage");
   const listPath = { to: "/settings/instance/sign-in-providers" as const };
@@ -98,6 +124,17 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
       return;
     }
     void navigate({ to: ".", search: { providerId, step: target } } as never);
+  };
+  const created = (result: IdentityProvider) =>
+    void navigate({ to: ".", search: { providerId: result.id, step: 2 } } as never);
+  const common = {
+    name: draft.name,
+    domains: draft.domains,
+    onCommonChange: (patch: { name?: string; domains?: string }) =>
+      setDraft((current) => ({ ...current, ...patch })),
+    canManage,
+    onBack: () => goTo(0),
+    onCreated: created,
   };
 
   return (
@@ -152,26 +189,37 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
           {!canManage ? <Notice variant="warning">{t("identityProviders.noPermission")}</Notice> : null}
           {step === "type" ? (
             <TypeStep
-              value={draft.preset}
-              onChange={(preset) =>
+              value={draft.choice}
+              onChange={(choice) =>
                 setDraft((current) => ({
                   ...current,
-                  preset,
-                  name: current.name === DEFAULT_NAMES[current.preset] ? DEFAULT_NAMES[preset] : current.name,
+                  choice,
+                  name: current.name === DEFAULT_NAMES[current.choice] ? DEFAULT_NAMES[choice] : current.name,
                 }))
               }
               onContinue={() => goTo(1)}
             />
           ) : null}
-          {step === "connection" ? (
-            <ConnectionStep
-              draft={draft}
-              onChange={setDraft}
-              canManage={canManage}
-              onBack={() => goTo(0)}
-              onCreated={(created) =>
-                void navigate({ to: ".", search: { providerId: created.id, step: 2 } } as never)
-              }
+          {step === "connection" && draft.choice === "saml" ? (
+            <SamlConnectionStep
+              {...common}
+              draft={draft.saml}
+              onChange={(saml) => setDraft((current) => ({ ...current, saml }))}
+            />
+          ) : null}
+          {step === "connection" && draft.choice === "ldap" ? (
+            <LdapConnectionStep
+              {...common}
+              draft={draft.directory}
+              onChange={(directory) => setDraft((current) => ({ ...current, directory }))}
+            />
+          ) : null}
+          {step === "connection" && draft.choice !== "saml" && draft.choice !== "ldap" ? (
+            <OidcConnectionStep
+              {...common}
+              choice={draft.choice}
+              draft={draft.oidc}
+              onChange={(oidc) => setDraft((current) => ({ ...current, oidc }))}
             />
           ) : null}
           {providerId && step !== "type" && step !== "connection" ? (
@@ -202,63 +250,45 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
   );
 }
 
-function WizardFooter({ onBack, next }: { onBack?: () => void; next: ReactNode }) {
-  const { t } = useTranslation();
-  return (
-    <div className="flex justify-between gap-2 border-border border-t pt-4">
-      {onBack ? (
-        <Button variant="secondary" icon={ArrowLeft} onClick={onBack}>
-          {t("common.back")}
-        </Button>
-      ) : (
-        <span />
-      )}
-      {next}
-    </div>
-  );
-}
-
 function TypeStep({
   value,
   onChange,
   onContinue,
 }: {
-  value: ProviderPreset;
-  onChange: (preset: ProviderPreset) => void;
+  value: Choice;
+  onChange: (choice: Choice) => void;
   onContinue: () => void;
 }) {
   const { t } = useTranslation();
-  const presets: ProviderPreset[] = ["entraId", "google", "generic"];
   return (
     <>
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-3 font-semibold text-lg">{t("identityProviders.wizard.typeTitle")}</legend>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {presets.map((preset) => (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {CHOICES.map((choice) => (
             <button
-              key={preset}
+              key={choice}
               type="button"
-              aria-pressed={value === preset}
-              onClick={() => onChange(preset)}
+              aria-pressed={value === choice}
+              onClick={() => onChange(choice)}
               className={classNames(
                 "flex flex-col items-start gap-1 rounded-md border p-4 text-left focus-visible:focus-ring",
-                value === preset
+                value === choice
                   ? "border-accent bg-selected"
                   : "border-control-border bg-surface hover:bg-hover",
               )}
             >
-              <span className="font-semibold">{presetLabel(t, preset)}</span>
+              <span className="font-semibold">{t(`identityProviders.wizard.choices.${choice}.title`)}</span>
               <span className="text-sm text-text-muted">
-                {t(`identityProviders.wizard.typeHints.${preset}`)}
+                {t(`identityProviders.wizard.choices.${choice}.hint`)}
               </span>
               <span className="text-sm text-text-muted">
-                {t(`identityProviders.wizard.capabilities.${preset}`)}
+                {t(`identityProviders.wizard.choices.${choice}.capabilities`)}
               </span>
             </button>
           ))}
         </div>
       </fieldset>
-      <p className="text-sm text-text-muted">{t("identityProviders.wizard.typeMore")}</p>
       <WizardFooter
         next={
           <Button variant="primary" onClick={onContinue}>
@@ -273,18 +303,22 @@ function TypeStep({
 const uuid = z.uuid();
 const issuerSchema = z.url({ protocol: /^https?$/ });
 
-function ConnectionStep({
+const OIDC_PRESETS = { entraId: "entraId", google: "google", oidc: "generic" } as const;
+
+function OidcConnectionStep({
+  choice,
   draft,
   onChange,
+  name,
+  domains,
+  onCommonChange,
   canManage,
   onBack,
   onCreated,
-}: {
-  draft: ConnectionDraft;
-  onChange: (draft: ConnectionDraft) => void;
-  canManage: boolean;
-  onBack: () => void;
-  onCreated: (provider: IdentityProvider) => void;
+}: CommonStepProps & {
+  choice: "entraId" | "google" | "oidc";
+  draft: OidcDraft;
+  onChange: (draft: OidcDraft) => void;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -292,32 +326,30 @@ function ConnectionStep({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [certificate, setCertificate] = useState<{ pem: string; provider: IdentityProvider } | null>(null);
-  const set = (patch: Partial<ConnectionDraft>) => onChange({ ...draft, ...patch });
+  const preset = OIDC_PRESETS[choice];
+  const set = (patch: Partial<OidcDraft>) => onChange({ ...draft, ...patch });
 
-  const validate = (): ProviderConfigInput | null => {
-    const found: Record<string, string> = {};
-    if (!identityProviderNameSchema.safeParse(draft.name).success) found.name = t("validation.required");
+  const validate = (): OidcConfigInput | null => {
+    const common = validateCommon(t, { name, domains });
+    const found = common.errors;
     if (!draft.clientId.trim()) found.clientId = t("validation.required");
-    if (draft.preset === "entraId" && !uuid.safeParse(draft.tenantId.trim()).success) {
+    if (preset === "entraId" && !uuid.safeParse(draft.tenantId.trim()).success) {
       found.tenantId = t("identityProviders.fields.tenantIdInvalid");
     }
-    if (draft.preset === "generic" && !issuerSchema.safeParse(draft.issuer.trim()).success) {
+    if (preset === "generic" && !issuerSchema.safeParse(draft.issuer.trim()).success) {
       found.issuer = t("validation.url");
     }
-    const domains = parseList(draft.domains);
-    if (domains.some((domain) => !domainSchema.safeParse(domain).success)) {
-      found.domains = t("identityProviders.accounts.domainsInvalid");
-    }
-    if (draft.preset === "google" && domains.length === 0)
+    if (preset === "google" && common.domains.length === 0 && !found.domains) {
       found.domains = t("identityProviders.fields.googleDomains");
+    }
     const credential = credentialInput(draft.credential);
     if (!credential.ok) found[credential.field] = t("validation.required");
     setErrors(found);
     if (Object.keys(found).length > 0) return null;
-    const common = { clientId: draft.clientId.trim(), domains };
-    if (draft.preset === "entraId") return { preset: "entraId", ...common, tenantId: draft.tenantId.trim() };
-    if (draft.preset === "google") return { preset: "google", ...common };
-    return { preset: "generic", ...common, issuer: draft.issuer.trim() };
+    const config = { clientId: draft.clientId.trim(), domains: common.domains };
+    if (preset === "entraId") return { preset: "entraId", ...config, tenantId: draft.tenantId.trim() };
+    if (preset === "google") return { preset: "google", ...config };
+    return { preset: "generic", ...config, issuer: draft.issuer.trim() };
   };
 
   const create = async () => {
@@ -328,7 +360,8 @@ function ConnectionStep({
     setError(null);
     try {
       const result = await createProvider({
-        name: draft.name.trim(),
+        type: "oidc",
+        name: name.trim(),
         config,
         credential: credential.value,
       });
@@ -348,17 +381,7 @@ function ConnectionStep({
   if (certificate) {
     return (
       <>
-        <Notice variant="success" title={t("identityProviders.credentials.certificateCreated")}>
-          {t("identityProviders.credentials.certificateUpload")}
-        </Notice>
-        <div>
-          <Button
-            variant="secondary"
-            onClick={() => downloadCertificate(certificate.pem, certificate.provider.name)}
-          >
-            {t("identityProviders.credentials.download")}
-          </Button>
-        </div>
+        <CertificateCreated pem={certificate.pem} name={certificate.provider.name} kind="certificate" />
         <WizardFooter
           next={
             <Button variant="primary" onClick={() => onCreated(certificate.provider)}>
@@ -373,23 +396,19 @@ function ConnectionStep({
   return (
     <>
       <h2 className="font-semibold text-lg">
-        {t("identityProviders.wizard.connectionTitle", { type: presetLabel(t, draft.preset) })}
+        {t("identityProviders.wizard.connectionTitle", {
+          type: t(`identityProviders.wizard.choices.${choice}.title`),
+        })}
       </h2>
-      <Notice variant="info">{t(`identityProviders.wizard.connectionHints.${draft.preset}`)}</Notice>
+      <Notice variant="info">{t(`identityProviders.wizard.connectionHints.${preset}`)}</Notice>
       {error ? (
         <Notice variant="danger" title={t("failures.createProvider")}>
           {error}
         </Notice>
       ) : null}
-      <Field
-        label={t("identityProviders.fields.name")}
-        hint={t("identityProviders.fields.nameHint")}
-        {...(errors.name ? { error: errors.name } : {})}
-      >
-        <Input value={draft.name} onChange={(event) => set({ name: event.target.value })} />
-      </Field>
+      <NameField value={name} error={errors.name} onChange={(next) => onCommonChange({ name: next })} />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {draft.preset === "entraId" ? (
+        {preset === "entraId" ? (
           <Field
             label={t("identityProviders.fields.tenantId")}
             hint={t("identityProviders.fields.tenantIdHint")}
@@ -402,7 +421,7 @@ function ConnectionStep({
             />
           </Field>
         ) : null}
-        {draft.preset === "generic" ? (
+        {preset === "generic" ? (
           <Field
             label={t("identityProviders.fields.issuer")}
             hint={t("identityProviders.fields.issuerHint")}
@@ -427,14 +446,13 @@ function ConnectionStep({
           />
         </Field>
       </div>
-      {draft.preset === "google" ? (
-        <Field
-          label={t("identityProviders.accounts.domains")}
+      {preset === "google" ? (
+        <DomainsField
+          value={domains}
+          error={errors.domains}
           hint={t("identityProviders.accounts.domainsHintGoogle")}
-          {...(errors.domains ? { error: errors.domains } : {})}
-        >
-          <Input value={draft.domains} onChange={(event) => set({ domains: event.target.value })} />
-        </Field>
+          onChange={(next) => onCommonChange({ domains: next })}
+        />
       ) : null}
       <Section title={t("identityProviders.credentials.title")}>
         <div className="px-4 py-3">
@@ -487,13 +505,20 @@ function SavedProviderStep({
       {step === "attributes" ? (
         <>
           <Notice variant="success" title={t("identityProviders.wizard.saved", { name: provider.name })}>
-            {t("identityProviders.wizard.redirectHint")}
+            {t(`identityProviders.wizard.savedHints.${provider.type}`)}
           </Notice>
-          <RedirectUriField uri={provider.redirectUri} />
+          {provider.type === "oidc" ? <RedirectUriField uri={provider.redirectUri} /> : null}
+          {provider.type === "saml" ? <SamlServiceProviderFields provider={provider} /> : null}
           <h2 className="font-semibold text-lg">{t("identityProviders.wizard.stepNames.attributes")}</h2>
           <p className="text-text-muted">{t("identityProviders.attributes.description")}</p>
           <Section title={t("identityProviders.attributes.mapping")}>
-            <AttributeFields provider={provider} canManage={canManage} />
+            {provider.type === "oidc" ? <AttributeFields provider={provider} canManage={canManage} /> : null}
+            {provider.type === "saml" ? (
+              <SamlAttributeFields provider={provider} canManage={canManage} />
+            ) : null}
+            {provider.type === "ldap" ? (
+              <LdapAttributeFields provider={provider} canManage={canManage} />
+            ) : null}
           </Section>
         </>
       ) : null}
@@ -507,22 +532,35 @@ function SavedProviderStep({
             <LinkFields />
           </Section>
           <Section title={t("identityProviders.secondFactor.title")}>
-            <SecondFactorFields provider={provider} canManage={canManage} />
+            {provider.type === "ldap" ? (
+              <LdapSecondFactorFields provider={provider} canManage={canManage} />
+            ) : (
+              <SecondFactorFields provider={provider} canManage={canManage} />
+            )}
           </Section>
         </>
       ) : null}
       {step === "test" ? (
         <>
           <h2 className="font-semibold text-lg">{t("identityProviders.test.title")}</h2>
-          <p className="text-text-muted">{t("identityProviders.test.description")}</p>
-          <StartTestButton
-            provider={provider}
-            variant="primary"
-            returnTo={() =>
-              `${globalThis.location.pathname}?providerId=${provider.id}&step=${STEPS.indexOf("test")}`
-            }
-          />
-          {flowId ? <TestResult provider={provider} flowId={flowId} /> : null}
+          {provider.type === "ldap" ? (
+            <>
+              <p className="text-text-muted">{t("identityProviders.directoryTest.description")}</p>
+              <DirectoryTest provider={provider} />
+            </>
+          ) : (
+            <>
+              <p className="text-text-muted">{t("identityProviders.test.description")}</p>
+              <StartTestButton
+                provider={provider}
+                variant="primary"
+                returnTo={() =>
+                  `${globalThis.location.pathname}?providerId=${provider.id}&step=${STEPS.indexOf("test")}`
+                }
+              />
+              {flowId ? <TestResult provider={provider} flowId={flowId} /> : null}
+            </>
+          )}
         </>
       ) : null}
       <WizardFooter onBack={onBack} next={next} />

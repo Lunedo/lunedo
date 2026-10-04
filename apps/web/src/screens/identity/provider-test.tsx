@@ -115,7 +115,7 @@ export function TestResult({ provider, flowId }: { provider: IdentityProvider; f
   );
 }
 
-function Entry({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+export function Entry({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex min-w-0 flex-col">
       <dt className="text-text-muted">{label}</dt>

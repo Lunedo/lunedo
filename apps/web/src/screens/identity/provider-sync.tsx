@@ -96,7 +96,13 @@ export function SyncTab({ provider, canManage }: { provider: IdentityProvider; c
   };
 
   if (!directory) {
-    return <Notice variant="info">{t(`identityProviders.sync.signInOnly.${provider.config.preset}`)}</Notice>;
+    return (
+      <Notice variant="info">
+        {provider.type === "oidc"
+          ? t(`identityProviders.sync.signInOnly.${provider.config.preset}`)
+          : t(`identityProviders.sync.signInOnly.${provider.type}`)}
+      </Notice>
+    );
   }
   return (
     <div className="flex flex-col gap-4">
@@ -313,7 +319,8 @@ export function SyncSettings({ provider, canManage }: { provider: IdentityProvid
   const interval = useSaveState();
   const config = provider.config;
   const capabilities = provider.capabilities;
-  if (config.preset === "generic") return null;
+  const google = provider.type === "oidc" && config.preset === "google";
+  if (!capabilities.directorySync && !capabilities.disabledAccounts && !google) return null;
   return (
     <Section title={t("identityProviders.sync.settingsTitle")}>
       {capabilities.directorySync ? (
@@ -348,7 +355,7 @@ export function SyncSettings({ provider, canManage }: { provider: IdentityProvid
           control={<span className="text-text-muted">{t("identityProviders.sync.deactivate")}</span>}
         />
       ) : null}
-      {config.preset === "google" ? <GoogleDirectory provider={provider} canManage={canManage} /> : null}
+      {google ? <GoogleDirectory provider={provider} canManage={canManage} /> : null}
     </Section>
   );
 }

@@ -1,10 +1,22 @@
 import type { BadgeVariant } from "@pagehall/ui";
 import type { TFunction } from "i18next";
-import type { IdentityProvider, ProviderPreset } from "../../api/identity-queries.js";
+import type { IdentityProvider, ProviderPreset, ProviderType } from "../../api/identity-queries.js";
 import type { Formatter } from "../../format/format.js";
+import { translateKey } from "../../i18n/translate.js";
 
-export function presetLabel(t: TFunction, preset: ProviderPreset): string {
-  return t(`identityProviders.presets.${preset}`);
+export function presetLabel(t: TFunction, type: ProviderType, preset: ProviderPreset): string {
+  return translateKey(t, `identityProviders.presets.${type}.${preset}`);
+}
+
+export function providerPresetLabel(
+  t: TFunction,
+  provider: { type: ProviderType; config: { preset: ProviderPreset } },
+): string {
+  return presetLabel(t, provider.type, provider.config.preset);
+}
+
+export function typeLabel(t: TFunction, type: ProviderType): string {
+  return t(`identityProviders.types.${type}`);
 }
 
 export function newestCredential(provider: Pick<IdentityProvider, "credentials">) {

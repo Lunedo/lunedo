@@ -53,7 +53,9 @@
       "signInOnly": {
         "generic": "Profile and groups of this provider update at every sign-in. It has no directory Pagehall could synchronize with in the background; a SCIM connection, planned for a later version, will send changes at once.",
         "google": "Google Workspace is only used to sign in. Turn on group synchronization in the settings to read groups and synchronize them in the background.",
-        "entraId": "This provider is only read at sign-in."
+        "entraId": "This provider is only read at sign-in.",
+        "saml": "Profile and groups of this provider update at every sign-in. SAML has no directory Pagehall could synchronize with in the background.",
+        "ldap": "This directory is only read at sign-in."
       },
       "filter": "Filter runs",
       "filterAll": "All runs",
@@ -177,7 +179,15 @@
       },
       "proofValues": "Accepted proof values",
       "proofValuesHint": "Values of the amr claim that count as multi-factor authentication, separated by commas. Most providers send mfa.",
-      "proofValuesInvalid": "Enter 1 to 20 values of up to 50 characters, separated by commas."
+      "proofValuesInvalid": "Enter 1 to 20 values of up to 50 characters, separated by commas.",
+      "directoryModes": {
+        "pagehall": "Always ask for a Pagehall second factor",
+        "provider": "No additional second factor"
+      },
+      "directoryHints": {
+        "pagehall": "A directory password proves no second factor. After every sign-in with it, Pagehall asks for its own second factor; people without one set one up first.",
+        "provider": "A directory password proves no second factor. Pagehall still asks for one where the instance or an organization requires it."
+      }
     },
     "status": {
       "title": "Status",
@@ -206,11 +216,6 @@
       "domains": "Domains",
       "credential": "Credential"
     },
-    "presets": {
-      "entraId": "Microsoft Entra ID",
-      "google": "Google Workspace",
-      "generic": "Other OIDC provider"
-    },
     "credentialStatus": {
       "none": "No credential",
       "expired": "Credential expired",
@@ -223,7 +228,12 @@
       "expiringAction": "Create a new credential at the provider and add it here before then, or sign-in through this provider stops working.",
       "stopped": "Sign-in through {name} does not work: {status}.",
       "stoppedAction": "Add a valid credential from the provider, then test the sign-in.",
-      "renew": "Renew credential"
+      "renew": "Renew credential",
+      "metadataTitle": "The metadata of {name} could not be refreshed",
+      "metadataRefreshFailed": "Metadata of {name} could not be refreshed at {time}: {error}. Pagehall keeps using the last good metadata. Check the metadata address or upload the file again.",
+      "caExpiring": "The CA certificate of {name} expires on {date}",
+      "caExpiringAction": "Upload the new CA certificate of the directory in the provider's connection settings before then, or Pagehall can no longer connect to the directory.",
+      "openSettings": "Open settings"
     },
     "tabs": {
       "mapping": "Group mapping",
@@ -267,11 +277,6 @@
       "identifier": "Identifier",
       "identifierHint": "Never changes, also when names or addresses change.",
       "fixed": "Fixed for this type of provider",
-      "identifiers": {
-        "entraId": "Tenant and object ID",
-        "google": "Google user ID (sub)",
-        "generic": "Subject (sub)"
-      },
       "email": "E-mail address",
       "emailHint": "Used for notifications, invitations and the home organization by domain.",
       "emailSources": {
@@ -295,6 +300,34 @@
         "groupsHint": "Leave empty if the provider does not send groups.",
         "groupNames": "Claim for group names",
         "groupNamesHint": "Optional. Groups are matched by their ID; names are only shown."
+      },
+      "identifiers": {
+        "oidc": {
+          "entraId": "Tenant and object ID",
+          "google": "Google user ID (sub)",
+          "generic": "Subject (sub)"
+        },
+        "saml": {
+          "entraId": "Tenant and object ID"
+        },
+        "ldap": {
+          "activeDirectory": "objectGUID",
+          "generic": "entryUUID"
+        }
+      },
+      "samlEmailSources": {
+        "email": "E-mail address claim",
+        "userPrincipalName": "User principal name"
+      },
+      "saml": {
+        "identifier": "Attribute for the identifier",
+        "identifierHint": "An attribute that never changes for a person, such as objectGUID.",
+        "identifierHintGeneric": "Leave empty to use the persistent NameID of the identity provider.",
+        "email": "Attribute for the e-mail address",
+        "signInName": "Attribute for the sign-in name",
+        "displayName": "Attribute for the display name",
+        "groups": "Attribute for groups",
+        "optionalHint": "Optional. Leave empty if the identity provider does not send it."
       }
     },
     "accounts": {
@@ -313,14 +346,17 @@
       "link": "Link by e-mail address",
       "linkHint": "When an account with the same verified address exists, the person confirms once with its password and second factor. Pagehall never links accounts automatically.",
       "linkFixed": "Fixed for security",
-      "confirmationRequired": "Confirmation required"
+      "confirmationRequired": "Confirmation required",
+      "domainsHintDirectory": "Enter the domains of the e-mail addresses and sign-in names in the directory, for example example.com. The sign-in page asks people with these domains for their directory password, and accounts are created only for them. A domain belongs to one provider only."
     },
     "credentials": {
       "title": "Credentials",
       "kind": "Credential",
       "kinds": {
         "clientSecret": "Client secret",
-        "certificate": "Certificate"
+        "certificate": "Certificate",
+        "samlSigning": "Signing certificate",
+        "bindPassword": "Service account password"
       },
       "secret": "Client secret",
       "expiresOn": "Expires on",
@@ -334,15 +370,44 @@
       "details": "Created {created} · expires {expires}",
       "never": "never",
       "newest": "In use",
-      "add": "Add credential",
       "addTitle": "New credential for {name}",
-      "addDescription": "The current credential keeps working until you remove it, so you can switch without interruption.",
-      "save": "Add credential",
-      "renewHint": "During a renewal, old and new credential both work. Remove the old one once the new one is in place.",
       "noneTitle": "No credential",
-      "noneDescription": "Sign-in through this provider does not work until you add a client secret or a certificate.",
       "removeTitle": "Remove this credential?",
-      "removeDescription": "Pagehall stops using it at once. Make sure a newer credential works first."
+      "removeDescription": "Pagehall stops using it at once. Make sure a newer credential works first.",
+      "graphKinds": {
+        "clientSecret": "Client secret for Microsoft Graph",
+        "certificate": "Certificate for Microsoft Graph"
+      },
+      "bindPassword": "Password of the service account",
+      "bindPasswordHint": "Pagehall stores it encrypted and uses it only to search the directory.",
+      "signingHint": "Pagehall creates a new key pair for signing its requests. Its metadata lists the new certificate at once.",
+      "signingCreated": "Signing certificate created",
+      "signingUpload": "Pagehall's metadata contains the new certificate. Let the identity provider load the metadata again, or download the certificate and add it there. Remove the old certificate once the identity provider uses the new one.",
+      "addFor": {
+        "oidc": "Add credential",
+        "saml": "Add signing certificate",
+        "ldap": "Enter new password"
+      },
+      "saveFor": {
+        "oidc": "Add credential",
+        "saml": "Add",
+        "ldap": "Save password"
+      },
+      "addDescriptions": {
+        "oidc": "The current credential keeps working until you remove it, so you can switch without interruption.",
+        "saml": "The current certificate keeps working until you remove it, so the identity provider can switch without interruption.",
+        "ldap": "Change the password of the service account in the directory first, then enter it here. Remove the old one afterwards."
+      },
+      "noneDescriptions": {
+        "oidc": "Sign-in through this provider does not work until you add a client secret or a certificate.",
+        "saml": "Pagehall cannot sign its requests until you add a signing certificate.",
+        "ldap": "Pagehall cannot search the directory until you enter the password of the service account."
+      },
+      "renewHints": {
+        "oidc": "During a renewal, old and new credential both work. Remove the old one once the new one is in place.",
+        "saml": "During a renewal, Pagehall's metadata lists old and new certificate. Remove the old one once the identity provider uses the new one.",
+        "ldap": "The password has no expiry date in Pagehall. To rotate it, enter the new password and remove the old one."
+      }
     },
     "logo": {
       "label": "Logo",
@@ -386,17 +451,6 @@
         "test": "Test"
       },
       "typeTitle": "Which provider do you use?",
-      "typeHints": {
-        "entraId": "OIDC with groups through Microsoft Graph.",
-        "google": "OIDC with groups through the Directory API.",
-        "generic": "Keycloak, Authentik, Okta, Zitadel and others."
-      },
-      "typeMore": "SAML and LDAP follow later.",
-      "capabilities": {
-        "entraId": "Groups and account status are synchronized in the background; disabled accounts are deactivated.",
-        "google": "Sign-in only at first. Group synchronization can be turned on later with a service account.",
-        "generic": "Profile and groups update at every sign-in. There is no background synchronization."
-      },
       "connectionTitle": "Connect {type}",
       "connectionHints": {
         "entraId": "In the Entra admin center, create an app registration. After saving, Pagehall shows the redirect URI to enter there. Under Enterprise applications, turn on Assignment required and assign the groups that may use Pagehall.",
@@ -405,8 +459,216 @@
       },
       "saveConnection": "Save and continue",
       "saved": "{name} is saved",
-      "redirectHint": "Enter this redirect URI in the app registration at your provider, then continue.",
-      "finish": "Finish"
+      "finish": "Finish",
+      "choices": {
+        "entraId": {
+          "title": "Microsoft Entra ID",
+          "hint": "OIDC with groups through Microsoft Graph.",
+          "capabilities": "Groups and account status are synchronized in the background; disabled accounts are deactivated."
+        },
+        "google": {
+          "title": "Google Workspace",
+          "hint": "OIDC with groups through the Directory API.",
+          "capabilities": "Sign-in only at first. Group synchronization can be turned on later with a service account."
+        },
+        "oidc": {
+          "title": "Other OIDC provider",
+          "hint": "Keycloak, Authentik, Okta, Zitadel and others.",
+          "capabilities": "Profile and groups update at every sign-in. There is no background synchronization."
+        },
+        "saml": {
+          "title": "SAML 2.0",
+          "hint": "ADFS, Shibboleth or Entra ID through SAML.",
+          "capabilities": "Profile and groups update at every sign-in. With Entra ID, groups can also be synchronized through Microsoft Graph."
+        },
+        "ldap": {
+          "title": "LDAP or Active Directory",
+          "hint": "Sign-in with directory passwords and group sync.",
+          "capabilities": "Groups and account status are synchronized in the background; disabled accounts are deactivated."
+        }
+      },
+      "savedHints": {
+        "oidc": "Enter this redirect URI in the app registration at your provider, then continue.",
+        "saml": "Enter these values at the identity provider, or let it read Pagehall's metadata, then continue.",
+        "ldap": "Pagehall reaches the directory with the service account. Choose below how people sign in."
+      },
+      "samlTitle": "Connect a SAML 2.0 provider",
+      "samlPreset": "Identity provider",
+      "samlHints": {
+        "entraId": "In the Entra admin center, create an enterprise application with SAML single sign-on. After saving, Pagehall shows its entity ID and reply URL to enter there.",
+        "adfs": "In ADFS, add a relying party trust. After saving, Pagehall shows its metadata address, which ADFS can read.",
+        "generic": "Create a SAML service provider at your identity provider. After saving, Pagehall shows its entity ID, its assertion consumer service URL and its metadata."
+      },
+      "metadataUrlHints": {
+        "entraId": "The App Federation Metadata URL from the SAML settings of the enterprise application.",
+        "adfs": "Usually https://adfs.example.org/FederationMetadata/2007-06/FederationMetadata.xml.",
+        "generic": "The address of the identity provider's metadata, starting with https://."
+      },
+      "chooseMetadata": "Choose metadata file",
+      "metadataFileHint": "The XML file with the metadata of the identity provider. Without an address, upload a new file whenever its certificate changes.",
+      "metadataFileRequired": "Choose the metadata file of the identity provider.",
+      "noFile": "No file chosen",
+      "fileUnreadable": "The file could not be read. Choose it again or try another file.",
+      "ldapTitle": "Connect a directory",
+      "ldapPreset": "Directory",
+      "ldapHints": {
+        "activeDirectory": "Create a service account in Active Directory that may read people and groups. It needs no other rights.",
+        "generic": "Create a service account in the directory that may read people and groups, for example in OpenLDAP or FreeIPA. It needs no other rights."
+      },
+      "caHint": "Optional. Only needed when the server certificate was issued by your own certificate authority.",
+      "caFailedTitle": "The provider is saved, but the CA certificate is not",
+      "caFailedAction": "Continue and upload the right CA certificate in the test step or in the connection settings."
+    },
+    "types": {
+      "oidc": "OIDC",
+      "saml": "SAML",
+      "ldap": "LDAP"
+    },
+    "presets": {
+      "oidc": {
+        "entraId": "Microsoft Entra ID",
+        "google": "Google Workspace",
+        "generic": "Other OIDC provider"
+      },
+      "saml": {
+        "entraId": "Microsoft Entra ID (SAML)",
+        "adfs": "Active Directory Federation Services",
+        "generic": "Other SAML provider"
+      },
+      "ldap": {
+        "activeDirectory": "Active Directory",
+        "generic": "Other LDAP directory"
+      }
+    },
+    "certificate": {
+      "subject": "Subject",
+      "fingerprint": "Fingerprint",
+      "expiresAt": "Expires",
+      "validUntil": "Valid until {date}"
+    },
+    "saml": {
+      "entityId": "Entity ID of Pagehall",
+      "entityIdHint": "Also called identifier or audience at the identity provider.",
+      "acsUrl": "Assertion consumer service URL",
+      "acsUrlHint": "Also called reply URL. The identity provider sends the sign-in response to this address.",
+      "metadataUrl": "Metadata address of Pagehall",
+      "metadataUrlHint": "Most identity providers can read this address or the downloaded file, so you do not have to enter the values above by hand.",
+      "downloadMetadata": "Download metadata",
+      "metadataTitle": "Metadata of the identity provider",
+      "noMetadataTitle": "No metadata loaded yet",
+      "noMetadataUrl": "Pagehall could not load the metadata yet, so nobody can sign in. Check the metadata address and load it again.",
+      "noMetadataFile": "Upload the metadata file of the identity provider. Nobody can sign in until then.",
+      "refreshFailedTitle": "The metadata could not be refreshed",
+      "source": "Metadata source",
+      "sourceHint": "With an address, Pagehall loads the metadata again every day and picks up new certificates of the identity provider by itself.",
+      "sources": {
+        "url": "Metadata address",
+        "file": "Uploaded file"
+      },
+      "metadataAddress": "Metadata address",
+      "metadataAddressHint": "The address of the identity provider's metadata, starting with https://.",
+      "idpEntityId": "Entity ID of the identity provider",
+      "ssoUrl": "Sign-in address",
+      "certificates": "Signing certificates",
+      "certificatesHint": "Pagehall accepts only responses signed with one of these certificates.",
+      "fetchedAt": "Last loaded",
+      "loadAgain": "Load again",
+      "uploadMetadata": "Upload metadata file",
+      "idpInitiated": "Allow sign-in started at the identity provider",
+      "idpInitiatedHint": "Sign-in started at the identity provider cannot be tied to a request from this browser, so an attacker could sign someone into the attacker's account. Turn it on only if people must start from a portal such as the Microsoft app launcher.",
+      "requireSignedResponse": "Require a signed response",
+      "requireSignedResponseHint": "The assertion must always be signed. Entra ID and ADFS sign only the assertion by default; turn this on only if your identity provider also signs the whole response.",
+      "encryptedAssertions": "Require encrypted assertions",
+      "encryptedAssertionsHint": "The identity provider encrypts the assertion with Pagehall's certificate from the metadata. Turn it on only after the identity provider is set up for it, or sign-in stops working.",
+      "graphClientId": "Client ID for Microsoft Graph",
+      "graphClientIdHint": "Optional. With an app registration and a credential for it, Pagehall reads groups beyond the token limit and synchronizes the directory through Microsoft Graph."
+    },
+    "ldap": {
+      "url": "Server address",
+      "urlHint": "For example ldaps://dc01.example.org. Use ldaps:// or ldap:// with StartTLS, so passwords are never sent unencrypted.",
+      "urlInvalid": "Enter an address such as ldaps://dc01.example.org, without a path.",
+      "urlInvalidStartTls": "Enter an ldap:// address while StartTLS is on. To use ldaps://, turn StartTLS off first.",
+      "startTls": "Use StartTLS",
+      "startTlsHint": "Encrypts the ldap:// connection before any password is sent.",
+      "startTlsLdaps": "Only for ldap:// addresses; ldaps:// is encrypted already.",
+      "plainWarning": "Without StartTLS, passwords travel unencrypted. Pagehall refuses such a connection unless the instance runs with insecure identity providers allowed.",
+      "bindDn": "Service account DN",
+      "bindDnHint": "The distinguished name of the account Pagehall uses to search the directory, for example CN=pagehall,OU=Service,DC=example,DC=org.",
+      "userBaseDn": "Base DN for people",
+      "userBaseDnHint": "Pagehall searches for people below this entry, for example OU=Staff,DC=example,DC=org.",
+      "groupBaseDn": "Base DN for groups",
+      "groupBaseDnHint": "Pagehall searches for groups below this entry, for example OU=Groups,DC=example,DC=org.",
+      "dnInvalid": "Enter a distinguished name such as OU=Staff,DC=example,DC=org.",
+      "userFilter": "Filter for people",
+      "userFilterHint": "Only entries matching this LDAP filter can sign in.",
+      "groupFilter": "Filter for groups",
+      "groupFilterHint": "Only entries matching this LDAP filter count as groups.",
+      "filterInvalid": "Enter an LDAP filter in parentheses, such as (objectClass=person).",
+      "signInAttribute": "Sign-in name",
+      "signInAttributeHint": "What people enter on the sign-in page besides their password.",
+      "signInAttributes": {
+        "userPrincipalName": "User principal name (lena.hofer@example.org)",
+        "sAMAccountName": "Windows user name (lhofer)",
+        "mail": "E-mail address",
+        "uid": "User name (uid)"
+      },
+      "attributes": {
+        "email": "Attribute for the e-mail address",
+        "signInName": "Attribute for the sign-in name",
+        "displayName": "Attribute for the display name",
+        "groupName": "Attribute for group names"
+      },
+      "attributeInvalid": "Enter an LDAP attribute name such as mail.",
+      "groupMembership": "Group membership",
+      "groupMembershipHint": "Where the directory records who belongs to a group.",
+      "memberships": {
+        "member": "member attribute of the group",
+        "memberOf": "memberOf attribute of the person"
+      },
+      "disabledAttribute": "Attribute for disabled accounts",
+      "disabledAttributeHint": "Optional. Leave empty if the directory does not mark disabled accounts.",
+      "disabledValues": "Values that mean disabled",
+      "disabledValuesHint": "Separated by commas. Without values, any value of the attribute means disabled.",
+      "disabledValuesInvalid": "Enter up to 20 values of up to 256 characters, separated by commas.",
+      "caTitle": "CA certificate",
+      "caDescription": "Needed when the server certificate of the directory was issued by your own certificate authority.",
+      "caNone": "No CA certificate uploaded",
+      "caNoneHint": "Pagehall trusts only certificates of public certificate authorities.",
+      "caSystem": "Public authorities only",
+      "caUpload": "Upload CA certificate",
+      "caReplace": "Replace CA certificate",
+      "caRemove": "Remove CA certificate",
+      "caRemoveTitle": "Remove the CA certificate?",
+      "caRemoveDescription": "Pagehall then trusts only public certificate authorities. If the directory uses a certificate of your own authority, sign-in and sync stop working."
+    },
+    "directoryTest": {
+      "title": "Test the directory",
+      "description": "Pagehall connects with the service account and searches for a person. Nothing is saved, and no account is created.",
+      "signInName": "Sign-in name of a test person",
+      "signInNameHint": "Optional. Without it, Pagehall shows the first person it finds.",
+      "start": "Test the directory",
+      "checks": "Checks",
+      "steps": {
+        "connection": "Connection to the server",
+        "certificate": "Server certificate",
+        "serviceAccount": "Service account",
+        "search": "Search for people"
+      },
+      "states": {
+        "ok": "Passed",
+        "failed": "Failed",
+        "skipped": "Not checked"
+      },
+      "worked": "The directory works",
+      "workedDescription": "Pagehall reached the server, trusted its certificate, signed in with the service account and found a person.",
+      "failed": "Check failed: {step}",
+      "actions": {
+        "connection": "Check the server address, the port and the firewall between Pagehall and the directory, then test again.",
+        "certificate": "Upload the CA certificate that issued the server's certificate, then test again.",
+        "serviceAccount": "Check the DN and the password of the service account, then test again.",
+        "search": "Check the base DNs and the filters, then test again."
+      },
+      "sample": "Person found"
     }
   },
   "identities": {
@@ -714,7 +976,18 @@
     "rateLimited": "Too many requests. Wait a moment and try again.",
     "rateLimitedRetry": "Too many requests. Try again in {seconds, plural, one {# second} other {# seconds}}.",
     "internalError": "The server could not complete the request. Try again; if it keeps failing, ask your administrator to check the server log.",
-    "busy": "The server is busy. Try again in a moment."
+    "busy": "The server is busy. Try again in a moment.",
+    "passwordExpired": "Your directory password has expired. Change it the way your organization usually does, for example when signing in to your computer, or contact IT. Pagehall never changes directory passwords.",
+    "passwordMustChange": "Your directory password must be changed before you can sign in. Change it the way your organization usually does, for example when signing in to your computer, or contact IT. Pagehall never changes directory passwords.",
+    "accountLocked": "Your directory account is locked, usually after too many wrong passwords. Wait until it unlocks or contact IT.",
+    "accountDisabled": "Your directory account is disabled. Contact IT if you still need access.",
+    "outsideSignInHours": "Your directory account may not sign in at this time. Try again during your permitted hours or contact IT.",
+    "providerInitiatedSignIn": "Sign-in started at the identity provider is turned off for this instance. Start on the Pagehall sign-in page instead.",
+    "invalidSamlMetadata": "Pagehall could not use the SAML metadata. Check that the address or file contains the metadata of the identity provider and try again.",
+    "invalidSamlMetadataDetail": "Pagehall could not use the SAML metadata: {detail}. Check that the address or file contains the metadata of the identity provider and try again.",
+    "invalidCertificate": "This file is not a CA certificate Pagehall can use. Upload the certificate of the authority that issued the directory server's certificate, in PEM format.",
+    "directoryInvalidCredentials": "The sign-in name or the password is not correct. Check both and try again. If you forgot your password, reset it the way your organization usually does or contact IT.",
+    "directoryUnavailable": "The directory could not be reached. Try again in a few minutes; if it keeps failing, contact IT."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -879,7 +1152,19 @@
     "secondFactorSetupTitle": "Set up a second factor",
     "secondFactorSetupDescription": "Your organization requires a second factor. Set one up to continue.",
     "secondFactorMethod": "Second factor",
-    "registerLink": "No account yet? Create one"
+    "registerLink": "No account yet? Create one",
+    "directory": {
+      "failedTitle": "Sign-in with {name} did not work",
+      "signInName": "Sign-in name at {name}",
+      "passwordHint": "The password of your work account. Pagehall only checks it with the directory and never changes it.",
+      "signInNameHints": {
+        "email": "Your e-mail address.",
+        "userPrincipalName": "Usually your e-mail address, for example lena.hofer@example.org.",
+        "sAMAccountName": "Your Windows user name without domain, for example lhofer.",
+        "uid": "Your user name in the directory, for example lhofer.",
+        "unknown": "The name you use to sign in to your computer at work."
+      }
+    }
   },
   "reauthentication": {
     "withProvider": "Continue with {name}",
@@ -893,7 +1178,9 @@
       "totp": "Authenticator app",
       "passkey": "Passkey"
     },
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "directoryPassword": "Password at {name}",
+    "withDirectory": "Confirm with {name}"
   },
   "setup": {
     "progress": "Step {step} of {total} · {name}",
@@ -2021,6 +2308,9 @@
         "credentialRemoved": "Provider credential removed",
         "logoChanged": "Provider logo changed",
         "directoryKeyChanged": "Directory key changed",
+        "metadataChanged": "SAML metadata changed",
+        "metadataRefreshFailed": "SAML metadata could not be refreshed",
+        "caCertificateChanged": "CA certificate of the directory changed",
         "synchronized": "Provider synchronized",
         "syncCancelled": "Synchronization cancelled"
       },
@@ -2422,6 +2712,11 @@
     "revokeInvitation": "The invitation was not revoked",
     "changeServiceAccount": "The service account was not changed",
     "deactivateServiceAccount": "The service account was not deactivated",
-    "loadAudit": "The audit log could not be loaded"
+    "loadAudit": "The audit log could not be loaded",
+    "refreshMetadata": "The metadata could not be loaded",
+    "uploadMetadata": "The metadata file could not be saved",
+    "uploadCaCertificate": "The CA certificate could not be saved",
+    "removeCaCertificate": "The CA certificate could not be removed",
+    "testDirectory": "The directory could not be tested"
   }
 }

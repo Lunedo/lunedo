@@ -53,7 +53,9 @@
       "signInOnly": {
         "generic": "Profil und Gruppen dieses Anbieters werden bei jeder Anmeldung aktualisiert. Er hat kein Verzeichnis, das Pagehall im Hintergrund synchronisieren könnte; eine SCIM-Verbindung, geplant für eine spätere Version, wird Änderungen sofort übermitteln.",
         "google": "Google Workspace dient nur zur Anmeldung. Schalte in den Einstellungen die Gruppensynchronisierung ein, um Gruppen zu lesen und im Hintergrund zu synchronisieren.",
-        "entraId": "Dieser Anbieter wird nur bei der Anmeldung gelesen."
+        "entraId": "Dieser Anbieter wird nur bei der Anmeldung gelesen.",
+        "saml": "Profil und Gruppen dieses Anbieters werden bei jeder Anmeldung aktualisiert. SAML hat kein Verzeichnis, das Pagehall im Hintergrund synchronisieren könnte.",
+        "ldap": "Dieses Verzeichnis wird nur bei der Anmeldung gelesen."
       },
       "filter": "Läufe filtern",
       "filterAll": "Alle Läufe",
@@ -177,7 +179,15 @@
       },
       "proofValues": "Anerkannte Nachweise",
       "proofValuesHint": "Werte des amr-Claims, die als Mehrfaktor-Authentifizierung gelten, durch Kommas getrennt. Die meisten Anbieter senden mfa.",
-      "proofValuesInvalid": "Gib 1 bis 20 Werte mit höchstens 50 Zeichen ein, durch Kommas getrennt."
+      "proofValuesInvalid": "Gib 1 bis 20 Werte mit höchstens 50 Zeichen ein, durch Kommas getrennt.",
+      "directoryModes": {
+        "pagehall": "Immer den zweiten Faktor von Pagehall abfragen",
+        "provider": "Kein zusätzlicher zweiter Faktor"
+      },
+      "directoryHints": {
+        "pagehall": "Ein Verzeichnispasswort ist kein zweiter Faktor. Nach jeder Anmeldung damit fragt Pagehall den eigenen zweiten Faktor ab; wer noch keinen hat, richtet zuerst einen ein.",
+        "provider": "Ein Verzeichnispasswort ist kein zweiter Faktor. Pagehall fragt trotzdem einen ab, wo die Instanz oder eine Organisation ihn verlangt."
+      }
     },
     "status": {
       "title": "Status",
@@ -206,11 +216,6 @@
       "domains": "Domains",
       "credential": "Zugang"
     },
-    "presets": {
-      "entraId": "Microsoft Entra ID",
-      "google": "Google Workspace",
-      "generic": "Anderer OIDC-Anbieter"
-    },
     "credentialStatus": {
       "none": "Kein Zugang",
       "expired": "Zugang abgelaufen",
@@ -223,7 +228,12 @@
       "expiringAction": "Erstelle beim Anbieter einen neuen Zugang und trage ihn vorher hier ein, sonst funktioniert die Anmeldung über diesen Anbieter nicht mehr.",
       "stopped": "Die Anmeldung über {name} funktioniert nicht: {status}.",
       "stoppedAction": "Füge einen gültigen Zugang vom Anbieter hinzu und teste dann die Anmeldung.",
-      "renew": "Zugang erneuern"
+      "renew": "Zugang erneuern",
+      "metadataTitle": "Die Metadaten von {name} konnten nicht aktualisiert werden",
+      "metadataRefreshFailed": "Die Metadaten von {name} konnten am {time} nicht aktualisiert werden: {error}. Pagehall verwendet weiter die letzten gültigen Metadaten. Prüfe die Metadatenadresse oder lade die Datei erneut hoch.",
+      "caExpiring": "Das CA-Zertifikat von {name} läuft am {date} ab",
+      "caExpiringAction": "Lade vorher das neue CA-Zertifikat des Verzeichnisses in den Verbindungseinstellungen des Anbieters hoch, sonst kann Pagehall das Verzeichnis nicht mehr erreichen.",
+      "openSettings": "Einstellungen öffnen"
     },
     "tabs": {
       "mapping": "Gruppenzuordnung",
@@ -267,11 +277,6 @@
       "identifier": "Kennung",
       "identifierHint": "Ändert sich nie, auch wenn sich Namen oder Adressen ändern.",
       "fixed": "Für diesen Anbietertyp fest",
-      "identifiers": {
-        "entraId": "Tenant- und Objekt-ID",
-        "google": "Google-Benutzer-ID (sub)",
-        "generic": "Subject (sub)"
-      },
       "email": "E-Mail-Adresse",
       "emailHint": "Für Benachrichtigungen, Einladungen und die Heimatorganisation nach Domain.",
       "emailSources": {
@@ -295,6 +300,34 @@
         "groupsHint": "Leer lassen, wenn der Anbieter keine Gruppen schickt.",
         "groupNames": "Claim für Gruppennamen",
         "groupNamesHint": "Optional. Gruppen werden über ihre ID zugeordnet, Namen dienen nur der Anzeige."
+      },
+      "identifiers": {
+        "oidc": {
+          "entraId": "Tenant- und Objekt-ID",
+          "google": "Google-Benutzer-ID (sub)",
+          "generic": "Subject (sub)"
+        },
+        "saml": {
+          "entraId": "Tenant- und Objekt-ID"
+        },
+        "ldap": {
+          "activeDirectory": "objectGUID",
+          "generic": "entryUUID"
+        }
+      },
+      "samlEmailSources": {
+        "email": "Claim für die E-Mail-Adresse",
+        "userPrincipalName": "User Principal Name"
+      },
+      "saml": {
+        "identifier": "Attribut für die Kennung",
+        "identifierHint": "Ein Attribut, das sich für eine Person nie ändert, etwa objectGUID.",
+        "identifierHintGeneric": "Leer lassen, um die dauerhafte NameID des Identitätsanbieters zu verwenden.",
+        "email": "Attribut für die E-Mail-Adresse",
+        "signInName": "Attribut für den Anmeldenamen",
+        "displayName": "Attribut für den Anzeigenamen",
+        "groups": "Attribut für Gruppen",
+        "optionalHint": "Optional. Leer lassen, wenn der Identitätsanbieter es nicht schickt."
       }
     },
     "accounts": {
@@ -313,14 +346,17 @@
       "link": "Über die E-Mail-Adresse verknüpfen",
       "linkHint": "Gibt es schon ein Konto mit derselben bestätigten Adresse, bestätigt die Person einmal mit dessen Passwort und zweitem Faktor. Pagehall verknüpft Konten nie automatisch.",
       "linkFixed": "Aus Sicherheitsgründen fest",
-      "confirmationRequired": "Bestätigung erforderlich"
+      "confirmationRequired": "Bestätigung erforderlich",
+      "domainsHintDirectory": "Gib die Domains der E-Mail-Adressen und Anmeldenamen im Verzeichnis ein, zum Beispiel example.com. Die Anmeldeseite fragt Personen mit diesen Domains nach ihrem Verzeichnispasswort, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Anbieter."
     },
     "credentials": {
       "title": "Zugänge",
       "kind": "Zugang",
       "kinds": {
         "clientSecret": "Client-Secret",
-        "certificate": "Zertifikat"
+        "certificate": "Zertifikat",
+        "samlSigning": "Signaturzertifikat",
+        "bindPassword": "Passwort des Dienstkontos"
       },
       "secret": "Client-Secret",
       "expiresOn": "Läuft ab am",
@@ -334,15 +370,44 @@
       "details": "Erstellt am {created} · läuft ab {expires}",
       "never": "nie",
       "newest": "In Verwendung",
-      "add": "Zugang hinzufügen",
       "addTitle": "Neuer Zugang für {name}",
-      "addDescription": "Der bisherige Zugang funktioniert weiter, bis du ihn entfernst. So wechselst du ohne Unterbrechung.",
-      "save": "Zugang hinzufügen",
-      "renewHint": "Während einer Erneuerung funktionieren alter und neuer Zugang. Entferne den alten, sobald der neue eingetragen ist.",
       "noneTitle": "Kein Zugang",
-      "noneDescription": "Die Anmeldung über diesen Anbieter funktioniert erst, wenn du ein Client-Secret oder ein Zertifikat hinzufügst.",
       "removeTitle": "Diesen Zugang entfernen?",
-      "removeDescription": "Pagehall verwendet ihn sofort nicht mehr. Stell vorher sicher, dass ein neuerer Zugang funktioniert."
+      "removeDescription": "Pagehall verwendet ihn sofort nicht mehr. Stell vorher sicher, dass ein neuerer Zugang funktioniert.",
+      "graphKinds": {
+        "clientSecret": "Client-Secret für Microsoft Graph",
+        "certificate": "Zertifikat für Microsoft Graph"
+      },
+      "bindPassword": "Passwort des Dienstkontos",
+      "bindPasswordHint": "Pagehall speichert es verschlüsselt und verwendet es nur, um im Verzeichnis zu suchen.",
+      "signingHint": "Pagehall erzeugt ein neues Schlüsselpaar zum Signieren seiner Anfragen. Die Metadaten enthalten das neue Zertifikat sofort.",
+      "signingCreated": "Signaturzertifikat erstellt",
+      "signingUpload": "Die Metadaten von Pagehall enthalten das neue Zertifikat. Lass den Identitätsanbieter die Metadaten neu laden oder lade das Zertifikat herunter und trage es dort ein. Entferne das alte Zertifikat, sobald der Identitätsanbieter das neue verwendet.",
+      "addFor": {
+        "oidc": "Zugang hinzufügen",
+        "saml": "Signaturzertifikat hinzufügen",
+        "ldap": "Neues Passwort eingeben"
+      },
+      "saveFor": {
+        "oidc": "Zugang hinzufügen",
+        "saml": "Hinzufügen",
+        "ldap": "Passwort speichern"
+      },
+      "addDescriptions": {
+        "oidc": "Der bisherige Zugang funktioniert weiter, bis du ihn entfernst. So wechselst du ohne Unterbrechung.",
+        "saml": "Das bisherige Zertifikat funktioniert weiter, bis du es entfernst. So kann der Identitätsanbieter ohne Unterbrechung wechseln.",
+        "ldap": "Ändere zuerst das Passwort des Dienstkontos im Verzeichnis und trag es dann hier ein. Entferne danach das alte."
+      },
+      "noneDescriptions": {
+        "oidc": "Die Anmeldung über diesen Anbieter funktioniert erst, wenn du ein Client-Secret oder ein Zertifikat hinzufügst.",
+        "saml": "Pagehall kann seine Anfragen erst signieren, wenn du ein Signaturzertifikat hinzufügst.",
+        "ldap": "Pagehall kann erst im Verzeichnis suchen, wenn du das Passwort des Dienstkontos eingibst."
+      },
+      "renewHints": {
+        "oidc": "Während einer Erneuerung funktionieren alter und neuer Zugang. Entferne den alten, sobald der neue eingetragen ist.",
+        "saml": "Während einer Erneuerung enthalten die Metadaten von Pagehall altes und neues Zertifikat. Entferne das alte, sobald der Identitätsanbieter das neue verwendet.",
+        "ldap": "Das Passwort hat in Pagehall kein Ablaufdatum. Zum Wechseln gibst du das neue Passwort ein und entfernst das alte."
+      }
     },
     "logo": {
       "label": "Logo",
@@ -386,17 +451,6 @@
         "test": "Test"
       },
       "typeTitle": "Welchen Anbieter verwendest du?",
-      "typeHints": {
-        "entraId": "OIDC mit Gruppen über Microsoft Graph.",
-        "google": "OIDC mit Gruppen über die Directory API.",
-        "generic": "Keycloak, Authentik, Okta, Zitadel und andere."
-      },
-      "typeMore": "SAML und LDAP folgen später.",
-      "capabilities": {
-        "entraId": "Gruppen und Kontostatus werden im Hintergrund synchronisiert; deaktivierte Konten werden deaktiviert.",
-        "google": "Zuerst nur zur Anmeldung. Die Gruppensynchronisierung lässt sich später mit einem Dienstkonto einschalten.",
-        "generic": "Profil und Gruppen werden bei jeder Anmeldung aktualisiert. Eine Synchronisierung im Hintergrund gibt es nicht."
-      },
       "connectionTitle": "{type} verbinden",
       "connectionHints": {
         "entraId": "Erstelle im Entra Admin Center eine App-Registrierung. Nach dem Speichern zeigt Pagehall die Weiterleitungs-URI, die du dort einträgst. Schalte unter Unternehmensanwendungen „Zuweisung erforderlich“ ein und weise die Gruppen zu, die Pagehall verwenden dürfen.",
@@ -405,8 +459,216 @@
       },
       "saveConnection": "Speichern und weiter",
       "saved": "{name} ist gespeichert",
-      "redirectHint": "Trage diese Weiterleitungs-URI in der App-Registrierung bei deinem Anbieter ein und mach dann weiter.",
-      "finish": "Fertig"
+      "finish": "Fertig",
+      "choices": {
+        "entraId": {
+          "title": "Microsoft Entra ID",
+          "hint": "OIDC mit Gruppen über Microsoft Graph.",
+          "capabilities": "Gruppen und Kontostatus werden im Hintergrund synchronisiert; deaktivierte Konten werden deaktiviert."
+        },
+        "google": {
+          "title": "Google Workspace",
+          "hint": "OIDC mit Gruppen über die Directory API.",
+          "capabilities": "Zuerst nur zur Anmeldung. Die Gruppensynchronisierung lässt sich später mit einem Dienstkonto einschalten."
+        },
+        "oidc": {
+          "title": "Anderer OIDC-Anbieter",
+          "hint": "Keycloak, Authentik, Okta, Zitadel und andere.",
+          "capabilities": "Profil und Gruppen werden bei jeder Anmeldung aktualisiert. Eine Synchronisierung im Hintergrund gibt es nicht."
+        },
+        "saml": {
+          "title": "SAML 2.0",
+          "hint": "ADFS, Shibboleth oder Entra ID über SAML.",
+          "capabilities": "Profil und Gruppen werden bei jeder Anmeldung aktualisiert. Mit Entra ID lassen sich Gruppen zusätzlich über Microsoft Graph synchronisieren."
+        },
+        "ldap": {
+          "title": "LDAP oder Active Directory",
+          "hint": "Anmeldung mit Verzeichnispasswörtern und Gruppensynchronisierung.",
+          "capabilities": "Gruppen und Kontostatus werden im Hintergrund synchronisiert; deaktivierte Konten werden deaktiviert."
+        }
+      },
+      "savedHints": {
+        "oidc": "Trage diese Weiterleitungs-URI in der App-Registrierung bei deinem Anbieter ein und mach dann weiter.",
+        "saml": "Trage diese Werte beim Identitätsanbieter ein oder lass ihn die Metadaten von Pagehall lesen und mach dann weiter.",
+        "ldap": "Pagehall erreicht das Verzeichnis mit dem Dienstkonto. Wähle unten, wie sich Personen anmelden."
+      },
+      "samlTitle": "SAML-2.0-Anbieter verbinden",
+      "samlPreset": "Identitätsanbieter",
+      "samlHints": {
+        "entraId": "Erstelle im Entra Admin Center eine Unternehmensanwendung mit SAML-Single-Sign-on. Nach dem Speichern zeigt Pagehall die Entity-ID und die Antwort-URL, die du dort einträgst.",
+        "adfs": "Füge in ADFS eine Vertrauensstellung der vertrauenden Seite hinzu. Nach dem Speichern zeigt Pagehall seine Metadatenadresse, die ADFS lesen kann.",
+        "generic": "Lege bei deinem Identitätsanbieter einen SAML-Dienstanbieter an. Nach dem Speichern zeigt Pagehall seine Entity-ID, seine Assertion-Consumer-Service-URL und seine Metadaten."
+      },
+      "metadataUrlHints": {
+        "entraId": "Die App-Verbundmetadaten-URL aus den SAML-Einstellungen der Unternehmensanwendung.",
+        "adfs": "Meist https://adfs.example.org/FederationMetadata/2007-06/FederationMetadata.xml.",
+        "generic": "Die Adresse der Metadaten des Identitätsanbieters, beginnend mit https://."
+      },
+      "chooseMetadata": "Metadatendatei auswählen",
+      "metadataFileHint": "Die XML-Datei mit den Metadaten des Identitätsanbieters. Ohne Adresse musst du eine neue Datei hochladen, sobald sich sein Zertifikat ändert.",
+      "metadataFileRequired": "Wähle die Metadatendatei des Identitätsanbieters aus.",
+      "noFile": "Keine Datei ausgewählt",
+      "fileUnreadable": "Die Datei konnte nicht gelesen werden. Wähle sie erneut aus oder versuche eine andere Datei.",
+      "ldapTitle": "Verzeichnis verbinden",
+      "ldapPreset": "Verzeichnis",
+      "ldapHints": {
+        "activeDirectory": "Lege im Active Directory ein Dienstkonto an, das Personen und Gruppen lesen darf. Weitere Rechte braucht es nicht.",
+        "generic": "Lege im Verzeichnis ein Dienstkonto an, das Personen und Gruppen lesen darf, zum Beispiel in OpenLDAP oder FreeIPA. Weitere Rechte braucht es nicht."
+      },
+      "caHint": "Optional. Nur nötig, wenn das Serverzertifikat von deiner eigenen Zertifizierungsstelle ausgestellt wurde.",
+      "caFailedTitle": "Der Anbieter ist gespeichert, das CA-Zertifikat aber nicht",
+      "caFailedAction": "Mach weiter und lade das richtige CA-Zertifikat im Testschritt oder in den Verbindungseinstellungen hoch."
+    },
+    "types": {
+      "oidc": "OIDC",
+      "saml": "SAML",
+      "ldap": "LDAP"
+    },
+    "presets": {
+      "oidc": {
+        "entraId": "Microsoft Entra ID",
+        "google": "Google Workspace",
+        "generic": "Anderer OIDC-Anbieter"
+      },
+      "saml": {
+        "entraId": "Microsoft Entra ID (SAML)",
+        "adfs": "Active Directory Federation Services",
+        "generic": "Anderer SAML-Anbieter"
+      },
+      "ldap": {
+        "activeDirectory": "Active Directory",
+        "generic": "Anderes LDAP-Verzeichnis"
+      }
+    },
+    "certificate": {
+      "subject": "Inhaber",
+      "fingerprint": "Fingerabdruck",
+      "expiresAt": "Läuft ab",
+      "validUntil": "Gültig bis {date}"
+    },
+    "saml": {
+      "entityId": "Entity-ID von Pagehall",
+      "entityIdHint": "Beim Identitätsanbieter auch Bezeichner oder Zielgruppe genannt.",
+      "acsUrl": "Assertion-Consumer-Service-URL",
+      "acsUrlHint": "Auch Antwort-URL genannt. Der Identitätsanbieter schickt die Anmeldeantwort an diese Adresse.",
+      "metadataUrl": "Metadatenadresse von Pagehall",
+      "metadataUrlHint": "Die meisten Identitätsanbieter können diese Adresse oder die heruntergeladene Datei lesen. Dann musst du die Werte oben nicht von Hand eintragen.",
+      "downloadMetadata": "Metadaten herunterladen",
+      "metadataTitle": "Metadaten des Identitätsanbieters",
+      "noMetadataTitle": "Noch keine Metadaten geladen",
+      "noMetadataUrl": "Pagehall konnte die Metadaten noch nicht laden, deshalb kann sich niemand anmelden. Prüfe die Metadatenadresse und lade sie erneut.",
+      "noMetadataFile": "Lade die Metadatendatei des Identitätsanbieters hoch. Bis dahin kann sich niemand anmelden.",
+      "refreshFailedTitle": "Die Metadaten konnten nicht aktualisiert werden",
+      "source": "Quelle der Metadaten",
+      "sourceHint": "Mit einer Adresse lädt Pagehall die Metadaten täglich neu und übernimmt neue Zertifikate des Identitätsanbieters selbst.",
+      "sources": {
+        "url": "Metadatenadresse",
+        "file": "Hochgeladene Datei"
+      },
+      "metadataAddress": "Metadatenadresse",
+      "metadataAddressHint": "Die Adresse der Metadaten des Identitätsanbieters, beginnend mit https://.",
+      "idpEntityId": "Entity-ID des Identitätsanbieters",
+      "ssoUrl": "Anmeldeadresse",
+      "certificates": "Signaturzertifikate",
+      "certificatesHint": "Pagehall akzeptiert nur Antworten, die mit einem dieser Zertifikate signiert sind.",
+      "fetchedAt": "Zuletzt geladen",
+      "loadAgain": "Erneut laden",
+      "uploadMetadata": "Metadatendatei hochladen",
+      "idpInitiated": "Anmeldung erlauben, die beim Identitätsanbieter beginnt",
+      "idpInitiatedHint": "Eine Anmeldung, die beim Identitätsanbieter beginnt, lässt sich keiner Anfrage aus diesem Browser zuordnen. Ein Angreifer könnte so jemanden in sein eigenes Konto anmelden. Schalte das nur ein, wenn Personen von einem Portal wie dem Microsoft App Launcher aus starten müssen.",
+      "requireSignedResponse": "Signierte Antwort verlangen",
+      "requireSignedResponseHint": "Die Assertion muss immer signiert sein. Entra ID und ADFS signieren standardmäßig nur die Assertion; schalte das nur ein, wenn dein Identitätsanbieter auch die ganze Antwort signiert.",
+      "encryptedAssertions": "Verschlüsselte Assertions verlangen",
+      "encryptedAssertionsHint": "Der Identitätsanbieter verschlüsselt die Assertion mit dem Zertifikat von Pagehall aus den Metadaten. Schalte das erst ein, wenn der Identitätsanbieter dafür eingerichtet ist, sonst funktioniert die Anmeldung nicht mehr.",
+      "graphClientId": "Client-ID für Microsoft Graph",
+      "graphClientIdHint": "Optional. Mit einer App-Registrierung und einem Zugang dafür liest Pagehall Gruppen über die Grenze des Tokens hinaus und synchronisiert das Verzeichnis über Microsoft Graph."
+    },
+    "ldap": {
+      "url": "Serveradresse",
+      "urlHint": "Zum Beispiel ldaps://dc01.example.org. Verwende ldaps:// oder ldap:// mit StartTLS, damit Passwörter nie unverschlüsselt übertragen werden.",
+      "urlInvalid": "Gib eine Adresse wie ldaps://dc01.example.org ohne Pfad ein.",
+      "urlInvalidStartTls": "Gib eine ldap://-Adresse ein, solange StartTLS eingeschaltet ist. Für ldaps:// schalte zuerst StartTLS aus.",
+      "startTls": "StartTLS verwenden",
+      "startTlsHint": "Verschlüsselt die ldap://-Verbindung, bevor ein Passwort übertragen wird.",
+      "startTlsLdaps": "Nur für ldap://-Adressen; ldaps:// ist bereits verschlüsselt.",
+      "plainWarning": "Ohne StartTLS werden Passwörter unverschlüsselt übertragen. Pagehall lehnt eine solche Verbindung ab, außer die Instanz läuft mit erlaubten unsicheren Identitätsanbietern.",
+      "bindDn": "DN des Dienstkontos",
+      "bindDnHint": "Der Distinguished Name des Kontos, mit dem Pagehall im Verzeichnis sucht, zum Beispiel CN=pagehall,OU=Service,DC=example,DC=org.",
+      "userBaseDn": "Basis-DN für Personen",
+      "userBaseDnHint": "Pagehall sucht Personen unterhalb dieses Eintrags, zum Beispiel OU=Staff,DC=example,DC=org.",
+      "groupBaseDn": "Basis-DN für Gruppen",
+      "groupBaseDnHint": "Pagehall sucht Gruppen unterhalb dieses Eintrags, zum Beispiel OU=Groups,DC=example,DC=org.",
+      "dnInvalid": "Gib einen Distinguished Name wie OU=Staff,DC=example,DC=org ein.",
+      "userFilter": "Filter für Personen",
+      "userFilterHint": "Nur Einträge, die diesem LDAP-Filter entsprechen, können sich anmelden.",
+      "groupFilter": "Filter für Gruppen",
+      "groupFilterHint": "Nur Einträge, die diesem LDAP-Filter entsprechen, gelten als Gruppen.",
+      "filterInvalid": "Gib einen LDAP-Filter in Klammern ein, etwa (objectClass=person).",
+      "signInAttribute": "Anmeldename",
+      "signInAttributeHint": "Was Personen auf der Anmeldeseite neben ihrem Passwort eingeben.",
+      "signInAttributes": {
+        "userPrincipalName": "User Principal Name (lena.hofer@example.org)",
+        "sAMAccountName": "Windows-Benutzername (lhofer)",
+        "mail": "E-Mail-Adresse",
+        "uid": "Benutzername (uid)"
+      },
+      "attributes": {
+        "email": "Attribut für die E-Mail-Adresse",
+        "signInName": "Attribut für den Anmeldenamen",
+        "displayName": "Attribut für den Anzeigenamen",
+        "groupName": "Attribut für Gruppennamen"
+      },
+      "attributeInvalid": "Gib einen LDAP-Attributnamen wie mail ein.",
+      "groupMembership": "Gruppenmitgliedschaft",
+      "groupMembershipHint": "Wo das Verzeichnis festhält, wer zu einer Gruppe gehört.",
+      "memberships": {
+        "member": "Attribut member der Gruppe",
+        "memberOf": "Attribut memberOf der Person"
+      },
+      "disabledAttribute": "Attribut für deaktivierte Konten",
+      "disabledAttributeHint": "Optional. Leer lassen, wenn das Verzeichnis deaktivierte Konten nicht kennzeichnet.",
+      "disabledValues": "Werte, die deaktiviert bedeuten",
+      "disabledValuesHint": "Durch Kommas getrennt. Ohne Werte bedeutet jeder Wert des Attributs deaktiviert.",
+      "disabledValuesInvalid": "Gib bis zu 20 Werte mit höchstens 256 Zeichen ein, durch Kommas getrennt.",
+      "caTitle": "CA-Zertifikat",
+      "caDescription": "Nötig, wenn das Serverzertifikat des Verzeichnisses von deiner eigenen Zertifizierungsstelle ausgestellt wurde.",
+      "caNone": "Kein CA-Zertifikat hochgeladen",
+      "caNoneHint": "Pagehall vertraut nur Zertifikaten öffentlicher Zertifizierungsstellen.",
+      "caSystem": "Nur öffentliche Stellen",
+      "caUpload": "CA-Zertifikat hochladen",
+      "caReplace": "CA-Zertifikat ersetzen",
+      "caRemove": "CA-Zertifikat entfernen",
+      "caRemoveTitle": "CA-Zertifikat entfernen?",
+      "caRemoveDescription": "Pagehall vertraut dann nur öffentlichen Zertifizierungsstellen. Verwendet das Verzeichnis ein Zertifikat deiner eigenen Stelle, funktionieren Anmeldung und Synchronisierung nicht mehr."
+    },
+    "directoryTest": {
+      "title": "Verzeichnis testen",
+      "description": "Pagehall verbindet sich mit dem Dienstkonto und sucht eine Person. Es wird nichts gespeichert und kein Konto angelegt.",
+      "signInName": "Anmeldename einer Testperson",
+      "signInNameHint": "Optional. Ohne Angabe zeigt Pagehall die erste Person, die es findet.",
+      "start": "Verzeichnis testen",
+      "checks": "Prüfungen",
+      "steps": {
+        "connection": "Verbindung zum Server",
+        "certificate": "Serverzertifikat",
+        "serviceAccount": "Dienstkonto",
+        "search": "Suche nach Personen"
+      },
+      "states": {
+        "ok": "Bestanden",
+        "failed": "Fehlgeschlagen",
+        "skipped": "Nicht geprüft"
+      },
+      "worked": "Das Verzeichnis funktioniert",
+      "workedDescription": "Pagehall hat den Server erreicht, seinem Zertifikat vertraut, sich mit dem Dienstkonto angemeldet und eine Person gefunden.",
+      "failed": "Prüfung fehlgeschlagen: {step}",
+      "actions": {
+        "connection": "Prüfe Serveradresse, Port und die Firewall zwischen Pagehall und dem Verzeichnis und teste dann erneut.",
+        "certificate": "Lade das CA-Zertifikat hoch, das das Zertifikat des Servers ausgestellt hat, und teste dann erneut.",
+        "serviceAccount": "Prüfe DN und Passwort des Dienstkontos und teste dann erneut.",
+        "search": "Prüfe die Basis-DNs und die Filter und teste dann erneut."
+      },
+      "sample": "Gefundene Person"
     }
   },
   "identities": {
@@ -714,7 +976,18 @@
     "rateLimited": "Zu viele Anfragen. Warte einen Moment und versuche es erneut.",
     "rateLimitedRetry": "Zu viele Anfragen. Versuche es in {seconds, plural, one {# Sekunde} other {# Sekunden}} erneut.",
     "internalError": "Der Server konnte die Anfrage nicht ausführen. Versuche es erneut; klappt es weiterhin nicht, bitte deine Administration, das Server-Log zu prüfen.",
-    "busy": "Der Server ist ausgelastet. Versuche es gleich erneut."
+    "busy": "Der Server ist ausgelastet. Versuche es gleich erneut.",
+    "passwordExpired": "Dein Verzeichnispasswort ist abgelaufen. Ändere es auf dem in deiner Organisation üblichen Weg, zum Beispiel bei der Anmeldung am Computer, oder wende dich an die IT. Pagehall ändert Verzeichnispasswörter nie.",
+    "passwordMustChange": "Dein Verzeichnispasswort muss geändert werden, bevor du dich anmelden kannst. Ändere es auf dem in deiner Organisation üblichen Weg, zum Beispiel bei der Anmeldung am Computer, oder wende dich an die IT. Pagehall ändert Verzeichnispasswörter nie.",
+    "accountLocked": "Dein Verzeichniskonto ist gesperrt, meist nach zu vielen falschen Passwörtern. Warte, bis die Sperre endet, oder wende dich an die IT.",
+    "accountDisabled": "Dein Verzeichniskonto ist deaktiviert. Wende dich an die IT, wenn du weiterhin Zugang brauchst.",
+    "outsideSignInHours": "Dein Verzeichniskonto darf sich zu dieser Zeit nicht anmelden. Versuche es innerhalb deiner erlaubten Zeiten erneut oder wende dich an die IT.",
+    "providerInitiatedSignIn": "Die Anmeldung, die beim Identitätsanbieter beginnt, ist für diese Instanz ausgeschaltet. Beginne stattdessen auf der Anmeldeseite von Pagehall.",
+    "invalidSamlMetadata": "Pagehall konnte die SAML-Metadaten nicht verwenden. Prüfe, ob die Adresse oder Datei die Metadaten des Identitätsanbieters enthält, und versuche es erneut.",
+    "invalidSamlMetadataDetail": "Pagehall konnte die SAML-Metadaten nicht verwenden: {detail}. Prüfe, ob die Adresse oder Datei die Metadaten des Identitätsanbieters enthält, und versuche es erneut.",
+    "invalidCertificate": "Diese Datei ist kein CA-Zertifikat, das Pagehall verwenden kann. Lade das Zertifikat der Stelle hoch, die das Zertifikat des Verzeichnisservers ausgestellt hat, im PEM-Format.",
+    "directoryInvalidCredentials": "Der Anmeldename oder das Passwort ist nicht korrekt. Prüfe beides und versuche es erneut. Wenn du dein Passwort vergessen hast, setze es auf dem in deiner Organisation üblichen Weg zurück oder wende dich an die IT.",
+    "directoryUnavailable": "Das Verzeichnis war nicht erreichbar. Versuche es in ein paar Minuten erneut; wenn es weiter scheitert, wende dich an die IT."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -879,7 +1152,19 @@
     "secondFactorSetupTitle": "Zweiten Faktor einrichten",
     "secondFactorSetupDescription": "Deine Organisation verlangt einen zweiten Faktor. Richte einen ein, um fortzufahren.",
     "secondFactorMethod": "Zweiter Faktor",
-    "registerLink": "Noch kein Konto? Lege eines an"
+    "registerLink": "Noch kein Konto? Lege eines an",
+    "directory": {
+      "failedTitle": "Die Anmeldung mit {name} hat nicht funktioniert",
+      "signInName": "Anmeldename bei {name}",
+      "passwordHint": "Das Passwort deines Arbeitskontos. Pagehall prüft es nur beim Verzeichnis und ändert es nie.",
+      "signInNameHints": {
+        "email": "Deine E-Mail-Adresse.",
+        "userPrincipalName": "Meist deine E-Mail-Adresse, zum Beispiel lena.hofer@example.org.",
+        "sAMAccountName": "Dein Windows-Benutzername ohne Domain, zum Beispiel lhofer.",
+        "uid": "Dein Benutzername im Verzeichnis, zum Beispiel lhofer.",
+        "unknown": "Der Name, mit dem du dich in der Arbeit am Computer anmeldest."
+      }
+    }
   },
   "reauthentication": {
     "withProvider": "Weiter mit {name}",
@@ -893,7 +1178,9 @@
       "totp": "Authenticator-App",
       "passkey": "Passkey"
     },
-    "confirm": "Bestätigen"
+    "confirm": "Bestätigen",
+    "directoryPassword": "Passwort bei {name}",
+    "withDirectory": "Mit {name} bestätigen"
   },
   "setup": {
     "progress": "Schritt {step} von {total} · {name}",
@@ -2018,6 +2305,9 @@
         "credentialRemoved": "Zugangsdaten des Anbieters entfernt",
         "logoChanged": "Logo des Anbieters geändert",
         "directoryKeyChanged": "Directory-Schlüssel geändert",
+        "metadataChanged": "SAML-Metadaten geändert",
+        "metadataRefreshFailed": "SAML-Metadaten konnten nicht aktualisiert werden",
+        "caCertificateChanged": "CA-Zertifikat des Verzeichnisses geändert",
         "synchronized": "Anbieter synchronisiert",
         "syncCancelled": "Synchronisierung abgebrochen"
       },
@@ -2419,6 +2709,11 @@
     "revokeInvitation": "Die Einladung wurde nicht widerrufen",
     "changeServiceAccount": "Das Dienstkonto wurde nicht geändert",
     "deactivateServiceAccount": "Das Dienstkonto wurde nicht deaktiviert",
-    "loadAudit": "Das Audit-Log konnte nicht geladen werden"
+    "loadAudit": "Das Audit-Log konnte nicht geladen werden",
+    "refreshMetadata": "Die Metadaten konnten nicht geladen werden",
+    "uploadMetadata": "Die Metadatendatei konnte nicht gespeichert werden",
+    "uploadCaCertificate": "Das CA-Zertifikat konnte nicht gespeichert werden",
+    "removeCaCertificate": "Das CA-Zertifikat konnte nicht entfernt werden",
+    "testDirectory": "Das Verzeichnis konnte nicht getestet werden"
   }
 }

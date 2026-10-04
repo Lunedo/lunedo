@@ -42,8 +42,21 @@ import {
   SecondFactorFields,
 } from "./provider-config.js";
 import { CredentialsList } from "./provider-credentials.js";
-import { credentialStatus, presetLabel } from "./provider-labels.js";
+import { credentialStatus, providerPresetLabel } from "./provider-labels.js";
+import {
+  CaCertificateSection,
+  DirectoryTest,
+  LdapAttributeFields,
+  LdapConnectionFields,
+  LdapSecondFactorFields,
+} from "./provider-ldap.js";
 import { MappingTab } from "./provider-mapping.js";
+import {
+  SamlAttributeFields,
+  SamlConnectionFields,
+  SamlMetadataSection,
+  SamlServiceProviderFields,
+} from "./provider-saml.js";
 import { SyncSettings, SyncTab, syncSummary } from "./provider-sync.js";
 import { StartTestButton, TestResult } from "./provider-test.js";
 
@@ -93,7 +106,7 @@ export function InstanceProviderScreen() {
       title={data?.name ?? t("identityProviders.details")}
       {...(data
         ? {
-            description: [presetLabel(t, data.config.preset), data.config.domains.join(", ")]
+            description: [providerPresetLabel(t, data), data.config.domains.join(", ")]
               .filter(Boolean)
               .join(" · "),
           }
@@ -104,7 +117,7 @@ export function InstanceProviderScreen() {
         { label: data?.name ?? t("identityProviders.details") },
       ]}
       actions={
-        data ? (
+        data && data.type !== "ldap" ? (
           <StartTestButton provider={data} returnTo={() => `${globalThis.location.pathname}?tab=overview`} />
         ) : undefined
       }
@@ -166,6 +179,7 @@ function Overview({
     <div className="flex flex-col gap-6">
       {flowId ? <TestResult provider={provider} flowId={flowId} /> : null}
       <OverviewTiles provider={provider} />
+      {provider.type === "saml" ? <SamlMetadataSection provider={provider} canManage={canManage} /> : null}
       <Section title={t("identityProviders.overview.connection")}>
         <SettingRow
           label={t("identityProviders.overview.credentialStatus")}
@@ -182,10 +196,28 @@ function Overview({
             )
           }
         />
-        <div className="px-4 py-3">
-          <RedirectUriField uri={provider.redirectUri} />
-        </div>
+        {provider.type === "ldap" ? (
+          <SettingRow
+            label={t("identityProviders.ldap.url")}
+            control={<span className="break-all font-mono text-sm">{provider.config.url}</span>}
+          />
+        ) : (
+          <div className="px-4 py-3">
+            {provider.type === "saml" ? (
+              <SamlServiceProviderFields provider={provider} />
+            ) : (
+              <RedirectUriField uri={provider.redirectUri} />
+            )}
+          </div>
+        )}
       </Section>
+      {provider.type === "ldap" ? (
+        <Section title={t("identityProviders.directoryTest.title")}>
+          <div className="px-4 py-3">
+            <DirectoryTest provider={provider} />
+          </div>
+        </Section>
+      ) : null}
       <Section title={t("identityProviders.credentials.title")}>
         <div className="px-4 py-3">
           <CredentialsList provider={provider} canManage={canManage} />
@@ -250,10 +282,15 @@ function Settings({ provider, canManage }: { provider: IdentityProvider; canMana
       <Section title={t("identityProviders.settings.signIn")}>
         <NameRow provider={provider} canManage={canManage} />
         <LogoRow provider={provider} canManage={canManage} />
-        <ConnectionFields provider={provider} canManage={canManage} />
+        {provider.type === "oidc" ? <ConnectionFields provider={provider} canManage={canManage} /> : null}
+        {provider.type === "saml" ? <SamlConnectionFields provider={provider} canManage={canManage} /> : null}
+        {provider.type === "ldap" ? <LdapConnectionFields provider={provider} canManage={canManage} /> : null}
       </Section>
+      {provider.type === "ldap" ? <CaCertificateSection provider={provider} canManage={canManage} /> : null}
       <Section title={t("identityProviders.attributes.mapping")}>
-        <AttributeFields provider={provider} canManage={canManage} />
+        {provider.type === "oidc" ? <AttributeFields provider={provider} canManage={canManage} /> : null}
+        {provider.type === "saml" ? <SamlAttributeFields provider={provider} canManage={canManage} /> : null}
+        {provider.type === "ldap" ? <LdapAttributeFields provider={provider} canManage={canManage} /> : null}
       </Section>
       <Section title={t("identityProviders.accounts.newPeople")}>
         <AccountFields provider={provider} canManage={canManage} />
@@ -262,7 +299,11 @@ function Settings({ provider, canManage }: { provider: IdentityProvider; canMana
         <LinkFields />
       </Section>
       <Section title={t("identityProviders.secondFactor.title")}>
-        <SecondFactorFields provider={provider} canManage={canManage} />
+        {provider.type === "ldap" ? (
+          <LdapSecondFactorFields provider={provider} canManage={canManage} />
+        ) : (
+          <SecondFactorFields provider={provider} canManage={canManage} />
+        )}
       </Section>
       <SyncSettings provider={provider} canManage={canManage} />
       {canManage ? <StatusSection provider={provider} /> : null}

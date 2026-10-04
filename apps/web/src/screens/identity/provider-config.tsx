@@ -9,19 +9,27 @@ import {
 import { Badge, CopyButton, Input, Select, SettingRow, Switch } from "@pagehall/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import {
   type IdentityProvider,
   identityKeys,
-  type ProviderConfig,
+  type LdapConfig,
+  type LdapConfigInput,
+  type LdapProvider,
+  type OidcConfig,
+  type OidcConfigInput,
+  type OidcProvider,
   type ProviderConfigInput,
+  type SamlConfig,
+  type SamlConfigInput,
+  type SamlProvider,
   updateProvider,
 } from "../../api/identity-queries.js";
 import { AutoSaveTextField, SaveIndicator, useSaveStates } from "../../components/auto-save.js";
 
-export function toConfigInput(config: ProviderConfig): ProviderConfigInput {
+export function oidcConfigInput(config: OidcConfig): OidcConfigInput {
   const common = {
     clientId: config.clientId,
     domains: config.domains,
@@ -66,6 +74,28 @@ export function toConfigInput(config: ProviderConfig): ProviderConfigInput {
   };
 }
 
+export function samlConfigInput(config: SamlConfig): SamlConfigInput {
+  if (config.preset === "entraId") {
+    const { authority, graphUrl, ...rest } = config;
+    return {
+      ...rest,
+      ...(authority ? { authority: String(authority) } : {}),
+      ...(graphUrl ? { graphUrl: String(graphUrl) } : {}),
+    };
+  }
+  return config;
+}
+
+export function ldapConfigInput(config: LdapConfig): LdapConfigInput {
+  return config;
+}
+
+export function toConfigInput(provider: IdentityProvider): ProviderConfigInput {
+  if (provider.type === "saml") return samlConfigInput(provider.config);
+  if (provider.type === "ldap") return ldapConfigInput(provider.config);
+  return oidcConfigInput(provider.config);
+}
+
 const OPTIONAL_CLAIMS: ReadonlySet<string> = new Set(["groups", "groupNames"]);
 
 export function parseList(value: string): string[] {
@@ -90,17 +120,45 @@ const claimName = z
   .max(100)
   .regex(/^[A-Za-z0-9_:./-]+$/);
 
-export function useProviderUpdate(provider: IdentityProvider) {
+export function useStoreProvider() {
   const queryClient = useQueryClient();
-  const store = (next: IdentityProvider) => {
-    queryClient.setQueryData(identityKeys.provider(provider.id), next);
+  return (next: IdentityProvider) => {
+    queryClient.setQueryData(identityKeys.provider(next.id), next);
     void queryClient.invalidateQueries({ queryKey: identityKeys.providers, exact: true });
   };
+}
+
+function useConfigUpdate<C extends ProviderConfigInput>(providerId: string, current: () => C) {
+  const store = useStoreProvider();
+  return async (change: (current: C) => C) =>
+    store(await updateProvider(providerId, { config: change(current()) }));
+}
+
+export function useProviderUpdate(provider: IdentityProvider) {
+  const store = useStoreProvider();
+  const config = useConfigUpdate(provider.id, () => toConfigInput(provider));
   return {
     rename: async (name: string) => store(await updateProvider(provider.id, { name })),
-    config: async (change: (current: ProviderConfigInput) => ProviderConfigInput) =>
-      store(await updateProvider(provider.id, { config: change(toConfigInput(provider.config)) })),
+    config,
   };
+}
+
+export function useOidcUpdate(provider: OidcProvider) {
+  return useConfigUpdate(provider.id, () => oidcConfigInput(provider.config));
+}
+
+export function useSamlUpdate(provider: SamlProvider) {
+  return useConfigUpdate(provider.id, () => samlConfigInput(provider.config));
+}
+
+export function useLdapUpdate(provider: LdapProvider) {
+  return useConfigUpdate(provider.id, () => ldapConfigInput(provider.config));
+}
+
+function useFederatedUpdate(provider: OidcProvider | SamlProvider) {
+  return useConfigUpdate<OidcConfigInput | SamlConfigInput>(provider.id, () =>
+    provider.type === "saml" ? samlConfigInput(provider.config) : oidcConfigInput(provider.config),
+  );
 }
 
 export function NameRow({ provider, canManage }: { provider: IdentityProvider; canManage: boolean }) {
@@ -120,15 +178,9 @@ export function NameRow({ provider, canManage }: { provider: IdentityProvider; c
   );
 }
 
-export function ConnectionFields({
-  provider,
-  canManage,
-}: {
-  provider: IdentityProvider;
-  canManage: boolean;
-}) {
+export function ConnectionFields({ provider, canManage }: { provider: OidcProvider; canManage: boolean }) {
   const { t } = useTranslation();
-  const update = useProviderUpdate(provider);
+  const update = { config: useOidcUpdate(provider) };
   const config = provider.config;
   const tracker = useSaveStates();
   return (
@@ -194,14 +246,14 @@ export function ConnectionFields({
   );
 }
 
-export function AttributeFields({ provider, canManage }: { provider: IdentityProvider; canManage: boolean }) {
+export function AttributeFields({ provider, canManage }: { provider: OidcProvider; canManage: boolean }) {
   const { t } = useTranslation();
-  const update = useProviderUpdate(provider);
+  const update = { config: useOidcUpdate(provider) };
   const tracker = useSaveStates();
   const config = provider.config;
   const fixed = (
     <Badge variant="neutral" icon={Lock}>
-      {t(`identityProviders.attributes.identifiers.${config.preset}`)}
+      {t(`identityProviders.attributes.identifiers.oidc.${config.preset}`)}
     </Badge>
   );
   return (
@@ -341,9 +393,11 @@ export function AccountFields({ provider, canManage }: { provider: IdentityProvi
         <AutoSaveTextField
           label={t("identityProviders.accounts.domains")}
           hint={
-            config.preset === "google"
-              ? t("identityProviders.accounts.domainsHintGoogle")
-              : t("identityProviders.accounts.domainsHint")
+            provider.type === "ldap"
+              ? t("identityProviders.accounts.domainsHintDirectory")
+              : config.preset === "google"
+                ? t("identityProviders.accounts.domainsHintGoogle")
+                : t("identityProviders.accounts.domainsHint")
           }
           value={config.domains.join(", ")}
           schema={domainList}
@@ -402,11 +456,11 @@ export function SecondFactorFields({
   provider,
   canManage,
 }: {
-  provider: IdentityProvider;
+  provider: OidcProvider | SamlProvider;
   canManage: boolean;
 }) {
   const { t } = useTranslation();
-  const update = useProviderUpdate(provider);
+  const update = { config: useFederatedUpdate(provider) };
   const tracker = useSaveStates();
   const setting = provider.config.secondFactor;
   return (
@@ -479,16 +533,37 @@ export function LinkFields() {
   );
 }
 
+export function CopyField({
+  label,
+  value,
+  hint,
+  action,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="font-medium">{label}</span>
+      <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+        <Input readOnly value={value} aria-label={label} className="font-mono" />
+        <CopyButton value={value} />
+        {action}
+      </div>
+      {hint ? <span className="text-sm text-text-muted">{hint}</span> : null}
+    </div>
+  );
+}
+
 export function RedirectUriField({ uri }: { uri: string }) {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-col gap-1">
-      <span className="font-medium">{t("identityProviders.redirectUri")}</span>
-      <div className="flex items-center gap-2">
-        <Input readOnly value={uri} aria-label={t("identityProviders.redirectUri")} className="font-mono" />
-        <CopyButton value={uri} />
-      </div>
-      <span className="text-sm text-text-muted">{t("identityProviders.redirectUriHint")}</span>
-    </div>
+    <CopyField
+      label={t("identityProviders.redirectUri")}
+      value={uri}
+      hint={t("identityProviders.redirectUriHint")}
+    />
   );
 }

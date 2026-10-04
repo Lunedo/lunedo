@@ -7,15 +7,38 @@ type ProviderResponse =
   paths["/api/v1/instance/identity-providers/{providerId}"]["get"]["responses"]["200"]["content"]["application/json"];
 
 export type IdentityProvider = ProviderResponse;
+export type ProviderType = IdentityProvider["type"];
+export type OidcProvider = Extract<IdentityProvider, { type: "oidc" }>;
+export type SamlProvider = Extract<IdentityProvider, { type: "saml" }>;
+export type LdapProvider = Extract<IdentityProvider, { type: "ldap" }>;
 export type ProviderConfig = IdentityProvider["config"];
+export type OidcConfig = OidcProvider["config"];
+export type SamlConfig = SamlProvider["config"];
+export type LdapConfig = LdapProvider["config"];
 export type ProviderPreset = ProviderConfig["preset"];
 export type ProviderCredential = IdentityProvider["credentials"][number];
 export type ProviderWarning = IdentityProvider["warnings"][number];
+export type CaCertificate = NonNullable<LdapProvider["ldap"]["caCertificate"]>;
 
-type CreateBody =
+export const providerTypes: readonly ProviderType[] = ["oidc", "saml", "ldap"];
+
+export type CreateProviderBody =
   paths["/api/v1/instance/identity-providers"]["post"]["requestBody"]["content"]["application/json"];
-export type ProviderConfigInput = CreateBody["config"];
-export type CredentialInput = CreateBody["credential"];
+type UpdateBody =
+  paths["/api/v1/instance/identity-providers/{providerId}"]["patch"]["requestBody"]["content"]["application/json"];
+export type ProviderConfigInput = NonNullable<UpdateBody["config"]>;
+export type OidcConfigInput = Extract<CreateProviderBody, { type: "oidc" }>["config"];
+export type SamlConfigInput = Extract<CreateProviderBody, { type: "saml" }>["config"];
+export type LdapConfigInput = Extract<CreateProviderBody, { type: "ldap" }>["config"];
+export type CredentialInput =
+  paths["/api/v1/instance/identity-providers/{providerId}/credentials"]["post"]["requestBody"]["content"]["application/json"];
+
+export type DirectoryTestResult =
+  paths["/api/v1/instance/identity-providers/{providerId}/directory-test"]["post"]["responses"]["200"]["content"]["application/json"];
+export type DirectoryTestStep = DirectoryTestResult["steps"][number];
+
+export type DirectorySignInResult =
+  paths["/api/v1/auth/providers/{providerId}/password"]["post"]["responses"]["200"]["content"]["application/json"];
 
 export type SignInOptions =
   paths["/api/v1/auth/sign-in-options"]["get"]["responses"]["200"]["content"]["application/json"];
@@ -103,11 +126,7 @@ export function accountIdentitiesQuery(accountId: string) {
   });
 }
 
-export function createProvider(body: {
-  name: string;
-  config: ProviderConfigInput;
-  credential: CredentialInput;
-}) {
+export function createProvider(body: CreateProviderBody) {
   return request(() => api.POST("/api/v1/instance/identity-providers", { body }));
 }
 
@@ -361,6 +380,66 @@ export async function removeDirectoryKey(providerId: string): Promise<void> {
       params: { path: { providerId } },
     }),
   );
+}
+
+export function uploadSamlMetadata(providerId: string, xml: string) {
+  return request(() =>
+    api.PUT("/api/v1/instance/identity-providers/{providerId}/saml-metadata", {
+      params: { path: { providerId } },
+      body: { xml },
+    }),
+  );
+}
+
+export function refreshSamlMetadata(providerId: string) {
+  return request(() =>
+    api.POST("/api/v1/instance/identity-providers/{providerId}/saml-metadata/refresh", {
+      params: { path: { providerId } },
+    }),
+  );
+}
+
+export function setCaCertificate(providerId: string, certificate: string) {
+  return request(() =>
+    api.PUT("/api/v1/instance/identity-providers/{providerId}/ca-certificate", {
+      params: { path: { providerId } },
+      body: { certificate },
+    }),
+  );
+}
+
+export function removeCaCertificate(providerId: string) {
+  return request(() =>
+    api.DELETE("/api/v1/instance/identity-providers/{providerId}/ca-certificate", {
+      params: { path: { providerId } },
+    }),
+  );
+}
+
+export function testDirectory(providerId: string, signInName: string | null) {
+  return request(() =>
+    api.POST("/api/v1/instance/identity-providers/{providerId}/directory-test", {
+      params: { path: { providerId } },
+      body: { signInName },
+    }),
+  );
+}
+
+export function signInWithDirectory(providerId: string, body: { signInName: string; password: string }) {
+  return request(
+    () =>
+      api.POST("/api/v1/auth/providers/{providerId}/password", {
+        params: { path: { providerId } },
+        body,
+      }),
+    { sessionHandling: false },
+  );
+}
+
+export async function reauthenticateWithDirectory(providerId: string, password: string): Promise<void> {
+  await request(() => api.POST("/api/v1/auth/reauthenticate/directory", { body: { providerId, password } }), {
+    sessionHandling: false,
+  });
 }
 
 export function hasDirectory(provider: IdentityProvider): boolean {
