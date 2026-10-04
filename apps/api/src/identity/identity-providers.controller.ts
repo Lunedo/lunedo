@@ -1,5 +1,10 @@
 import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Req, Res } from "@nestjs/common";
-import { instanceUrlSetting, LOGO_MAX_BYTES, type ProviderSummary } from "@pagehall/server";
+import {
+  type CredentialInput,
+  instanceUrlSetting,
+  LOGO_MAX_BYTES,
+  type ProviderSummary,
+} from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission, PublicRoute } from "../access/route-access.js";
@@ -13,15 +18,19 @@ import { actorOf, sessionOf } from "../http/request.js";
 import { uuid } from "../http/schemas.js";
 import {
   addedCredentialSchema,
+  caCertificateUploadSchema,
   createdProviderSchema,
   createProviderSchema,
   credentialInputSchema,
   credentialParams,
+  directoryTestResultSchema,
+  directoryTestSchema,
   providerIdParams,
   providerSchema,
   referenceParams,
   refusalSchema,
   removalPreviewSchema,
+  samlMetadataUploadSchema,
   startedSchema,
   testResultParams,
   testResultSchema,
@@ -72,6 +81,16 @@ const logoBody = z
   .strict()
   .describe("A logo image.");
 
+function credentialOf(body: z.output<typeof credentialInputSchema>): CredentialInput {
+  return body.kind === "clientSecret"
+    ? {
+        kind: "clientSecret",
+        secret: body.secret,
+        expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
+      }
+    : body;
+}
+
 export async function baseUrlOf(context: ApiContext, request: FastifyRequest): Promise<string> {
   const configured = context.settings ? await context.settings.get(instanceUrlSetting, {}) : "";
   return configured || ownOrigin(request);
@@ -87,7 +106,23 @@ export class IdentityProvidersController {
   }
 
   async #present(request: FastifyRequest, provider: ProviderSummary) {
-    const base = await baseUrlOf(this.context, request);
+    const base = (await baseUrlOf(this.context, request)).replace(/\/+$/, "");
+    if (provider.type === "saml") {
+      const { callbackPath, saml, ...rest } = provider;
+      return {
+        ...rest,
+        redirectUri: `${base}${callbackPath}`,
+        saml: {
+          entityId: `${base}${saml.metadataPath}`,
+          metadataUrl: `${base}${saml.metadataPath}`,
+          identityProvider: saml.identityProvider,
+        },
+      };
+    }
+    if (provider.type === "ldap") {
+      const { callbackPath: _callbackPath, ...rest } = provider;
+      return { ...rest, redirectUri: `${base}/sign-in` };
+    }
     const { callbackPath, ...rest } = provider;
     return { ...rest, redirectUri: `${base}${callbackPath}` };
   }
@@ -153,24 +188,26 @@ export class IdentityProvidersController {
     status: 201,
     body: createProviderSchema,
     response: { description: "The provider.", schema: createdProviderSchema },
-    errors: ["invalidProviderConfiguration", "domainInUse", "reauthenticationRequired"],
+    errors: [
+      "invalidProviderConfiguration",
+      "invalidSamlMetadata",
+      "domainInUse",
+      "invalidInput",
+      "reauthenticationRequired",
+    ],
   })
   async createInstance(@Body() body: z.output<typeof createProviderSchema>, @Req() request: FastifyRequest) {
     return this.#create(request, body);
   }
 
   async #create(request: FastifyRequest, body: z.output<typeof createProviderSchema>) {
+    const credential = body.credential ? credentialOf(body.credential) : null;
     const created = await this.#services.identityProviders.create(actorOf(request), {
+      type: body.type,
       name: body.name,
       config: body.config,
-      credential:
-        body.credential.kind === "clientSecret"
-          ? {
-              kind: "clientSecret",
-              secret: body.credential.secret,
-              expiresAt: body.credential.expiresAt ? new Date(body.credential.expiresAt) : null,
-            }
-          : body.credential,
+      credential,
+      metadataXml: body.type === "saml" ? (body.metadataXml ?? null) : null,
     });
     return { provider: await this.#present(request, created.provider), credential: created.credential };
   }
@@ -324,7 +361,7 @@ export class IdentityProvidersController {
     params: providerIdParams,
     body: credentialInputSchema,
     response: { description: "The credential.", schema: addedCredentialSchema },
-    errors: ["expiryInPast", "reauthenticationRequired"],
+    errors: ["expiryInPast", "invalidInput", "reauthenticationRequired"],
   })
   async addInstanceCredential(
     @Param("providerId") providerId: string,
@@ -339,17 +376,7 @@ export class IdentityProvidersController {
     providerId: string,
     body: z.output<typeof credentialInputSchema>,
   ) {
-    return this.#services.identityProviders.addCredential(
-      actorOf(request),
-      providerId,
-      body.kind === "clientSecret"
-        ? {
-            kind: "clientSecret",
-            secret: body.secret,
-            expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
-          }
-        : body,
-    );
+    return this.#services.identityProviders.addCredential(actorOf(request), providerId, credentialOf(body));
   }
 
   @Delete("instance/identity-providers/:providerId/credentials/:credentialId")
@@ -451,6 +478,109 @@ export class IdentityProvidersController {
     @Req() request: FastifyRequest,
   ) {
     return this.#testResult(request, providerId, flowId);
+  }
+
+  @Put("instance/identity-providers/:providerId/saml-metadata")
+  @Permission("instance.signIn.manage", { type: "instance" }, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "Upload the SAML metadata of an instance provider",
+    description:
+      "Replaces the metadata of a SAML provider whose metadata source is a file. Changed signing certificates are audited.",
+    tags: [TAG],
+    params: providerIdParams,
+    body: samlMetadataUploadSchema,
+    response: { description: "The provider.", schema: providerSchema },
+    errors: ["invalidSamlMetadata", "invalidProviderConfiguration", "reauthenticationRequired"],
+  })
+  async uploadSamlMetadata(
+    @Param("providerId") providerId: string,
+    @Body() body: z.output<typeof samlMetadataUploadSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    const provider = await this.#services.identityProviders.uploadSamlMetadata(
+      actorOf(request),
+      providerId,
+      body.xml,
+    );
+    return this.#present(request, provider);
+  }
+
+  @Post("instance/identity-providers/:providerId/saml-metadata/refresh")
+  @Permission("instance.signIn.manage")
+  @ApiRoute({
+    summary: "Load the SAML metadata of an instance provider again",
+    description:
+      "Loads the metadata from its address now. A failure keeps the last good metadata and is shown as a warning.",
+    tags: [TAG],
+    status: 200,
+    params: providerIdParams,
+    response: { description: "The provider.", schema: providerSchema },
+    errors: ["invalidSamlMetadata", "invalidProviderConfiguration"],
+  })
+  async refreshSamlMetadata(@Param("providerId") providerId: string, @Req() request: FastifyRequest) {
+    const provider = await this.#services.identityProviders.refreshSamlMetadata(actorOf(request), providerId);
+    return this.#present(request, provider);
+  }
+
+  @Put("instance/identity-providers/:providerId/ca-certificate")
+  @Permission("instance.signIn.manage", { type: "instance" }, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "Trust a certificate authority for a directory",
+    description:
+      "For directories whose certificate comes from an internal certificate authority. Only certificates of authorities are accepted. Every change is audited.",
+    tags: [TAG],
+    params: providerIdParams,
+    body: caCertificateUploadSchema,
+    response: { description: "The provider.", schema: providerSchema },
+    errors: ["invalidCertificate", "invalidProviderConfiguration", "reauthenticationRequired"],
+  })
+  async setCaCertificate(
+    @Param("providerId") providerId: string,
+    @Body() body: z.output<typeof caCertificateUploadSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    const provider = await this.#services.identityProviders.setCaCertificate(
+      actorOf(request),
+      providerId,
+      body.certificate,
+    );
+    return this.#present(request, provider);
+  }
+
+  @Delete("instance/identity-providers/:providerId/ca-certificate")
+  @Permission("instance.signIn.manage", { type: "instance" }, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "Stop trusting the uploaded certificate authority",
+    description: "The directory's certificate must then come from an authority the system trusts.",
+    tags: [TAG],
+    params: providerIdParams,
+    response: { description: "The provider.", schema: providerSchema },
+    errors: ["reauthenticationRequired"],
+  })
+  async removeCaCertificate(@Param("providerId") providerId: string, @Req() request: FastifyRequest) {
+    const provider = await this.#services.identityProviders.removeCaCertificate(actorOf(request), providerId);
+    return this.#present(request, provider);
+  }
+
+  @Post("instance/identity-providers/:providerId/directory-test")
+  @Permission("instance.signIn.manage")
+  @ApiRoute({
+    summary: "Test the connection to a directory",
+    description:
+      "Checks the connection, the certificate, the bind of the service account and a sample search. Signs nobody in and changes nothing.",
+    tags: [TAG],
+    status: 200,
+    params: providerIdParams,
+    body: directoryTestSchema,
+    response: { description: "The result of each check.", schema: directoryTestResultSchema },
+    errors: ["invalidInput"],
+  })
+  async testDirectory(
+    @Param("providerId") providerId: string,
+    @Body() body: z.output<typeof directoryTestSchema>,
+  ) {
+    await this.#services.identityProviders.get(providerId);
+    return this.#services.providerSignIn.testDirectory(providerId, body.signInName ?? null);
   }
 
   @Get("instance/sign-in-refusals/:reference")

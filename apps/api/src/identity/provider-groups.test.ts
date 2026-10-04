@@ -27,6 +27,7 @@ describe.skipIf(!databaseBaseUrl)("mapping rules and synchronization through the
     await addTotp(owner);
     organizationId = await firstOrganizationId(test);
     const created = await owner.post("/api/v1/instance/identity-providers", {
+      type: "oidc",
       name: "Company login",
       config: {
         preset: "generic",

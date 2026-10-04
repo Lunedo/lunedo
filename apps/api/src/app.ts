@@ -41,6 +41,12 @@ function isBackchannelLogout(request: FastifyRequest): boolean {
   return BACKCHANNEL_LOGOUT.test(request.url.split("?")[0] ?? "");
 }
 
+const SAML_RESPONSE = /^\/api\/v1\/auth\/providers\/[0-9A-Fa-f-]{36}\/saml\/acs$/;
+
+function isSamlResponse(request: FastifyRequest): boolean {
+  return request.method === "POST" && SAML_RESPONSE.test(request.url.split("?")[0] ?? "");
+}
+
 export async function configureApp(app: NestFastifyApplication, context: ApiContext): Promise<void> {
   const fastify = app.getHttpAdapter().getInstance();
 
@@ -62,6 +68,7 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
       if (!carriesCookieCredentials(request)) return;
     }
     if (isBackchannelLogout(request) && !carriesCookieCredentials(request)) return;
+    if (isSamlResponse(request)) return;
     if (!changesState(request) || isCsrfSafe(request, await allowedOrigins(request, context))) return;
     return sendProblem(
       reply,

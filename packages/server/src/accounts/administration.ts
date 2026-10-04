@@ -33,6 +33,7 @@ export interface IdentitySummary {
   id: string;
   providerId: string;
   providerName: string;
+  providerType: "oidc" | "saml" | "ldap";
   subject: string;
   email: string | null;
   signInName: string | null;
@@ -132,6 +133,7 @@ export class AccountAdministrationService {
         id: identities.id,
         providerId: identities.providerId,
         providerName: identityProviders.name,
+        providerType: identityProviders.type,
         subject: identities.subject,
         email: identities.email,
         signInName: identities.signInName,

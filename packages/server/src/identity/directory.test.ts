@@ -42,7 +42,9 @@ function recordingFetch() {
   return { requests, fetch: fetch as typeof globalThis.fetch };
 }
 
-const credentials = [{ id: randomUUID(), kind: "clientSecret" as const, secret: "secret", keyId: null }];
+const credentials = [
+  { id: randomUUID(), kind: "clientSecret" as const, secret: "secret", keyId: null, certificate: null },
+];
 
 describe("directory clients", () => {
   it("never sends a cached token to a changed directory address", async () => {

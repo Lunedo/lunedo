@@ -21,9 +21,14 @@ import { organizations } from "../organizations/schema.js";
 
 const timestampColumn = () => timestamp({ withTimezone: true, mode: "date" });
 
-export const identityProviderTypes = ["oidc"] as const;
-export const identityProviderPresets = ["entraId", "google", "generic"] as const;
-export const identityCredentialKinds = ["clientSecret", "certificate"] as const;
+export const identityProviderTypes = ["oidc", "saml", "ldap"] as const;
+export const identityProviderPresets = ["entraId", "google", "generic", "adfs", "activeDirectory"] as const;
+export const identityCredentialKinds = [
+  "clientSecret",
+  "certificate",
+  "samlSigning",
+  "bindPassword",
+] as const;
 export const providerFlowPurposes = ["signIn", "reauthentication", "test"] as const;
 
 export const identityProviderType = pgEnum("identity_provider_type", identityProviderTypes);
@@ -116,8 +121,10 @@ export const providerFlows = pgTable(
       .references(() => identityProviders.id, { onDelete: "cascade" }),
     stateHash: bytes().notNull(),
     browserHash: bytes().notNull(),
-    nonce: text().notNull(),
-    codeVerifier: text().notNull(),
+    nonce: text(),
+    codeVerifier: text(),
+    requestId: text(),
+    samlResponse: text(),
     redirectUri: text().notNull(),
     consumedAt: timestampColumn(),
     sessionId: uuid(),
@@ -312,3 +319,40 @@ export const providerSyncRuns = pgTable(
     uniqueIndex("provider_sync_runs_running").on(table.providerId).where(sql`${table.status} = 'running'`),
   ],
 );
+
+export const samlMetadata = pgTable("saml_metadata", {
+  providerId: uuid()
+    .primaryKey()
+    .references(() => identityProviders.id, { onDelete: "cascade" }),
+  xml: text().notNull(),
+  entityId: text().notNull(),
+  ssoUrl: text().notNull(),
+  certificates: jsonb().$type<string[]>().notNull(),
+  fetchedAt: timestampColumn().notNull(),
+  refreshFailedAt: timestampColumn(),
+  refreshError: text(),
+  ...timestamps(),
+});
+
+export const samlAssertions = pgTable(
+  "saml_assertions",
+  {
+    providerId: uuid()
+      .notNull()
+      .references(() => identityProviders.id, { onDelete: "cascade" }),
+    assertionId: text().notNull(),
+    expiresAt: timestampColumn().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.providerId, table.assertionId] }), index().on(table.expiresAt)],
+);
+
+export const identityProviderCaCertificates = pgTable("identity_provider_ca_certificates", {
+  providerId: uuid()
+    .primaryKey()
+    .references(() => identityProviders.id, { onDelete: "cascade" }),
+  certificates: text().notNull(),
+  fingerprint: text().notNull(),
+  subject: text().notNull(),
+  expiresAt: timestampColumn().notNull(),
+  ...timestamps(),
+});

@@ -1,18 +1,29 @@
+import "reflect-metadata";
 import { createHash } from "node:crypto";
 import {
+  caCertificateSchema,
   clientSecretSchema,
+  directoryPasswordSchema,
   ENTRA_AUTHORITY,
   GOOGLE_ISSUER,
   googleServiceAccountKeySchema,
+  type IdentityProviderType,
   identityProviderNameSchema,
+  type LdapConfig,
+  ldapConfigSchema,
   type OidcConfig,
-  type OidcConfigInput,
   oidcConfigSchema,
+  providerConfigSchema,
+  SAML_METADATA_REFRESH_HOURS,
+  type SamlConfig,
+  samlConfigSchema,
+  samlMetadataXmlSchema,
   uuidv7,
 } from "@pagehall/shared";
+import * as x509 from "@peculiar/x509";
 import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import type { Principal } from "../accounts/principal.js";
+import { type Principal, SYSTEM } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import { sessions } from "../auth/schema.js";
 import { type Areas, builtInRoleAreas } from "../authorization/areas.js";
@@ -25,11 +36,21 @@ import { LOGO_MAX_BYTES, logoContentType, OrganizationError } from "../organizat
 import type { SettingsService } from "../settings/service.js";
 import type { ProviderCapabilities, ProviderCredential, ProviderDefinition } from "./adapter.js";
 import { generateCertificate } from "./certificates.js";
-import { foreignDirectoryEndpoint } from "./directory.js";
+import { foreignDirectoryEndpoint, foreignGraphEndpoint } from "./directory.js";
 import { emptyReport, type GroupMappingService } from "./groups.js";
+import { ldapCapabilities } from "./ldap.js";
 import { oidcCapabilities, oidcIssuer } from "./oidc.js";
+import { samlCapabilities, samlPaths } from "./saml.js";
+import {
+  type CertificateInfo,
+  certificateInfo,
+  fetchSamlMetadata,
+  parseSamlMetadata,
+  SamlMetadataError,
+} from "./saml-metadata.js";
 import {
   identities,
+  identityProviderCaCertificates,
   identityProviderCredentials,
   identityProviderDomains,
   identityProviderLogos,
@@ -38,24 +59,47 @@ import {
   managedGroups,
   mappingRules,
   providerSyncRuns,
+  samlMetadata,
 } from "./schema.js";
 import { accountsWithoutOtherSignIn } from "./sign-in-ways.js";
 
-export type ProviderWarning = "noCredential" | "credentialExpiring" | "credentialExpired";
+export type ProviderWarning =
+  | "noCredential"
+  | "credentialExpiring"
+  | "credentialExpired"
+  | "metadataRefreshFailed"
+  | "caCertificateExpiring";
+
+export type CredentialKind = "clientSecret" | "certificate" | "samlSigning" | "bindPassword";
 
 export interface CredentialSummary {
   id: string;
-  kind: "clientSecret" | "certificate";
+  kind: CredentialKind;
   keyId: string | null;
   expiresAt: Date | null;
   createdAt: Date;
 }
 
-export interface ProviderSummary {
+export interface SamlSummary {
+  acsPath: string;
+  metadataPath: string;
+  identityProvider: {
+    entityId: string;
+    ssoUrl: string;
+    certificates: CertificateInfo[];
+    fetchedAt: Date;
+    refreshFailedAt: Date | null;
+    refreshError: string | null;
+  } | null;
+}
+
+export interface LdapSummary {
+  caCertificate: CertificateInfo | null;
+}
+
+interface ProviderSummaryBase {
   id: string;
-  type: "oidc";
   name: string;
-  config: OidcConfig;
   issuer: string;
   callbackPath: string;
   logoRef: string | null;
@@ -68,6 +112,11 @@ export interface ProviderSummary {
   updatedAt: Date;
 }
 
+export type ProviderSummary =
+  | (ProviderSummaryBase & { type: "oidc"; config: OidcConfig })
+  | (ProviderSummaryBase & { type: "saml"; config: SamlConfig; saml: SamlSummary })
+  | (ProviderSummaryBase & { type: "ldap"; config: LdapConfig; ldap: LdapSummary });
+
 export interface RemovalPreview {
   accounts: number;
   accountsWithoutSignIn: number;
@@ -78,14 +127,49 @@ export interface RemovalPreview {
 
 export interface SignInProvider {
   id: string;
+  type: IdentityProviderType;
   name: string;
-  preset: OidcConfig["preset"];
+  preset: OidcConfig["preset"] | SamlConfig["preset"] | LdapConfig["preset"];
   logoRef: string | null;
 }
 
 export type CredentialInput =
   | { kind: "clientSecret"; secret: string; expiresAt: Date | null }
-  | { kind: "certificate"; validDays: number };
+  | { kind: "certificate"; validDays: number }
+  | { kind: "samlSigning"; validDays: number }
+  | { kind: "bindPassword"; secret: string };
+
+export interface CreateProviderInput {
+  type: IdentityProviderType;
+  name: string;
+  config: unknown;
+  credential?: CredentialInput | null;
+  metadataXml?: string | null;
+}
+
+type CredentialGroup = "client" | "signing" | "bind";
+
+function groupOf(kind: CredentialKind): CredentialGroup {
+  if (kind === "samlSigning") return "signing";
+  if (kind === "bindPassword") return "bind";
+  return "client";
+}
+
+function primaryGroup(type: IdentityProviderType): CredentialGroup {
+  if (type === "saml") return "signing";
+  if (type === "ldap") return "bind";
+  return "client";
+}
+
+function allowedGroups(
+  type: IdentityProviderType,
+  config: OidcConfig | SamlConfig | LdapConfig,
+): CredentialGroup[] {
+  if (type === "saml") return config.preset === "entraId" ? ["signing", "client"] : ["signing"];
+  return [primaryGroup(type)];
+}
+
+const SIGNING_VALID_DAYS = 2 * 365;
 
 export interface AddedCredential extends CredentialSummary {
   certificate: string | null;
@@ -111,6 +195,14 @@ export const providerCredentialReminderJob = defineJob({
 
 export const PROVIDER_CREDENTIAL_REMINDER_SCHEDULE = "41 * * * *";
 
+export const samlMetadataRefreshJob = defineJob({
+  name: "identity-providers.refresh-saml-metadata",
+  payload: z.object({}),
+  retryLimit: 1,
+});
+
+export const SAML_METADATA_REFRESH_SCHEDULE = "17 * * * *";
+
 export function callbackPath(providerId: string): string {
   return `/api/v1/auth/providers/${providerId}/callback`;
 }
@@ -133,6 +225,41 @@ function notFound(): OrganizationError {
   return new OrganizationError("notFound", "The identity provider does not exist");
 }
 
+function invalidConfiguration(message: string, fields: string[]): OrganizationError {
+  return new OrganizationError("invalidProviderConfiguration", message, { fields });
+}
+
+export function parseCaCertificates(pem: string): { pem: string; info: CertificateInfo } {
+  const blocks = pem.match(/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g) ?? [];
+  if (blocks.length === 0 || blocks.length > 20) {
+    throw new OrganizationError(
+      "invalidCertificate",
+      "The file must contain one to twenty certificates in PEM format",
+    );
+  }
+  const infos: CertificateInfo[] = [];
+  for (const block of blocks) {
+    let certificate: x509.X509Certificate;
+    try {
+      certificate = new x509.X509Certificate(block);
+    } catch {
+      throw new OrganizationError("invalidCertificate", "A certificate in the file cannot be read");
+    }
+    const constraints = certificate.getExtension(x509.BasicConstraintsExtension);
+    if (!constraints?.ca) {
+      throw new OrganizationError(
+        "invalidCertificate",
+        "Upload the certificate of the certificate authority, not the certificate of the server",
+      );
+    }
+    infos.push(certificateInfo(block));
+  }
+  const first = infos[0];
+  if (!first) throw new OrganizationError("invalidCertificate", "The file contains no certificate");
+  const expiresAt = new Date(Math.min(...infos.map((info) => info.expiresAt.getTime())));
+  return { pem: `${blocks.join("\n")}\n`, info: { ...first, expiresAt } };
+}
+
 function warningsOf(credentials: CredentialSummary[], now: Date): ProviderWarning[] {
   const usable = credentials.filter((credential) => !credential.expiresAt || credential.expiresAt > now);
   if (credentials.length === 0) return ["noCredential"];
@@ -152,6 +279,7 @@ export class IdentityProviderService {
   readonly #clock: () => Date;
   readonly #mapping: GroupMappingService | undefined;
   readonly #settings: SettingsService;
+  readonly #fetch: typeof fetch | undefined;
 
   constructor(options: {
     database: Database;
@@ -162,6 +290,7 @@ export class IdentityProviderService {
     allowInsecure: boolean;
     clock?: () => Date;
     mapping?: GroupMappingService;
+    fetch?: typeof fetch;
   }) {
     this.#database = options.database;
     this.#audit = options.audit;
@@ -171,16 +300,53 @@ export class IdentityProviderService {
     this.#clock = options.clock ?? (() => new Date());
     this.#mapping = options.mapping;
     this.#settings = options.settings;
+    this.#fetch = options.fetch;
   }
 
-  #parseConfig(input: OidcConfigInput | unknown): OidcConfig {
-    const parsed = oidcConfigSchema.safeParse(input);
+  #parseConfig(type: IdentityProviderType, input: unknown): OidcConfig | SamlConfig | LdapConfig {
+    const parsed = providerConfigSchema(type).safeParse(input);
     if (!parsed.success) {
-      throw new OrganizationError("invalidProviderConfiguration", "The provider configuration is not valid", {
-        fields: parsed.error.issues.map((issue) => issue.path.join(".")),
-      });
+      throw invalidConfiguration(
+        "The provider configuration is not valid",
+        parsed.error.issues.map((issue) => issue.path.join(".")),
+      );
     }
     const config = parsed.data;
+    if (type === "oidc") return this.#checkOidc(config as OidcConfig);
+    if (type === "saml") return this.#checkSaml(config as SamlConfig);
+    return this.#checkLdap(config as LdapConfig);
+  }
+
+  #checkSaml(config: SamlConfig): SamlConfig {
+    if (this.#allowInsecure) return config;
+    if (config.metadata.source === "url" && new URL(config.metadata.url).protocol !== "https:") {
+      throw invalidConfiguration("Metadata must be loaded through HTTPS", ["metadata.url"]);
+    }
+    if (config.preset === "entraId") {
+      if (!MICROSOFT_AUTHORITIES.includes(config.authority)) {
+        throw invalidConfiguration("The authority is not a Microsoft cloud", ["authority"]);
+      }
+      if (foreignGraphEndpoint(config.authority, config.graphUrl)) {
+        throw invalidConfiguration("The directory endpoint is not one of the provider's own endpoints", [
+          "graphUrl",
+        ]);
+      }
+    }
+    return config;
+  }
+
+  #checkLdap(config: LdapConfig): LdapConfig {
+    if (this.#allowInsecure) return config;
+    if (new URL(config.url).protocol === "ldap:" && !config.startTls) {
+      throw invalidConfiguration("Directories must be reached through LDAPS or StartTLS", [
+        "url",
+        "startTls",
+      ]);
+    }
+    return config;
+  }
+
+  #checkOidc(config: OidcConfig): OidcConfig {
     if (this.#allowInsecure) return config;
     const urls = [oidcIssuer(config), ...(config.preset === "entraId" ? [config.graphUrl] : [])];
     if (urls.some((url) => new URL(url).protocol !== "https:")) {
@@ -279,30 +445,123 @@ export class IdentityProviderService {
             .select({ providerId: identityProviderSecrets.providerId })
             .from(identityProviderSecrets)
             .where(inArray(identityProviderSecrets.providerId, ids));
+    const metadata =
+      ids.length === 0
+        ? []
+        : await executor.select().from(samlMetadata).where(inArray(samlMetadata.providerId, ids));
+    const authorities =
+      ids.length === 0
+        ? []
+        : await executor
+            .select()
+            .from(identityProviderCaCertificates)
+            .where(inArray(identityProviderCaCertificates.providerId, ids));
     const now = this.#clock();
-    return rows.map((row) => {
-      const config = oidcConfigSchema.parse(row.config);
+    return rows.map((row): ProviderSummary => {
       const own = credentials.get(row.id) ?? [];
-      return {
+      const directoryKey = keys.some((key) => key.providerId === row.id);
+      const base = {
         id: row.id,
-        type: row.type,
         name: row.name,
-        config,
-        issuer: oidcIssuer(config),
         callbackPath: callbackPath(row.id),
         logoRef: logos.find((logo) => logo.providerId === row.id)?.ref ?? null,
         credentials: own,
-        directoryKey: keys.some((key) => key.providerId === row.id),
-        capabilities: oidcCapabilities(
-          config,
-          keys.some((key) => key.providerId === row.id),
-        ),
+        directoryKey,
         deactivatedAt: row.deactivatedAt,
-        warnings: warningsOf(own, now),
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       };
+      if (row.type === "saml") {
+        const config = samlConfigSchema.parse(row.config);
+        const stored = metadata.find((entry) => entry.providerId === row.id);
+        const warnings = this.#credentialWarnings("saml", config, own, now);
+        if (stored?.refreshFailedAt) warnings.push("metadataRefreshFailed");
+        const paths = samlPaths(row.id);
+        return {
+          ...base,
+          type: "saml",
+          config,
+          issuer: stored?.entityId ?? (config.metadata.source === "url" ? config.metadata.url : ""),
+          callbackPath: paths.acs,
+          capabilities: samlCapabilities(
+            config,
+            own.some((credential) => groupOf(credential.kind) === "client"),
+          ),
+          warnings,
+          saml: {
+            acsPath: paths.acs,
+            metadataPath: paths.metadata,
+            identityProvider: stored
+              ? {
+                  entityId: stored.entityId,
+                  ssoUrl: stored.ssoUrl,
+                  certificates: stored.certificates.map((pem) => certificateInfo(pem)),
+                  fetchedAt: stored.fetchedAt,
+                  refreshFailedAt: stored.refreshFailedAt,
+                  refreshError: stored.refreshError,
+                }
+              : null,
+          },
+        };
+      }
+      if (row.type === "ldap") {
+        const config = ldapConfigSchema.parse(row.config);
+        const authority = authorities.find((entry) => entry.providerId === row.id);
+        const warnings = this.#credentialWarnings("ldap", config, own, now);
+        if (authority && authority.expiresAt.getTime() < now.getTime() + WARNING_DAYS * DAY_MS) {
+          warnings.push("caCertificateExpiring");
+        }
+        return {
+          ...base,
+          type: "ldap",
+          config,
+          issuer: config.url,
+          capabilities: ldapCapabilities(config),
+          warnings,
+          ldap: {
+            caCertificate: authority
+              ? {
+                  fingerprint: authority.fingerprint,
+                  subject: authority.subject,
+                  expiresAt: authority.expiresAt,
+                }
+              : null,
+          },
+        };
+      }
+      const config = oidcConfigSchema.parse(row.config);
+      return {
+        ...base,
+        type: "oidc",
+        config,
+        issuer: oidcIssuer(config),
+        capabilities: oidcCapabilities(config, directoryKey),
+        warnings: warningsOf(own, now),
+      };
     });
+  }
+
+  #credentialWarnings(
+    type: IdentityProviderType,
+    config: OidcConfig | SamlConfig | LdapConfig,
+    credentials: CredentialSummary[],
+    now: Date,
+  ): ProviderWarning[] {
+    const warnings = new Set<ProviderWarning>(
+      warningsOf(
+        credentials.filter((credential) => groupOf(credential.kind) === primaryGroup(type)),
+        now,
+      ),
+    );
+    if (type === "saml" && config.preset === "entraId" && "graphClientId" in config && config.graphClientId) {
+      for (const warning of warningsOf(
+        credentials.filter((credential) => groupOf(credential.kind) === "client"),
+        now,
+      )) {
+        warnings.add(warning);
+      }
+    }
+    return [...warnings];
   }
 
   get allowsInsecure(): boolean {
@@ -324,21 +583,115 @@ export class IdentityProviderService {
     return summary;
   }
 
+  async #loadMetadata(config: SamlConfig, uploaded: string | null | undefined): Promise<string> {
+    try {
+      if (config.metadata.source === "url") {
+        return await fetchSamlMetadata(config.metadata.url, {
+          allowInsecure: this.#allowInsecure,
+          ...(this.#fetch ? { fetch: this.#fetch } : {}),
+        });
+      }
+      if (!uploaded) {
+        throw new OrganizationError(
+          "invalidSamlMetadata",
+          "Upload the metadata file of the identity provider",
+        );
+      }
+      const parsed = samlMetadataXmlSchema.safeParse(uploaded);
+      if (!parsed.success) throw new OrganizationError("invalidSamlMetadata", "The metadata is too large");
+      return parsed.data;
+    } catch (error) {
+      if (error instanceof SamlMetadataError)
+        throw new OrganizationError("invalidSamlMetadata", error.message);
+      throw error;
+    }
+  }
+
+  #parseMetadata(xml: string) {
+    try {
+      const parsed = parseSamlMetadata(xml);
+      if (!this.#allowInsecure && new URL(parsed.ssoUrl).protocol !== "https:") {
+        throw new SamlMetadataError("The sign-in address of the identity provider does not use HTTPS");
+      }
+      return parsed;
+    } catch (error) {
+      if (error instanceof SamlMetadataError)
+        throw new OrganizationError("invalidSamlMetadata", error.message);
+      throw error;
+    }
+  }
+
+  async #storeMetadata(
+    tx: Transaction,
+    actor: Principal,
+    providerId: string,
+    source: "url" | "file",
+    xml: string,
+  ): Promise<void> {
+    const parsed = this.#parseMetadata(xml);
+    const [previous] = await tx
+      .select({ certificates: samlMetadata.certificates, xml: samlMetadata.xml })
+      .from(samlMetadata)
+      .where(eq(samlMetadata.providerId, providerId))
+      .for("update");
+    const now = this.#clock();
+    const values = {
+      xml,
+      entityId: parsed.entityId,
+      ssoUrl: parsed.ssoUrl,
+      certificates: parsed.certificates,
+      fetchedAt: now,
+    };
+    await tx
+      .insert(samlMetadata)
+      .values({ providerId, ...values })
+      .onConflictDoUpdate({
+        target: samlMetadata.providerId,
+        set: { ...values, refreshFailedAt: null, refreshError: null, updatedAt: now },
+      });
+    if (previous?.xml === xml) return;
+    await this.#audit.record(tx, {
+      name: "identityProvider.metadataChanged",
+      actor,
+      targetId: providerId,
+      fields: {
+        source,
+        entityId: parsed.entityId,
+        certificates: parsed.certificates.map((pem) => certificateInfo(pem).fingerprint),
+        previousCertificates: (previous?.certificates ?? []).map((pem) => certificateInfo(pem).fingerprint),
+      },
+    });
+  }
+
+  #checkCredential(
+    type: IdentityProviderType,
+    config: OidcConfig | SamlConfig | LdapConfig,
+    input: CredentialInput,
+  ): void {
+    if (!allowedGroups(type, config).includes(groupOf(input.kind))) {
+      throw new OrganizationError("invalidInput", "This kind of credential does not belong to this provider");
+    }
+  }
+
   async create(
     actor: Principal,
-    input: { name: string; config: unknown; credential: CredentialInput },
-  ): Promise<{ provider: ProviderSummary; credential: AddedCredential }> {
+    input: CreateProviderInput,
+  ): Promise<{ provider: ProviderSummary; credential: AddedCredential | null }> {
     const name = identityProviderNameSchema.parse(input.name);
-    const config = this.#parseConfig(input.config);
+    const type = input.type;
+    const config = this.#parseConfig(type, input.config);
+    const credential = input.credential ?? null;
+    if (credential) this.#checkCredential(type, config, credential);
+    if (!credential && type !== "saml") {
+      throw new OrganizationError("invalidInput", "The provider needs a credential");
+    }
+    const metadataXml =
+      type === "saml" ? await this.#loadMetadata(config as SamlConfig, input.metadataXml) : null;
+    if (metadataXml) this.#parseMetadata(metadataXml);
     const created = await this.#database.transaction(async (tx) => {
       const [row] = await tx
         .insert(identityProviders)
-        .values({
-          type: "oidc",
-          preset: config.preset,
-          name,
-          config,
-        })
+        .values({ type, preset: config.preset, name, config })
         .returning();
       if (!row) throw new Error("The identity provider was not created");
       await this.#audit.record(tx, {
@@ -348,8 +701,19 @@ export class IdentityProviderService {
         fields: { name, type: row.type, preset: config.preset },
       });
       await this.#syncDomains(tx, row.id, config.domains);
-      const credential = await this.#addCredential(tx, actor, row, input.credential);
-      return { id: row.id, credential };
+      let added: AddedCredential | null = null;
+      if (type === "saml" && metadataXml) {
+        added = await this.#addCredential(tx, actor, row, {
+          kind: "samlSigning",
+          validDays: SIGNING_VALID_DAYS,
+        });
+        await this.#storeMetadata(tx, actor, row.id, (config as SamlConfig).metadata.source, metadataXml);
+      }
+      if (credential) {
+        const stored = await this.#addCredential(tx, actor, row, credential);
+        added = added ?? stored;
+      }
+      return { id: row.id, credential: added };
     });
     return { provider: await this.get(created.id), credential: created.credential };
   }
@@ -359,19 +723,24 @@ export class IdentityProviderService {
     id: string,
     input: { name?: string; config?: unknown },
   ): Promise<ProviderSummary> {
+    const before = await this.#find(this.#database, id);
+    const type = before.type;
+    const previousConfig = providerConfigSchema(type).parse(before.config);
+    const config = input.config === undefined ? previousConfig : this.#parseConfig(type, input.config);
+    const metadataXml =
+      config.preset !== previousConfig.preset
+        ? null
+        : type === "saml" &&
+            (config as SamlConfig).metadata.source === "url" &&
+            JSON.stringify((config as SamlConfig).metadata) !==
+              JSON.stringify((previousConfig as SamlConfig).metadata)
+          ? await this.#loadMetadata(config as SamlConfig, null)
+          : null;
     await this.#database.transaction(async (tx) => {
       const current = await this.#find(tx, id, true);
       const name = input.name === undefined ? current.name : identityProviderNameSchema.parse(input.name);
-      const config =
-        input.config === undefined ? oidcConfigSchema.parse(current.config) : this.#parseConfig(input.config);
       if (config.preset !== current.preset) {
-        throw new OrganizationError(
-          "invalidProviderConfiguration",
-          "The preset of a provider cannot change",
-          {
-            fields: ["config.preset"],
-          },
-        );
+        throw invalidConfiguration("The preset of a provider cannot change", ["config.preset"]);
       }
       await tx.update(identityProviders).set({ name, config }).where(eq(identityProviders.id, id));
       await this.#syncDomains(tx, id, config.domains);
@@ -383,6 +752,168 @@ export class IdentityProviderService {
           name,
           config: config as unknown as Record<string, never>,
           previous: { name: current.name, config: current.config as never },
+        },
+      });
+      if (metadataXml) await this.#storeMetadata(tx, actor, id, "url", metadataXml);
+    });
+    return this.get(id);
+  }
+
+  async uploadSamlMetadata(actor: Principal, id: string, xml: string): Promise<ProviderSummary> {
+    const parsedXml = samlMetadataXmlSchema.safeParse(xml);
+    if (!parsedXml.success) {
+      throw new OrganizationError("invalidSamlMetadata", "The metadata is empty or too large");
+    }
+    await this.#database.transaction(async (tx) => {
+      const current = await this.#find(tx, id, true);
+      if (current.type !== "saml") {
+        throw new OrganizationError("invalidProviderConfiguration", "Only SAML providers have metadata");
+      }
+      if (samlConfigSchema.parse(current.config).metadata.source !== "file") {
+        throw new OrganizationError(
+          "invalidProviderConfiguration",
+          "The provider loads its metadata from an address; switch it to an uploaded file first",
+        );
+      }
+      await this.#storeMetadata(tx, actor, id, "file", parsedXml.data);
+    });
+    return this.get(id);
+  }
+
+  async refreshSamlMetadata(actor: Principal, id: string): Promise<ProviderSummary> {
+    const current = await this.#find(this.#database, id);
+    if (current.type !== "saml") {
+      throw new OrganizationError("invalidProviderConfiguration", "Only SAML providers have metadata");
+    }
+    const config = samlConfigSchema.parse(current.config);
+    if (config.metadata.source !== "url") {
+      throw new OrganizationError(
+        "invalidProviderConfiguration",
+        "Uploaded metadata is replaced by uploading a new file",
+      );
+    }
+    const failure = await this.#refresh(id, config.metadata.url, actor);
+    if (failure) throw new OrganizationError("invalidSamlMetadata", failure);
+    return this.get(id);
+  }
+
+  async #refresh(id: string, url: string, actor: Principal): Promise<string | null> {
+    let xml: string;
+    try {
+      xml = await fetchSamlMetadata(url, {
+        allowInsecure: this.#allowInsecure,
+        ...(this.#fetch ? { fetch: this.#fetch } : {}),
+      });
+      this.#parseMetadata(xml);
+    } catch (error) {
+      const message = (error instanceof Error ? error.message : String(error)).slice(0, 500);
+      await this.#database.transaction(async (tx) => {
+        await tx
+          .update(samlMetadata)
+          .set({ refreshFailedAt: this.#clock(), refreshError: message, updatedAt: this.#clock() })
+          .where(eq(samlMetadata.providerId, id));
+        await this.#audit.record(tx, {
+          name: "identityProvider.metadataRefreshFailed",
+          actor: SYSTEM,
+          targetId: id,
+          fields: { url, error: message },
+        });
+      });
+      return message;
+    }
+    await this.#database.transaction(async (tx) => {
+      await this.#find(tx, id, true);
+      await this.#storeMetadata(tx, actor, id, "url", xml);
+    });
+    return null;
+  }
+
+  async refreshDueMetadata(): Promise<number> {
+    const threshold = new Date(this.#clock().getTime() - SAML_METADATA_REFRESH_HOURS * 60 * 60 * 1000);
+    const due = await this.#database
+      .select({ id: identityProviders.id, config: identityProviders.config })
+      .from(identityProviders)
+      .innerJoin(samlMetadata, eq(samlMetadata.providerId, identityProviders.id))
+      .where(
+        and(
+          eq(identityProviders.type, "saml"),
+          isNull(identityProviders.deactivatedAt),
+          lte(samlMetadata.fetchedAt, threshold),
+          or(isNull(samlMetadata.refreshFailedAt), lte(samlMetadata.refreshFailedAt, threshold)),
+        ),
+      );
+    let refreshed = 0;
+    for (const row of due) {
+      const config = samlConfigSchema.parse(row.config);
+      if (config.metadata.source !== "url") continue;
+      if ((await this.#refresh(row.id, config.metadata.url, SYSTEM)) === null) refreshed++;
+    }
+    return refreshed;
+  }
+
+  async setCaCertificate(actor: Principal, id: string, pem: string): Promise<ProviderSummary> {
+    const input = caCertificateSchema.safeParse(pem);
+    if (!input.success) throw new OrganizationError("invalidCertificate", "The file is empty or too large");
+    const parsed = parseCaCertificates(input.data);
+    await this.#database.transaction(async (tx) => {
+      const current = await this.#find(tx, id, true);
+      if (current.type !== "ldap") {
+        throw new OrganizationError(
+          "invalidProviderConfiguration",
+          "Only directory providers use a CA certificate",
+        );
+      }
+      const [previous] = await tx
+        .select({ fingerprint: identityProviderCaCertificates.fingerprint })
+        .from(identityProviderCaCertificates)
+        .where(eq(identityProviderCaCertificates.providerId, id));
+      const values = {
+        certificates: parsed.pem,
+        fingerprint: parsed.info.fingerprint,
+        subject: parsed.info.subject,
+        expiresAt: parsed.info.expiresAt,
+      };
+      await tx
+        .insert(identityProviderCaCertificates)
+        .values({ providerId: id, ...values })
+        .onConflictDoUpdate({
+          target: identityProviderCaCertificates.providerId,
+          set: { ...values, updatedAt: this.#clock() },
+        });
+      await this.#audit.record(tx, {
+        name: "identityProvider.caCertificateChanged",
+        actor,
+        targetId: id,
+        fields: {
+          action: "set",
+          fingerprint: parsed.info.fingerprint,
+          subject: parsed.info.subject,
+          expiresAt: parsed.info.expiresAt.toISOString(),
+          previousFingerprint: previous?.fingerprint ?? null,
+        },
+      });
+    });
+    return this.get(id);
+  }
+
+  async removeCaCertificate(actor: Principal, id: string): Promise<ProviderSummary> {
+    await this.#database.transaction(async (tx) => {
+      await this.#find(tx, id, true);
+      const [removed] = await tx
+        .delete(identityProviderCaCertificates)
+        .where(eq(identityProviderCaCertificates.providerId, id))
+        .returning({ fingerprint: identityProviderCaCertificates.fingerprint });
+      if (!removed) return;
+      await this.#audit.record(tx, {
+        name: "identityProvider.caCertificateChanged",
+        actor,
+        targetId: id,
+        fields: {
+          action: "removed",
+          fingerprint: null,
+          subject: null,
+          expiresAt: null,
+          previousFingerprint: removed.fingerprint,
         },
       });
     });
@@ -508,12 +1039,19 @@ export class IdentityProviderService {
     let certificate: string | null = null;
     let keyId: string | null = null;
     let expiresAt: Date | null;
+    this.#checkCredential(provider.type, providerConfigSchema(provider.type).parse(provider.config), input);
     if (input.kind === "clientSecret") {
       secret = clientSecretSchema.parse(input.secret);
       expiresAt = input.expiresAt;
       if (expiresAt && expiresAt <= now) {
         throw new OrganizationError("expiryInPast", "The client secret has already expired");
       }
+    } else if (input.kind === "bindPassword") {
+      const parsed = directoryPasswordSchema.safeParse(input.secret);
+      if (!parsed.success)
+        throw new OrganizationError("invalidInput", "Enter the password of the service account");
+      secret = parsed.data;
+      expiresAt = null;
     } else {
       if (!Number.isInteger(input.validDays) || input.validDays < 30 || input.validDays > 3 * 365) {
         throw new OrganizationError("invalidInput", "A certificate is valid for 30 days to 3 years");
@@ -567,7 +1105,10 @@ export class IdentityProviderService {
         .where(eq(identityProviderCredentials.providerId, id));
       const credential = credentials.find((candidate) => candidate.id === credentialId);
       if (!credential) throw new OrganizationError("notFound", "The credential does not exist");
-      if (credentials.length === 1) {
+      const sameGroup = credentials.filter(
+        (candidate) => groupOf(candidate.kind) === groupOf(credential.kind),
+      );
+      if (sameGroup.length === 1) {
         throw new OrganizationError("lastCredential", "Add a new credential before removing the last one");
       }
       await tx.delete(identityProviderCredentials).where(eq(identityProviderCredentials.id, credentialId));
@@ -724,21 +1265,51 @@ export class IdentityProviderService {
       .select({ directoryKey: identityProviderSecrets.directoryKey })
       .from(identityProviderSecrets)
       .where(eq(identityProviderSecrets.providerId, id));
+    const base = {
+      id: row.id,
+      name: row.name,
+      directoryKey: secret
+        ? this.#encryption.decryptString(secret.directoryKey, directoryKeyContext(row.id))
+        : null,
+    };
+    let provider: ProviderDefinition;
+    if (row.type === "saml") {
+      const [metadata] = await this.#database
+        .select({
+          entityId: samlMetadata.entityId,
+          ssoUrl: samlMetadata.ssoUrl,
+          certificates: samlMetadata.certificates,
+        })
+        .from(samlMetadata)
+        .where(eq(samlMetadata.providerId, id));
+      provider = {
+        ...base,
+        type: "saml",
+        config: samlConfigSchema.parse(row.config),
+        metadata: metadata ?? null,
+      };
+    } else if (row.type === "ldap") {
+      const [authority] = await this.#database
+        .select({ certificates: identityProviderCaCertificates.certificates })
+        .from(identityProviderCaCertificates)
+        .where(eq(identityProviderCaCertificates.providerId, id));
+      provider = {
+        ...base,
+        type: "ldap",
+        config: ldapConfigSchema.parse(row.config),
+        caCertificates: authority?.certificates ?? null,
+      };
+    } else {
+      provider = { ...base, type: "oidc", config: oidcConfigSchema.parse(row.config) };
+    }
     return {
-      provider: {
-        id: row.id,
-        type: row.type,
-        name: row.name,
-        config: oidcConfigSchema.parse(row.config),
-        directoryKey: secret
-          ? this.#encryption.decryptString(secret.directoryKey, directoryKeyContext(row.id))
-          : null,
-      },
+      provider,
       active: row.deactivatedAt === null,
       credentials: rows.map((credential) => ({
         id: credential.id,
         kind: credential.kind,
         keyId: credential.keyId,
+        certificate: credential.certificate,
         secret: this.#encryption.decryptString(credential.secret, credentialContext(credential.id)),
       })),
     };
@@ -748,6 +1319,7 @@ export class IdentityProviderService {
     const rows = await this.#database
       .select({
         id: identityProviders.id,
+        type: identityProviders.type,
         name: identityProviders.name,
         preset: identityProviders.preset,
         logoRef: identityProviderLogos.ref,
@@ -763,6 +1335,7 @@ export class IdentityProviderService {
     const [row] = await this.#database
       .select({
         id: identityProviders.id,
+        type: identityProviders.type,
         name: identityProviders.name,
         preset: identityProviders.preset,
         logoRef: identityProviderLogos.ref,

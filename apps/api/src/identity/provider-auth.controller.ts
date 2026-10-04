@@ -30,6 +30,9 @@ import { ProblemException } from "../http/problems.js";
 import { actorOf, clientOf, sessionOf } from "../http/request.js";
 import { baseUrlOf } from "./identity-providers.controller.js";
 import {
+  directoryReauthenticationSchema,
+  directorySignInResultSchema,
+  directorySignInSchema,
   discoverSchema,
   identityParams,
   identitySchema,
@@ -40,6 +43,7 @@ import {
   providerIdParams,
   reauthenticateSchema,
   referenceSchema,
+  samlResponseBodySchema,
   signInOptionsSchema,
   signInStepSchema,
   startedSchema,
@@ -215,6 +219,146 @@ export class ProviderAuthController {
     await reply.status(303).header("location", location).header("cache-control", "no-store").send();
   }
 
+  @Get("auth/providers/:providerId/saml/metadata")
+  @PublicRoute()
+  @ApiRoute({
+    summary: "SAML metadata of Pagehall",
+    description:
+      "The service provider metadata to register at the identity provider: entity ID, assertion consumer service and the signing certificates of Pagehall.",
+    tags: [TAG],
+    params: providerIdParams,
+    raw: { contentTypes: ["application/samlmetadata+xml"], description: "The metadata.", example: "" },
+  })
+  async samlMetadata(
+    @Param("providerId") providerId: string,
+    @Req() request: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const metadata = await this.#services.providerSignIn.serviceProviderMetadata(
+      providerId,
+      await baseUrlOf(this.context, request),
+    );
+    reply
+      .header("content-type", "application/samlmetadata+xml")
+      .header("content-disposition", `inline; filename="pagehall-${providerId}.xml"`)
+      .header("cache-control", "no-cache");
+    return metadata;
+  }
+
+  @Post("auth/providers/:providerId/saml/acs")
+  @PublicRoute()
+  @ApiRoute({
+    summary: "Receive a SAML response",
+    description:
+      "The identity provider posts the response here. Pagehall keeps it with the started sign-in and redirects (303) to the callback, which checks it in the browser that started the sign-in.",
+    tags: [TAG],
+    params: providerIdParams,
+    body: samlResponseBodySchema,
+    redirect: { description: "Redirect to the callback or to the sign-in page with an error." },
+  })
+  async samlResponse(
+    @Param("providerId") providerId: string,
+    @Body() body: z.output<typeof samlResponseBodySchema>,
+    @Req() request: FastifyRequest,
+    @Res() reply: FastifyReply,
+  ) {
+    let location: string;
+    try {
+      const receipt = await this.#services.providerSignIn.receiveSamlResponse({
+        providerId,
+        samlResponse: body.SAMLResponse,
+        relayState: body.RelayState ?? null,
+        baseUrl: await baseUrlOf(this.context, request),
+        clientIp: request.ip,
+      });
+      if (receipt.browserToken) {
+        setCookie(reply, COOKIES.providerFlow, receipt.browserToken, PROVIDER_FLOW_MAX_AGE_SECONDS);
+      }
+      location = withQuery(`/api/v1/auth/providers/${providerId}/callback`, { state: receipt.state });
+    } catch (error) {
+      const code =
+        error instanceof ProviderResponseError
+          ? "providerUnavailable"
+          : error instanceof AuthError || error instanceof OrganizationError
+            ? error.code
+            : null;
+      if (code === null) throw error;
+      location = withQuery("/sign-in", { error: code });
+    }
+    await reply.status(303).header("location", location).header("cache-control", "no-store").send();
+  }
+
+  @Post("auth/providers/:providerId/password")
+  @PublicRoute()
+  @ApiRoute({
+    summary: "Sign in with a directory password",
+    description:
+      "For LDAP and Active Directory providers. Pagehall finds the person with its service account and checks the password with a bind. Pagehall's rate limits apply before the directory is asked, so failed attempts here never lock the directory account.",
+    tags: [TAG],
+    status: 200,
+    params: providerIdParams,
+    body: directorySignInSchema,
+    response: { description: "The outcome.", schema: directorySignInResultSchema },
+    errors: [
+      "invalidCredentials",
+      "passwordExpired",
+      "passwordMustChange",
+      "accountLocked",
+      "accountDisabled",
+      "outsideSignInHours",
+      "locked",
+      "rateLimited",
+      "providerUnavailable",
+      "providerDeactivated",
+    ],
+  })
+  async directorySignIn(
+    @Param("providerId") providerId: string,
+    @Body() body: z.output<typeof directorySignInSchema>,
+    @Req() request: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const device = ensureDeviceCookie(request, reply, generateToken);
+    let result: CallbackResult;
+    try {
+      result = await this.#services.providerSignIn.signInWithDirectory({
+        providerId,
+        signInName: body.signInName,
+        password: body.password,
+        client: clientOf(request, device),
+      });
+    } catch (error) {
+      if (error instanceof ProviderResponseError) {
+        this.context.logger.warn({ providerId, reason: error.message }, "Directory sign-in failed");
+        throw new ProblemException(
+          "providerUnavailable",
+          "The directory could not be reached. Try again in a few minutes or contact IT.",
+        );
+      }
+      throw error;
+    }
+    switch (result.kind) {
+      case "signedIn":
+        await setSessionCookie(this.context, reply, result.signedIn.token);
+        setCookie(reply, COOKIES.lastProvider, providerId, LAST_PROVIDER_MAX_AGE_SECONDS);
+        return {
+          status: "signedIn" as const,
+          sessionKind: result.signedIn.session.kind,
+          account: await this.#describe(result.signedIn.session.accountId),
+        };
+      case "secondFactorRequired":
+        setPendingCookie(reply, result.pendingToken);
+        return { status: "secondFactorRequired" as const, factors: result.factors };
+      case "linkRequired":
+        setCookie(reply, COOKIES.link, result.pendingToken, LINK_MAX_AGE_SECONDS);
+        return { status: "linkRequired" as const };
+      case "refused":
+        return { status: "refused" as const, reference: result.reference, reason: result.reason };
+      default:
+        throw new ProblemException("providerUnavailable", "The sign-in could not be completed");
+    }
+  }
+
   @Post("auth/providers/:providerId/backchannel-logout")
   @PublicRoute()
   @ApiRoute({
@@ -350,6 +494,44 @@ export class ProviderAuthController {
     });
     setCookie(reply, COOKIES.providerFlow, started.browserToken, PROVIDER_FLOW_MAX_AGE_SECONDS);
     return { url: started.url };
+  }
+
+  @Post("auth/reauthenticate/directory")
+  @SessionRoute()
+  @ApiRoute({
+    summary: "Confirm the identity with the directory password",
+    description:
+      "For accounts linked to an LDAP or Active Directory provider. Pagehall checks the password with a bind.",
+    tags: [TAG],
+    status: 200,
+    body: directoryReauthenticationSchema,
+    errors: ["invalidCredentials", "locked", "rateLimited", "providerUnavailable"],
+  })
+  async reauthenticateWithDirectory(
+    @Body() body: z.output<typeof directoryReauthenticationSchema>,
+    @Req() request: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const session = sessionOf(request);
+    let token: string;
+    try {
+      token = await this.#services.providerSignIn.reauthenticateWithDirectory({
+        sessionId: session.id,
+        accountId: session.accountId,
+        providerId: body.providerId,
+        password: body.password,
+        client: clientOf(request),
+      });
+    } catch (error) {
+      if (error instanceof ProviderResponseError) {
+        throw new ProblemException(
+          "providerUnavailable",
+          "The directory could not be reached. Try again in a few minutes or contact IT.",
+        );
+      }
+      throw error;
+    }
+    await setSessionCookie(this.context, reply, token);
   }
 
   @Get("account/identities")

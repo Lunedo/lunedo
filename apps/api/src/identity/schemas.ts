@@ -1,14 +1,20 @@
 import { PASSWORD_MAX_LENGTH, signInRefusalReasons } from "@pagehall/server";
 import {
+  caCertificateSchema,
   clientSecretSchema,
+  directoryPasswordSchema,
   identityProviderNameSchema,
   identityProviderPresets,
+  identityProviderTypes,
+  ldapConfigSchema,
   mappingRuleInputSchema,
   oidcConfigSchema,
+  samlConfigSchema,
+  samlMetadataXmlSchema,
   signInRefusalReferenceSchema,
 } from "@pagehall/shared";
 import { z } from "zod";
-import { secondFactorSchema } from "../auth/schemas.js";
+import { secondFactorSchema, signedInSchema } from "../auth/schemas.js";
 import { inputTimestamp, timestamp, uuid } from "../http/schemas.js";
 
 export const removalPreviewSchema = z
@@ -75,27 +81,180 @@ export const credentialInputSchema = z
           .describe("Validity of the generated certificate in days, 30 to 1095."),
       })
       .strict(),
+    z
+      .object({
+        kind: z.literal("samlSigning"),
+        validDays: z
+          .number()
+          .int()
+          .min(30)
+          .max(1095)
+          .describe("Validity of the generated signing certificate in days, 30 to 1095."),
+      })
+      .strict(),
+    z
+      .object({
+        kind: z.literal("bindPassword"),
+        secret: directoryPasswordSchema.describe("Password of the directory service account."),
+      })
+      .strict(),
   ])
   .describe(
-    "A client secret, or a certificate whose key pair Pagehall generates. The private key never leaves Pagehall.",
+    "A client secret, a certificate or a SAML signing key pair that Pagehall generates, or the password of a directory service account. Private keys and passwords never leave Pagehall.",
   );
 
+const providerName = identityProviderNameSchema.describe("Name shown on the sign-in page.");
+
 export const createProviderSchema = z
-  .object({
-    name: identityProviderNameSchema.describe("Name shown on the sign-in page."),
-    config: oidcConfigSchema.describe("Configuration of the OpenID Connect provider."),
-    credential: credentialInputSchema,
-  })
-  .strict()
-  .describe("A new OpenID Connect provider.");
+  .discriminatedUnion("type", [
+    z
+      .object({
+        type: z.literal("oidc").describe("OpenID Connect."),
+        name: providerName,
+        config: oidcConfigSchema.describe("Configuration of the OpenID Connect provider."),
+        credential: credentialInputSchema,
+      })
+      .strict(),
+    z
+      .object({
+        type: z.literal("saml").describe("SAML 2.0."),
+        name: providerName,
+        config: samlConfigSchema.describe("Configuration of the SAML identity provider."),
+        metadataXml: samlMetadataXmlSchema
+          .nullable()
+          .optional()
+          .describe("The metadata file of the identity provider, when the metadata source is a file."),
+        credential: credentialInputSchema
+          .nullable()
+          .optional()
+          .describe(
+            "Credential for Microsoft Graph, for Entra ID with directory sync. Pagehall generates its own signing key.",
+          ),
+      })
+      .strict(),
+    z
+      .object({
+        type: z.literal("ldap").describe("LDAP or Active Directory."),
+        name: providerName,
+        config: ldapConfigSchema.describe("Configuration of the directory."),
+        credential: credentialInputSchema.describe("The password of the service account."),
+      })
+      .strict(),
+  ])
+  .describe("A new identity provider.");
 
 export const updateProviderSchema = z
   .object({
     name: identityProviderNameSchema.optional().describe("Name shown on the sign-in page."),
-    config: oidcConfigSchema.optional().describe("The whole new configuration. The preset cannot change."),
+    config: z
+      .union([oidcConfigSchema, samlConfigSchema, ldapConfigSchema])
+      .optional()
+      .describe("The whole new configuration. The type and the preset cannot change."),
   })
   .strict()
   .describe("Changes to the provider.");
+
+export const samlMetadataUploadSchema = z
+  .object({ xml: samlMetadataXmlSchema.describe("The metadata file of the identity provider.") })
+  .strict()
+  .describe("SAML metadata of the identity provider.");
+
+export const caCertificateUploadSchema = z
+  .object({
+    certificate: caCertificateSchema.describe(
+      "One or more certificates of the certificate authority that issued the directory server's certificate, in PEM format.",
+    ),
+  })
+  .strict()
+  .describe("The certificate authority to trust for this directory.");
+
+export const directoryTestSchema = z
+  .object({
+    signInName: z
+      .string()
+      .trim()
+      .min(1)
+      .max(320)
+      .nullable()
+      .optional()
+      .describe("A sign-in name to look up. Without it, Pagehall reads any one person."),
+  })
+  .strict()
+  .describe("What to look up in the directory.");
+
+export const directoryTestResultSchema = z
+  .object({
+    steps: z
+      .array(
+        z.object({
+          step: z
+            .enum(["connection", "certificate", "serviceAccount", "search"])
+            .describe("What was checked."),
+          ok: z.boolean().describe("Whether the check passed."),
+          detail: z.string().nullable().describe("What failed, or null."),
+        }),
+      )
+      .describe("The checks in order. A failed check ends the test."),
+    sample: z
+      .object({
+        subject: z.string().describe("Identifier Pagehall uses for the person."),
+        email: z.string().nullable().describe("E-mail address."),
+        signInName: z.string().nullable().describe("Sign-in name."),
+        displayName: z.string().nullable().describe("Display name."),
+        groups: z
+          .array(z.object({ id: z.string(), name: z.string().nullable() }))
+          .nullable()
+          .describe("Groups including nested groups."),
+      })
+      .nullable()
+      .describe("The person found, or null."),
+  })
+  .describe("Result of the directory test.");
+
+export const directorySignInSchema = z
+  .object({
+    signInName: z.string().trim().min(1).max(320).describe("Sign-in name in the directory."),
+    password: z.string().max(1024).describe("Directory password. An empty password is always refused."),
+  })
+  .strict()
+  .describe("Sign-in with a directory password.");
+
+export const directoryReauthenticationSchema = z
+  .object({
+    providerId: uuid("Directory provider linked to the account."),
+    password: z.string().max(1024).describe("Directory password."),
+  })
+  .strict()
+  .describe("Confirmation of the identity with the directory password.");
+
+export const directorySignInResultSchema = z
+  .discriminatedUnion("status", [
+    signedInSchema.describe("Signed in."),
+    z
+      .object({
+        status: z.literal("secondFactorRequired"),
+        factors: z.array(z.string()).describe("Second factors of the account."),
+      })
+      .describe("A Pagehall second factor is required next."),
+    z
+      .object({ status: z.literal("linkRequired") })
+      .describe("An account with the address exists; the person confirms the link next."),
+    z
+      .object({
+        status: z.literal("refused"),
+        reference: z.string().describe("Reference for administrators."),
+        reason: z.enum(signInRefusalReasons).describe("Why the sign-in was refused."),
+      })
+      .describe("The sign-in was refused."),
+  ])
+  .describe("The outcome of a directory sign-in.");
+
+export const samlResponseBodySchema = z
+  .object({
+    SAMLResponse: z.string().min(1).max(1_000_000).describe("The SAML response, Base64-encoded."),
+    RelayState: z.string().max(200).optional().describe("The state Pagehall sent with the request."),
+  })
+  .describe("The SAML response the identity provider posts.");
 
 export const startSchema = z
   .object({ returnTo: returnTo.nullable().optional() })
@@ -122,8 +281,10 @@ export const startedSchema = z
 const credentialSchema = z
   .object({
     id: uuid("ID of the credential."),
-    kind: z.enum(["clientSecret", "certificate"]).describe("A client secret or a certificate."),
-    keyId: z.string().nullable().describe("Thumbprint of the certificate, or null for a secret."),
+    kind: z
+      .enum(["clientSecret", "certificate", "samlSigning", "bindPassword"])
+      .describe("A client secret, a certificate, a SAML signing key pair or a service account password."),
+    keyId: z.string().nullable().describe("Thumbprint of the certificate, or null for a secret or password."),
     expiresAt: timestamp("When the credential expires.").nullable(),
     createdAt: timestamp("When the credential was added."),
   })
@@ -133,51 +294,116 @@ export const addedCredentialSchema = credentialSchema
   .extend({ certificate: z.string().nullable().describe("The public certificate as PEM, for certificates.") })
   .describe("The added credential.");
 
-export const providerSchema = z
+const certificateInfoSchema = z
   .object({
-    id: uuid("ID of the provider."),
-    type: z.literal("oidc").describe("Protocol of the provider."),
-    name: z.string().describe("Name shown on the sign-in page."),
-    config: oidcConfigSchema.describe("Configuration of the provider."),
-    issuer: z.string().describe("Issuer URL the provider is discovered at."),
-    redirectUri: z.string().describe("Redirect URI to register with the provider."),
-    logoRef: z.string().nullable().describe("Reference to the uploaded logo, or null."),
-    credentials: z.array(credentialSchema).describe("Credentials, newest first."),
-    directoryKey: z
-      .boolean()
-      .describe("Whether a service account key for the Google directory is stored. The key is never shown."),
-    capabilities: z
-      .object({
-        groups: z.boolean().describe("Whether Pagehall learns the groups of a person from this provider."),
-        directorySync: z
-          .boolean()
-          .describe("Whether profiles and groups are synchronized in the background, not only at sign-in."),
-        disabledAccounts: z
-          .boolean()
-          .describe("Whether accounts disabled or deleted in the provider are detected without a sign-in."),
-      })
-      .describe("What the provider can do with its current configuration."),
-    deactivatedAt: z.iso
-      .datetime()
-      .nullable()
-      .describe(
-        "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized.",
-      ),
-    warnings: z
-      .array(z.enum(["noCredential", "credentialExpiring", "credentialExpired"]))
-      .describe("Problems that need attention."),
-    createdAt: timestamp("When the provider was set up."),
-    updatedAt: timestamp("When the provider was last changed."),
+    fingerprint: z.string().describe("SHA-256 fingerprint of the certificate."),
+    subject: z.string().describe("Subject of the certificate."),
+    expiresAt: timestamp("When the certificate expires."),
   })
+  .describe("A certificate.");
+
+const providerBase = {
+  id: uuid("ID of the provider."),
+  name: z.string().describe("Name shown on the sign-in page."),
+  issuer: z
+    .string()
+    .describe("Issuer URL for OIDC, entity ID of the identity provider for SAML, server address for LDAP."),
+  redirectUri: z
+    .string()
+    .describe("Redirect URI for OIDC, assertion consumer service URL for SAML, the sign-in page for LDAP."),
+  logoRef: z.string().nullable().describe("Reference to the uploaded logo, or null."),
+  credentials: z.array(credentialSchema).describe("Credentials, newest first."),
+  directoryKey: z
+    .boolean()
+    .describe("Whether a service account key for the Google directory is stored. The key is never shown."),
+  capabilities: z
+    .object({
+      groups: z.boolean().describe("Whether Pagehall learns the groups of a person from this provider."),
+      directorySync: z
+        .boolean()
+        .describe("Whether profiles and groups are synchronized in the background, not only at sign-in."),
+      disabledAccounts: z
+        .boolean()
+        .describe("Whether accounts disabled or deleted in the provider are detected without a sign-in."),
+    })
+    .describe("What the provider can do with its current configuration."),
+  deactivatedAt: z.iso
+    .datetime()
+    .nullable()
+    .describe(
+      "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized.",
+    ),
+  warnings: z
+    .array(
+      z.enum([
+        "noCredential",
+        "credentialExpiring",
+        "credentialExpired",
+        "metadataRefreshFailed",
+        "caCertificateExpiring",
+      ]),
+    )
+    .describe("Problems that need attention."),
+  createdAt: timestamp("When the provider was set up."),
+  updatedAt: timestamp("When the provider was last changed."),
+};
+
+export const providerSchema = z
+  .discriminatedUnion("type", [
+    z.object({
+      type: z.literal("oidc").describe("OpenID Connect."),
+      ...providerBase,
+      config: oidcConfigSchema.describe("Configuration of the provider."),
+    }),
+    z.object({
+      type: z.literal("saml").describe("SAML 2.0."),
+      ...providerBase,
+      config: samlConfigSchema.describe("Configuration of the provider."),
+      saml: z
+        .object({
+          entityId: z
+            .string()
+            .describe("Entity ID of Pagehall as service provider, the address of its metadata."),
+          metadataUrl: z.string().describe("Address of Pagehall's service provider metadata."),
+          identityProvider: z
+            .object({
+              entityId: z.string().describe("Entity ID of the identity provider."),
+              ssoUrl: z.string().describe("Sign-in address of the identity provider."),
+              certificates: z
+                .array(certificateInfoSchema)
+                .describe("Signing certificates of the identity provider."),
+              fetchedAt: timestamp("When the metadata was last loaded."),
+              refreshFailedAt: timestamp("When the last refresh failed, or null.").nullable(),
+              refreshError: z.string().nullable().describe("Why the last refresh failed, or null."),
+            })
+            .nullable()
+            .describe("What the metadata of the identity provider says."),
+        })
+        .describe("SAML details."),
+    }),
+    z.object({
+      type: z.literal("ldap").describe("LDAP or Active Directory."),
+      ...providerBase,
+      config: ldapConfigSchema.describe("Configuration of the provider."),
+      ldap: z
+        .object({
+          caCertificate: certificateInfoSchema
+            .nullable()
+            .describe("Uploaded certificate authority, or null when the system's trusted authorities apply."),
+        })
+        .describe("Directory details."),
+    }),
+  ])
   .describe("An identity provider.");
 
 export const createdProviderSchema = z
-  .object({ provider: providerSchema, credential: addedCredentialSchema })
+  .object({ provider: providerSchema, credential: addedCredentialSchema.nullable() })
   .describe("The new provider with its first credential.");
 
 export const signInProviderSchema = z
   .object({
     id: uuid("ID of the provider."),
+    type: z.enum(identityProviderTypes).describe("Protocol of the provider."),
     name: z.string().describe("Name shown on the sign-in page."),
     preset: z.enum(identityProviderPresets).describe("Kind of provider."),
     logoRef: z.string().nullable().describe("Reference to the uploaded logo, or null."),
@@ -217,6 +443,17 @@ export const signInStepSchema = z
         preset: z.enum(identityProviderPresets).describe("Kind of provider."),
       })
       .describe("The domain belongs to a provider."),
+    z
+      .object({
+        step: z.literal("directory").describe("Continue with the directory password of this provider."),
+        providerId: uuid("ID of the provider."),
+        name: z.string().describe("Name of the provider."),
+        preset: z.enum(identityProviderPresets).describe("Kind of provider."),
+        signInName: z
+          .enum(["email", "userPrincipalName", "sAMAccountName", "uid"])
+          .describe("What the directory expects as sign-in name besides the password."),
+      })
+      .describe("The domain belongs to a directory; the page asks for the password."),
     z
       .object({ step: z.literal("password").describe("Continue with the password form.") })
       .describe("Password sign-in is offered for this address."),
@@ -289,6 +526,11 @@ export const identitySchema = z
     id: uuid("ID of the linked identity."),
     providerId: uuid("ID of the provider."),
     providerName: z.string().describe("Name of the provider."),
+    providerType: z
+      .enum(identityProviderTypes)
+      .describe(
+        "Protocol of the provider. Directory providers confirm the identity with the directory password.",
+      ),
     subject: z.string().describe("Identifier at the provider."),
     email: z.string().nullable().describe("E-mail address from the provider."),
     signInName: z.string().nullable().describe("Sign-in name from the provider."),

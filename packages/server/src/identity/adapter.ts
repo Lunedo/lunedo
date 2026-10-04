@@ -1,22 +1,41 @@
-import type { OidcConfig } from "@pagehall/shared";
+import type { LdapConfig, OidcConfig, SamlConfig } from "@pagehall/shared";
 import type { identityCredentialKinds, identityProviderTypes } from "./schema.js";
 
 export type IdentityProviderType = (typeof identityProviderTypes)[number];
 export type IdentityCredentialKind = (typeof identityCredentialKinds)[number];
 
-export interface ProviderDefinition {
+interface ProviderBase {
   id: string;
-  type: IdentityProviderType;
   name: string;
-  config: OidcConfig;
   directoryKey: string | null;
 }
+
+export interface SamlIdentityProviderMetadata {
+  entityId: string;
+  ssoUrl: string;
+  certificates: string[];
+}
+
+export type OidcProviderDefinition = ProviderBase & { type: "oidc"; config: OidcConfig };
+export type SamlProviderDefinition = ProviderBase & {
+  type: "saml";
+  config: SamlConfig;
+  metadata: SamlIdentityProviderMetadata | null;
+};
+export type LdapProviderDefinition = ProviderBase & {
+  type: "ldap";
+  config: LdapConfig;
+  caCertificates: string | null;
+};
+
+export type ProviderDefinition = OidcProviderDefinition | SamlProviderDefinition | LdapProviderDefinition;
 
 export interface ProviderCredential {
   id: string;
   kind: IdentityCredentialKind;
   secret: string;
   keyId: string | null;
+  certificate: string | null;
 }
 
 export interface ProviderCapabilities {
@@ -46,11 +65,36 @@ export interface AuthorizationRequest {
   reauthenticate: boolean;
 }
 
+export interface StartedAuthorization {
+  url: URL;
+  requestId: string | null;
+}
+
 export interface CallbackInput {
   callbackUrl: URL;
+  redirectUri: string;
   state: string;
   nonce: string;
   codeVerifier: string;
+  requestId: string | null;
+  samlResponse: string | null;
+}
+
+export interface DirectSignInInput {
+  signInName: string;
+  password: string;
+}
+
+export interface DirectSignInResult {
+  profile: ProviderProfile;
+  groupsFailed: boolean;
+}
+
+export type DirectoryTestStep = "connection" | "certificate" | "serviceAccount" | "search";
+
+export interface DirectoryTestResult {
+  steps: { step: DirectoryTestStep; ok: boolean; detail: string | null }[];
+  sample: ProviderProfile | null;
 }
 
 export interface RedirectSignInResult {
@@ -59,6 +103,7 @@ export interface RedirectSignInResult {
   authTime: number | null;
   providerSessionId: string | null;
   claimNames: string[];
+  assertion?: { id: string; expiresAt: Date };
 }
 
 export interface ProviderLogout {
@@ -85,17 +130,33 @@ export interface IdentityProviderAdapter {
     provider: ProviderDefinition,
     credentials: readonly ProviderCredential[],
     request: AuthorizationRequest,
-  ): Promise<URL>;
+  ): Promise<StartedAuthorization>;
   completeSignIn(
     provider: ProviderDefinition,
     credentials: readonly ProviderCredential[],
     input: CallbackInput,
   ): Promise<RedirectSignInResult>;
-  verifyLogout(
+  verifyLogout?(
     provider: ProviderDefinition,
     credentials: readonly ProviderCredential[],
     logoutToken: string,
   ): Promise<ProviderLogout>;
+  authenticate?(
+    provider: ProviderDefinition,
+    credentials: readonly ProviderCredential[],
+    input: DirectSignInInput,
+  ): Promise<DirectSignInResult>;
+  verifyPassword?(
+    provider: ProviderDefinition,
+    credentials: readonly ProviderCredential[],
+    subject: string,
+    password: string,
+  ): Promise<boolean>;
+  testDirectory?(
+    provider: ProviderDefinition,
+    credentials: readonly ProviderCredential[],
+    signInName: string | null,
+  ): Promise<DirectoryTestResult>;
   readProfile?(
     provider: ProviderDefinition,
     credentials: readonly ProviderCredential[],
@@ -138,6 +199,62 @@ export class ProviderPolicyError extends Error {
 
   constructor(
     readonly reason: "domainNotAllowed" | "otherTenant",
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+export class ProviderTypeError extends Error {
+  override name = "ProviderTypeError";
+}
+
+export function expectType<T extends ProviderDefinition["type"]>(
+  provider: ProviderDefinition,
+  type: T,
+): Extract<ProviderDefinition, { type: T }> {
+  if (provider.type !== type) {
+    throw new ProviderTypeError(`A ${provider.type} provider was given to the ${type} adapter`);
+  }
+  return provider as Extract<ProviderDefinition, { type: T }>;
+}
+
+export const directorySignInFailures = [
+  "invalidCredentials",
+  "passwordExpired",
+  "passwordMustChange",
+  "accountLocked",
+  "accountDisabled",
+  "outsideSignInHours",
+] as const;
+export type DirectorySignInFailure = (typeof directorySignInFailures)[number];
+
+export class DirectorySignInError extends Error {
+  override name = "DirectorySignInError";
+
+  constructor(
+    readonly reason: DirectorySignInFailure,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+export const directoryConnectionFailures = [
+  "unreachable",
+  "certificateUntrusted",
+  "certificateInvalid",
+  "insecureConnection",
+  "serviceAccountRejected",
+  "searchFailed",
+] as const;
+export type DirectoryConnectionFailure = (typeof directoryConnectionFailures)[number];
+
+export class DirectoryConnectionError extends ProviderResponseError {
+  override name = "DirectoryConnectionError";
+
+  constructor(
+    readonly reason: DirectoryConnectionFailure,
     message: string,
   ) {
     super(message);

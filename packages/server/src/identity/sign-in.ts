@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import type { OidcConfig } from "@pagehall/shared";
+import { directoryPasswordSchema } from "@pagehall/shared";
 import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import * as client from "openid-client";
 import { ZodError } from "zod";
@@ -9,12 +9,23 @@ import { ANONYMOUS, accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { ChallengeStore } from "../auth/challenges.js";
 import { instanceAdministratorIds } from "../auth/emergency-recipients.js";
-import { ChallengeExpiredError, RateLimitedError } from "../auth/errors.js";
+import {
+  AuthError,
+  ChallengeExpiredError,
+  InvalidCredentialsError,
+  LockedError,
+  RateLimitedError,
+} from "../auth/errors.js";
 import { sessions } from "../auth/schema.js";
 import type { ClientInfo, SessionService } from "../auth/sessions.js";
 import { passwordSignInSetting } from "../auth/settings.js";
 import type { PendingIdentity, SecondFactorType, SignedIn, SignInService } from "../auth/sign-in.js";
-import { clientSubject, type RateLimiter } from "../auth/throttle.js";
+import {
+  clientSubject,
+  type RateLimiter,
+  type SignInThrottle,
+  type ThrottleSubjects,
+} from "../auth/throttle.js";
 import { secondFactorsOf } from "../auth/two-factor.js";
 import { secretsEqual } from "../crypto/constant-time.js";
 import type { Database, Transaction } from "../database/database.js";
@@ -24,6 +35,9 @@ import { OrganizationError } from "../organizations/organizations.js";
 import { organizationDomains } from "../organizations/schema.js";
 import type { SettingsService } from "../settings/service.js";
 import {
+  DirectorySignInError,
+  type DirectorySignInFailure,
+  type DirectoryTestResult,
   type IdentityProviderAdapter,
   type ProviderDefinition,
   ProviderPolicyError,
@@ -33,11 +47,13 @@ import {
 import type { GroupMappingService } from "./groups.js";
 import type { IdentityProviderService, SignInProvider } from "./providers.js";
 import { callbackPath } from "./providers.js";
+import { SamlAdapter, samlPaths } from "./saml.js";
 import {
   identities,
   providerFlows,
   providerLogoutTokens,
   type SignInRefusalReason,
+  samlAssertions,
   signInRefusals,
 } from "./schema.js";
 
@@ -57,12 +73,31 @@ export interface StartedFlow {
 }
 
 export function needsPagehallFactor(
-  setting: OidcConfig["secondFactor"],
+  setting: { mode: "provider" | "providerProof" | "pagehall"; proofValues?: readonly string[] },
   methods: readonly string[],
 ): boolean {
   if (setting.mode === "pagehall") return true;
   if (setting.mode === "provider") return false;
-  return !methods.some((method) => setting.proofValues.includes(method));
+  return !methods.some((method) => setting.proofValues?.includes(method));
+}
+
+export class DirectorySignInRefusedError extends AuthError {
+  constructor(readonly reason: Exclude<DirectorySignInFailure, "invalidCredentials">) {
+    super(reason, "The directory account cannot sign in right now");
+  }
+}
+
+const DIRECTORY_AUDIT_REASONS = {
+  passwordExpired: "directoryPasswordExpired",
+  passwordMustChange: "directoryPasswordMustChange",
+  accountLocked: "directoryAccountLocked",
+  accountDisabled: "directoryAccountDisabled",
+  outsideSignInHours: "directoryOutsideSignInHours",
+} as const;
+
+export interface SamlReceipt {
+  state: string;
+  browserToken: string | null;
 }
 
 export type CallbackResult =
@@ -98,6 +133,13 @@ export interface SignInOptions {
 
 export type SignInStep =
   | { step: "provider"; providerId: string; name: string; preset: SignInProvider["preset"] }
+  | {
+      step: "directory";
+      providerId: string;
+      name: string;
+      preset: SignInProvider["preset"];
+      signInName: "email" | "userPrincipalName" | "sAMAccountName" | "uid";
+    }
   | { step: "password" }
   | { step: "none" };
 
@@ -165,6 +207,7 @@ export class ProviderSignInService {
   readonly #notifications: NotificationService;
   readonly #settings: SettingsService;
   readonly #rateLimiter: RateLimiter;
+  readonly #throttle: SignInThrottle | undefined;
   readonly #mapping: GroupMappingService;
   readonly #clock: () => Date;
 
@@ -180,6 +223,7 @@ export class ProviderSignInService {
     notifications: NotificationService;
     settings: SettingsService;
     rateLimiter: RateLimiter;
+    throttle?: SignInThrottle;
     mapping: GroupMappingService;
     clock?: () => Date;
   }) {
@@ -194,6 +238,7 @@ export class ProviderSignInService {
     this.#notifications = options.notifications;
     this.#settings = options.settings;
     this.#rateLimiter = options.rateLimiter;
+    this.#throttle = options.throttle;
     this.#mapping = options.mapping;
     this.#clock = options.clock ?? (() => new Date());
   }
@@ -231,25 +276,34 @@ export class ProviderSignInService {
         .where(and(eq(identities.providerId, provider.id), eq(identities.accountId, input.accountId ?? "")));
       if (!identity) throw new OrganizationError("notFound", "The account is not linked to this provider");
     }
+    if (provider.type === "ldap") {
+      throw new OrganizationError("invalidInput", "Directory providers sign in on the Pagehall page");
+    }
     const browserToken = client.randomState();
     const state = client.randomState();
     const nonce = client.randomNonce();
     const codeVerifier = client.randomPKCECodeVerifier();
-    const redirectUri = `${input.baseUrl.replace(/\/+$/, "")}${callbackPath(provider.id)}`;
-    const url = await this.#adapter(provider.type).authorizationUrl(provider, credentials, {
+    const base = input.baseUrl.replace(/\/+$/, "");
+    const redirectUri =
+      provider.type === "saml"
+        ? `${base}${samlPaths(provider.id).acs}`
+        : `${base}${callbackPath(provider.id)}`;
+    const started = await this.#adapter(provider.type).authorizationUrl(provider, credentials, {
       redirectUri,
       state,
       nonce,
       codeChallenge: await client.calculatePKCECodeChallenge(codeVerifier),
       reauthenticate: input.purpose === "reauthentication",
     });
+    const url = started.url;
     await this.#database.insert(providerFlows).values({
       purpose: input.purpose,
       providerId: provider.id,
       stateHash: hashState(state),
       browserHash: hashState(browserToken),
-      nonce,
-      codeVerifier,
+      nonce: provider.type === "oidc" ? nonce : null,
+      codeVerifier: provider.type === "oidc" ? codeVerifier : null,
+      requestId: started.requestId,
       redirectUri,
       sessionId: input.sessionId ?? null,
       returnTo: input.returnTo ?? null,
@@ -292,14 +346,20 @@ export class ProviderSignInService {
     let result: Awaited<ReturnType<IdentityProviderAdapter["completeSignIn"]>>;
     try {
       if (input.query.has("error")) throw new ProviderResponseError("The provider refused the sign-in");
+      if (provider.type === "saml" && !flow.samlResponse) throw new ChallengeExpiredError();
       result = await this.#adapter(provider.type).completeSignIn(provider, credentials, {
         callbackUrl,
+        redirectUri: flow.redirectUri,
         state,
-        nonce: flow.nonce,
-        codeVerifier: flow.codeVerifier,
+        nonce: flow.nonce ?? "",
+        codeVerifier: flow.codeVerifier ?? "",
+        requestId: flow.requestId,
+        samlResponse: flow.samlResponse,
       });
+      if (result.assertion) await this.#consumeAssertion(provider.id, result.assertion);
     } catch (error) {
       if (!(error instanceof ProviderPolicyError) && !(error instanceof ProviderResponseError)) throw error;
+      await this.#forgetResponse(flow.id);
       if (flow.purpose === "test") {
         await this.#database
           .update(providerFlows)
@@ -313,6 +373,7 @@ export class ProviderSignInService {
           : "invalidResponse";
       return this.#refuse({ providerId: provider.id, reason });
     }
+    await this.#forgetResponse(flow.id);
     const profile = result.profile;
     const emailVerified = this.#emailVerified(provider.config.domains, profile.email);
 
@@ -397,7 +458,7 @@ export class ProviderSignInService {
     groups: ProviderProfile["groups"];
     groupsFailed: boolean;
     emailVerified: boolean;
-    secondFactor: boolean;
+    secondFactor: boolean | "policy";
     providerSessionId: string | null;
     client: ClientInfo;
     returnTo: string | null;
@@ -565,7 +626,7 @@ export class ProviderSignInService {
       client: ClientInfo;
       returnTo: string | null;
       started: Date;
-      secondFactor: boolean;
+      secondFactor: boolean | "policy";
     },
   ): Promise<CallbackResult> {
     const mailIds: string[] = [];
@@ -579,7 +640,11 @@ export class ProviderSignInService {
         identityId,
         providerSessionId: input.providerSessionId,
       };
-      if (input.secondFactor) {
+      const secondFactor =
+        input.secondFactor === "policy"
+          ? await this.#signIn.secondFactorRequired(target.id, tx)
+          : input.secondFactor;
+      if (secondFactor) {
         const pending = await this.#signIn.providerSecondFactor(tx, target, session, input.client);
         if (pending) return pending;
       }
@@ -590,7 +655,7 @@ export class ProviderSignInService {
         input.client,
         mailIds,
         input.started,
-        input.secondFactor ? "secondFactorSetup" : "full",
+        secondFactor ? "secondFactorSetup" : "full",
       );
     });
     await this.#notifications.dispatch(mailIds);
@@ -743,6 +808,19 @@ export class ProviderSignInService {
     if (!limit.allowed) throw new RateLimitedError(limit.retryAfterSeconds);
     const domain = domainOf(email);
     const provider = domain ? await this.#providers.providerForDomain(domain) : null;
+    if (provider?.type === "ldap") {
+      const loaded = await this.#providers.definition(provider.id);
+      if (loaded?.provider.type === "ldap") {
+        const attribute = loaded.provider.config.signInAttribute;
+        return {
+          step: "directory",
+          providerId: provider.id,
+          name: provider.name,
+          preset: provider.preset,
+          signInName: attribute === "mail" ? "email" : attribute,
+        };
+      }
+    }
     if (provider) {
       return { step: "provider", providerId: provider.id, name: provider.name, preset: provider.preset };
     }
@@ -776,7 +854,10 @@ export class ProviderSignInService {
   async backchannelLogout(providerId: string, logoutToken: string, clientIp?: string): Promise<number> {
     await this.#limit("providerLogout", clientIp, LOGOUTS_PER_CLIENT);
     const { provider, credentials } = await this.#load(providerId);
-    const logout = await this.#adapter(provider.type).verifyLogout(provider, credentials, logoutToken);
+    const adapter = this.#adapter(provider.type);
+    if (!adapter.verifyLogout)
+      throw new ProviderResponseError("The provider does not sign people out this way");
+    const logout = await adapter.verifyLogout(provider, credentials, logoutToken);
     return this.#database.transaction(async (tx) => {
       const recorded = await tx
         .insert(providerLogoutTokens)
@@ -810,17 +891,268 @@ export class ProviderSignInService {
     });
   }
 
+  async #consumeAssertion(providerId: string, assertion: { id: string; expiresAt: Date }): Promise<void> {
+    const stored = await this.#database
+      .insert(samlAssertions)
+      .values({ providerId, assertionId: assertion.id, expiresAt: assertion.expiresAt })
+      .onConflictDoNothing()
+      .returning({ assertionId: samlAssertions.assertionId });
+    if (stored.length === 0) throw new ProviderResponseError("The assertion was used before");
+  }
+
+  async #forgetResponse(flowId: string): Promise<void> {
+    await this.#database
+      .update(providerFlows)
+      .set({ samlResponse: null })
+      .where(eq(providerFlows.id, flowId));
+  }
+
+  async receiveSamlResponse(input: {
+    providerId: string;
+    samlResponse: string;
+    relayState: string | null;
+    baseUrl: string;
+    clientIp?: string | undefined;
+  }): Promise<SamlReceipt> {
+    await this.#limit("samlResponse", input.clientIp, STARTS_PER_CLIENT);
+    const { provider } = await this.#load(input.providerId, "signIn");
+    if (provider.type !== "saml")
+      throw new OrganizationError("notFound", "The identity provider does not exist");
+    if (input.relayState) {
+      const [flow] = await this.#database
+        .update(providerFlows)
+        .set({ samlResponse: input.samlResponse })
+        .where(
+          and(
+            eq(providerFlows.stateHash, hashState(input.relayState)),
+            eq(providerFlows.providerId, provider.id),
+            isNull(providerFlows.consumedAt),
+            isNull(providerFlows.samlResponse),
+            gt(providerFlows.expiresAt, this.#clock()),
+          ),
+        )
+        .returning({ id: providerFlows.id });
+      if (flow) return { state: input.relayState, browserToken: null };
+    }
+    if (!provider.config.idpInitiated) {
+      throw new OrganizationError(
+        "providerInitiatedSignIn",
+        "Sign-in started at the identity provider is turned off for this provider",
+      );
+    }
+    const state = client.randomState();
+    const browserToken = client.randomState();
+    await this.#database.insert(providerFlows).values({
+      purpose: "signIn",
+      providerId: provider.id,
+      stateHash: hashState(state),
+      browserHash: hashState(browserToken),
+      requestId: null,
+      samlResponse: input.samlResponse,
+      redirectUri: `${input.baseUrl.replace(/\/+$/, "")}${samlPaths(provider.id).acs}`,
+      expiresAt: new Date(this.#clock().getTime() + FLOW_LIFETIME_MS),
+    });
+    return { state, browserToken };
+  }
+
+  async serviceProviderMetadata(providerId: string, baseUrl: string): Promise<string> {
+    const { provider, credentials } = await this.#load(providerId);
+    const adapter = this.#adapter(provider.type);
+    if (!(adapter instanceof SamlAdapter)) {
+      throw new OrganizationError("notFound", "The identity provider has no SAML metadata");
+    }
+    return adapter.serviceProviderMetadata(provider, credentials, baseUrl);
+  }
+
+  #directorySubjects(providerId: string, signInName: string, clientIp: string | undefined): ThrottleSubjects {
+    return { email: `directory:${providerId}:${signInName.trim().toLowerCase()}`, clientIp };
+  }
+
+  async #checkDirectoryAttempt(subjects: ThrottleSubjects): Promise<void> {
+    if (!this.#throttle) return;
+    const rate = await this.#throttle.attempt(subjects);
+    if (!rate.allowed) throw new RateLimitedError(rate.retryAfterSeconds);
+    const lockout = await this.#throttle.lockout(subjects);
+    if (lockout) {
+      await this.#audit.recordAlone({
+        name: "auth.signInFailed",
+        actor: ANONYMOUS,
+        targetId: null,
+        fields: {
+          reason: lockout.subject === "account" ? "accountLocked" : "clientLocked",
+          method: "identityProvider",
+        },
+      });
+      throw new LockedError(Math.max(1, Math.ceil((lockout.lockedUntil.getTime() - Date.now()) / 1000)));
+    }
+  }
+
+  async #directoryFailure(
+    subjects: ThrottleSubjects,
+    reason: "invalidCredentials" | (typeof DIRECTORY_AUDIT_REASONS)[keyof typeof DIRECTORY_AUDIT_REASONS],
+  ): Promise<void> {
+    await this.#database.transaction(async (tx) => {
+      const lockouts =
+        reason === "invalidCredentials" ? ((await this.#throttle?.recordFailure(subjects, tx)) ?? []) : [];
+      await this.#audit.record(tx, {
+        name: "auth.signInFailed",
+        actor: ANONYMOUS,
+        targetId: null,
+        fields: { reason, method: "identityProvider" },
+      });
+      for (const lockout of lockouts) {
+        await this.#audit.record(tx, {
+          name: "auth.lockedOut",
+          actor: ANONYMOUS,
+          targetId: null,
+          fields: {
+            subject: lockout.subject,
+            failures: lockout.failures,
+            lockedUntil: lockout.lockedUntil.toISOString(),
+          },
+        });
+      }
+    });
+  }
+
+  async signInWithDirectory(input: {
+    providerId: string;
+    signInName: string;
+    password: string;
+    client: ClientInfo;
+  }): Promise<CallbackResult> {
+    const started = await this.#databaseNow();
+    const subjects = this.#directorySubjects(input.providerId, input.signInName, input.client.ip);
+    await this.#checkDirectoryAttempt(subjects);
+    const { provider, credentials } = await this.#load(input.providerId, "signIn");
+    const adapter = this.#adapter(provider.type);
+    if (provider.type !== "ldap" || !adapter.authenticate) {
+      throw new OrganizationError("invalidInput", "This provider signs in through its own page");
+    }
+    if (!directoryPasswordSchema.safeParse(input.password).success || input.signInName.trim() === "") {
+      await this.#directoryFailure(subjects, "invalidCredentials");
+      throw new InvalidCredentialsError();
+    }
+    let result: Awaited<ReturnType<NonNullable<IdentityProviderAdapter["authenticate"]>>>;
+    try {
+      result = await adapter.authenticate(provider, credentials, {
+        signInName: input.signInName,
+        password: input.password,
+      });
+    } catch (error) {
+      if (!(error instanceof DirectorySignInError)) throw error;
+      if (error.reason === "invalidCredentials") {
+        await this.#directoryFailure(subjects, "invalidCredentials");
+        throw new InvalidCredentialsError();
+      }
+      await this.#directoryFailure(subjects, DIRECTORY_AUDIT_REASONS[error.reason]);
+      throw new DirectorySignInRefusedError(error.reason);
+    }
+    await this.#throttle?.recordSuccess(subjects.email ?? "");
+    const profile = result.profile;
+    const emailVerified = this.#emailVerified(provider.config.domains, profile.email);
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.#signInWith({
+          provider,
+          profile,
+          groups: profile.groups,
+          groupsFailed: result.groupsFailed,
+          emailVerified,
+          secondFactor: provider.config.secondFactor.mode === "pagehall" ? true : "policy",
+          providerSessionId: null,
+          client: input.client,
+          returnTo: null,
+          started,
+        });
+      } catch (error) {
+        if (error instanceof Refused) {
+          return this.#refuse({ providerId: provider.id, reason: error.reason, profile });
+        }
+        if (attempt === 0 && isUniqueViolation(error)) continue;
+        if (error instanceof ZodError) {
+          return this.#refuse({ providerId: provider.id, reason: "invalidResponse", profile });
+        }
+        throw error;
+      }
+    }
+  }
+
+  async reauthenticateWithDirectory(input: {
+    sessionId: string;
+    accountId: string;
+    providerId: string;
+    password: string;
+    client: ClientInfo;
+  }): Promise<string> {
+    const subjects = { email: `reauthentication:${input.accountId}`, clientIp: input.client.ip };
+    await this.#checkDirectoryAttempt(subjects);
+    const { provider, credentials } = await this.#load(input.providerId, "reauthentication");
+    const adapter = this.#adapter(provider.type);
+    if (provider.type !== "ldap" || !adapter.verifyPassword) {
+      throw new OrganizationError("invalidInput", "This provider confirms the identity through its own page");
+    }
+    const [identity] = await this.#database
+      .select({ subject: identities.subject })
+      .from(identities)
+      .where(and(eq(identities.providerId, provider.id), eq(identities.accountId, input.accountId)));
+    if (!identity) throw new OrganizationError("notFound", "The account is not linked to this provider");
+    let valid = false;
+    if (directoryPasswordSchema.safeParse(input.password).success) {
+      try {
+        valid = await adapter.verifyPassword(provider, credentials, identity.subject, input.password);
+      } catch (error) {
+        if (!(error instanceof DirectorySignInError)) throw error;
+      }
+    }
+    if (!valid) {
+      await this.#database.transaction(async (tx) => {
+        await this.#throttle?.recordFailure(subjects, tx);
+        await this.#audit.record(tx, {
+          name: "auth.reauthenticationFailed",
+          actor: accountPrincipal(input.accountId),
+          targetId: input.accountId,
+          fields: { sessionId: input.sessionId, method: "identityProvider" },
+        });
+      });
+      throw new InvalidCredentialsError();
+    }
+    await this.#throttle?.recordSuccess(subjects.email);
+    return this.#database.transaction(async (tx) => {
+      const token = await this.#sessions.rotate(tx, input.sessionId, { reauthenticated: true });
+      await this.#audit.record(tx, {
+        name: "auth.reauthenticated",
+        actor: accountPrincipal(input.accountId),
+        targetId: input.accountId,
+        fields: { sessionId: input.sessionId, method: "identityProvider" },
+      });
+      return token;
+    });
+  }
+
+  async testDirectory(providerId: string, signInName: string | null): Promise<DirectoryTestResult> {
+    const { provider, credentials } = await this.#load(providerId);
+    const adapter = this.#adapter(provider.type);
+    if (provider.type !== "ldap" || !adapter.testDirectory) {
+      throw new OrganizationError("invalidInput", "Only directory providers are tested this way");
+    }
+    return adapter.testDirectory(provider, credentials, signInName);
+  }
+
   async cleanup(): Promise<number> {
     const now = this.#clock();
     const flows = await this.#database.delete(providerFlows).where(lt(providerFlows.expiresAt, now));
     const tokens = await this.#database
       .delete(providerLogoutTokens)
       .where(lt(providerLogoutTokens.expiresAt, now));
+    const assertions = await this.#database.delete(samlAssertions).where(lt(samlAssertions.expiresAt, now));
     const refusals = await this.#database
       .delete(signInRefusals)
       .where(
         lt(signInRefusals.createdAt, new Date(now.getTime() - REFUSAL_RETENTION_DAYS * 24 * 60 * 60 * 1000)),
       );
-    return (flows.rowCount ?? 0) + (tokens.rowCount ?? 0) + (refusals.rowCount ?? 0);
+    return (
+      (flows.rowCount ?? 0) + (tokens.rowCount ?? 0) + (assertions.rowCount ?? 0) + (refusals.rowCount ?? 0)
+    );
   }
 }

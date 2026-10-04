@@ -51,6 +51,7 @@ const refusalReasons = [
   "linkUnavailable",
   "invalidResponse",
 ] as const;
+const credentialKinds = ["clientSecret", "certificate", "samlSigning", "bindPassword"] as const;
 const sessionReference = z.object({ sessionId: z.uuid() });
 const credential = z.object({ credentialId: z.uuid(), name: z.string() });
 const previous = z.record(z.string(), z.json()).optional();
@@ -151,7 +152,7 @@ export const auditCatalog = {
     target: "identityProvider",
     fields: z.object({
       credentialId: z.uuid(),
-      kind: z.enum(["clientSecret", "certificate"]),
+      kind: z.enum(credentialKinds),
       expiresAt: z.iso.datetime().nullable(),
     }),
     visibility: "instance",
@@ -159,13 +160,42 @@ export const auditCatalog = {
   "identityProvider.credentialRemoved": event({
     actor: ["account", "system"],
     target: "identityProvider",
-    fields: z.object({ credentialId: z.uuid(), kind: z.enum(["clientSecret", "certificate"]) }),
+    fields: z.object({ credentialId: z.uuid(), kind: z.enum(credentialKinds) }),
     visibility: "instance",
   }),
   "identityProvider.directoryKeyChanged": event({
     actor: ["account", "system"],
     target: "identityProvider",
     fields: z.object({ action: z.enum(["set", "removed"]), serviceAccount: z.string().nullable() }),
+    visibility: "instance",
+  }),
+  "identityProvider.metadataChanged": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({
+      source: z.enum(["url", "file"]),
+      entityId: z.string(),
+      certificates: z.array(z.string()),
+      previousCertificates: z.array(z.string()),
+    }),
+    visibility: "instance",
+  }),
+  "identityProvider.metadataRefreshFailed": event({
+    actor: ["system"],
+    target: "identityProvider",
+    fields: z.object({ url: z.string(), error: z.string() }),
+    visibility: "instance",
+  }),
+  "identityProvider.caCertificateChanged": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({
+      action: z.enum(["set", "removed"]),
+      fingerprint: z.string().nullable(),
+      subject: z.string().nullable(),
+      expiresAt: z.iso.datetime().nullable(),
+      previousFingerprint: z.string().nullable(),
+    }),
     visibility: "instance",
   }),
   "mappingRule.created": event({
@@ -233,7 +263,17 @@ export const auditCatalog = {
     actor: ["anonymous"],
     target: "account",
     fields: z.object({
-      reason: z.enum(["invalidCredentials", "invalidSecondFactor", "accountLocked", "clientLocked"]),
+      reason: z.enum([
+        "invalidCredentials",
+        "invalidSecondFactor",
+        "accountLocked",
+        "clientLocked",
+        "directoryPasswordExpired",
+        "directoryPasswordMustChange",
+        "directoryAccountLocked",
+        "directoryAccountDisabled",
+        "directoryOutsideSignInHours",
+      ]),
       method: z.enum(signInMethods),
     }),
     visibility: "organization",

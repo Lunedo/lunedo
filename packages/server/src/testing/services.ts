@@ -11,6 +11,7 @@ import { KeyRingHolder } from "../crypto/key-ring-holder.js";
 import { createDatabase, type Database } from "../database/database.js";
 import { runMigrations } from "../database/migrate.js";
 import { createDatabasePool, type DatabasePool } from "../database/pool.js";
+import type { DirectoryConnector } from "../identity/ldap-connection.js";
 import { createLogger } from "../logging/logger.js";
 import { type AccountServices, createAccountServices } from "../services.js";
 import { SettingsService } from "../settings/service.js";
@@ -25,12 +26,13 @@ export interface TestServices {
   settings: SettingsService;
   services: AccountServices;
   mail: CapturingTransport;
+  anotherNode(): AccountServices;
   close(): Promise<void>;
 }
 
 export async function createTestServices(
   baseUrl: string,
-  options: { configuredInstanceUrl?: string } = {},
+  options: { configuredInstanceUrl?: string; directoryConnector?: DirectoryConnector } = {},
 ): Promise<TestServices> {
   const temporary: TemporaryDatabase = await createTemporaryDatabase(baseUrl, "pagehall_services_test");
   const pool = createDatabasePool({ connectionString: temporary.url, applicationName: "pagehall-test" });
@@ -46,22 +48,25 @@ export async function createTestServices(
   await keyRing.reload();
   const mail = new CapturingTransport();
   const encryption = new Encryption(() => keyRing.ring);
-  const services = createAccountServices({
-    database,
-    pool,
-    settings,
-    audit,
-    encryption,
-    keyRing,
-    backupKeys: parseKeyRing(formatKeyEntry(1, randomBytes(32))),
-    jobs: undefined,
-    logger,
-    filesDir: mkdtempSync(path.join(tmpdir(), "pagehall-files-")),
-    passwordHashConcurrency: 2,
-    insecureIdentityProviders: true,
-    configuredInstanceUrl: options.configuredInstanceUrl,
-    mailTransport: () => mail,
-  });
+  const build = () =>
+    createAccountServices({
+      database,
+      pool,
+      settings,
+      audit,
+      encryption,
+      keyRing,
+      backupKeys: parseKeyRing(formatKeyEntry(1, randomBytes(32))),
+      jobs: undefined,
+      logger,
+      filesDir: mkdtempSync(path.join(tmpdir(), "pagehall-files-")),
+      passwordHashConcurrency: 2,
+      insecureIdentityProviders: true,
+      configuredInstanceUrl: options.configuredInstanceUrl,
+      ...(options.directoryConnector ? { directoryConnector: options.directoryConnector } : {}),
+      mailTransport: () => mail,
+    });
+  const services = build();
   return {
     url: temporary.url,
     pool,
@@ -70,6 +75,7 @@ export async function createTestServices(
     services,
     mail,
     encryption,
+    anotherNode: build,
     async close() {
       await pool.end();
       await temporary.drop();

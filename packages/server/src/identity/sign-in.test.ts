@@ -66,6 +66,7 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     const domains = options.domains ?? ["example.org"];
     await releaseDomains(domains);
     const { provider: created } = await test.services.identityProviders.create(SYSTEM, {
+      type: "oidc",
       name: "Test provider",
       config: {
         preset: "generic",
@@ -543,6 +544,7 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     try {
       await releaseDomains(["example.org"]);
       const { provider: created } = await test.services.identityProviders.create(SYSTEM, {
+        type: "oidc",
         name: "Microsoft",
         config: {
           preset: "entraId",
@@ -587,6 +589,7 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     try {
       await releaseDomains(["example.org"]);
       const { provider: created } = await test.services.identityProviders.create(SYSTEM, {
+        type: "oidc",
         name: "Google",
         config: {
           preset: "google",

@@ -142,6 +142,7 @@ export { createDatabasePool, type DatabasePool, pingDatabase } from "./database/
 export { handleOperationsRequest, type OperationsEndpoints, operationsPaths } from "./health/health-http.js";
 export { readinessChecks } from "./health/readiness.js";
 export {
+  type DirectoryTestResult,
   type ProviderCapabilities,
   type ProviderProfile,
   ProviderResponseError,
@@ -153,11 +154,14 @@ export {
   type CredentialInput,
   type CredentialSummary,
   callbackPath,
+  type LdapSummary,
   type ProviderSummary,
   type ProviderWarning,
   type RemovalPreview,
+  type SamlSummary,
   type SignInProvider,
 } from "./identity/providers.js";
+export type { CertificateInfo } from "./identity/saml-metadata.js";
 export { signInRefusalReasons } from "./identity/schema.js";
 export type {
   CallbackResult,

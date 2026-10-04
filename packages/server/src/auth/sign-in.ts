@@ -193,14 +193,16 @@ export class SignInService {
     this.#onIdentityLinked = options.onIdentityLinked;
   }
 
-  async secondFactorRequired(accountId: string): Promise<boolean> {
-    if ((await this.#accounts.ownerId()) === accountId) return true;
-    const [reset] = await this.#database
+  async secondFactorRequired(accountId: string, executor: Executor = this.#database): Promise<boolean> {
+    if ((await this.#accounts.ownerId(executor)) === accountId) return true;
+    const [reset] = await executor
       .select({ at: accounts.secondFactorResetAt })
       .from(accounts)
       .where(eq(accounts.id, accountId));
     if (reset?.at) return true;
-    return this.#settings.get(twoFactorRequiredSetting, await accountScopeChain(this.#database, accountId));
+    return this.#settings.get(twoFactorRequiredSetting, await accountScopeChain(executor, accountId), {
+      executor,
+    });
   }
 
   async #checkAttempt(subjects: ThrottleSubjects, accountId: string | null, method: SignInMethod) {

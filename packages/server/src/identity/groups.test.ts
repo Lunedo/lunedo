@@ -47,6 +47,7 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
     google = await startFakeGoogleDirectory();
     generic = (
       await test.services.identityProviders.create(SYSTEM, {
+        type: "oidc",
         name: "Keycloak",
         config: {
           preset: "generic",
@@ -67,6 +68,7 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
     ).provider.id;
     entra = (
       await test.services.identityProviders.create(SYSTEM, {
+        type: "oidc",
         name: "Entra ID",
         config: {
           preset: "entraId",
@@ -354,6 +356,7 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
   async function removableProvider(name: string) {
     const domain = `removed-${randomUUID().slice(0, 8)}.example`;
     const created = await test.services.identityProviders.create(SYSTEM, {
+      type: "oidc",
       name,
       config: {
         preset: "generic",
@@ -897,7 +900,7 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
     const large = await startFakeGraph({ data });
     try {
       const loaded = await test.services.identityProviders.definition(entra);
-      if (!loaded) throw new Error("Provider missing");
+      if (loaded?.provider.type !== "oidc") throw new Error("Provider missing");
       const provider = {
         ...loaded.provider,
         config: { ...loaded.provider.config, graphUrl: large.url, authority: large.url },
@@ -972,6 +975,7 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
   async function googleProvider(directory: Record<string, unknown>, domain = "example.org") {
     const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
     const provider = await test.services.identityProviders.create(SYSTEM, {
+      type: "oidc",
       name: `Google ${randomUUID().slice(0, 6)}`,
       config: {
         preset: "google",

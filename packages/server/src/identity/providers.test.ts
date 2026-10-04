@@ -68,6 +68,7 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
 
   async function instanceProvider(secretExpiresAt: Date | null = null, domains: string[] = []) {
     const { provider } = await test.services.identityProviders.create(SYSTEM, {
+      type: "oidc",
       name: `Provider ${randomUUID().slice(0, 6)}`,
       config: { ...GENERIC, domains },
       credential: { kind: "clientSecret", secret: "s3cret-value", expiresAt: secretExpiresAt },
@@ -84,6 +85,7 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     });
     expect(withGroups.capabilities).toEqual({ groups: true, directorySync: false, disabledAccounts: false });
     const entra = await test.services.identityProviders.create(SYSTEM, {
+      type: "oidc",
       name: "Entra ID",
       config: { preset: "entraId", clientId: "c", tenantId: randomUUID(), domains: [uniqueDomain()] },
       credential,
@@ -94,6 +96,7 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
       disabledAccounts: true,
     });
     const google = await test.services.identityProviders.create(SYSTEM, {
+      type: "oidc",
       name: "Google",
       config: { preset: "google", clientId: "c", domains: [uniqueDomain()] },
       credential,
@@ -235,6 +238,7 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     for (const tenantId of ["common", "organizations", "consumers"]) {
       await expect(
         strict.create(SYSTEM, {
+          type: "oidc",
           name: "Entra",
           config: { preset: "entraId", tenantId, clientId: "c" },
           credential,
@@ -243,6 +247,7 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     }
     await expect(
       strict.create(SYSTEM, {
+        type: "oidc",
         name: "Plain",
         config: { ...GENERIC, issuer: "http://idp.example.org" },
         credential,
@@ -250,6 +255,7 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     ).rejects.toMatchObject({ code: "invalidProviderConfiguration" });
     await expect(
       strict.create(SYSTEM, {
+        type: "oidc",
         name: "Entra",
         config: {
           preset: "entraId",
@@ -262,6 +268,7 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     ).rejects.toMatchObject({ code: "invalidProviderConfiguration" });
     await expect(
       strict.create(SYSTEM, {
+        type: "oidc",
         name: "Google",
         config: {
           preset: "google",
@@ -274,6 +281,7 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     ).rejects.toMatchObject({ code: "invalidProviderConfiguration" });
     await expect(
       strict.create(SYSTEM, {
+        type: "oidc",
         name: "Entra",
         config: {
           preset: "entraId",
@@ -290,6 +298,7 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     ]) {
       await expect(
         strict.create(SYSTEM, {
+          type: "oidc",
           name: "Google",
           config: { preset: "google", clientId: "c", domains: [uniqueDomain()], directory },
           credential,
@@ -298,6 +307,7 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     }
     await expect(
       strict.create(SYSTEM, {
+        type: "oidc",
         name: "Google",
         config: {
           preset: "google",
@@ -312,11 +322,73 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
       details: { fields: ["directory.adminEmail"] },
     });
     const google = await strict.create(SYSTEM, {
+      type: "oidc",
       name: "Google",
       config: { preset: "google", clientId: "c", domains: [uniqueDomain()] },
       credential,
     });
     expect(google.provider.issuer).toBe("https://accounts.google.com");
+  });
+
+  it("refuses plain directory connections and SAML metadata without HTTPS unless insecure providers are allowed", async () => {
+    const strict = new IdentityProviderService({
+      database: test.database,
+      audit: test.services.audit,
+      encryption: test.encryption,
+      notifications: test.services.notifications,
+      settings: test.settings,
+      allowInsecure: false,
+    });
+    const directory = {
+      preset: "generic",
+      bindDn: "cn=pagehall,dc=example,dc=org",
+      userBaseDn: "ou=people,dc=example,dc=org",
+      groupBaseDn: "ou=groups,dc=example,dc=org",
+    };
+    const password = { kind: "bindPassword" as const, secret: "service password" };
+    await expect(
+      strict.create(SYSTEM, {
+        type: "ldap",
+        name: "Plain",
+        config: { ...directory, url: "ldap://ldap.example.org" },
+        credential: password,
+      }),
+    ).rejects.toMatchObject({
+      code: "invalidProviderConfiguration",
+      details: { fields: ["url", "startTls"] },
+    });
+    for (const url of ["ldaps://ldap.example.org", "ldap://ldap.example.org"]) {
+      const created = await strict.create(SYSTEM, {
+        type: "ldap",
+        name: "Secure",
+        config: { ...directory, url, startTls: url.startsWith("ldap:") },
+        credential: password,
+      });
+      expect(created.provider.type).toBe("ldap");
+    }
+    await expect(
+      strict.create(SYSTEM, {
+        type: "ldap",
+        name: "Twice",
+        config: { ...directory, url: "ldaps://ldap.example.org", startTls: true },
+        credential: password,
+      }),
+    ).rejects.toMatchObject({ code: "invalidProviderConfiguration" });
+    await expect(
+      strict.create(SYSTEM, {
+        type: "saml",
+        name: "Plain metadata",
+        config: { preset: "generic", metadata: { source: "url", url: "http://idp.example.org/metadata" } },
+      }),
+    ).rejects.toMatchObject({ code: "invalidProviderConfiguration", details: { fields: ["metadata.url"] } });
+    await expect(
+      strict.create(SYSTEM, {
+        type: "ldap",
+        name: "Wrong credential",
+        config: { ...directory, url: "ldaps://ldap.example.org" },
+        credential: { kind: "clientSecret", secret: "x", expiresAt: null },
+      }),
+    ).rejects.toMatchObject({ code: "invalidInput" });
   });
 
   it("turns password sign-in off for the instance, but always lets the instance owner in and tells the administrators", async () => {

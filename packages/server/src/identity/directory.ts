@@ -22,7 +22,16 @@ export function googleReadsUsers(config: GoogleConfig): boolean {
   );
 }
 
-type EntraConfig = Extract<OidcConfig, { preset: "entraId" }>;
+export interface GraphConfig {
+  preset: "entraId";
+  authority: string;
+  tenantId: string;
+  clientId: string;
+  graphUrl: string;
+  emailSource: "email" | "userPrincipalName" | "graphMail";
+}
+
+type EntraConfig = GraphConfig;
 type GoogleConfig = Extract<OidcConfig, { preset: "google" }>;
 
 export interface DirectoryAccount {
@@ -51,10 +60,14 @@ function withoutTrailingSlash(url: string): string {
   return url.replace(/\/+$/, "");
 }
 
-export function foreignDirectoryEndpoint(config: OidcConfig): string | null {
+export function foreignGraphEndpoint(authority: string, graphUrl: string): boolean {
+  const allowed = GRAPH_ENDPOINTS[withoutTrailingSlash(authority)] ?? [];
+  return !allowed.includes(withoutTrailingSlash(graphUrl));
+}
+
+export function foreignDirectoryEndpoint(config: OidcConfig | GraphConfig): string | null {
   if (config.preset === "entraId") {
-    const allowed = GRAPH_ENDPOINTS[withoutTrailingSlash(config.authority)] ?? [];
-    return allowed.includes(withoutTrailingSlash(config.graphUrl)) ? null : "graphUrl";
+    return foreignGraphEndpoint(config.authority, config.graphUrl) ? "graphUrl" : null;
   }
   if (config.preset === "google" && config.directory) {
     if (withoutTrailingSlash(config.directory.url) !== GOOGLE_DIRECTORY) return "directory.url";
@@ -83,7 +96,7 @@ export class DirectoryClients {
     }
   }
 
-  #checkEndpoints(config: OidcConfig): void {
+  #checkEndpoints(config: OidcConfig | GraphConfig): void {
     if (this.#allowInsecure) return;
     if (foreignDirectoryEndpoint(config)) {
       throw new ProviderResponseError("The directory endpoint is not one of the provider's own endpoints");

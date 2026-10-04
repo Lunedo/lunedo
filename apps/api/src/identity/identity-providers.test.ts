@@ -33,6 +33,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     await addTotp(owner);
     organizationId = await firstOrganizationId(test);
     const created = await owner.post("/api/v1/instance/identity-providers", {
+      type: "oidc",
       name: "Company login",
       config: {
         preset: "generic",
@@ -87,6 +88,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
       step: "password",
     });
     const taken = await owner.post("/api/v1/instance/identity-providers", {
+      type: "oidc",
       name: "Second login",
       config: { preset: "generic", issuer: idp.issuer, clientId: "second", domains: ["pagehall.test"] },
       credential: { kind: "clientSecret", secret: "second-secret", expiresAt: null },
@@ -146,6 +148,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
 
   it("sends people to the second factor of Pagehall when the provider asks for it", async () => {
     const created = await owner.post("/api/v1/instance/identity-providers", {
+      type: "oidc",
       name: "Second factor login",
       config: {
         preset: "generic",
@@ -298,6 +301,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
 
   it("answers provider failures and invalid profile values with a problem or a reference", async () => {
     const unreachable = await owner.post("/api/v1/instance/identity-providers", {
+      type: "oidc",
       name: "Unreachable login",
       config: {
         preset: "generic",

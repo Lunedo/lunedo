@@ -23,13 +23,18 @@ import type { KeyRingHolder } from "./crypto/key-ring-holder.js";
 import type { Database } from "./database/database.js";
 import type { DatabasePool } from "./database/pool.js";
 import { GroupMappingService } from "./identity/groups.js";
+import { LdapAdapter } from "./identity/ldap.js";
+import type { DirectoryConnector } from "./identity/ldap-connection.js";
 import { MappingRuleService } from "./identity/mapping.js";
 import { OidcAdapter } from "./identity/oidc.js";
 import {
   IdentityProviderService,
   PROVIDER_CREDENTIAL_REMINDER_SCHEDULE,
   providerCredentialReminderJob,
+  SAML_METADATA_REFRESH_SCHEDULE,
+  samlMetadataRefreshJob,
 } from "./identity/providers.js";
+import { SamlAdapter } from "./identity/saml.js";
 import { ProviderSignInService } from "./identity/sign-in.js";
 import {
   PROVIDER_SYNC_RETENTION_SCHEDULE,
@@ -124,6 +129,7 @@ export function createAccountServices(options: {
   configuredInstanceUrl?: string | undefined;
   passwordHashConcurrency: number;
   insecureIdentityProviders?: boolean;
+  directoryConnector?: DirectoryConnector;
   mailTransport?: (options: SmtpOptions) => MailTransport;
 }): AccountServices {
   const { database, settings, audit, encryption, jobs, logger } = options;
@@ -237,7 +243,15 @@ export function createAccountServices(options: {
     setupComplete: () => setup.isComplete(),
     onIdentityLinked: (tx, link) => groupMapping.applyAtSignIn(tx, link),
   });
-  const providerAdapters = [new OidcAdapter({ allowInsecure: options.insecureIdentityProviders ?? false })];
+  const allowInsecure = options.insecureIdentityProviders ?? false;
+  const providerAdapters = [
+    new OidcAdapter({ allowInsecure }),
+    new SamlAdapter({ allowInsecure }),
+    new LdapAdapter({
+      allowInsecure,
+      ...(options.directoryConnector ? { connector: options.directoryConnector } : {}),
+    }),
+  ];
   const mappingRules = new MappingRuleService({
     database,
     providers: identityProviders,
@@ -271,6 +285,7 @@ export function createAccountServices(options: {
     notifications,
     settings,
     rateLimiter,
+    throttle,
   });
   const security = new AccountSecurityService({
     database,
@@ -392,6 +407,10 @@ export async function workAccountJobs(
     const sent = await services.identityProviders.sendCredentialReminders();
     if (sent > 0) job.logger.info({ sent }, "Provider credential reminders sent");
   });
+  await jobs.work(samlMetadataRefreshJob, async (job) => {
+    const refreshed = await services.identityProviders.refreshDueMetadata();
+    if (refreshed > 0) job.logger.info({ refreshed }, "SAML metadata refreshed");
+  });
   await jobs.work(providerSyncJob, async (job) => {
     const { providerId, trigger, actorId } = job.payload;
     const run = await services.providerSync.run(
@@ -426,6 +445,7 @@ export async function workAccountJobs(
   await jobs.schedule(organizationRemindersJob, ORGANIZATION_REMINDERS_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(providerSyncScheduleJob, PROVIDER_SYNC_SCHEDULE, {}, { key: "regular" });
   await jobs.schedule(providerSyncRetentionJob, PROVIDER_SYNC_RETENTION_SCHEDULE, {}, { key: "daily" });
+  await jobs.schedule(samlMetadataRefreshJob, SAML_METADATA_REFRESH_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(
     providerCredentialReminderJob,
     PROVIDER_CREDENTIAL_REMINDER_SCHEDULE,

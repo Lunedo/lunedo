@@ -6,7 +6,9 @@ import {
   type AuthorizationRequest,
   type CallbackInput,
   type DirectoryGroupMatch,
+  expectType,
   type IdentityProviderAdapter,
+  type OidcProviderDefinition,
   type ProviderCapabilities,
   type ProviderCredential,
   type ProviderDefinition,
@@ -16,6 +18,7 @@ import {
   type ProviderProfile,
   ProviderResponseError,
   type RedirectSignInResult,
+  type StartedAuthorization,
   type SynchronizedAccount,
 } from "./adapter.js";
 import { type DirectoryAccount, DirectoryClients, googleReadsUsers } from "./directory.js";
@@ -127,16 +130,19 @@ export class OidcAdapter implements IdentityProviderAdapter {
   }
 
   hasDirectory(provider: ProviderDefinition): boolean {
-    return oidcCapabilities(provider.config, provider.directoryKey !== null).directorySync;
+    return (
+      provider.type === "oidc" &&
+      oidcCapabilities(provider.config, provider.directoryKey !== null).directorySync
+    );
   }
 
   #profileFrom(
-    provider: ProviderDefinition,
+    provider: OidcProviderDefinition,
     subject: string,
     account: DirectoryAccount,
     groups: ProviderGroup[] | null,
   ): ProviderProfile {
-    const config = provider.config;
+    const config = expectType(provider, "oidc").config;
     const signInName =
       config.preset === "entraId" && config.signInNameSource === "email" ? account.email : account.signInName;
     return { subject, email: account.email, signInName, displayName: account.displayName, groups };
@@ -147,7 +153,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
     credentials: readonly ProviderCredential[],
     subject: string,
   ): Promise<ProviderGroup[] | null> {
-    const config = provider.config;
+    const config = expectType(provider, "oidc").config;
     if (config.preset === "entraId") {
       return this.#directory.graphGroupsOf(provider.id, config, credentials, objectIdOf(subject));
     }
@@ -162,7 +168,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
     credentials: readonly ProviderCredential[],
     subject: string,
   ): Promise<ProviderProfile | null> {
-    const config = provider.config;
+    const config = expectType(provider, "oidc").config;
     if (config.preset === "entraId") {
       const account = await this.#directory.graphAccount(
         provider.id,
@@ -170,7 +176,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
         credentials,
         objectIdOf(subject),
       );
-      return account ? this.#profileFrom(provider, subject, account, null) : null;
+      return account ? this.#profileFrom(expectType(provider, "oidc"), subject, account, null) : null;
     }
     if (config.preset === "google" && this.hasDirectory(provider) && googleReadsUsers(config)) {
       const account = await this.#directory.googleAccount(
@@ -179,7 +185,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
         provider.directoryKey ?? "",
         subject,
       );
-      return account ? this.#profileFrom(provider, subject, account, null) : null;
+      return account ? this.#profileFrom(expectType(provider, "oidc"), subject, account, null) : null;
     }
     return null;
   }
@@ -189,7 +195,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
     credentials: readonly ProviderCredential[],
     subjects: readonly string[],
   ): AsyncIterable<SynchronizedAccount> {
-    const config = provider.config;
+    const config = expectType(provider, "oidc").config;
     for (const subject of subjects) {
       let account: DirectoryAccount | null;
       let groups: ProviderGroup[] | null;
@@ -217,7 +223,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
       yield {
         subject,
         state: account.enabled ? "enabled" : "disabled",
-        profile: this.#profileFrom(provider, subject, account, groups),
+        profile: this.#profileFrom(expectType(provider, "oidc"), subject, account, groups),
       };
     }
   }
@@ -227,7 +233,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
     credentials: readonly ProviderCredential[],
     groupId: string,
   ): Promise<ProviderGroup | null> {
-    const config = provider.config;
+    const config = expectType(provider, "oidc").config;
     if (config.preset === "entraId")
       return this.#directory.graphGroup(provider.id, config, credentials, groupId);
     if (config.preset === "google" && this.hasDirectory(provider)) {
@@ -241,7 +247,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
     credentials: readonly ProviderCredential[],
     query: string,
   ): Promise<DirectoryGroupMatch[]> {
-    const config = provider.config;
+    const config = expectType(provider, "oidc").config;
     if (config.preset === "entraId") {
       return this.#directory.graphSearchGroups(provider.id, config, credentials, query);
     }
@@ -256,7 +262,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
     credentials: readonly ProviderCredential[],
     groupId: string,
   ): Promise<number | null> {
-    const config = provider.config;
+    const config = expectType(provider, "oidc").config;
     if (config.preset === "entraId") {
       return this.#directory.graphMemberCount(provider.id, config, credentials, groupId);
     }
@@ -272,7 +278,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
     }
   }
 
-  async #configuration(provider: ProviderDefinition, credential: ProviderCredential) {
+  async #configuration(provider: OidcProviderDefinition, credential: ProviderCredential) {
     const issuer = oidcIssuer(provider.config);
     this.#checkTransport(issuer);
     const key = `${provider.id}:${credential.id}:${issuer}:${provider.config.clientId}:${provider.config.idTokenAlgorithm}`;
@@ -304,23 +310,25 @@ export class OidcAdapter implements IdentityProviderAdapter {
     provider: ProviderDefinition,
     credentials: readonly ProviderCredential[],
     request: AuthorizationRequest,
-  ): Promise<URL> {
+  ): Promise<StartedAuthorization> {
+    const oidc = expectType(provider, "oidc");
     const credential = credentials[0];
     if (!credential) throw new ProviderResponseError("The provider has no credential");
-    const configuration = await this.#configuration(provider, credential);
-    return client.buildAuthorizationUrl(configuration, {
+    const configuration = await this.#configuration(oidc, credential);
+    const url = client.buildAuthorizationUrl(configuration, {
       redirect_uri: request.redirectUri,
-      scope: oidcScopes(provider.config).join(" "),
+      scope: oidcScopes(oidc.config).join(" "),
       response_type: "code",
       state: request.state,
       nonce: request.nonce,
       code_challenge: request.codeChallenge,
       code_challenge_method: "S256",
       ...(request.reauthenticate ? { prompt: "login", max_age: "0" } : {}),
-      ...(provider.config.preset === "google" && provider.config.domains.length === 1
-        ? { hd: provider.config.domains[0] ?? "" }
+      ...(oidc.config.preset === "google" && oidc.config.domains.length === 1
+        ? { hd: oidc.config.domains[0] ?? "" }
         : {}),
     });
+    return { url, requestId: null };
   }
 
   async completeSignIn(
@@ -328,9 +336,10 @@ export class OidcAdapter implements IdentityProviderAdapter {
     credentials: readonly ProviderCredential[],
     input: CallbackInput,
   ): Promise<RedirectSignInResult> {
+    const oidc = expectType(provider, "oidc");
     let lastError: unknown = null;
     for (const credential of credentials) {
-      const configuration = await this.#configuration(provider, credential);
+      const configuration = await this.#configuration(oidc, credential);
       try {
         const tokens = await client.authorizationCodeGrant(configuration, input.callbackUrl, {
           pkceCodeVerifier: input.codeVerifier,
@@ -340,7 +349,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
         });
         const claims = tokens.claims();
         if (!claims) throw new ProviderResponseError("The provider returned no ID token");
-        const profile = await this.#profile(provider, credentials, claims);
+        const profile = await this.#profile(oidc, credentials, claims);
         return {
           profile,
           methods: Array.isArray(claims.amr)
@@ -367,11 +376,11 @@ export class OidcAdapter implements IdentityProviderAdapter {
   }
 
   async #profile(
-    provider: ProviderDefinition,
+    provider: OidcProviderDefinition,
     credentials: readonly ProviderCredential[],
     claims: Record<string, unknown>,
   ): Promise<ProviderProfile> {
-    const config = provider.config;
+    const config = expectType(provider, "oidc").config;
     if (config.preset === "entraId") {
       const tenant = stringClaim(claims, "tid");
       const objectId = stringClaim(claims, "oid");
@@ -441,9 +450,10 @@ export class OidcAdapter implements IdentityProviderAdapter {
     credentials: readonly ProviderCredential[],
     logoutToken: string,
   ): Promise<ProviderLogout> {
+    const oidc = expectType(provider, "oidc");
     const credential = credentials[0];
     if (!credential) throw new ProviderResponseError("The provider has no credential");
-    const configuration = await this.#configuration(provider, credential);
+    const configuration = await this.#configuration(oidc, credential);
     const metadata = configuration.serverMetadata();
     if (!metadata.jwks_uri) throw new ProviderResponseError("The provider publishes no keys");
     this.#checkTransport(metadata.jwks_uri);
@@ -451,8 +461,8 @@ export class OidcAdapter implements IdentityProviderAdapter {
     try {
       ({ payload } = await jwtVerify(logoutToken, this.#keySet(provider.id, metadata.jwks_uri), {
         issuer: metadata.issuer,
-        audience: provider.config.clientId,
-        algorithms: [provider.config.idTokenAlgorithm],
+        audience: oidc.config.clientId,
+        algorithms: [oidc.config.idTokenAlgorithm],
         clockTolerance: CLOCK_TOLERANCE_SECONDS,
         maxTokenAge: "10 minutes",
         requiredClaims: ["iat", "jti"],
@@ -470,7 +480,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
     if (!subject && !sessionId) throw new ProviderResponseError("The logout token names nobody");
     const issuedAt = (payload.iat ?? 0) * 1000;
     return {
-      subject: provider.config.preset === "entraId" ? null : subject,
+      subject: oidc.config.preset === "entraId" ? null : subject,
       providerSessionId: sessionId,
       tokenId: String(payload.jti),
       expiresAt: new Date(Math.max(issuedAt, Date.now()) + 15 * 60 * 1000),
