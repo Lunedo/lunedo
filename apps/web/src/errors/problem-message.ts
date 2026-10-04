@@ -21,6 +21,7 @@ const KNOWN = new Set([
   "roleNotAssignable",
   "ownerExpiry",
   "expiryInPast",
+  "credentialExpired",
   "expiryRequired",
   "expiryTooLate",
   "invalidOwner",

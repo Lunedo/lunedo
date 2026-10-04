@@ -18,6 +18,7 @@ export const problems = {
   roleNotAssignable: { status: 400, title: "The role cannot be assigned" },
   ownerExpiry: { status: 400, title: "The owner role cannot expire" },
   expiryInPast: { status: 400, title: "The expiry lies in the past" },
+  credentialExpired: { status: 409, title: "The credential has expired" },
   expiryRequired: { status: 400, title: "An expiry date is required" },
   expiryTooLate: { status: 400, title: "The expiry exceeds the maximum lifetime" },
   invalidOwner: { status: 400, title: "The owner is not valid" },

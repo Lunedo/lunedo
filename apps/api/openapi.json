@@ -17280,6 +17280,14 @@
                                   "type": "string",
                                   "format": "date-time",
                                   "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                                },
+                                "inUse": {
+                                  "type": "boolean",
+                                  "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                                },
+                                "chosen": {
+                                  "type": "boolean",
+                                  "description": "Whether an administrator chose this credential."
                                 }
                               },
                               "required": [
@@ -17287,7 +17295,9 @@
                                 "kind",
                                 "keyId",
                                 "expiresAt",
-                                "createdAt"
+                                "createdAt",
+                                "inUse",
+                                "chosen"
                               ],
                               "additionalProperties": false,
                               "description": "A credential. Secrets and private keys are never returned."
@@ -18099,6 +18109,14 @@
                                   "type": "string",
                                   "format": "date-time",
                                   "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                                },
+                                "inUse": {
+                                  "type": "boolean",
+                                  "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                                },
+                                "chosen": {
+                                  "type": "boolean",
+                                  "description": "Whether an administrator chose this credential."
                                 }
                               },
                               "required": [
@@ -18106,7 +18124,9 @@
                                 "kind",
                                 "keyId",
                                 "expiresAt",
-                                "createdAt"
+                                "createdAt",
+                                "inUse",
+                                "chosen"
                               ],
                               "additionalProperties": false,
                               "description": "A credential. Secrets and private keys are never returned."
@@ -19139,6 +19159,14 @@
                                   "type": "string",
                                   "format": "date-time",
                                   "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                                },
+                                "inUse": {
+                                  "type": "boolean",
+                                  "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                                },
+                                "chosen": {
+                                  "type": "boolean",
+                                  "description": "Whether an administrator chose this credential."
                                 }
                               },
                               "required": [
@@ -19146,7 +19174,9 @@
                                 "kind",
                                 "keyId",
                                 "expiresAt",
-                                "createdAt"
+                                "createdAt",
+                                "inUse",
+                                "chosen"
                               ],
                               "additionalProperties": false,
                               "description": "A credential. Secrets and private keys are never returned."
@@ -21985,6 +22015,14 @@
                                     "type": "string",
                                     "format": "date-time",
                                     "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                                  },
+                                  "inUse": {
+                                    "type": "boolean",
+                                    "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                                  },
+                                  "chosen": {
+                                    "type": "boolean",
+                                    "description": "Whether an administrator chose this credential."
                                   }
                                 },
                                 "required": [
@@ -21992,7 +22030,9 @@
                                   "kind",
                                   "keyId",
                                   "expiresAt",
-                                  "createdAt"
+                                  "createdAt",
+                                  "inUse",
+                                  "chosen"
                                 ],
                                 "additionalProperties": false,
                                 "description": "A credential. Secrets and private keys are never returned."
@@ -22804,6 +22844,14 @@
                                     "type": "string",
                                     "format": "date-time",
                                     "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                                  },
+                                  "inUse": {
+                                    "type": "boolean",
+                                    "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                                  },
+                                  "chosen": {
+                                    "type": "boolean",
+                                    "description": "Whether an administrator chose this credential."
                                   }
                                 },
                                 "required": [
@@ -22811,7 +22859,9 @@
                                   "kind",
                                   "keyId",
                                   "expiresAt",
-                                  "createdAt"
+                                  "createdAt",
+                                  "inUse",
+                                  "chosen"
                                 ],
                                 "additionalProperties": false,
                                 "description": "A credential. Secrets and private keys are never returned."
@@ -23844,6 +23894,14 @@
                                     "type": "string",
                                     "format": "date-time",
                                     "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                                  },
+                                  "inUse": {
+                                    "type": "boolean",
+                                    "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                                  },
+                                  "chosen": {
+                                    "type": "boolean",
+                                    "description": "Whether an administrator chose this credential."
                                   }
                                 },
                                 "required": [
@@ -23851,7 +23909,9 @@
                                   "kind",
                                   "keyId",
                                   "expiresAt",
-                                  "createdAt"
+                                  "createdAt",
+                                  "inUse",
+                                  "chosen"
                                 ],
                                 "additionalProperties": false,
                                 "description": "A credential. Secrets and private keys are never returned."
@@ -24909,6 +24969,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -24916,7 +24984,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -25728,6 +25798,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -25735,7 +25813,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -26768,6 +26848,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -26775,7 +26863,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -29277,6 +29367,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -29284,7 +29382,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -30096,6 +30196,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -30103,7 +30211,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -31136,6 +31246,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -31143,7 +31261,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -31994,6 +32114,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -32001,7 +32129,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -32813,6 +32943,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -32820,7 +32958,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -33853,6 +33993,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -33860,7 +34008,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -34684,6 +34834,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -34691,7 +34849,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -35503,6 +35663,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -35510,7 +35678,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -36543,6 +36713,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -36550,7 +36728,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -37395,6 +37575,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -37402,7 +37590,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -38214,6 +38404,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -38221,7 +38419,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -39254,6 +39454,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -39261,7 +39469,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -40652,11 +40862,11 @@
         }
       }
     },
-    "/api/v1/instance/identity-providers/{providerId}/deactivate": {
-      "post": {
-        "operationId": "identityProviders.deactivateInstance",
-        "summary": "Deactivate an instance identity provider",
-        "description": "Nobody can sign in through the provider any more, synchronization stops and the sessions that came from it end. Everything else stays and returns when the provider is activated again.\n\nRequires the permission `instance.signIn.manage` on the instance. Needs a signed-in session; API tokens are refused.",
+    "/api/v1/instance/identity-providers/{providerId}/credentials/{credentialId}/use": {
+      "put": {
+        "operationId": "identityProviders.chooseInstanceCredential",
+        "summary": "Choose the credential an instance provider uses",
+        "description": "Pagehall uses the newest valid credential of each kind unless an administrator chooses another one. A chosen credential stays in use until it expires, is removed or another choice is made.\n\nRequires the permission `instance.signIn.manage` on the instance. Needs a signed-in session; API tokens are refused.",
         "tags": [
           "Identity providers"
         ],
@@ -40681,8 +40891,42 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "credentialId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the credential.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "use": {
+                    "type": "string",
+                    "enum": [
+                      "this",
+                      "newest"
+                    ],
+                    "description": "this uses the credential from now on; newest returns to the newest valid credential of its kind."
+                  }
+                },
+                "required": [
+                  "use"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The provider.",
@@ -40765,6 +41009,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -40772,7 +41024,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -41584,6 +41838,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -41591,7 +41853,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -42624,6 +42888,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -42631,7 +42903,2749 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A credential. Secrets and private keys are never returned."
+                          },
+                          "description": "Credentials, newest first."
+                        },
+                        "directoryKey": {
+                          "type": "boolean",
+                          "description": "Whether a service account key for the Google directory is stored. The key is never shown."
+                        },
+                        "capabilities": {
+                          "type": "object",
+                          "properties": {
+                            "groups": {
+                              "type": "boolean",
+                              "description": "Whether Pagehall learns the groups of a person from this provider."
+                            },
+                            "directorySync": {
+                              "type": "boolean",
+                              "description": "Whether profiles and groups are synchronized in the background, not only at sign-in."
+                            },
+                            "disabledAccounts": {
+                              "type": "boolean",
+                              "description": "Whether accounts disabled or deleted in the provider are detected without a sign-in."
+                            },
+                            "groupsByName": {
+                              "type": "boolean",
+                              "description": "Whether groups are identified by their names, so that renaming a group breaks its rules."
+                            }
+                          },
+                          "required": [
+                            "groups",
+                            "directorySync",
+                            "disabledAccounts",
+                            "groupsByName"
+                          ],
+                          "additionalProperties": false,
+                          "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "deactivatedAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
+                        },
+                        "warnings": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "noCredential",
+                              "credentialExpiring",
+                              "credentialExpired",
+                              "metadataRefreshFailed",
+                              "caCertificateExpiring",
+                              "noGraphCredential"
+                            ]
+                          },
+                          "description": "Problems that need attention."
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "When the provider was set up. ISO 8601 timestamp in UTC."
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "When the provider was last changed. ISO 8601 timestamp in UTC."
+                        },
+                        "config": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "preset": {
+                                  "type": "string",
+                                  "const": "activeDirectory"
+                                },
+                                "url": {
+                                  "type": "string",
+                                  "maxLength": 2048,
+                                  "format": "uri"
+                                },
+                                "startTls": {
+                                  "default": false,
+                                  "type": "boolean"
+                                },
+                                "bindDn": {
+                                  "type": "string",
+                                  "minLength": 3,
+                                  "maxLength": 1000
+                                },
+                                "userBaseDn": {
+                                  "type": "string",
+                                  "minLength": 3,
+                                  "maxLength": 1000,
+                                  "pattern": "="
+                                },
+                                "groupBaseDn": {
+                                  "type": "string",
+                                  "minLength": 3,
+                                  "maxLength": 1000,
+                                  "pattern": "="
+                                },
+                                "domains": {
+                                  "default": [],
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "maxLength": 253,
+                                    "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                  }
+                                },
+                                "accountCreation": {
+                                  "default": {
+                                    "enabled": false,
+                                    "requiredGroups": []
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "enabled": {
+                                      "default": false,
+                                      "type": "boolean"
+                                    },
+                                    "requiredGroups": {
+                                      "default": [],
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "enabled",
+                                    "requiredGroups"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "sync": {
+                                  "default": {
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20,
+                                    "deactivationLimitAccounts": 5
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "intervalMinutes": {
+                                      "default": 60,
+                                      "type": "integer",
+                                      "minimum": 15,
+                                      "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
+                                    },
+                                    "deactivationLimitAccounts": {
+                                      "default": 5,
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 100000
+                                    }
+                                  },
+                                  "required": [
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent",
+                                    "deactivationLimitAccounts"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "secondFactor": {
+                                  "default": {
+                                    "mode": "pagehall"
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "mode": {
+                                      "default": "pagehall",
+                                      "type": "string",
+                                      "enum": [
+                                        "pagehall",
+                                        "provider"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "mode"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "userFilter": {
+                                  "default": "(&(objectCategory=person)(objectClass=user))",
+                                  "type": "string",
+                                  "minLength": 3,
+                                  "maxLength": 1000
+                                },
+                                "groupFilter": {
+                                  "default": "(objectClass=group)",
+                                  "type": "string",
+                                  "minLength": 3,
+                                  "maxLength": 1000
+                                },
+                                "signInAttribute": {
+                                  "default": "userPrincipalName",
+                                  "type": "string",
+                                  "enum": [
+                                    "userPrincipalName",
+                                    "sAMAccountName",
+                                    "mail"
+                                  ]
+                                },
+                                "attributes": {
+                                  "default": {
+                                    "email": "mail",
+                                    "displayName": "displayName"
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "email": {
+                                      "default": "mail",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    },
+                                    "displayName": {
+                                      "default": "displayName",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    }
+                                  },
+                                  "required": [
+                                    "email",
+                                    "displayName"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "preset",
+                                "url",
+                                "startTls",
+                                "bindDn",
+                                "userBaseDn",
+                                "groupBaseDn",
+                                "domains",
+                                "accountCreation",
+                                "sync",
+                                "secondFactor",
+                                "userFilter",
+                                "groupFilter",
+                                "signInAttribute",
+                                "attributes"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "preset": {
+                                  "type": "string",
+                                  "const": "generic"
+                                },
+                                "url": {
+                                  "type": "string",
+                                  "maxLength": 2048,
+                                  "format": "uri"
+                                },
+                                "startTls": {
+                                  "default": false,
+                                  "type": "boolean"
+                                },
+                                "bindDn": {
+                                  "type": "string",
+                                  "minLength": 3,
+                                  "maxLength": 1000,
+                                  "pattern": "="
+                                },
+                                "userBaseDn": {
+                                  "type": "string",
+                                  "minLength": 3,
+                                  "maxLength": 1000,
+                                  "pattern": "="
+                                },
+                                "groupBaseDn": {
+                                  "type": "string",
+                                  "minLength": 3,
+                                  "maxLength": 1000,
+                                  "pattern": "="
+                                },
+                                "domains": {
+                                  "default": [],
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "maxLength": 253,
+                                    "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                  }
+                                },
+                                "accountCreation": {
+                                  "default": {
+                                    "enabled": false,
+                                    "requiredGroups": []
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "enabled": {
+                                      "default": false,
+                                      "type": "boolean"
+                                    },
+                                    "requiredGroups": {
+                                      "default": [],
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "enabled",
+                                    "requiredGroups"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "sync": {
+                                  "default": {
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20,
+                                    "deactivationLimitAccounts": 5
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "intervalMinutes": {
+                                      "default": 60,
+                                      "type": "integer",
+                                      "minimum": 15,
+                                      "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
+                                    },
+                                    "deactivationLimitAccounts": {
+                                      "default": 5,
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 100000
+                                    }
+                                  },
+                                  "required": [
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent",
+                                    "deactivationLimitAccounts"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "secondFactor": {
+                                  "default": {
+                                    "mode": "pagehall"
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "mode": {
+                                      "default": "pagehall",
+                                      "type": "string",
+                                      "enum": [
+                                        "pagehall",
+                                        "provider"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "mode"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "userFilter": {
+                                  "default": "(objectClass=inetOrgPerson)",
+                                  "type": "string",
+                                  "minLength": 3,
+                                  "maxLength": 1000
+                                },
+                                "groupFilter": {
+                                  "default": "(|(objectClass=groupOfNames)(objectClass=groupOfUniqueNames))",
+                                  "type": "string",
+                                  "minLength": 3,
+                                  "maxLength": 1000
+                                },
+                                "signInAttribute": {
+                                  "default": "mail",
+                                  "type": "string",
+                                  "enum": [
+                                    "mail",
+                                    "uid"
+                                  ]
+                                },
+                                "attributes": {
+                                  "default": {
+                                    "email": "mail",
+                                    "signInName": "uid",
+                                    "displayName": "cn",
+                                    "groupName": "cn"
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "email": {
+                                      "default": "mail",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    },
+                                    "signInName": {
+                                      "default": "uid",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    },
+                                    "displayName": {
+                                      "default": "cn",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    },
+                                    "groupName": {
+                                      "default": "cn",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                    }
+                                  },
+                                  "required": [
+                                    "email",
+                                    "signInName",
+                                    "displayName",
+                                    "groupName"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "groupMembership": {
+                                  "default": "member",
+                                  "type": "string",
+                                  "enum": [
+                                    "member",
+                                    "memberOf"
+                                  ]
+                                },
+                                "disabled": {
+                                  "default": null,
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "attribute": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 100,
+                                          "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                        },
+                                        "values": {
+                                          "default": [],
+                                          "maxItems": 20,
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 256
+                                          }
+                                        }
+                                      },
+                                      "required": [
+                                        "attribute",
+                                        "values"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "preset",
+                                "url",
+                                "startTls",
+                                "bindDn",
+                                "userBaseDn",
+                                "groupBaseDn",
+                                "domains",
+                                "accountCreation",
+                                "sync",
+                                "secondFactor",
+                                "userFilter",
+                                "groupFilter",
+                                "signInAttribute",
+                                "attributes",
+                                "groupMembership",
+                                "disabled"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Configuration of the provider."
+                        },
+                        "ldap": {
+                          "type": "object",
+                          "properties": {
+                            "caCertificate": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "fingerprint": {
+                                      "type": "string",
+                                      "description": "SHA-256 fingerprint of the certificate."
+                                    },
+                                    "subject": {
+                                      "type": "string",
+                                      "description": "Subject of the certificate."
+                                    },
+                                    "expiresAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "description": "When the certificate expires. ISO 8601 timestamp in UTC."
+                                    }
+                                  },
+                                  "required": [
+                                    "fingerprint",
+                                    "subject",
+                                    "expiresAt"
+                                  ],
+                                  "additionalProperties": false,
+                                  "description": "A certificate."
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Uploaded certificate authority, or null when the system's trusted authorities apply."
+                            }
+                          },
+                          "required": [
+                            "caCertificate"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Directory details."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "id",
+                        "name",
+                        "issuer",
+                        "redirectUri",
+                        "logoRef",
+                        "credentials",
+                        "directoryKey",
+                        "capabilities",
+                        "scim",
+                        "deactivatedAt",
+                        "warnings",
+                        "createdAt",
+                        "updatedAt",
+                        "config",
+                        "ldap"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ],
+                  "description": "An identity provider."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "reauthenticationRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:reauthenticationRequired",
+                      "title": "Confirm your identity first",
+                      "status": 403,
+                      "code": "reauthenticationRequired"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`credentialExpired`: The credential has expired.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "credentialExpired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:credentialExpired",
+                      "title": "The credential has expired",
+                      "status": 409,
+                      "code": "credentialExpired"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/identity-providers/{providerId}/deactivate": {
+      "post": {
+        "operationId": "identityProviders.deactivateInstance",
+        "summary": "Deactivate an instance identity provider",
+        "description": "Nobody can sign in through the provider any more, synchronization stops and the sessions that came from it end. Everything else stays and returns when the provider is activated again.\n\nRequires the permission `instance.signIn.manage` on the instance. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Identity providers"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.signIn.manage",
+          "resource": "instance"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the identity provider.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The provider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "oidc",
+                          "description": "OpenID Connect."
+                        },
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of the provider."
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "Name shown on the sign-in page."
+                        },
+                        "issuer": {
+                          "type": "string",
+                          "description": "Issuer URL for OIDC, entity ID of the identity provider for SAML, server address for LDAP."
+                        },
+                        "redirectUri": {
+                          "type": "string",
+                          "description": "Redirect URI for OIDC, assertion consumer service URL for SAML, the sign-in page for LDAP."
+                        },
+                        "logoRef": {
+                          "description": "Reference to the uploaded logo, or null.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "credentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the credential."
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "clientSecret",
+                                  "certificate",
+                                  "samlSigning",
+                                  "bindPassword"
+                                ],
+                                "description": "A client secret, a certificate, a SAML signing key pair or a service account password."
+                              },
+                              "keyId": {
+                                "description": "Thumbprint of the certificate, or null for a secret or password.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "expiresAt": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "When the credential expires. ISO 8601 timestamp in UTC."
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "kind",
+                              "keyId",
+                              "expiresAt",
+                              "createdAt",
+                              "inUse",
+                              "chosen"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A credential. Secrets and private keys are never returned."
+                          },
+                          "description": "Credentials, newest first."
+                        },
+                        "directoryKey": {
+                          "type": "boolean",
+                          "description": "Whether a service account key for the Google directory is stored. The key is never shown."
+                        },
+                        "capabilities": {
+                          "type": "object",
+                          "properties": {
+                            "groups": {
+                              "type": "boolean",
+                              "description": "Whether Pagehall learns the groups of a person from this provider."
+                            },
+                            "directorySync": {
+                              "type": "boolean",
+                              "description": "Whether profiles and groups are synchronized in the background, not only at sign-in."
+                            },
+                            "disabledAccounts": {
+                              "type": "boolean",
+                              "description": "Whether accounts disabled or deleted in the provider are detected without a sign-in."
+                            },
+                            "groupsByName": {
+                              "type": "boolean",
+                              "description": "Whether groups are identified by their names, so that renaming a group breaks its rules."
+                            }
+                          },
+                          "required": [
+                            "groups",
+                            "directorySync",
+                            "disabledAccounts",
+                            "groupsByName"
+                          ],
+                          "additionalProperties": false,
+                          "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "deactivatedAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
+                        },
+                        "warnings": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "noCredential",
+                              "credentialExpiring",
+                              "credentialExpired",
+                              "metadataRefreshFailed",
+                              "caCertificateExpiring",
+                              "noGraphCredential"
+                            ]
+                          },
+                          "description": "Problems that need attention."
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "When the provider was set up. ISO 8601 timestamp in UTC."
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "When the provider was last changed. ISO 8601 timestamp in UTC."
+                        },
+                        "config": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "preset": {
+                                  "type": "string",
+                                  "const": "entraId"
+                                },
+                                "clientId": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 500
+                                },
+                                "domains": {
+                                  "default": [],
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "maxLength": 253,
+                                    "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                  }
+                                },
+                                "idTokenAlgorithm": {
+                                  "default": "RS256",
+                                  "type": "string",
+                                  "enum": [
+                                    "RS256",
+                                    "RS384",
+                                    "RS512",
+                                    "PS256",
+                                    "PS384",
+                                    "PS512",
+                                    "ES256",
+                                    "ES384",
+                                    "ES512"
+                                  ]
+                                },
+                                "accountCreation": {
+                                  "default": {
+                                    "enabled": false,
+                                    "requiredGroups": []
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "enabled": {
+                                      "default": false,
+                                      "type": "boolean"
+                                    },
+                                    "requiredGroups": {
+                                      "default": [],
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "enabled",
+                                    "requiredGroups"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "sync": {
+                                  "default": {
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20,
+                                    "deactivationLimitAccounts": 5
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "intervalMinutes": {
+                                      "default": 60,
+                                      "type": "integer",
+                                      "minimum": 15,
+                                      "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
+                                    },
+                                    "deactivationLimitAccounts": {
+                                      "default": 5,
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 100000
+                                    }
+                                  },
+                                  "required": [
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent",
+                                    "deactivationLimitAccounts"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "secondFactor": {
+                                  "default": {
+                                    "mode": "provider",
+                                    "proofValues": [
+                                      "mfa"
+                                    ]
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "mode": {
+                                      "default": "provider",
+                                      "type": "string",
+                                      "enum": [
+                                        "provider",
+                                        "providerProof",
+                                        "pagehall"
+                                      ]
+                                    },
+                                    "proofValues": {
+                                      "default": [
+                                        "mfa"
+                                      ],
+                                      "minItems": 1,
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 50
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "mode",
+                                    "proofValues"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "tenantId": {
+                                  "type": "string",
+                                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                                },
+                                "authority": {
+                                  "default": "https://login.microsoftonline.com"
+                                },
+                                "graphUrl": {
+                                  "default": "https://graph.microsoft.com"
+                                },
+                                "emailSource": {
+                                  "default": "email",
+                                  "type": "string",
+                                  "enum": [
+                                    "email",
+                                    "userPrincipalName",
+                                    "graphMail"
+                                  ]
+                                },
+                                "signInNameSource": {
+                                  "default": "userPrincipalName",
+                                  "type": "string",
+                                  "enum": [
+                                    "preferredUsername",
+                                    "userPrincipalName",
+                                    "email"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "preset",
+                                "clientId",
+                                "domains",
+                                "idTokenAlgorithm",
+                                "accountCreation",
+                                "sync",
+                                "secondFactor",
+                                "tenantId",
+                                "authority",
+                                "graphUrl",
+                                "emailSource",
+                                "signInNameSource"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "preset": {
+                                  "type": "string",
+                                  "const": "google"
+                                },
+                                "clientId": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 500
+                                },
+                                "domains": {
+                                  "minItems": 1,
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "maxLength": 253,
+                                    "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                  }
+                                },
+                                "idTokenAlgorithm": {
+                                  "default": "RS256",
+                                  "type": "string",
+                                  "enum": [
+                                    "RS256",
+                                    "RS384",
+                                    "RS512",
+                                    "PS256",
+                                    "PS384",
+                                    "PS512",
+                                    "ES256",
+                                    "ES384",
+                                    "ES512"
+                                  ]
+                                },
+                                "accountCreation": {
+                                  "default": {
+                                    "enabled": false,
+                                    "requiredGroups": []
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "enabled": {
+                                      "default": false,
+                                      "type": "boolean"
+                                    },
+                                    "requiredGroups": {
+                                      "default": [],
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "enabled",
+                                    "requiredGroups"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "sync": {
+                                  "default": {
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20,
+                                    "deactivationLimitAccounts": 5
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "intervalMinutes": {
+                                      "default": 60,
+                                      "type": "integer",
+                                      "minimum": 15,
+                                      "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
+                                    },
+                                    "deactivationLimitAccounts": {
+                                      "default": 5,
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 100000
+                                    }
+                                  },
+                                  "required": [
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent",
+                                    "deactivationLimitAccounts"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "secondFactor": {
+                                  "default": {
+                                    "mode": "provider",
+                                    "proofValues": [
+                                      "mfa"
+                                    ]
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "mode": {
+                                      "default": "provider",
+                                      "type": "string",
+                                      "enum": [
+                                        "provider",
+                                        "providerProof",
+                                        "pagehall"
+                                      ]
+                                    },
+                                    "proofValues": {
+                                      "default": [
+                                        "mfa"
+                                      ],
+                                      "minItems": 1,
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 50
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "mode",
+                                    "proofValues"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "issuer": {
+                                  "default": "https://accounts.google.com",
+                                  "type": "string",
+                                  "maxLength": 2048,
+                                  "format": "uri"
+                                },
+                                "directory": {
+                                  "default": null,
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "method": {
+                                          "default": "adminRole",
+                                          "type": "string",
+                                          "enum": [
+                                            "adminRole",
+                                            "delegation"
+                                          ]
+                                        },
+                                        "adminEmail": {
+                                          "default": null,
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "maxLength": 254,
+                                              "format": "email"
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "readUsers": {
+                                          "default": false,
+                                          "type": "boolean"
+                                        },
+                                        "url": {
+                                          "default": "https://admin.googleapis.com"
+                                        },
+                                        "tokenUrl": {
+                                          "default": "https://oauth2.googleapis.com/token"
+                                        }
+                                      },
+                                      "required": [
+                                        "method",
+                                        "adminEmail",
+                                        "readUsers",
+                                        "url",
+                                        "tokenUrl"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "preset",
+                                "clientId",
+                                "domains",
+                                "idTokenAlgorithm",
+                                "accountCreation",
+                                "sync",
+                                "secondFactor",
+                                "issuer",
+                                "directory"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "preset": {
+                                  "type": "string",
+                                  "const": "generic"
+                                },
+                                "clientId": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 500
+                                },
+                                "domains": {
+                                  "default": [],
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "maxLength": 253,
+                                    "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                  }
+                                },
+                                "idTokenAlgorithm": {
+                                  "default": "RS256",
+                                  "type": "string",
+                                  "enum": [
+                                    "RS256",
+                                    "RS384",
+                                    "RS512",
+                                    "PS256",
+                                    "PS384",
+                                    "PS512",
+                                    "ES256",
+                                    "ES384",
+                                    "ES512"
+                                  ]
+                                },
+                                "accountCreation": {
+                                  "default": {
+                                    "enabled": false,
+                                    "requiredGroups": []
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "enabled": {
+                                      "default": false,
+                                      "type": "boolean"
+                                    },
+                                    "requiredGroups": {
+                                      "default": [],
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "enabled",
+                                    "requiredGroups"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "sync": {
+                                  "default": {
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20,
+                                    "deactivationLimitAccounts": 5
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "intervalMinutes": {
+                                      "default": 60,
+                                      "type": "integer",
+                                      "minimum": 15,
+                                      "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
+                                    },
+                                    "deactivationLimitAccounts": {
+                                      "default": 5,
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 100000
+                                    }
+                                  },
+                                  "required": [
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent",
+                                    "deactivationLimitAccounts"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "secondFactor": {
+                                  "default": {
+                                    "mode": "provider",
+                                    "proofValues": [
+                                      "mfa"
+                                    ]
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "mode": {
+                                      "default": "provider",
+                                      "type": "string",
+                                      "enum": [
+                                        "provider",
+                                        "providerProof",
+                                        "pagehall"
+                                      ]
+                                    },
+                                    "proofValues": {
+                                      "default": [
+                                        "mfa"
+                                      ],
+                                      "minItems": 1,
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 50
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "mode",
+                                    "proofValues"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "issuer": {
+                                  "type": "string",
+                                  "maxLength": 2048,
+                                  "format": "uri"
+                                },
+                                "scopes": {
+                                  "default": [
+                                    "openid",
+                                    "profile",
+                                    "email"
+                                  ],
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100
+                                  }
+                                },
+                                "claims": {
+                                  "default": {
+                                    "email": "email",
+                                    "signInName": "preferred_username",
+                                    "displayName": "name",
+                                    "groups": null,
+                                    "groupNames": null
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "email": {
+                                      "default": "email",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^[A-Za-z0-9_:./-]+$"
+                                    },
+                                    "signInName": {
+                                      "default": "preferred_username",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^[A-Za-z0-9_:./-]+$"
+                                    },
+                                    "displayName": {
+                                      "default": "name",
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100,
+                                      "pattern": "^[A-Za-z0-9_:./-]+$"
+                                    },
+                                    "groups": {
+                                      "default": null,
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 100,
+                                          "pattern": "^[A-Za-z0-9_:./-]+$"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "groupNames": {
+                                      "default": null,
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 100,
+                                          "pattern": "^[A-Za-z0-9_:./-]+$"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "email",
+                                    "signInName",
+                                    "displayName",
+                                    "groups",
+                                    "groupNames"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "preset",
+                                "clientId",
+                                "domains",
+                                "idTokenAlgorithm",
+                                "accountCreation",
+                                "sync",
+                                "secondFactor",
+                                "issuer",
+                                "scopes",
+                                "claims"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Configuration of the provider."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "id",
+                        "name",
+                        "issuer",
+                        "redirectUri",
+                        "logoRef",
+                        "credentials",
+                        "directoryKey",
+                        "capabilities",
+                        "scim",
+                        "deactivatedAt",
+                        "warnings",
+                        "createdAt",
+                        "updatedAt",
+                        "config"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "saml",
+                          "description": "SAML 2.0."
+                        },
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of the provider."
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "Name shown on the sign-in page."
+                        },
+                        "issuer": {
+                          "type": "string",
+                          "description": "Issuer URL for OIDC, entity ID of the identity provider for SAML, server address for LDAP."
+                        },
+                        "redirectUri": {
+                          "type": "string",
+                          "description": "Redirect URI for OIDC, assertion consumer service URL for SAML, the sign-in page for LDAP."
+                        },
+                        "logoRef": {
+                          "description": "Reference to the uploaded logo, or null.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "credentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the credential."
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "clientSecret",
+                                  "certificate",
+                                  "samlSigning",
+                                  "bindPassword"
+                                ],
+                                "description": "A client secret, a certificate, a SAML signing key pair or a service account password."
+                              },
+                              "keyId": {
+                                "description": "Thumbprint of the certificate, or null for a secret or password.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "expiresAt": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "When the credential expires. ISO 8601 timestamp in UTC."
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "kind",
+                              "keyId",
+                              "expiresAt",
+                              "createdAt",
+                              "inUse",
+                              "chosen"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A credential. Secrets and private keys are never returned."
+                          },
+                          "description": "Credentials, newest first."
+                        },
+                        "directoryKey": {
+                          "type": "boolean",
+                          "description": "Whether a service account key for the Google directory is stored. The key is never shown."
+                        },
+                        "capabilities": {
+                          "type": "object",
+                          "properties": {
+                            "groups": {
+                              "type": "boolean",
+                              "description": "Whether Pagehall learns the groups of a person from this provider."
+                            },
+                            "directorySync": {
+                              "type": "boolean",
+                              "description": "Whether profiles and groups are synchronized in the background, not only at sign-in."
+                            },
+                            "disabledAccounts": {
+                              "type": "boolean",
+                              "description": "Whether accounts disabled or deleted in the provider are detected without a sign-in."
+                            },
+                            "groupsByName": {
+                              "type": "boolean",
+                              "description": "Whether groups are identified by their names, so that renaming a group breaks its rules."
+                            }
+                          },
+                          "required": [
+                            "groups",
+                            "directorySync",
+                            "disabledAccounts",
+                            "groupsByName"
+                          ],
+                          "additionalProperties": false,
+                          "description": "What the provider can do with its current configuration."
+                        },
+                        "scim": {
+                          "type": "boolean",
+                          "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "deactivatedAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
+                        },
+                        "warnings": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "noCredential",
+                              "credentialExpiring",
+                              "credentialExpired",
+                              "metadataRefreshFailed",
+                              "caCertificateExpiring",
+                              "noGraphCredential"
+                            ]
+                          },
+                          "description": "Problems that need attention."
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "When the provider was set up. ISO 8601 timestamp in UTC."
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "When the provider was last changed. ISO 8601 timestamp in UTC."
+                        },
+                        "config": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "preset": {
+                                  "type": "string",
+                                  "const": "entraId"
+                                },
+                                "domains": {
+                                  "default": [],
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "maxLength": 253,
+                                    "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                  }
+                                },
+                                "metadata": {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "source": {
+                                          "type": "string",
+                                          "const": "url"
+                                        },
+                                        "url": {
+                                          "type": "string",
+                                          "maxLength": 2048,
+                                          "format": "uri"
+                                        }
+                                      },
+                                      "required": [
+                                        "source",
+                                        "url"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "source": {
+                                          "type": "string",
+                                          "const": "file"
+                                        }
+                                      },
+                                      "required": [
+                                        "source"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                },
+                                "idpInitiated": {
+                                  "default": false,
+                                  "type": "boolean"
+                                },
+                                "requireSignedResponse": {
+                                  "default": false,
+                                  "type": "boolean"
+                                },
+                                "encryptedAssertions": {
+                                  "default": false,
+                                  "type": "boolean"
+                                },
+                                "accountCreation": {
+                                  "default": {
+                                    "enabled": false,
+                                    "requiredGroups": []
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "enabled": {
+                                      "default": false,
+                                      "type": "boolean"
+                                    },
+                                    "requiredGroups": {
+                                      "default": [],
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "enabled",
+                                    "requiredGroups"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "sync": {
+                                  "default": {
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20,
+                                    "deactivationLimitAccounts": 5
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "intervalMinutes": {
+                                      "default": 60,
+                                      "type": "integer",
+                                      "minimum": 15,
+                                      "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
+                                    },
+                                    "deactivationLimitAccounts": {
+                                      "default": 5,
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 100000
+                                    }
+                                  },
+                                  "required": [
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent",
+                                    "deactivationLimitAccounts"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "secondFactor": {
+                                  "default": {
+                                    "mode": "provider",
+                                    "proofValues": [
+                                      "mfa"
+                                    ]
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "mode": {
+                                      "default": "provider",
+                                      "type": "string",
+                                      "enum": [
+                                        "provider",
+                                        "providerProof",
+                                        "pagehall"
+                                      ]
+                                    },
+                                    "proofValues": {
+                                      "default": [
+                                        "mfa"
+                                      ],
+                                      "minItems": 1,
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 50
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "mode",
+                                    "proofValues"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "tenantId": {
+                                  "type": "string",
+                                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                                },
+                                "authority": {
+                                  "default": "https://login.microsoftonline.com"
+                                },
+                                "graphUrl": {
+                                  "default": "https://graph.microsoft.com"
+                                },
+                                "graphClientId": {
+                                  "default": null,
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "emailSource": {
+                                  "default": "email",
+                                  "type": "string",
+                                  "enum": [
+                                    "email",
+                                    "userPrincipalName"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "preset",
+                                "domains",
+                                "metadata",
+                                "idpInitiated",
+                                "requireSignedResponse",
+                                "encryptedAssertions",
+                                "accountCreation",
+                                "sync",
+                                "secondFactor",
+                                "tenantId",
+                                "authority",
+                                "graphUrl",
+                                "graphClientId",
+                                "emailSource"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "preset": {
+                                  "type": "string",
+                                  "const": "adfs"
+                                },
+                                "domains": {
+                                  "default": [],
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "maxLength": 253,
+                                    "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                  }
+                                },
+                                "metadata": {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "source": {
+                                          "type": "string",
+                                          "const": "url"
+                                        },
+                                        "url": {
+                                          "type": "string",
+                                          "maxLength": 2048,
+                                          "format": "uri"
+                                        }
+                                      },
+                                      "required": [
+                                        "source",
+                                        "url"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "source": {
+                                          "type": "string",
+                                          "const": "file"
+                                        }
+                                      },
+                                      "required": [
+                                        "source"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                },
+                                "idpInitiated": {
+                                  "default": false,
+                                  "type": "boolean"
+                                },
+                                "requireSignedResponse": {
+                                  "default": false,
+                                  "type": "boolean"
+                                },
+                                "encryptedAssertions": {
+                                  "default": false,
+                                  "type": "boolean"
+                                },
+                                "accountCreation": {
+                                  "default": {
+                                    "enabled": false,
+                                    "requiredGroups": []
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "enabled": {
+                                      "default": false,
+                                      "type": "boolean"
+                                    },
+                                    "requiredGroups": {
+                                      "default": [],
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "enabled",
+                                    "requiredGroups"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "sync": {
+                                  "default": {
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20,
+                                    "deactivationLimitAccounts": 5
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "intervalMinutes": {
+                                      "default": 60,
+                                      "type": "integer",
+                                      "minimum": 15,
+                                      "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
+                                    },
+                                    "deactivationLimitAccounts": {
+                                      "default": 5,
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 100000
+                                    }
+                                  },
+                                  "required": [
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent",
+                                    "deactivationLimitAccounts"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "secondFactor": {
+                                  "default": {
+                                    "mode": "provider",
+                                    "proofValues": [
+                                      "mfa"
+                                    ]
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "mode": {
+                                      "default": "provider",
+                                      "type": "string",
+                                      "enum": [
+                                        "provider",
+                                        "providerProof",
+                                        "pagehall"
+                                      ]
+                                    },
+                                    "proofValues": {
+                                      "default": [
+                                        "mfa"
+                                      ],
+                                      "minItems": 1,
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 50
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "mode",
+                                    "proofValues"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "identifierAttribute": {
+                                  "default": "objectGUID",
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256,
+                                  "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                },
+                                "attributes": {
+                                  "default": {
+                                    "email": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+                                    "signInName": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn",
+                                    "displayName": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name",
+                                    "groups": "http://schemas.microsoft.com/ws/2008/06/identity/claims/groupsid"
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "email": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256,
+                                      "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                    },
+                                    "signInName": {
+                                      "default": null,
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 256,
+                                          "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "displayName": {
+                                      "default": null,
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 256,
+                                          "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "groups": {
+                                      "default": null,
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 256,
+                                          "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "email",
+                                    "signInName",
+                                    "displayName",
+                                    "groups"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "groupValues": {
+                                  "default": "identifiers",
+                                  "type": "string",
+                                  "enum": [
+                                    "identifiers",
+                                    "names"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "preset",
+                                "domains",
+                                "metadata",
+                                "idpInitiated",
+                                "requireSignedResponse",
+                                "encryptedAssertions",
+                                "accountCreation",
+                                "sync",
+                                "secondFactor",
+                                "identifierAttribute",
+                                "attributes",
+                                "groupValues"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "preset": {
+                                  "type": "string",
+                                  "const": "generic"
+                                },
+                                "domains": {
+                                  "default": [],
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "maxLength": 253,
+                                    "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                  }
+                                },
+                                "metadata": {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "source": {
+                                          "type": "string",
+                                          "const": "url"
+                                        },
+                                        "url": {
+                                          "type": "string",
+                                          "maxLength": 2048,
+                                          "format": "uri"
+                                        }
+                                      },
+                                      "required": [
+                                        "source",
+                                        "url"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "source": {
+                                          "type": "string",
+                                          "const": "file"
+                                        }
+                                      },
+                                      "required": [
+                                        "source"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                },
+                                "idpInitiated": {
+                                  "default": false,
+                                  "type": "boolean"
+                                },
+                                "requireSignedResponse": {
+                                  "default": false,
+                                  "type": "boolean"
+                                },
+                                "encryptedAssertions": {
+                                  "default": false,
+                                  "type": "boolean"
+                                },
+                                "accountCreation": {
+                                  "default": {
+                                    "enabled": false,
+                                    "requiredGroups": []
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "enabled": {
+                                      "default": false,
+                                      "type": "boolean"
+                                    },
+                                    "requiredGroups": {
+                                      "default": [],
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "enabled",
+                                    "requiredGroups"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "sync": {
+                                  "default": {
+                                    "intervalMinutes": 60,
+                                    "deactivationLimitPercent": 20,
+                                    "deactivationLimitAccounts": 5
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "intervalMinutes": {
+                                      "default": 60,
+                                      "type": "integer",
+                                      "minimum": 15,
+                                      "maximum": 1440
+                                    },
+                                    "deactivationLimitPercent": {
+                                      "default": 20,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 100
+                                    },
+                                    "deactivationLimitAccounts": {
+                                      "default": 5,
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 100000
+                                    }
+                                  },
+                                  "required": [
+                                    "intervalMinutes",
+                                    "deactivationLimitPercent",
+                                    "deactivationLimitAccounts"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "secondFactor": {
+                                  "default": {
+                                    "mode": "provider",
+                                    "proofValues": [
+                                      "mfa"
+                                    ]
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "mode": {
+                                      "default": "provider",
+                                      "type": "string",
+                                      "enum": [
+                                        "provider",
+                                        "providerProof",
+                                        "pagehall"
+                                      ]
+                                    },
+                                    "proofValues": {
+                                      "default": [
+                                        "mfa"
+                                      ],
+                                      "minItems": 1,
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 50
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "mode",
+                                    "proofValues"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "identifierAttribute": {
+                                  "default": null,
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256,
+                                      "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "attributes": {
+                                  "default": {
+                                    "email": "email",
+                                    "signInName": null,
+                                    "displayName": null,
+                                    "groups": null
+                                  },
+                                  "type": "object",
+                                  "properties": {
+                                    "email": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256,
+                                      "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                    },
+                                    "signInName": {
+                                      "default": null,
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 256,
+                                          "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "displayName": {
+                                      "default": null,
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 256,
+                                          "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "groups": {
+                                      "default": null,
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 256,
+                                          "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "email",
+                                    "signInName",
+                                    "displayName",
+                                    "groups"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "groupValues": {
+                                  "default": "names",
+                                  "type": "string",
+                                  "enum": [
+                                    "identifiers",
+                                    "names"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "preset",
+                                "domains",
+                                "metadata",
+                                "idpInitiated",
+                                "requireSignedResponse",
+                                "encryptedAssertions",
+                                "accountCreation",
+                                "sync",
+                                "secondFactor",
+                                "identifierAttribute",
+                                "attributes",
+                                "groupValues"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Configuration of the provider."
+                        },
+                        "saml": {
+                          "type": "object",
+                          "properties": {
+                            "entityId": {
+                              "type": "string",
+                              "description": "Entity ID of Pagehall as service provider, the address of its metadata."
+                            },
+                            "metadataUrl": {
+                              "type": "string",
+                              "description": "Address of Pagehall's service provider metadata."
+                            },
+                            "identityProvider": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "entityId": {
+                                      "type": "string",
+                                      "description": "Entity ID of the identity provider."
+                                    },
+                                    "ssoUrl": {
+                                      "type": "string",
+                                      "description": "Sign-in address of the identity provider."
+                                    },
+                                    "certificates": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "fingerprint": {
+                                            "type": "string",
+                                            "description": "SHA-256 fingerprint of the certificate."
+                                          },
+                                          "subject": {
+                                            "type": "string",
+                                            "description": "Subject of the certificate."
+                                          },
+                                          "expiresAt": {
+                                            "type": "string",
+                                            "format": "date-time",
+                                            "description": "When the certificate expires. ISO 8601 timestamp in UTC."
+                                          }
+                                        },
+                                        "required": [
+                                          "fingerprint",
+                                          "subject",
+                                          "expiresAt"
+                                        ],
+                                        "additionalProperties": false,
+                                        "description": "A certificate."
+                                      },
+                                      "description": "Signing certificates of the identity provider."
+                                    },
+                                    "fetchedAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "description": "When the metadata was last loaded. ISO 8601 timestamp in UTC."
+                                    },
+                                    "refreshFailedAt": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "format": "date-time"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "When the last refresh failed, or null. ISO 8601 timestamp in UTC."
+                                    },
+                                    "refreshError": {
+                                      "description": "Why the last refresh failed, or null.",
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "entityId",
+                                    "ssoUrl",
+                                    "certificates",
+                                    "fetchedAt",
+                                    "refreshFailedAt",
+                                    "refreshError"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "What the metadata of the identity provider says."
+                            }
+                          },
+                          "required": [
+                            "entityId",
+                            "metadataUrl",
+                            "identityProvider"
+                          ],
+                          "additionalProperties": false,
+                          "description": "SAML details."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "id",
+                        "name",
+                        "issuer",
+                        "redirectUri",
+                        "logoRef",
+                        "credentials",
+                        "directoryKey",
+                        "capabilities",
+                        "scim",
+                        "deactivatedAt",
+                        "warnings",
+                        "createdAt",
+                        "updatedAt",
+                        "config",
+                        "saml"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "ldap",
+                          "description": "LDAP or Active Directory."
+                        },
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of the provider."
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "Name shown on the sign-in page."
+                        },
+                        "issuer": {
+                          "type": "string",
+                          "description": "Issuer URL for OIDC, entity ID of the identity provider for SAML, server address for LDAP."
+                        },
+                        "redirectUri": {
+                          "type": "string",
+                          "description": "Redirect URI for OIDC, assertion consumer service URL for SAML, the sign-in page for LDAP."
+                        },
+                        "logoRef": {
+                          "description": "Reference to the uploaded logo, or null.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "credentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the credential."
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "clientSecret",
+                                  "certificate",
+                                  "samlSigning",
+                                  "bindPassword"
+                                ],
+                                "description": "A client secret, a certificate, a SAML signing key pair or a service account password."
+                              },
+                              "keyId": {
+                                "description": "Thumbprint of the certificate, or null for a secret or password.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "expiresAt": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "When the credential expires. ISO 8601 timestamp in UTC."
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "kind",
+                              "keyId",
+                              "expiresAt",
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -44801,6 +47815,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -44808,7 +47830,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -45620,6 +48644,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -45627,7 +48659,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -46660,6 +49694,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -46667,7 +49709,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -49879,6 +52923,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -49886,7 +52938,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -50698,6 +53752,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -50705,7 +53767,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -51738,6 +54802,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -51745,7 +54817,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -52588,6 +55662,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -52595,7 +55677,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -53407,6 +56491,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -53414,7 +56506,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."
@@ -54447,6 +57541,14 @@
                                 "type": "string",
                                 "format": "date-time",
                                 "description": "When the credential was added. ISO 8601 timestamp in UTC."
+                              },
+                              "inUse": {
+                                "type": "boolean",
+                                "description": "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one."
+                              },
+                              "chosen": {
+                                "type": "boolean",
+                                "description": "Whether an administrator chose this credential."
                               }
                             },
                             "required": [
@@ -54454,7 +57556,9 @@
                               "kind",
                               "keyId",
                               "expiresAt",
-                              "createdAt"
+                              "createdAt",
+                              "inUse",
+                              "chosen"
                             ],
                             "additionalProperties": false,
                             "description": "A credential. Secrets and private keys are never returned."

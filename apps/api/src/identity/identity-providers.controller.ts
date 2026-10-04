@@ -18,6 +18,7 @@ import {
   createdProviderSchema,
   createdScimTokenSchema,
   createProviderSchema,
+  credentialChoiceSchema,
   credentialInputSchema,
   credentialParams,
   directoryTestResultSchema,
@@ -444,6 +445,33 @@ export class IdentityProvidersController {
     @Req() request: FastifyRequest,
   ) {
     await this.#services.scimTokens.remove(actorOf(request), providerId, tokenId);
+  }
+
+  @Put("instance/identity-providers/:providerId/credentials/:credentialId/use")
+  @Permission("instance.signIn.manage", { type: "instance" }, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "Choose the credential an instance provider uses",
+    description:
+      "Pagehall uses the newest valid credential of each kind unless an administrator chooses another one. A chosen credential stays in use until it expires, is removed or another choice is made.",
+    tags: [TAG],
+    params: credentialParams,
+    body: credentialChoiceSchema,
+    response: { description: "The provider.", schema: providerSchema },
+    errors: ["credentialExpired", "notFound", "reauthenticationRequired"],
+  })
+  async chooseInstanceCredential(
+    @Param("providerId") providerId: string,
+    @Param("credentialId") credentialId: string,
+    @Body() body: z.output<typeof credentialChoiceSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    const chosen = await this.#services.identityProviders.chooseCredential(
+      actorOf(request),
+      providerId,
+      credentialId,
+      body.use,
+    );
+    return this.#present(request, chosen);
   }
 
   @Delete("instance/identity-providers/:providerId/credentials/:credentialId")

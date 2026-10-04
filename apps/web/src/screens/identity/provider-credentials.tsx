@@ -22,6 +22,7 @@ import {
   addCredential,
   type CredentialInput,
   certificateUrl,
+  chooseCredential,
   type IdentityProvider,
   identityKeys,
   type ProviderCredential,
@@ -66,6 +67,10 @@ export function credentialKindLabel(
     return t(`identityProviders.credentials.graphKinds.${kind}`);
   }
   return t(`identityProviders.credentials.kinds.${kind}`);
+}
+
+function expired(credential: ProviderCredential): boolean {
+  return credential.expiresAt !== null && new Date(credential.expiresAt).getTime() <= Date.now();
 }
 
 function isCertificate(kind: CredentialKind): boolean {
@@ -208,8 +213,20 @@ export function CredentialsList({ provider, canManage }: { provider: IdentityPro
   const showFailure = useFailureToast();
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<ProviderCredential | null>(null);
+  const [choosing, setChoosing] = useState<string | null>(null);
   const credentials = [...provider.credentials].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const refresh = () => queryClient.invalidateQueries({ queryKey: identityKeys.providers });
+  const choose = async (credential: ProviderCredential, use: "this" | "newest") => {
+    setChoosing(credential.id);
+    try {
+      await chooseCredential(provider.id, credential.id, use);
+      await refresh();
+    } catch (failure) {
+      showFailure(t("failures.chooseCredential"), failure, () => void choose(credential, use));
+    } finally {
+      setChoosing(null);
+    }
+  };
   return (
     <div className="flex flex-col gap-3">
       {credentials.length === 0 ? (
@@ -218,15 +235,22 @@ export function CredentialsList({ provider, canManage }: { provider: IdentityPro
         </Notice>
       ) : null}
       <List label={t("identityProviders.credentials.title")}>
-        {credentials.map((credential, index) => (
+        {credentials.map((credential) => (
           <ListRow
             key={credential.id}
             icon={isCertificate(credential.kind) ? FileKey2 : KeyRound}
             title={
               <span className="flex flex-wrap items-center gap-2">
                 {credentialKindLabel(t, provider, credential.kind)}
-                {index === 0 && credentials.length > 1 ? (
-                  <Badge variant="accent">{t("identityProviders.credentials.newest")}</Badge>
+                {credential.inUse && credentials.length > 1 ? (
+                  <Badge variant="accent">
+                    {credential.chosen
+                      ? t("identityProviders.credentials.inUseChosen")
+                      : t("identityProviders.credentials.newest")}
+                  </Badge>
+                ) : null}
+                {expired(credential) ? (
+                  <Badge variant="danger">{t("identityProviders.credentials.expired")}</Badge>
                 ) : null}
               </span>
             }
@@ -238,6 +262,26 @@ export function CredentialsList({ provider, canManage }: { provider: IdentityPro
             })}
             actions={
               <span className="flex flex-wrap gap-2">
+                {canManage && !credential.inUse && !expired(credential) ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    loading={choosing === credential.id}
+                    onClick={() => void choose(credential, "this")}
+                  >
+                    {t("identityProviders.credentials.useThis")}
+                  </Button>
+                ) : null}
+                {canManage && credential.chosen ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    loading={choosing === credential.id}
+                    onClick={() => void choose(credential, "newest")}
+                  >
+                    {t("identityProviders.credentials.useNewest")}
+                  </Button>
+                ) : null}
                 {isCertificate(credential.kind) ? (
                   <Button
                     variant="secondary"

@@ -80,6 +80,8 @@ export interface CredentialSummary {
   keyId: string | null;
   expiresAt: Date | null;
   createdAt: Date;
+  inUse: boolean;
+  chosen: boolean;
 }
 
 export interface SamlSummary {
@@ -174,7 +176,7 @@ function allowedGroups(
 
 const SIGNING_VALID_DAYS = 2 * 365;
 
-export interface AddedCredential extends CredentialSummary {
+export interface AddedCredential extends Omit<CredentialSummary, "inUse" | "chosen"> {
   certificate: string | null;
 }
 
@@ -418,12 +420,32 @@ export class IdentityProviderService {
         keyId: identityProviderCredentials.keyId,
         expiresAt: identityProviderCredentials.expiresAt,
         createdAt: identityProviderCredentials.createdAt,
+        chosenAt: identityProviderCredentials.chosenAt,
       })
       .from(identityProviderCredentials)
       .where(inArray(identityProviderCredentials.providerId, providerIds))
       .orderBy(desc(identityProviderCredentials.createdAt), desc(identityProviderCredentials.id));
-    for (const { providerId, ...credential } of rows) {
-      map.set(providerId, [...(map.get(providerId) ?? []), credential]);
+    const now = this.#clock();
+    const usable = (row: (typeof rows)[number]) => !row.expiresAt || row.expiresAt > now;
+    for (const providerId of new Set(rows.map((row) => row.providerId))) {
+      const own = rows.filter((row) => row.providerId === providerId);
+      const inUse = new Set<string>();
+      for (const group of new Set(own.map((row) => groupOf(row.kind)))) {
+        const candidates = own.filter((row) => groupOf(row.kind) === group && usable(row));
+        const chosen = candidates
+          .filter((row) => row.chosenAt !== null)
+          .sort((a, b) => (b.chosenAt?.getTime() ?? 0) - (a.chosenAt?.getTime() ?? 0))[0];
+        const used = chosen ?? candidates[0];
+        if (used) inUse.add(used.id);
+      }
+      map.set(
+        providerId,
+        own.map(({ providerId: _providerId, chosenAt, ...credential }) => ({
+          ...credential,
+          inUse: inUse.has(credential.id),
+          chosen: chosenAt !== null && (!credential.expiresAt || credential.expiresAt > now),
+        })),
+      );
     }
     return map;
   }
@@ -1102,7 +1124,14 @@ export class IdentityProviderService {
       targetId: provider.id,
       fields: { credentialId: row.id, kind: input.kind, expiresAt: expiresAt?.toISOString() ?? null },
     });
-    return { id: row.id, kind: input.kind, keyId, expiresAt, createdAt: row.createdAt, certificate };
+    return {
+      id: row.id,
+      kind: input.kind,
+      keyId,
+      expiresAt,
+      createdAt: row.createdAt,
+      certificate,
+    };
   }
 
   async addCredential(actor: Principal, id: string, input: CredentialInput): Promise<AddedCredential> {
@@ -1110,6 +1139,50 @@ export class IdentityProviderService {
       const provider = await this.#find(tx, id, true);
       return this.#addCredential(tx, actor, provider, input);
     });
+  }
+
+  async chooseCredential(
+    actor: Principal,
+    id: string,
+    credentialId: string,
+    choice: "this" | "newest",
+  ): Promise<ProviderSummary> {
+    await this.#database.transaction(async (tx) => {
+      await this.#find(tx, id, true);
+      const credentials = await tx
+        .select({
+          id: identityProviderCredentials.id,
+          kind: identityProviderCredentials.kind,
+          expiresAt: identityProviderCredentials.expiresAt,
+        })
+        .from(identityProviderCredentials)
+        .where(eq(identityProviderCredentials.providerId, id));
+      const credential = credentials.find((candidate) => candidate.id === credentialId);
+      if (!credential) throw new OrganizationError("notFound", "The credential does not exist");
+      if (choice === "this" && credential.expiresAt && credential.expiresAt <= this.#clock()) {
+        throw new OrganizationError("credentialExpired", "An expired credential cannot be used");
+      }
+      const group = credentials
+        .filter((candidate) => groupOf(candidate.kind) === groupOf(credential.kind))
+        .map((candidate) => candidate.id);
+      await tx
+        .update(identityProviderCredentials)
+        .set({ chosenAt: null })
+        .where(inArray(identityProviderCredentials.id, group));
+      if (choice === "this") {
+        await tx
+          .update(identityProviderCredentials)
+          .set({ chosenAt: this.#clock() })
+          .where(eq(identityProviderCredentials.id, credentialId));
+      }
+      await this.#audit.record(tx, {
+        name: "identityProvider.credentialChosen",
+        actor,
+        targetId: id,
+        fields: { credentialId, kind: credential.kind, automatic: choice === "newest" },
+      });
+    });
+    return this.get(id);
   }
 
   async removeCredential(actor: Principal, id: string, credentialId: string): Promise<void> {
@@ -1276,7 +1349,11 @@ export class IdentityProviderService {
           ),
         ),
       )
-      .orderBy(desc(identityProviderCredentials.createdAt), desc(identityProviderCredentials.id));
+      .orderBy(
+        sql`${identityProviderCredentials.chosenAt} desc nulls last`,
+        desc(identityProviderCredentials.createdAt),
+        desc(identityProviderCredentials.id),
+      );
     const [secret] = await this.#database
       .select({ directoryKey: identityProviderSecrets.directoryKey })
       .from(identityProviderSecrets)

@@ -166,6 +166,12 @@ export const auditCatalog = {
     fields: z.object({ credentialId: z.uuid(), kind: z.enum(credentialKinds) }),
     visibility: "instance",
   }),
+  "identityProvider.credentialChosen": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({ credentialId: z.uuid(), kind: z.enum(credentialKinds), automatic: z.boolean() }),
+    visibility: "instance",
+  }),
   "identityProvider.directoryKeyChanged": event({
     actor: ["account", "system"],
     target: "identityProvider",

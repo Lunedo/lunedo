@@ -70,6 +70,7 @@ export const identityProviderCredentials = pgTable(
     certificate: text(),
     keyId: text(),
     expiresAt: timestampColumn(),
+    chosenAt: timestampColumn(),
     notifiedThirtyDaysAt: timestampColumn(),
     notifiedSevenDaysAt: timestampColumn(),
     createdAt: timestampColumn().notNull().defaultNow(),

@@ -440,6 +440,53 @@ describe("the sign-in settings of the instance", () => {
     expect(screen.queryByText(/Organizations/)).toBeNull();
   });
 
+  it("lets an administrator choose the credential in use and return to the newest", async () => {
+    const older = "01929b1e-0000-7000-8000-0000000000b1";
+    const newer = "01929b1e-0000-7000-8000-0000000000b2";
+    let chosen: string | null = null;
+    const current = () =>
+      provider({
+        credentials: [
+          {
+            id: newer,
+            kind: "certificate",
+            keyId: "thumbprint",
+            expiresAt: "2028-10-23T00:00:00.000Z",
+            createdAt: "2026-10-01T00:00:00.000Z",
+            inUse: chosen === null,
+            chosen: false,
+          },
+          {
+            id: older,
+            kind: "clientSecret",
+            keyId: null,
+            expiresAt: "2027-10-23T00:00:00.000Z",
+            createdAt: "2024-10-23T00:00:00.000Z",
+            inUse: chosen === older,
+            chosen: chosen === older,
+          },
+        ],
+      });
+    const { requests } = adminApi({
+      [`GET /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({ body: current() }),
+      "GET /api/v1/instance/identity-providers": () => ({ body: [current()] }),
+      [`PUT /api/v1/instance/identity-providers/${PROVIDER}/credentials/${older}/use`]: (request) => {
+        chosen = (request.body as { use: string }).use === "this" ? older : null;
+        return { body: current() };
+      },
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}`);
+    expect(await screen.findByText("In use · newest")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Use this one" }));
+    expect(await screen.findByText("In use · chosen")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Use the newest again" }));
+    expect(await screen.findByText("In use · newest")).toBeTruthy();
+    expect(requests.filter((request) => request.method === "PUT").map((request) => request.body)).toEqual([
+      { use: "this" },
+      { use: "newest" },
+    ]);
+  });
+
   it("deactivates a provider instead of removing it and activates it again", async () => {
     let deactivatedAt: string | null = null;
     const current = () => provider({ deactivatedAt });

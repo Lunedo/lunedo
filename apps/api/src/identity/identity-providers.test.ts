@@ -103,6 +103,43 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     ]);
   });
 
+  it("lets an administrator choose the credential in use and return to the newest", async () => {
+    const original = (await owner.get(`/api/v1/instance/identity-providers/${providerId}`)).json()
+      .credentials[0] as { id: string };
+    const added = await owner.post(`/api/v1/instance/identity-providers/${providerId}/credentials`, {
+      kind: "clientSecret",
+      secret: idp.clientSecret,
+      expiresAt: null,
+    });
+    expect(added.statusCode).toBe(201);
+    const inUse = (body: { credentials: { id: string; inUse: boolean }[] }) =>
+      body.credentials.filter((credential) => credential.inUse).map((credential) => credential.id);
+    expect(inUse((await owner.get(`/api/v1/instance/identity-providers/${providerId}`)).json())).toEqual([
+      added.json().id,
+    ]);
+    const chosen = await owner.put(
+      `/api/v1/instance/identity-providers/${providerId}/credentials/${original.id}/use`,
+      { use: "this" },
+    );
+    expect(chosen.statusCode).toBe(200);
+    expect(inUse(chosen.json())).toEqual([original.id]);
+    const member = await createAccount(test, "credential.viewer@pagehall.test");
+    const client = await signedInClient(test, member.email, member.password);
+    expect(
+      (
+        await client.put(`/api/v1/instance/identity-providers/${providerId}/credentials/${original.id}/use`, {
+          use: "newest",
+        })
+      ).statusCode,
+    ).toBe(403);
+    const automatic = await owner.put(
+      `/api/v1/instance/identity-providers/${providerId}/credentials/${original.id}/use`,
+      { use: "newest" },
+    );
+    expect(inUse(automatic.json())).toEqual([added.json().id]);
+    await owner.delete(`/api/v1/instance/identity-providers/${providerId}/credentials/${added.json().id}`);
+  });
+
   it("signs a new person in through the browser flow and sends them back", async () => {
     const browser = new TestClient(test.app);
     const response = await signInThroughProvider(browser, {

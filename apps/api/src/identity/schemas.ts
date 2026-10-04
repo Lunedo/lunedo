@@ -339,6 +339,27 @@ const credentialSchema = z
   })
   .describe("A credential. Secrets and private keys are never returned.");
 
+const providerCredentialSchema = credentialSchema
+  .extend({
+    inUse: z
+      .boolean()
+      .describe(
+        "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one.",
+      ),
+    chosen: z.boolean().describe("Whether an administrator chose this credential."),
+  })
+  .describe("A credential. Secrets and private keys are never returned.");
+
+export const credentialChoiceSchema = z
+  .object({
+    use: z
+      .enum(["this", "newest"])
+      .describe(
+        "this uses the credential from now on; newest returns to the newest valid credential of its kind.",
+      ),
+  })
+  .strict();
+
 export const addedCredentialSchema = credentialSchema
   .extend({ certificate: z.string().nullable().describe("The public certificate as PEM, for certificates.") })
   .describe("The added credential.");
@@ -361,7 +382,7 @@ const providerBase = {
     .string()
     .describe("Redirect URI for OIDC, assertion consumer service URL for SAML, the sign-in page for LDAP."),
   logoRef: z.string().nullable().describe("Reference to the uploaded logo, or null."),
-  credentials: z.array(credentialSchema).describe("Credentials, newest first."),
+  credentials: z.array(providerCredentialSchema).describe("Credentials, newest first."),
   directoryKey: z
     .boolean()
     .describe("Whether a service account key for the Google directory is stored. The key is never shown."),

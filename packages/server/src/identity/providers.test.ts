@@ -165,6 +165,59 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     ).rejects.toMatchObject({ code: "lastCredential" });
   });
 
+  it("uses the newest credential unless an administrator chooses another one, and audits the choice", async () => {
+    const provider = await instanceProvider();
+    const older = provider.credentials[0];
+    if (!older) throw new Error("A credential expected");
+    const newer = await test.services.identityProviders.addCredential(SYSTEM, provider.id, {
+      kind: "certificate",
+      validDays: 365,
+    });
+    const inUse = async () =>
+      (await test.services.identityProviders.get(provider.id)).credentials
+        .filter((credential) => credential.inUse)
+        .map((credential) => credential.id);
+    const first = async () =>
+      (await test.services.identityProviders.definition(provider.id))?.credentials[0]?.id;
+    expect(await inUse()).toEqual([newer.id]);
+    expect(await first()).toBe(newer.id);
+
+    const chosen = await test.services.identityProviders.chooseCredential(
+      SYSTEM,
+      provider.id,
+      older.id,
+      "this",
+    );
+    expect(chosen.credentials.find((credential) => credential.id === older.id)).toMatchObject({
+      inUse: true,
+      chosen: true,
+    });
+    expect(await inUse()).toEqual([older.id]);
+    expect(await first()).toBe(older.id);
+    const third = await test.services.identityProviders.addCredential(SYSTEM, provider.id, {
+      kind: "clientSecret",
+      secret: "third-secret",
+      expiresAt: null,
+    });
+    expect(await inUse()).toEqual([older.id]);
+
+    await test.pool.query(
+      "update identity_provider_credentials set expires_at = now() - interval '1 day' where id = $1",
+      [newer.id],
+    );
+    await expect(
+      test.services.identityProviders.chooseCredential(SYSTEM, provider.id, newer.id, "this"),
+    ).rejects.toMatchObject({ code: "credentialExpired" });
+    await test.services.identityProviders.chooseCredential(SYSTEM, provider.id, older.id, "newest");
+    expect(await inUse()).toEqual([third.id]);
+    expect(await first()).toBe(third.id);
+    const events = await test.pool.query<{ fields: { automatic: boolean } }>(
+      "select fields from audit_events where name = 'identityProvider.credentialChosen' and target_id = $1 order by sequence",
+      [provider.id],
+    );
+    expect(events.rows.map((row) => row.fields.automatic)).toEqual([false, true]);
+  });
+
   it("warns about expiring credentials and reminds the owners once at 30 and 7 days", async () => {
     const { owner } = await organization();
     await test.pool.query("update instance set owner_account_id = $1", [owner]);

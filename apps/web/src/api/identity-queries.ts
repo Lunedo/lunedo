@@ -187,6 +187,19 @@ export async function removeCredential(providerId: string, credentialId: string)
   );
 }
 
+export async function chooseCredential(
+  providerId: string,
+  credentialId: string,
+  use: "this" | "newest",
+): Promise<IdentityProvider> {
+  return request(() =>
+    api.PUT("/api/v1/instance/identity-providers/{providerId}/credentials/{credentialId}/use", {
+      params: { path: { providerId, credentialId } },
+      body: { use },
+    }),
+  );
+}
+
 export function certificateUrl(providerId: string, credentialId: string): string {
   return `/api/v1/instance/identity-providers/${providerId}/credentials/${credentialId}/certificate`;
 }
