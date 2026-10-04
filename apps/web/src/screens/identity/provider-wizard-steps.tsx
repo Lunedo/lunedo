@@ -47,7 +47,7 @@ export interface CommonStepProps {
   domains: string;
   onCommonChange: (patch: { name?: string; domains?: string }) => void;
   canManage: boolean;
-  onBack: () => void;
+  draftId: string;
   onCreated: (provider: IdentityProvider) => void;
 }
 
@@ -161,7 +161,7 @@ export function SamlConnectionStep({
   domains,
   onCommonChange,
   canManage,
-  onBack,
+  draftId,
   onCreated,
 }: CommonStepProps & { draft: SamlDraft; onChange: (draft: SamlDraft) => void }) {
   const { t } = useTranslation();
@@ -205,6 +205,7 @@ export function SamlConnectionStep({
       const result = await createProvider({
         type: "saml",
         name: name.trim(),
+        draftId,
         config,
         ...(draft.source === "file" && draft.file ? { metadataXml: draft.file.xml } : {}),
       });
@@ -296,7 +297,6 @@ export function SamlConnectionStep({
         onChange={(next) => onCommonChange({ domains: next })}
       />
       <WizardFooter
-        onBack={onBack}
         next={
           <Button variant="primary" loading={busy} disabled={!canManage} onClick={() => void create()}>
             {t("identityProviders.wizard.saveConnection")}
@@ -342,7 +342,7 @@ export function LdapConnectionStep({
   domains,
   onCommonChange,
   canManage,
-  onBack,
+  draftId,
   onCreated,
 }: CommonStepProps & { draft: DirectoryDraft; onChange: (draft: DirectoryDraft) => void }) {
   const { t } = useTranslation();
@@ -391,6 +391,7 @@ export function LdapConnectionStep({
       const result = await createProvider({
         type: "ldap",
         name: name.trim(),
+        draftId,
         config,
         credential: { kind: "bindPassword", secret: draft.password },
       });
@@ -545,7 +546,6 @@ export function LdapConnectionStep({
         />
       </div>
       <WizardFooter
-        onBack={onBack}
         next={
           <Button variant="primary" loading={busy} disabled={!canManage} onClick={() => void create()}>
             {t("identityProviders.wizard.saveConnection")}

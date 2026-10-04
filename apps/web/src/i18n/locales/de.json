@@ -554,8 +554,8 @@
         }
       },
       "savedHints": {
-        "oidc": "Trage diese Weiterleitungs-URI in der App-Registrierung bei deinem Anbieter ein und mach dann weiter.",
-        "saml": "Trage diese Werte beim Identitätsanbieter ein oder lass ihn die Metadaten von Pagehall lesen und mach dann weiter.",
+        "oidc": "Pagehall weiß jetzt, wie es den Anbieter erreicht. Wähle unten, welche Werte es liest, und teste danach die Anmeldung.",
+        "saml": "Pagehall hat die Metadaten des Identitätsanbieters gelesen. Wähle unten, welche Attribute es liest, und teste danach die Anmeldung.",
         "ldap": "Pagehall erreicht das Verzeichnis mit dem Dienstkonto. Wähle unten, wie sich Personen anmelden."
       },
       "samlTitle": "SAML-2.0-Anbieter verbinden",
@@ -585,7 +585,13 @@
       "caFailedTitle": "Der Anbieter ist gespeichert, das CA-Zertifikat aber nicht",
       "caFailedAction": "Mach weiter und lade das richtige CA-Zertifikat im Testschritt oder in den Verbindungseinstellungen hoch.",
       "graphHint": "SAML-Assertions aus Entra ID enthalten höchstens 150 Gruppen. Mit einer App-Registrierung mit den Anwendungsberechtigungen GroupMember.Read.All und User.Read.All lädt Pagehall den Rest über Microsoft Graph und synchronisiert Konten im Hintergrund. Du kannst diesen Schritt überspringen und ihn später in den Einstellungen nachholen.",
-      "graphApp": "App-Registrierung"
+      "graphApp": "App-Registrierung",
+      "draftHint": "Pagehall speichert die Einrichtung ab dem nächsten Schritt als Entwurf. Du kannst den Assistenten schließen und später in der Liste der Identitätsanbieter fortsetzen.",
+      "draftNotSaved": "Deine letzten Änderungen konnten nicht im Entwurf gespeichert werden. Prüfe die Verbindung; Pagehall versucht es bei der nächsten Änderung erneut.",
+      "copyTitle": "Diese Werte bei {provider} eintragen",
+      "copyHint": "Registriere Pagehall zuerst mit diesen Werten bei {provider}. Sie ändern sich nicht, du kannst sie also jetzt kopieren und die Felder unten danach ausfüllen.",
+      "signingCertificate": "Signaturzertifikat von Pagehall",
+      "signingCertificateHint": "Lade es bei {provider} hoch, wenn dort signierte Anfragen geprüft werden. Es ist auch in den Metadaten von Pagehall enthalten."
     },
     "types": {
       "oidc": "OIDC",
@@ -781,6 +787,16 @@
       "removeDescription": "Anfragen mit diesem Token werden sofort abgelehnt.",
       "removeLast": "Anfragen mit diesem Token werden sofort abgelehnt. Ohne Token ist SCIM aus, und die Hintergrundsynchronisierung läuft wieder in ihrem Intervall.",
       "removed": "Token entfernt"
+    },
+    "unfinished": {
+      "title": "Nicht abgeschlossene Einrichtungen",
+      "draft": "Entwurf, zuletzt gespeichert {date}",
+      "connected": "Verbunden; niemand meldet sich darüber an, bis die Einrichtung abgeschlossen ist",
+      "continue": "Einrichtung fortsetzen",
+      "badge": "Einrichtung offen",
+      "removeTitle": "Entwurf {name} entfernen?",
+      "removeDescription": "Die Redirect-URI und das Zertifikat dieses Entwurfs funktionieren dann nicht mehr. Entferne auch die Registrierung beim Anbieter, falls du eine angelegt hast.",
+      "notice": "Niemand meldet sich über {name} an, bis die Einrichtung abgeschlossen ist. Testanmeldungen funktionieren bereits."
     }
   },
   "identities": {
@@ -3008,7 +3024,12 @@
     "renewScimToken": "Das SCIM-Token konnte nicht erneuert werden",
     "removeScimToken": "Das SCIM-Token konnte nicht entfernt werden",
     "removeMailCredential": "Die Zugangsdaten konnten nicht entfernt werden",
-    "addMailCredential": "Die Zugangsdaten konnten nicht hinzugefügt werden"
+    "addMailCredential": "Die Zugangsdaten konnten nicht hinzugefügt werden",
+    "loadDraft": "Der Entwurf konnte nicht geladen werden",
+    "startProviderDraft": "Die Einrichtung konnte nicht begonnen werden",
+    "finishProviderSetup": "Die Einrichtung konnte nicht abgeschlossen werden",
+    "removeDraft": "Der Entwurf konnte nicht entfernt werden",
+    "loadDrafts": "Die Entwürfe konnten nicht geladen werden"
   },
   "lifecycle": {
     "placeholder": {

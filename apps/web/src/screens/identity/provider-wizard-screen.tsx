@@ -1,16 +1,25 @@
-import { Button, classNames, Field, Input, Notice, Section, Skeleton } from "@pagehall/ui";
+import { identityProviderNameSchema } from "@pagehall/shared";
+import { Button, buttonClassName, classNames, Field, Input, Notice, Section, Skeleton } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { Check, KeyRound } from "lucide-react";
-import { useState } from "react";
+import { Check, Download, KeyRound } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import {
+  certificateUrl,
+  completeSetup,
+  createDraft,
   createProvider,
+  type DraftInput,
+  type DraftUpdate,
+  draftQuery,
   type IdentityProvider,
   identityKeys,
   type OidcConfigInput,
+  type ProviderDraft,
   providerQuery,
+  updateDraft,
 } from "../../api/identity-queries.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
@@ -19,6 +28,7 @@ import { SettingsPage } from "../settings/settings-page.js";
 import {
   AccountFields,
   AttributeFields,
+  CopyField,
   LinkFields,
   RedirectUriField,
   SecondFactorFields,
@@ -32,7 +42,7 @@ import {
   emptyCredentialDraft,
 } from "./provider-credentials.js";
 import { DirectoryTest, LdapAttributeFields, LdapSecondFactorFields } from "./provider-ldap.js";
-import { SamlAttributeFields, SamlGraphClientField, SamlServiceProviderFields } from "./provider-saml.js";
+import { SamlAttributeFields, SamlGraphClientField } from "./provider-saml.js";
 import { StartTestButton, TestResult } from "./provider-test.js";
 import {
   type CommonStepProps,
@@ -65,6 +75,7 @@ const CHOICES: Choice[] = ["entraId", "google", "oidc", "saml", "ldap"];
 
 interface WizardSearch {
   providerId?: string | undefined;
+  draftId?: string | undefined;
   step?: number | undefined;
   providerTest?: string | undefined;
 }
@@ -98,52 +109,207 @@ const DEFAULT_NAMES: Record<Choice, string> = {
   ldap: "",
 };
 
-function ProviderWizard({ search }: { search: WizardSearch }) {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const state = useOrganizationState();
-  const providerId = search.providerId;
-  const provider = useQuery({
-    ...providerQuery(providerId ?? ""),
-    enabled: Boolean(providerId),
-  });
-  const [localStep, setLocalStep] = useState(0);
-  const [draft, setDraft] = useState<WizardDraft>({
+function emptyDraft(): WizardDraft {
+  return {
     choice: "entraId",
     name: DEFAULT_NAMES.entraId,
     domains: "",
     oidc: { clientId: "", tenantId: "", issuer: "", credential: emptyCredentialDraft() },
     saml: emptySamlDraft(),
     directory: emptyDirectoryDraft(),
+  };
+}
+
+function kindOf(draft: WizardDraft): { type: "oidc" | "saml" | "ldap"; preset: string } {
+  if (draft.choice === "saml") return { type: "saml", preset: draft.saml.preset };
+  if (draft.choice === "ldap") return { type: "ldap", preset: draft.directory.preset };
+  return { type: "oidc", preset: OIDC_PRESETS[draft.choice] };
+}
+
+function choiceOf(type: ProviderDraft["type"], preset: ProviderDraft["preset"]): Choice {
+  if (type === "saml") return "saml";
+  if (type === "ldap") return "ldap";
+  if (preset === "entraId") return "entraId";
+  return preset === "google" ? "google" : "oidc";
+}
+
+function text(fields: Record<string, unknown>, key: string): string {
+  const value = fields[key];
+  return typeof value === "string" ? value : "";
+}
+
+function fieldsOf(draft: WizardDraft): Record<string, string | boolean> {
+  if (draft.choice === "saml") {
+    return {
+      domains: draft.domains,
+      tenantId: draft.saml.tenantId,
+      source: draft.saml.source,
+      url: draft.saml.url,
+    };
+  }
+  if (draft.choice === "ldap") {
+    return {
+      domains: draft.domains,
+      url: draft.directory.url,
+      startTls: draft.directory.startTls,
+      bindDn: draft.directory.bindDn,
+      userBaseDn: draft.directory.userBaseDn,
+      groupBaseDn: draft.directory.groupBaseDn,
+    };
+  }
+  return {
+    domains: draft.domains,
+    clientId: draft.oidc.clientId,
+    tenantId: draft.oidc.tenantId,
+    issuer: draft.oidc.issuer,
+  };
+}
+
+function restore(saved: ProviderDraft): WizardDraft {
+  const fields = saved.fields;
+  const empty = emptyDraft();
+  const choice = choiceOf(saved.type, saved.preset);
+  return {
+    ...empty,
+    choice,
+    name: saved.name,
+    domains: text(fields, "domains"),
+    oidc: {
+      ...empty.oidc,
+      clientId: text(fields, "clientId"),
+      tenantId: text(fields, "tenantId"),
+      issuer: text(fields, "issuer"),
+    },
+    saml: {
+      ...empty.saml,
+      preset: saved.type === "saml" ? (saved.preset as SamlDraft["preset"]) : empty.saml.preset,
+      tenantId: text(fields, "tenantId"),
+      source: text(fields, "source") === "file" ? "file" : "url",
+      url: text(fields, "url"),
+    },
+    directory: {
+      ...empty.directory,
+      preset: saved.type === "ldap" ? (saved.preset as DirectoryDraft["preset"]) : empty.directory.preset,
+      url: text(fields, "url"),
+      startTls: fields.startTls === true,
+      bindDn: text(fields, "bindDn"),
+      userBaseDn: text(fields, "userBaseDn"),
+      groupBaseDn: text(fields, "groupBaseDn"),
+    },
+  };
+}
+
+const DRAFT_SAVE_DELAY_MS = 600;
+
+function ProviderWizard({ search }: { search: WizardSearch }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const state = useOrganizationState();
+  const providerId = search.providerId;
+  const draftId = providerId ? undefined : search.draftId;
+  const provider = useQuery({
+    ...providerQuery(providerId ?? ""),
+    enabled: Boolean(providerId),
   });
-  const saved = provider.data;
+  const saved = useQuery({ ...draftQuery(draftId ?? ""), enabled: Boolean(draftId) });
+  const [draft, setDraft] = useState<WizardDraft>(emptyDraft);
+  const [restoredFrom, setRestoredFrom] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+  const [draftSaveFailed, setDraftSaveFailed] = useState(false);
+  const [finishError, setFinishError] = useState<string | null>(null);
+  const lastSaved = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!saved.data || restoredFrom === saved.data.id) return;
+    const restored = restore(saved.data);
+    lastSaved.current = JSON.stringify({
+      name: restored.name,
+      ...kindOf(restored),
+      fields: fieldsOf(restored),
+    });
+    setDraft(restored);
+    setRestoredFrom(saved.data.id);
+  }, [saved.data, restoredFrom]);
+
+  useEffect(() => {
+    if (!draftId || restoredFrom !== draftId) return;
+    const kind = kindOf(draft);
+    const body = {
+      ...(identityProviderNameSchema.safeParse(draft.name).success ? { name: draft.name.trim() } : {}),
+      preset: kind.preset as DraftUpdate["preset"],
+      fields: fieldsOf(draft),
+    };
+    const key = JSON.stringify({ name: draft.name, ...kind, fields: body.fields });
+    if (key === lastSaved.current) return;
+    const timer = setTimeout(() => {
+      updateDraft(draftId, body)
+        .then(() => {
+          lastSaved.current = key;
+          setDraftSaveFailed(false);
+        })
+        .catch(() => setDraftSaveFailed(true));
+    }, DRAFT_SAVE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [draft, draftId, restoredFrom]);
+
+  const connected = provider.data;
   const steps = stepsFor(
-    saved
-      ? saved.type === "saml" && saved.config.preset === "entraId"
+    connected
+      ? connected.type === "saml" && connected.config.preset === "entraId"
       : draft.choice === "saml" && draft.saml.preset === "entraId",
   );
-  const index = providerId
-    ? Math.min(Math.max(search.step ?? 2, 2), steps.length - 1)
-    : Math.min(localStep, 1);
+  const index = providerId ? Math.min(Math.max(search.step ?? 2, 2), steps.length - 1) : draftId ? 1 : 0;
   const step = steps[index] ?? "type";
   const canManage = state.can("instance.signIn.manage");
   const listPath = { to: "/settings/instance/sign-in-providers" as const };
   const goTo = (target: number) => {
-    if (!providerId) {
-      setLocalStep(target);
-      return;
-    }
+    if (!providerId) return;
     void navigate({ to: ".", search: { providerId, step: target } } as never);
   };
-  const created = (result: IdentityProvider) =>
+  const created = (result: IdentityProvider) => {
+    void queryClient.invalidateQueries({ queryKey: identityKeys.drafts });
     void navigate({ to: ".", search: { providerId: result.id, step: 2 } } as never);
+  };
+  const start = async () => {
+    setStarting(true);
+    setStartError(null);
+    try {
+      const kind = kindOf(draft);
+      const name = identityProviderNameSchema.safeParse(draft.name).success
+        ? draft.name.trim()
+        : t(`identityProviders.wizard.choices.${draft.choice}.title`);
+      const result = await createDraft({
+        type: kind.type,
+        preset: kind.preset as DraftInput["preset"],
+        name,
+      });
+      await queryClient.invalidateQueries({ queryKey: identityKeys.drafts });
+      void navigate({ to: ".", search: { draftId: result.id, step: 1 } } as never);
+    } catch (failure) {
+      setStartError(problemMessage(t, failure));
+    } finally {
+      setStarting(false);
+    }
+  };
+  const finish = async (id: string) => {
+    setFinishError(null);
+    try {
+      await completeSetup(id);
+      await queryClient.invalidateQueries({ queryKey: identityKeys.providers });
+      void navigate(providerPath(id));
+    } catch (failure) {
+      setFinishError(problemMessage(t, failure));
+    }
+  };
   const common = {
     name: draft.name,
     domains: draft.domains,
     onCommonChange: (patch: { name?: string; domains?: string }) =>
       setDraft((current) => ({ ...current, ...patch })),
     canManage,
-    onBack: () => goTo(0),
+    draftId: draftId ?? "",
     onCreated: created,
   };
 
@@ -158,7 +324,7 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
       ]}
       actions={
         <Button variant="secondary" onClick={() => void navigate(listPath)}>
-          {providerId ? t("identityProviders.wizard.close") : t("common.cancel")}
+          {providerId || draftId ? t("identityProviders.wizard.close") : t("common.cancel")}
         </Button>
       }
     >
@@ -166,9 +332,7 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
         <nav aria-label={t("identityProviders.wizard.steps")} className="md:w-sidebar">
           <ol className="flex flex-col gap-1">
             {steps.map((name, position) => {
-              const reachable = providerId
-                ? position >= 2
-                : position <= Math.max(localStep, 0) && position <= 1;
+              const reachable = providerId ? position >= 2 : position === index;
               return (
                 <li key={name}>
                   <button
@@ -200,6 +364,9 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
           {step === "type" ? (
             <TypeStep
               value={draft.choice}
+              busy={starting}
+              error={startError}
+              canManage={canManage}
               onChange={(choice) =>
                 setDraft((current) => ({
                   ...current,
@@ -207,30 +374,50 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
                   name: current.name === DEFAULT_NAMES[current.choice] ? DEFAULT_NAMES[choice] : current.name,
                 }))
               }
-              onContinue={() => goTo(1)}
+              onContinue={() => void start()}
             />
           ) : null}
-          {step === "connection" && draft.choice === "saml" ? (
-            <SamlConnectionStep
-              {...common}
-              draft={draft.saml}
-              onChange={(saml) => setDraft((current) => ({ ...current, saml }))}
-            />
-          ) : null}
-          {step === "connection" && draft.choice === "ldap" ? (
-            <LdapConnectionStep
-              {...common}
-              draft={draft.directory}
-              onChange={(directory) => setDraft((current) => ({ ...current, directory }))}
-            />
-          ) : null}
-          {step === "connection" && draft.choice !== "saml" && draft.choice !== "ldap" ? (
-            <OidcConnectionStep
-              {...common}
-              choice={draft.choice}
-              draft={draft.oidc}
-              onChange={(oidc) => setDraft((current) => ({ ...current, oidc }))}
-            />
+          {step === "connection" && draftId ? (
+            saved.isPending || restoredFrom !== draftId ? (
+              saved.isError ? (
+                <LoadError
+                  what={t("failures.loadDraft")}
+                  error={saved.error}
+                  onRetry={() => saved.refetch()}
+                />
+              ) : (
+                <Skeleton className="h-48 w-full" />
+              )
+            ) : (
+              <>
+                {saved.data ? <DraftCopyValues draft={saved.data} /> : null}
+                {draftSaveFailed ? (
+                  <Notice variant="warning">{t("identityProviders.wizard.draftNotSaved")}</Notice>
+                ) : null}
+                {draft.choice === "saml" ? (
+                  <SamlConnectionStep
+                    {...common}
+                    draft={draft.saml}
+                    onChange={(samlDraft) => setDraft((current) => ({ ...current, saml: samlDraft }))}
+                  />
+                ) : null}
+                {draft.choice === "ldap" ? (
+                  <LdapConnectionStep
+                    {...common}
+                    draft={draft.directory}
+                    onChange={(directory) => setDraft((current) => ({ ...current, directory }))}
+                  />
+                ) : null}
+                {draft.choice !== "saml" && draft.choice !== "ldap" ? (
+                  <OidcConnectionStep
+                    {...common}
+                    choice={draft.choice}
+                    draft={draft.oidc}
+                    onChange={(oidc) => setDraft((current) => ({ ...current, oidc }))}
+                  />
+                ) : null}
+              </>
+            )
           ) : null}
           {providerId && step !== "type" && step !== "connection" ? (
             provider.isPending ? (
@@ -242,17 +429,24 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
                 onRetry={() => provider.refetch()}
               />
             ) : (
-              <SavedProviderStep
-                provider={provider.data}
-                step={step}
-                testStep={steps.indexOf("test")}
-                canManage={canManage}
-                flowId={search.providerTest}
-                isLast={index === steps.length - 1}
-                onBack={() => goTo(index - 1)}
-                onContinue={() => goTo(index + 1)}
-                onFinish={() => void navigate(providerPath(provider.data.id))}
-              />
+              <>
+                {finishError ? (
+                  <Notice variant="danger" title={t("failures.finishProviderSetup")}>
+                    {finishError}
+                  </Notice>
+                ) : null}
+                <SavedProviderStep
+                  provider={provider.data}
+                  step={step}
+                  testStep={steps.indexOf("test")}
+                  canManage={canManage}
+                  flowId={search.providerTest}
+                  isLast={index === steps.length - 1}
+                  onBack={() => goTo(index - 1)}
+                  onContinue={() => goTo(index + 1)}
+                  onFinish={() => void finish(provider.data.id)}
+                />
+              </>
             )
           ) : null}
         </div>
@@ -261,12 +455,80 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
   );
 }
 
+function DraftCopyValues({ draft }: { draft: ProviderDraft }) {
+  const { t } = useTranslation();
+  const provider = t(`identityProviders.wizard.choices.${choiceOf(draft.type, draft.preset)}.title`);
+  if (draft.type === "ldap") return null;
+  return (
+    <Section title={t("identityProviders.wizard.copyTitle", { provider })}>
+      <div className="flex flex-col gap-4 px-4 py-3">
+        <p className="text-sm text-text-muted">{t("identityProviders.wizard.copyHint", { provider })}</p>
+        {draft.saml ? (
+          <>
+            <CopyField
+              label={t("identityProviders.saml.entityId")}
+              value={draft.saml.entityId}
+              hint={t("identityProviders.saml.entityIdHint")}
+            />
+            <CopyField
+              label={t("identityProviders.saml.acsUrl")}
+              value={draft.redirectUri}
+              hint={t("identityProviders.saml.acsUrlHint")}
+            />
+            <CopyField
+              label={t("identityProviders.saml.metadataUrl")}
+              value={draft.saml.metadataUrl}
+              hint={t("identityProviders.saml.metadataUrlHint")}
+              action={
+                <a
+                  href={draft.saml.metadataUrl}
+                  download
+                  className={buttonClassName({ variant: "secondary", className: "shrink-0" })}
+                >
+                  <Download aria-hidden="true" className="size-icon-sm" />
+                  {t("identityProviders.saml.downloadMetadata")}
+                </a>
+              }
+            />
+            {draft.saml.signingCredentialId ? (
+              <div className="flex flex-col gap-1">
+                <span className="font-medium">{t("identityProviders.wizard.signingCertificate")}</span>
+                <span className="text-sm text-text-muted">
+                  {t("identityProviders.wizard.signingCertificateHint", { provider })}
+                </span>
+                <div>
+                  <a
+                    href={certificateUrl(draft.id, draft.saml.signingCredentialId)}
+                    download
+                    className={buttonClassName({ variant: "secondary" })}
+                  >
+                    <Download aria-hidden="true" className="size-icon-sm" />
+                    {t("identityProviders.credentials.download")}
+                  </a>
+                </div>
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <RedirectUriField uri={draft.redirectUri} />
+        )}
+      </div>
+    </Section>
+  );
+}
+
 function TypeStep({
   value,
+  busy,
+  error,
+  canManage,
   onChange,
   onContinue,
 }: {
   value: Choice;
+  busy: boolean;
+  error: string | null;
+  canManage: boolean;
   onChange: (choice: Choice) => void;
   onContinue: () => void;
 }) {
@@ -300,9 +562,15 @@ function TypeStep({
           ))}
         </div>
       </fieldset>
+      {error ? (
+        <Notice variant="danger" title={t("failures.startProviderDraft")}>
+          {error}
+        </Notice>
+      ) : null}
+      <p className="text-sm text-text-muted">{t("identityProviders.wizard.draftHint")}</p>
       <WizardFooter
         next={
-          <Button variant="primary" onClick={onContinue}>
+          <Button variant="primary" loading={busy} disabled={!canManage} onClick={onContinue}>
             {t("common.continue")}
           </Button>
         }
@@ -324,7 +592,7 @@ function OidcConnectionStep({
   domains,
   onCommonChange,
   canManage,
-  onBack,
+  draftId,
   onCreated,
 }: CommonStepProps & {
   choice: "entraId" | "google" | "oidc";
@@ -373,6 +641,7 @@ function OidcConnectionStep({
       const result = await createProvider({
         type: "oidc",
         name: name.trim(),
+        draftId,
         config,
         credential: credential.value,
       });
@@ -475,7 +744,6 @@ function OidcConnectionStep({
         </div>
       </Section>
       <WizardFooter
-        onBack={onBack}
         next={
           <Button variant="primary" loading={busy} disabled={!canManage} onClick={() => void create()}>
             {t("identityProviders.wizard.saveConnection")}
@@ -520,8 +788,6 @@ function SavedProviderStep({
           <Notice variant="success" title={t("identityProviders.wizard.saved", { name: provider.name })}>
             {t(`identityProviders.wizard.savedHints.${provider.type}`)}
           </Notice>
-          {provider.type === "oidc" ? <RedirectUriField uri={provider.redirectUri} /> : null}
-          {provider.type === "saml" ? <SamlServiceProviderFields provider={provider} /> : null}
           <h2 className="font-semibold text-lg">{t("identityProviders.wizard.stepNames.attributes")}</h2>
           <p className="text-text-muted">{t("identityProviders.attributes.description")}</p>
           <Section title={t("identityProviders.attributes.mapping")}>

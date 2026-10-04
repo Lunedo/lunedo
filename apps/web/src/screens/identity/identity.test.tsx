@@ -411,11 +411,135 @@ function provider(patch: Record<string, unknown> = {}) {
     directoryKey: false,
     capabilities: { groups: true, directorySync: true, disabledAccounts: true, groupsByName: false },
     deactivatedAt: null,
+    setupComplete: true,
     createdAt: "2026-09-01T08:00:00.000Z",
     updatedAt: "2026-09-01T08:00:00.000Z",
     ...patch,
   };
 }
+
+const DRAFTS = "/api/v1/instance/identity-provider-drafts";
+
+function entraDraft(patch: Record<string, unknown> = {}) {
+  return {
+    id: PROVIDER,
+    type: "oidc",
+    preset: "entraId",
+    name: "Microsoft",
+    fields: {},
+    redirectUri: `https://wiki.example.org/api/v1/auth/providers/${PROVIDER}/callback`,
+    saml: null,
+    createdAt: "2026-10-04T08:00:00.000Z",
+    updatedAt: "2026-10-04T09:30:00.000Z",
+    ...patch,
+  };
+}
+
+describe("setting up a provider as a draft", () => {
+  it("shows the redirect URI before the fields that need the provider and saves the draft", async () => {
+    let current = entraDraft();
+    const { requests } = adminApi({
+      [`POST ${DRAFTS}`]: () => ({ status: 201, body: current }),
+      [`GET ${DRAFTS}/${PROVIDER}`]: () => ({ body: current }),
+      [`PATCH ${DRAFTS}/${PROVIDER}`]: (request) => {
+        current = { ...current, ...(request.body as object) };
+        return { body: current };
+      },
+    });
+    await renderPath("/settings/instance/sign-in-providers/new");
+    expect(await screen.findByText(/saves the setup as a draft from the next step on/)).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    const redirect = await screen.findByDisplayValue(
+      `https://wiki.example.org/api/v1/auth/providers/${PROVIDER}/callback`,
+    );
+    const clientId = screen.getByLabelText("Client ID");
+    expect(redirect.compareDocumentPosition(clientId) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText("Enter these values at Microsoft Entra ID")).toBeTruthy();
+    expect(requests.find((request) => request.method === "POST")?.body).toEqual({
+      type: "oidc",
+      preset: "entraId",
+      name: "Microsoft",
+    });
+    await userEvent.type(clientId, "a91b7e04-2c6d-4f13-8e5a-0b9d4c7f2a61");
+    await waitFor(
+      () =>
+        expect(requests.filter((request) => request.method === "PATCH").at(-1)?.body).toMatchObject({
+          name: "Microsoft",
+          preset: "entraId",
+          fields: { clientId: "a91b7e04-2c6d-4f13-8e5a-0b9d4c7f2a61" },
+        }),
+      { timeout: 3000 },
+    );
+    expect(JSON.stringify(requests.filter((request) => request.method === "PATCH"))).not.toContain("secret");
+  });
+
+  it("lists unfinished setups, continues a draft where it stopped and removes another", async () => {
+    const other = "01929b1e-0000-7000-8000-0000000000e9";
+    const { requests } = adminApi({
+      "GET /api/v1/instance/identity-providers": () => ({ body: [provider({ setupComplete: false })] }),
+      [`GET ${DRAFTS}`]: () => ({
+        body: [
+          entraDraft({ fields: { clientId: "client-from-draft", tenantId: "tenant-from-draft" } }),
+          entraDraft({ id: other, name: "Old draft" }),
+        ],
+      }),
+      [`GET ${DRAFTS}/${PROVIDER}`]: () => ({
+        body: entraDraft({ fields: { clientId: "client-from-draft", tenantId: "tenant-from-draft" } }),
+      }),
+      [`DELETE ${DRAFTS}/${other}`]: () => ({ status: 204 }),
+    });
+    await renderPath("/settings/instance/sign-in-providers");
+    const section = await screen.findByRole("region", { name: "Unfinished setups" });
+    expect(within(section).getByText("Old draft")).toBeTruthy();
+    expect(within(section).getByText(/nobody signs in through it until the setup is finished/)).toBeTruthy();
+    expect(screen.getByText("Setup not finished")).toBeTruthy();
+    const removeButtons = within(section).getAllByRole("button", { name: "Remove" });
+    await userEvent.click(removeButtons[1] as HTMLElement);
+    await userEvent.click(
+      within(await screen.findByRole("dialog", { name: "Remove the draft Old draft?" })).getByRole("button", {
+        name: "Remove",
+      }),
+    );
+    await waitFor(() =>
+      expect(requests.some((request) => request.method === "DELETE" && request.path.endsWith(other))).toBe(
+        true,
+      ),
+    );
+    await userEvent.click(
+      within(section).getAllByRole("button", { name: "Continue setup" })[0] as HTMLElement,
+    );
+    expect(await screen.findByDisplayValue("client-from-draft")).toBeTruthy();
+    expect(screen.getByDisplayValue("tenant-from-draft")).toBeTruthy();
+  });
+
+  it("finishes the setup at the last step", async () => {
+    let complete = false;
+    const { requests } = adminApi({
+      [`GET /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({
+        body: provider({ setupComplete: complete }),
+      }),
+      "GET /api/v1/instance/identity-providers": () => ({ body: [provider({ setupComplete: complete })] }),
+      [`POST /api/v1/instance/identity-providers/${PROVIDER}/complete-setup`]: () => {
+        complete = true;
+        return { body: provider({ setupComplete: true }) };
+      },
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}`);
+    expect(
+      await screen.findByText(/Nobody signs in through Microsoft Entra ID · Example until its setup/),
+    ).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Continue setup" }));
+    await userEvent.click(await screen.findByRole("button", { name: /Test$/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "Finish" }));
+    await waitFor(() =>
+      expect(requests.some((request) => request.path.endsWith("/complete-setup"))).toBe(true),
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Microsoft Entra ID · Example", level: 1 }),
+    ).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText(/until its setup is finished/)).toBeNull());
+  });
+});
 
 describe("the sign-in settings of the instance", () => {
   it("lists the providers with their domains, warns about expiring credentials and offers password sign-in", async () => {

@@ -554,8 +554,8 @@
         }
       },
       "savedHints": {
-        "oidc": "Enter this redirect URI in the app registration at your provider, then continue.",
-        "saml": "Enter these values at the identity provider, or let it read Pagehall's metadata, then continue.",
+        "oidc": "Pagehall knows how to reach the provider now. Choose below which values it reads, then test the sign-in.",
+        "saml": "Pagehall has read the metadata of the identity provider. Choose below which attributes it reads, then test the sign-in.",
         "ldap": "Pagehall reaches the directory with the service account. Choose below how people sign in."
       },
       "samlTitle": "Connect a SAML 2.0 provider",
@@ -585,7 +585,13 @@
       "caFailedTitle": "The provider is saved, but the CA certificate is not",
       "caFailedAction": "Continue and upload the right CA certificate in the test step or in the connection settings.",
       "graphHint": "SAML assertions from Entra ID carry at most 150 groups. With an app registration that has the application permissions GroupMember.Read.All and User.Read.All, Pagehall loads the rest through Microsoft Graph and also synchronizes accounts in the background. You can skip this step and add it later in the settings.",
-      "graphApp": "App registration"
+      "graphApp": "App registration",
+      "draftHint": "Pagehall saves the setup as a draft from the next step on. You can close the assistant and continue later from the list of identity providers.",
+      "draftNotSaved": "Your last changes could not be saved to the draft. Check the connection; Pagehall tries again with your next change.",
+      "copyTitle": "Enter these values at {provider}",
+      "copyHint": "Register Pagehall at {provider} with these values first. They do not change, so you can copy them now and fill in the fields below afterwards.",
+      "signingCertificate": "Pagehall's signing certificate",
+      "signingCertificateHint": "Upload it at {provider} if it verifies signed requests. It is also part of Pagehall's metadata."
     },
     "types": {
       "oidc": "OIDC",
@@ -781,6 +787,16 @@
       "removeDescription": "Requests with this token are refused at once.",
       "removeLast": "Requests with this token are refused at once. Without a token, SCIM is off and the background synchronization returns to its interval.",
       "removed": "Token removed"
+    },
+    "unfinished": {
+      "title": "Unfinished setups",
+      "draft": "Draft, last saved {date}",
+      "connected": "Connected; nobody signs in through it until the setup is finished",
+      "continue": "Continue setup",
+      "badge": "Setup not finished",
+      "removeTitle": "Remove the draft {name}?",
+      "removeDescription": "The redirect URI and the certificate of this draft stop working. Remove the registration at the provider as well if you created one.",
+      "notice": "Nobody signs in through {name} until its setup is finished. Test sign-ins work already."
     }
   },
   "identities": {
@@ -3011,7 +3027,12 @@
     "renewScimToken": "The SCIM token could not be renewed",
     "removeScimToken": "The SCIM token could not be removed",
     "removeMailCredential": "The credential could not be removed",
-    "addMailCredential": "The credential could not be added"
+    "addMailCredential": "The credential could not be added",
+    "loadDraft": "The draft could not be loaded",
+    "startProviderDraft": "The setup could not be started",
+    "finishProviderSetup": "The setup could not be finished",
+    "removeDraft": "The draft could not be removed",
+    "loadDrafts": "The drafts could not be loaded"
   },
   "lifecycle": {
     "placeholder": {

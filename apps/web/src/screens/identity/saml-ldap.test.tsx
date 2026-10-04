@@ -78,6 +78,7 @@ const common = {
   logoRef: null,
   directoryKey: false,
   deactivatedAt: null,
+  setupComplete: true,
   createdAt: "2026-09-01T08:00:00.000Z",
   updatedAt: "2026-09-01T08:00:00.000Z",
 };
@@ -187,6 +188,40 @@ function ldapProvider(patch: Record<string, unknown> = {}, config: Record<string
   };
 }
 
+const DRAFTS = "/api/v1/instance/identity-provider-drafts";
+
+function draftApi(id: string, type: "saml" | "ldap", preset: string) {
+  let current: Record<string, unknown> = {
+    id,
+    type,
+    preset,
+    name: type === "saml" ? "SAML 2.0" : "LDAP or Active Directory",
+    fields: {},
+    redirectUri:
+      type === "saml"
+        ? `https://wiki.example.org/api/v1/auth/providers/${id}/saml/acs`
+        : "https://wiki.example.org/sign-in",
+    saml:
+      type === "saml"
+        ? {
+            entityId: `https://wiki.example.org/api/v1/auth/providers/${id}/saml/metadata`,
+            metadataUrl: `https://wiki.example.org/api/v1/auth/providers/${id}/saml/metadata`,
+            signingCredentialId: "01929b1e-0000-7000-8000-0000000000d1",
+          }
+        : null,
+    createdAt: "2026-10-04T08:00:00.000Z",
+    updatedAt: "2026-10-04T08:00:00.000Z",
+  };
+  return {
+    [`POST ${DRAFTS}`]: () => ({ status: 201, body: current }),
+    [`GET ${DRAFTS}/${id}`]: () => ({ body: current }),
+    [`PATCH ${DRAFTS}/${id}`]: (request: RecordedRequest) => {
+      current = { ...current, ...(request.body as object) };
+      return { body: current };
+    },
+  };
+}
+
 function bodyOf(requests: RecordedRequest[], method: string, path: string) {
   return requests.find((request) => request.method === method && request.path === path)?.body;
 }
@@ -201,17 +236,32 @@ describe("adding a SAML provider", () => {
           : { status: 201, body: { provider: samlProvider(), credential: null } },
       [`GET ${BASE}/${SAML}`]: () => ({ body: samlProvider() }),
       [`GET ${BASE}`]: () => ({ body: [samlProvider()] }),
+      ...draftApi(SAML, "saml", "entraId"),
     });
     await renderPath("/settings/instance/sign-in-providers/new");
     await userEvent.click(await screen.findByRole("button", { name: /SAML 2\.0/ }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("heading", { name: "Connect a SAML 2.0 provider" })).toBeTruthy();
+    expect(bodyOf(requests, "POST", DRAFTS)).toEqual({ type: "saml", preset: "entraId", name: "SAML 2.0" });
+    expect(
+      screen.getAllByDisplayValue(`https://wiki.example.org/api/v1/auth/providers/${SAML}/saml/metadata`),
+    ).toHaveLength(2);
+    expect(
+      screen.getByDisplayValue(`https://wiki.example.org/api/v1/auth/providers/${SAML}/saml/acs`),
+    ).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Download metadata" }).getAttribute("href")).toBe(
+      `https://wiki.example.org/api/v1/auth/providers/${SAML}/saml/metadata`,
+    );
+    expect(screen.getByRole("link", { name: "Download certificate" }).getAttribute("href")).toBe(
+      `${BASE}/${SAML}/credentials/01929b1e-0000-7000-8000-0000000000d1/certificate`,
+    );
     await userEvent.click(screen.getByRole("radio", { name: "Active Directory Federation Services" }));
+    await userEvent.clear(screen.getByLabelText("Name on the sign-in page"));
     await userEvent.type(screen.getByLabelText("Name on the sign-in page"), "ADFS · Verlag");
     await userEvent.click(screen.getByRole("radio", { name: "Uploaded file" }));
     await userEvent.click(screen.getByRole("button", { name: "Save and continue" }));
     expect(await screen.findByText("Choose the metadata file of the identity provider.")).toBeTruthy();
-    expect(requests.some((request) => request.method === "POST")).toBe(false);
+    expect(requests.some((request) => request.method === "POST" && request.path === BASE)).toBe(false);
 
     await userEvent.upload(
       screen.getByLabelText("Choose metadata file"),
@@ -228,19 +278,11 @@ describe("adding a SAML provider", () => {
 
     refuse = false;
     await userEvent.click(screen.getByRole("button", { name: "Save and continue" }));
-    expect(
-      await screen.findByDisplayValue("https://wiki.example.org/api/v1/auth/providers/saml"),
-    ).toBeTruthy();
-    expect(
-      screen.getByDisplayValue(`https://wiki.example.org/api/v1/auth/providers/${SAML}/saml/acs`),
-    ).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Download metadata" }).getAttribute("href")).toBe(
-      `https://wiki.example.org/api/v1/auth/providers/${SAML}/saml/metadata`,
-    );
-    expect(screen.getByLabelText("Attribute for the identifier")).toBeTruthy();
+    expect(await screen.findByLabelText("Attribute for the identifier")).toBeTruthy();
     expect(bodyOf(requests, "POST", BASE)).toEqual({
       type: "saml",
       name: "ADFS · Verlag",
+      draftId: SAML,
       config: { preset: "adfs", domains: ["verlag.example"], metadata: { source: "file" } },
       metadataXml: "<EntityDescriptor/>",
     });
@@ -250,11 +292,13 @@ describe("adding a SAML provider", () => {
     const { requests } = adminApi({
       [`POST ${BASE}`]: () => ({ status: 201, body: { provider: samlProvider(), credential: null } }),
       [`GET ${BASE}/${SAML}`]: () => ({ body: samlProvider() }),
+      ...draftApi(SAML, "saml", "entraId"),
     });
     await renderPath("/settings/instance/sign-in-providers/new");
     await userEvent.click(await screen.findByRole("button", { name: /SAML 2\.0/ }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-    await userEvent.type(await screen.findByLabelText("Name on the sign-in page"), "Microsoft");
+    await userEvent.clear(await screen.findByLabelText("Name on the sign-in page"));
+    await userEvent.type(screen.getByLabelText("Name on the sign-in page"), "Microsoft");
     await userEvent.type(screen.getByLabelText("Directory (tenant) ID"), "not a tenant");
     await userEvent.type(screen.getByLabelText("Metadata address"), "ftp://example.org");
     await userEvent.click(screen.getByRole("button", { name: "Save and continue" }));
@@ -276,6 +320,7 @@ describe("adding a SAML provider", () => {
       expect(bodyOf(requests, "POST", BASE)).toEqual({
         type: "saml",
         name: "Microsoft",
+        draftId: SAML,
         config: {
           preset: "entraId",
           domains: [],
@@ -296,11 +341,14 @@ describe("adding an LDAP directory", () => {
       [`POST ${BASE}`]: () => ({ status: 201, body: { provider: ldapProvider(), credential: null } }),
       [`PUT ${BASE}/${LDAP}/ca-certificate`]: () => ({ body: ldapProvider() }),
       [`GET ${BASE}/${LDAP}`]: () => ({ body: ldapProvider() }),
+      ...draftApi(LDAP, "ldap", "activeDirectory"),
     });
     await renderPath("/settings/instance/sign-in-providers/new");
     await userEvent.click(await screen.findByRole("button", { name: /LDAP or Active Directory/ }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("heading", { name: "Connect a directory" })).toBeTruthy();
+    expect(screen.queryByText(/Enter these values at/)).toBeNull();
+    await userEvent.clear(screen.getByLabelText("Name on the sign-in page"));
     await userEvent.type(screen.getByLabelText("Name on the sign-in page"), "Active Directory · Verlag");
     await userEvent.type(screen.getByLabelText("Server address"), "ldap://dc01.verlag.example");
     expect(screen.getByText(/Without StartTLS, passwords travel unencrypted/)).toBeTruthy();
@@ -326,6 +374,7 @@ describe("adding an LDAP directory", () => {
     expect(bodyOf(requests, "POST", BASE)).toEqual({
       type: "ldap",
       name: "Active Directory · Verlag",
+      draftId: LDAP,
       config: {
         preset: "activeDirectory",
         url: "ldap://dc01.verlag.example",

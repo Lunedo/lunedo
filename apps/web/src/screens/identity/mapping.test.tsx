@@ -90,6 +90,7 @@ function provider(preset: "entraId" | "generic" | "google" = "entraId") {
       groupsByName: false,
     },
     deactivatedAt: null,
+    setupComplete: true,
     createdAt: "2026-09-01T08:00:00.000Z",
     updatedAt: "2026-09-01T08:00:00.000Z",
   };

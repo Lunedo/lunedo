@@ -20,6 +20,7 @@ const redirectSearch = z.object({ redirect: z.string().optional() });
 
 const wizardSearch = z.object({
   providerId: z.uuid().optional(),
+  draftId: z.uuid().optional(),
   step: z.coerce.number().int().min(0).max(5).optional(),
   providerTest: z.string().max(100).optional(),
 });

@@ -60,6 +60,7 @@ import {
 import { ScimTab } from "./provider-scim.js";
 import { SyncSettings, SyncTab, syncSummary } from "./provider-sync.js";
 import { StartTestButton, TestResult } from "./provider-test.js";
+import { continueSetupPath } from "./providers-screen.js";
 
 const route = getRouteApi("/app/settings/instance/sign-in-providers/$providerId");
 
@@ -135,6 +136,25 @@ export function InstanceProviderScreen() {
       {data?.deactivatedAt ? (
         <Notice variant="warning" title={t("identityProviders.status.deactivatedTitle")}>
           {t("identityProviders.status.deactivatedNotice")}
+        </Notice>
+      ) : null}
+      {data && !data.setupComplete ? (
+        <Notice
+          variant="warning"
+          title={t("identityProviders.unfinished.badge")}
+          action={
+            state.can("instance.signIn.manage") ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => void navigate(continueSetupPath({ providerId: data.id }) as never)}
+              >
+                {t("identityProviders.unfinished.continue")}
+              </Button>
+            ) : undefined
+          }
+        >
+          {t("identityProviders.unfinished.notice", { name: data.name })}
         </Notice>
       ) : null}
       {data ? (

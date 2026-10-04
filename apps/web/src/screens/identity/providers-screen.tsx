@@ -18,12 +18,15 @@ import { KeyRound, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  draftsQuery,
   type IdentityProvider,
   identityKeys,
+  type ProviderDraft,
   type ProviderType,
   providerLogoUrl,
   providersQuery,
   providerTypes,
+  removeDraft,
   removeProvider,
 } from "../../api/identity-queries.js";
 import { SettingsList } from "../../components/settings-list.js";
@@ -44,6 +47,103 @@ export function providerPath(providerId: string, search?: Record<string, string>
 }
 
 export const newProviderPath = { to: "/settings/instance/sign-in-providers/new" as const };
+
+export function continueSetupPath(target: { providerId: string } | { draftId: string }) {
+  return {
+    to: "/settings/instance/sign-in-providers/new" as const,
+    search:
+      "providerId" in target
+        ? { providerId: target.providerId, step: 2 }
+        : { draftId: target.draftId, step: 1 },
+  };
+}
+
+function UnfinishedSetups({ providers, canManage }: { providers: IdentityProvider[]; canManage: boolean }) {
+  const { t } = useTranslation();
+  const format = useFormat();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const showFailure = useFailureToast();
+  const drafts = useQuery({ ...draftsQuery, throwOnError: false });
+  const [removing, setRemoving] = useState<ProviderDraft | null>(null);
+  const unfinished = providers.filter((provider) => !provider.setupComplete);
+  const items = [
+    ...(drafts.data ?? []).map((draft) => ({
+      key: draft.id,
+      name: draft.name,
+      type: draft.type,
+      detail: t("identityProviders.unfinished.draft", { date: format.dateTime(draft.updatedAt) }),
+      target: { draftId: draft.id },
+      draft,
+    })),
+    ...unfinished.map((provider) => ({
+      key: provider.id,
+      name: provider.name,
+      type: provider.type,
+      detail: t("identityProviders.unfinished.connected"),
+      target: { providerId: provider.id },
+      draft: null,
+    })),
+  ];
+  if (drafts.isError) {
+    return (
+      <LoadError what={t("failures.loadDrafts")} error={drafts.error} onRetry={() => drafts.refetch()} />
+    );
+  }
+  if (items.length === 0) return null;
+  return (
+    <Section title={t("identityProviders.unfinished.title")}>
+      <ul className="flex flex-col divide-y divide-border">
+        {items.map((item) => (
+          <li key={item.key} className="flex flex-wrap items-center gap-3 px-4 py-3">
+            <KeyRound aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <TruncatedText text={item.name} className="font-medium" />
+              <span className="text-sm text-text-muted">
+                {typeLabel(t, item.type)} · {item.detail}
+              </span>
+            </span>
+            {canManage ? (
+              <span className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => void navigate(continueSetupPath(item.target) as never)}
+                >
+                  {t("identityProviders.unfinished.continue")}
+                </Button>
+                {item.draft ? (
+                  <Button size="sm" variant="danger" icon={Trash2} onClick={() => setRemoving(item.draft)}>
+                    {t("common.remove")}
+                  </Button>
+                ) : null}
+              </span>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+      <ConfirmDialog
+        open={removing !== null}
+        onOpenChange={(next) => (next ? undefined : setRemoving(null))}
+        title={t("identityProviders.unfinished.removeTitle", { name: removing?.name ?? "" })}
+        description={t("identityProviders.unfinished.removeDescription")}
+        confirmLabel={t("common.remove")}
+        cancelLabel={t("common.cancel")}
+        destructive
+        onConfirm={async () => {
+          if (!removing) return;
+          try {
+            await removeDraft(removing.id);
+            setRemoving(null);
+            await queryClient.invalidateQueries({ queryKey: identityKeys.drafts });
+          } catch (failure) {
+            showFailure(t("failures.removeDraft"), failure);
+          }
+        }}
+      />
+    </Section>
+  );
+}
 
 export function ProviderGlyph({ provider }: { provider: Pick<IdentityProvider, "id" | "logoRef"> }) {
   const logo = providerLogoUrl(provider);
@@ -230,6 +330,9 @@ export function ProvidersTable({
                 {provider.deactivatedAt ? (
                   <Badge variant="neutral">{t("identityProviders.status.deactivatedBadge")}</Badge>
                 ) : null}
+                {provider.setupComplete ? null : (
+                  <Badge variant="warning">{t("identityProviders.unfinished.badge")}</Badge>
+                )}
               </span>
             ),
           },
@@ -277,6 +380,15 @@ export function ProvidersTable({
                 }
                 items={[
                   { label: t("identityProviders.openDetails"), onSelect: () => open(provider) },
+                  ...(canManage && !provider.setupComplete
+                    ? [
+                        {
+                          label: t("identityProviders.unfinished.continue"),
+                          onSelect: () =>
+                            void navigate(continueSetupPath({ providerId: provider.id }) as never),
+                        },
+                      ]
+                    : []),
                   ...(canManage
                     ? [
                         {
@@ -344,6 +456,7 @@ export function InstanceProvidersScreen() {
           onRetry={() => providers.refetch()}
         />
       ) : null}
+      {providers.data ? <UnfinishedSetups providers={providers.data} canManage={canManage} /> : null}
       {providers.data ? (
         providers.data.length === 0 ? (
           <EmptyState

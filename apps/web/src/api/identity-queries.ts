@@ -7,6 +7,14 @@ type ProviderResponse =
   paths["/api/v1/instance/identity-providers/{providerId}"]["get"]["responses"]["200"]["content"]["application/json"];
 
 export type IdentityProvider = ProviderResponse;
+export type ProviderDraft =
+  paths["/api/v1/instance/identity-provider-drafts/{draftId}"]["get"]["responses"]["200"]["content"]["application/json"];
+export type DraftInput = NonNullable<
+  paths["/api/v1/instance/identity-provider-drafts"]["post"]["requestBody"]
+>["content"]["application/json"];
+export type DraftUpdate = NonNullable<
+  paths["/api/v1/instance/identity-provider-drafts/{draftId}"]["patch"]["requestBody"]
+>["content"]["application/json"];
 export type ProviderType = IdentityProvider["type"];
 export type OidcProvider = Extract<IdentityProvider, { type: "oidc" }>;
 export type SamlProvider = Extract<IdentityProvider, { type: "saml" }>;
@@ -76,6 +84,8 @@ export function isRefusalReason(value: unknown): value is RefusalReason {
 export const identityKeys = {
   providers: ["identityProviders"] as const,
   provider: (providerId: string) => ["identityProviders", providerId] as const,
+  drafts: ["identityProviderDrafts"] as const,
+  draft: (draftId: string) => ["identityProviderDrafts", draftId] as const,
   signInOptions: ["auth", "signInOptions"] as const,
   ownIdentities: ["account", "identities"] as const,
   accountIdentities: (accountId: string) => ["instance", "accounts", "identities", accountId] as const,
@@ -111,6 +121,45 @@ export function providerQuery(providerId: string) {
         api.GET("/api/v1/instance/identity-providers/{providerId}", { params: { path: { providerId } } }),
       ),
   });
+}
+
+export const draftsQuery = queryOptions({
+  queryKey: identityKeys.drafts,
+  queryFn: () => request(() => api.GET("/api/v1/instance/identity-provider-drafts")),
+});
+
+export function draftQuery(draftId: string) {
+  return queryOptions({
+    queryKey: identityKeys.draft(draftId),
+    queryFn: () =>
+      request(() =>
+        api.GET("/api/v1/instance/identity-provider-drafts/{draftId}", { params: { path: { draftId } } }),
+      ),
+  });
+}
+
+export function createDraft(body: DraftInput) {
+  return request(() => api.POST("/api/v1/instance/identity-provider-drafts", { body }));
+}
+
+export function updateDraft(draftId: string, body: DraftUpdate) {
+  return request(() =>
+    api.PATCH("/api/v1/instance/identity-provider-drafts/{draftId}", { params: { path: { draftId } }, body }),
+  );
+}
+
+export async function removeDraft(draftId: string): Promise<void> {
+  await request(() =>
+    api.DELETE("/api/v1/instance/identity-provider-drafts/{draftId}", { params: { path: { draftId } } }),
+  );
+}
+
+export function completeSetup(providerId: string) {
+  return request(() =>
+    api.POST("/api/v1/instance/identity-providers/{providerId}/complete-setup", {
+      params: { path: { providerId } },
+    }),
+  );
 }
 
 export const ownIdentitiesQuery = queryOptions({

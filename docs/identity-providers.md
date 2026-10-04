@@ -34,6 +34,12 @@ Every provider type implements one adapter interface in `packages/server/src/ide
 
 The sign-in flow, linking, accounts at first sign-in and the refusal page do not depend on the protocol, so new protocols only add an adapter.
 
+## Setting up a provider
+
+The setup assistant saves a provider as a draft as soon as its type is chosen (`POST /api/v1/instance/identity-provider-drafts`). The draft has the final ID of the provider, so its first step shows everything to enter at the provider before anything is needed from there: the redirect URI for OpenID Connect; the entity ID, the reply URL, the address of Pagehall's metadata and the signing certificate for SAML. The values typed into the assistant are saved in the draft as they change, without secrets, and the provider list offers to continue or remove unfinished setups.
+
+Saving the connection turns the draft into a provider with the same ID (`draftId` in `POST /api/v1/instance/identity-providers`). Until the last step of the assistant is finished (`POST …/complete-setup`, `identityProvider.setupCompleted`), the provider is not offered on the sign-in page, takes no sign-ins and is not synchronized; test sign-ins work. Providers created through the API without a draft are finished at once.
+
 ## Credentials
 
 A provider has one or more credentials:
@@ -41,7 +47,7 @@ A provider has one or more credentials:
 - a client secret with its expiry date, entered from the provider's console, or
 - a certificate whose RSA key pair Pagehall generates. The private key never leaves Pagehall; the public certificate is downloaded (`GET …/credentials/{id}/certificate`) and registered with the provider. Pagehall authenticates with `private_key_jwt`.
 
-Secrets and private keys are stored with envelope encryption (see [encryption.md](encryption.md)) and are never returned by the API. During a renewal, add the new credential first: Pagehall uses the newest one and falls back to older ones when the provider rejects it, until the old one is removed. The last credential cannot be removed.
+Secrets and private keys are stored with envelope encryption (see [encryption.md](encryption.md)) and are never returned by the API. During a renewal, add the new credential first: Pagehall uses the newest valid one and falls back to older ones when the provider rejects it, until the old one is removed. An administrator can choose another valid credential of the same kind instead (`PUT …/credentials/{id}/use` with `this`, audited as `identityProvider.credentialChosen`); it stays in use until it expires, is removed or `newest` returns to the default. The last credential cannot be removed.
 
 The instance owner and the holders of the instance area "sign-in and security" get the notification `identityProvider.credentialExpiring` 30 and 7 days before the last valid credential expires, and the provider list shows a warning.
 
@@ -75,11 +81,11 @@ When the group values are names, the provider reports `capabilities.groupsByName
 
 ## LDAP
 
-Directories are reached through LDAPS or StartTLS with a service account. People sign in with their directory password on the Pagehall sign-in page. Active Directory identifies people and groups by `objectGUID`; other directories by `entryUUID`.
+Directories are reached through LDAPS or StartTLS with a service account. People sign in with their directory password on the Pagehall sign-in page. Active Directory identifies people and groups by `objectGUID`; other directories by `entryUUID`. For Active Directory, the service account is entered as distinguished name, as user principal name (`svc@example.org`) or as `DOMAIN\name`; other directories need the distinguished name. The attributes for the e-mail address and the display name are chosen from the attributes the directory returns for a test person (`POST …/directory-test`); passwords and binary values are never shown.
 
 ## Testing a provider
 
-The setup assistant and the provider page test a provider with a real sign-in (OpenID Connect and SAML) or a directory lookup (LDAP). Nothing is saved and no account is created. The result shows the identifier, the profile, the groups, and the claims or attributes as received. Tokens, assertions in raw form, hashes, nonces and secrets are never shown.
+The setup assistant and the provider page test a provider with a real sign-in (OpenID Connect and SAML) or a directory lookup (LDAP). A failed test returns to the page it started from with the message of the provider and a reason (`providerRefused`, `userNotAssigned`, `consentRequired`, `unknownApplication`, `invalidClient`, `otherTenant`, `domainNotAllowed`, `browserChanged`, `invalidResponse`), so the page can say what to do. A test that brings no e-mail address says so. Nothing is saved and no account is created. The result shows the identifier, the profile, the groups, and the claims or attributes as received. Tokens, assertions in raw form, hashes, nonces and secrets are never shown.
 
 ## Identities
 
@@ -102,7 +108,7 @@ Reasons: `accountCreationDisabled`, `domainNotAllowed`, `emailNotVerified`, `gro
 Groups are identified by their stable ID at the provider, never by their name. Pagehall stores the names it sees and updates them when the provider renames a group; rules keep working.
 
 - Generic OpenID Connect providers send groups in a claim set in the provider (`claims.groups`, for example `groups`). An optional second claim (`claims.groupNames`) carries the names in the same order; Keycloak and Authentik can send both.
-- Microsoft Entra ID sends group IDs in the token. When a person is in too many groups, the token carries an overage reference instead, and Pagehall reads the groups through Microsoft Graph with the provider's own credential (client credentials, application permissions `GroupMember.Read.All` and `User.Read.All`), never with the person's token. Nested groups count.
+- Microsoft Entra ID sends group IDs in the token or the assertion, without names. Pagehall reads the missing names through Microsoft Graph at sign-in (`directoryObjects/getByIds`) and during synchronization, so the names follow renames in Entra ID; rules keep matching by object ID. When a person is in too many groups, the token carries an overage reference instead, and Pagehall reads the groups through Microsoft Graph with the provider's own credential (client credentials, application permissions `GroupMember.Read.All` and `User.Read.All`), never with the person's token. Nested groups count.
 - Google Workspace does not put groups into the token. Group synchronization is optional: without it, Google Workspace is used for sign-in only and mapping rules see no groups. With it, Pagehall reads groups through the Directory API with a service account, in one of two ways:
   - Administrator role (recommended): create a service account in Google Cloud and a JSON key for it. In the Google Admin console, under Account > Admin roles, assign the prebuilt role Groups Reader to the service account. Pagehall requests only the read-only scope `admin.directory.group.readonly` and acts as the service account itself, so the Google audit log shows the service account. To detect suspended or deleted accounts during synchronization, assign a role that can also read users (for example a custom role with Users > Read) and turn on "Detect suspended accounts"; Pagehall then also requests `admin.directory.user.readonly`. Without it, Pagehall does not see suspensions; a suspended person can no longer sign in through Google, but sessions already open run until they expire.
   - Domain-wide delegation: authorize the service account for the scopes `admin.directory.group.readonly` and `admin.directory.user.readonly` under Security > API controls > Domain-wide delegation, and enter the address of an administrator the service account acts for. Delegation lets the service account use these scopes for the whole domain as that administrator; use it only when the administrator role is not possible.
@@ -117,7 +123,7 @@ Providers with a directory (Entra ID, and Google Workspace with group synchroniz
 
 An account that the provider disabled or deleted is deactivated: its sessions and personal API tokens end. Pagehall never deletes accounts. When the provider enables the account again, Pagehall reactivates it, but only if this provider deactivated it.
 
-A wrong search base, a moved directory unit or a service account that lost its read permission look the same as everyone leaving, and deactivation revokes API tokens for good. So a run that would deactivate more than a share of the provider's active accounts at once (`config.sync.deactivationLimitPercent`, 1 to 100, default 20), or that finds none of the linked accounts it would deactivate, stops: it deactivates nobody, ends as failed with a warning, and notifies the instance owner and administrators (`identityProvider.syncHeld`). An administrator who checked that the people really left confirms the run in the sync log (`identityProvider.syncConfirmed`). Confirming starts a new run that may deactivate up to as many accounts as the held one; each held run can be confirmed once. For LDAP and Active Directory, a user or group search base that does not exist fails the run instead of returning no entries.
+A wrong search base, a moved directory unit or a service account that lost its read permission look the same as everyone leaving, and deactivation revokes API tokens for good. So a run that would deactivate more than a share of the provider's active accounts at once (`config.sync.deactivationLimitPercent`, 1 to 100, default 20) and more than a minimum number of accounts (`config.sync.deactivationLimitAccounts`, default 5), or that finds none of the linked accounts it would deactivate, stops: it deactivates nobody, ends as failed with a warning, and notifies the instance owner and administrators (`identityProvider.syncHeld`). An administrator who checked that the people really left confirms the run in the sync log (`identityProvider.syncConfirmed`). Confirming starts a new run that may deactivate up to as many accounts as the held one; each held run can be confirmed once. For LDAP and Active Directory, a user or group search base that does not exist fails the run instead of returning no entries.
 
 Every run is kept in the sync log with trigger, result, duration, changes and warnings, for `identityProviders.syncLogRetentionDays` days (instance, default 90).
 
@@ -134,7 +140,7 @@ Synchronized Pagehall groups are read-only: their members, managers, name and de
 
 When the groups of a person cannot be read at sign-in or during a synchronization, memberships stay as last known. If the last successful read is older than twice the provider's sync interval, instance roles and the organization roles owner and administrator that come from mapping rules are paused: the authorization service does not count them. The person sees which roles are paused and why (`GET /api/v1/account/withheld-roles`), instance administrators get the notification `account.rolesWithheld` once, and the roles return at the next successful read.
 
-The rule dialog searches the provider's groups (the directory, or the groups seen at sign-in for generic providers) and shows beforehand who gains access.
+The rule dialog suggests the groups Pagehall has seen at sign-ins and synchronizations of the provider, with their names where known. For providers with a directory (Entra ID through Graph, Google Workspace through the Directory API, LDAP and Active Directory), it also searches the directory by name, and the API resolves the chosen group there and stores its ID; a value that is not a group of the directory is refused with `providerGroupNotFound`. For generic OpenID Connect and SAML providers without a directory, the group value is typed as the provider sends it. The dialog shows beforehand who gains access.
 
 ## SCIM
 
@@ -172,4 +178,4 @@ The instance owner can always sign in with password and second factor. When pass
 
 ## Audit events
 
-`identityProvider.created`, `.updated`, `.deactivated`, `.activated`, `.removed`, `.credentialAdded`, `.credentialRemoved`, `.logoChanged`, `.directoryKeyChanged`, `.synchronized` with the result of the run, `.syncConfirmed`; `mappingRule.created`, `.updated`, `.removed`; `account.deactivatedByProvider`, `account.reactivatedByProvider`; memberships, roles and group members changed by rules, with the reason `providerRule`; `auth.signedIn` with `providerId`, `auth.signInRefused` with reason and reference, `auth.providerSignedOut`, `auth.emergencySignIn`; `identity.linked`, `identity.unlinked`; `account.createdAtSignIn`.
+`identityProvider.created`, `.updated`, `.setupCompleted`, `.deactivated`, `.activated`, `.removed`, `.credentialAdded`, `.credentialRemoved`, `.credentialChosen`, `.logoChanged`, `.directoryKeyChanged`, `.synchronized` with the result of the run, `.syncConfirmed`; `mappingRule.created`, `.updated`, `.removed`; `account.deactivatedByProvider`, `account.reactivatedByProvider`; memberships, roles and group members changed by rules, with the reason `providerRule`; `auth.signedIn` with `providerId`, `auth.signInRefused` with reason and reference, `auth.providerSignedOut`, `auth.emergencySignIn`; `identity.linked`, `identity.unlinked`; `account.createdAtSignIn`.
