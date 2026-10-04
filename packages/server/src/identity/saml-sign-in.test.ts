@@ -22,6 +22,7 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
   let metadataServer: Server;
   let metadataUrl: string;
   let metadataAvailable = true;
+  let metadataPrefix = "";
 
   beforeAll(async () => {
     test = await createTestServices(baseUrl ?? "");
@@ -33,7 +34,7 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
         response.writeHead(503).end();
         return;
       }
-      response.writeHead(200, { "content-type": "application/samlmetadata+xml" }).end(idp.metadata());
+      response.writeHead(200, { "content-type": "application/samlmetadata+xml" }).end(`${metadataPrefix}${idp.metadata()}`);
     });
     await new Promise<void>((resolve) => metadataServer.listen(0, "127.0.0.1", resolve));
     metadataUrl = `http://127.0.0.1:${(metadataServer.address() as AddressInfo).port}/metadata`;
@@ -276,6 +277,28 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
     }
     const refreshed = await test.services.identityProviders.refreshSamlMetadata(SYSTEM, id);
     expect(refreshed.warnings).not.toContain("metadataRefreshFailed");
+  });
+
+  it("accepts metadata that starts with a byte order mark, from an address and from a file", async () => {
+    metadataPrefix = "﻿";
+    try {
+      const fromUrl = await provider({ fromUrl: true });
+      const loaded = await test.services.identityProviders.get(fromUrl.id);
+      if (loaded.type !== "saml") throw new Error("SAML provider expected");
+      expect(loaded.saml.identityProvider?.entityId).toBe(idp.entityId);
+      const refreshed = await test.services.identityProviders.refreshSamlMetadata(SYSTEM, fromUrl.id);
+      expect(refreshed.warnings).not.toContain("metadataRefreshFailed");
+    } finally {
+      metadataPrefix = "";
+    }
+    const { provider: fromFile } = await test.services.identityProviders.create(SYSTEM, {
+      type: "saml",
+      name: "SAML with byte order mark",
+      config: { preset: "generic", metadata: { source: "file" } },
+      metadataXml: `﻿${idp.metadata()}`,
+    });
+    if (fromFile.type !== "saml") throw new Error("SAML provider expected");
+    expect(fromFile.saml.identityProvider?.entityId).toBe(idp.entityId);
   });
 
   it("warns about Entra ID providers that cannot read groups through Graph", async () => {

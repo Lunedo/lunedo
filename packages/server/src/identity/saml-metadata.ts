@@ -43,7 +43,10 @@ export function certificateInfo(pem: string): CertificateInfo {
   };
 }
 
-export function parseSamlMetadata(xml: string): SamlIdentityProviderMetadata {
+const BYTE_ORDER_MARK = "﻿";
+
+export function parseSamlMetadata(source: string): SamlIdentityProviderMetadata {
+  const xml = source.startsWith(BYTE_ORDER_MARK) ? source.slice(BYTE_ORDER_MARK.length) : source;
   if (Buffer.byteLength(xml, "utf8") > METADATA_MAX_BYTES) {
     throw new SamlMetadataError("The metadata is larger than 1 MB");
   }
@@ -143,7 +146,7 @@ export async function fetchSamlMetadata(
     }
     chunks.push(value);
   }
-  return Buffer.concat(chunks).toString("utf8");
+  return new TextDecoder().decode(Buffer.concat(chunks));
 }
 
 export function samlEndpointsInsecure(metadata: SamlIdentityProviderMetadata): boolean {
