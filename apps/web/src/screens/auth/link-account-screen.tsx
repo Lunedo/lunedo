@@ -18,7 +18,7 @@ import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { api } from "../../api/client.js";
 import { queryKeys } from "../../api/queries.js";
-import { request } from "../../api/request.js";
+import { ApiError, request } from "../../api/request.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
@@ -39,6 +39,10 @@ export const linkQuery = {
   retry: false,
 };
 
+function isExpired(error: unknown): boolean {
+  return error instanceof ApiError && error.code === "challengeExpired";
+}
+
 const linkForm = z.object({ password: z.string(), code: z.string() });
 
 type Provider = { id: string; name: string; directory: boolean };
@@ -56,6 +60,7 @@ export function LinkAccountScreen() {
   const [reference, setReference] = useState<string | null>(null);
   const [declining, setDeclining] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [expired, setExpired] = useState(false);
   const [directory, setDirectory] = useState<Provider | null>(null);
   const [directoryPassword, setDirectoryPassword] = useState("");
   const form = useSchemaForm(linkForm, { defaultValues: { password: "", code: "" } });
@@ -113,7 +118,8 @@ export function LinkAccountScreen() {
       );
       await finish(result.sessionKind);
     } catch (failure) {
-      setError(isPasskeyCancelled(failure) ? t("auth.passkeyCancelled") : problemMessage(t, failure));
+      if (isExpired(failure)) setExpired(true);
+      else setError(isPasskeyCancelled(failure) ? t("auth.passkeyCancelled") : problemMessage(t, failure));
       form.resetField("password");
       form.resetField("code");
     }
@@ -125,7 +131,8 @@ export function LinkAccountScreen() {
     try {
       await work();
     } catch (failure) {
-      setError(isPasskeyCancelled(failure) ? t("auth.passkeyCancelled") : problemMessage(t, failure));
+      if (isExpired(failure)) setExpired(true);
+      else setError(isPasskeyCancelled(failure) ? t("auth.passkeyCancelled") : problemMessage(t, failure));
     } finally {
       setBusy(null);
     }
@@ -180,7 +187,8 @@ export function LinkAccountScreen() {
       queryClient.removeQueries({ queryKey: linkQuery.queryKey });
       setReference(result.reference);
     } catch (failure) {
-      setError(problemMessage(t, failure));
+      if (isExpired(failure)) setExpired(true);
+      else setError(problemMessage(t, failure));
     } finally {
       setDeclining(false);
     }
@@ -190,6 +198,22 @@ export function LinkAccountScreen() {
     return (
       <AuthCard title={t("auth.link.loading")}>
         <Skeleton className="h-32 w-full" />
+      </AuthCard>
+    );
+  }
+  if (expired || (pending.isError && isExpired(pending.error))) {
+    return (
+      <AuthCard title={t("auth.link.expiredTitle")}>
+        <Notice variant="warning">{t("auth.link.expired")}</Notice>
+        <Button
+          variant="primary"
+          onClick={() => {
+            queryClient.removeQueries({ queryKey: linkQuery.queryKey });
+            void navigate({ to: "/sign-in" });
+          }}
+        >
+          {t("auth.link.startAgain")}
+        </Button>
       </AuthCard>
     );
   }

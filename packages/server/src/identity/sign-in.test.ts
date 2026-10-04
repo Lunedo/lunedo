@@ -402,6 +402,27 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     expect(needsPagehallFactor({ mode: "pagehall", proofValues: ["mfa"] }, ["mfa"])).toBe(true);
   });
 
+  it("keeps a pending link for 15 minutes and refuses it afterwards", async () => {
+    const existing = await account(null);
+    const id = await provider({});
+    const result = await signIn(id, { sub: randomUUID(), email: existing.email });
+    if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
+    const stored = await test.pool.query<{ minutes: number }>(
+      `select extract(epoch from expires_at - now()) / 60 as minutes from auth_challenges
+        where purpose = 'identityLink' and account_id = $1`,
+      [existing.id],
+    );
+    expect(Number(stored.rows[0]?.minutes)).toBeGreaterThan(14.5);
+    expect(Number(stored.rows[0]?.minutes)).toBeLessThanOrEqual(15);
+    await test.pool.query(
+      "update auth_challenges set expires_at = now() - interval '1 second' where purpose = 'identityLink' and account_id = $1",
+      [existing.id],
+    );
+    await expect(test.services.providerSignIn.linkInfo(result.pendingToken)).rejects.toThrow(
+      ChallengeExpiredError,
+    );
+  });
+
   it("links an existing account only after its password and second factor", async () => {
     const org = await organization();
     const existing = await account(org);

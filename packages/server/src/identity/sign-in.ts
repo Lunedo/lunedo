@@ -9,7 +9,7 @@ import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import type { AccountLifecycleService } from "../accounts/lifecycle.js";
 import { ANONYMOUS, accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
-import type { ChallengeStore } from "../auth/challenges.js";
+import { type ChallengeStore, IDENTITY_LINK_LIFETIME_MS } from "../auth/challenges.js";
 import { instanceAdministratorIds } from "../auth/emergency-recipients.js";
 import {
   AuthError,
@@ -554,6 +554,7 @@ export class ProviderSignInService {
           accountId: existing.id,
           payload,
           withToken: true,
+          lifetimeMs: IDENTITY_LINK_LIFETIME_MS,
         });
         return { kind: "linkRequired", pendingToken: pending.token ?? "" };
       }

@@ -33,6 +33,7 @@ const columns = {
 };
 
 export const CHALLENGE_LIFETIME_MS = 5 * 60 * 1000;
+export const IDENTITY_LINK_LIFETIME_MS = 15 * 60 * 1000;
 
 export const MAX_CHALLENGE_FAILURES = 5;
 
@@ -56,6 +57,7 @@ export class ChallengeStore {
       deviceHash?: Buffer | null;
       payload?: unknown;
       withToken: boolean;
+      lifetimeMs?: number;
     },
   ): Promise<{ id: string; token: string | null }> {
     const token = options.withToken ? generateToken() : null;
@@ -70,7 +72,7 @@ export class ChallengeStore {
         methods: options.methods ?? [],
         deviceHash: options.deviceHash ?? null,
         payload: options.payload ?? null,
-        expiresAt: new Date(this.#clock().getTime() + CHALLENGE_LIFETIME_MS),
+        expiresAt: new Date(this.#clock().getTime() + (options.lifetimeMs ?? CHALLENGE_LIFETIME_MS)),
       })
       .returning({ id: authChallenges.id });
     if (!row) throw new Error("The challenge was not created");

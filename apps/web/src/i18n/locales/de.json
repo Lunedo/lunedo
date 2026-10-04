@@ -1153,7 +1153,10 @@
     },
     "link": {
       "loading": "Das zu verknüpfende Konto wird geladen",
-      "unavailableTitle": "Diese Verknüpfung ist abgelaufen",
+      "unavailableTitle": "Das zu verknüpfende Konto konnte nicht geladen werden",
+      "expiredTitle": "Diese Verknüpfung ist abgelaufen",
+      "expired": "Eine Verknüpfung muss innerhalb von 15 Minuten nach der Anmeldung bestätigt werden. Beginne neu: Melde dich noch einmal über den Identitätsanbieter an, dann fragt Pagehall erneut nach der Bestätigung.",
+      "startAgain": "Neu beginnen",
       "backToSignIn": "Zurück zur Anmeldung",
       "title": "Dein {provider}-Konto verknüpfen",
       "description": "Es gibt schon ein Pagehall-Konto mit der E-Mail-Adresse {email}. Bestätige, dass es deines ist, damit beide Anmeldungen zum selben Konto führen.",

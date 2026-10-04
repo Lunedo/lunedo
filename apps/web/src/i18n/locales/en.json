@@ -1153,7 +1153,10 @@
     },
     "link": {
       "loading": "Loading the account to link",
-      "unavailableTitle": "This link has expired",
+      "unavailableTitle": "The account to link could not be loaded",
+      "expiredTitle": "This link has expired",
+      "expired": "A link must be confirmed within 15 minutes after the sign-in. Start again: sign in through the identity provider once more, and Pagehall asks you to confirm the link again.",
+      "startAgain": "Start again",
       "backToSignIn": "Back to sign in",
       "title": "Link your {provider} account",
       "description": "A Pagehall account with the e-mail address {email} already exists. Confirm that it is yours, so both sign-ins lead to the same account.",

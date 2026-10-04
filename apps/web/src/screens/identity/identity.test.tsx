@@ -219,6 +219,24 @@ describe("linking an existing account", () => {
     );
   }
 
+  it("says when the link has expired and starts again", async () => {
+    linkApi({}, { "GET /api/v1/auth/link": () => problem(401, "challengeExpired") });
+    await renderPath("/sign-in/link");
+    expect(await screen.findByRole("heading", { name: "This link has expired" })).toBeTruthy();
+    expect(screen.getByText(/within 15 minutes after the sign-in/)).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Start again" }));
+    expect(await screen.findByLabelText("Work e-mail address or sign-in name")).toBeTruthy();
+  });
+
+  it("switches to the expired notice when the link expires while it is confirmed", async () => {
+    linkApi({}, { "POST /api/v1/auth/link": () => problem(401, "challengeExpired") });
+    await renderPath("/sign-in/link");
+    await userEvent.type(await screen.findByLabelText("Password of Lena Hofer"), "right password");
+    await userEvent.type(screen.getByLabelText(/code/i), "123456");
+    await userEvent.click(screen.getByRole("button", { name: "Confirm and link" }));
+    expect(await screen.findByRole("heading", { name: "This link has expired" })).toBeTruthy();
+  });
+
   it("offers the providers linked to an account without a password and opens a fresh sign-in", async () => {
     const { requests } = linkApi(
       {
