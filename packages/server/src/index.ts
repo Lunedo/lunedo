@@ -161,6 +161,7 @@ export {
   type CredentialSummary,
   callbackPath,
   type LdapSummary,
+  type ProviderDraft,
   type ProviderSummary,
   type ProviderWarning,
   type RemovalPreview,

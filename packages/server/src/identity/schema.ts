@@ -36,15 +36,26 @@ export const identityProviderPreset = pgEnum("identity_provider_preset", identit
 export const identityCredentialKind = pgEnum("identity_credential_kind", identityCredentialKinds);
 export const providerFlowPurpose = pgEnum("provider_flow_purpose", providerFlowPurposes);
 
-export const identityProviders = pgTable("identity_providers", {
-  id: primaryId(),
-  type: identityProviderType().notNull(),
-  preset: identityProviderPreset().notNull(),
-  name: text().notNull(),
-  config: jsonb().notNull(),
-  deactivatedAt: timestampColumn(),
-  ...timestamps(),
-});
+export const identityProviders = pgTable(
+  "identity_providers",
+  {
+    id: primaryId(),
+    type: identityProviderType().notNull(),
+    preset: identityProviderPreset().notNull(),
+    name: text().notNull(),
+    config: jsonb(),
+    draft: jsonb(),
+    setupCompletedAt: timestampColumn(),
+    deactivatedAt: timestampColumn(),
+    ...timestamps(),
+  },
+  (table) => [
+    check(
+      "identity_providers_config_or_draft",
+      sql`(${table.config} is null) = (${table.draft} is not null)`,
+    ),
+  ],
+);
 
 export const identityProviderDomains = pgTable(
   "identity_provider_domains",

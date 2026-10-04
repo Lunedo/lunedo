@@ -14,6 +14,7 @@ export const auditEventNames = [
   "identityProvider.credentialAdded",
   "identityProvider.credentialRemoved",
   "identityProvider.credentialChosen",
+  "identityProvider.setupCompleted",
   "identityProvider.logoChanged",
   "identityProvider.directoryKeyChanged",
   "identityProvider.metadataChanged",

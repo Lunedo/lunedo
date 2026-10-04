@@ -432,6 +432,19 @@ export const directoryPasswordSchema = z.string().min(1).max(1024);
 
 export const identityProviderNameSchema = z.string().trim().min(1).max(100);
 
+export const providerPresets = {
+  oidc: ["entraId", "google", "generic"],
+  saml: ["entraId", "adfs", "generic"],
+  ldap: ["activeDirectory", "generic"],
+} as const;
+
+export const providerDraftFieldsSchema = z
+  .record(
+    z.string().max(64),
+    z.union([z.string().max(4000), z.boolean(), z.null(), z.array(z.string().max(500)).max(50)]),
+  )
+  .refine((fields) => Object.keys(fields).length <= 50, "has too many fields");
+
 export const clientSecretSchema = z.string().min(1).max(4096);
 
 export const signInRefusalReferenceSchema = z

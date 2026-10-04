@@ -103,6 +103,73 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     ]);
   });
 
+  it("starts a provider as a draft, connects it and finishes its setup", async () => {
+    const started = await owner.post("/api/v1/instance/identity-provider-drafts", {
+      type: "oidc",
+      preset: "generic",
+      name: "Draft login",
+    });
+    expect(started.statusCode).toBe(201);
+    const draft = started.json();
+    expect(draft.redirectUri).toBe(`${TEST_ORIGIN}/api/v1/auth/providers/${draft.id}/callback`);
+    expect(
+      (
+        await owner.patch(`/api/v1/instance/identity-provider-drafts/${draft.id}`, {
+          fields: { issuer: idp.issuer, clientId: "draft-client" },
+        })
+      ).json().fields,
+    ).toEqual({ issuer: idp.issuer, clientId: "draft-client" });
+    const drafts = (await owner.get("/api/v1/instance/identity-provider-drafts")).json();
+    expect(drafts.map((entry: { id: string }) => entry.id)).toContain(draft.id);
+    const listed = (await owner.get("/api/v1/instance/identity-providers")).json();
+    expect(listed.map((entry: { id: string }) => entry.id)).not.toContain(draft.id);
+
+    const connected = await owner.post("/api/v1/instance/identity-providers", {
+      type: "oidc",
+      name: "Draft login",
+      draftId: draft.id,
+      config: { preset: "generic", issuer: idp.issuer, clientId: idp.clientId, domains: ["draft.test"] },
+      credential: { kind: "clientSecret", secret: idp.clientSecret, expiresAt: null },
+    });
+    expect(connected.statusCode).toBe(201);
+    expect(connected.json().provider).toMatchObject({ id: draft.id, setupComplete: false });
+    expect(
+      (
+        await new TestClient(test.app).post("/api/v1/auth/sign-in/discover", { email: "a@draft.test" })
+      ).json(),
+    ).toEqual({ step: "password" });
+    const finished = await owner.post(`/api/v1/instance/identity-providers/${draft.id}/complete-setup`);
+    expect(finished.json()).toMatchObject({ id: draft.id, setupComplete: true });
+    expect(
+      (
+        await new TestClient(test.app).post("/api/v1/auth/sign-in/discover", { email: "a@draft.test" })
+      ).json(),
+    ).toMatchObject({ step: "provider", providerId: draft.id });
+    await owner.delete(`/api/v1/instance/identity-providers/${draft.id}`);
+
+    const other = (
+      await owner.post("/api/v1/instance/identity-provider-drafts", {
+        type: "ldap",
+        preset: "activeDirectory",
+        name: "Directory draft",
+      })
+    ).json();
+    expect(other.redirectUri).toBe(`${TEST_ORIGIN}/sign-in`);
+    expect((await owner.delete(`/api/v1/instance/identity-provider-drafts/${other.id}`)).statusCode).toBe(
+      204,
+    );
+    expect((await owner.get(`/api/v1/instance/identity-provider-drafts/${other.id}`)).statusCode).toBe(404);
+    expect(
+      (
+        await owner.post("/api/v1/instance/identity-provider-drafts", {
+          type: "ldap",
+          preset: "google",
+          name: "Wrong kind",
+        })
+      ).json(),
+    ).toMatchObject({ code: "invalidProviderConfiguration" });
+  });
+
   it("lets an administrator choose the credential in use and return to the newest", async () => {
     const original = (await owner.get(`/api/v1/instance/identity-providers/${providerId}`)).json()
       .credentials[0] as { id: string };

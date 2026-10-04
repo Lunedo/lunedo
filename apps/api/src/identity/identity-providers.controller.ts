@@ -1,5 +1,10 @@
 import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Req, Res } from "@nestjs/common";
-import { type CredentialInput, LOGO_MAX_BYTES, type ProviderSummary } from "@pagehall/server";
+import {
+  type CredentialInput,
+  LOGO_MAX_BYTES,
+  type ProviderDraft,
+  type ProviderSummary,
+} from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission, PublicRoute } from "../access/route-access.js";
@@ -15,6 +20,7 @@ import { uuid } from "../http/schemas.js";
 import {
   addedCredentialSchema,
   caCertificateUploadSchema,
+  createDraftSchema,
   createdProviderSchema,
   createdScimTokenSchema,
   createProviderSchema,
@@ -23,6 +29,8 @@ import {
   credentialParams,
   directoryTestResultSchema,
   directoryTestSchema,
+  draftParams,
+  draftSchema,
   providerIdParams,
   providerSchema,
   referenceParams,
@@ -35,6 +43,7 @@ import {
   testResultParams,
   testResultSchema,
   testStartSchema,
+  updateDraftSchema,
   updateProviderSchema,
 } from "./schemas.js";
 import { scimPath } from "./scim.controller.js";
@@ -127,6 +136,113 @@ export class IdentityProvidersController {
     return { ...rest, redirectUri: `${base}${callbackPath}` };
   }
 
+  async #presentDraft(request: FastifyRequest, draft: ProviderDraft) {
+    const base = (await baseUrlOf(this.context, request)).replace(/\/+$/, "");
+    const { callbackPath, saml, ...rest } = draft;
+    return {
+      ...rest,
+      redirectUri: draft.type === "ldap" ? `${base}/sign-in` : `${base}${callbackPath}`,
+      saml: saml
+        ? {
+            entityId: `${base}${saml.metadataPath}`,
+            metadataUrl: `${base}${saml.metadataPath}`,
+            signingCredentialId: saml.signingCredentialId,
+          }
+        : null,
+    };
+  }
+
+  @Post("instance/identity-provider-drafts")
+  @Permission("instance.signIn.manage", { type: "instance" }, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "Start setting up an instance identity provider",
+    description:
+      "Creates a draft with its final ID, so that the redirect URI, the SAML entity ID and Pagehall's signing certificate are known before anything is entered at the provider.",
+    tags: [TAG],
+    status: 201,
+    body: createDraftSchema,
+    response: { description: "The draft.", schema: draftSchema },
+    errors: ["invalidProviderConfiguration", "reauthenticationRequired"],
+  })
+  async createDraft(@Body() body: z.output<typeof createDraftSchema>, @Req() request: FastifyRequest) {
+    return this.#presentDraft(
+      request,
+      await this.#services.identityProviders.createDraft(actorOf(request), body),
+    );
+  }
+
+  @Get("instance/identity-provider-drafts")
+  @Permission("instance.signIn.view")
+  @ApiRoute({
+    summary: "List the unfinished drafts of instance identity providers",
+    tags: [TAG],
+    response: { description: "The drafts, newest first.", schema: z.array(draftSchema) },
+  })
+  async listDrafts(@Req() request: FastifyRequest) {
+    const drafts = await this.#services.identityProviders.drafts();
+    return Promise.all(drafts.map((draft) => this.#presentDraft(request, draft)));
+  }
+
+  @Get("instance/identity-provider-drafts/:draftId")
+  @Permission("instance.signIn.view")
+  @ApiRoute({
+    summary: "Get a draft of an instance identity provider",
+    tags: [TAG],
+    params: draftParams,
+    response: { description: "The draft.", schema: draftSchema },
+  })
+  async getDraft(@Param("draftId") draftId: string, @Req() request: FastifyRequest) {
+    return this.#presentDraft(request, await this.#services.identityProviders.draft(draftId));
+  }
+
+  @Patch("instance/identity-provider-drafts/:draftId")
+  @Permission("instance.signIn.manage")
+  @ApiRoute({
+    summary: "Save a draft of an instance identity provider",
+    tags: [TAG],
+    params: draftParams,
+    body: updateDraftSchema,
+    response: { description: "The draft.", schema: draftSchema },
+    errors: ["invalidProviderConfiguration", "invalidInput"],
+  })
+  async updateDraft(
+    @Param("draftId") draftId: string,
+    @Body() body: z.output<typeof updateDraftSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#presentDraft(request, await this.#services.identityProviders.updateDraft(draftId, body));
+  }
+
+  @Delete("instance/identity-provider-drafts/:draftId")
+  @Permission("instance.signIn.manage", { type: "instance" }, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "Remove a draft of an instance identity provider",
+    tags: [TAG],
+    params: draftParams,
+    errors: ["reauthenticationRequired"],
+  })
+  async removeDraft(@Param("draftId") draftId: string, @Req() request: FastifyRequest) {
+    await this.#services.identityProviders.draft(draftId);
+    await this.#services.identityProviders.remove(actorOf(request), draftId);
+  }
+
+  @Post("instance/identity-providers/:providerId/complete-setup")
+  @Permission("instance.signIn.manage", { type: "instance" }, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "Finish the setup of an instance identity provider",
+    description: "From now on, people sign in through the provider and it is synchronized.",
+    tags: [TAG],
+    params: providerIdParams,
+    response: { description: "The provider.", schema: providerSchema },
+    errors: ["reauthenticationRequired"],
+  })
+  async completeSetup(@Param("providerId") providerId: string, @Req() request: FastifyRequest) {
+    return this.#present(
+      request,
+      await this.#services.identityProviders.completeSetup(actorOf(request), providerId),
+    );
+  }
+
   async #presentAll(request: FastifyRequest, providers: ProviderSummary[]) {
     return Promise.all(providers.map((provider) => this.#present(request, provider)));
   }
@@ -208,6 +324,7 @@ export class IdentityProvidersController {
       config: body.config,
       credential,
       metadataXml: body.type === "saml" ? (body.metadataXml ?? null) : null,
+      draftId: body.draftId ?? null,
     });
     return { provider: await this.#present(request, created.provider), credential: created.credential };
   }

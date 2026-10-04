@@ -305,6 +305,108 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
     expect(refreshed.warnings).not.toContain("metadataRefreshFailed");
   });
 
+  it("keeps a draft with Pagehall's details from the first step and connects it later", async () => {
+    const draft = await test.services.identityProviders.createDraft(SYSTEM, {
+      type: "saml",
+      preset: "entraId",
+      name: "Entra SAML draft",
+    });
+    expect(draft.saml).toMatchObject({
+      acsPath: samlPaths(draft.id).acs,
+      metadataPath: samlPaths(draft.id).metadata,
+    });
+    const signingId = draft.saml?.signingCredentialId ?? "";
+    const certificate = await test.services.identityProviders.certificate(draft.id, signingId);
+    const metadata = await test.services.providerSignIn.serviceProviderMetadata(draft.id, BASE);
+    expect(metadata).toContain(samlEntityId(BASE, draft.id));
+    expect(metadata).toContain(
+      certificate
+        .replace(/-----[A-Z ]+-----/g, "")
+        .replace(/\s+/g, "")
+        .slice(0, 40),
+    );
+    expect((await test.services.identityProviders.drafts()).map((entry) => entry.id)).toContain(draft.id);
+    expect((await test.services.identityProviders.list()).map((entry) => entry.id)).not.toContain(draft.id);
+    await expect(test.services.identityProviders.get(draft.id)).rejects.toMatchObject({ code: "notFound" });
+    await expect(
+      test.services.identityProviders.updateDraft(draft.id, { preset: "activeDirectory" }),
+    ).rejects.toMatchObject({ code: "invalidProviderConfiguration" });
+    const saved = await test.services.identityProviders.updateDraft(draft.id, {
+      preset: "generic",
+      fields: { metadataUrl: "https://idp.example.org/metadata", idpInitiated: false },
+    });
+    expect(saved).toMatchObject({
+      preset: "generic",
+      fields: { metadataUrl: "https://idp.example.org/metadata", idpInitiated: false },
+    });
+
+    const domain = `${randomUUID().slice(0, 8)}.example.org`;
+    const { provider: connected } = await test.services.identityProviders.create(SYSTEM, {
+      type: "saml",
+      name: "SAML from a draft",
+      draftId: draft.id,
+      config: {
+        preset: "generic",
+        metadata: { source: "file" },
+        domains: [domain],
+        accountCreation: { enabled: true, requiredGroups: [] },
+        attributes: { email: "email", displayName: "name", groups: null },
+      },
+      metadataXml: idp.metadata(),
+    });
+    expect(connected).toMatchObject({ id: draft.id, setupComplete: false });
+    expect(connected.credentials.filter((credential) => credential.kind === "samlSigning")).toHaveLength(1);
+    expect(await test.services.identityProviders.drafts()).not.toContainEqual(
+      expect.objectContaining({ id: draft.id }),
+    );
+    expect((await test.services.identityProviders.signInProviders()).map((entry) => entry.id)).not.toContain(
+      draft.id,
+    );
+    expect(await test.services.identityProviders.providerForDomain(domain)).toBeNull();
+    await expect(
+      test.services.providerSignIn.start({ providerId: draft.id, purpose: "signIn", baseUrl: BASE }),
+    ).rejects.toMatchObject({ code: "providerDeactivated" });
+    const tested = await test.services.providerSignIn.start({
+      providerId: draft.id,
+      purpose: "test",
+      baseUrl: BASE,
+    });
+    expect(tested.url).toContain("SAMLRequest");
+
+    const finished = await test.services.identityProviders.completeSetup(SYSTEM, draft.id);
+    expect(finished.setupComplete).toBe(true);
+    expect((await test.services.identityProviders.signInProviders()).map((entry) => entry.id)).toContain(
+      draft.id,
+    );
+    const person = { nameId: randomUUID(), email: `ada@${domain}` };
+    expect((await signIn(draft.id, person)).kind).toBe("signedIn");
+    const events = await test.pool.query(
+      "select name from audit_events where target_id = $1 and name like 'identityProvider.%' order by sequence",
+      [draft.id],
+    );
+    expect(events.rows.map((row) => row.name)).toEqual(
+      expect.arrayContaining([
+        "identityProvider.created",
+        "identityProvider.updated",
+        "identityProvider.setupCompleted",
+      ]),
+    );
+  });
+
+  it("removes a draft together with its signing certificate", async () => {
+    const draft = await test.services.identityProviders.createDraft(SYSTEM, {
+      type: "saml",
+      preset: "generic",
+      name: "Draft to remove",
+    });
+    await test.services.identityProviders.remove(SYSTEM, draft.id);
+    await expect(test.services.identityProviders.draft(draft.id)).rejects.toMatchObject({ code: "notFound" });
+    const left = await test.pool.query("select 1 from identity_provider_credentials where provider_id = $1", [
+      draft.id,
+    ]);
+    expect(left.rowCount).toBe(0);
+  });
+
   it("accepts metadata that starts with a byte order mark, from an address and from a file", async () => {
     metadataPrefix = "﻿";
     try {

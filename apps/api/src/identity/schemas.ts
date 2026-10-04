@@ -9,6 +9,7 @@ import {
   ldapConfigSchema,
   mappingRuleInputSchema,
   oidcConfigSchema,
+  providerDraftFieldsSchema,
   samlConfigSchema,
   samlMetadataXmlSchema,
   signInRefusalReferenceSchema,
@@ -151,6 +152,9 @@ export const createProviderSchema = z
         type: z.literal("oidc").describe("OpenID Connect."),
         name: providerName,
         config: oidcConfigSchema.describe("Configuration of the OpenID Connect provider."),
+        draftId: uuid("ID of the draft this provider completes, when it was started as a draft.")
+          .nullable()
+          .optional(),
         credential: credentialInputSchema,
       })
       .strict(),
@@ -159,6 +163,9 @@ export const createProviderSchema = z
         type: z.literal("saml").describe("SAML 2.0."),
         name: providerName,
         config: samlConfigSchema.describe("Configuration of the SAML identity provider."),
+        draftId: uuid("ID of the draft this provider completes, when it was started as a draft.")
+          .nullable()
+          .optional(),
         metadataXml: samlMetadataXmlSchema
           .nullable()
           .optional()
@@ -176,11 +183,68 @@ export const createProviderSchema = z
         type: z.literal("ldap").describe("LDAP or Active Directory."),
         name: providerName,
         config: ldapConfigSchema.describe("Configuration of the directory."),
+        draftId: uuid("ID of the draft this provider completes, when it was started as a draft.")
+          .nullable()
+          .optional(),
         credential: credentialInputSchema.describe("The password of the service account."),
       })
       .strict(),
   ])
   .describe("A new identity provider.");
+
+const draftPreset = z
+  .enum(identityProviderPresets)
+  .describe("The kind of provider; it must belong to the type.");
+
+export const createDraftSchema = z
+  .object({
+    type: z
+      .enum(["oidc", "saml", "ldap"])
+      .describe("OpenID Connect, SAML 2.0, or LDAP and Active Directory."),
+    preset: draftPreset,
+    name: providerName,
+  })
+  .strict()
+  .describe("A provider to set up step by step.");
+
+export const updateDraftSchema = z
+  .object({
+    name: providerName.optional(),
+    preset: draftPreset.optional(),
+    fields: providerDraftFieldsSchema
+      .optional()
+      .describe("The values typed into the assistant so far. Secrets are never stored in a draft."),
+  })
+  .strict()
+  .describe("Changes to a draft.");
+
+export const draftParams = z.object({ draftId: uuid("ID of the draft.") }).strict();
+
+export const draftSchema = z
+  .object({
+    id: uuid("ID of the draft; the provider keeps it."),
+    type: z.enum(["oidc", "saml", "ldap"]).describe("Type of the provider."),
+    preset: draftPreset,
+    name: z.string().describe("Name shown on the sign-in page."),
+    fields: z.record(z.string(), z.unknown()).describe("The values typed into the assistant so far."),
+    redirectUri: z
+      .string()
+      .describe("Redirect URI for OIDC, assertion consumer service URL for SAML, the sign-in page for LDAP."),
+    saml: z
+      .object({
+        entityId: z.string().describe("Entity ID of Pagehall."),
+        metadataUrl: z.string().describe("Address of Pagehall's metadata."),
+        signingCredentialId: z
+          .string()
+          .nullable()
+          .describe("ID of the signing certificate, for its download."),
+      })
+      .nullable()
+      .describe("What to enter at a SAML identity provider."),
+    createdAt: timestamp("When the draft was started."),
+    updatedAt: timestamp("When the draft was last saved."),
+  })
+  .describe("A provider whose setup has not reached the connection yet.");
 
 export const updateProviderSchema = z
   .object({
@@ -401,6 +465,11 @@ const providerBase = {
     })
     .describe("What the provider can do with its current configuration."),
   scim: z.boolean().describe("Whether SCIM is on: the provider has a SCIM token and sends changes at once."),
+  setupComplete: z
+    .boolean()
+    .describe(
+      "Whether the setup assistant was finished. Until then, nobody signs in through the provider except for test sign-ins.",
+    ),
   deactivatedAt: z.iso
     .datetime()
     .nullable()

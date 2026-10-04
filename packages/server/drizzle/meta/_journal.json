@@ -218,6 +218,13 @@
       "when": 1791141173383,
       "tag": "0030_credential_chosen",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1791141937068,
+      "tag": "0031_provider_drafts",
+      "breakpoints": true
     }
   ]
 }

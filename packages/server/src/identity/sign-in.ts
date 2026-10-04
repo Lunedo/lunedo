@@ -1248,7 +1248,8 @@ export class ProviderSignInService {
   }
 
   async serviceProviderMetadata(providerId: string, baseUrl: string): Promise<string> {
-    const { provider, credentials } = await this.#load(providerId);
+    const { provider, credentials } =
+      (await this.#providers.draftServiceProvider(providerId)) ?? (await this.#load(providerId));
     const adapter = this.#adapter(provider.type);
     if (!(adapter instanceof SamlAdapter)) {
       throw new OrganizationError("notFound", "The identity provider has no SAML metadata");

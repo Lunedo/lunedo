@@ -2525,6 +2525,7 @@
       "identityProvider": {
         "created": "Identity provider set up",
         "updated": "Identity provider changed",
+        "setupCompleted": "Identity provider setup finished",
         "removed": "Identity provider removed",
         "deactivated": "Identity provider deactivated",
         "activated": "Identity provider activated",

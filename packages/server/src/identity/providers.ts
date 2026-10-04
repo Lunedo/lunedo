@@ -14,6 +14,8 @@ import {
   type OidcConfig,
   oidcConfigSchema,
   providerConfigSchema,
+  providerDraftFieldsSchema,
+  providerPresets,
   SAML_METADATA_REFRESH_HOURS,
   type SamlConfig,
   samlConfigSchema,
@@ -112,6 +114,7 @@ interface ProviderSummaryBase {
   capabilities: ProviderCapabilities;
   scim: boolean;
   deactivatedAt: Date | null;
+  setupComplete: boolean;
   warnings: ProviderWarning[];
   createdAt: Date;
   updatedAt: Date;
@@ -150,6 +153,19 @@ export interface CreateProviderInput {
   config: unknown;
   credential?: CredentialInput | null;
   metadataXml?: string | null;
+  draftId?: string | null;
+}
+
+export interface ProviderDraft {
+  id: string;
+  type: IdentityProviderType;
+  preset: (typeof providerPresets)[IdentityProviderType][number];
+  name: string;
+  fields: Record<string, unknown>;
+  callbackPath: string;
+  saml: { acsPath: string; metadataPath: string; signingCredentialId: string | null } | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 type CredentialGroup = "client" | "signing" | "bind";
@@ -384,8 +400,22 @@ export class IdentityProviderService {
     return config;
   }
 
-  async #find(executor: Executor, id: string, lock = false) {
-    const query = executor.select().from(identityProviders).where(eq(identityProviders.id, id));
+  async #find(
+    executor: Executor,
+    id: string,
+    lock = false,
+    drafts: "exclude" | "include" | "only" = "exclude",
+  ) {
+    const query = executor
+      .select()
+      .from(identityProviders)
+      .where(
+        and(
+          eq(identityProviders.id, id),
+          drafts === "exclude" ? isNotNull(identityProviders.config) : undefined,
+          drafts === "only" ? isNull(identityProviders.config) : undefined,
+        ),
+      );
     const [row] = lock ? await query.for("update") : await query;
     if (!row) throw notFound();
     return row;
@@ -509,6 +539,7 @@ export class IdentityProviderService {
         directoryKey,
         scim: scim.has(row.id),
         deactivatedAt: row.deactivatedAt,
+        setupComplete: row.setupCompletedAt !== null,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       };
@@ -610,6 +641,7 @@ export class IdentityProviderService {
     const rows = await this.#database
       .select()
       .from(identityProviders)
+      .where(isNotNull(identityProviders.config))
       .orderBy(asc(identityProviders.name), asc(identityProviders.id));
     return this.#summaries(this.#database, rows);
   }
@@ -726,25 +758,54 @@ export class IdentityProviderService {
     const metadataXml =
       type === "saml" ? await this.#loadMetadata(config as SamlConfig, input.metadataXml) : null;
     if (metadataXml) this.#parseMetadata(metadataXml);
+    const draftId = input.draftId ?? null;
     const created = await this.#database.transaction(async (tx) => {
-      const [row] = await tx
-        .insert(identityProviders)
-        .values({ type, preset: config.preset, name, config })
-        .returning();
-      if (!row) throw new Error("The identity provider was not created");
-      await this.#audit.record(tx, {
-        name: "identityProvider.created",
-        actor,
-        targetId: row.id,
-        fields: { name, type: row.type, preset: config.preset },
-      });
+      let row: typeof identityProviders.$inferSelect | undefined;
+      let signing = false;
+      if (draftId) {
+        const draft = await this.#find(tx, draftId, true, "only");
+        if (draft.type !== type) {
+          throw invalidConfiguration("The draft belongs to another type of provider", ["type"]);
+        }
+        [row] = await tx
+          .update(identityProviders)
+          .set({ name, preset: config.preset, config, draft: null, updatedAt: this.#clock() })
+          .where(eq(identityProviders.id, draftId))
+          .returning();
+        if (!row) throw notFound();
+        await this.#audit.record(tx, {
+          name: "identityProvider.updated",
+          actor,
+          targetId: row.id,
+          fields: {
+            name,
+            config: config as unknown as Record<string, never>,
+            previous: { name: draft.name },
+          },
+        });
+        signing = (await this.#signingCredentialId(tx, row.id)) !== null;
+      } else {
+        [row] = await tx
+          .insert(identityProviders)
+          .values({ type, preset: config.preset, name, config, setupCompletedAt: this.#clock() })
+          .returning();
+        if (!row) throw new Error("The identity provider was not created");
+        await this.#audit.record(tx, {
+          name: "identityProvider.created",
+          actor,
+          targetId: row.id,
+          fields: { name, type: row.type, preset: config.preset },
+        });
+      }
       await this.#syncDomains(tx, row.id, config.domains);
       let added: AddedCredential | null = null;
-      if (type === "saml" && metadataXml) {
+      if (type === "saml" && metadataXml && !signing) {
         added = await this.#addCredential(tx, actor, row, {
           kind: "samlSigning",
           validDays: SIGNING_VALID_DAYS,
         });
+      }
+      if (type === "saml" && metadataXml) {
         await this.#storeMetadata(tx, actor, row.id, (config as SamlConfig).metadata.source, metadataXml);
       }
       if (credential) {
@@ -754,6 +815,168 @@ export class IdentityProviderService {
       return { id: row.id, credential: added };
     });
     return { provider: await this.get(created.id), credential: created.credential };
+  }
+
+  #draftOf(row: typeof identityProviders.$inferSelect, signingCredentialId: string | null): ProviderDraft {
+    const paths = row.type === "saml" ? samlPaths(row.id) : null;
+    return {
+      id: row.id,
+      type: row.type,
+      preset: row.preset as ProviderDraft["preset"],
+      name: row.name,
+      fields: (row.draft ?? {}) as Record<string, unknown>,
+      callbackPath: paths ? paths.acs : callbackPath(row.id),
+      saml: paths ? { acsPath: paths.acs, metadataPath: paths.metadata, signingCredentialId } : null,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  }
+
+  #checkPreset(type: IdentityProviderType, preset: string): ProviderDraft["preset"] {
+    if (!(providerPresets[type] as readonly string[]).includes(preset)) {
+      throw invalidConfiguration("This kind of provider does not exist", ["preset"]);
+    }
+    return preset as ProviderDraft["preset"];
+  }
+
+  async #signingCredentialId(executor: Executor, id: string): Promise<string | null> {
+    const [row] = await executor
+      .select({ id: identityProviderCredentials.id })
+      .from(identityProviderCredentials)
+      .where(
+        and(
+          eq(identityProviderCredentials.providerId, id),
+          eq(identityProviderCredentials.kind, "samlSigning"),
+        ),
+      )
+      .orderBy(desc(identityProviderCredentials.createdAt));
+    return row?.id ?? null;
+  }
+
+  async createDraft(
+    actor: Principal,
+    input: { type: IdentityProviderType; preset: string; name: string },
+  ): Promise<ProviderDraft> {
+    const name = identityProviderNameSchema.parse(input.name);
+    const preset = this.#checkPreset(input.type, input.preset);
+    return this.#database.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(identityProviders)
+        .values({ type: input.type, preset, name, config: null, draft: {} })
+        .returning();
+      if (!row) throw new Error("The draft was not created");
+      await this.#audit.record(tx, {
+        name: "identityProvider.created",
+        actor,
+        targetId: row.id,
+        fields: { name, type: row.type, preset },
+      });
+      const signing =
+        row.type === "saml"
+          ? await this.#addCredential(tx, actor, row, { kind: "samlSigning", validDays: SIGNING_VALID_DAYS })
+          : null;
+      return this.#draftOf(row, signing?.id ?? null);
+    });
+  }
+
+  async drafts(): Promise<ProviderDraft[]> {
+    const rows = await this.#database
+      .select()
+      .from(identityProviders)
+      .where(isNull(identityProviders.config))
+      .orderBy(desc(identityProviders.createdAt));
+    return Promise.all(
+      rows.map(async (row) => this.#draftOf(row, await this.#signingCredentialId(this.#database, row.id))),
+    );
+  }
+
+  async draft(id: string): Promise<ProviderDraft> {
+    const row = await this.#find(this.#database, id, false, "only");
+    return this.#draftOf(row, await this.#signingCredentialId(this.#database, id));
+  }
+
+  async updateDraft(
+    id: string,
+    input: { name?: string | undefined; preset?: string | undefined; fields?: unknown },
+  ): Promise<ProviderDraft> {
+    const parsed = input.fields === undefined ? null : providerDraftFieldsSchema.safeParse(input.fields);
+    if (parsed && !parsed.success) {
+      throw new OrganizationError("invalidInput", "The draft fields are not valid");
+    }
+    return this.#database.transaction(async (tx) => {
+      const current = await this.#find(tx, id, true, "only");
+      const [row] = await tx
+        .update(identityProviders)
+        .set({
+          ...(input.name === undefined ? {} : { name: identityProviderNameSchema.parse(input.name) }),
+          ...(input.preset === undefined ? {} : { preset: this.#checkPreset(current.type, input.preset) }),
+          ...(parsed ? { draft: parsed.data } : {}),
+          updatedAt: this.#clock(),
+        })
+        .where(eq(identityProviders.id, id))
+        .returning();
+      if (!row) throw notFound();
+      return this.#draftOf(row, await this.#signingCredentialId(tx, id));
+    });
+  }
+
+  async completeSetup(actor: Principal, id: string): Promise<ProviderSummary> {
+    await this.#database.transaction(async (tx) => {
+      const current = await this.#find(tx, id, true);
+      if (current.setupCompletedAt) return;
+      await tx
+        .update(identityProviders)
+        .set({ setupCompletedAt: this.#clock() })
+        .where(eq(identityProviders.id, id));
+      await this.#audit.record(tx, {
+        name: "identityProvider.setupCompleted",
+        actor,
+        targetId: id,
+        fields: { name: current.name },
+      });
+    });
+    return this.get(id);
+  }
+
+  async draftServiceProvider(
+    id: string,
+  ): Promise<{ provider: ProviderDefinition; credentials: ProviderCredential[] } | null> {
+    const [row] = await this.#database
+      .select()
+      .from(identityProviders)
+      .where(and(eq(identityProviders.id, id), isNull(identityProviders.config)));
+    if (row?.type !== "saml") return null;
+    const signing = await this.#database
+      .select()
+      .from(identityProviderCredentials)
+      .where(
+        and(
+          eq(identityProviderCredentials.providerId, id),
+          eq(identityProviderCredentials.kind, "samlSigning"),
+        ),
+      )
+      .orderBy(desc(identityProviderCredentials.createdAt));
+    return {
+      provider: {
+        id: row.id,
+        name: row.name,
+        directoryKey: null,
+        type: "saml",
+        config: samlConfigSchema.parse({
+          preset: "generic",
+          metadata: { source: "file" },
+          identifierAttribute: row.preset === "generic" ? null : "objectGUID",
+        }),
+        metadata: null,
+      },
+      credentials: signing.map((credential) => ({
+        id: credential.id,
+        kind: credential.kind,
+        keyId: credential.keyId,
+        certificate: credential.certificate,
+        secret: this.#encryption.decryptString(credential.secret, credentialContext(credential.id)),
+      })),
+    };
   }
 
   async update(
@@ -1049,7 +1272,7 @@ export class IdentityProviderService {
 
   async remove(actor: Principal, id: string): Promise<void> {
     await this.#database.transaction(async (tx) => {
-      const current = await this.#find(tx, id, true);
+      const current = await this.#find(tx, id, true, "include");
       const linked = await this.#linked(tx, id);
       const endedSessions = await this.#endSessions(tx, linked);
       const releasedGroups = (await this.#mapping?.releaseGroups(tx, id, current.name)) ?? 0;
@@ -1077,7 +1300,13 @@ export class IdentityProviderService {
     let certificate: string | null = null;
     let keyId: string | null = null;
     let expiresAt: Date | null;
-    this.#checkCredential(provider.type, providerConfigSchema(provider.type).parse(provider.config), input);
+    if (provider.config === null) {
+      if (input.kind !== "samlSigning") {
+        throw new OrganizationError("invalidInput", "Connect the provider before adding credentials");
+      }
+    } else {
+      this.#checkCredential(provider.type, providerConfigSchema(provider.type).parse(provider.config), input);
+    }
     if (input.kind === "clientSecret") {
       secret = clientSecretSchema.parse(input.secret);
       expiresAt = input.expiresAt;
@@ -1263,7 +1492,7 @@ export class IdentityProviderService {
   }
 
   async certificate(id: string, credentialId: string): Promise<string> {
-    await this.#find(this.#database, id);
+    await this.#find(this.#database, id, false, "include");
     const [row] = await this.#database
       .select({ certificate: identityProviderCredentials.certificate })
       .from(identityProviderCredentials)
@@ -1335,7 +1564,7 @@ export class IdentityProviderService {
     id: string,
   ): Promise<{ provider: ProviderDefinition; credentials: ProviderCredential[]; active: boolean } | null> {
     const [row] = await this.#database.select().from(identityProviders).where(eq(identityProviders.id, id));
-    if (!row) return null;
+    if (!row || row.config === null) return null;
     const now = this.#clock();
     const rows = await this.#database
       .select()
@@ -1397,7 +1626,7 @@ export class IdentityProviderService {
     }
     return {
       provider,
-      active: row.deactivatedAt === null,
+      active: row.deactivatedAt === null && row.setupCompletedAt !== null,
       credentials: rows.map((credential) => ({
         id: credential.id,
         kind: credential.kind,
@@ -1419,7 +1648,7 @@ export class IdentityProviderService {
       })
       .from(identityProviders)
       .leftJoin(identityProviderLogos, eq(identityProviderLogos.providerId, identityProviders.id))
-      .where(isNull(identityProviders.deactivatedAt))
+      .where(and(isNull(identityProviders.deactivatedAt), isNotNull(identityProviders.setupCompletedAt)))
       .orderBy(asc(identityProviders.name), asc(identityProviders.id));
     return rows.map((row) => ({ ...row, logoRef: row.logoRef ?? null }));
   }
@@ -1440,6 +1669,7 @@ export class IdentityProviderService {
         and(
           eq(identityProviderDomains.domain, domain.trim().toLowerCase()),
           isNull(identityProviders.deactivatedAt),
+          isNotNull(identityProviders.setupCompletedAt),
         ),
       );
     return row ? { ...row, logoRef: row.logoRef ?? null } : null;

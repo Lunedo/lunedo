@@ -144,6 +144,12 @@ export const auditCatalog = {
     fields: z.object({ name: z.string(), endedSessions: z.number().int().nonnegative() }),
     visibility: "instance",
   }),
+  "identityProvider.setupCompleted": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({ name: z.string() }),
+    visibility: "instance",
+  }),
   "identityProvider.activated": event({
     actor: ["account", "system"],
     target: "identityProvider",
