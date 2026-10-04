@@ -117,7 +117,6 @@ export const setupStepSchemas = {
             email: emailSchema,
             name: accountNameSchema,
             password: z.string().min(1).max(PASSWORD_MAX_LENGTH),
-            language: languageSchema.optional(),
           })
           .strict(),
         result: empty,

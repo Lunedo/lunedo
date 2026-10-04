@@ -107,10 +107,16 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
           email: "Owner@Example.org",
           name: "Olivia Owner",
           password: "violet tram umbrella",
-          language: "de",
         })
       ).statusCode,
     ).toBe(200);
+    expect(
+      (
+        await test.runtime.pool.query(
+          "select 1 from setting_values where level = 'user' and key = 'locale.language'",
+        )
+      ).rowCount,
+    ).toBe(0);
     const totp = (await post("/api/v1/setup/steps/owner/beginTotp")).json();
     expect(totp.uri).toMatch(/^otpauth:\/\/totp\/Test%20wiki:Owner%40Example\.org\?/);
     expect((await post("/api/v1/setup/steps/owner/confirmTotp", { code: "000000" })).statusCode).toBe(401);

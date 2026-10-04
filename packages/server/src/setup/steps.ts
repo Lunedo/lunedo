@@ -275,7 +275,6 @@ export function ownerStep(deps: SetupStepDependencies): SetupStep {
         input: setupStepSchemas.owner.actions.createAccount.input,
         async run(context, input) {
           const existing = await ownerOf(context);
-          let accountId: string;
           if (existing) {
             const passwordHash = await deps.accounts.hashPassword(input.password, existing.id);
             await withUniqueEmail(() =>
@@ -287,7 +286,6 @@ export function ownerStep(deps: SetupStepDependencies): SetupStep {
             for (const table of [totpCredentials, webauthnCredentials, recoveryCodes, sessions]) {
               await context.tx.delete(table).where(eq(table.accountId, existing.id));
             }
-            accountId = existing.id;
           } else {
             const account = await deps.accounts.createStandard(context.tx, {
               email: input.email,
@@ -297,12 +295,6 @@ export function ownerStep(deps: SetupStepDependencies): SetupStep {
             });
             await context.tx.insert(instance).values({ id: 1 }).onConflictDoNothing();
             await context.tx.update(instance).set({ ownerAccountId: account.id }).where(eq(instance.id, 1));
-            accountId = account.id;
-          }
-          if (input.language) {
-            await deps.settings.set(languageSetting, { user: accountId }, "user", input.language, {
-              tx: context.tx,
-            });
           }
           await context.reopen();
           return {};
