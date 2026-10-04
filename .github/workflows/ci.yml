@@ -2,25 +2,81 @@ name: CI
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 env:
   TURBO_TELEMETRY_DISABLED: "1"
   DO_NOT_TRACK: "1"
 
 jobs:
+  scope:
+    name: Scope
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      lane: ${{ steps.scope.outputs.lane }}
+      end-to-end: ${{ steps.scope.outputs.endToEnd }}
+      identity-providers: ${{ steps.scope.outputs.identityProviders }}
+      backup: ${{ steps.scope.outputs.backup }}
+      base: ${{ steps.scope.outputs.base }}
+      head: ${{ steps.scope.outputs.head }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      - id: scope
+        run: node scripts/check-ci-scope.ts
+
   checks:
-    name: Lint, typecheck and unit tests
+    name: Lint, typecheck and checks
+    needs: scope
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: corepack enable
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-checks-${{ github.sha }}
+          restore-keys: turbo-checks-
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm references:check
+      - run: pnpm i18n:check
+      - run: pnpm typecheck
+      - name: Script tests
+        run: node --test "scripts/*.test.ts"
+
+  unit:
+    name: Unit tests (${{ matrix.shard }} of 3)
+    needs: scope
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     services:
       postgres:
         image: postgres:16-alpine
@@ -45,39 +101,68 @@ jobs:
     env:
       PAGEHALL_TEST_DATABASE_URL: postgres://pagehall:pagehall@localhost:5432/pagehall
       PAGEHALL_TEST_MAILPIT_URL: http://localhost:8025
+      LANE: ${{ needs.scope.outputs.lane }}
+      FORCE: ${{ github.event_name == 'push' }}
+      SHARD: ${{ matrix.shard }}
+      TURBO_SCM_BASE: ${{ needs.scope.outputs.base }}
+      TURBO_SCM_HEAD: ${{ needs.scope.outputs.head }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: ${{ needs.scope.outputs.lane == 'fast' && '0' || '1' }}
           persist-credentials: false
       - run: corepack enable
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-unit-${{ matrix.shard }}-${{ github.sha }}
+          restore-keys: turbo-unit-${{ matrix.shard }}-
       - name: Install PostgreSQL client tools for the backup tests
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm references:check
-      - run: pnpm i18n:check
-      - run: pnpm typecheck
-      - run: pnpm test
+      - name: Run the tests of this shard
+        run: |
+          args=(run test)
+          if [ "$LANE" = "fast" ]; then args+=(--affected); fi
+          if [ "$FORCE" = "true" ]; then args+=(--force); fi
+          pnpm exec turbo "${args[@]}" -- "--shard=${SHARD}/3" --passWithNoTests
 
   backup:
     name: Backup round trip
+    needs: scope
+    if: needs.scope.outputs.backup == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Build the image
-        run: docker build -f docker/Dockerfile --build-arg VERSION=ci -t pagehall:ci .
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build the image for amd64
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: pagehall:ci
+          build-args: VERSION=ci
+          cache-from: |
+            type=gha,scope=amd64
+            type=gha,scope=image
+          cache-to: type=gha,mode=max,scope=amd64
       - name: Back up, restore and compare
         run: scripts/backup-roundtrip.sh pagehall:ci
 
   e2e:
     name: End-to-end, accessibility and visual tests
+    needs: scope
+    if: needs.scope.outputs.end-to-end == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     container:
@@ -108,6 +193,19 @@ jobs:
         with:
           persist-credentials: false
       - run: corepack enable
+      - name: Locate the pnpm store
+        id: pnpm
+        run: echo "store=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm.outputs.store }}
+          key: pnpm-store-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-playwright-
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-e2e-${{ github.sha }}
+          restore-keys: turbo-e2e-
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm --filter @pagehall/web build:e2e
@@ -121,6 +219,8 @@ jobs:
 
   identity-providers:
     name: Sign-in through identity providers
+    needs: scope
+    if: needs.scope.outputs.identity-providers == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -167,6 +267,7 @@ jobs:
 
   dependencies:
     name: Licenses and audit
+    needs: scope
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -203,3 +304,22 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+  result:
+    name: CI result
+    needs: [scope, checks, unit, backup, e2e, identity-providers, dependencies, dco]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Fail when a job failed or was cancelled
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          for result in $RESULTS; do
+            case "$result" in
+              success|skipped) ;;
+              *) exit 1 ;;
+            esac
+          done

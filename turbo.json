@@ -2,7 +2,7 @@
   "$schema": "https://turborepo.com/schema.json",
   "agentGuidance": false,
   "ui": "stream",
-  "globalDependencies": ["biome.json", "packages/config/tsconfig/*.json"],
+  "globalDependencies": ["biome.json", "packages/config/tsconfig/*.json", ".github/workflows/ci.yml"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
