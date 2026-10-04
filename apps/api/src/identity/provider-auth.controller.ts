@@ -268,7 +268,6 @@ export class ProviderAuthController {
         providerId,
         samlResponse: body.SAMLResponse,
         relayState: body.RelayState ?? null,
-        baseUrl: await baseUrlOf(this.context, request),
         clientIp: request.ip,
       });
       if (receipt.browserToken) {

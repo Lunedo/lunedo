@@ -97,7 +97,6 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
       providerId,
       samlResponse,
       relayState,
-      baseUrl: BASE,
     });
     expect(receipt.browserToken).toBeNull();
     return test.services.providerSignIn.callback({
@@ -138,7 +137,6 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
         requestId: requestIdOf(started.url),
       }),
       relayState: new URL(started.url).searchParams.get("RelayState"),
-      baseUrl: BASE,
     });
     await expect(
       test.services.providerSignIn.callback({
@@ -162,7 +160,6 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
           requestId: null,
         }),
         relayState: null,
-        baseUrl: BASE,
       }),
     ).rejects.toMatchObject({ code: "providerInitiatedSignIn" } satisfies Partial<OrganizationError>);
   });
@@ -182,7 +179,6 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
           providerId: id,
           samlResponse,
           relayState: null,
-          baseUrl: BASE,
         });
         return node.providerSignIn.callback({
           providerId: id,
@@ -197,7 +193,6 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
       providerId: id,
       samlResponse,
       relayState: null,
-      baseUrl: BASE,
     });
     const third = await test.services.providerSignIn.callback({
       providerId: id,
@@ -206,6 +201,38 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
       client: {},
     });
     expect(third).toMatchObject({ kind: "refused", reason: "invalidResponse" });
+  });
+
+  it("checks unsolicited responses against the configured address of the instance, not the request", async () => {
+    const { id, domain } = await provider({ idpInitiated: true });
+    const elsewhere = "https://attacker.example";
+    const samlResponse = await idp.response({
+      audience: samlEntityId(elsewhere, id),
+      recipient: `${elsewhere}${samlPaths(id).acs}`,
+      nameId: randomUUID(),
+      attributes: { email: [`frank@${domain}`] },
+      requestId: null,
+    });
+    const receipt = await test.services.providerSignIn.receiveSamlResponse({
+      providerId: id,
+      samlResponse,
+      relayState: null,
+    });
+    const result = await test.services.providerSignIn.callback({
+      providerId: id,
+      query: new URLSearchParams({ state: receipt.state }),
+      browserToken: receipt.browserToken ?? "",
+      client: {},
+    });
+    expect(result).toMatchObject({ kind: "refused", reason: "invalidResponse" });
+    await test.settings.set(instanceUrlSetting, {}, "instance", "");
+    try {
+      await expect(
+        test.services.providerSignIn.receiveSamlResponse({ providerId: id, samlResponse, relayState: null }),
+      ).rejects.toMatchObject({ code: "providerInitiatedSignIn" });
+    } finally {
+      await test.settings.set(instanceUrlSetting, {}, "instance", BASE);
+    }
   });
 
   it("accepts a re-authentication only with a fresh AuthnInstant", async () => {

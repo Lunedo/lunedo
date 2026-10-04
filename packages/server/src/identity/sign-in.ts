@@ -5,6 +5,7 @@ import * as client from "openid-client";
 import { ZodError } from "zod";
 import type { Account, AccountService } from "../accounts/accounts.js";
 import { EmailInUseError } from "../accounts/accounts.js";
+import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { ANONYMOUS, accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { ChallengeStore } from "../auth/challenges.js";
@@ -911,7 +912,6 @@ export class ProviderSignInService {
     providerId: string;
     samlResponse: string;
     relayState: string | null;
-    baseUrl: string;
     clientIp?: string | undefined;
   }): Promise<SamlReceipt> {
     await this.#limit("samlResponse", input.clientIp, STARTS_PER_CLIENT);
@@ -940,6 +940,13 @@ export class ProviderSignInService {
         "Sign-in started at the identity provider is turned off for this provider",
       );
     }
+    const instanceUrl = await this.#settings.get(instanceUrlSetting, {});
+    if (!instanceUrl) {
+      throw new OrganizationError(
+        "providerInitiatedSignIn",
+        "Sign-in started at the identity provider needs the address of the instance in the settings",
+      );
+    }
     const state = client.randomState();
     const browserToken = client.randomState();
     await this.#database.insert(providerFlows).values({
@@ -949,7 +956,7 @@ export class ProviderSignInService {
       browserHash: hashState(browserToken),
       requestId: null,
       samlResponse: input.samlResponse,
-      redirectUri: `${input.baseUrl.replace(/\/+$/, "")}${samlPaths(provider.id).acs}`,
+      redirectUri: `${instanceUrl.replace(/\/+$/, "")}${samlPaths(provider.id).acs}`,
       expiresAt: new Date(this.#clock().getTime() + FLOW_LIFETIME_MS),
     });
     return { state, browserToken };
