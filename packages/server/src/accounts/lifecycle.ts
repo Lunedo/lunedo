@@ -414,6 +414,7 @@ export class AccountLifecycleService {
           providerId: identities.providerId,
           subject: identities.subject,
           email: identities.email,
+          emailVerified: identities.emailVerified,
         });
       events.push({
         name: "account.anonymized",
@@ -446,14 +447,14 @@ export class AccountLifecycleService {
   async #erase(
     tx: Transaction,
     target: { id: string; email: string | null },
-    linked: { providerId: string; subject: string; email: string | null }[],
+    linked: { providerId: string; subject: string; email: string | null; emailVerified: boolean }[],
     clientIps: string[],
   ): Promise<void> {
     const id = target.id;
     const addresses = [
       ...new Set(
-        [target.email, ...linked.map((identity) => identity.email)].flatMap((address) =>
-          address ? [address.trim().toLowerCase()] : [],
+        [target.email, ...linked.map((identity) => (identity.emailVerified ? identity.email : null))].flatMap(
+          (address) => (address ? [address.trim().toLowerCase()] : []),
         ),
       ),
     ];

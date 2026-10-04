@@ -394,6 +394,39 @@ describe.skipIf(!baseUrl)("placeholders and anonymization", () => {
     expect(events.items.every((item) => item.formerSubjects.includes(accountId))).toBe(true);
   });
 
+  it("keeps data of another address that an identity reported without verifying it", async () => {
+    const org = await organization();
+    const marker = randomUUID().slice(0, 8);
+    const victim = `victim.${marker}@other.example`;
+    const invitation = await test.services.invitations.create(accountPrincipal(org.owner), org.id, {
+      email: victim,
+      kind: "member",
+    });
+    await test.pool.query(
+      "insert into sign_in_refusals (id, reference, provider_id, reason, subject, email) values (gen_random_uuid(), $1, $2, 'accountInactive', $3, $4)",
+      [`V-${marker}`, providerId, randomUUID(), victim],
+    );
+    const result = await signIn({ sub: randomUUID(), email: `mallory.${marker}@${domain}`, name: "Mallory" });
+    if (result.kind !== "signedIn") throw new Error(`Signed in expected, got ${result.kind}`);
+    const accountId = result.signedIn.session.accountId;
+    await test.pool.query("update identities set email = $1, email_verified = false where account_id = $2", [
+      victim,
+      accountId,
+    ]);
+
+    await test.services.accountLifecycle.anonymize(accountPrincipal(administrator), accountId, {
+      reason: "Erasure request",
+      confirmation: "Mallory",
+    });
+    const kept = await test.pool.query(
+      `select (select count(*)::int from invitations where id = $1) as invitations,
+        (select count(*)::int from sign_in_refusals where reference = $2) as refusals,
+        (select count(*)::int from audit_subject_keys where subject_id = $1) as keys`,
+      [invitation.id, `V-${marker}`],
+    );
+    expect(kept.rows[0]).toEqual({ invitations: 1, refusals: 1, keys: 1 });
+  });
+
   it("refuses to anonymize the instance owner or the own account", async () => {
     await expect(
       test.services.accountLifecycle.anonymize(accountPrincipal(administrator), ownerId, {
