@@ -51,11 +51,6 @@ export class PersonalDataMissingKeyError extends Error {
   }
 }
 
-/**
- * Personal data in audit events is encrypted with a key per account, so that anonymizing
- * the account makes it unreadable by destroying the key, while the stored events and
- * their hash chain stay unchanged.
- */
 export class AuditSealer {
   readonly #encryption: Encryption;
 

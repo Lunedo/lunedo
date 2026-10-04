@@ -162,11 +162,6 @@ function domainOf(email: string): string {
   return email.slice(email.lastIndexOf("@") + 1).toLowerCase();
 }
 
-/**
- * SCIM 2.0 for one identity provider: users are the identities of the provider, groups are the
- * groups Pagehall knows from it. Accounts are deactivated, never deleted, and access follows
- * only from mapping rules, as at sign-in.
- */
 export class ScimService {
   readonly #database: Database;
   readonly #providers: IdentityProviderService;

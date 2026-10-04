@@ -1,8 +1,3 @@
-/**
- * Requests in the form Microsoft Entra ID provisioning sends them, with synthetic values:
- * capitalized operations, string booleans from older tenants, filters on userName and
- * externalId, groups without members in GET, and member changes in batches.
- */
 export const ENTRA_SCHEMAS = {
   user: "urn:ietf:params:scim:schemas:core:2.0:User",
   enterprise: "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",

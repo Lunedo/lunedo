@@ -24,11 +24,6 @@ async function organizationAdministrators(executor: Executor, organizationId: st
   return result.rows.map((row) => row.id);
 }
 
-/**
- * Moves the home organization of an account: automatically when the membership that made an
- * organization the home ends, or by hand. Every change is audited and announced to the person
- * and the administrators of both organizations.
- */
 export class HomeOrganizationService {
   readonly #database: Database;
   readonly #audit: AuditLog;

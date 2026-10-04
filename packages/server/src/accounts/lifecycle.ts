@@ -57,11 +57,6 @@ function messageContext(id: string): string {
   return `mail_outbox.message:${id}`;
 }
 
-/**
- * Placeholders, their merge into real accounts, and anonymization. Anonymization removes
- * everything that identifies the person and keeps the account ID, so content stays attributed
- * to a former user.
- */
 export class AccountLifecycleService {
   readonly #database: Database;
   readonly #audit: AuditLog;

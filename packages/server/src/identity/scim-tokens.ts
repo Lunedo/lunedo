@@ -42,10 +42,6 @@ function generate(): string {
   return `${TOKEN_PREFIX}${randomBytes(32).toString("base64url")}`;
 }
 
-/**
- * Bearer tokens with which a provider sends SCIM requests. They are shown once, stored as a
- * hash and bound to one provider. A renewal keeps the old token valid for a short overlap.
- */
 export class ScimTokenService {
   readonly #database: Database;
   readonly #audit: AuditLog;
