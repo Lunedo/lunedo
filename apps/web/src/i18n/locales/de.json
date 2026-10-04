@@ -706,6 +706,7 @@
     },
     "scim": {
       "intro": "Mit SCIM sendet der Anbieter Änderungen an Personen und Gruppen sofort an Pagehall, statt auf die nächste Anmeldung oder Synchronisierung zu warten. Konten werden vor der ersten Anmeldung angelegt und deaktiviert, nie gelöscht.",
+      "accounts": "Alle, die der App beim Anbieter zugewiesen sind, erhalten ein Konto, auch wenn die Kontoerstellung bei der ersten Anmeldung aus ist.",
       "entraSetup": "Entra ID braucht P1 oder höher. Öffne in der Unternehmensanwendung Bereitstellung, wähle Automatisch und trage die URL unten als Mandanten-URL und das Token als geheimes Token ein. Ordne in den Attributzuordnungen für Benutzer objectId dem Attribut externalId zu.",
       "genericSetup": "Trage die URL unten und das Token als Bearer-Token bei deinem Anbieter ein. externalId muss die Kennung enthalten, die der Anbieter bei der Anmeldung verwendet.",
       "connection": "Verbindung",
@@ -2989,7 +2990,7 @@
       "auditLog": "Das Audit-Protokoll behält die Ereignisse nur mit der Konto-ID; die persönlichen Daten darin werden unlesbar.",
       "copies": "Kopien des Audit-Protokolls, die exportiert oder an andere Systeme gestreamt wurden, liegen außerhalb von Pagehall und behalten die Daten. Lösche sie bei Bedarf dort.",
       "reason": "Grund",
-      "reasonHint": "Bleibt im Audit-Protokoll. Nenne die Person nicht, zum Beispiel: Löschanfrage vom 1. Oktober 2026.",
+      "reasonHint": "Bis zu 500 Zeichen, bleibt im Audit-Protokoll. Nenne die Person nicht, zum Beispiel: Löschanfrage vom 1. Oktober 2026.",
       "confirm": "Gib {name} zur Bestätigung ein",
       "reauthentication": "Danach bittet Pagehall dich, mit deinem Passwort, Passkey oder Authenticator-Code zu bestätigen.",
       "action": "Anonymisieren",

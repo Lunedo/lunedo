@@ -298,6 +298,14 @@ describe.skipIf(!baseUrl)("placeholders and anonymization", () => {
         confirmation: "Someone else",
       }),
     ).rejects.toMatchObject({ code: "confirmationMismatch" });
+    for (const reason of [" ", "x".repeat(501)]) {
+      await expect(
+        test.services.accountLifecycle.anonymize(accountPrincipal(administrator), accountId, {
+          reason,
+          confirmation: name,
+        }),
+      ).rejects.toMatchObject({ code: "invalidInput" });
+    }
     await expect(
       test.services.accountLifecycle.anonymize(accountPrincipal(org.owner), accountId, {
         reason: "Erasure request",

@@ -69,6 +69,7 @@ export function ScimTab({ provider, canManage }: { provider: IdentityProvider; c
       <Notice variant="info">
         <div className="flex flex-col gap-2">
           <p>{t("identityProviders.scim.intro")}</p>
+          <p>{t("identityProviders.scim.accounts")}</p>
           {entra ? (
             <p>{t("identityProviders.scim.entraSetup")}</p>
           ) : (

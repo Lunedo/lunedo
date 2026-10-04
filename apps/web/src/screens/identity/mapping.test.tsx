@@ -245,6 +245,9 @@ describe("group mapping", () => {
     expect(await screen.findByDisplayValue(`https://wiki.example.org/scim/v2/${PROVIDER}`)).toBeTruthy();
     expect(screen.getByText("No token yet. SCIM is off until you create one.")).toBeTruthy();
     expect(screen.getByText(/map objectId to externalId/)).toBeTruthy();
+    expect(
+      screen.getByText(/gets an account, even when account creation at first sign-in is off/),
+    ).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Create token" }));
     const created = await screen.findByRole("dialog", { name: "New SCIM token" });
     expect(within(created).getByDisplayValue("phscim_AbCdEf-the-secret")).toBeTruthy();

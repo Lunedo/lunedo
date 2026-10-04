@@ -706,6 +706,7 @@
     },
     "scim": {
       "intro": "With SCIM, the provider sends changes of people and groups to Pagehall at once instead of waiting for the next sign-in or synchronization. Accounts are created before the first sign-in and deactivated, never deleted.",
+      "accounts": "Everyone assigned to the app at the provider gets an account, even when account creation at first sign-in is off.",
       "entraSetup": "Entra ID needs P1 or higher. In the enterprise application, open Provisioning, choose Automatic, enter the URL below as tenant URL and the token as secret token. In the attribute mappings for users, map objectId to externalId.",
       "genericSetup": "Enter the URL below and the token as bearer token at your provider. externalId must carry the identifier the provider uses at sign-in.",
       "connection": "Connection",
@@ -2992,7 +2993,7 @@
       "auditLog": "The audit log keeps the events with the account ID only; its personal data there becomes unreadable.",
       "copies": "Copies of the audit log that were exported or streamed to other systems are outside Pagehall and keep the data. Remove them there if needed.",
       "reason": "Reason",
-      "reasonHint": "Kept in the audit log. Do not name the person, for example: erasure request of 1 October 2026.",
+      "reasonHint": "Up to 500 characters, kept in the audit log. Do not name the person, for example: erasure request of 1 October 2026.",
       "confirm": "Type {name} to confirm",
       "reauthentication": "Next, Pagehall asks you to confirm with your password, passkey or authenticator code.",
       "action": "Anonymize",
