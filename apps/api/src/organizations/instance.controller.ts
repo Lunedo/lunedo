@@ -1,4 +1,17 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Query, Req } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Query,
+  Req,
+  Res,
+} from "@nestjs/common";
 import {
   accentColorSetting,
   instanceNameSetting,
@@ -13,12 +26,14 @@ import {
   accountNameSchema,
   emailSchema,
   idSchema,
+  type MailMethod,
+  mailMethods,
   setupStepSchemas,
   smtpInputSchema,
   smtpTestInputSchema,
   smtpTestResultSchema,
 } from "@pagehall/shared";
-import type { FastifyRequest } from "fastify";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission, PublicRoute } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
@@ -51,6 +66,7 @@ import {
   optionalExpiry,
   roleAssignmentSchema,
   settingSchema,
+  timestamp,
   uuid,
 } from "../http/schemas.js";
 import { definitionFor, listSettings, settingUpdateSchema, updateSetting } from "../http/settings.js";
@@ -195,6 +211,87 @@ function settingPermission(key: string): string {
 
 const byName = (item: { name: string; id: string }) => [item.name.toLowerCase(), item.id];
 
+const graphMailInputSchema = z
+  .object({
+    tenantId: z.string().describe("Directory (tenant) ID of the app registration."),
+    clientId: z.string().describe("Application (client) ID of the app registration."),
+    sender: z.string().describe("The mailbox Pagehall sends from. The app may send only as this mailbox."),
+    senderName: z
+      .string()
+      .nullable()
+      .optional()
+      .describe("Name shown as sender, or null for the mailbox name."),
+    authority: z
+      .string()
+      .optional()
+      .describe("Sign-in authority of the Microsoft cloud; the global cloud by default."),
+    graphUrl: z.string().optional().describe("Microsoft Graph endpoint of that cloud."),
+  })
+  .strict()
+  .describe("Settings for sending e-mail through Microsoft Graph.");
+
+const graphMailSchema = z
+  .object({
+    tenantId: z.string().describe("Directory (tenant) ID."),
+    clientId: z.string().describe("Application (client) ID."),
+    sender: z.string().describe("Sender mailbox."),
+    senderName: z.string().nullable().describe("Name shown as sender, or null."),
+    authority: z.string().describe("Sign-in authority."),
+    graphUrl: z.string().describe("Microsoft Graph endpoint."),
+  })
+  .describe("Settings for sending e-mail through Microsoft Graph.");
+
+const mailCredentialSchema = z
+  .object({
+    id: uuid("ID of the credential."),
+    kind: z.enum(["clientSecret", "certificate"]).describe("Client secret or certificate."),
+    keyId: z.string().nullable().describe("Thumbprint of the certificate, or null."),
+    expiresAt: timestamp("When it expires, or null.").nullable(),
+    createdAt: timestamp("When it was added."),
+  })
+  .describe("A credential of the app registration.");
+
+const addedMailCredentialSchema = mailCredentialSchema
+  .extend({ certificate: z.string().nullable().describe("The public certificate in PEM format, or null.") })
+  .describe("The added credential.");
+
+const mailCredentialInputSchema = z
+  .discriminatedUnion("kind", [
+    z
+      .object({
+        kind: z.literal("clientSecret").describe("A client secret from the app registration."),
+        secret: z.string().min(1).max(4096).describe("The secret value."),
+        expiresAt: z.iso.datetime().nullable().describe("When the secret expires, as shown in Entra ID."),
+      })
+      .strict(),
+    z
+      .object({
+        kind: z.literal("certificate").describe("A certificate Pagehall creates."),
+        validDays: z.number().int().min(30).max(1095).describe("How long the certificate is valid, in days."),
+      })
+      .strict(),
+  ])
+  .describe("A credential to add.");
+
+const graphMailTestSchema = z
+  .object({
+    to: emailSchema.describe("Recipient of the test e-mail."),
+    language: z.enum(supportedLanguages).default("en").describe("Language of the test e-mail."),
+    configuration: graphMailInputSchema.optional(),
+  })
+  .strict()
+  .describe("A test e-mail through Microsoft Graph.");
+
+const mailSettingsSchema = setupStepSchemas.mail.details
+  .extend({
+    method: z.enum(mailMethods).describe("How e-mail is sent."),
+    graph: graphMailSchema.nullable(),
+    graphCredentials: z
+      .array(mailCredentialSchema)
+      .describe("Credentials of the app registration, newest first."),
+  })
+  .describe("The e-mail settings.");
+
 const accountListQuerySchema = searchQuerySchema
   .extend({
     withoutOrganization: z
@@ -315,16 +412,136 @@ export class InstanceController {
   @Permission("instance.settings.view")
   @InternalRoute()
   @ApiRoute({
-    summary: "Get the mail server",
+    summary: "Get the e-mail settings",
     tags: [TAG],
     response: {
-      description: "The SMTP configuration, without the password.",
-      schema: setupStepSchemas.mail.details,
+      description: "The sending method, the SMTP and Microsoft Graph settings, without passwords or secrets.",
+      schema: mailSettingsSchema,
     },
   })
   async mail() {
     const mail = this.#services.mail;
-    return { smtp: await mail.smtpConfiguration(), passwordSet: await mail.hasSmtpPassword() };
+    return {
+      smtp: await mail.smtpConfiguration(),
+      passwordSet: await mail.hasSmtpPassword(),
+      method: await mail.method(),
+      graph: await mail.graphConfiguration(),
+      graphCredentials: await mail.graphCredentials(),
+    };
+  }
+
+  @Put("mail/method")
+  @Permission("instance.settings.manage", { type: "instance" }, { recentAuthentication: true })
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Choose how e-mail is sent",
+    tags: [TAG],
+    body: z.object({ method: z.enum(mailMethods).describe("SMTP or Microsoft Graph.") }).strict(),
+    errors: ["mailNotReady", "reauthenticationRequired"],
+  })
+  async setMailMethod(@Body() body: { method: MailMethod }, @Req() request: FastifyRequest) {
+    await this.#services.mail.setMethod(actorOf(request), body.method);
+  }
+
+  @Put("mail/graph")
+  @Permission("instance.settings.manage", { type: "instance" }, { recentAuthentication: true })
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Configure e-mail through Microsoft Graph",
+    tags: [TAG],
+    body: graphMailInputSchema,
+    errors: ["invalidMailConfiguration", "reauthenticationRequired"],
+  })
+  async configureGraphMail(@Body() body: unknown, @Req() request: FastifyRequest) {
+    await this.#services.mail.configureGraph(actorOf(request), body);
+  }
+
+  @Post("mail/graph/credentials")
+  @Permission("instance.settings.manage", { type: "instance" }, { recentAuthentication: true })
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Add a credential for e-mail through Microsoft Graph",
+    tags: [TAG],
+    status: 201,
+    body: mailCredentialInputSchema,
+    response: {
+      description: "The credential, with the certificate to upload to the app registration.",
+      schema: addedMailCredentialSchema,
+    },
+    errors: ["expiryInPast", "invalidInput", "reauthenticationRequired"],
+  })
+  async addGraphMailCredential(
+    @Body() body: z.output<typeof mailCredentialInputSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.mail.addGraphCredential(
+      actorOf(request),
+      body.kind === "clientSecret"
+        ? {
+            kind: "clientSecret",
+            secret: body.secret,
+            expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
+          }
+        : body,
+    );
+  }
+
+  @Delete("mail/graph/credentials/:credentialId")
+  @Permission("instance.settings.manage", { type: "instance" }, { recentAuthentication: true })
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Remove a credential for e-mail through Microsoft Graph",
+    tags: [TAG],
+    params: z.object({ credentialId: uuid("ID of the credential.") }).strict(),
+    errors: ["lastCredential", "notFound", "reauthenticationRequired"],
+  })
+  async removeGraphMailCredential(
+    @Param("credentialId") credentialId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    await this.#services.mail.removeGraphCredential(actorOf(request), credentialId);
+  }
+
+  @Get("mail/graph/credentials/:credentialId/certificate")
+  @Permission("instance.settings.view")
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Download the certificate of a Microsoft Graph credential",
+    tags: [TAG],
+    params: z.object({ credentialId: uuid("ID of the credential.") }).strict(),
+    raw: {
+      contentTypes: ["application/x-pem-file"],
+      description: "The public certificate in PEM format.",
+      example: "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n",
+    },
+    errors: ["notFound"],
+  })
+  async graphMailCertificate(
+    @Param("credentialId") credentialId: string,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const pem = await this.#services.mail.graphCertificate(credentialId);
+    reply
+      .type("application/x-pem-file")
+      .header("content-disposition", 'attachment; filename="pagehall-mail.pem"');
+    return pem;
+  }
+
+  @Post("mail/graph/test")
+  @Permission("instance.settings.manage")
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Send a test e-mail through Microsoft Graph",
+    description:
+      "Sends with the given settings, or the stored ones without them, and the stored credentials. Errors name what failed: a mailbox outside the scope of the app, a missing permission, an unknown mailbox or an expired or wrong credential.",
+    tags: [TAG],
+    status: 200,
+    body: graphMailTestSchema,
+    response: { description: "Whether Microsoft Graph accepted the e-mail.", schema: smtpTestResultSchema },
+    errors: ["invalidMailConfiguration"],
+  })
+  async testGraphMail(@Body() body: z.output<typeof graphMailTestSchema>, @Req() request: FastifyRequest) {
+    return this.#services.mail.sendGraphTest(actorOf(request), body.to, body.language, body.configuration);
   }
 
   @Put("mail")

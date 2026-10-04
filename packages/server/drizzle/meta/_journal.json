@@ -169,6 +169,13 @@
       "when": 1791119772548,
       "tag": "0023_scim",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791120677695,
+      "tag": "0024_graph_mail",
+      "breakpoints": true
     }
   ]
 }

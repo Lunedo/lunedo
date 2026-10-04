@@ -17,6 +17,7 @@ export {
   type FakeGraphData,
   type FakeGraphGroup,
   type FakeGraphUser,
+  type FakeSentMail,
   GRAPH_CLIENT_ID,
   GRAPH_CLIENT_SECRET,
   GRAPH_IDS,

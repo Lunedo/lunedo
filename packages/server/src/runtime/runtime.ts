@@ -31,7 +31,7 @@ import {
   cleanupJobProgressJob,
 } from "../jobs/progress-cleanup.js";
 import { createLogger, type Logger } from "../logging/logger.js";
-import { smtpSetting } from "../mail/mail-service.js";
+import { graphMailSetting, mailMethodSetting, smtpSetting } from "../mail/mail-service.js";
 import type { MailTransport, SmtpOptions } from "../mail/transport.js";
 import { NotificationHub } from "../notifications/hub.js";
 import { notificationSettings } from "../notifications/types.js";
@@ -151,6 +151,8 @@ export async function createServerRuntime(options: {
         ...notificationSettings,
         auditRetentionSetting,
         smtpSetting,
+        mailMethodSetting,
+        graphMailSetting,
         syncLogRetentionDaysSetting,
       ] as SettingDefinition<never>[]),
       ...(options.settings ?? []),

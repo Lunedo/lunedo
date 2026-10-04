@@ -92,6 +92,8 @@ const KNOWN = new Set([
   "confirmationMismatch",
   "anonymizeSelf",
   "notPlaceholder",
+  "invalidMailConfiguration",
+  "mailNotReady",
 ]);
 
 const DIRECTORY_PROBLEMS: Record<string, string> = {

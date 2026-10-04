@@ -53,7 +53,9 @@ import {
   DISPATCH_PENDING_MAIL_SCHEDULE,
   deliverMailJob,
   dispatchPendingMailJob,
+  MAIL_CREDENTIAL_REMINDER_SCHEDULE,
   MailService,
+  mailCredentialReminderJob,
 } from "./mail/mail-service.js";
 import type { MailTransport, SmtpOptions } from "./mail/transport.js";
 import { NotificationRegistry } from "./notifications/registry.js";
@@ -139,6 +141,7 @@ export function createAccountServices(options: {
   insecureIdentityProviders?: boolean;
   directoryConnector?: DirectoryConnector;
   mailTransport?: (options: SmtpOptions) => MailTransport;
+  mailFetch?: typeof fetch;
 }): AccountServices {
   const { database, settings, audit, encryption, jobs, logger } = options;
   const hasher = new PasswordHasher({
@@ -160,7 +163,9 @@ export function createAccountServices(options: {
     audit,
     jobs,
     logger,
+    allowInsecure: options.insecureIdentityProviders ?? false,
     ...(options.mailTransport ? { transport: options.mailTransport } : {}),
+    ...(options.mailFetch ? { fetch: options.mailFetch } : {}),
   });
   const authorization = new AuthorizationService({
     database,
@@ -179,6 +184,7 @@ export function createAccountServices(options: {
     authorization,
     registry: new NotificationRegistry().register(...builtinNotificationTypes),
   });
+  mail.useNotifications(notifications);
   const homeOrganizations = new HomeOrganizationService({ database, audit, authorization, notifications });
   const groupMapping = new GroupMappingService({
     roles,
@@ -447,6 +453,10 @@ export async function workAccountJobs(
     const sent = await services.identityProviders.sendCredentialReminders();
     if (sent > 0) job.logger.info({ sent }, "Provider credential reminders sent");
   });
+  await jobs.work(mailCredentialReminderJob, async (job) => {
+    const sent = await services.mail.sendCredentialReminders();
+    if (sent > 0) job.logger.info({ sent }, "Mail credential reminders sent");
+  });
   await jobs.work(samlMetadataRefreshJob, async (job) => {
     const refreshed = await services.identityProviders.refreshDueMetadata();
     if (refreshed > 0) job.logger.info({ refreshed }, "SAML metadata refreshed");
@@ -486,6 +496,7 @@ export async function workAccountJobs(
   await jobs.schedule(providerSyncScheduleJob, PROVIDER_SYNC_SCHEDULE, {}, { key: "regular" });
   await jobs.schedule(providerSyncRetentionJob, PROVIDER_SYNC_RETENTION_SCHEDULE, {}, { key: "daily" });
   await jobs.schedule(samlMetadataRefreshJob, SAML_METADATA_REFRESH_SCHEDULE, {}, { key: "hourly" });
+  await jobs.schedule(mailCredentialReminderJob, MAIL_CREDENTIAL_REMINDER_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(
     providerCredentialReminderJob,
     PROVIDER_CREDENTIAL_REMINDER_SCHEDULE,

@@ -22,3 +22,21 @@ export const instanceSecrets = pgTable("instance_secrets", {
   value: encrypted().notNull(),
   updatedAt: timestamp({ withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
+
+export const mailCredentialKind = pgEnum("mail_credential_kind", ["clientSecret", "certificate"]);
+
+export const mailCredentials = pgTable(
+  "mail_credentials",
+  {
+    id: primaryId(),
+    kind: mailCredentialKind().notNull(),
+    secret: encrypted().notNull(),
+    certificate: text(),
+    keyId: text(),
+    expiresAt: timestamp({ withTimezone: true, mode: "date" }),
+    notifiedThirtyDaysAt: timestamp({ withTimezone: true, mode: "date" }),
+    notifiedSevenDaysAt: timestamp({ withTimezone: true, mode: "date" }),
+    createdAt: timestamp({ withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [index().on(table.expiresAt)],
+);

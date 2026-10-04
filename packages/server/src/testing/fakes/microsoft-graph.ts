@@ -32,6 +32,19 @@ export interface FakeGraphData {
   users: FakeGraphUser[];
   groups: FakeGraphGroup[];
   members: Record<string, string[]>;
+  mailScope: string[] | null;
+  secretExpired: boolean;
+}
+
+export interface FakeSentMail {
+  mailbox: string;
+  message: {
+    subject: string;
+    body: { contentType: string; content: string };
+    toRecipients: { emailAddress: { address: string } }[];
+    from?: { emailAddress: { address: string; name?: string } };
+  };
+  saveToSentItems: boolean;
 }
 
 export const GRAPH_TENANT_ID = "0f1e2d3c-4b5a-4968-8776-655443322110";
@@ -92,12 +105,15 @@ export function defaultGraphData(): FakeGraphData {
       [GRAPH_IDS.admins]: [GRAPH_IDS.alice, GRAPH_IDS.frank],
       ...Object.fromEntries(overageGroups.map((group) => [group.id, [GRAPH_IDS.olga]])),
     },
+    mailScope: null,
+    secretExpired: false,
   };
 }
 
 export interface FakeGraph extends RunningFake {
   readonly data: FakeGraphData;
   readonly requests: string[];
+  readonly sentMail: FakeSentMail[];
   tokenEndpoint(): string;
   setAccountEnabled(userId: string, enabled: boolean): void;
   addMember(groupId: string, memberId: string): void;
@@ -120,11 +136,17 @@ export async function startFakeGraph(
   const data = options.data ?? defaultGraphData();
   const tokens = new Set<string>();
   const requests: string[] = [];
+  const sentMail: FakeSentMail[] = [];
   let baseUrl = "";
   let gate: { reached: () => void; released: Promise<void> } | null = null;
 
   const findUser = (key: string) =>
-    data.users.find((user) => user.id === key || user.userPrincipalName.toLowerCase() === key.toLowerCase());
+    data.users.find(
+      (user) =>
+        user.id === key ||
+        user.userPrincipalName.toLowerCase() === key.toLowerCase() ||
+        user.mail?.toLowerCase() === key.toLowerCase(),
+    );
   const findGroup = (id: string) => data.groups.find((group) => group.id === id);
   const directGroupsOf = (memberId: string) =>
     data.groups.filter((group) => (data.members[group.id] ?? []).includes(memberId));
@@ -209,7 +231,24 @@ export async function startFakeGraph(
         decodeJwtPayload(assertion)?.iss === data.clientId &&
         decodeJwtPayload(assertion)?.sub === data.clientId
       : form.get("client_id") === data.clientId && form.get("client_secret") === data.clientSecret;
-    if (!authenticated) return { status: 401, body: { error: "invalid_client" } };
+    if (authenticated && data.secretExpired && !assertion) {
+      return {
+        status: 401,
+        body: {
+          error: "invalid_client",
+          error_description: `AADSTS7000222: The provided client secret keys for app '${data.clientId}' are expired.`,
+        },
+      };
+    }
+    if (!authenticated) {
+      return {
+        status: 401,
+        body: {
+          error: "invalid_client",
+          error_description: "AADSTS7000215: Invalid client secret provided.",
+        },
+      };
+    }
     if (!form.get("scope")?.endsWith("/.default")) {
       return { status: 400, body: { error: "invalid_scope" } };
     }
@@ -254,8 +293,28 @@ export async function startFakeGraph(
     if (collection === "users") {
       if (!id) return list(data.users as unknown as Record<string, unknown>[], request);
       const user = findUser(id);
+      if (!user && relation === "sendMail") {
+        return graphError(404, "ErrorInvalidUser", `The requested user '${id}' is invalid.`);
+      }
       if (!user) return graphError(404, "Request_ResourceNotFound", `Resource '${id}' does not exist.`);
       if (!relation) return { status: 200, body: select({ ...user }, request) };
+      if (relation === "sendMail" && request.method === "POST") {
+        const inScope =
+          data.mailScope === null ||
+          data.mailScope.some((mailbox) => mailbox.toLowerCase() === (user.mail ?? "").toLowerCase());
+        if (!inScope) {
+          return graphError(
+            403,
+            "ErrorAccessDenied",
+            "Access to OData is disabled: [RAOP] : Blocked by tenant configured AppOnly AccessPolicy settings.",
+          );
+        }
+        sentMail.push({
+          mailbox: user.mail ?? user.userPrincipalName,
+          ...jsonBody<Omit<FakeSentMail, "mailbox">>(request),
+        });
+        return { status: 202 };
+      }
       if (relation === "memberOf" || relation === "transitiveMemberOf") {
         const groups = relation === "memberOf" ? directGroupsOf(user.id) : transitiveGroupsOf(user.id);
         return list(
@@ -312,6 +371,7 @@ export async function startFakeGraph(
     ...running,
     data,
     requests,
+    sentMail,
     tokenEndpoint: () => `${running.url}/${data.tenantId}/oauth2/v2.0/token`,
     setAccountEnabled(userId, enabled) {
       const user = data.users.find((candidate) => candidate.id === userId);

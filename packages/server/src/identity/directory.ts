@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import type { OidcConfig } from "@pagehall/shared";
 import {
   ENTRA_AUTHORITY,
@@ -9,6 +9,7 @@ import {
 } from "@pagehall/shared";
 import { importPKCS8, SignJWT } from "jose";
 import { type ProviderCredential, type ProviderGroup, ProviderResponseError } from "./adapter.js";
+import { requestGraphToken } from "./graph-token.js";
 
 const REQUEST_TIMEOUT_MS = 10_000;
 const GRAPH_PAGE_SIZE = 999;
@@ -136,43 +137,19 @@ export class DirectoryClients {
       credentials.map((credential) => credential.id),
     ]);
     return this.#cachedToken(key, async () => {
-      const endpoint = `${config.authority}/${config.tenantId}/oauth2/v2.0/token`;
       let lastStatus = 0;
       for (const credential of credentials) {
-        const form = new URLSearchParams({
-          grant_type: "client_credentials",
-          client_id: config.clientId,
-          scope: `${config.graphUrl}/.default`,
+        const result = await requestGraphToken({
+          request: (url, init) => this.#request(url, init),
+          authority: config.authority,
+          tenantId: config.tenantId,
+          clientId: config.clientId,
+          graphUrl: config.graphUrl,
+          credential,
         });
-        if (credential.kind === "clientSecret") {
-          form.set("client_secret", credential.secret);
-        } else {
-          const key = await importPKCS8(credential.secret, "RS256");
-          const assertion = await new SignJWT({})
-            .setProtectedHeader({ alg: "RS256", ...(credential.keyId ? { x5t: credential.keyId } : {}) })
-            .setIssuer(config.clientId)
-            .setSubject(config.clientId)
-            .setAudience(endpoint)
-            .setJti(randomUUID())
-            .setIssuedAt()
-            .setExpirationTime("5m")
-            .sign(key);
-          form.set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer");
-          form.set("client_assertion", assertion);
-        }
-        const response = await this.#request(endpoint, {
-          method: "POST",
-          headers: { "content-type": "application/x-www-form-urlencoded" },
-          body: form,
-        });
-        if (response.ok) {
-          const body = (await response.json()) as { access_token?: unknown; expires_in?: unknown };
-          const token = stringValue(body.access_token);
-          if (!token) throw new ProviderResponseError("Microsoft Graph issued no access token");
-          return { token, expiresIn: typeof body.expires_in === "number" ? body.expires_in : 3600 };
-        }
-        lastStatus = response.status;
-        if (response.status !== 400 && response.status !== 401) break;
+        if (result.ok) return { token: result.token, expiresIn: result.expiresIn };
+        lastStatus = result.status;
+        if (result.status !== 400 && result.status !== 401) break;
       }
       throw new ProviderResponseError(`Microsoft Graph refused the credentials (${lastStatus})`);
     });

@@ -213,7 +213,17 @@ export {
 } from "./jobs/job-queue.js";
 export { PgBossQueue } from "./jobs/pg-boss-queue.js";
 export { createLogger, type Logger, type LogLevel, logLevels } from "./logging/logger.js";
-export { MailNotConfiguredError, SmtpConfigurationError, smtpSetting } from "./mail/mail-service.js";
+export { GraphMailError } from "./mail/graph.js";
+export {
+  graphMailSetting,
+  type MailCredentialInput,
+  type MailCredentialSummary,
+  MailNotConfiguredError,
+  type MailTestResult,
+  mailMethodSetting,
+  SmtpConfigurationError,
+  smtpSetting,
+} from "./mail/mail-service.js";
 export type { MailMessage, MailTransport, SmtpOptions } from "./mail/transport.js";
 export { NotificationHub } from "./notifications/hub.js";
 export {

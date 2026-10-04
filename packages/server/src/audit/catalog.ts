@@ -522,10 +522,55 @@ export const auditCatalog = {
     }),
     visibility: "instance",
   }),
+  "mail.methodChanged": event({
+    actor: ["account", "system"],
+    target: "instance",
+    fields: z.object({ method: z.enum(["smtp", "graph"]), previousMethod: z.enum(["smtp", "graph"]) }),
+    visibility: "instance",
+  }),
+  "mail.graphChanged": event({
+    actor: ["account", "system"],
+    target: "instance",
+    fields: z.object({
+      tenantId: z.string(),
+      clientId: z.string(),
+      sender: z.string(),
+      senderName: z.string().nullable(),
+      previous: z
+        .object({
+          tenantId: z.string(),
+          clientId: z.string(),
+          sender: z.string(),
+          senderName: z.string().nullable(),
+        })
+        .nullable(),
+    }),
+    visibility: "instance",
+  }),
+  "mail.credentialAdded": event({
+    actor: ["account", "system"],
+    target: "instance",
+    fields: z.object({
+      credentialId: z.uuid(),
+      kind: z.enum(["clientSecret", "certificate"]),
+      expiresAt: z.iso.datetime().nullable(),
+    }),
+    visibility: "instance",
+  }),
+  "mail.credentialRemoved": event({
+    actor: ["account", "system"],
+    target: "instance",
+    fields: z.object({ credentialId: z.uuid(), kind: z.enum(["clientSecret", "certificate"]) }),
+    visibility: "instance",
+  }),
   "mail.testSent": event({
     actor: ["account", "anonymous"],
     target: "instance",
-    fields: z.object({ recipient: z.string(), delivered: z.boolean() }),
+    fields: z.object({
+      recipient: z.string(),
+      delivered: z.boolean(),
+      method: z.enum(["smtp", "graph"]).optional(),
+    }),
     visibility: "instance",
     personal: { recipient: "actor" },
   }),

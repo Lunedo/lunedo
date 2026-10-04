@@ -1057,7 +1057,9 @@
     "directoryUnavailable": "Das Verzeichnis war nicht erreichbar. Versuche es in ein paar Minuten erneut; wenn es weiter scheitert, wende dich an die IT.",
     "confirmationMismatch": "Der eingegebene Name passt nicht zum Konto. Gib den Namen genau wie angezeigt ein und versuche es erneut.",
     "anonymizeSelf": "Du kannst dein eigenes Konto nicht anonymisieren. Bitte eine andere Person aus der Administration.",
-    "notPlaceholder": "Dieses Konto ist kein Platzhalter mehr oder wurde bereits zusammengeführt. Lade die Seite neu."
+    "notPlaceholder": "Dieses Konto ist kein Platzhalter mehr oder wurde bereits zusammengeführt. Lade die Seite neu.",
+    "invalidMailConfiguration": "Die E-Mail-Einstellungen sind ungültig. Prüfe die markierten Felder und speichere erneut.",
+    "mailNotReady": "Diese Versandart ist noch nicht eingerichtet. Speichere ihre Einstellungen und füge für Microsoft Graph zuerst Zugangsdaten hinzu."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -1883,7 +1885,94 @@
     "testDelivered": "Der Mailserver hat die Testmail angenommen.",
     "testFailed": "Die Test-E-Mail wurde nicht gesendet",
     "testFailedUnknown": "Der Mailserver hat die Nachricht nicht angenommen.",
-    "testFailedAction": "Prüfe Server, Port, Verbindungssicherheit und Zugangsdaten und sende den Test dann erneut."
+    "testFailedAction": "Prüfe Server, Port, Verbindungssicherheit und Zugangsdaten und sende den Test dann erneut.",
+    "preset": "Dienst",
+    "presetHint": "Füllt Server, Port und Verbindungssicherheit aus. Alle Dienste werden über SMTP genutzt.",
+    "presetCustom": "Eigener Mailserver",
+    "methodTitle": "Versandart",
+    "method": "Versandart",
+    "methodHint": "Pagehall sendet derzeit über {method}. Exchange Online rückt von SMTP mit Passwörtern ab; für Microsoft 365 nutze Microsoft Graph. Eine Versandart gilt, sobald du ihre Einstellungen speicherst.",
+    "methods": {
+      "smtp": "SMTP",
+      "graph": "Microsoft Graph"
+    },
+    "smtpSaved": "SMTP-Einstellungen gespeichert. Pagehall sendet über SMTP.",
+    "saveTogether": "Mandant, App und Absender gelten nur zusammen und werden deshalb mit einer Schaltfläche gespeichert.",
+    "graph": {
+      "title": "Microsoft Graph",
+      "scopeTitle": "Beschränke die App auf das eine Absenderpostfach",
+      "scope": "Pagehall sendet nur über sendMail des Absenderpostfachs. Gib der App das Recht zum Senden in Exchange Online, beschränkt auf dieses Postfach: Weise mit RBAC für Anwendungen die Rolle Application Mail.Send mit einem Verwaltungsbereich zu, der nur dieses Postfach enthält, oder nutze eine Anwendungszugriffsrichtlinie.",
+      "noEntraPermission": "Erteile die Berechtigung Mail.Send nicht in Entra ID selbst. Dort erteilt, darf die App als jedes Postfach des Mandanten senden.",
+      "setup": "Lege eine App-Registrierung nur für E-Mail an, getrennt von der Anmeldung. Trage ihren Mandanten, die Client-ID, das Absenderpostfach und ein Client-Secret oder ein von Pagehall erstelltes Zertifikat ein.",
+      "sender": "Absenderpostfach",
+      "senderHint": "Das einzige Postfach, als das die App senden darf.",
+      "senderName": "Absendername",
+      "senderNameHint": "Optional. Ohne ihn wird der Name des Postfachs angezeigt.",
+      "credentials": "Client-Secret oder Zertifikat",
+      "noCredentials": "Noch keines. Füge ein Client-Secret hinzu oder erstelle ein Zertifikat, bevor Pagehall senden kann.",
+      "kinds": {
+        "clientSecret": "Client-Secret",
+        "certificate": "Zertifikat"
+      },
+      "expires": "Läuft ab am {date}",
+      "noExpiry": "Kein Ablaufdatum eingetragen",
+      "downloadCertificate": "Zertifikat herunterladen",
+      "addSecret": "Client-Secret hinzufügen",
+      "createCertificate": "Zertifikat erstellen",
+      "active": "Pagehall sendet über Microsoft Graph.",
+      "removeTitle": "Diese Zugangsdaten entfernen?",
+      "removeDescription": "Pagehall verwendet sie sofort nicht mehr. Füge zuerst neue hinzu, solange Microsoft Graph die E-Mails sendet.",
+      "addTitle": "Zugangsdaten hinzufügen",
+      "kind": "Art",
+      "expiresHint": "Wie in Entra ID angezeigt. Pagehall erinnert 30 und 7 Tage vorher.",
+      "validity": "Gültig für",
+      "certificateHint": "Pagehall behält den privaten Schlüssel. Lade das Zertifikat in der App-Registrierung unter Zertifikate & Geheimnisse hoch.",
+      "years": "{count, plural, one {# Jahr} other {# Jahre}}",
+      "savedActive": "Gespeichert. Pagehall sendet über Microsoft Graph.",
+      "savedNeedsCredential": "Gespeichert. Füge ein Client-Secret oder Zertifikat hinzu und speichere erneut, um über Microsoft Graph zu senden."
+    },
+    "graphErrors": {
+      "graphMailboxNotAllowed": {
+        "cause": "Die App darf nicht als dieses Postfach senden: Exchange Online hat es blockiert.",
+        "action": "Nimm das Postfach in den Verwaltungsbereich oder die Anwendungszugriffsrichtlinie der App auf und teste erneut. Änderungen in Exchange Online können bis zu einer Stunde dauern."
+      },
+      "graphPermissionMissing": {
+        "cause": "Die App hat keine Berechtigung, E-Mails zu senden.",
+        "action": "Weise der App in Exchange Online die Rolle Application Mail.Send zu, beschränkt auf das Absenderpostfach, und teste erneut."
+      },
+      "graphMailboxUnknown": {
+        "cause": "Das Absenderpostfach existiert im Mandanten nicht oder hat kein Exchange-Online-Postfach.",
+        "action": "Prüfe die Adresse des Absenderpostfachs und teste erneut."
+      },
+      "graphCredentialExpired": {
+        "cause": "Das Client-Secret der App-Registrierung ist abgelaufen.",
+        "action": "Erstelle in Entra ID ein neues Client-Secret, füge es hier hinzu und entferne das alte."
+      },
+      "graphCredentialInvalid": {
+        "cause": "Microsoft Entra ID hat das Client-Secret oder Zertifikat abgelehnt.",
+        "action": "Prüfe Client-ID und Secret oder lade das Zertifikat in die App-Registrierung hoch und teste erneut."
+      },
+      "graphCredentialMissing": {
+        "cause": "Es ist kein gültiges Client-Secret oder Zertifikat gespeichert.",
+        "action": "Füge ein Client-Secret hinzu oder erstelle ein Zertifikat und teste erneut."
+      },
+      "graphTenantUnknown": {
+        "cause": "Microsoft Entra ID kennt den Mandanten nicht.",
+        "action": "Kopiere die Verzeichnis-ID (Mandanten-ID) aus der Übersicht der App-Registrierung und teste erneut."
+      },
+      "graphApplicationUnknown": {
+        "cause": "Die App-Registrierung existiert in diesem Mandanten nicht.",
+        "action": "Kopiere die Anwendungs-ID (Client-ID) aus der Übersicht der App-Registrierung und teste erneut."
+      },
+      "graphUnreachable": {
+        "cause": "Microsoft Graph war nicht erreichbar oder ausgelastet.",
+        "action": "Prüfe, ob der Server graph.microsoft.com und login.microsoftonline.com erreicht, und versuche es in ein paar Minuten erneut."
+      },
+      "graphRefused": {
+        "cause": "Microsoft Graph hat die E-Mail abgelehnt.",
+        "action": "Prüfe Absenderpostfach und Empfänger und teste erneut."
+      }
+    }
   },
   "organization": {
     "general": {
@@ -2445,7 +2534,11 @@
       },
       "mail": {
         "smtpChanged": "Mailserver geändert",
-        "testSent": "Testmail gesendet"
+        "testSent": "Testmail gesendet",
+        "methodChanged": "Versandart geändert",
+        "graphChanged": "E-Mail-Einstellungen für Microsoft Graph geändert",
+        "credentialAdded": "E-Mail-Zugangsdaten hinzugefügt",
+        "credentialRemoved": "E-Mail-Zugangsdaten entfernt"
       },
       "settings": {
         "changed": "Einstellung geändert"
@@ -2576,7 +2669,7 @@
       "lockedUntil": "Gesperrt bis",
       "logoRef": "Logo",
       "masterKeyVersions": "Versionen der Hauptschlüssel",
-      "method": "Methode",
+      "method": "Versandart",
       "methods": "Methoden",
       "name": "Name",
       "notifiedCount": "Benachrichtigte Personen",
@@ -2622,7 +2715,12 @@
       "membersAdded": "Mitglieder hinzugefügt",
       "membersRemoved": "Mitglieder entfernt",
       "groupId": "Gruppe",
-      "providerId": "Identitätsanbieter"
+      "providerId": "Identitätsanbieter",
+      "previousMethod": "Vorherige Versandart",
+      "tenantId": "Mandant",
+      "clientId": "Client-ID",
+      "sender": "Absender",
+      "senderName": "Absendername"
     },
     "values": {
       "account": "Konto",
@@ -2656,7 +2754,11 @@
       "updated": "Geändert",
       "deleted": "Gelöscht",
       "deactivated": "Deaktiviert",
-      "reactivated": "Reaktiviert"
+      "reactivated": "Reaktiviert",
+      "smtp": "SMTP",
+      "graph": "Microsoft Graph",
+      "clientSecret": "Client-Secret",
+      "certificate": "Zertifikat"
     },
     "formerUser": "Ehemalige Person {id}"
   },
@@ -2842,7 +2944,9 @@
     "loadScim": "Die SCIM-Verbindung konnte nicht geladen werden",
     "createScimToken": "Das SCIM-Token konnte nicht erstellt werden",
     "renewScimToken": "Das SCIM-Token konnte nicht erneuert werden",
-    "removeScimToken": "Das SCIM-Token konnte nicht entfernt werden"
+    "removeScimToken": "Das SCIM-Token konnte nicht entfernt werden",
+    "removeMailCredential": "Die Zugangsdaten konnten nicht entfernt werden",
+    "addMailCredential": "Die Zugangsdaten konnten nicht hinzugefügt werden"
   },
   "lifecycle": {
     "placeholder": {
