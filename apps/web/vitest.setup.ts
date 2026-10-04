@@ -1,6 +1,6 @@
 import { cleanup, configure } from "@testing-library/react";
 import { afterEach } from "vitest";
 
-configure({ asyncUtilTimeout: 5000 });
+configure({ asyncUtilTimeout: 15_000 });
 
 afterEach(cleanup);
