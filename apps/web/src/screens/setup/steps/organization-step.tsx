@@ -8,7 +8,7 @@ import {
   timeZoneSchema,
 } from "@pagehall/shared";
 import { Button, Combobox, Field, Input, Notice, Select, TimeZoneCombobox } from "@pagehall/ui";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Controller } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -50,12 +50,6 @@ export function OrganizationStep({ details, back, onDone }: StepProps<"organizat
       formats: details.formats ?? proposeFormats(language, timeZone),
     },
   });
-  const formatsChosen = useRef(details.formats !== null);
-  const chosenLanguage = form.watch("language");
-  const chosenTimeZone = form.watch("timeZone");
-  useEffect(() => {
-    if (!formatsChosen.current) form.setValue("formats", proposeFormats(chosenLanguage, chosenTimeZone));
-  }, [form, chosenLanguage, chosenTimeZone]);
   const submit = form.handleSubmit(async (values) => {
     setError(null);
     try {
@@ -122,10 +116,7 @@ export function OrganizationStep({ details, back, onDone }: StepProps<"organizat
                 render={({ field }) => (
                   <Select
                     value={field.value}
-                    onValueChange={(value) => {
-                      formatsChosen.current = true;
-                      field.onChange(value);
-                    }}
+                    onValueChange={field.onChange}
                     options={localeOptionSet(format.key)?.options(t, i18n.language) ?? []}
                   />
                 )}
