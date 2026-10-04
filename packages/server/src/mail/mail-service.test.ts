@@ -8,6 +8,7 @@ import { formatKeyEntry, parseKeyRing } from "../crypto/key-ring.js";
 import { createDatabase, type Database } from "../database/database.js";
 import { createDatabasePool, type DatabasePool } from "../database/pool.js";
 import { createLogger } from "../logging/logger.js";
+import { runWithRequestContext } from "../observability/request-context.js";
 import { SettingsService } from "../settings/service.js";
 import { CapturingTransport, testJobContext } from "../testing/jobs.js";
 import { Mailpit, testMailpitUrl } from "../testing/mailpit.js";
@@ -254,6 +255,43 @@ describe.skipIf(!databaseUrl)("MailService", () => {
       from: "wiki@example.org",
     }).send(renderMail("smtpTest", "en", { instanceName: "Docs" }, to));
     expect((await mailpit.waitFor(to)).subject).toBe("Test e-mail from Docs");
+  });
+
+  it("uses the stored SMTP password only for the stored server in a test mail", async () => {
+    const used: (string | null)[] = [];
+    const settings = new SettingsService({ database, logger });
+    const mail = new MailService({
+      database,
+      encryption,
+      settings,
+      audit: new AuditLog({ database }),
+      jobs: undefined,
+      logger,
+      transport: (options) => {
+        used.push(options.password);
+        return new CapturingTransport();
+      },
+    });
+    const stored = {
+      host: "smtp.example.org",
+      port: 465,
+      security: "tls" as const,
+      username: "wiki",
+      from: "wiki@example.org",
+    };
+    await mail.configureSmtp(stored, "stored-smtp-secret");
+    await runWithRequestContext({ requestId: "test", actor: { type: "anonymous" } }, async () => {
+      await mail.sendTest("someone@example.org", "en", { configuration: stored, password: undefined });
+      await mail.sendTest("someone@example.org", "en", {
+        configuration: { ...stored, host: "attacker.example" },
+        password: undefined,
+      });
+    });
+    expect(used).toEqual(["stored-smtp-secret", null]);
+    await mail.configureSmtp(
+      { host: "smtp.example.org", port: 25, security: "none", username: null, from: "wiki@example.org" },
+      null,
+    );
   });
 
   it("refuses STARTTLS servers that do not offer it", async () => {

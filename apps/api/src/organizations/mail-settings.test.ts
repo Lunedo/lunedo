@@ -40,6 +40,26 @@ describe.skipIf(!databaseBaseUrl)("e-mail settings through the API", () => {
     graphUrl: graph.url,
   });
 
+  it("keeps the mail method and the Graph settings out of the general settings endpoint", async () => {
+    const foreign = {
+      ...settings(),
+      authority: "https://attacker.example",
+      graphUrl: "https://attacker.example",
+    };
+    for (const [key, value] of [
+      ["mail.graph", foreign],
+      ["mail.method", "graph"],
+    ] as const) {
+      const response = await owner.put(`/api/v1/instance/settings/${key}`, { value });
+      expect(response.json()).toMatchObject({ code: "settingManagedElsewhere" });
+    }
+    const listed = (await owner.get("/api/v1/instance/settings?limit=200")).json().items as {
+      key: string;
+      editable: boolean;
+    }[];
+    expect(listed.filter((item) => item.key.startsWith("mail.")).every((item) => !item.editable)).toBe(true);
+  });
+
   it("stores the Graph settings and a credential, tests them and switches the sending method", async () => {
     expect((await owner.get("/api/v1/instance/mail")).json()).toMatchObject({ method: "smtp", graph: null });
     expect((await owner.put("/api/v1/instance/mail/method", { method: "graph" })).json()).toMatchObject({

@@ -307,7 +307,7 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
         actor_type: "anonymous",
         target_type: "instance",
         target_id: null,
-        fields: { recipient: "operator@example.org", delivered: true },
+        fields: { recipient: "operator@example.org", delivered: true, method: "smtp" },
       },
     ]);
   });

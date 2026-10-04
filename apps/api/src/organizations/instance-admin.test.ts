@@ -149,6 +149,9 @@ describe.skipIf(!databaseBaseUrl)("instance administration for the interface", (
         from: "wiki@pagehall.test",
       },
       passwordSet: false,
+      method: "smtp",
+      graph: null,
+      graphCredentials: [],
     });
 
     const configuration = {
@@ -161,7 +164,13 @@ describe.skipIf(!databaseBaseUrl)("instance administration for the interface", (
     const saved = await owner.put("/api/v1/instance/mail", { ...configuration, password: "secret" });
     expect(saved.statusCode).toBe(204);
     const stored = (await owner.get("/api/v1/instance/mail")).json();
-    expect(stored).toEqual({ smtp: configuration, passwordSet: true });
+    expect(stored).toEqual({
+      smtp: configuration,
+      passwordSet: true,
+      method: "smtp",
+      graph: null,
+      graphCredentials: [],
+    });
     expect(JSON.stringify(stored)).not.toContain("secret");
 
     const before = test.mail.sent.length;

@@ -12,7 +12,7 @@ import {
 } from "../testing/fakes/index.js";
 import { deliverPendingMail } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
-import { MailService } from "./mail-service.js";
+import { graphMailSetting, MailService } from "./mail-service.js";
 
 const baseUrl = testDatabaseBaseUrl();
 const SENDER = "alice@example.org";
@@ -131,6 +131,19 @@ describe.skipIf(!baseUrl)("e-mail through Microsoft Graph", () => {
     });
   });
 
+  it("never sends the stored credentials to another app or endpoint in a test", async () => {
+    const before = graph.requests.length;
+    const other = await test.services.mail.sendGraphTest(actor(), "reader@example.net", "en", {
+      ...configuration(),
+      clientId: "another-client",
+    });
+    expect(other).toEqual({
+      delivered: false,
+      error: { code: "graphCredentialMissing", responseCode: null },
+    });
+    expect(graph.requests.length).toBe(before);
+  });
+
   it("signs in to Graph with a certificate as well", async () => {
     const certificate = await test.services.mail.addGraphCredential(actor(), {
       kind: "certificate",
@@ -196,5 +209,11 @@ describe.skipIf(!baseUrl)("e-mail through Microsoft Graph", () => {
         graphUrl: "https://graph.example.org",
       }),
     ).rejects.toMatchObject({ details: { fields: ["graphUrl"] } });
+
+    await test.settings.set(graphMailSetting, {}, "instance", configuration());
+    const before = graph.requests.length;
+    const result = await strict.sendGraphTest(actor(), "reader@example.net", "en");
+    expect(result.delivered).toBe(false);
+    expect(graph.requests.length).toBe(before);
   });
 });

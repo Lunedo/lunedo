@@ -361,12 +361,18 @@ export class MailService {
     return this.#transport({ ...configuration, password: await this.#smtpPassword() });
   }
 
-  async #graphTransport(configuration: GraphMailConfiguration): Promise<GraphMailTransport> {
-    const rows = await this.#database
-      .select()
-      .from(mailCredentials)
-      .where(or(isNull(mailCredentials.expiresAt), gt(mailCredentials.expiresAt, new Date())))
-      .orderBy(desc(mailCredentials.createdAt), desc(mailCredentials.id));
+  async #graphTransport(
+    configuration: GraphMailConfiguration,
+    storedCredentials = true,
+  ): Promise<GraphMailTransport> {
+    this.#checkGraph(configuration);
+    const rows = !storedCredentials
+      ? []
+      : await this.#database
+          .select()
+          .from(mailCredentials)
+          .where(or(isNull(mailCredentials.expiresAt), gt(mailCredentials.expiresAt, new Date())))
+          .orderBy(desc(mailCredentials.createdAt), desc(mailCredentials.id));
     return new GraphMailTransport({
       configuration,
       credentials: rows.map((row) => ({
@@ -563,7 +569,8 @@ export class MailService {
     language: Language,
     input?: unknown,
   ): Promise<MailTestResult> {
-    let configuration = await this.graphConfiguration();
+    const stored = await this.graphConfiguration();
+    let configuration = stored;
     if (input !== undefined) {
       const parsed = graphMailConfigurationSchema.safeParse(input);
       if (!parsed.success) {
@@ -578,11 +585,18 @@ export class MailService {
       this.#checkGraph(parsed.data);
       configuration = parsed.data;
     }
+    const sameApp =
+      stored !== null &&
+      configuration !== null &&
+      stored.tenantId === configuration.tenantId &&
+      stored.clientId === configuration.clientId &&
+      stored.authority === configuration.authority &&
+      stored.graphUrl === configuration.graphUrl;
     const instanceName = await this.#settings.get(instanceNameSetting, {});
     let error: MailTestResult["error"] = null;
     try {
       if (!configuration) throw new MailNotConfiguredError();
-      await (await this.#graphTransport(configuration)).send(
+      await (await this.#graphTransport(configuration, sameApp)).send(
         renderMail("smtpTest", language, { instanceName }, to),
       );
     } catch (failure) {
@@ -701,11 +715,20 @@ export class MailService {
     const instanceName = await this.#settings.get(instanceNameSetting, {});
     const message: MailMessage = renderMail("smtpTest", language, { instanceName }, to);
     const adHoc = smtp ? smtpConfigurationSchema.parse(smtp.configuration) : undefined;
+    const stored = adHoc && smtp?.password === undefined ? await this.smtpConfiguration() : null;
+    const sameServer =
+      stored !== null &&
+      adHoc !== undefined &&
+      stored.host.toLowerCase() === adHoc.host.toLowerCase() &&
+      stored.port === adHoc.port &&
+      stored.username === adHoc.username;
     const password =
       adHoc?.username === null
         ? null
         : smtp?.password === undefined
-          ? await this.#smtpPassword()
+          ? !adHoc || sameServer
+            ? await this.#smtpPassword()
+            : null
           : smtp.password;
     if (adHoc) checkSmtpCredentials(adHoc, password !== null);
     let error: { code: string | null; responseCode: number | null } | null = null;

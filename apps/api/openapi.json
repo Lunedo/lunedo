@@ -56354,7 +56354,7 @@
       "post": {
         "operationId": "instance.testGraphMail",
         "summary": "Send a test e-mail through Microsoft Graph",
-        "description": "Sends with the given settings, or the stored ones without them, and the stored credentials. Errors name what failed: a mailbox outside the scope of the app, a missing permission, an unknown mailbox or an expired or wrong credential.\n\nRequires the permission `instance.settings.manage` on the instance.",
+        "description": "Sends with the given settings, or the stored ones without them, and the stored credentials. Errors name what failed: a mailbox outside the scope of the app, a missing permission, an unknown mailbox or an expired or wrong credential.\n\nRequires the permission `instance.settings.manage` on the instance. Needs a signed-in session; API tokens are refused.",
         "tags": [
           "Instance"
         ],
@@ -56365,9 +56365,6 @@
         "x-pagehall-internal": true,
         "x-stability-level": "alpha",
         "security": [
-          {
-            "bearerAuth": []
-          },
           {
             "sessionCookie": []
           }
@@ -56500,21 +56497,13 @@
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidMailConfiguration`: The e-mail configuration is not valid.",
+            "description": "`invalidInput`: The request is not valid. `invalidMailConfiguration`: The e-mail configuration is not valid.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
-                  "ambiguousCredentials": {
-                    "value": {
-                      "type": "urn:pagehall:problem:ambiguousCredentials",
-                      "title": "The request carries both a session and an API token",
-                      "status": 400,
-                      "code": "ambiguousCredentials"
-                    }
-                  },
                   "invalidInput": {
                     "value": {
                       "type": "urn:pagehall:problem:invalidInput",
@@ -56536,21 +56525,13 @@
             }
           },
           "401": {
-            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "description": "`notSignedIn`: Sign in or send an API token.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
-                  "invalidApiToken": {
-                    "value": {
-                      "type": "urn:pagehall:problem:invalidApiToken",
-                      "title": "The API token is not valid",
-                      "status": 401,
-                      "code": "invalidApiToken"
-                    }
-                  },
                   "notSignedIn": {
                     "value": {
                       "type": "urn:pagehall:problem:notSignedIn",
@@ -56564,7 +56545,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -56586,25 +56567,21 @@
                       "status": 403,
                       "code": "forbidden"
                     }
-                  }
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "`rateLimited`: Too many requests.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "rateLimited": {
+                  },
+                  "reauthenticationRequired": {
                     "value": {
-                      "type": "urn:pagehall:problem:rateLimited",
-                      "title": "Too many requests",
-                      "status": 429,
-                      "code": "rateLimited"
+                      "type": "urn:pagehall:problem:reauthenticationRequired",
+                      "title": "Confirm your identity first",
+                      "status": 403,
+                      "code": "reauthenticationRequired"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
                     }
                   }
                 }
@@ -56782,9 +56759,6 @@
         "x-stability-level": "alpha",
         "security": [
           {
-            "bearerAuth": []
-          },
-          {
             "sessionCookie": []
           }
         ],
@@ -56925,21 +56899,13 @@
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidSmtpConfiguration`: The mail server configuration is not valid.",
+            "description": "`invalidInput`: The request is not valid. `invalidSmtpConfiguration`: The mail server configuration is not valid.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
-                  "ambiguousCredentials": {
-                    "value": {
-                      "type": "urn:pagehall:problem:ambiguousCredentials",
-                      "title": "The request carries both a session and an API token",
-                      "status": 400,
-                      "code": "ambiguousCredentials"
-                    }
-                  },
                   "invalidInput": {
                     "value": {
                       "type": "urn:pagehall:problem:invalidInput",
@@ -56961,21 +56927,13 @@
             }
           },
           "401": {
-            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "description": "`notSignedIn`: Sign in or send an API token.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
-                  "invalidApiToken": {
-                    "value": {
-                      "type": "urn:pagehall:problem:invalidApiToken",
-                      "title": "The API token is not valid",
-                      "status": 401,
-                      "code": "invalidApiToken"
-                    }
-                  },
                   "notSignedIn": {
                     "value": {
                       "type": "urn:pagehall:problem:notSignedIn",
@@ -56989,7 +56947,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -57011,25 +56969,21 @@
                       "status": 403,
                       "code": "forbidden"
                     }
-                  }
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "`rateLimited`: Too many requests.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "rateLimited": {
+                  },
+                  "reauthenticationRequired": {
                     "value": {
-                      "type": "urn:pagehall:problem:rateLimited",
-                      "title": "Too many requests",
-                      "status": 429,
-                      "code": "rateLimited"
+                      "type": "urn:pagehall:problem:reauthenticationRequired",
+                      "title": "Confirm your identity first",
+                      "status": 403,
+                      "code": "reauthenticationRequired"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
                     }
                   }
                 }

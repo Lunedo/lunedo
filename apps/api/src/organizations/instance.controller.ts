@@ -528,7 +528,7 @@ export class InstanceController {
   }
 
   @Post("mail/graph/test")
-  @Permission("instance.settings.manage")
+  @Permission("instance.settings.manage", { type: "instance" }, { recentAuthentication: true })
   @InternalRoute()
   @ApiRoute({
     summary: "Send a test e-mail through Microsoft Graph",
@@ -559,7 +559,7 @@ export class InstanceController {
   }
 
   @Post("mail/test")
-  @Permission("instance.settings.manage")
+  @Permission("instance.settings.manage", { type: "instance" }, { recentAuthentication: true })
   @InternalRoute()
   @ApiRoute({
     summary: "Send a test mail",
