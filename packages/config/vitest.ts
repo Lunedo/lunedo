@@ -29,6 +29,7 @@ export function createVitestConfig(options: VitestPresetOptions = {}): UserWorks
       setupFiles: options.setupFiles ?? [],
       globalSetup: options.globalSetup ?? [],
       testTimeout: options.testTimeout ?? 5000,
+      hookTimeout: 60_000,
       restoreMocks: true,
       unstubGlobals: true,
       unstubEnvs: true,

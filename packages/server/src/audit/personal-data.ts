@@ -53,28 +53,45 @@ export class PersonalDataMissingKeyError extends Error {
 
 export class AuditSealer {
   readonly #encryption: Encryption;
+  readonly #transactionKeys = new WeakMap<Transaction, Map<string, Buffer>>();
 
   constructor(encryption: Encryption) {
     this.#encryption = encryption;
   }
 
-  async #key(tx: Transaction, subjectId: string, accountId: string | null): Promise<Buffer> {
-    const fresh = randomBytes(KEY_LENGTH);
-    await tx
-      .insert(auditSubjectKeys)
-      .values({
-        subjectId,
-        accountId,
-        key: this.#encryption.encrypt(fresh.toString("base64"), keyContext(subjectId)),
-      })
-      .onConflictDoNothing();
-    fresh.fill(0);
+  async #stored(tx: Transaction, subjectId: string): Promise<Buffer | null> {
     const [row] = await tx
       .select({ key: auditSubjectKeys.key })
       .from(auditSubjectKeys)
       .where(eq(auditSubjectKeys.subjectId, subjectId));
-    if (!row) throw new Error("The audit key of the subject is missing");
-    return Buffer.from(this.#encryption.decryptString(row.key, keyContext(subjectId)), "base64");
+    return row ? Buffer.from(this.#encryption.decryptString(row.key, keyContext(subjectId)), "base64") : null;
+  }
+
+  async #key(tx: Transaction, subjectId: string, accountId: string | null): Promise<Buffer> {
+    let cache = this.#transactionKeys.get(tx);
+    if (!cache) {
+      cache = new Map();
+      this.#transactionKeys.set(tx, cache);
+    }
+    const cached = cache.get(subjectId);
+    if (cached) return cached;
+    let key = await this.#stored(tx, subjectId);
+    if (!key) {
+      const fresh = randomBytes(KEY_LENGTH);
+      await tx
+        .insert(auditSubjectKeys)
+        .values({
+          subjectId,
+          accountId,
+          key: this.#encryption.encrypt(fresh.toString("base64"), keyContext(subjectId)),
+        })
+        .onConflictDoNothing();
+      fresh.fill(0);
+      key = await this.#stored(tx, subjectId);
+    }
+    if (!key) throw new Error("The audit key of the subject is missing");
+    cache.set(subjectId, key);
+    return key;
   }
 
   async seal(
@@ -86,20 +103,16 @@ export class AuditSealer {
     const sealed: Record<string, string> = {};
     for (const [subjectId, entry] of [...parts.entries()].sort(([a], [b]) => (a < b ? -1 : 1))) {
       const key = await this.#key(tx, subjectId, entry.accountId);
-      try {
-        const iv = randomBytes(IV_LENGTH);
-        const cipher = createCipheriv("aes-256-gcm", key, iv);
-        cipher.setAAD(aad(position, subjectId));
-        const data = Buffer.concat([cipher.update(JSON.stringify(entry.parts), "utf8"), cipher.final()]);
-        sealed[subjectId] = Buffer.concat([
-          Buffer.from([FORMAT_VERSION]),
-          iv,
-          data,
-          cipher.getAuthTag(),
-        ]).toString("base64");
-      } finally {
-        key.fill(0);
-      }
+      const iv = randomBytes(IV_LENGTH);
+      const cipher = createCipheriv("aes-256-gcm", key, iv);
+      cipher.setAAD(aad(position, subjectId));
+      const data = Buffer.concat([cipher.update(JSON.stringify(entry.parts), "utf8"), cipher.final()]);
+      sealed[subjectId] = Buffer.concat([
+        Buffer.from([FORMAT_VERSION]),
+        iv,
+        data,
+        cipher.getAuthTag(),
+      ]).toString("base64");
     }
     return sealed;
   }

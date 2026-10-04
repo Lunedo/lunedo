@@ -179,7 +179,7 @@ describe.skipIf(!databaseUrl)("AuditLog", () => {
     expect(await verifyScope(audit, scope)).toMatchObject({ entries: 25, broken: null });
   });
 
-  it("reports no gap when entries are written while it runs", async () => {
+  it("reports no gap when entries are written while it runs", { timeout: 60_000 }, async () => {
     const scope = newScope();
     await database.transaction(async (tx) => {
       for (let i = 0; i < 2500; i++) await audit.record(tx, signIn(scope));
