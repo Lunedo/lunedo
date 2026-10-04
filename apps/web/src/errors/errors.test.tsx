@@ -61,7 +61,7 @@ function checks(patch: Record<string, unknown> = {}) {
       ownerUid: 0,
       ownerGid: 0,
     },
-    instanceUrl: { status: "warning", ...help, cause: "notSet", configured: false },
+    instanceUrl: { status: "warning", ...help, cause: "notSet", configured: false, url: null, source: null },
     https: { status: "ok", ...help, instanceUrl: true, request: true },
     ...patch,
   };
@@ -98,6 +98,36 @@ describe("the system check", () => {
     await userEvent.click(screen.getAllByRole("button", { name: "Check again" })[0] as HTMLElement);
     await userEvent.click(screen.getByRole("button", { name: "Run all checks again" }));
     expect(refresh).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows the instance URL set through the configuration", async () => {
+    mockApi({ "GET /api/v1/auth/session": () => problem(401, "notSignedIn") });
+    await renderWithProviders(
+      <PreferencesProvider>
+        <SystemCheckStep
+          details={
+            {
+              checks: checks({
+                instanceUrl: {
+                  status: "ok",
+                  fixCommand: null,
+                  docs: "setup.md#instance-url",
+                  cause: null,
+                  configured: true,
+                  url: "https://wiki.example.org",
+                  source: "configuration",
+                },
+              }),
+            } as never
+          }
+          back={null}
+          onDone={async () => undefined}
+          refresh={async () => undefined}
+        />
+      </PreferencesProvider>,
+    );
+    expect(screen.getByText("Set through PAGEHALL_INSTANCE_URL: https://wiki.example.org")).toBeTruthy();
+    expect(screen.queryByText("Instance URL did not pass the check")).toBeNull();
   });
 });
 

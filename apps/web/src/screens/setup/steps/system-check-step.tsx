@@ -35,7 +35,9 @@ function passedDescription(t: TFunction, format: Formatter, checks: Checks, key:
     case "clock":
       return t("setup.systemCheck.clockOk");
     case "instanceUrl":
-      return t("setup.systemCheck.urlOk");
+      return checks.instanceUrl.source === "configuration"
+        ? t("setup.systemCheck.urlConfigured", { url: checks.instanceUrl.url ?? "" })
+        : t("setup.systemCheck.urlOk", { url: checks.instanceUrl.url ?? "" });
     case "https":
       return t("setup.systemCheck.httpsOk");
   }

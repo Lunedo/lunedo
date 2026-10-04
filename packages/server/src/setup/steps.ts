@@ -174,9 +174,13 @@ export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
     required: true,
     async describe({ request }) {
       const [database, clock] = await checkDatabaseAndClock(deps.pool);
-      const url = await deps.settings.get(instanceUrlSetting, {});
+      const stored = await deps.settings.get(instanceUrlSetting, {});
+      const configured = deps.configuredInstanceUrl ?? "";
+      const url = stored || configured;
+      const source = stored ? "setting" : configured ? "configuration" : null;
       const httpsUrl = url.startsWith("https:");
       const httpsRequest = request.protocol === "https";
+      const httpsOk = url ? httpsUrl : httpsRequest;
       return {
         checks: {
           database,
@@ -188,10 +192,12 @@ export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
             fixCommand: null,
             docs: "setup.md#instance-url",
             configured: url !== "",
+            url: url || null,
+            source,
           },
           https: {
-            status: httpsUrl && httpsRequest ? "ok" : "warning",
-            cause: !httpsUrl ? "instanceUrlNotHttps" : httpsRequest ? null : "requestNotHttps",
+            status: httpsOk ? "ok" : "warning",
+            cause: httpsOk ? null : url ? "instanceUrlNotHttps" : "requestNotHttps",
             fixCommand: null,
             docs: "setup.md#https",
             instanceUrl: httpsUrl,

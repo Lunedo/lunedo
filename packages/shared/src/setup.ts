@@ -81,6 +81,8 @@ export const setupStepSchemas = {
           ...checkHelp,
           cause: z.enum(["notSet"]).nullable(),
           configured: z.boolean(),
+          url: z.string().nullable(),
+          source: z.enum(["configuration", "setting"]).nullable(),
         }),
         https: z.object({
           status: checkStatus,

@@ -77805,6 +77805,26 @@
                                           },
                                           "configured": {
                                             "type": "boolean"
+                                          },
+                                          "url": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "source": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string",
+                                                "enum": [
+                                                  "configuration",
+                                                  "setting"
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
                                           }
                                         },
                                         "required": [
@@ -77812,7 +77832,9 @@
                                           "cause",
                                           "fixCommand",
                                           "docs",
-                                          "configured"
+                                          "configured",
+                                          "url",
+                                          "source"
                                         ],
                                         "additionalProperties": false
                                       },
