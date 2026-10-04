@@ -813,13 +813,16 @@ export class ProviderSignInService {
     return { pending, account, identity };
   }
 
-  async #linkedSubject(accountId: string, providerId: string): Promise<string> {
+  async #linkedIdentity(
+    accountId: string,
+    providerId: string,
+  ): Promise<{ subject: string; signInName: string | null }> {
     const [identity] = await this.#database
-      .select({ subject: identities.subject })
+      .select({ subject: identities.subject, signInName: identities.signInName })
       .from(identities)
       .where(and(eq(identities.providerId, providerId), eq(identities.accountId, accountId)));
     if (!identity) throw new OrganizationError("notFound", "The account is not linked to this provider");
-    return identity.subject;
+    return identity;
   }
 
   async startLinkConfirmation(input: {
@@ -829,7 +832,7 @@ export class ProviderSignInService {
     clientIp?: string | undefined;
   }): Promise<StartedFlow> {
     const { pending, account } = await this.#pendingLink(input.pendingToken);
-    await this.#linkedSubject(account.id, input.providerId);
+    await this.#linkedIdentity(account.id, input.providerId);
     return this.start({
       providerId: input.providerId,
       purpose: "linkConfirmation",
@@ -903,14 +906,14 @@ export class ProviderSignInService {
   }): Promise<{ signedIn: SignedIn } | { confirmed: true }> {
     const started = await this.#databaseNow();
     const { pending, account } = await this.#pendingLink(input.pendingToken);
-    const subjects = { email: `link:${account.id}`, clientIp: input.client.ip };
-    await this.#checkDirectoryAttempt(subjects);
     const { provider, credentials } = await this.#load(input.providerId, "signIn");
     const adapter = this.#adapter(provider.type);
     if (provider.type !== "ldap" || !adapter.verifyPassword) {
       throw new OrganizationError("invalidInput", "This provider confirms the identity through its own page");
     }
-    const subject = await this.#linkedSubject(account.id, provider.id);
+    const { subject, signInName } = await this.#linkedIdentity(account.id, provider.id);
+    const subjects = this.#directorySubjects(provider.id, signInName ?? subject, input.client.ip);
+    await this.#checkDirectoryAttempt(subjects);
     let valid = false;
     if (directoryPasswordSchema.safeParse(input.password).success) {
       try {
@@ -924,7 +927,7 @@ export class ProviderSignInService {
       await this.#directoryFailure(subjects, "invalidCredentials");
       throw new InvalidCredentialsError();
     }
-    await this.#throttle?.recordSuccess(subjects.email);
+    await this.#throttle?.recordSuccess(subjects.email ?? "");
     const factorRequired =
       provider.config.secondFactor.mode === "pagehall" ||
       (await this.#signIn.secondFactorRequired(account.id));

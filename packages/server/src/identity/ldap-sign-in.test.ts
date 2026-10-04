@@ -293,10 +293,7 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
     expect(await states(linked.map((item) => item.accountId))).toEqual(Array(5).fill("active"));
   });
 
-  it("links a sign-in of another provider to a directory account after its directory password", async () => {
-    const { id, domain } = await provider();
-    const [moved] = await people(id, domain, 1);
-    if (!moved) throw new Error("Account expected");
+  async function pendingLinkFromCloud(domain: string, email: string) {
     await test.pool.query("delete from identity_provider_domains where domain = $1", [domain]);
     const { provider: entra } = await test.services.identityProviders.create(SYSTEM, {
       type: "oidc",
@@ -309,10 +306,7 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
       purpose: "signIn",
       baseUrl: "https://pagehall.test",
     });
-    const callback = await idp.authorize(started.url, {
-      sub: randomUUID(),
-      email: String(moved.entry.attributes.mail?.[0]),
-    });
+    const callback = await idp.authorize(started.url, { sub: randomUUID(), email });
     const result = await test.services.providerSignIn.callback({
       providerId: entra.id,
       query: callback.searchParams,
@@ -320,6 +314,15 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
       client: {},
     });
     if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
+    return result.pendingToken;
+  }
+
+  it("links a sign-in of another provider to a directory account after its directory password", async () => {
+    const { id, domain } = await provider();
+    const [moved] = await people(id, domain, 1);
+    if (!moved) throw new Error("Account expected");
+    const pendingToken = await pendingLinkFromCloud(domain, String(moved.entry.attributes.mail?.[0]));
+    const result = { pendingToken };
     expect(await test.services.providerSignIn.linkInfo(result.pendingToken)).toMatchObject({
       password: false,
       providers: [{ id, name: "Directory", directory: true }],
@@ -344,6 +347,39 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
       moved.accountId,
     ]);
     expect(identities.rowCount).toBe(2);
+  });
+
+  it("counts failed directory sign-ins against the confirmation of a link", async () => {
+    const { id, domain } = await provider();
+    const [locked] = await people(id, domain, 1);
+    if (!locked) throw new Error("Account expected");
+    const [identity] = (
+      await test.pool.query<{ sign_in_name: string | null; subject: string }>(
+        "select sign_in_name, subject from identities where account_id = $1",
+        [locked.accountId],
+      )
+    ).rows;
+    const name = identity?.sign_in_name ?? identity?.subject ?? "";
+    const pendingToken = await pendingLinkFromCloud(domain, String(locked.entry.attributes.mail?.[0]));
+    let blocked = false;
+    for (let attempt = 0; attempt < 30 && !blocked; attempt++) {
+      try {
+        await signIn(id, name, "wrong password");
+      } catch (error) {
+        blocked = error instanceof LockedError || error instanceof RateLimitedError;
+      }
+    }
+    expect(blocked).toBe(true);
+    const binds = directory.binds.filter((bind) => bind.dn === locked.entry.dn).length;
+    await expect(
+      test.services.providerSignIn.confirmLinkWithDirectory({
+        pendingToken,
+        providerId: id,
+        password: PASSWORD,
+        client: { ip: "10.250.0.9" },
+      }),
+    ).rejects.toSatisfy((error) => error instanceof LockedError || error instanceof RateLimitedError);
+    expect(directory.binds.filter((bind) => bind.dn === locked.entry.dn).length).toBe(binds);
   });
 
   it("refuses an empty password before asking the directory", async () => {
