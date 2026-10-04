@@ -19200,8 +19200,7 @@
                                   "bindDn": {
                                     "type": "string",
                                     "minLength": 3,
-                                    "maxLength": 1000,
-                                    "pattern": "="
+                                    "maxLength": 1000
                                   },
                                   "userBaseDn": {
                                     "type": "string",
@@ -21276,8 +21275,7 @@
                               "bindDn": {
                                 "type": "string",
                                 "minLength": 3,
-                                "maxLength": 1000,
-                                "pattern": "="
+                                "maxLength": 1000
                               },
                               "userBaseDn": {
                                 "type": "string",
@@ -23734,8 +23732,7 @@
                                     "bindDn": {
                                       "type": "string",
                                       "minLength": 3,
-                                      "maxLength": 1000,
-                                      "pattern": "="
+                                      "maxLength": 1000
                                     },
                                     "userBaseDn": {
                                       "type": "string",
@@ -26566,8 +26563,7 @@
                                 "bindDn": {
                                   "type": "string",
                                   "minLength": 3,
-                                  "maxLength": 1000,
-                                  "pattern": "="
+                                  "maxLength": 1000
                                 },
                                 "userBaseDn": {
                                   "type": "string",
@@ -28413,8 +28409,7 @@
                               "bindDn": {
                                 "type": "string",
                                 "minLength": 3,
-                                "maxLength": 1000,
-                                "pattern": "="
+                                "maxLength": 1000
                               },
                               "userBaseDn": {
                                 "type": "string",
@@ -30763,8 +30758,7 @@
                                 "bindDn": {
                                   "type": "string",
                                   "minLength": 3,
-                                  "maxLength": 1000,
-                                  "pattern": "="
+                                  "maxLength": 1000
                                 },
                                 "userBaseDn": {
                                   "type": "string",
@@ -33388,8 +33382,7 @@
                                 "bindDn": {
                                   "type": "string",
                                   "minLength": 3,
-                                  "maxLength": 1000,
-                                  "pattern": "="
+                                  "maxLength": 1000
                                 },
                                 "userBaseDn": {
                                   "type": "string",
@@ -35986,8 +35979,7 @@
                                 "bindDn": {
                                   "type": "string",
                                   "minLength": 3,
-                                  "maxLength": 1000,
-                                  "pattern": "="
+                                  "maxLength": 1000
                                 },
                                 "userBaseDn": {
                                   "type": "string",
@@ -38605,8 +38597,7 @@
                                 "bindDn": {
                                   "type": "string",
                                   "minLength": 3,
-                                  "maxLength": 1000,
-                                  "pattern": "="
+                                  "maxLength": 1000
                                 },
                                 "userBaseDn": {
                                   "type": "string",
@@ -41883,8 +41874,7 @@
                                 "bindDn": {
                                   "type": "string",
                                   "minLength": 3,
-                                  "maxLength": 1000,
-                                  "pattern": "="
+                                  "maxLength": 1000
                                 },
                                 "userBaseDn": {
                                   "type": "string",
@@ -45827,8 +45817,7 @@
                                 "bindDn": {
                                   "type": "string",
                                   "minLength": 3,
-                                  "maxLength": 1000,
-                                  "pattern": "="
+                                  "maxLength": 1000
                                 },
                                 "userBaseDn": {
                                   "type": "string",
@@ -50757,8 +50746,7 @@
                                 "bindDn": {
                                   "type": "string",
                                   "minLength": 3,
-                                  "maxLength": 1000,
-                                  "pattern": "="
+                                  "maxLength": 1000
                                 },
                                 "userBaseDn": {
                                   "type": "string",
@@ -53374,8 +53362,7 @@
                                 "bindDn": {
                                   "type": "string",
                                   "minLength": 3,
-                                  "maxLength": 1000,
-                                  "pattern": "="
+                                  "maxLength": 1000
                                 },
                                 "userBaseDn": {
                                   "type": "string",

@@ -61,8 +61,24 @@ export class FakeLdapDirectory {
     this.entries.push(...entries);
   }
 
+  netbiosDomain: string | null = null;
+
   find(dn: string): FakeLdapEntry | undefined {
     return this.entries.find((entry) => normalize(entry.dn) === normalize(dn));
+  }
+
+  #bindTarget(name: string): FakeLdapEntry | undefined {
+    if (name.includes("=")) return this.find(name);
+    const [domain, logonName] = name.split("\\");
+    if (logonName !== undefined) {
+      if (domain?.toLowerCase() !== this.netbiosDomain?.toLowerCase()) return undefined;
+      return this.entries.find((entry) =>
+        valuesOf(entry, "sAMAccountName").some((value) => equal(value, logonName)),
+      );
+    }
+    return this.entries.find((entry) =>
+      valuesOf(entry, "userPrincipalName").some((value) => equal(value, name)),
+    );
   }
 
   #memberOfTransitive(groupDn: string, memberDn: string, seen = new Set<string>()): boolean {
@@ -131,7 +147,7 @@ export class FakeLdapDirectory {
       bind: async (dn, password) => {
         this.binds.push({ dn, password });
         if (password.length === 0) return;
-        const entry = this.find(dn);
+        const entry = this.#bindTarget(dn);
         if (entry?.bindError) throw new DirectoryBindRejected(entry.bindError);
         if (!entry || entry.password !== password) {
           throw new DirectoryBindRejected(

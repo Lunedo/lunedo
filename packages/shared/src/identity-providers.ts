@@ -185,7 +185,26 @@ const ldapAttributeName = z
   .max(100)
   .regex(/^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\.[0-9]+)+)$/, "must be an LDAP attribute name");
 
-const distinguishedName = z.string().trim().min(3).max(1000).regex(/=/, "must be a distinguished name");
+export const distinguishedNameSchema = z
+  .string()
+  .trim()
+  .min(3)
+  .max(1000)
+  .regex(/=/, "must be a distinguished name");
+const distinguishedName = distinguishedNameSchema;
+
+const USER_PRINCIPAL_NAME = /^[^@\s\\]+@[^@\s\\]+$/;
+const DOWN_LEVEL_LOGON_NAME = /^[^\\\s]+\\[^\\]+$/;
+
+export const activeDirectoryServiceAccountSchema = z
+  .string()
+  .trim()
+  .min(3)
+  .max(1000)
+  .refine(
+    (value) => value.includes("=") || USER_PRINCIPAL_NAME.test(value) || DOWN_LEVEL_LOGON_NAME.test(value),
+    "must be a distinguished name, a user principal name such as svc@example.org or DOMAIN\\name",
+  );
 
 function balancedFilter(value: string): boolean {
   if (!value.startsWith("(") || !value.endsWith(")")) return false;
@@ -335,6 +354,7 @@ export const activeDirectoryConfigSchema = z
   .object({
     preset: z.literal("activeDirectory"),
     ...ldapCommonShape,
+    bindDn: activeDirectoryServiceAccountSchema,
     userFilter: ldapFilter.default("(&(objectCategory=person)(objectClass=user))"),
     groupFilter: ldapFilter.default("(objectClass=group)"),
     signInAttribute: z.enum(["userPrincipalName", "sAMAccountName", "mail"]).default("userPrincipalName"),

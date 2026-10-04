@@ -309,10 +309,8 @@ describe("adding an LDAP directory", () => {
     expect((await screen.findAllByText(/Enter a distinguished name/)).length).toBe(3);
     expect(screen.getByText("This field is required.")).toBeTruthy();
 
-    await userEvent.type(
-      screen.getByLabelText("Service account DN"),
-      "CN=pagehall,OU=Service,DC=verlag,DC=example",
-    );
+    expect(screen.getByText(/Enter a distinguished name, a user principal name/)).toBeTruthy();
+    await userEvent.type(screen.getByLabelText("Service account"), "svc-pagehall@verlag.example");
     await userEvent.type(screen.getByLabelText("Password of the service account"), "bind secret");
     await userEvent.type(screen.getByLabelText("Base DN for people"), "OU=Staff,DC=verlag,DC=example");
     await userEvent.type(screen.getByLabelText("Base DN for groups"), "OU=Groups,DC=verlag,DC=example");
@@ -331,7 +329,7 @@ describe("adding an LDAP directory", () => {
         preset: "activeDirectory",
         url: "ldap://dc01.verlag.example",
         startTls: true,
-        bindDn: "CN=pagehall,OU=Service,DC=verlag,DC=example",
+        bindDn: "svc-pagehall@verlag.example",
         userBaseDn: "OU=Staff,DC=verlag,DC=example",
         groupBaseDn: "OU=Groups,DC=verlag,DC=example",
         domains: ["verlag.example"],

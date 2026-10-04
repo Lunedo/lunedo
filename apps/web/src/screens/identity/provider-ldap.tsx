@@ -1,4 +1,9 @@
-import { caCertificateSchema, ldapSecondFactorModes } from "@pagehall/shared";
+import {
+  activeDirectoryServiceAccountSchema,
+  caCertificateSchema,
+  distinguishedNameSchema,
+  ldapSecondFactorModes,
+} from "@pagehall/shared";
 import {
   Badge,
   Button,
@@ -42,8 +47,6 @@ export const ldapUrlSchema = z
     return (url.pathname === "" || url.pathname === "/") && url.search === "" && url.hash === "";
   });
 
-export const distinguishedNameSchema = z.string().trim().min(3).max(1000).regex(/=/);
-
 export const ldapFilterSchema = z
   .string()
   .trim()
@@ -67,6 +70,20 @@ const ldapAttribute = z
   .max(100)
   .regex(/^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\.[0-9]+)+)$/);
 
+export function serviceAccountField(preset: LdapConfigInput["preset"]) {
+  return preset === "activeDirectory"
+    ? ({
+        schema: activeDirectoryServiceAccountSchema,
+        hint: "identityProviders.ldap.bindDnHintActiveDirectory",
+        invalid: "identityProviders.ldap.serviceAccountInvalid",
+      } as const)
+    : ({
+        schema: distinguishedNameSchema,
+        hint: "identityProviders.ldap.bindDnHint",
+        invalid: "identityProviders.ldap.dnInvalid",
+      } as const);
+}
+
 export function isPlainLdap(url: string): boolean {
   return url.trim().toLowerCase().startsWith("ldap://");
 }
@@ -88,6 +105,7 @@ export function LdapConnectionFields({
   const tracker = useSaveStates();
   const config = provider.config;
   const plain = isPlainLdap(config.url);
+  const serviceAccount = serviceAccountField(config.preset);
   return (
     <>
       <div className="px-4 py-3">
@@ -132,7 +150,17 @@ export function LdapConnectionFields({
         status={<SaveIndicator tracker={tracker("startTls")} />}
       />
       <div className="grid grid-cols-1 gap-4 px-4 py-3 sm:grid-cols-2">
-        {(["bindDn", "userBaseDn", "groupBaseDn"] as const).map((field) => (
+        <AutoSaveTextField
+          label={t("identityProviders.ldap.bindDn")}
+          hint={t(serviceAccount.hint)}
+          value={config.bindDn}
+          schema={serviceAccount.schema}
+          invalidMessage={t(serviceAccount.invalid)}
+          disabled={!canManage}
+          className="font-mono"
+          onSave={(bindDn) => update((current) => ({ ...current, bindDn }))}
+        />
+        {(["userBaseDn", "groupBaseDn"] as const).map((field) => (
           <AutoSaveTextField
             key={field}
             label={t(`identityProviders.ldap.${field}`)}

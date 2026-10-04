@@ -183,6 +183,23 @@ describe("LDAP and Active Directory", () => {
     expect(result.profile.signInName).toBe("alice");
   });
 
+  it.each([SERVICE_DN, "svc-pagehall@corp.example", "CORP\\svc-pagehall"])(
+    "binds the Active Directory service account as %s",
+    async (bindDn) => {
+      const directory = activeDirectory();
+      directory.netbiosDomain = "CORP";
+      const service = directory.find(SERVICE_DN);
+      if (!service) throw new Error("Service account expected");
+      service.attributes.userPrincipalName = ["svc-pagehall@corp.example"];
+      service.attributes.sAMAccountName = ["svc-pagehall"];
+      const adapter = new LdapAdapter({ allowInsecure: false, connector: directory.connector });
+      const provider = adProvider({ bindDn });
+      const result = await adapter.testDirectory(provider, credentials, "alice@corp.example");
+      expect(result.steps.every((step) => step.ok)).toBe(true);
+      expect(directory.binds[0]?.dn).toBe(bindDn);
+    },
+  );
+
   it("refuses an empty password before any bind", async () => {
     const directory = activeDirectory();
     const adapter = new LdapAdapter({ allowInsecure: false, connector: directory.connector });

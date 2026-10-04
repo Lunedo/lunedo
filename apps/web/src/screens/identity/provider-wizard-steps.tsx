@@ -1,4 +1,9 @@
-import { directoryPasswordSchema, domainSchema, identityProviderNameSchema } from "@pagehall/shared";
+import {
+  directoryPasswordSchema,
+  distinguishedNameSchema,
+  domainSchema,
+  identityProviderNameSchema,
+} from "@pagehall/shared";
 import { Button, Field, Input, Notice, PasswordInput, SegmentedControl, Switch } from "@pagehall/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
@@ -18,7 +23,7 @@ import { problemMessage } from "../../errors/problem-message.js";
 import { FileButton, readFileText } from "./file-button.js";
 import { parseList } from "./provider-config.js";
 import { presetLabel } from "./provider-labels.js";
-import { CERTIFICATE_TYPES, distinguishedNameSchema, isPlainLdap, ldapUrlSchema } from "./provider-ldap.js";
+import { CERTIFICATE_TYPES, isPlainLdap, ldapUrlSchema, serviceAccountField } from "./provider-ldap.js";
 import { METADATA_TYPES, metadataUrlSchema } from "./provider-saml.js";
 
 export function WizardFooter({ onBack, next }: { onBack?: () => void; next: ReactNode }) {
@@ -328,7 +333,7 @@ export function emptyDirectoryDraft(): DirectoryDraft {
   };
 }
 
-const DN_FIELDS = ["bindDn", "userBaseDn", "groupBaseDn"] as const;
+const DN_FIELDS = ["userBaseDn", "groupBaseDn"] as const;
 
 export function LdapConnectionStep({
   draft,
@@ -348,12 +353,14 @@ export function LdapConnectionStep({
   const [caFailure, setCaFailure] = useState<{ provider: IdentityProvider; message: string } | null>(null);
   const set = (patch: Partial<DirectoryDraft>) => onChange({ ...draft, ...patch });
   const plain = isPlainLdap(draft.url);
+  const serviceAccount = serviceAccountField(draft.preset);
 
   const validate = (): LdapConfigInput | null => {
     const common = validateCommon(t, { name, domains });
     const found = common.errors;
     if (!ldapUrlSchema.safeParse(draft.url.trim()).success)
       found.url = t("identityProviders.ldap.urlInvalid");
+    if (!serviceAccount.schema.safeParse(draft.bindDn).success) found.bindDn = t(serviceAccount.invalid);
     for (const field of DN_FIELDS) {
       if (!distinguishedNameSchema.safeParse(draft[field]).success) {
         found[field] = t("identityProviders.ldap.dnInvalid");
@@ -477,7 +484,7 @@ export function LdapConnectionStep({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field
           label={t("identityProviders.ldap.bindDn")}
-          hint={t("identityProviders.ldap.bindDnHint")}
+          hint={t(serviceAccount.hint)}
           {...(errors.bindDn ? { error: errors.bindDn } : {})}
         >
           <Input
