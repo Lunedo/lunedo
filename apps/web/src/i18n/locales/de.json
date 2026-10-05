@@ -748,7 +748,7 @@
       "actions": {
         "connection": "Prüfe Serveradresse, Port und die Firewall zwischen Pagehall und dem Verzeichnis und teste dann erneut.",
         "certificate": "Lade das CA-Zertifikat hoch, das das Zertifikat des Servers ausgestellt hat, und teste dann erneut.",
-        "serviceAccount": "Prüfe DN und Passwort des Dienstkontos und teste dann erneut.",
+        "serviceAccount": "Prüfe den Namen des Dienstkontos genau so, wie er in der Meldung steht, und sein Passwort und teste dann erneut.",
         "search": "Prüfe die Basis-DNs und die Filter und teste dann erneut."
       },
       "sample": "Gefundene Person",

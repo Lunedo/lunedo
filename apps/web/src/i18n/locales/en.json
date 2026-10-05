@@ -748,7 +748,7 @@
       "actions": {
         "connection": "Check the server address, the port and the firewall between Pagehall and the directory, then test again.",
         "certificate": "Upload the CA certificate that issued the server's certificate, then test again.",
-        "serviceAccount": "Check the DN and the password of the service account, then test again.",
+        "serviceAccount": "Check the name of the service account exactly as shown in the message, and its password, then test again.",
         "search": "Check the base DNs and the filters, then test again."
       },
       "sample": "Person found",

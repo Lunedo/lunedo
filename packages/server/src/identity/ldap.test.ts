@@ -463,5 +463,8 @@ describe("LDAP and Active Directory", () => {
       ["certificate", true],
       ["serviceAccount", false],
     ]);
+    expect(failed.steps.at(-1)?.detail).toContain(
+      `The directory refused the service account ${SERVICE_DN}: 80090308: LdapErr`,
+    );
   });
 });

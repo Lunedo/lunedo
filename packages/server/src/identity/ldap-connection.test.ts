@@ -2,9 +2,11 @@ import "reflect-metadata";
 import { webcrypto } from "node:crypto";
 import { type AddressInfo, createServer as createNetServer } from "node:net";
 import { createServer, type Server } from "node:tls";
+import { ldapConfigSchema } from "@pagehall/shared";
 import * as x509 from "@peculiar/x509";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { DirectoryConnectionError } from "./adapter.js";
+import { DirectoryConnectionError, type LdapProviderDefinition } from "./adapter.js";
+import { guidToBytes, LdapAdapter } from "./ldap.js";
 import { ldaptsConnector } from "./ldap-connection.js";
 import { parseCaCertificates } from "./providers.js";
 
@@ -128,6 +130,68 @@ describe("directory connections", () => {
     expect(received.map((data) => data[0])).toEqual([0x30, 0x30]);
     expect(received[0]?.includes(Buffer.from("cn=service"))).toBe(true);
     expect(received[1]?.includes(Buffer.from("1.3.6.1.4.1.1466.20037"))).toBe(true);
+  });
+
+  it("sends the service account name unchanged in every form and objectGUID filters as raw bytes", async () => {
+    const received: Buffer[] = [];
+    const reply = (id: Buffer, operation: number) => {
+      const result = Buffer.from([operation, 7, 0x0a, 1, 0, 0x04, 0, 0x04, 0]);
+      const body = Buffer.concat([Buffer.from([0x02, id.length]), id, result]);
+      return Buffer.concat([Buffer.from([0x30, body.length]), body]);
+    };
+    const server = createNetServer((socket) => {
+      socket.on("data", (data) => {
+        received.push(data);
+        const first = data[1] ?? 0;
+        const start = 2 + (first & 0x80 ? first & 0x7f : 0);
+        const id = data.subarray(start + 2, start + 2 + (data[start + 1] ?? 0));
+        const operation = data[start + 2 + id.length];
+        if (operation === 0x60) socket.write(reply(id, 0x61));
+        else if (operation === 0x63) socket.write(reply(id, 0x65));
+        else socket.end();
+      });
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const port = (server.address() as AddressInfo).port;
+    const adapter = new LdapAdapter({ allowInsecure: true });
+    const groupId = "6c7e9e97-f5c3-4b1a-8d2e-00000000ff80";
+    try {
+      for (const bindDn of [
+        "CN=svc-pagehall,OU=Service,DC=pagehall,DC=lab",
+        "svc-pagehall@pagehall.lab",
+        "PAGEHALL\\svc-pagehall",
+      ]) {
+        received.length = 0;
+        const provider: LdapProviderDefinition = {
+          id: "01929b1e-0000-7000-8000-000000000001",
+          name: "Active Directory",
+          directoryKey: null,
+          type: "ldap",
+          caCertificates: null,
+          config: ldapConfigSchema.parse({
+            preset: "activeDirectory",
+            url: `ldap://127.0.0.1:${port}`,
+            bindDn,
+            userBaseDn: "OU=Users,DC=pagehall,DC=lab",
+            groupBaseDn: "OU=Groups,DC=pagehall,DC=lab",
+          }),
+        };
+        const credential = {
+          id: "c",
+          kind: "bindPassword",
+          secret: "password",
+          keyId: null,
+          certificate: null,
+        } as const;
+        expect(await adapter.readGroup(provider, [credential], groupId)).toBeNull();
+        const sent = Buffer.concat(received);
+        const name = Buffer.from(bindDn, "utf8");
+        expect(sent.includes(Buffer.concat([Buffer.from([0x04, name.length]), name]))).toBe(true);
+        expect(sent.includes(Buffer.concat([Buffer.from([0x04, 16]), guidToBytes(groupId)]))).toBe(true);
+      }
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
   });
 
   it("fails a subtree search whose base does not exist and returns nothing for a missing entry", async () => {

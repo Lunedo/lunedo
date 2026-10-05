@@ -180,7 +180,7 @@ export class LdapAdapter implements IdentityProviderAdapter {
     }
     throw new DirectoryConnectionError(
       "serviceAccountRejected",
-      `The directory refused the service account: ${(rejected as Error | null)?.message ?? "no password"}`,
+      `The directory refused the service account ${ldap.config.bindDn}: ${(rejected as Error | null)?.message ?? "no password"}`,
     );
   }
 
