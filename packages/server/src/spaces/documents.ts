@@ -136,6 +136,10 @@ export class PageDocumentService {
     this.#origin = options.origin;
   }
 
+  get origin(): string {
+    return this.#origin;
+  }
+
   async snapshot(itemId: string): Promise<PageSnapshot | null> {
     const result = await this.#database.execute<{
       snapshot: unknown;

@@ -21,7 +21,11 @@ function databaseUrl(name: string): string {
   return url.toString();
 }
 
-function start(role: "api" | "worker", env: NodeJS.ProcessEnv, onLine: (line: string) => void): ChildProcess {
+function start(
+  role: "api" | "collab" | "worker",
+  env: NodeJS.ProcessEnv,
+  onLine: (line: string) => void,
+): ChildProcess {
   const child = spawn(
     process.execPath,
     ["--enable-source-maps", path.join(appRoot, `apps/${role}/dist/main.js`)],
@@ -70,7 +74,9 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     PAGEHALL_DATABASE_URL: databaseUrl(database),
     PAGEHALL_HOST: process.env.PAGEHALL_E2E_HOST ?? "127.0.0.1",
     PAGEHALL_API_PORT: String(E2E_PORT),
+    PAGEHALL_COLLAB_PORT: String(E2E_PORT + 1),
     PAGEHALL_WORKER_PORT: String(E2E_PORT + 2),
+    ...(process.env.PAGEHALL_E2E_REDIS_URL ? { PAGEHALL_REDIS_URL: process.env.PAGEHALL_E2E_REDIS_URL } : {}),
     PAGEHALL_WEB_ROOT: webRoot,
     PAGEHALL_SECRETS_DIR: path.join(dataDir, "secrets"),
     PAGEHALL_FILES_DIR: path.join(dataDir, "files"),
@@ -88,20 +94,27 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   };
   const api = start("api", env, capture);
   let worker: ChildProcess | undefined;
+  let collab: ChildProcess | undefined;
   try {
     await waitFor(async () => (await fetch(`${BASE_URL}/health/ready`)).ok, 120_000, "the API");
     worker = start("worker", env, (line) => log.push(line));
+    collab = start("collab", env, (line) => log.push(line));
+    await waitFor(
+      async () => (await fetch(`http://127.0.0.1:${E2E_PORT + 1}/health/ready`)).ok,
+      60_000,
+      "the collaboration server",
+    );
     await waitFor(async () => setupCode !== null, 10_000, "the setup code");
   } catch (error) {
     writeFileSync(path.join(STATE_DIR, "server.log"), log.join("\n"));
-    api.kill();
+    for (const child of [api, worker, collab]) child?.kill();
     throw error;
   }
   writeState({ setupCode: setupCode ?? "" });
 
   return async () => {
     writeFileSync(path.join(STATE_DIR, "server.log"), log.join("\n"));
-    for (const child of [api, worker]) child?.kill();
+    for (const child of [api, worker, collab]) child?.kill();
     await new Promise((resolve) => setTimeout(resolve, 1000));
     const cleanup = new pg.Client({ connectionString: DATABASE_BASE_URL });
     await cleanup.connect();

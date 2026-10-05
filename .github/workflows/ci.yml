@@ -98,9 +98,19 @@ jobs:
         ports:
           - 1025:1025
           - 8025:8025
+      valkey:
+        image: valkey/valkey:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     env:
       PAGEHALL_TEST_DATABASE_URL: postgres://pagehall:pagehall@localhost:5432/pagehall
       PAGEHALL_TEST_MAILPIT_URL: http://localhost:8025
+      PAGEHALL_TEST_REDIS_URL: redis://localhost:6379
       LANE: ${{ needs.scope.outputs.lane }}
       FORCE: ${{ github.event_name == 'push' }}
       SHARD: ${{ matrix.shard }}
@@ -183,9 +193,17 @@ jobs:
         image: axllent/mailpit:v1.31.3
         env:
           MP_DISABLE_VERSION_CHECK: "true"
+      valkey:
+        image: valkey/valkey:8-alpine
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     env:
       PAGEHALL_E2E_DATABASE_URL: postgres://pagehall:pagehall@postgres:5432/pagehall
       PAGEHALL_E2E_MAILPIT_URL: http://mailpit:8025
+      PAGEHALL_E2E_REDIS_URL: redis://valkey:6379
       PAGEHALL_E2E_SMTP_HOST: mailpit
       HOME: /root
     steps:

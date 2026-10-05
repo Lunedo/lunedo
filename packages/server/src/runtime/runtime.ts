@@ -61,6 +61,7 @@ export interface ServerRuntime {
   audit: AuditLog;
   services: AccountServices;
   notificationHub: NotificationHub;
+  listener: NotificationListener;
   /** Undefined for the collaboration server, which does not use jobs yet. */
   jobs: JobQueue | undefined;
   keyRotation: KeyRotation | undefined;
@@ -232,6 +233,7 @@ export async function createServerRuntime(options: {
       audit,
       services,
       notificationHub: new NotificationHub(listener),
+      listener,
       jobs,
       keyRotation,
       metrics,

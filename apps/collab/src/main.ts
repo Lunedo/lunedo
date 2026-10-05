@@ -17,7 +17,7 @@ try {
 }
 
 const { config, logger } = runtime;
-const server = createCollabServer({
+const server = await createCollabServer({
   host: config.host,
   port: config.ports.collab,
   endpoints: {
@@ -26,6 +26,8 @@ const server = createCollabServer({
     metrics: runtime.metrics,
     metricsToken: runtime.metricsToken.reveal(),
   },
+  runtime,
+  redisUrl: config.redisUrl?.reveal(),
 });
 
 await server.listen();

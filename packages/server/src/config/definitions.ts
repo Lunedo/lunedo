@@ -40,6 +40,22 @@ export const configSettings = [
   setting("PAGEHALL_API_PORT", port.default(3000), "Port of the API."),
   setting("PAGEHALL_COLLAB_PORT", port.default(3001), "Port of the collaboration server."),
   setting("PAGEHALL_WORKER_PORT", port.default(3002), "Port of the worker's health and metrics endpoints."),
+  setting(
+    "PAGEHALL_COLLAB_UPSTREAM",
+    nonEmpty
+      .refine(
+        (value) => /^https?:\/\/[^/]+\/?$/.test(value),
+        "must be an http:// or https:// address without a path",
+      )
+      .optional(),
+    "Address of the collaboration server that the API forwards /collab to. Defaults to the local collaboration port.",
+  ),
+  setting(
+    "PAGEHALL_REDIS_URL",
+    nonEmpty.refine((value) => /^rediss?:\/\//.test(value), "must be a redis:// or rediss:// URL").optional(),
+    "Redis connection URL. Collaboration servers synchronize documents through it when more than one runs.",
+    true,
+  ),
   setting("PAGEHALL_LOG_LEVEL", z.enum(logLevels).default("info"), "Minimum log level."),
   setting(
     "PAGEHALL_DATABASE_URL",

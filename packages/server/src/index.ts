@@ -39,10 +39,12 @@ export {
 } from "./accounts/principal.js";
 export { accountScopeChain } from "./accounts/scope.js";
 export {
+  AUDIT_CHANGES_CHANNEL,
   type AuditChangeSignal,
   AuditLog,
   type AuditScope,
   type AuditVerification,
+  parseAuditChangeSignal,
 } from "./audit/audit-log.js";
 export {
   type AuditChangeKind,
@@ -72,6 +74,7 @@ export {
 export { ARGON2_PARAMETERS, PASSWORD_MAX_LENGTH, PasswordHasher } from "./auth/passwords.js";
 export {
   type ClientInfo,
+  SESSION_COOKIE,
   type Session,
   SessionGoneError,
   type SessionKind,
@@ -114,6 +117,7 @@ export {
 export { BackupConfigurationError, type DatabaseArchiver, PostgresArchiver } from "./backup/postgres.js";
 export { checkRestoreComplete, IncompleteRestoreError } from "./backup/restore-marker.js";
 export { configurationForBackup } from "./config/backup-view.js";
+export { clientAddress, trustedProxyList } from "./config/client-address.js";
 export { configSettings, isAddressOrRange } from "./config/definitions.js";
 export type { ConfiguredSetup } from "./config/load.js";
 export { ConfigError, type Env, loadConfig, type ServerConfig } from "./config/load.js";
@@ -328,7 +332,7 @@ export {
 } from "./settings/service.js";
 export { applyConfiguredSetup } from "./setup/configured.js";
 export { SetupNotFoundError, type SetupStatus, SetupStepError } from "./setup/setup-service.js";
-export { SpaceError } from "./spaces/common.js";
+export { auditScopeOf, SpaceError } from "./spaces/common.js";
 export {
   API_ORIGIN,
   type Backlink,
@@ -338,10 +342,10 @@ export {
   MERGE_ORIGIN,
   normalizeLabel,
   type PageReferences,
-  pagePath,
-  renderPageMarkdown,
   type PageSnapshot,
+  pagePath,
   recordClient,
+  renderPageMarkdown,
 } from "./spaces/documents.js";
 export {
   cleanLinkUrl,

@@ -37,6 +37,8 @@ The master keys and the backup keys are needed to read encrypted data and backup
 | `PAGEHALL_API_PORT` | `3000` | | Port of the API. |
 | `PAGEHALL_COLLAB_PORT` | `3001` | | Port of the collaboration server. |
 | `PAGEHALL_WORKER_PORT` | `3002` | | Port of the worker's health and metrics endpoints. |
+| `PAGEHALL_COLLAB_UPSTREAM` | `http://127.0.0.1:` and the collaboration port | | Address of the collaboration server that the API forwards `/collab` to. See [collaboration.md](collaboration.md). |
+| `PAGEHALL_REDIS_URL` | | yes | Redis connection URL (`redis://` or `rediss://`). Needed only when more than one collaboration server runs; see [collaboration.md](collaboration.md). |
 | `PAGEHALL_LOG_LEVEL` | `info` | | One of `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `silent`. |
 | `PAGEHALL_DATABASE_URL` | required | yes | PostgreSQL connection URL, `postgres://user:password@host:5432/database`. |
 | `PAGEHALL_DATABASE_POOL_SIZE` | `10` | | Maximum database connections per process. |

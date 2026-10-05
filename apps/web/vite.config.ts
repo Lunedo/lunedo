@@ -20,17 +20,25 @@ export default defineConfig({
     hmr: instance
       ? { protocol: instance.socketProtocol, host: instance.hostname, clientPort: instance.port }
       : undefined,
-    proxy: Object.fromEntries(
-      ["/api", "/scim"].map((path) => [
-        path,
-        {
-          target: process.env.PAGEHALL_DEV_API_URL ?? "http://localhost:3000",
-          changeOrigin: false,
-          xfwd: true,
-          ...(instance ? { headers: instance.forwardedHeaders } : {}),
-        },
-      ]),
-    ),
+    proxy: {
+      ...Object.fromEntries(
+        ["/api", "/scim"].map((path) => [
+          path,
+          {
+            target: process.env.PAGEHALL_DEV_API_URL ?? "http://localhost:3000",
+            changeOrigin: false,
+            xfwd: true,
+            ...(instance ? { headers: instance.forwardedHeaders } : {}),
+          },
+        ]),
+      ),
+      "/collab": {
+        target: process.env.PAGEHALL_DEV_COLLAB_URL ?? "ws://localhost:3001",
+        ws: true,
+        changeOrigin: false,
+        xfwd: true,
+      },
+    },
   },
   preview: {
     port: 4173,
