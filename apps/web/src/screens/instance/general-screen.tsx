@@ -8,6 +8,7 @@ import { SettingsList } from "../../components/settings-list.js";
 import { type SettingChange, useInstanceSettingMutation } from "../../settings/setting-mutations.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
+import { InstanceAddressRow } from "./instance-address.js";
 
 export function settingPermission(key: string): string {
   if (key.startsWith("auth.")) return "instance.signIn.manage";
@@ -59,11 +60,9 @@ export function InstanceGeneralScreen() {
     >
       <MailNotice />
       <Section title={t("instance.general.identity")}>
-        <SettingsList
-          {...editor}
-          keys={["instance.name", "instance.url", "branding.accentColor"]}
-          level="instance"
-        />
+        <SettingsList {...editor} keys={["instance.name"]} level="instance" />
+        <InstanceAddressRow canManage={editor.canManage("instance.url")} />
+        <SettingsList {...editor} keys={["branding.accentColor"]} level="instance" />
       </Section>
       <Section title={t("instance.general.localeDefaults")}>
         <SettingsList

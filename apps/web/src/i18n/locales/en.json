@@ -1165,7 +1165,9 @@
     "anonymizeSelf": "You cannot anonymize your own account. Ask another administrator.",
     "notPlaceholder": "This account is not a placeholder anymore, or it was merged already. Reload the page.",
     "invalidMailConfiguration": "The e-mail settings are not valid. Check the marked fields, then save again.",
-    "mailNotReady": "This sending method is not set up yet. Save its settings and, for Microsoft Graph, add a credential first."
+    "mailNotReady": "This sending method is not set up yet. Save its settings and, for Microsoft Graph, add a credential first.",
+    "instanceUrlFromEnvironment": "The server environment sets the address with PAGEHALL_INSTANCE_URL. Change the variable and restart Pagehall.",
+    "instanceMoved": "Pagehall has moved to another address. Open it at its new address."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -2467,7 +2469,21 @@
       "retention": "Retention and API",
       "mailMissingTitle": "E-mail is not set up",
       "mailMissing": "Pagehall sends no invitations and no e-mail notifications until a mail server or Microsoft Graph is set up. Notifications still appear in the app.",
-      "mailSettings": "Set up e-mail"
+      "mailSettings": "Set up e-mail",
+      "addressFromEnvironment": "Set by PAGEHALL_INSTANCE_URL in the server environment. To change it, change the variable and restart Pagehall.",
+      "addressInvalid": "Enter an address with http:// or https:// and without a path, for example https://wiki.example.org.",
+      "addressUnchanged": "This is the current address. Enter the new one.",
+      "addressConfirmTitle": "Move Pagehall to {url}?",
+      "addressConfirmIntro": "Make sure Pagehall is reachable at the new address first. Then:",
+      "addressEffectPasskeys": "Passkeys registered under the old address stop working. Everyone signs in with another method and adds a new passkey.",
+      "addressEffectProviders": "Redirect and reply URLs at every identity provider must be updated to the new address, or sign-in through them fails.",
+      "addressEffectSessions": "All open sessions end, also yours. This browser opens the new address, where you sign in again.",
+      "addressMove": "Move to new address",
+      "addressKeep": "Keep current address",
+      "movedTitle": "Pagehall has moved",
+      "movedDescription": "This page is open under {old}, but Pagehall is now at {url}. Changes made here cannot be saved. Sessions under the old address have ended.",
+      "movedAction": "Open {url}",
+      "movedPasskeys": "If you signed in with a passkey, sign in with another method at the new address and add a new passkey there."
     },
     "organizations": {
       "search": "Search by name or short name",
@@ -2730,7 +2746,8 @@
         "responsibleChanged": "Responsible person changed"
       },
       "instance": {
-        "ownershipTransferred": "Instance ownership transferred"
+        "ownershipTransferred": "Instance ownership transferred",
+        "addressChanged": "Instance address changed"
       },
       "breakGlass": {
         "started": "Break-glass access started",
@@ -2871,7 +2888,9 @@
       "tenantId": "Tenant",
       "clientId": "Client ID",
       "sender": "Sender",
-      "senderName": "Sender name"
+      "senderName": "Sender name",
+      "url": "Address",
+      "previousUrl": "Previous address"
     },
     "values": {
       "account": "Account",
@@ -3104,7 +3123,8 @@
     "startProviderDraft": "The setup could not be started",
     "finishProviderSetup": "The setup could not be finished",
     "removeDraft": "The draft could not be removed",
-    "loadDrafts": "The drafts could not be loaded"
+    "loadDrafts": "The drafts could not be loaded",
+    "changeAddress": "The address was not changed"
   },
   "lifecycle": {
     "placeholder": {

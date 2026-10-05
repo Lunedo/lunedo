@@ -229,13 +229,15 @@ export function instanceStep(deps: SetupStepDependencies): SetupStep {
         name: await deps.settings.get(instanceNameSetting, {}),
         suggestedUrl:
           deps.configuredInstanceUrl ?? (request.host ? `${request.protocol}://${request.host}` : null),
+        urlFromEnvironment: Boolean(deps.configuredInstanceUrl),
       };
     },
     actions: {
       save: defineSetupAction({
         input: setupStepSchemas.instance.actions.save.input,
         async run(context, input) {
-          await deps.settings.set(instanceUrlSetting, {}, "instance", input.url, { tx: context.tx });
+          const url = deps.configuredInstanceUrl || input.url;
+          await deps.settings.set(instanceUrlSetting, {}, "instance", url, { tx: context.tx });
           await deps.settings.set(instanceNameSetting, {}, "instance", input.name, { tx: context.tx });
           await context.complete();
           return {};

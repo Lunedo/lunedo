@@ -59,11 +59,21 @@ export function isApiError(error: unknown, code?: string): error is ApiError {
 
 type ReauthenticationHandler = () => Promise<boolean>;
 type SignedOutHandler = (code: string) => void;
+type MovedHandler = (url: string) => void;
 
-const handlers: { reauthenticate: ReauthenticationHandler | null; signedOut: SignedOutHandler | null } = {
+const handlers: {
+  reauthenticate: ReauthenticationHandler | null;
+  signedOut: SignedOutHandler | null;
+  moved: MovedHandler | null;
+} = {
   reauthenticate: null,
   signedOut: null,
+  moved: null,
 };
+
+export function setMovedHandler(handler: MovedHandler | null): void {
+  handlers.moved = handler;
+}
 
 export function setReauthenticationHandler(handler: ReauthenticationHandler | null): void {
   handlers.reauthenticate = handler;
@@ -99,5 +109,7 @@ export async function request<T>(call: () => Promise<Result<T>>, options: Reques
     if (await handlers.reauthenticate()) return request(call, { sessionHandling: false });
   }
   if (sessionHandling && SIGNED_OUT.has(error.code)) handlers.signedOut?.(error.code);
+  if (error.code === "instanceMoved" && error.problem.instanceUrl)
+    handlers.moved?.(error.problem.instanceUrl);
   throw error;
 }

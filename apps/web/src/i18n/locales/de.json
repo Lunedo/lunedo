@@ -1165,7 +1165,9 @@
     "anonymizeSelf": "Du kannst dein eigenes Konto nicht anonymisieren. Bitte eine andere Person aus der Administration.",
     "notPlaceholder": "Dieses Konto ist kein Platzhalter mehr oder wurde bereits zusammengeführt. Lade die Seite neu.",
     "invalidMailConfiguration": "Die E-Mail-Einstellungen sind ungültig. Prüfe die markierten Felder und speichere erneut.",
-    "mailNotReady": "Diese Versandart ist noch nicht eingerichtet. Speichere ihre Einstellungen und füge für Microsoft Graph zuerst Zugangsdaten hinzu."
+    "mailNotReady": "Diese Versandart ist noch nicht eingerichtet. Speichere ihre Einstellungen und füge für Microsoft Graph zuerst Zugangsdaten hinzu.",
+    "instanceUrlFromEnvironment": "Die Serverumgebung legt die Adresse mit PAGEHALL_INSTANCE_URL fest. Ändere die Variable und starte Pagehall neu.",
+    "instanceMoved": "Pagehall ist an eine andere Adresse umgezogen. Öffne es unter der neuen Adresse."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -2464,7 +2466,21 @@
       "retention": "Aufbewahrung und API",
       "mailMissingTitle": "E-Mail ist nicht eingerichtet",
       "mailMissing": "Pagehall versendet keine Einladungen und keine Benachrichtigungen per E-Mail, bis ein Mailserver oder Microsoft Graph eingerichtet ist. Benachrichtigungen erscheinen weiterhin in der App.",
-      "mailSettings": "E-Mail einrichten"
+      "mailSettings": "E-Mail einrichten",
+      "addressFromEnvironment": "Festgelegt durch PAGEHALL_INSTANCE_URL in der Serverumgebung. Um sie zu ändern, ändere die Variable und starte Pagehall neu.",
+      "addressInvalid": "Gib eine Adresse mit http:// oder https:// und ohne Pfad ein, zum Beispiel https://wiki.example.org.",
+      "addressUnchanged": "Das ist die aktuelle Adresse. Gib die neue ein.",
+      "addressConfirmTitle": "Pagehall nach {url} umziehen?",
+      "addressConfirmIntro": "Stell zuerst sicher, dass Pagehall unter der neuen Adresse erreichbar ist. Dann:",
+      "addressEffectPasskeys": "Passkeys, die unter der alten Adresse registriert wurden, funktionieren nicht mehr. Alle melden sich mit einer anderen Methode an und fügen einen neuen Passkey hinzu.",
+      "addressEffectProviders": "Redirect- und Reply-URLs müssen bei jedem Identitätsanbieter auf die neue Adresse geändert werden, sonst schlägt die Anmeldung darüber fehl.",
+      "addressEffectSessions": "Alle offenen Sitzungen enden, auch deine. Dieser Browser öffnet die neue Adresse, wo du dich neu anmeldest.",
+      "addressMove": "Zur neuen Adresse umziehen",
+      "addressKeep": "Aktuelle Adresse behalten",
+      "movedTitle": "Pagehall ist umgezogen",
+      "movedDescription": "Diese Seite ist unter {old} geöffnet, Pagehall ist aber jetzt unter {url} erreichbar. Änderungen hier können nicht gespeichert werden. Sitzungen unter der alten Adresse wurden beendet.",
+      "movedAction": "{url} öffnen",
+      "movedPasskeys": "Wenn du dich mit einem Passkey angemeldet hast, melde dich unter der neuen Adresse mit einer anderen Methode an und füge dort einen neuen Passkey hinzu."
     },
     "organizations": {
       "search": "Nach Name oder Kurzname suchen",
@@ -2727,7 +2743,8 @@
         "responsibleChanged": "Verantwortliche Person geändert"
       },
       "instance": {
-        "ownershipTransferred": "Owner der Instanz übertragen"
+        "ownershipTransferred": "Owner der Instanz übertragen",
+        "addressChanged": "Adresse der Instanz geändert"
       },
       "breakGlass": {
         "started": "Notfallzugriff begonnen",
@@ -2868,7 +2885,9 @@
       "tenantId": "Mandant",
       "clientId": "Client-ID",
       "sender": "Absender",
-      "senderName": "Absendername"
+      "senderName": "Absendername",
+      "url": "Adresse",
+      "previousUrl": "Vorherige Adresse"
     },
     "values": {
       "account": "Konto",
@@ -3101,7 +3120,8 @@
     "startProviderDraft": "Die Einrichtung konnte nicht begonnen werden",
     "finishProviderSetup": "Die Einrichtung konnte nicht abgeschlossen werden",
     "removeDraft": "Der Entwurf konnte nicht entfernt werden",
-    "loadDrafts": "Die Entwürfe konnten nicht geladen werden"
+    "loadDrafts": "Die Entwürfe konnten nicht geladen werden",
+    "changeAddress": "Die Adresse wurde nicht geändert"
   },
   "lifecycle": {
     "placeholder": {

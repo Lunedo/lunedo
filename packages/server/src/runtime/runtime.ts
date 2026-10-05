@@ -198,6 +198,8 @@ export async function createServerRuntime(options: {
       ...(options.mailTransport ? { mailTransport: options.mailTransport } : {}),
     });
 
+    await services.instanceAddress.applyConfigured();
+
     if (jobs && keyRotation) {
       if (role === "worker") {
         await workAccountJobs(jobs, services, settings);

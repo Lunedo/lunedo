@@ -96,7 +96,12 @@ export const setupStepSchemas = {
     actions: { acknowledge: { input: empty, result: empty } },
   },
   instance: {
-    details: z.object({ url: z.string(), name: z.string(), suggestedUrl: z.string().nullable() }),
+    details: z.object({
+      url: z.string(),
+      name: z.string(),
+      suggestedUrl: z.string().nullable(),
+      urlFromEnvironment: z.boolean(),
+    }),
     actions: {
       save: {
         input: z.object({ url: instanceUrlSchema, name: instanceNameSchema }).strict(),

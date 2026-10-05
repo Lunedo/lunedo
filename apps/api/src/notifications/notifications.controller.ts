@@ -217,7 +217,9 @@ data: ${JSON.stringify(signal)}
       if (signal.scope === "organization") {
         if (!signal.organizationId) return false;
         const viewer = ORGANIZATION_VIEWERS[signal.target];
-        return (viewer !== undefined && (await allowed(viewer))) || (await allowed("organization.audit.view"));
+        return (
+          (viewer !== undefined && (await allowed(viewer))) || (await allowed("organization.audit.view"))
+        );
       }
       const viewer = INSTANCE_VIEWERS[signal.target];
       return (viewer !== undefined && (await allowed(viewer))) || (await allowed("instance.audit.view"));

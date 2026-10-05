@@ -16,7 +16,10 @@ export function InstanceStep({ details, back, onDone }: StepProps<"instance">) {
   const [error, setError] = useState<string | null>(null);
   const form = useSchemaForm(instanceForm, {
     defaultValues: {
-      url: details.url || details.suggestedUrl || globalThis.location?.origin || "",
+      url:
+        (details.urlFromEnvironment ? details.suggestedUrl : details.url || details.suggestedUrl) ||
+        globalThis.location?.origin ||
+        "",
       name: details.name,
     },
     messages: { url: t("validation.instanceUrl") },
@@ -40,10 +43,19 @@ export function InstanceStep({ details, back, onDone }: StepProps<"instance">) {
       ) : null}
       <Field
         label={t("setup.instance.url")}
-        hint={t("setup.instance.urlHint")}
+        hint={
+          details.urlFromEnvironment
+            ? t("instance.general.addressFromEnvironment")
+            : t("setup.instance.urlHint")
+        }
         error={form.formState.errors.url?.message}
       >
-        <Input type="url" autoComplete="url" {...form.register("url")} />
+        <Input
+          type="url"
+          autoComplete="url"
+          readOnly={details.urlFromEnvironment}
+          {...form.register("url")}
+        />
       </Field>
       {needsHttpsWarning(form.watch("url")) ? (
         <Notice variant="warning" title={t("setup.instance.notHttpsTitle")}>

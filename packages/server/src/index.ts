@@ -7,6 +7,13 @@ export {
   PasswordPolicyError,
 } from "./accounts/accounts.js";
 export { AccountAdministrationService, type IdentitySummary } from "./accounts/administration.js";
+export {
+  type InstanceAddress,
+  InstanceAddressConfiguredError,
+  InstanceAddressInvalidError,
+  InstanceAddressService,
+  type InstanceAddressSource,
+} from "./accounts/instance-address.js";
 export { instanceNameSetting, instanceUrlSetting } from "./accounts/instance-settings.js";
 export {
   AccountLifecycleService,

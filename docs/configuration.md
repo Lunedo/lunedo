@@ -53,7 +53,7 @@ The master keys and the backup keys are needed to read encrypted data and backup
 | `PAGEHALL_PASSWORD_HASH_CONCURRENCY` | `4` | | Password hashes computed at once per process. Each needs about 19 MiB of memory; further sign-ins wait, and beyond a queue of 25 per slot they are rejected with 503. |
 | `PAGEHALL_INSECURE_IDENTITY_PROVIDERS` | `false` | | `true` allows identity providers reached without HTTPS, such as a local Keycloak. Only for development and tests; never set it in production. |
 | `PAGEHALL_SETUP_CODE` | generated | yes | Setup code for the setup assistant, at least 12 characters not counting spaces and hyphens, at most 64. When set, Pagehall uses it instead of a generated code and does not print it. Ignored once setup is complete. |
-| `PAGEHALL_INSTANCE_URL` | none | | Address of the instance, for example `https://wiki.example.org`. Alone, it is used for the setup link in the log and prefills the instance step of the setup assistant. Together with the owner and organization settings, it is part of setup through configuration. |
+| `PAGEHALL_INSTANCE_URL` | none | | Address of the instance, for example `https://wiki.example.org`. When set, it is the address: Pagehall stores it at every start, and the setup assistant and the instance settings show it read-only. Together with the owner and organization settings, it is part of setup through configuration. |
 | `PAGEHALL_INSTANCE_NAME` | `Pagehall` | | Setup through configuration: name of the instance. |
 | `PAGEHALL_OWNER_EMAIL` | none | | Setup through configuration: e-mail address of the owner account. |
 | `PAGEHALL_OWNER_NAME` | none | | Setup through configuration: name of the owner account. |
@@ -72,7 +72,9 @@ The master keys and the backup keys are needed to read encrypted data and backup
 
 On the first start, Pagehall opens a setup assistant that is protected by a one-time setup code, either from `PAGEHALL_SETUP_CODE` or from the container log (see [setup.md](setup.md)). For automated deployments, the setup values can be given through configuration instead: `PAGEHALL_INSTANCE_URL`, `PAGEHALL_OWNER_EMAIL`, `PAGEHALL_OWNER_NAME`, `PAGEHALL_OWNER_PASSWORD` and `PAGEHALL_ORGANIZATION_NAME` are required together, the instance name and the SMTP settings are optional. When they are set, the first API node that starts applies them, the assistant is skipped and no setup code is printed. The organization gets the formats the assistant would propose for its language and time zone (see [setup.md](setup.md)).
 
-`PAGEHALL_INSTANCE_URL` can also be set on its own. Then it only defines the address: the setup link in the log uses it and the assistant suggests it in the instance step, but setup still runs through the assistant.
+`PAGEHALL_INSTANCE_URL` can also be set on its own. Then it only defines the address: the setup link in the log uses it and the assistant shows it in the instance step, but setup still runs through the assistant.
+
+Without `PAGEHALL_INSTANCE_URL`, administrators change the address under Settings, Instance, General. Moving to a new address ends every session, passkeys registered under the old address stop working, and the redirect and reply URLs at every identity provider must be updated; the dialog lists these effects before the change. A browser tab still open under the old address shows the new address instead of failing.
 
 The values are applied once. Later changes to these settings have no effect; change the instance in its settings instead. The owner must set up a second factor at the first sign-in. Back up the master keys and the backup keys yourself, because the assistant's key backup step is skipped.
 

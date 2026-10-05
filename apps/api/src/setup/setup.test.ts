@@ -341,7 +341,10 @@ describe.skipIf(!databaseBaseUrl)("setup with an instance URL that differs from 
       email: "someone@example.org",
       password: "whatever it is",
     });
-    expect(signIn.json()).toMatchObject({ code: "csrfRejected" });
+    expect(signIn.json()).toMatchObject({
+      code: "instanceMoved",
+      instanceUrl: "https://wiki.elsewhere.example",
+    });
 
     const anotherClient = new TestClient(test.app, { remoteAddress: CLIENT_IP });
     const restart = await anotherClient.post(

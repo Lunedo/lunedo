@@ -68,6 +68,8 @@ const KNOWN = new Set([
   "homeOrganization",
   "deactivateSelf",
   "instanceOwner",
+  "instanceUrlFromEnvironment",
+  "instanceMoved",
   "settingLocked",
   "setupIncomplete",
   "setupNotReady",
