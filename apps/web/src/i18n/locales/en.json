@@ -2909,7 +2909,9 @@
       "invitation": "Invitation",
       "breakGlassAccess": "Break-glass access",
       "apiToken": "API token",
-      "audit": "Audit log"
+      "audit": "Audit log",
+      "identityProvider": "Identity provider",
+      "mappingRule": "Mapping rule"
     },
     "properties": {
       "value": "Value",
@@ -2936,7 +2938,8 @@
       "lockedUntil": "Locked until",
       "logoRef": "Logo",
       "masterKeyVersions": "Master key versions",
-      "method": "Sending method",
+      "method": "Sign-in method",
+      "mailMethod": "Sending method",
       "methods": "Methods",
       "name": "Name",
       "notifiedCount": "People notified",

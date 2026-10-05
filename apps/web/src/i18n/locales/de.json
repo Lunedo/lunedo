@@ -2906,7 +2906,9 @@
       "invitation": "Einladung",
       "breakGlassAccess": "Notfallzugriff",
       "apiToken": "API-Token",
-      "audit": "Audit-Log"
+      "audit": "Audit-Log",
+      "identityProvider": "Identitätsanbieter",
+      "mappingRule": "Gruppenzuordnung"
     },
     "properties": {
       "value": "Wert",
@@ -2933,7 +2935,8 @@
       "lockedUntil": "Gesperrt bis",
       "logoRef": "Logo",
       "masterKeyVersions": "Versionen der Hauptschlüssel",
-      "method": "Versandart",
+      "method": "Anmeldemethode",
+      "mailMethod": "Versandart",
       "methods": "Methoden",
       "name": "Name",
       "notifiedCount": "Benachrichtigte Personen",

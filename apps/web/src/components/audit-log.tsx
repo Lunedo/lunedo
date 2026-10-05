@@ -4,6 +4,7 @@ import {
   Combobox,
   type ComboboxItem,
   Drawer,
+  Field,
   Input,
   Table,
   TableToolbar,
@@ -143,22 +144,22 @@ export function AuditLog({
       <TableToolbar
         filters={
           <>
-            <Input
-              type="date"
-              aria-label={t("audit.from")}
-              title={t("audit.from")}
-              className="w-auto"
-              value={filters.from}
-              onChange={(event) => update({ from: event.target.value })}
-            />
-            <Input
-              type="date"
-              aria-label={t("audit.to")}
-              title={t("audit.to")}
-              className="w-auto"
-              value={filters.to}
-              onChange={(event) => update({ to: event.target.value })}
-            />
+            <Field label={t("audit.from")}>
+              <Input
+                type="date"
+                className="w-auto"
+                value={filters.from}
+                onChange={(event) => update({ from: event.target.value })}
+              />
+            </Field>
+            <Field label={t("audit.to")}>
+              <Input
+                type="date"
+                className="w-auto"
+                value={filters.to}
+                onChange={(event) => update({ to: event.target.value })}
+              />
+            </Field>
             <div className="w-field max-w-full">
               <Combobox
                 aria-label={t("audit.action")}
