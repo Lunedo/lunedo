@@ -37,10 +37,10 @@ import type { BuiltInRoleKey } from "../organizations/access-schema.js";
 import { LOGO_MAX_BYTES, logoContentType, OrganizationError } from "../organizations/organizations.js";
 import type { SettingsService } from "../settings/service.js";
 import {
-  plainText,
   type ProviderCapabilities,
   type ProviderCredential,
   type ProviderDefinition,
+  plainText,
 } from "./adapter.js";
 import { generateCertificate } from "./certificates.js";
 import { foreignDirectoryEndpoint, foreignGraphEndpoint } from "./directory.js";

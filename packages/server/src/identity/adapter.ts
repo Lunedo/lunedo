@@ -199,10 +199,13 @@ export interface IdentityProviderAdapter {
 }
 
 export function plainText(text: string): string {
-  return text
-    .replace(/[\t\n\r]+/g, " ")
-    .replace(/[\u0000-\u001f\u007f-\u009f]/g, "")
-    .trim();
+  let plain = "";
+  for (const character of text) {
+    const code = character.codePointAt(0) ?? 0;
+    if (code === 0x09 || code === 0x0a || code === 0x0d) plain += " ";
+    else if (code >= 0x20 && (code < 0x7f || code > 0x9f)) plain += character;
+  }
+  return plain.replace(/ {2,}/g, " ").trim();
 }
 
 export class ProviderResponseError extends Error {

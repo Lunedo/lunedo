@@ -58,19 +58,24 @@ describe("ldapServerAddress", () => {
     ).toBe(address);
   });
 
-  it.each(["", "https://dc01.pagehall.lab", "ldaps://", "ldaps://dc01/path", "dc 01", "ldaps://user@dc01", "::"])(
-    "refuses %j without throwing",
-    (input) => {
-      expect(ldapServerAddress(input)).toBeNull();
-      expect(
-        ldapConfigSchema.safeParse({
-          preset: "activeDirectory",
-          url: input,
-          bindDn: "svc@example.org",
-          userBaseDn: "DC=example,DC=org",
-          groupBaseDn: "DC=example,DC=org",
-        }).success,
-      ).toBe(false);
-    },
-  );
+  it.each([
+    "",
+    "https://dc01.pagehall.lab",
+    "ldaps://",
+    "ldaps://dc01/path",
+    "dc 01",
+    "ldaps://user@dc01",
+    "::",
+  ])("refuses %j without throwing", (input) => {
+    expect(ldapServerAddress(input)).toBeNull();
+    expect(
+      ldapConfigSchema.safeParse({
+        preset: "activeDirectory",
+        url: input,
+        bindDn: "svc@example.org",
+        userBaseDn: "DC=example,DC=org",
+        groupBaseDn: "DC=example,DC=org",
+      }).success,
+    ).toBe(false);
+  });
 });
