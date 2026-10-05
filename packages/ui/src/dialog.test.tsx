@@ -144,3 +144,14 @@ describe("ConfirmDialog for an irreversible action", () => {
     expect(onConfirm).toHaveBeenCalledOnce();
   });
 });
+
+describe("dialog width", () => {
+  it("lets the dialog shrink below its content on narrow screens", () => {
+    renderUi(
+      <Dialog open onOpenChange={() => undefined} title="Create role">
+        <p>Body</p>
+      </Dialog>,
+    );
+    expect(screen.getByRole("dialog", { name: "Create role" }).className).toContain("min-w-0");
+  });
+});

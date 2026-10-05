@@ -165,14 +165,20 @@ export function SettingRow({ label, description, meta, control, menu, status }: 
           <div data-setting-control="" className="flex w-full min-w-0 justify-end sm:w-field">
             {control}
           </div>
-          <div data-setting-menu="" className="flex w-control-md shrink-0 justify-end">
+          <div
+            data-setting-menu=""
+            className={classNames("w-control-md shrink-0 justify-end", menu ? "flex" : "hidden sm:flex")}
+          >
             {menu}
           </div>
         </div>
         {status ? (
           <div className="flex justify-end gap-3">
             <div className="flex w-full min-w-0 justify-end sm:w-field">{status}</div>
-            <div aria-hidden="true" className="w-control-md shrink-0" />
+            <div
+              aria-hidden="true"
+              className={classNames("w-control-md shrink-0", menu ? "block" : "hidden sm:block")}
+            />
           </div>
         ) : null}
       </div>

@@ -73,6 +73,15 @@ describe("Section headers", () => {
   });
 });
 
+describe("SettingRow", () => {
+  it("leaves no room for a missing menu on narrow screens", () => {
+    renderUi(<SettingRow label="E-mail" control={<Button>Change e-mail address</Button>} />);
+    const menu = document.querySelector("[data-setting-menu]");
+    expect(menu?.className).toContain("hidden");
+    expect(menu?.className).toContain("sm:flex");
+  });
+});
+
 describe("ListRow", () => {
   it("shows details below the row across its full width", () => {
     renderUi(

@@ -44,7 +44,7 @@ export function Dialog({
             onCloseAutoFocus={returnFocus}
             {...(description ? {} : { "aria-describedby": undefined })}
             className={classNames(
-              "flex w-full flex-col gap-4 rounded-lg bg-surface p-5 text-text shadow-dialog focus-visible:focus-ring",
+              "flex w-full min-w-0 flex-col gap-4 rounded-lg bg-surface p-5 text-text shadow-dialog focus-visible:focus-ring",
               SIZES[size],
             )}
           >
