@@ -1076,7 +1076,8 @@
     "then": "then",
     "groups": {
       "general": "General",
-      "navigation": "Navigation"
+      "navigation": "Navigation",
+      "editor": "Editor"
     },
     "commandPalette": "Open the command palette",
     "search": "Search",
@@ -3292,6 +3293,330 @@
       "action": "Anonymize",
       "done": "The account was anonymized",
       "reasonRequired": "Enter why the account is anonymized, for example the date of the erasure request."
+    }
+  },
+  "editor": {
+    "contentLabel": "Page content",
+    "placeholder": "Type / for blocks, @ to mention someone, [[ to link a page",
+    "suggestions": {
+      "blocks": "Blocks",
+      "people": "People",
+      "pages": "Pages",
+      "empty": "Nothing found. Try another word.",
+      "newPage": "Link to a new page “{title}”",
+      "newPageDescription": "The page is created in this space when someone opens the link"
+    },
+    "slashGroups": {
+      "text": "Text",
+      "lists": "Lists",
+      "blocks": "Blocks",
+      "inline": "In the text"
+    },
+    "blocks": {
+      "paragraph": "Paragraph",
+      "paragraphDescription": "Plain text",
+      "heading1": "Heading 1",
+      "heading2": "Heading 2",
+      "heading3": "Heading 3",
+      "heading4": "Heading 4",
+      "heading5": "Heading 5",
+      "heading6": "Heading 6",
+      "headingDescription": "Section title",
+      "bulletList": "Bulleted list",
+      "bulletListDescription": "List with bullet points",
+      "orderedList": "Numbered list",
+      "orderedListDescription": "List with numbers",
+      "taskList": "Task list",
+      "taskListDescription": "Checklist of things to do",
+      "blockquote": "Quote",
+      "blockquoteDescription": "Quoted text",
+      "codeBlock": "Code block",
+      "codeBlockDescription": "Code with syntax highlighting",
+      "callout": {
+        "info": "Info panel",
+        "tip": "Tip panel",
+        "note": "Note panel",
+        "warning": "Warning panel",
+        "error": "Error panel"
+      },
+      "calloutDescription": "Highlighted box for important information",
+      "expand": "Expand",
+      "expandDescription": "Content that readers open on demand",
+      "columns2": "Two columns",
+      "columns3": "Three columns",
+      "columns4": "Four columns",
+      "columnsDescription": "Content side by side",
+      "horizontalRule": "Divider",
+      "horizontalRuleDescription": "Line between sections",
+      "table": "Table",
+      "tableDescription": "Rows and columns, cells can be merged",
+      "tableOfContents": "Table of contents",
+      "tableOfContentsDescription": "Links to the headings of this page",
+      "blockMath": "Formula",
+      "blockMathDescription": "Formula on its own line, written in LaTeX",
+      "inlineMath": "Formula in text",
+      "inlineMathDescription": "Formula inside a sentence, written in LaTeX",
+      "status": "Status",
+      "statusDescription": "Colored label such as “In progress”",
+      "date": "Date",
+      "dateDescription": "Today's date, changeable",
+      "mention": "Mention",
+      "mentionDescription": "Name a person",
+      "pageLink": "Link to a page",
+      "pageLinkDescription": "Link to a page in any space you can read",
+      "emoji": "Emoji",
+      "emojiDescription": "Pick an emoji"
+    },
+    "mention": {
+      "unknown": "Unknown person"
+    },
+    "pageLink": {
+      "noAccess": "No access",
+      "loading": "Loading page…",
+      "missingHint": "This page does not exist yet. Opening the link creates it.",
+      "followFailed": "The page could not be opened",
+      "followFailedDescription": "It may have been moved, or you may not be allowed to create pages in that space. Try again, or ask a space admin."
+    },
+    "status": {
+      "edit": "Status {text}, change",
+      "title": "Change status",
+      "text": "Text",
+      "textInvalid": "Enter 1 to 40 characters.",
+      "color": "Color",
+      "apply": "Apply",
+      "default": "To do"
+    },
+    "date": {
+      "edit": "Date {date}, change",
+      "title": "Change date",
+      "label": "Date"
+    },
+    "colors": {
+      "default": "Default color",
+      "none": "No color",
+      "gray": "Gray",
+      "red": "Red",
+      "orange": "Orange",
+      "yellow": "Yellow",
+      "green": "Green",
+      "teal": "Teal",
+      "blue": "Blue",
+      "purple": "Purple",
+      "pink": "Pink"
+    },
+    "math": {
+      "edit": "Formula {latex}, edit",
+      "empty": "Empty formula",
+      "title": "Edit formula",
+      "formula": "Formula in LaTeX",
+      "hintBlock": "For example \\sum_{i=1}^{n} i. Press Ctrl+Enter to apply.",
+      "hintInline": "For example E = mc^2. Press Enter to apply.",
+      "preview": "Preview",
+      "invalid": "The formula has an error. Check brackets and commands.",
+      "apply": "Apply"
+    },
+    "toc": {
+      "title": "Table of contents",
+      "levels": "Up to level {level}",
+      "empty": "Add headings to fill the table of contents.",
+      "untitled": "Untitled heading"
+    },
+    "callout": {
+      "change": "Change panel type",
+      "info": "Info",
+      "tip": "Tip",
+      "note": "Note",
+      "warning": "Warning",
+      "error": "Error"
+    },
+    "expand": {
+      "open": "Open",
+      "collapse": "Close",
+      "titleLabel": "Title of the expandable section",
+      "titlePlaceholder": "Title"
+    },
+    "columns": {
+      "layout": "Change column widths"
+    },
+    "code": {
+      "plain": "Plain text",
+      "language": "Language",
+      "searchLanguage": "Search language"
+    },
+    "unsupportedMacro": "Unsupported macro: {name}",
+    "attachment": {
+      "image": "Image {name}",
+      "file": "File {name}"
+    },
+    "presence": {
+      "label": "{count, plural, one {# person} other {# people}} on this page",
+      "you": "{name} (you)",
+      "more": "{count} more"
+    },
+    "save": {
+      "editing": "Editing",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "offline": "Offline, changes are kept in this tab",
+      "error": "Not saved"
+    },
+    "toolbar": {
+      "label": "Formatting",
+      "more": "More formatting",
+      "hide": "Hide toolbar",
+      "show": "Show toolbar",
+      "undo": "Undo",
+      "redo": "Redo",
+      "blockType": "Text style",
+      "bold": "Bold",
+      "italic": "Italic",
+      "underline": "Underline",
+      "strike": "Strikethrough",
+      "code": "Inline code",
+      "subscript": "Subscript",
+      "superscript": "Superscript",
+      "textColor": "Text color",
+      "highlight": "Highlight",
+      "clearFormatting": "Clear formatting",
+      "bulletList": "Bulleted list",
+      "orderedList": "Numbered list",
+      "taskList": "Task list",
+      "align": "Alignment",
+      "alignLeft": "Align left",
+      "alignCenter": "Center",
+      "alignRight": "Align right",
+      "alignJustify": "Justify",
+      "indent": "Indent",
+      "outdent": "Outdent",
+      "link": "Link",
+      "table": "Insert table",
+      "mention": "Mention someone",
+      "emoji": "Emoji",
+      "date": "Insert today's date",
+      "insert": "Insert",
+      "find": "Find and replace"
+    },
+    "selectionMenu": {
+      "label": "Format selection",
+      "turnIntoTask": "Turn into task"
+    },
+    "link": {
+      "title": "Link",
+      "address": "Web address",
+      "addressHint": "An address starting with https://, an e-mail address or a path such as /spaces/IT.",
+      "addressPlaceholder": "https://example.org",
+      "addressInvalid": "Enter a web address, an e-mail address or a path that starts with /.",
+      "apply": "Apply link",
+      "remove": "Remove link",
+      "page": "Or link a page",
+      "pageHint": "Search the pages you can read by title.",
+      "pagePlaceholder": "Search pages"
+    },
+    "table": {
+      "label": "Table",
+      "rows": "Rows",
+      "columns": "Columns",
+      "addRowBefore": "Add row above",
+      "addRowAfter": "Add row below",
+      "deleteRow": "Delete row",
+      "addColumnBefore": "Add column to the left",
+      "addColumnAfter": "Add column to the right",
+      "deleteColumn": "Delete column",
+      "mergeCells": "Merge cells",
+      "splitCell": "Split cell",
+      "headerRow": "Header row on or off",
+      "headerColumn": "Header column on or off",
+      "background": "Cell background",
+      "deleteTable": "Delete table"
+    },
+    "find": {
+      "label": "Find and replace",
+      "query": "Find",
+      "queryPlaceholder": "Find in page",
+      "replacement": "Replace with",
+      "replacementPlaceholder": "Replace with",
+      "next": "Next match",
+      "previous": "Previous match",
+      "replace": "Replace",
+      "replaceAll": "Replace all",
+      "caseSensitive": "Match case",
+      "close": "Close find",
+      "count": "{current} of {total}",
+      "none": "No matches"
+    },
+    "emoji": {
+      "title": "Insert emoji",
+      "search": "Search emoji",
+      "searchPlaceholder": "For example smile or heart",
+      "empty": "No emoji found. Try another word.",
+      "loading": "Loading emoji",
+      "failed": "The emoji could not be loaded. Check your connection and open the picker again.",
+      "results": "{count, plural, one {# emoji} other {# emoji}}"
+    },
+    "drag": {
+      "handle": "Drag to move the block",
+      "moved": "Block moved"
+    },
+    "readView": {
+      "untitledPage": "Untitled page",
+      "unsupportedMacro": "Unsupported macro: {name}",
+      "file": "File",
+      "image": "Image",
+      "invalid": "This page cannot be shown because its stored content is damaged. Ask a space admin to restore an earlier version."
+    },
+    "shortcuts": {
+      "slash": "Insert a block",
+      "mention": "Mention someone",
+      "pageLink": "Link to a page",
+      "toolbar": "Move focus to the toolbar"
+    },
+    "problems": {
+      "reload": "Reload page",
+      "signIn": "Sign in again",
+      "originNotAllowed": {
+        "title": "Editing is not available at this address",
+        "description": "Pagehall accepts editing only at its configured address. Open the page through the instance address and try again."
+      },
+      "tokenNotAllowed": {
+        "title": "Editing needs a signed-in session",
+        "description": "API tokens cannot edit pages together with others. Sign in in the browser to edit."
+      },
+      "notSignedIn": {
+        "title": "You are signed out",
+        "description": "Your session has ended. Sign in again to keep editing."
+      },
+      "pageNotFound": {
+        "title": "The page cannot be edited",
+        "description": "It may have been moved or you may no longer have access. Reload to see where it is now."
+      },
+      "noEditPermission": {
+        "title": "You can read this page but not edit it",
+        "description": "Ask a space admin for the editor role if you need to change it."
+      },
+      "tooManyConnections": {
+        "title": "Too many open editors",
+        "description": "You have this page open in many tabs. Close some of them and reload."
+      },
+      "updateRejected": {
+        "title": "Your last change could not be saved",
+        "description": "It did not match the allowed page content. Reload the page; changes that were saved before stay."
+      },
+      "permissionRevoked": {
+        "title": "You can no longer edit this page",
+        "description": "Your edit permission was removed while the page was open. The page is now read-only; changes you made before were saved."
+      },
+      "sessionEnded": {
+        "title": "Your session ended",
+        "description": "Changes made before are saved. Sign in again to keep editing."
+      },
+      "tooManyMessages": {
+        "title": "Editing paused",
+        "description": "Too many changes arrived in a short time. Wait a moment, then reload to continue."
+      },
+      "unknown": {
+        "title": "Editing stopped",
+        "description": "The connection to the server was closed. Reload to continue editing."
+      }
     }
   }
 }

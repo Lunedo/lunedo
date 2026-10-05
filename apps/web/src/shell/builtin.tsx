@@ -19,6 +19,7 @@ import {
   Users,
   UsersRound,
 } from "lucide-react";
+import "../editor/shortcuts.js";
 import { AccountRailItem } from "./account-menu.js";
 import { commands, navigationItems, railItems, shortcuts } from "./extensions.js";
 import { HelpRailItem, NotificationsRailItem, SearchRailItem, SettingsRailItem } from "./rail-items.js";

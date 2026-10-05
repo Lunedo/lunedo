@@ -49,8 +49,9 @@ export interface Shortcut {
   id: string;
   order?: number;
   keys: string[];
-  group: "general" | "navigation";
+  group: "general" | "navigation" | "editor";
   labelKey: string;
+  listOnly?: boolean;
   run: (context: ShellContext) => void;
 }
 

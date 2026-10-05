@@ -42,7 +42,11 @@ function ShellFrame() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const registeredShortcuts = useRegistry(shortcuts);
+  const allShortcuts = useRegistry(shortcuts);
+  const registeredShortcuts = useMemo(
+    () => allShortcuts.filter((shortcut) => !shortcut.listOnly),
+    [allShortcuts],
+  );
   const items = useRegistry(railItems);
 
   const signOut = useCallback(() => {

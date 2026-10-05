@@ -1076,7 +1076,8 @@
     "then": "dann",
     "groups": {
       "general": "Allgemein",
-      "navigation": "Navigation"
+      "navigation": "Navigation",
+      "editor": "Editor"
     },
     "commandPalette": "Befehlspalette öffnen",
     "search": "Suchen",
@@ -3289,6 +3290,330 @@
       "action": "Anonymisieren",
       "done": "Das Konto wurde anonymisiert",
       "reasonRequired": "Gib an, warum das Konto anonymisiert wird, zum Beispiel das Datum des Löschantrags."
+    }
+  },
+  "editor": {
+    "contentLabel": "Seiteninhalt",
+    "placeholder": "/ für Blöcke, @ um jemanden zu erwähnen, [[ um eine Seite zu verlinken",
+    "suggestions": {
+      "blocks": "Blöcke",
+      "people": "Personen",
+      "pages": "Seiten",
+      "empty": "Nichts gefunden. Versuche ein anderes Wort.",
+      "newPage": "Link auf neue Seite „{title}“",
+      "newPageDescription": "Die Seite wird in diesem Space angelegt, wenn jemand den Link öffnet"
+    },
+    "slashGroups": {
+      "text": "Text",
+      "lists": "Listen",
+      "blocks": "Blöcke",
+      "inline": "Im Text"
+    },
+    "blocks": {
+      "paragraph": "Absatz",
+      "paragraphDescription": "Normaler Text",
+      "heading1": "Überschrift 1",
+      "heading2": "Überschrift 2",
+      "heading3": "Überschrift 3",
+      "heading4": "Überschrift 4",
+      "heading5": "Überschrift 5",
+      "heading6": "Überschrift 6",
+      "headingDescription": "Abschnittstitel",
+      "bulletList": "Aufzählung",
+      "bulletListDescription": "Liste mit Punkten",
+      "orderedList": "Nummerierte Liste",
+      "orderedListDescription": "Liste mit Zahlen",
+      "taskList": "Aufgabenliste",
+      "taskListDescription": "Checkliste mit Aufgaben",
+      "blockquote": "Zitat",
+      "blockquoteDescription": "Zitierter Text",
+      "codeBlock": "Codeblock",
+      "codeBlockDescription": "Code mit Syntaxhervorhebung",
+      "callout": {
+        "info": "Info-Box",
+        "tip": "Tipp-Box",
+        "note": "Notiz-Box",
+        "warning": "Warnungs-Box",
+        "error": "Fehler-Box"
+      },
+      "calloutDescription": "Hervorgehobene Box für wichtige Informationen",
+      "expand": "Aufklappbereich",
+      "expandDescription": "Inhalt, den Lesende bei Bedarf öffnen",
+      "columns2": "Zwei Spalten",
+      "columns3": "Drei Spalten",
+      "columns4": "Vier Spalten",
+      "columnsDescription": "Inhalte nebeneinander",
+      "horizontalRule": "Trennlinie",
+      "horizontalRuleDescription": "Linie zwischen Abschnitten",
+      "table": "Tabelle",
+      "tableDescription": "Zeilen und Spalten, Zellen lassen sich verbinden",
+      "tableOfContents": "Inhaltsverzeichnis",
+      "tableOfContentsDescription": "Links zu den Überschriften dieser Seite",
+      "blockMath": "Formel",
+      "blockMathDescription": "Formel in eigener Zeile, in LaTeX",
+      "inlineMath": "Formel im Text",
+      "inlineMathDescription": "Formel innerhalb eines Satzes, in LaTeX",
+      "status": "Status",
+      "statusDescription": "Farbiges Label wie „In Arbeit“",
+      "date": "Datum",
+      "dateDescription": "Heutiges Datum, änderbar",
+      "mention": "Erwähnung",
+      "mentionDescription": "Eine Person nennen",
+      "pageLink": "Link auf eine Seite",
+      "pageLinkDescription": "Link auf eine Seite in einem Space, den du lesen kannst",
+      "emoji": "Emoji",
+      "emojiDescription": "Ein Emoji auswählen"
+    },
+    "mention": {
+      "unknown": "Unbekannte Person"
+    },
+    "pageLink": {
+      "noAccess": "Kein Zugriff",
+      "loading": "Seite wird geladen …",
+      "missingHint": "Diese Seite gibt es noch nicht. Das Öffnen des Links legt sie an.",
+      "followFailed": "Die Seite konnte nicht geöffnet werden",
+      "followFailedDescription": "Vielleicht wurde sie verschoben, oder du darfst in diesem Space keine Seiten anlegen. Versuche es erneut oder frage einen Space-Admin."
+    },
+    "status": {
+      "edit": "Status {text}, ändern",
+      "title": "Status ändern",
+      "text": "Text",
+      "textInvalid": "Gib 1 bis 40 Zeichen ein.",
+      "color": "Farbe",
+      "apply": "Übernehmen",
+      "default": "Offen"
+    },
+    "date": {
+      "edit": "Datum {date}, ändern",
+      "title": "Datum ändern",
+      "label": "Datum"
+    },
+    "colors": {
+      "default": "Standardfarbe",
+      "none": "Keine Farbe",
+      "gray": "Grau",
+      "red": "Rot",
+      "orange": "Orange",
+      "yellow": "Gelb",
+      "green": "Grün",
+      "teal": "Türkis",
+      "blue": "Blau",
+      "purple": "Lila",
+      "pink": "Pink"
+    },
+    "math": {
+      "edit": "Formel {latex}, bearbeiten",
+      "empty": "Leere Formel",
+      "title": "Formel bearbeiten",
+      "formula": "Formel in LaTeX",
+      "hintBlock": "Zum Beispiel \\sum_{i=1}^{n} i. Mit Strg+Eingabe übernehmen.",
+      "hintInline": "Zum Beispiel E = mc^2. Mit Eingabe übernehmen.",
+      "preview": "Vorschau",
+      "invalid": "Die Formel enthält einen Fehler. Prüfe Klammern und Befehle.",
+      "apply": "Übernehmen"
+    },
+    "toc": {
+      "title": "Inhaltsverzeichnis",
+      "levels": "Bis Ebene {level}",
+      "empty": "Füge Überschriften hinzu, um das Inhaltsverzeichnis zu füllen.",
+      "untitled": "Überschrift ohne Text"
+    },
+    "callout": {
+      "change": "Art der Box ändern",
+      "info": "Info",
+      "tip": "Tipp",
+      "note": "Notiz",
+      "warning": "Warnung",
+      "error": "Fehler"
+    },
+    "expand": {
+      "open": "Öffnen",
+      "collapse": "Schließen",
+      "titleLabel": "Titel des Aufklappbereichs",
+      "titlePlaceholder": "Titel"
+    },
+    "columns": {
+      "layout": "Spaltenbreiten ändern"
+    },
+    "code": {
+      "plain": "Reiner Text",
+      "language": "Sprache",
+      "searchLanguage": "Sprache suchen"
+    },
+    "unsupportedMacro": "Nicht unterstütztes Makro: {name}",
+    "attachment": {
+      "image": "Bild {name}",
+      "file": "Datei {name}"
+    },
+    "presence": {
+      "label": "{count, plural, one {# Person} other {# Personen}} auf dieser Seite",
+      "you": "{name} (du)",
+      "more": "{count} weitere"
+    },
+    "save": {
+      "editing": "Bearbeitung",
+      "saving": "Wird gespeichert …",
+      "saved": "Gespeichert",
+      "offline": "Offline, Änderungen bleiben in diesem Tab erhalten",
+      "error": "Nicht gespeichert"
+    },
+    "toolbar": {
+      "label": "Formatierung",
+      "more": "Weitere Formatierung",
+      "hide": "Werkzeugleiste ausblenden",
+      "show": "Werkzeugleiste einblenden",
+      "undo": "Rückgängig",
+      "redo": "Wiederholen",
+      "blockType": "Textstil",
+      "bold": "Fett",
+      "italic": "Kursiv",
+      "underline": "Unterstrichen",
+      "strike": "Durchgestrichen",
+      "code": "Code im Text",
+      "subscript": "Tiefgestellt",
+      "superscript": "Hochgestellt",
+      "textColor": "Textfarbe",
+      "highlight": "Hervorheben",
+      "clearFormatting": "Formatierung entfernen",
+      "bulletList": "Aufzählung",
+      "orderedList": "Nummerierte Liste",
+      "taskList": "Aufgabenliste",
+      "align": "Ausrichtung",
+      "alignLeft": "Linksbündig",
+      "alignCenter": "Zentriert",
+      "alignRight": "Rechtsbündig",
+      "alignJustify": "Blocksatz",
+      "indent": "Einzug vergrößern",
+      "outdent": "Einzug verkleinern",
+      "link": "Link",
+      "table": "Tabelle einfügen",
+      "mention": "Jemanden erwähnen",
+      "emoji": "Emoji",
+      "date": "Heutiges Datum einfügen",
+      "insert": "Einfügen",
+      "find": "Suchen und ersetzen"
+    },
+    "selectionMenu": {
+      "label": "Auswahl formatieren",
+      "turnIntoTask": "In Aufgabe umwandeln"
+    },
+    "link": {
+      "title": "Link",
+      "address": "Webadresse",
+      "addressHint": "Eine Adresse mit https://, eine E-Mail-Adresse oder ein Pfad wie /spaces/IT.",
+      "addressPlaceholder": "https://example.org",
+      "addressInvalid": "Gib eine Webadresse, eine E-Mail-Adresse oder einen Pfad ein, der mit / beginnt.",
+      "apply": "Link übernehmen",
+      "remove": "Link entfernen",
+      "page": "Oder eine Seite verlinken",
+      "pageHint": "Durchsucht die Titel der Seiten, die du lesen kannst.",
+      "pagePlaceholder": "Seiten suchen"
+    },
+    "table": {
+      "label": "Tabelle",
+      "rows": "Zeilen",
+      "columns": "Spalten",
+      "addRowBefore": "Zeile oberhalb einfügen",
+      "addRowAfter": "Zeile unterhalb einfügen",
+      "deleteRow": "Zeile löschen",
+      "addColumnBefore": "Spalte links einfügen",
+      "addColumnAfter": "Spalte rechts einfügen",
+      "deleteColumn": "Spalte löschen",
+      "mergeCells": "Zellen verbinden",
+      "splitCell": "Zelle teilen",
+      "headerRow": "Kopfzeile ein oder aus",
+      "headerColumn": "Kopfspalte ein oder aus",
+      "background": "Zellenhintergrund",
+      "deleteTable": "Tabelle löschen"
+    },
+    "find": {
+      "label": "Suchen und ersetzen",
+      "query": "Suchen",
+      "queryPlaceholder": "Auf der Seite suchen",
+      "replacement": "Ersetzen durch",
+      "replacementPlaceholder": "Ersetzen durch",
+      "next": "Nächster Treffer",
+      "previous": "Vorheriger Treffer",
+      "replace": "Ersetzen",
+      "replaceAll": "Alle ersetzen",
+      "caseSensitive": "Groß- und Kleinschreibung beachten",
+      "close": "Suche schließen",
+      "count": "{current} von {total}",
+      "none": "Keine Treffer"
+    },
+    "emoji": {
+      "title": "Emoji einfügen",
+      "search": "Emoji suchen",
+      "searchPlaceholder": "Zum Beispiel lächeln oder Herz",
+      "empty": "Kein Emoji gefunden. Versuche ein anderes Wort.",
+      "loading": "Emoji werden geladen",
+      "failed": "Die Emoji konnten nicht geladen werden. Prüfe die Verbindung und öffne die Auswahl erneut.",
+      "results": "{count, plural, one {# Emoji} other {# Emoji}}"
+    },
+    "drag": {
+      "handle": "Ziehen, um den Block zu verschieben",
+      "moved": "Block verschoben"
+    },
+    "readView": {
+      "untitledPage": "Seite ohne Titel",
+      "unsupportedMacro": "Nicht unterstütztes Makro: {name}",
+      "file": "Datei",
+      "image": "Bild",
+      "invalid": "Diese Seite kann nicht angezeigt werden, weil ihr gespeicherter Inhalt beschädigt ist. Bitte einen Space-Admin, eine frühere Version wiederherzustellen."
+    },
+    "shortcuts": {
+      "slash": "Block einfügen",
+      "mention": "Jemanden erwähnen",
+      "pageLink": "Seite verlinken",
+      "toolbar": "Fokus in die Werkzeugleiste"
+    },
+    "problems": {
+      "reload": "Seite neu laden",
+      "signIn": "Erneut anmelden",
+      "originNotAllowed": {
+        "title": "Bearbeiten ist unter dieser Adresse nicht möglich",
+        "description": "Pagehall erlaubt das Bearbeiten nur unter seiner eingestellten Adresse. Öffne die Seite über die Adresse der Instanz und versuche es erneut."
+      },
+      "tokenNotAllowed": {
+        "title": "Zum Bearbeiten ist eine Anmeldung nötig",
+        "description": "API-Tokens können Seiten nicht gemeinsam mit anderen bearbeiten. Melde dich im Browser an, um zu bearbeiten."
+      },
+      "notSignedIn": {
+        "title": "Du bist abgemeldet",
+        "description": "Deine Sitzung ist beendet. Melde dich erneut an, um weiter zu bearbeiten."
+      },
+      "pageNotFound": {
+        "title": "Die Seite kann nicht bearbeitet werden",
+        "description": "Vielleicht wurde sie verschoben oder du hast keinen Zugriff mehr. Lade neu, um zu sehen, wo sie jetzt ist."
+      },
+      "noEditPermission": {
+        "title": "Du kannst diese Seite lesen, aber nicht bearbeiten",
+        "description": "Bitte einen Space-Admin um die Rolle Bearbeiter, wenn du sie ändern musst."
+      },
+      "tooManyConnections": {
+        "title": "Zu viele offene Editoren",
+        "description": "Du hast diese Seite in vielen Tabs geöffnet. Schließe einige davon und lade neu."
+      },
+      "updateRejected": {
+        "title": "Deine letzte Änderung konnte nicht gespeichert werden",
+        "description": "Sie entsprach nicht dem erlaubten Seiteninhalt. Lade die Seite neu; zuvor gespeicherte Änderungen bleiben erhalten."
+      },
+      "permissionRevoked": {
+        "title": "Du kannst diese Seite nicht mehr bearbeiten",
+        "description": "Dein Bearbeitungsrecht wurde entfernt, während die Seite offen war. Die Seite ist jetzt schreibgeschützt; deine bisherigen Änderungen wurden gespeichert."
+      },
+      "sessionEnded": {
+        "title": "Deine Sitzung ist beendet",
+        "description": "Bisherige Änderungen sind gespeichert. Melde dich erneut an, um weiter zu bearbeiten."
+      },
+      "tooManyMessages": {
+        "title": "Bearbeitung pausiert",
+        "description": "In kurzer Zeit kamen zu viele Änderungen an. Warte einen Moment und lade dann neu, um weiterzumachen."
+      },
+      "unknown": {
+        "title": "Bearbeitung beendet",
+        "description": "Die Verbindung zum Server wurde geschlossen. Lade neu, um weiter zu bearbeiten."
+      }
     }
   }
 }
