@@ -20,7 +20,7 @@ export class PeopleService {
     this.#authorization = options.authorization;
   }
 
-  visibleCondition(viewer: Principal, account: SQL): SQL {
+  colleagueCondition(viewer: Principal, account: SQL): SQL {
     if (viewer.type === "system") return sql`true`;
     if (viewer.type === "anonymous") return sql`false`;
     const viewerId = sql`${viewer.id}::uuid`;
@@ -31,7 +31,13 @@ export class PeopleService {
           and ma.account_id = ${account} and (ma.expires_at is null or ma.expires_at > now()))
       or exists (select 1 from service_accounts sa join memberships mv on mv.organization_id = sa.organization_id
         where sa.account_id = ${account} and mv.account_id = ${viewerId} and mv.kind = 'member'
-          and (mv.expires_at is null or mv.expires_at > now()))
+          and (mv.expires_at is null or mv.expires_at > now())))`;
+  }
+
+  visibleCondition(viewer: Principal, account: SQL): SQL {
+    if (viewer.type === "system") return sql`true`;
+    if (viewer.type === "anonymous") return sql`false`;
+    return sql`(${this.colleagueCondition(viewer, account)}
       or exists (select 1 from space_permissions sp join spaces vs on vs.id = sp.space_id
         where sp.principal_kind = 'account' and sp.principal_id = ${account}
           and ${this.#authorization.spaceFilter(viewer, sql`vs`)}))`;
@@ -55,10 +61,11 @@ export class PeopleService {
       type: string;
       sort_name: string;
     }>(sql`
-      select a.id, a.name, a.email, a.type::text as type, ${sortName} as sort_name
+      select a.id, a.name, case when ${this.colleagueCondition(viewer, sql`a.id`)} then a.email end as email,
+        a.type::text as type, ${sortName} as sort_name
       from accounts a
       where a.state = 'active' and ${this.visibleCondition(viewer, sql`a.id`)}
-        ${term ? sql`and (a.name ilike ${pattern} or a.email ilike ${pattern})` : sql``}
+        ${term ? sql`and (a.name ilike ${pattern} or (a.email ilike ${pattern} and ${this.colleagueCondition(viewer, sql`a.id`)}))` : sql``}
         ${page.after ? sql`and ${afterKey([sortName, sql`a.id`], page.after)}` : sql``}
       order by ${sortName}, a.id
       limit ${pageLimit(page)}`);
