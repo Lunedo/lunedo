@@ -19,12 +19,37 @@ import { sessionOf } from "../http/request.js";
 
 const TAG = "Notifications";
 
-const INSTANCE_CHANGE_VIEWERS = [
-  "instance.accounts.view",
-  "instance.organizations.view",
-  "instance.signIn.view",
-  "instance.audit.view",
-] as const;
+const INSTANCE_VIEWERS: Partial<Record<AuditChangeSignal["target"], InstanceAction>> = {
+  account: "instance.accounts.view",
+  invitation: "instance.accounts.view",
+  organization: "instance.organizations.view",
+  role: "instance.roles.view",
+  roleAssignment: "instance.roles.view",
+  identityProvider: "instance.signIn.view",
+  mappingRule: "instance.signIn.view",
+};
+
+const ORGANIZATION_VIEWERS: Partial<Record<AuditChangeSignal["target"], OrganizationAction>> = {
+  account: "organization.members.view",
+  invitation: "organization.members.view",
+  group: "organization.groups.view",
+  role: "organization.roles.view",
+  roleAssignment: "organization.roles.view",
+  apiToken: "organization.integrations.view",
+};
+
+type InstanceAction =
+  | "instance.accounts.view"
+  | "instance.organizations.view"
+  | "instance.roles.view"
+  | "instance.signIn.view"
+  | "instance.audit.view";
+type OrganizationAction =
+  | "organization.members.view"
+  | "organization.groups.view"
+  | "organization.roles.view"
+  | "organization.integrations.view"
+  | "organization.audit.view";
 
 export const HEARTBEAT_MS = 25_000;
 
@@ -126,7 +151,7 @@ export class NotificationsController {
     raw: {
       contentTypes: ["text/event-stream"],
       description:
-        "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log. The event `changes` names the kind of object that changed in the instance or in an organization, as recorded in the audit log, sent only to callers who may view that organization or an administrative area of the instance; reload lists that show such objects.",
+        "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log. The event `changes` names the kind of object that changed in the instance or in an organization, as recorded in the audit log, sent only to callers who may view such objects there or the audit log of that level; reload lists that show such objects.",
       example:
         'event: notifications\ndata: {"unreadCount":2}\n\nevent: settings\ndata: {"key":"branding.accentColor","level":"instance","organizationId":null}\n\nevent: syncRuns\ndata: {"providerId":"01929b1e-0000-7000-8000-000000000001","runId":"01929b1e-0000-7000-8000-000000000002"}\n\nevent: changes\ndata: {"scope":"organization","organizationId":"01929b1e-0000-7000-8000-000000000003","target":"group"}\n\n',
     },
@@ -182,18 +207,20 @@ data: ${JSON.stringify(signal)}
     const pendingChanges = new Set<string>();
     const mayFollow = async (signal: AuditChangeSignal): Promise<boolean> => {
       const principal = accountPrincipal(session.accountId);
-      if (signal.scope === "organization" && signal.organizationId) {
-        const decision = await services.authorization.explain(principal, "organization.view", {
-          type: "organization",
-          id: signal.organizationId,
-        });
-        return decision.allowed;
+      const allowed = async (action: InstanceAction | OrganizationAction) => {
+        const resource =
+          signal.scope === "organization" && signal.organizationId
+            ? { type: "organization", id: signal.organizationId }
+            : { type: "instance" };
+        return (await services.authorization.explain(principal, action, resource)).allowed;
+      };
+      if (signal.scope === "organization") {
+        if (!signal.organizationId) return false;
+        const viewer = ORGANIZATION_VIEWERS[signal.target];
+        return (viewer !== undefined && (await allowed(viewer))) || (await allowed("organization.audit.view"));
       }
-      for (const action of INSTANCE_CHANGE_VIEWERS) {
-        if ((await services.authorization.explain(principal, action, { type: "instance" })).allowed)
-          return true;
-      }
-      return false;
+      const viewer = INSTANCE_VIEWERS[signal.target];
+      return (viewer !== undefined && (await allowed(viewer))) || (await allowed("instance.audit.view"));
     };
     const sendChange = (signal: AuditChangeSignal) => {
       const data = JSON.stringify(signal);

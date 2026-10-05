@@ -250,6 +250,15 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
     const responses: IncomingMessage[] = [];
     const member = await createAccount(test, "changes-member@pagehall.test");
     const memberClient = await signedInClient(test, member.email, member.password);
+    const elsewhere = await owner.post("/api/v1/organizations", { name: "Changes elsewhere" });
+    expect(elsewhere.statusCode).toBe(201);
+    const outsider = await createAccount(
+      test,
+      "changes-outsider@pagehall.test",
+      "a long enough passphrase",
+      elsewhere.json().id,
+    );
+    const outsiderClient = await signedInClient(test, outsider.email, outsider.password);
     try {
       second = await createTestApp(apiContextOf(secondRuntime));
       await second.listen(0, "127.0.0.1");
@@ -276,6 +285,7 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
       };
       const administrator = await follow(owner);
       const colleague = await follow(memberClient);
+      const stranger = await follow(outsiderClient);
 
       const created = await owner.post(`/api/v1/organizations/${organizationId}/groups`, {
         name: `Live ${randomUUID().slice(0, 8)}`,
@@ -292,8 +302,18 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
       expect(placeholder.statusCode).toBe(201);
       const accountChange = { scope: "instance", organizationId: null, target: "account" };
       await expect.poll(() => administrator.changes, { timeout: 5000 }).toContainEqual(accountChange);
+      await test.runtime.audit.recordAlone({
+        name: "apiToken.revoked",
+        targetId: randomUUID(),
+        scope: { type: "organization", id: organizationId },
+        fields: { accountId: ownerId, reason: "revoked" },
+      });
+      const tokenChange = { scope: "organization", organizationId, target: "apiToken" };
+      await expect.poll(() => administrator.changes, { timeout: 5000 }).toContainEqual(tokenChange);
       await new Promise((resolve) => setTimeout(resolve, 300));
       expect(colleague.changes).not.toContainEqual(accountChange);
+      expect(colleague.changes).not.toContainEqual(tokenChange);
+      expect(stranger.changes).toEqual([]);
     } finally {
       for (const response of responses) response.destroy();
       await second?.close();
