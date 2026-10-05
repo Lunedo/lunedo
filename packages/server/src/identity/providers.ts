@@ -36,7 +36,12 @@ import type { NotificationService } from "../notifications/service.js";
 import type { BuiltInRoleKey } from "../organizations/access-schema.js";
 import { LOGO_MAX_BYTES, logoContentType, OrganizationError } from "../organizations/organizations.js";
 import type { SettingsService } from "../settings/service.js";
-import type { ProviderCapabilities, ProviderCredential, ProviderDefinition } from "./adapter.js";
+import {
+  plainText,
+  type ProviderCapabilities,
+  type ProviderCredential,
+  type ProviderDefinition,
+} from "./adapter.js";
 import { generateCertificate } from "./certificates.js";
 import { foreignDirectoryEndpoint, foreignGraphEndpoint } from "./directory.js";
 import { emptyReport, type GroupMappingService } from "./groups.js";
@@ -1067,7 +1072,7 @@ export class IdentityProviderService {
       });
       this.#parseMetadata(xml);
     } catch (error) {
-      const message = (error instanceof Error ? error.message : String(error)).slice(0, 500);
+      const message = plainText(error instanceof Error ? error.message : String(error)).slice(0, 500);
       await this.#database.transaction(async (tx) => {
         await tx
           .update(samlMetadata)

@@ -198,8 +198,19 @@ export interface IdentityProviderAdapter {
   ): Promise<number | null>;
 }
 
+export function plainText(text: string): string {
+  return text
+    .replace(/[\t\n\r]+/g, " ")
+    .replace(/[\u0000-\u001f\u007f-\u009f]/g, "")
+    .trim();
+}
+
 export class ProviderResponseError extends Error {
   override name = "ProviderResponseError";
+
+  constructor(message: string) {
+    super(plainText(message));
+  }
 }
 
 export class ProviderPolicyError extends Error {
@@ -244,7 +255,7 @@ export class DirectorySignInError extends Error {
     readonly reason: DirectorySignInFailure,
     message: string,
   ) {
-    super(message);
+    super(plainText(message));
   }
 }
 

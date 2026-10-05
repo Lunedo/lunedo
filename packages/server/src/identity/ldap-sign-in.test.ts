@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { ANONYMOUS, accountPrincipal, SYSTEM } from "../accounts/principal.js";
+import { AuditLog } from "../audit/audit-log.js";
 import { InvalidCredentialsError, LockedError, RateLimitedError } from "../auth/errors.js";
 import { runWithRequestContext } from "../observability/request-context.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
@@ -9,6 +11,7 @@ import { type FakeOidcProvider, startFakeOidcProvider } from "../testing/fake-oi
 import { FakeLdapDirectory, type FakeLdapEntry, objectGuid } from "../testing/fakes/ldap-directory.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { guidFromBytes } from "./ldap.js";
+import { providerSyncRuns } from "./schema.js";
 import { type CallbackResult, DirectorySignInRefusedError } from "./sign-in.js";
 
 const baseUrl = testDatabaseBaseUrl();
@@ -265,6 +268,50 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
     users.attributes.member = [alice.dn];
     expect((await test.services.providerSync.run(ad.id, "manual"))?.status).toBe("succeeded");
     expect(await membership(org.id, accountId)).toBe(true);
+  });
+
+  it("ends a run as failed without the null byte that Active Directory appends to its messages", async () => {
+    const ad = await activeDirectoryProvider();
+    const service = directory.find(SERVICE_DN) as FakeLdapEntry;
+    service.bindError =
+      "80090308: LdapErr: DSID-0C09044E, comment: AcceptSecurityContext error, data 52e, v65f4\u0000";
+    try {
+      const run = await test.services.providerSync.run(ad.id, "manual");
+      expect(run?.status).toBe("failed");
+      const [stored] = await test.database
+        .select({ error: providerSyncRuns.error })
+        .from(providerSyncRuns)
+        .where(eq(providerSyncRuns.id, run?.id ?? ""));
+      expect(stored?.error).toMatch(/data 52e, v65f4$/);
+      const tested = await test.services.providerSignIn.testDirectory(ad.id, null);
+      const detail = tested.steps.find((step) => !step.ok)?.detail ?? "";
+      expect(detail).toMatch(/v65f4$/);
+    } finally {
+      delete service.bindError;
+    }
+  });
+
+  it("ends a run as failed when its result cannot be stored", async () => {
+    const ad = await activeDirectoryProvider();
+    const record = AuditLog.prototype.record;
+    const spy = vi.spyOn(AuditLog.prototype, "record").mockImplementation(function (
+      this: AuditLog,
+      tx,
+      input,
+    ) {
+      if (input.name === "identityProvider.synchronized") return Promise.reject(new Error("storage failed"));
+      return record.call(this, tx, input);
+    });
+    try {
+      await expect(test.services.providerSync.run(ad.id, "manual")).rejects.toThrow("storage failed");
+    } finally {
+      spy.mockRestore();
+    }
+    const runs = await test.database
+      .select({ status: providerSyncRuns.status, finishedAt: providerSyncRuns.finishedAt })
+      .from(providerSyncRuns)
+      .where(eq(providerSyncRuns.providerId, ad.id));
+    expect(runs).toEqual([{ status: "failed", finishedAt: expect.any(Date) }]);
   });
 
   it("deactivates a disabled person at the next sync and reactivates them when enabled again", async () => {

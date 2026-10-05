@@ -1,7 +1,7 @@
 import { isIP } from "node:net";
 import type { ConnectionOptions } from "node:tls";
 import { Client, type Filter, InvalidCredentialsError, ResultCodeError } from "ldapts";
-import { DirectoryConnectionError } from "./adapter.js";
+import { DirectoryConnectionError, plainText } from "./adapter.js";
 
 const CONNECT_TIMEOUT_MS = 10_000;
 const OPERATION_TIMEOUT_MS = 20_000;
@@ -39,6 +39,10 @@ export type DirectoryConnector = (target: DirectoryTarget) => DirectorySession;
 
 export class DirectoryBindRejected extends Error {
   override name = "DirectoryBindRejected";
+
+  constructor(message: string) {
+    super(plainText(message));
+  }
 }
 
 const UNTRUSTED = new Set([

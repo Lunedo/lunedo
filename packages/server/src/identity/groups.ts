@@ -9,7 +9,7 @@ import { groupMembers, groups, memberships, roleAssignments } from "../organizat
 import type { HomeOrganizationService } from "../organizations/home.js";
 import { claimHomeOrganization, type MembershipService } from "../organizations/memberships.js";
 import type { RoleService } from "../organizations/roles.js";
-import type { ProviderGroup } from "./adapter.js";
+import { type ProviderGroup, plainText } from "./adapter.js";
 import {
   identities,
   identityGroups,
@@ -88,7 +88,7 @@ function roleKey(role: RoleKey): string {
 }
 
 function message(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  return plainText(error instanceof Error ? error.message : String(error));
 }
 
 const GROUP_NAME_MAX = 100;

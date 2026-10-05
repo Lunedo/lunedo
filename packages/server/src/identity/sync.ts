@@ -13,7 +13,12 @@ import type { MembershipService } from "../organizations/memberships.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import { defineSetting } from "../settings/definition.js";
 import type { SettingsService } from "../settings/service.js";
-import type { IdentityProviderAdapter, ProviderDefinition, SynchronizedAccount } from "./adapter.js";
+import {
+  type IdentityProviderAdapter,
+  type ProviderDefinition,
+  plainText,
+  type SynchronizedAccount,
+} from "./adapter.js";
 import { emptyReport, type GroupMappingService, type SyncReport } from "./groups.js";
 import type { IdentityProviderService } from "./providers.js";
 import {
@@ -61,6 +66,7 @@ export const PROVIDER_SYNC_SCHEDULE = "*/5 * * * *";
 export const PROVIDER_SYNC_RETENTION_SCHEDULE = "23 3 * * *";
 
 const SILENT_RUN_MINUTES = 5;
+const STORE_FAILED = "The result of the run could not be stored";
 
 export type SyncTrigger = "schedule" | "manual" | "scim" | "reconciliation" | "signIn";
 
@@ -94,7 +100,7 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 function message(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  return plainText(error instanceof Error ? error.message : String(error));
 }
 
 function domainOf(email: string | null): string | null {
@@ -396,7 +402,7 @@ export class ProviderSyncService {
     } catch (error) {
       failure = message(error);
     }
-    const status: SyncStatus = cancelled
+    const status: Exclude<SyncStatus, "running"> = cancelled
       ? "cancelled"
       : failure
         ? "failed"
@@ -404,6 +410,42 @@ export class ProviderSyncService {
           ? "warnings"
           : "succeeded";
     const durationMs = Date.now() - started;
+    try {
+      await this.#finish(runId, providerId, trigger, actor, {
+        status,
+        report,
+        failure,
+        held,
+        notifyHeld,
+        durationMs,
+      });
+    } catch (error) {
+      await this.#database
+        .update(providerSyncRuns)
+        .set({ status: "failed", finishedAt: new Date(), error: STORE_FAILED })
+        .where(eq(providerSyncRuns.id, runId));
+      throw error;
+    }
+    await this.#mapping.dispatch(report.mailIds);
+    const [summary] = await this.#summaries(eq(providerSyncRuns.id, runId));
+    return summary ?? null;
+  }
+
+  async #finish(
+    runId: string,
+    providerId: string,
+    trigger: SyncTrigger,
+    actor: Principal,
+    result: {
+      status: Exclude<SyncStatus, "running">;
+      report: SyncReport;
+      failure: string | null;
+      held: number | null;
+      notifyHeld: { providerName: string; accounts: number } | null;
+      durationMs: number;
+    },
+  ): Promise<void> {
+    const { status, report, failure, held, notifyHeld, durationMs } = result;
     await this.#database.transaction(async (tx) => {
       await tx
         .update(providerSyncRuns)
@@ -445,9 +487,6 @@ export class ProviderSyncService {
         },
       });
     });
-    await this.#mapping.dispatch(report.mailIds);
-    const [summary] = await this.#summaries(eq(providerSyncRuns.id, runId));
-    return summary ?? null;
   }
 
   async #useConfirmation(providerId: string, confirmedRunId: string, runId: string): Promise<number> {
