@@ -180,7 +180,7 @@ export function SignInScreen() {
     <p className="text-center text-sm">
       <button
         type="button"
-        className="font-medium text-text-muted hover:underline focus-visible:focus-ring"
+        className="inline-flex min-h-hit items-center rounded-sm px-2 font-medium text-text-muted hover:underline focus-visible:focus-ring"
         onClick={() => setEmergency(true)}
       >
         {t("auth.emergency.link")}

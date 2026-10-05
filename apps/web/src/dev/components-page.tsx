@@ -133,6 +133,8 @@ const LABELS: Record<PageLanguage, UiLabels> = {
     suggested: "Suggested",
     allTimeZones: "All time zones",
     browserTimeZone: "This browser",
+    undo: "Undo",
+    secondsLeft: "{seconds} s",
   },
   de: {
     close: "Schließen",
@@ -177,6 +179,8 @@ const LABELS: Record<PageLanguage, UiLabels> = {
     suggested: "Vorschläge",
     allTimeZones: "Alle Zeitzonen",
     browserTimeZone: "Dieser Browser",
+    undo: "Rückgängig",
+    secondsLeft: "{seconds} s",
   },
 };
 
@@ -648,6 +652,7 @@ function Data() {
               { key: "role", header: t("Role", "Rolle"), cell: (row) => row.role },
               {
                 key: "actions",
+                sticky: true,
                 header: t("Actions", "Aktionen"),
                 align: "end",
                 cell: (row) => (

@@ -65,7 +65,7 @@ describe("Table", () => {
     const onPrevious = vi.fn();
     renderTable({ pagination: { hasPrevious: false, hasNext: true, onNext, onPrevious } });
     const pages = screen.getByRole("navigation", { name: "Pages" });
-    expect(within(pages).getByRole("button", { name: "Previous page" })).toHaveProperty("disabled", true);
+    expect(within(pages).queryByRole("button", { name: "Previous page" })).toBeNull();
     await userEvent.click(within(pages).getByRole("button", { name: "Next page" }));
     expect(onNext).toHaveBeenCalledOnce();
   });
@@ -78,5 +78,14 @@ describe("Table", () => {
     expect(screen.getByRole("table").getAttribute("aria-busy")).toBe("true");
     expect(screen.getByText("Loading")).toBeDefined();
     expect(screen.queryByText("Lena Hofer")).toBeNull();
+  });
+
+  it("keeps a sticky row menu column reachable while the table scrolls", () => {
+    renderTable({
+      columns: [...columns, { key: "actions", header: "Actions", cell: () => "…", sticky: true }],
+    });
+    const cells = screen.getAllByRole("cell", { name: "…" });
+    for (const cell of cells) expect(cell.className).toContain("sticky");
+    expect(screen.getByRole("columnheader", { name: "Actions" }).className).toContain("sticky");
   });
 });

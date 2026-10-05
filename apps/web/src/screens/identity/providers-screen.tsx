@@ -367,6 +367,7 @@ export function ProvidersTable({
           },
           {
             key: "actions",
+            sticky: true,
             header: <span className="sr-only">{t("settings.actions")}</span>,
             align: "end",
             cell: (provider) => (

@@ -210,6 +210,7 @@
     "dialogWidth": { "sm": "28rem", "md": "32rem", "lg": "40rem" },
     "qrCodeSize": "7.5rem",
     "fieldWidth": "16rem",
+    "hitArea": "44px",
     "numberFieldWidth": "6rem",
     "unitFieldWidth": "9rem"
   },

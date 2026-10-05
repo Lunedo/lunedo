@@ -908,7 +908,9 @@
     "resetFilters": "Filter zurücksetzen",
     "suggested": "Vorschläge",
     "allTimeZones": "Alle Zeitzonen",
-    "browserTimeZone": "Dieser Browser"
+    "browserTimeZone": "Dieser Browser",
+    "undo": "Rückgängig",
+    "secondsLeft": "{seconds} s"
   },
   "emergencyRecipients": {
     "title": "Notfall-Anmeldung",
@@ -2450,7 +2452,7 @@
       "organization": "Organisation",
       "chooseOrganization": "Organisation auswählen",
       "assign": "Organisation zuweisen",
-      "accountType": "Kontotyp",
+      "accountType": "Typ",
       "typesHint": "Standardkonten gehören Personen einer Organisation. Gäste und Portalnutzer sehen nur, was mit ihnen geteilt ist. Service-Konten gehören zu Integrationen und melden sich nur mit API-Tokens an.",
       "instanceRole": "Instanzrolle",
       "twoFactor": "Zwei-Faktor",

@@ -44,6 +44,8 @@ export interface UiLabels {
   suggested: string;
   allTimeZones: string;
   browserTimeZone: string;
+  undo: string;
+  secondsLeft: string;
 }
 
 const LabelsContext = createContext<UiLabels | null>(null);

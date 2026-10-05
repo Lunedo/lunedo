@@ -1,7 +1,8 @@
-import { Eye, EyeOff } from "lucide-react";
+import { CircleAlert, Eye, EyeOff } from "lucide-react";
 import { type ComponentProps, createContext, type ReactNode, useContext, useId, useState } from "react";
 import { IconButton } from "./button.js";
 import { classNames } from "./class-names.js";
+import { Icon } from "./icon.js";
 import { useUiLabels } from "./labels.js";
 
 interface FieldContextValue {
@@ -63,6 +64,7 @@ export function Field({ label, hint, error, required = false, id, labelAction, c
         {children}
         {error && (
           <p id={errorId} className="text-sm text-danger">
+            <Icon icon={CircleAlert} size="sm" className="mr-1 inline align-text-bottom" />
             {error}
           </p>
         )}
@@ -77,7 +79,7 @@ export function Field({ label, hint, error, required = false, id, labelAction, c
 }
 
 export const controlClassName =
-  "w-full min-w-0 rounded-md border border-border bg-surface px-3 text-base text-text placeholder:text-text-muted focus-visible:border-accent focus-visible:focus-ring disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-danger";
+  "w-full min-w-0 rounded-md border border-control-border bg-control px-3 text-base text-text placeholder:text-text-muted focus-visible:border-accent focus-visible:focus-ring disabled:cursor-not-allowed disabled:border-dashed disabled:bg-surface-sunken disabled:text-text-muted aria-invalid:border-danger";
 
 export interface InputProps extends ComponentProps<"input"> {
   invalid?: boolean;
@@ -99,17 +101,18 @@ export function PasswordInput({ className, ...props }: Omit<InputProps, "type">)
   const labels = useUiLabels();
   const [visible, setVisible] = useState(false);
   return (
-    <div className="relative">
+    <div data-password-field="" className="relative">
       <Input {...props} type={visible ? "text" : "password"} className={classNames("pr-10", className)} />
-      <IconButton
-        label={visible ? labels.hidePassword : labels.showPassword}
-        icon={visible ? EyeOff : Eye}
-        size="sm"
-        tooltip={false}
-        aria-pressed={visible}
-        onClick={() => setVisible((current) => !current)}
-        className="absolute top-1 right-1"
-      />
+      <span className="absolute inset-y-0 right-1 flex items-center">
+        <IconButton
+          label={visible ? labels.hidePassword : labels.showPassword}
+          icon={visible ? EyeOff : Eye}
+          size="sm"
+          tooltip={false}
+          aria-pressed={visible}
+          onClick={() => setVisible((current) => !current)}
+        />
+      </span>
     </div>
   );
 }

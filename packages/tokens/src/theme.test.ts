@@ -256,6 +256,11 @@ describe("generateThemeCss", () => {
     expect(smallest(tokens.layout.rowHeight.compact)).toBeGreaterThanOrEqual(24);
   });
 
+  it("keeps hit areas at least 44 pixels at every text size", () => {
+    expect(tokens.layout.hitArea).toBe("44px");
+    expect(ruleBody(css, "@theme inline")).toContain("--spacing-hit: 44px;");
+  });
+
   it("lets popovers match the width of their trigger and lays out setting rows in fixed columns", () => {
     const theme = ruleBody(css, "@theme inline");
     expect(theme).toContain("--spacing-select-trigger: var(--radix-select-trigger-width);");

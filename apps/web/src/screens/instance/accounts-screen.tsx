@@ -212,13 +212,19 @@ export function InstanceAccountsScreen() {
               header: t("instance.accounts.lastSignIn"),
               hideBelow: "md",
               cell: (account) =>
-                account.lastSignInAt ? format.dateTime(account.lastSignInAt) : t("instance.accounts.never"),
+                account.lastSignInAt ? (
+                  <Tooltip content={format.dateTime(account.lastSignInAt)}>
+                    <span className="whitespace-nowrap">{format.date(account.lastSignInAt)}</span>
+                  </Tooltip>
+                ) : (
+                  t("instance.accounts.never")
+                ),
             },
             {
               key: "created",
               header: t("instance.accounts.created"),
               hideBelow: "md",
-              cell: (account) => format.date(account.createdAt),
+              cell: (account) => <span className="whitespace-nowrap">{format.date(account.createdAt)}</span>,
             },
           ]}
         />

@@ -238,7 +238,7 @@ export function AuditLog({
             key: "actor",
             header: t("audit.actor"),
             hideBelow: "sm",
-            cell: (event) => <TruncatedText text={actorLabel(t, event)} />,
+            cell: (event) => <TruncatedText text={actorLabel(t, event)} className="max-w-field" />,
           },
           {
             key: "action",
@@ -261,7 +261,7 @@ export function AuditLog({
             key: "target",
             header: t("audit.target"),
             cell: (event) => (
-              <div className="flex min-w-0 flex-col">
+              <div className="flex max-w-field min-w-0 flex-col">
                 <TruncatedText text={targetLabel(t, event)} />
                 <span className="text-text-muted text-xs">{scopeLabel(t, event)}</span>
               </div>

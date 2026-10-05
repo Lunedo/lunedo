@@ -126,6 +126,13 @@ export {
   type RailProps,
 } from "./rail.js";
 export {
+  ScrollArea,
+  type ScrollAreaProps,
+  type ScrollEdges,
+  scrollEdges,
+  useScrollEdges,
+} from "./scroll-area.js";
+export {
   DurationSelect,
   type DurationSelectProps,
   type SettingOption,
@@ -163,6 +170,6 @@ export {
   timeZoneItems,
   timeZoneOffset,
 } from "./time-zone-combobox.js";
-export { type ToastOptions, ToastProvider, type ToastVariant, useToast } from "./toast.js";
+export { type ToastOptions, ToastProvider, type ToastVariant, UNDO_SECONDS, useToast } from "./toast.js";
 export { Tooltip, TooltipProvider } from "./tooltip.js";
 export { isTruncated, TruncatedText, type TruncatedTextProps, useTruncated } from "./truncated-text.js";

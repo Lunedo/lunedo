@@ -11,15 +11,18 @@ export type ButtonVariant = "primary" | "secondary" | "outline" | "danger" | "da
 export type ButtonSize = "sm" | "md" | "lg";
 
 const BASE =
-  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md border font-medium transition-colors focus-visible:focus-ring disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none";
+  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md border font-medium transition-colors focus-visible:focus-ring disabled:cursor-not-allowed disabled:border-dashed disabled:border-control-border disabled:bg-surface-sunken disabled:text-text-muted aria-busy:cursor-progress motion-reduce:transition-none";
+
+const HIT_AREA =
+  "after:absolute after:top-1/2 after:left-1/2 after:size-hit after:-translate-x-1/2 after:-translate-y-1/2";
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary:
-    "border-accent bg-accent font-semibold text-on-accent hover:border-accent-hover hover:bg-accent-hover disabled:hover:bg-accent",
+    "border-accent bg-accent font-semibold text-on-accent hover:border-accent-hover hover:bg-accent-hover",
   secondary: "border-control-border bg-control text-text hover:bg-control-hover",
   outline: "border-control-border bg-surface text-text hover:bg-control-hover",
   danger: "border-transparent bg-transparent text-danger hover:bg-danger-soft",
-  dangerPrimary: "border-danger bg-danger font-semibold text-on-accent hover:opacity-90",
+  dangerPrimary: "border-danger bg-danger font-semibold text-on-accent hover:opacity-90 disabled:opacity-100",
 };
 
 const SIZES: Record<ButtonSize, string> = {
@@ -62,6 +65,7 @@ export function Button({
   children,
   disabled,
   type = "button",
+  onClick,
   ...props
 }: ButtonProps) {
   const labels = useUiLabels();
@@ -77,8 +81,15 @@ export function Button({
     <button
       type={type}
       className={classes}
-      disabled={disabled || loading}
-      aria-busy={loading || undefined}
+      {...(disabled ? { disabled } : {})}
+      {...(loading ? { "aria-busy": true, "aria-disabled": true } : {})}
+      onClick={(event) => {
+        if (loading) {
+          event.preventDefault();
+          return;
+        }
+        onClick?.(event);
+      }}
       {...props}
     >
       {loading ? (
@@ -142,7 +153,7 @@ export function IconButton({
     <button
       type={type}
       aria-label={label}
-      className={classNames(BASE, "relative", ICON_VARIANTS[variant], ICON_SIZES[size], className)}
+      className={classNames(BASE, "relative", HIT_AREA, ICON_VARIANTS[variant], ICON_SIZES[size], className)}
       {...props}
     >
       <Icon icon={icon} size={size === "lg" ? "lg" : "md"} />

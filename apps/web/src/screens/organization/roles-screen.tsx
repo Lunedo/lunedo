@@ -142,6 +142,7 @@ export function OrganizationRolesScreen() {
             },
             {
               key: "actions",
+              sticky: true,
               header: t("settings.actions"),
               align: "end",
               cell: (role) =>
@@ -180,6 +181,7 @@ export function OrganizationRolesScreen() {
             },
             {
               key: "actions",
+              sticky: true,
               header: t("settings.actions"),
               align: "end",
               cell: (assignment) =>

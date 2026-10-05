@@ -674,11 +674,11 @@ describe("the sign-in settings of the instance", () => {
     const start = await screen.findByRole("button", { name: "Start test sign-in" });
     await userEvent.click(start);
     await waitFor(() => expect(navigateTo).toHaveBeenCalledWith("https://login.example/authorize"));
-    expect(start.hasAttribute("disabled")).toBe(true);
+    expect(start.getAttribute("aria-busy")).toBe("true");
     const restored = new Event("pageshow");
     Object.defineProperty(restored, "persisted", { value: true });
     window.dispatchEvent(restored);
-    await waitFor(() => expect(start.hasAttribute("disabled")).toBe(false));
+    await waitFor(() => expect(start.hasAttribute("aria-busy")).toBe(false));
   });
 
   it("deactivates a provider instead of removing it and activates it again", async () => {

@@ -908,7 +908,9 @@
     "resetFilters": "Reset filters",
     "suggested": "Suggested",
     "allTimeZones": "All time zones",
-    "browserTimeZone": "This browser"
+    "browserTimeZone": "This browser",
+    "undo": "Undo",
+    "secondsLeft": "{seconds} s"
   },
   "emergencyRecipients": {
     "title": "Emergency sign-in",
@@ -2453,7 +2455,7 @@
       "organization": "Organization",
       "chooseOrganization": "Choose an organization",
       "assign": "Assign organization",
-      "accountType": "Account type",
+      "accountType": "Type",
       "typesHint": "Standard accounts belong to people in an organization. Guests and portal users see only what is shared with them. Service accounts belong to integrations and sign in only with API tokens.",
       "instanceRole": "Instance role",
       "twoFactor": "Two-factor",

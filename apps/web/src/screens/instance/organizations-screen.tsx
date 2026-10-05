@@ -148,6 +148,7 @@ export function InstanceOrganizationsScreen() {
           },
           {
             key: "actions",
+            sticky: true,
             header: t("settings.actions"),
             align: "end",
             cell: (organization) => (

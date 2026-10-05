@@ -128,6 +128,7 @@ export function InstanceRolesScreen() {
             },
             {
               key: "actions",
+              sticky: true,
               header: t("settings.actions"),
               align: "end",
               cell: (role) =>
@@ -168,6 +169,7 @@ export function InstanceRolesScreen() {
             },
             {
               key: "actions",
+              sticky: true,
               header: t("settings.actions"),
               align: "end",
               cell: (assignment) =>

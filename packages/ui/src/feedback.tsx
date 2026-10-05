@@ -189,7 +189,7 @@ export function Notice({
       <Icon icon={style.glyph} className={classNames("mt-1", style.icon)} />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         {title && <p className="font-semibold">{title}</p>}
-        {children && <div>{children}</div>}
+        {children && <div className="wrap-anywhere">{children}</div>}
       </div>
       {action}
     </div>

@@ -253,6 +253,7 @@ export function MembersScreen() {
                 },
                 {
                   key: "actions",
+                  sticky: true,
                   header: t("settings.actions"),
                   align: "end",
                   cell: (member) =>
@@ -659,6 +660,7 @@ function InvitationsTable({ organizationId }: { organizationId: string }) {
           },
           {
             key: "actions",
+            sticky: true,
             header: t("settings.actions"),
             align: "end",
             cell: (invitation) => (

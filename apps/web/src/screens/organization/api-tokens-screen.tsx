@@ -94,6 +94,7 @@ export function OrganizationTokensScreen() {
           },
           {
             key: "actions",
+            sticky: true,
             header: t("settings.actions"),
             align: "end",
             cell: (token) =>

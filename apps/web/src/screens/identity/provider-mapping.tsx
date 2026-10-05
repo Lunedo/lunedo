@@ -197,6 +197,7 @@ export function MappingTab({ provider, canManage }: { provider: IdentityProvider
           },
           {
             key: "actions",
+            sticky: true,
             header: <span className="sr-only">{t("settings.actions")}</span>,
             align: "end",
             cell: (rule) =>

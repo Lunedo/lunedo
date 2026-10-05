@@ -47,6 +47,8 @@ export const testLabels: UiLabels = {
   suggested: "Suggested",
   allTimeZones: "All time zones",
   browserTimeZone: "This browser",
+  undo: "Undo",
+  secondsLeft: "{seconds} s",
 };
 
 export function renderUi(element: ReactElement): RenderResult {

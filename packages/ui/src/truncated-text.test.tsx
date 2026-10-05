@@ -57,3 +57,37 @@ describe("TruncatedText", () => {
     expect((await screen.findByRole("tooltip")).textContent).toContain("Automatisch");
   });
 });
+
+describe("Truncation measurement", () => {
+  it("keeps observing the rendered element after the tooltip turns on", () => {
+    const observed: Element[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe(element: Element) {
+          observed.push(element);
+        }
+        disconnect() {}
+        unobserve() {}
+      },
+    );
+    try {
+      overflow(300);
+      renderUi(
+        <>
+          <TruncatedText text="Benachrichtigungseinstellungen der Organisation" />
+          <Select
+            aria-label="Date format"
+            value="long"
+            onValueChange={() => {}}
+            options={[{ value: "long", label: "Day, month and year" }]}
+          />
+        </>,
+      );
+      expect(observed.length).toBeGreaterThan(0);
+      for (const element of observed) expect(element.isConnected).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
