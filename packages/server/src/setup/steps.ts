@@ -322,25 +322,58 @@ export function ownerStep(deps: SetupStepDependencies): SetupStep {
           if (!(await deps.totp.verify(context.tx, owner.id, input.code, { confirming: true }))) {
             throw new SetupStepError("invalidSecondFactor", "The code is not valid");
           }
-          const codes = await deps.recoveryCodes.generate(context.tx, owner.id);
           await deps.audit.record(context.tx, {
             name: "twoFactor.totpAdded",
             actor: accountPrincipal(owner.id),
             targetId: owner.id,
             fields: {},
           });
-          await deps.audit.record(context.tx, {
-            name: "twoFactor.recoveryCodesGenerated",
-            actor: accountPrincipal(owner.id),
-            targetId: owner.id,
-            fields: { count: codes.length },
-          });
+          return { body: { recoveryCodes: await issueRecoveryCodes(deps, context, owner.id) } };
+        },
+      }),
+      renewRecoveryCodes: defineSetupAction({
+        input: setupStepSchemas.owner.actions.renewRecoveryCodes.input,
+        async run(context) {
+          const owner = await confirmedOwnerOf(context);
+          return { body: { recoveryCodes: await issueRecoveryCodes(deps, context, owner.id) } };
+        },
+      }),
+      acknowledgeRecoveryCodes: defineSetupAction({
+        input: setupStepSchemas.owner.actions.acknowledgeRecoveryCodes.input,
+        async run(context) {
+          await confirmedOwnerOf(context);
           await context.complete();
-          return { body: { recoveryCodes: codes } };
+          return {};
         },
       }),
     },
   };
+}
+
+async function confirmedOwnerOf(context: SetupActionContext): Promise<{ id: string; email: string }> {
+  const owner = await ownerOf(context);
+  if (!owner) throw new SetupStepError("ownerMissing", "Create the owner account first");
+  const [totp] = await context.tx
+    .select({ confirmedAt: totpCredentials.confirmedAt })
+    .from(totpCredentials)
+    .where(eq(totpCredentials.accountId, owner.id));
+  if (!totp?.confirmedAt) throw new SetupStepError("totpMissing", "Confirm the authenticator app first");
+  return owner;
+}
+
+async function issueRecoveryCodes(
+  deps: SetupStepDependencies,
+  context: SetupActionContext,
+  ownerId: string,
+): Promise<string[]> {
+  const codes = await deps.recoveryCodes.generate(context.tx, ownerId);
+  await deps.audit.record(context.tx, {
+    name: "twoFactor.recoveryCodesGenerated",
+    actor: accountPrincipal(ownerId),
+    targetId: ownerId,
+    fields: { count: codes.length },
+  });
+  return codes;
 }
 
 function keyRingLine(ring: KeyRing): string {

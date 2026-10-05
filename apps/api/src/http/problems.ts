@@ -103,6 +103,7 @@ export const problems = {
   keysAlreadyDownloaded: { status: 409, title: "The keys were already downloaded" },
   totpExists: { status: 409, title: "An authenticator app is already set up" },
   ownerMissing: { status: 409, title: "The owner account is missing" },
+  totpMissing: { status: 409, title: "The authenticator app is not confirmed yet" },
   lastSecondFactor: { status: 409, title: "The last second factor cannot be removed" },
   noSecondFactor: { status: 409, title: "No second factor is set up" },
   secondFactorExists: { status: 409, title: "The second factor already exists" },

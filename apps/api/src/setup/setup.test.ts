@@ -116,6 +116,9 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
         )
       ).rowCount,
     ).toBe(0);
+    expect((await post("/api/v1/setup/steps/owner/renewRecoveryCodes")).json()).toMatchObject({
+      code: "totpMissing",
+    });
     const totp = (await post("/api/v1/setup/steps/owner/beginTotp")).json();
     expect(totp.uri).toMatch(/^otpauth:\/\/totp\/Test%20wiki:Owner%40Example\.org\?/);
     expect((await post("/api/v1/setup/steps/owner/confirmTotp", { code: "000000" })).statusCode).toBe(401);
@@ -124,6 +127,18 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
     });
     expect(confirmed.statusCode).toBe(200);
     expect(confirmed.json().recoveryCodes).toHaveLength(10);
+    const ownerStep = async () =>
+      (await get("/api/v1/setup/steps")).json().steps.find((step: { id: string }) => step.id === "owner");
+    expect(await ownerStep()).toMatchObject({
+      completed: false,
+      details: { totpConfirmed: true },
+    });
+    const renewed = (await post("/api/v1/setup/steps/owner/renewRecoveryCodes")).json().recoveryCodes;
+    expect(renewed).toHaveLength(10);
+    expect(renewed).not.toContain(confirmed.json().recoveryCodes[0]);
+    expect((await ownerStep()).completed).toBe(false);
+    expect((await post("/api/v1/setup/steps/owner/acknowledgeRecoveryCodes")).statusCode).toBe(200);
+    expect((await ownerStep()).completed).toBe(true);
 
     const mail = await post("/api/v1/setup/steps/mail/save", {
       host: "smtp.pagehall.test",

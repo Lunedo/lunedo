@@ -131,6 +131,8 @@ export const setupStepSchemas = {
         input: z.object({ code: totpCodeSchema }).strict(),
         result: z.object({ recoveryCodes: z.array(z.string()) }),
       },
+      renewRecoveryCodes: { input: empty, result: z.object({ recoveryCodes: z.array(z.string()) }) },
+      acknowledgeRecoveryCodes: { input: empty, result: empty },
     },
   },
   keyBackup: {

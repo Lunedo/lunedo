@@ -77,6 +77,7 @@ const KNOWN = new Set([
   "keysAlreadyDownloaded",
   "totpExists",
   "ownerMissing",
+  "totpMissing",
   "lastSecondFactor",
   "noSecondFactor",
   "secondFactorExists",
