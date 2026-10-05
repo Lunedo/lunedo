@@ -12,7 +12,6 @@ import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { nameCursor, pageQuerySchema, pageRequest, pageSchema, toApiPage } from "../http/pagination.js";
-import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import { organizationIdParams, uuid } from "../http/schemas.js";
 import {

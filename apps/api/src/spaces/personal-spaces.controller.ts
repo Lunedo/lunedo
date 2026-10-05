@@ -6,7 +6,6 @@ import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import {
-  idCursor,
   nameCursor,
   pageQuerySchema,
   pageRequest,

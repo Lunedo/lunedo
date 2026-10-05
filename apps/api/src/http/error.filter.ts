@@ -2,9 +2,9 @@ import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException, Inject 
 import {
   AuthError,
   BusyError,
+  DocumentInvalidError,
   EmailInUseError,
   ForbiddenError,
-  DocumentInvalidError,
   OrganizationError,
   PasswordPolicyError,
   ProviderResponseError,

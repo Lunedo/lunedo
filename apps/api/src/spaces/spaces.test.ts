@@ -231,9 +231,9 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
       (await script.put(`/api/v1/pages/${page.id}/content`, { document }, bearer(writer))).statusCode,
     ).toBe(200);
     expect((await script.get(`/api/v1/pages/${page.id}/content`, bearer(unrelated))).statusCode).toBe(404);
-    expect((await script.get(`/api/v1/spaces?organizationId=${organizationId}`, bearer(unrelated))).statusCode).toBe(
-      403,
-    );
+    expect(
+      (await script.get(`/api/v1/spaces?organizationId=${organizationId}`, bearer(unrelated))).statusCode,
+    ).toBe(403);
     const listed = await script.get(`/api/v1/spaces?organizationId=${organizationId}`, bearer(readOnly));
     expect(listed.json().items.map((item: { id: string }) => item.id)).toContain(space.id);
   });
