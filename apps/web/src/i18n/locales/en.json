@@ -1026,7 +1026,8 @@
     "notificationsUnread": "Notifications, {count, plural, one {# unread} other {# unread}}",
     "help": "Help",
     "settings": "Settings",
-    "account": "Account"
+    "account": "Account",
+    "spaces": "Spaces"
   },
   "help": {
     "shortcuts": "Keyboard shortcuts",
@@ -1057,7 +1058,9 @@
     "organizations": "Organizations",
     "accounts": "Accounts",
     "mail": "E-mail",
-    "breakGlass": "Break-glass access"
+    "breakGlass": "Break-glass access",
+    "spaces": "Spaces",
+    "personalSpaces": "Personal spaces"
   },
   "commands": {
     "label": "Command palette",
@@ -1069,7 +1072,9 @@
     "openNotifications": "Open notifications",
     "toggleSidebar": "Show or hide the sidebar",
     "changeLanguage": "Change language",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "goSpaces": "Go to spaces",
+    "openPersonalSpace": "Open my personal space"
   },
   "shortcuts": {
     "title": "Keyboard shortcuts",
@@ -1087,7 +1092,8 @@
     "goPreferences": "Go to preferences",
     "goSecurity": "Go to security",
     "goMembers": "Go to members",
-    "goAuditLog": "Go to the audit log"
+    "goAuditLog": "Go to the audit log",
+    "editPage": "Edit the page"
   },
   "errors": {
     "notFoundTitle": "Page not found",
@@ -1224,7 +1230,32 @@
     "invalidMailConfiguration": "The e-mail settings are not valid. Check the marked fields, then save again.",
     "mailNotReady": "This sending method is not set up yet. Save its settings and, for Microsoft Graph, add a credential first.",
     "instanceUrlFromEnvironment": "The server environment sets the address with PAGEHALL_INSTANCE_URL. Change the variable and restart Pagehall.",
-    "instanceMoved": "Pagehall has moved to another address. Open it at its new address."
+    "instanceMoved": "Pagehall has moved to another address. Open it at its new address.",
+    "keyTaken": "Another space already uses this key. Choose a different key.",
+    "invalidSpaceKey": "The key needs 2 to 10 letters or digits. Remove spaces and other characters.",
+    "invalidSpaceName": "The name needs 1 to 100 characters.",
+    "invalidSpaceDescription": "The description can have up to 1000 characters. Shorten it and save again.",
+    "invalidHolder": "This person or group cannot get a role here. Choose someone from the organization, or for a personal space someone you work with.",
+    "alreadyGranted": "This person or group already has a role in the space. Change that role instead.",
+    "permissionNotFound": "Someone changed the permissions at the same moment. Reload the page and try again.",
+    "lastSpaceAdmin": "A space needs at least one space admin. Give someone else the space admin role first.",
+    "selfExtension": "Nobody can extend their own permissions. Ask another space admin.",
+    "selfAppointment": "You cannot give yourself access this way. Choose another person.",
+    "spaceHasAdministrator": "The space has a space admin again. Ask them to change the permissions.",
+    "personalSpaceVisibility": "Personal spaces are always private. Share them in the permissions instead.",
+    "notUnderReview": "The owner of this personal space is active again, so it cannot be transferred.",
+    "invalidTitle": "The title needs 1 to 255 characters.",
+    "invalidDescription": "The description can have up to 1000 characters. Shorten it and save again.",
+    "invalidLinkUrl": "Enter a full address that starts with http:// or https://.",
+    "invalidLinkTarget": "The link target does not exist or you cannot read it. Choose another page or folder.",
+    "invalidPlacement": "That place in the page tree does not exist anymore. Reload the page tree and try again.",
+    "invalidConversion": "Links cannot be converted. Create a page or folder instead.",
+    "moveIntoDescendant": "An item cannot be moved below itself or one of its children. Choose another place.",
+    "itemMoved": "Someone moved the item at the same moment. Reload the page tree and try again.",
+    "overviewPage": "The overview page of a space stays a page in its space. Move its children instead.",
+    "invalidDocument": "The content does not match what Pagehall can store. Remove the last change and try again.",
+    "invalidLabel": "A label needs 1 to 100 letters, digits, dots, dashes or underscores.",
+    "tooManyLabels": "A page can have up to 100 labels. Remove a label before you add another."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -1845,6 +1876,18 @@
       "apiTokens_unusedNoticeDays": {
         "label": "Unused API tokens",
         "description": "Notify the owner when a token has not been used for this long. The token keeps working."
+      },
+      "spaces_membersCreateSpaces": {
+        "label": "Members create spaces",
+        "description": "Members may create spaces. Administrators always can; guests and collaborators never."
+      },
+      "spaces_personalSpaces": {
+        "label": "Personal spaces",
+        "description": "Every person with a standard account gets a personal space when they first open it."
+      },
+      "appearance_folderView": {
+        "label": "Folder view",
+        "description": "Show the contents of folders as a list or as tiles."
       }
     },
     "disabled": {
@@ -3097,7 +3140,8 @@
     "instanceRolesDoNotGrantOrganizationAccess": "Instance roles do not grant access to organizations",
     "roleExceedsOwnPermissions": "The role exceeds their own permissions",
     "selfExtension": "Nobody can extend their own permissions",
-    "tokenScope": "Not allowed for this token"
+    "tokenScope": "Not allowed for this token",
+    "noSpaceRole": "No role in the space grants this"
   },
   "grants": {
     "system": "System",
@@ -3618,5 +3662,362 @@
         "description": "The connection to the server was closed. Reload to continue editing."
       }
     }
+  },
+  "spaces": {
+    "navigation": "Navigation of {space}",
+    "inOrganization": "{organization} · Space",
+    "options": "Space options",
+    "overview": "Overview",
+    "pagesButton": "Pages",
+    "loadFailed": "The space could not be loaded",
+    "notFound": {
+      "title": "Space not found",
+      "description": "There is no space with the key {key}, or you have no access to it. Check the address or ask a space admin for access.",
+      "back": "Go to all spaces"
+    },
+    "noOverview": {
+      "title": "This space has no overview page",
+      "description": "Open a page from the page tree, or ask a space admin to add one."
+    },
+    "roles": {
+      "reader": "Reader",
+      "commenter": "Commenter",
+      "editor": "Editor",
+      "admin": "Space admin"
+    },
+    "roleDescriptions": {
+      "reader": "Reads and exports pages.",
+      "commenter": "Also comments on pages.",
+      "editor": "Also creates, edits and moves pages, folders and links.",
+      "admin": "Also manages the settings and permissions of the space."
+    },
+    "visibility": {
+      "private": {
+        "label": "Private",
+        "short": "Private",
+        "description": "Only the people and groups listed in the permissions can open it.",
+        "summary": "Only the people and groups with a role can read the space."
+      },
+      "organization": {
+        "label": "Organization",
+        "short": "Organization",
+        "description": "Every member of {organization} can read it. Guests and collaborators need a role.",
+        "summary": "Every member of {organization} can read the space."
+      },
+      "instance": {
+        "label": "Whole instance",
+        "short": "Instance",
+        "description": "Every internal user of this Pagehall instance can read it, in all organizations.",
+        "summary": "Every internal user of the instance can read the space."
+      }
+    },
+    "holders": {
+      "organizationMembers": "All members of the organization",
+      "organizationMembersOf": "All members of {organization}",
+      "instanceUsers": "All internal users of the instance",
+      "group": "Group {name}",
+      "unknownGroup": "Deleted group",
+      "unknownPerson": "Former person",
+      "everyoneGroup": "Everyone",
+      "groupsGroup": "Groups",
+      "peopleGroup": "People",
+      "groupDescription": "Group",
+      "searchPlaceholder": "Search people and groups",
+      "noMatch": "No person or group matches. Check the spelling, or ask an administrator whether the person is a member."
+    },
+    "list": {
+      "title": "Spaces",
+      "description": "Spaces you can read, with their pages and folders.",
+      "search": "Filter spaces",
+      "searchPlaceholder": "Name, key or description",
+      "organizationFilter": "Organization",
+      "allOrganizations": "All organizations",
+      "inOrganization": "{organization}",
+      "loadFailed": "The spaces could not be loaded",
+      "none": "No spaces yet",
+      "noneDescription": "Spaces hold pages, folders and links for a team or a topic. Create the first one to start writing.",
+      "noMatch": "No space matches the filter",
+      "noMatchDescription": "Try another name or key, or show the spaces of all organizations.",
+      "clearFilters": "Clear filters",
+      "more": "Show more spaces"
+    },
+    "create": {
+      "action": "Create space",
+      "title": "Create a space",
+      "organization": "Organization",
+      "name": "Name",
+      "namePlaceholder": "For example IT Operations",
+      "nameRequired": "Enter a name for the space.",
+      "key": "Key",
+      "keyHint": "2 to 10 letters or digits. It appears in addresses, for example /spaces/ITOPS.",
+      "keyInvalid": "Use 2 to 10 letters or digits, without spaces or other characters.",
+      "keyTaken": "Another space already uses {key}. Choose a different key.",
+      "description": "Description",
+      "descriptionHint": "Optional. One or two sentences about what the space is for.",
+      "visibility": "Who can read the space",
+      "permissions": "Permissions",
+      "permissionsHint": "Your organization suggests these roles for new spaces. Change them as needed.",
+      "you": "You",
+      "roleOf": "Role of {holder}",
+      "removeHolder": "Remove {holder}",
+      "addHolder": "Add people or groups",
+      "newRole": "Role",
+      "add": "Add",
+      "chooseHolderFirst": "Choose a person or group first.",
+      "whoGetsAccess": "Who gets access",
+      "accessYou": "You become space admin.",
+      "accessHolder": "{holder}: {role}",
+      "submit": "Create space",
+      "created": "Space {name} created",
+      "failed": "The space could not be created"
+    },
+    "personal": {
+      "label": "Personal space",
+      "nameOf": "Personal space of {name}",
+      "open": "My personal space",
+      "opening": "Opening your personal space",
+      "overviewTitle": "My personal space",
+      "unavailableTitle": "Personal spaces are not available",
+      "unavailable": "This instance does not offer personal spaces, or your account cannot have one. Ask an instance administrator if you need it.",
+      "failed": "Your personal space could not be opened"
+    },
+    "impact": {
+      "noChangeTitle": "Nobody's access changes",
+      "noChange": "The change keeps everyone's access as it is.",
+      "gaining": "{count, plural, one {# person gets access} other {# people get access}}",
+      "losing": "{count, plural, one {# person loses access} other {# people lose access}}",
+      "changing": "{count, plural, one {# person gets another role} other {# people get another role}}",
+      "roleChange": "{name}: {before} → {after}",
+      "andMore": "and {count} more",
+      "unlisted": "{count, plural, one {One of them is a person you cannot see; they are counted but not named.} other {# of them are people you cannot see; they are counted but not named.}}",
+      "loadFailed": "The change in access could not be calculated"
+    },
+    "settings": {
+      "title": "Space settings",
+      "general": "General",
+      "generalDescription": "Name, key, description and who can read the space.",
+      "permissions": "Permissions",
+      "permissionsDescription": "Who has which role in the space.",
+      "about": "About the space",
+      "name": "Name",
+      "personalNameHint": "Leave it empty to show your name.",
+      "description": "Description",
+      "key": "Key",
+      "keyDescription": "The key appears in the addresses of the space and its pages.",
+      "keyRedirectTitle": "Old links keep working",
+      "keyRedirect": "Addresses with {old} lead to the new key until another space takes {old}. Links to pages always keep working.",
+      "saveKey": "Change key",
+      "keyChanged": "The key is now {key}",
+      "visibility": "Who can read the space",
+      "visibilityDescription": "Besides the people and groups in the permissions.",
+      "visibilityConfirmTitle": "Change who can read the space?",
+      "visibilityConfirm": "From {from} to {to}.",
+      "changeVisibility": "Change visibility",
+      "visibilityChanged": "Visibility changed",
+      "visibilityFailed": "The visibility could not be changed",
+      "personalPrivate": "Personal spaces are always private. Share them with people and groups in the permissions.",
+      "adminsOnlyTitle": "Only space admins manage permissions",
+      "adminsOnly": "Your role in this space is {role}. Ask a space admin if someone needs another role."
+    },
+    "permissions": {
+      "visibilityTitle": "Readers through visibility",
+      "visibilityPrivate": "The space is private: only the holders below have access.",
+      "holders": "People and groups",
+      "holdersDescription": "Every change shows first who gains or loses access.",
+      "loadFailed": "The permissions could not be loaded",
+      "you": "{name} (you)",
+      "remove": "Remove the role of {holder}",
+      "add": "Give role",
+      "rolesTitle": "What the roles allow",
+      "grantTitle": "Give {holder} the role {role}?",
+      "changeTitle": "Change the role of {holder} to {role}?",
+      "removeTitle": "Remove the role of {holder}?",
+      "confirmDescription": "Check who gains or loses access before you confirm.",
+      "confirmGrant": "Give role",
+      "confirmChange": "Change role",
+      "confirmRemove": "Remove role",
+      "grantDone": "{holder} has the new role",
+      "changeDone": "The role of {holder} changed",
+      "removeDone": "The role of {holder} was removed",
+      "failed": "The permissions could not be changed",
+      "dangerZone": "Danger zone",
+      "stepDownTitle": "Step down as space admin",
+      "stepDownDescription": "You lose your role in this space. Another space admin must remain; appoint one first if you are the last.",
+      "stepDown": "Step down as space admin"
+    },
+    "organization": {
+      "title": "Spaces",
+      "description": "Who can create spaces, which permissions new spaces get, and spaces without a space admin.",
+      "creating": "Creating spaces",
+      "defaults": "Default permissions for new spaces",
+      "defaultsDescription": "The creator sees these settings first and can change them. Existing spaces do not change.",
+      "defaultsFailed": "The default permissions could not be loaded",
+      "creatorAdmin": "The creator always becomes space admin.",
+      "noDefaultHolders": "New spaces get no other holders by default.",
+      "withoutAdmin": "Spaces without a space admin",
+      "withoutAdminDescription": "Spaces where no active person holds the space admin role, for example after the last space admin was deactivated.",
+      "withoutAdminFailed": "The spaces without a space admin could not be loaded",
+      "allHaveAdmins": "Every space has a space admin",
+      "allHaveAdminsDescription": "Spaces appear here when their last space admin is deactivated.",
+      "appoint": "Appoint space admin",
+      "appointTitle": "Appoint a space admin for {space}",
+      "person": "Person",
+      "personHint": "A member of the organization. You cannot appoint yourself.",
+      "choosePerson": "Choose a person first.",
+      "appointEffectTitle": "This gives access to all content of the space",
+      "appointEffect": "The person can read and edit everything in {space} and manage its permissions. The appointment is recorded in the audit log.",
+      "appointSubmit": "Appoint space admin",
+      "appointed": "{person} is now space admin of {space}",
+      "appointFailed": "The space admin could not be appointed"
+    },
+    "instance": {
+      "title": "Personal spaces",
+      "description": "Whether people get personal spaces, and personal spaces of deactivated owners.",
+      "availability": "Availability",
+      "review": "Personal spaces to review",
+      "reviewDescription": "Personal spaces whose owner is deactivated. Titles and content stay hidden; transfer a space to give someone access.",
+      "reviewFailed": "The personal spaces could not be loaded",
+      "none": "Nothing to review",
+      "noneDescription": "Personal spaces appear here when their owner is deactivated.",
+      "owner": "Owner",
+      "ownerState": "Owner's account",
+      "states": {
+        "deactivated": "Deactivated",
+        "anonymized": "Anonymized"
+      },
+      "formerOwner": "Former person",
+      "pages": "Pages",
+      "lastChange": "Last change",
+      "actions": "Actions",
+      "transfer": "Transfer",
+      "transferTitle": "Transfer the personal space of {owner}",
+      "newOwner": "New owner",
+      "newOwnerHint": "An active standard account. You cannot transfer it to yourself.",
+      "chooseAccount": "Choose the new owner first.",
+      "transferEffectTitle": "The new owner gets all content",
+      "transferEffect": "The new owner becomes space admin and can read everything {owner} wrote there. The transfer is recorded in the audit log.",
+      "transferSubmit": "Transfer space",
+      "transferred": "The personal space of {owner} now belongs to {account}",
+      "transferFailed": "The personal space could not be transferred"
+    }
+  },
+  "tree": {
+    "title": "Pages",
+    "label": "Page tree",
+    "create": "Create in this space",
+    "newPage": "New page",
+    "newFolder": "New folder",
+    "newLink": "New link",
+    "newPageInside": "New page inside",
+    "newFolderInside": "New folder inside",
+    "newLinkInside": "New link inside",
+    "untitledPage": "Untitled page",
+    "loading": "Loading pages",
+    "loadFailed": "The pages could not be loaded.",
+    "showMore": "Show more",
+    "noAccess": "No access",
+    "actionsFor": "Actions for {title}",
+    "move": "Move…",
+    "convertToFolder": "Convert to folder",
+    "convertToPage": "Convert to page",
+    "convertedToFolder": "{title} is now a folder",
+    "convertedToPage": "{title} is now a page",
+    "convertFailed": "The item could not be converted",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied",
+    "copyFailed": "The link could not be copied. Copy it from the address bar instead.",
+    "moved": "{title} moved",
+    "moveFailed": "The item could not be moved",
+    "undoFailed": "The move could not be undone",
+    "createFailed": "The page could not be created"
+  },
+  "move": {
+    "title": "Move {title}",
+    "description": "Choose the space and the place in the page tree. Children move along.",
+    "space": "Space",
+    "parent": "Place below",
+    "parentHint": "Search pages and folders by title, or keep the top level.",
+    "topLevel": "Top level of the space",
+    "folder": "Folder",
+    "page": "Page",
+    "noMatch": "No page or folder matches the title.",
+    "position": "Position",
+    "first": "At the beginning",
+    "last": "At the end",
+    "accessChange": "How access changes",
+    "impactFailed": "The change in access could not be calculated",
+    "submit": "Move",
+    "submitToSpace": "Move to {space}",
+    "moved": "{title} moved",
+    "movedToSpace": "{title} moved to {space}",
+    "failed": "The item could not be moved"
+  },
+  "createItem": {
+    "folderTitle": "New folder",
+    "linkTitle": "New link",
+    "title": "Title",
+    "titleRequired": "Enter a title.",
+    "linkTitleHint": "Leave it empty to use the title or address of the target.",
+    "description": "Description",
+    "descriptionHint": "Optional. Shown at the top of the folder.",
+    "target": "Link to",
+    "targetItem": "Page or folder",
+    "targetUrl": "Web address",
+    "targetItemLabel": "Page or folder",
+    "targetRequired": "Choose the page or folder the link points to.",
+    "noMatch": "No readable page or folder matches.",
+    "url": "Address",
+    "urlHint": "A full address that starts with http:// or https://.",
+    "urlPlaceholder": "https://",
+    "urlInvalid": "Enter a full address that starts with http:// or https://.",
+    "createFolder": "Create folder",
+    "createLink": "Create link",
+    "failed": "The item could not be created"
+  },
+  "folder": {
+    "titleLabel": "Folder title",
+    "view": "View",
+    "list": "List",
+    "tiles": "Tiles",
+    "newPage": "New page",
+    "more": "More actions",
+    "description": "Description",
+    "contents": "Contents",
+    "loadFailed": "The folder could not be loaded",
+    "contentsFailed": "The contents of the folder could not be loaded",
+    "empty": "This folder is empty",
+    "emptyDescription": "Pages, folders and links you create here appear in this overview."
+  },
+  "labels": {
+    "title": "Labels",
+    "add": "Add label",
+    "addPlaceholder": "Type a label",
+    "newLabelHint": "Type a new label and choose it to add it.",
+    "create": "Add new label {label}",
+    "remove": "Remove label {label}",
+    "removed": "Label {label} removed",
+    "addFailed": "The label could not be added",
+    "removeFailed": "The label could not be removed",
+    "pagesTitle": "Pages with the label {label}",
+    "pagesDescription": "In {space}.",
+    "pagesFailed": "The pages could not be loaded",
+    "noPages": "No pages with this label",
+    "noPagesDescription": "Add the label {label} to a page to list it here."
+  },
+  "page": {
+    "loadFailed": "The page could not be loaded",
+    "contentFailed": "The content of the page could not be loaded",
+    "titleLabel": "Page title",
+    "edit": "Edit",
+    "done": "Done",
+    "more": "More actions",
+    "width": "Page width",
+    "widthFixed": "Fixed",
+    "widthFull": "Full",
+    "backlinks": "{count, plural, one {Linked from # page} other {Linked from # pages}}"
+  },
+  "pageTitle": {
+    "edit": "Rename {title}",
+    "saveFailed": "The title could not be saved"
   }
 }

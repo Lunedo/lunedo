@@ -1,0 +1,17 @@
+import { createContext, useContext } from "react";
+import type { SpaceWithRole, TreeItem } from "./space-queries.js";
+
+export interface SpaceContextValue {
+  space: SpaceWithRole;
+  canEdit: boolean;
+  openMove: (item: Pick<TreeItem, "id" | "title" | "kind" | "spaceId" | "parentId">) => void;
+  openCreate: (kind: "page" | "folder" | "link", parentId: string | null) => void;
+}
+
+export const SpaceContext = createContext<SpaceContextValue | null>(null);
+
+export function useSpace(): SpaceContextValue {
+  const value = useContext(SpaceContext);
+  if (!value) throw new Error("useSpace needs a space layout");
+  return value;
+}

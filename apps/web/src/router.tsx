@@ -172,8 +172,90 @@ const homeRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/",
   beforeLoad: () => {
-    throw redirect({ to: "/settings/preferences" });
+    throw redirect({ to: "/spaces" });
   },
+});
+
+const spacesRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/spaces",
+  validateSearch: z.object({
+    q: z.string().max(200).optional().catch(undefined),
+    organization: idSchema.optional().catch(undefined),
+  }),
+  component: lazyRouteComponent(() => import("./spaces/spaces-screen.js"), "SpacesScreen"),
+});
+
+const personalSpaceRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/personal-space",
+  component: lazyRouteComponent(() => import("./spaces/personal-space-screen.js"), "PersonalSpaceScreen"),
+});
+
+const spaceRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/spaces/$spaceKey",
+  component: lazyRouteComponent(() => import("./spaces/space-layout.js"), "SpaceLayout"),
+});
+
+const spaceIndexRoute = createRoute({
+  getParentRoute: () => spaceRoute,
+  path: "/",
+  component: lazyRouteComponent(() => import("./spaces/space-layout.js"), "SpaceOverviewRedirect"),
+});
+
+const itemSearch = z.object({ edit: z.boolean().optional().catch(undefined) });
+
+const pageRoute = createRoute({
+  getParentRoute: () => spaceRoute,
+  path: "/pages/$itemId/{-$slug}",
+  params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
+  validateSearch: itemSearch,
+  component: lazyRouteComponent(() => import("./spaces/page-screen.js"), "PageScreen"),
+});
+
+const folderRoute = createRoute({
+  getParentRoute: () => spaceRoute,
+  path: "/folders/$itemId/{-$slug}",
+  params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
+  component: lazyRouteComponent(() => import("./spaces/folder-screen.js"), "FolderScreen"),
+});
+
+const labelRoute = createRoute({
+  getParentRoute: () => spaceRoute,
+  path: "/labels/$label",
+  component: lazyRouteComponent(() => import("./spaces/label-screen.js"), "LabelScreen"),
+});
+
+const spaceSettingsRoute = createRoute({
+  getParentRoute: () => spaceRoute,
+  path: "/settings",
+});
+
+const spaceSettingsIndexRoute = createRoute({
+  getParentRoute: () => spaceSettingsRoute,
+  path: "/",
+  beforeLoad: ({ params }) => {
+    throw redirect({ to: "/spaces/$spaceKey/settings/general", params });
+  },
+});
+
+const spaceGeneralRoute = createRoute({
+  getParentRoute: () => spaceSettingsRoute,
+  path: "/general",
+  component: lazyRouteComponent(
+    () => import("./spaces/settings/space-general-screen.js"),
+    "SpaceGeneralScreen",
+  ),
+});
+
+const spacePermissionsRoute = createRoute({
+  getParentRoute: () => spaceSettingsRoute,
+  path: "/permissions",
+  component: lazyRouteComponent(
+    () => import("./spaces/settings/space-permissions-screen.js"),
+    "SpacePermissionsScreen",
+  ),
 });
 
 const settingsRoute = createRoute({
@@ -292,6 +374,11 @@ const organizationNotificationsRoute = organizationScreen(
   () => import("./screens/organization/notification-defaults-screen.js"),
   "OrganizationNotificationDefaultsScreen",
 );
+const organizationSpacesRoute = organizationScreen(
+  "/spaces",
+  () => import("./spaces/settings/organization-spaces-screen.js"),
+  "OrganizationSpacesScreen",
+);
 const organizationAuditRoute = organizationScreen(
   "/audit-log",
   () => import("./screens/organization/audit-screen.js"),
@@ -385,6 +472,11 @@ const instanceNotificationsRoute = instanceScreen(
   () => import("./screens/instance/notification-defaults-screen.js"),
   "InstanceNotificationDefaultsScreen",
 );
+const instancePersonalSpacesRoute = instanceScreen(
+  "/personal-spaces",
+  () => import("./spaces/settings/instance-personal-spaces-screen.js"),
+  "InstancePersonalSpacesScreen",
+);
 const instanceAuditRoute = instanceScreen(
   "/audit-log",
   () => import("./screens/instance/audit-screen.js"),
@@ -418,6 +510,15 @@ const routeTree = rootRoute.addChildren([
   ]),
   appRoute.addChildren([
     homeRoute,
+    spacesRoute,
+    personalSpaceRoute,
+    spaceRoute.addChildren([
+      spaceIndexRoute,
+      pageRoute,
+      folderRoute,
+      labelRoute,
+      spaceSettingsRoute.addChildren([spaceSettingsIndexRoute, spaceGeneralRoute, spacePermissionsRoute]),
+    ]),
     settingsRoute.addChildren([
       settingsIndexRoute,
       preferencesRoute,
@@ -436,6 +537,7 @@ const routeTree = rootRoute.addChildren([
         organizationSecurityRoute,
         domainsRoute,
         organizationNotificationsRoute,
+        organizationSpacesRoute,
         organizationAuditRoute,
       ]),
       instanceRoute.addChildren([
@@ -451,6 +553,7 @@ const routeTree = rootRoute.addChildren([
         instanceMailRoute,
         breakGlassRoute,
         instanceNotificationsRoute,
+        instancePersonalSpacesRoute,
         instanceAuditRoute,
       ]),
     ]),

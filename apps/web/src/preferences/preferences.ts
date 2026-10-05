@@ -39,6 +39,7 @@ export interface PreferenceValues {
   font: Font;
   sidebarCollapsed: boolean;
   editorToolbar: boolean;
+  folderView: "list" | "tiles";
 }
 
 export const preferenceKeys: Record<keyof PreferenceValues, string> = {
@@ -55,6 +56,7 @@ export const preferenceKeys: Record<keyof PreferenceValues, string> = {
   font: "appearance.font",
   sidebarCollapsed: "appearance.sidebarCollapsed",
   editorToolbar: "appearance.editorToolbar",
+  folderView: "appearance.folderView",
 };
 
 const STORAGE_KEY = "pagehall.appearance";
@@ -75,6 +77,7 @@ export function defaultPreferences(language: Language): PreferenceValues {
     font: "default",
     sidebarCollapsed: false,
     editorToolbar: true,
+    folderView: "list",
   };
 }
 
@@ -100,6 +103,7 @@ export function toPreferenceValues(
     font: oneOf(fonts, value("font"), fallback.font),
     sidebarCollapsed: value("sidebarCollapsed") === true,
     editorToolbar: value("editorToolbar") !== false,
+    folderView: value("folderView") === "tiles" ? "tiles" : "list",
   };
 }
 
