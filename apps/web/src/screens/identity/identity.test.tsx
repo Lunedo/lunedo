@@ -217,7 +217,10 @@ describe("the sign-in page", () => {
       },
     );
     await renderPath("/sign-in");
-    await userEvent.type(await screen.findByLabelText("Work e-mail address or sign-in name"), "olivia@example.org");
+    await userEvent.type(
+      await screen.findByLabelText("Work e-mail address or sign-in name"),
+      "olivia@example.org",
+    );
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await userEvent.type(await screen.findByLabelText("Password"), "wrong password");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));

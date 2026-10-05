@@ -11,14 +11,16 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { createFormatter, type Formatter } from "../format/format.js";
-import { isLanguage, rememberLanguage } from "../i18n/index.js";
+import { isLanguage, rememberLanguage, takeChosenLanguage } from "../i18n/index.js";
 import {
   defaultPreferences,
   type PreferenceValues,
+  preferenceKeys,
   rememberAppearance,
   storedAppearance,
   toPreferenceValues,
   usePreferenceList,
+  useUpdatePreference,
 } from "./preferences.js";
 
 const PreferencesContext = createContext<PreferenceValues | null>(null);
@@ -59,6 +61,17 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     [list.data, fallback, i18n.language],
   );
   const accentColor = useAccentColor();
+  const update = useUpdatePreference();
+  const { mutate } = update;
+
+  useEffect(() => {
+    if (!list.data) return;
+    const chosen = takeChosenLanguage();
+    const own = list.data.find((entry) => entry.key === preferenceKeys.language);
+    if (chosen && own && own.source !== "user" && own.lockedBy === null) {
+      mutate({ key: preferenceKeys.language, value: chosen });
+    }
+  }, [list.data, mutate]);
 
   useAppearance({
     colorMode: values.colorMode,

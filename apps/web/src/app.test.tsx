@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App, createQueryClient } from "./app.js";
@@ -142,6 +142,42 @@ describe("the web client", () => {
     expect(await screen.findByRole("heading", { name: "Security", level: 1 })).toBeTruthy();
     const signIn = requests.find((request) => request.path === "/api/v1/auth/sign-in");
     expect(signIn?.headers.get("X-Pagehall-Request")).toBe("1");
+  });
+
+  it("makes the language chosen on the sign-in page the person's own when they have none", async () => {
+    let signedIn = false;
+    const { requests } = api({
+      "GET /api/v1/auth/session": () => (signedIn ? { body: SESSION } : problem(401, "notSignedIn")),
+      "GET /api/v1/account/preferences": () => ({
+        body: [{ ...preference("locale.language", "en"), source: "organization" }],
+      }),
+      "PUT /api/v1/account/preferences/locale.language": () => ({ status: 204 }),
+    });
+    await renderApp("/sign-in");
+    await userEvent.click(await screen.findByRole("combobox", { name: "Language" }));
+    await userEvent.click(screen.getByRole("option", { name: "Deutsch" }));
+    cleanup();
+    signedIn = true;
+    await renderApp("/settings/preferences");
+    await waitFor(() =>
+      expect(
+        requests.find((request) => request.path === "/api/v1/account/preferences/locale.language")?.body,
+      ).toEqual({ value: "de" }),
+    );
+  });
+
+  it("keeps a person's own language over the one chosen on the sign-in page", async () => {
+    const { requests } = api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/preferences": () => ({
+        body: [{ ...preference("locale.language", "en"), source: "user" }],
+      }),
+    });
+    localStorage.setItem("pagehall.chosenLanguage", "de");
+    await renderApp("/settings/preferences");
+    expect(await screen.findByRole("heading", { name: "Preferences", level: 1 })).toBeTruthy();
+    await waitFor(() => expect(localStorage.getItem("pagehall.chosenLanguage")).toBeNull());
+    expect(requests.some((request) => request.method === "PUT")).toBe(false);
   });
 
   it("applies the preferences and the organization's accent once signed in", async () => {

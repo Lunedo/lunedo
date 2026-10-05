@@ -5,7 +5,7 @@ import { type ReactNode, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { instanceInfoQuery } from "../../api/queries.js";
 import { languageItems } from "../../components/pickers.js";
-import { isLanguage, rememberLanguage } from "../../i18n/index.js";
+import { isLanguage, rememberChosenLanguage, rememberLanguage } from "../../i18n/index.js";
 import { isAccentColor } from "../../preferences/preferences.js";
 import { setAccentColor } from "../../preferences/preferences-provider.js";
 import { BrandMark } from "../../shell/brand.js";
@@ -27,13 +27,13 @@ export function AuthLayout() {
       <footer className="flex flex-wrap items-center justify-center gap-3 px-4 pb-6 text-sm text-text-muted">
         <span>{info.data?.name ?? ""}</span>
         <span aria-hidden="true">·</span>
-        <LanguagePicker label={t("auth.language")} />
+        <LanguagePicker label={t("auth.language")} ownLanguage />
       </footer>
     </div>
   );
 }
 
-export function LanguagePicker({ label }: { label: string }) {
+export function LanguagePicker({ label, ownLanguage = false }: { label: string; ownLanguage?: boolean }) {
   const { t, i18n } = useTranslation();
   return (
     <div className="w-field max-w-full">
@@ -43,6 +43,7 @@ export function LanguagePicker({ label }: { label: string }) {
         onValueChange={(language) => {
           if (!isLanguage(language)) return;
           rememberLanguage(language);
+          if (ownLanguage) rememberChosenLanguage(language);
           void i18n.changeLanguage(language);
         }}
         items={languageItems(t)}
