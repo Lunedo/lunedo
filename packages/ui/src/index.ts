@@ -55,6 +55,7 @@ export {
   type DialogSize,
   Drawer,
   type DrawerProps,
+  type TypedConfirmation,
 } from "./dialog.js";
 export {
   DURATION_UNITS,
@@ -98,6 +99,8 @@ export { Icon, type IconSize } from "./icon.js";
 export { type UiLabels, UiProvider, useUiLabels } from "./labels.js";
 export {
   type Breadcrumb,
+  DangerAction,
+  DangerZone,
   List,
   ListRow,
   PageContainer,

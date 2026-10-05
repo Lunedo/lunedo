@@ -265,6 +265,65 @@ describe("group mapping", () => {
     expect(await within(table).findByText("Platform Engineering")).toBeTruthy();
   });
 
+  it("removes a rule at once and restores it in its place on undo", async () => {
+    const second = rule({
+      id: "01929b1e-0000-7000-8000-0000000000d2",
+      position: 1,
+      group: { id: "sg-design", name: "Design", missing: false },
+      synchronizedGroup: null,
+    });
+    const restored = "01929b1e-0000-7000-8000-0000000000d3";
+    let rules = [rule(), second];
+    const { requests } = adminApi({
+      [`GET ${BASE}/mapping-rules`]: () => ({ body: rules }),
+      [`DELETE ${BASE}/mapping-rules/${RULE}`]: () => {
+        rules = [second];
+        return { status: 204 };
+      },
+      [`POST ${BASE}/mapping-rules`]: () => {
+        const created = rule({ id: restored, position: 1 });
+        rules = [second, created];
+        return { status: 201, body: created };
+      },
+      [`PUT ${BASE}/mapping-rule-order`]: () => ({ status: 204 }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
+    await screen.findByRole("table", { name: "Mapping rules" });
+    await userEvent.click(screen.getByRole("button", { name: "More for Engineering" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Remove rule" }));
+    expect(screen.queryByRole("dialog", { name: "Remove mapping rule" })).toBeNull();
+    expect(requests.some((request) => request.method === "DELETE")).toBe(true);
+    expect(await screen.findByText("The rule for Engineering was removed.")).toBeTruthy();
+    await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
+    await waitFor(() =>
+      expect(requests.find((request) => request.path.endsWith("/mapping-rule-order"))?.body).toEqual({
+        ruleIds: [restored, second.id],
+      }),
+    );
+    const created = requests.find(
+      (request) => request.method === "POST" && request.path.endsWith("/mapping-rules"),
+    );
+    expect(created?.body).toEqual({
+      target: "organization",
+      group: { id: "sg-engineering", name: "Engineering" },
+      organizationId: ORGANIZATION,
+      role: null,
+      synchronizedGroup: true,
+      homeOrganization: false,
+    });
+  });
+
+  it("shows rules changed in another session without a reload", async () => {
+    let rules = [rule()];
+    adminApi({ [`GET ${BASE}/mapping-rules`]: () => ({ body: rules }) });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
+    const table = await screen.findByRole("table", { name: "Mapping rules" });
+    expect(within(table).getAllByText("Engineering").length).toBeGreaterThan(0);
+    rules = [];
+    emitStream("changes", { scope: "instance", organizationId: null, target: "mappingRule" });
+    await waitFor(() => expect(within(table).queryByText("Engineering")).toBeNull());
+  });
+
   it("does not warn about renaming when groups have identifiers", async () => {
     adminApi({ [`GET ${BASE}/mapping-rules`]: () => ({ body: [rule()] }) });
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);

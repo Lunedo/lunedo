@@ -32,6 +32,7 @@ import {
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
 import { memberLoader } from "../../components/pickers.js";
+import { useUnassignWithUndo } from "../../components/role-undo.js";
 import { usePaged, useSorted } from "../../components/table-state.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { translateKey } from "../../i18n/translate.js";
@@ -94,6 +95,11 @@ export function MembersScreen() {
         : member.name.toLowerCase(),
   );
   const paged = usePaged(sorted.rows, 25);
+  const queryClient = useQueryClient();
+  const unassign = useUnassignWithUndo({ organizationId }, async () => {
+    await queryClient.invalidateQueries({ queryKey: organizationKeys.members(organizationId) });
+    await queryClient.invalidateQueries({ queryKey: organizationKeys.assignments(organizationId) });
+  });
   const nameOf = useMemo(() => new Map(people.map((member) => [member.accountId, member.name])), [people]);
 
   const memberMenu = (member: Member) => [
@@ -106,8 +112,26 @@ export function MembersScreen() {
       label: t("members.actions.removeRole", {
         role: role.customRoleId ? role.role : translateKey(t, `roles.builtIn.${role.role}`),
       }),
-      onSelect: () =>
-        setAction({ kind: "unassign", member, assignmentId: role.assignmentId, role: role.role }),
+      onSelect: () => {
+        if (!role.customRoleId && role.role === "owner") {
+          setAction({ kind: "unassign", member, assignmentId: role.assignmentId, role: role.role });
+          return;
+        }
+        void unassign(
+          {
+            id: role.assignmentId,
+            builtInRole: role.customRoleId ? null : role.role,
+            customRoleId: role.customRoleId,
+            principalKind: "account",
+            principalId: member.accountId,
+            expiresAt: role.expiresAt,
+          },
+          t("roles.unassignedNamed", {
+            name: member.name,
+            role: role.customRoleId ? role.role : translateKey(t, `roles.builtIn.${role.role}`),
+          }),
+        );
+      },
     })),
     { type: "separator" as const },
     ...(member.kind !== "member"
@@ -350,8 +374,9 @@ function MemberActionDialogs({
       <ConfirmDialog
         open
         onOpenChange={close}
-        title={t("roles.unassignTitle")}
-        confirmLabel={t("roles.unassign")}
+        title={t("roles.removeOwnerTitle", { name: member.name })}
+        description={t("roles.removeOwnerSummary", { name: member.name, organization: organizationName })}
+        confirmLabel={t("roles.removeOwner")}
         cancelLabel={t("common.cancel")}
         destructive
         onConfirm={() =>

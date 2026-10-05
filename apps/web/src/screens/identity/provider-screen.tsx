@@ -2,6 +2,8 @@ import {
   Badge,
   Button,
   ConfirmDialog,
+  DangerAction,
+  DangerZone,
   Notice,
   Section,
   SettingRow,
@@ -41,7 +43,7 @@ import {
   RedirectUriField,
   SecondFactorFields,
 } from "./provider-config.js";
-import { CredentialsList } from "./provider-credentials.js";
+import { CredentialRemovalZone, CredentialsList } from "./provider-credentials.js";
 import { credentialStatus, providerPresetLabel } from "./provider-labels.js";
 import {
   CaCertificateSection,
@@ -252,13 +254,23 @@ function Overview({
         <>
           <Section title={t("identityProviders.credentials.groupTitles.signing")}>
             <div className="px-4 py-3">
-              <CredentialsList provider={provider} canManage={canManage} group="signing" />
+              <CredentialsList
+                provider={provider}
+                canManage={canManage}
+                group="signing"
+                removeInline={false}
+              />
             </div>
           </Section>
           {provider.config.preset === "entraId" ? (
             <Section title={t("identityProviders.credentials.groupTitles.graph")}>
               <div className="px-4 py-3">
-                <CredentialsList provider={provider} canManage={canManage} group="graph" />
+                <CredentialsList
+                  provider={provider}
+                  canManage={canManage}
+                  group="graph"
+                  removeInline={false}
+                />
               </div>
             </Section>
           ) : null}
@@ -266,10 +278,15 @@ function Overview({
       ) : (
         <Section title={t("identityProviders.credentials.title")}>
           <div className="px-4 py-3">
-            <CredentialsList provider={provider} canManage={canManage} />
+            <CredentialsList provider={provider} canManage={canManage} removeInline={false} />
           </div>
         </Section>
       )}
+      {canManage && provider.credentials.length > 0 ? (
+        <DangerZone title={t("common.dangerZone")}>
+          <CredentialRemovalZone provider={provider} />
+        </DangerZone>
+      ) : null}
     </div>
   );
 }
@@ -492,28 +509,34 @@ function StatusSection({ provider }: { provider: IdentityProvider }) {
     }
   };
   return (
-    <Section title={t("identityProviders.status.title")}>
+    <>
       {deactivated ? (
-        <SettingRow
-          label={t("identityProviders.status.activateTitle", { name: provider.name })}
-          description={t("identityProviders.status.activateDescription")}
-          control={
-            <Button variant="primary" icon={Play} loading={busy} onClick={() => void activate()}>
-              {t("identityProviders.status.activate")}
-            </Button>
-          }
-        />
-      ) : (
-        <SettingRow
-          label={t("identityProviders.status.deactivateTitle", { name: provider.name })}
-          description={t("identityProviders.status.deactivateDescription")}
-          control={
-            <Button variant="secondary" icon={Pause} onClick={() => setConfirming(true)}>
-              {t("identityProviders.status.deactivate")}
-            </Button>
-          }
-        />
-      )}
+        <Section title={t("identityProviders.status.title")}>
+          <SettingRow
+            label={t("identityProviders.status.activateTitle", { name: provider.name })}
+            description={t("identityProviders.status.activateDescription")}
+            control={
+              <Button variant="primary" icon={Play} loading={busy} onClick={() => void activate()}>
+                {t("identityProviders.status.activate")}
+              </Button>
+            }
+          />
+        </Section>
+      ) : null}
+      <DangerZone title={t("common.dangerZone")}>
+        {deactivated ? null : (
+          <DangerAction
+            title={t("identityProviders.status.deactivateTitle", { name: provider.name })}
+            description={t("identityProviders.status.deactivateDescription")}
+            action={
+              <Button variant="danger" size="sm" icon={Pause} onClick={() => setConfirming(true)}>
+                {t("identityProviders.status.deactivate")}
+              </Button>
+            }
+          />
+        )}
+        <RemoveRow provider={provider} />
+      </DangerZone>
       <ConfirmDialog
         open={confirming}
         onOpenChange={setConfirming}
@@ -521,6 +544,7 @@ function StatusSection({ provider }: { provider: IdentityProvider }) {
         description={t("identityProviders.status.deactivateConfirm")}
         confirmLabel={t("identityProviders.status.deactivate")}
         cancelLabel={t("common.cancel")}
+        destructive
         onConfirm={async () => {
           try {
             await refresh(await deactivateProvider(provider.id));
@@ -534,8 +558,7 @@ function StatusSection({ provider }: { provider: IdentityProvider }) {
           }
         }}
       />
-      <RemoveRow provider={provider} />
-    </Section>
+    </>
   );
 }
 
@@ -581,11 +604,11 @@ function RemoveRow({ provider }: { provider: IdentityProvider }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <SettingRow
-        label={t("identityProviders.removeTitle", { name: provider.name })}
+      <DangerAction
+        title={t("identityProviders.removeTitle", { name: provider.name })}
         description={t("identityProviders.removeDescription")}
-        control={
-          <Button variant="danger" icon={Trash2} onClick={() => setOpen(true)}>
+        action={
+          <Button variant="danger" size="sm" icon={Trash2} onClick={() => setOpen(true)}>
             {t("identityProviders.remove")}
           </Button>
         }
@@ -598,6 +621,11 @@ function RemoveRow({ provider }: { provider: IdentityProvider }) {
         confirmLabel={t("identityProviders.remove")}
         cancelLabel={t("common.cancel")}
         destructive
+        typedConfirmation={{
+          value: provider.name,
+          label: t("common.typeToConfirm", { name: provider.name }),
+          mismatch: t("common.nameMismatch"),
+        }}
         onConfirm={async () => {
           try {
             await removeProvider(provider.id);

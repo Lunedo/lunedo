@@ -1,6 +1,9 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MoreHorizontal } from "lucide-react";
 import { describe, expect, it, vi } from "vitest";
+import { IconButton } from "./button.js";
+import { Menu } from "./overlays.js";
 import { Table, type TableColumn, type TableSort } from "./table.js";
 import { renderUi } from "./testing/render.js";
 
@@ -87,5 +90,30 @@ describe("Table", () => {
     const cells = screen.getAllByRole("cell", { name: "…" });
     for (const cell of cells) expect(cell.className).toContain("sticky");
     expect(screen.getByRole("columnheader", { name: "Actions" }).className).toContain("sticky");
+  });
+
+  it("does not open a row for clicks inside a menu that it renders elsewhere", async () => {
+    const onRowClick = vi.fn();
+    const onSelect = vi.fn();
+    renderTable({
+      onRowClick,
+      columns: [
+        ...columns,
+        {
+          key: "actions",
+          header: "Actions",
+          cell: (row) => (
+            <Menu
+              trigger={<IconButton label={`More for ${row.name}`} icon={MoreHorizontal} />}
+              items={[{ label: "Remove rule", onSelect }]}
+            />
+          ),
+        },
+      ],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "More for Lena Hofer" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Remove rule" }));
+    expect(onSelect).toHaveBeenCalledOnce();
+    expect(onRowClick).not.toHaveBeenCalled();
   });
 });

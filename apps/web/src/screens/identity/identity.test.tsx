@@ -617,6 +617,38 @@ describe("the sign-in settings of the instance", () => {
     ]);
   });
 
+  it("removes credentials only from the danger zone and says when sign-in would stop", async () => {
+    const only = "01929b1e-0000-7000-8000-0000000000b1";
+    const { requests } = adminApi({
+      [`GET /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({
+        body: provider({
+          credentials: [
+            {
+              id: only,
+              kind: "clientSecret",
+              keyId: null,
+              expiresAt: "2027-10-23T00:00:00.000Z",
+              createdAt: "2024-10-23T00:00:00.000Z",
+              inUse: true,
+              chosen: false,
+            },
+          ],
+        }),
+      }),
+      [`DELETE /api/v1/instance/identity-providers/${PROVIDER}/credentials/${only}`]: () => ({ status: 204 }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}`);
+    await screen.findByRole("heading", { name: "Microsoft Entra ID · Example", level: 1 });
+    const credentials = screen.getByRole("list", { name: "Credentials" });
+    expect(within(credentials).queryByRole("button", { name: /Remove/ })).toBeNull();
+    const zone = screen.getByRole("region", { name: "Danger zone" });
+    expect(within(zone).getByText(/Sign-in through Microsoft Entra ID · Example stops/)).toBeTruthy();
+    await userEvent.click(within(zone).getByRole("button", { name: "Remove credential" }));
+    const confirm = await screen.findByRole("dialog", { name: "Remove this credential?" });
+    await userEvent.click(within(confirm).getByRole("button", { name: "Remove credential" }));
+    await waitFor(() => expect(requests.some((request) => request.method === "DELETE")).toBe(true));
+  });
+
   it("explains a failed test sign-in and what to do in the assistant", async () => {
     const flow = "01929b1e-0000-7000-8000-0000000000f1";
     adminApi({
@@ -697,10 +729,12 @@ describe("the sign-in settings of the instance", () => {
       },
     });
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=settings`);
-    await userEvent.click(await screen.findByRole("button", { name: "Deactivate" }));
+    const zone = await screen.findByRole("region", { name: "Danger zone" });
+    await userEvent.click(within(zone).getByRole("button", { name: "Deactivate provider" }));
     const confirm = await screen.findByRole("dialog", { name: "Deactivate Microsoft Entra ID · Example" });
     expect(within(confirm).getByText(/sessions that came from it end now/)).toBeTruthy();
-    await userEvent.click(within(confirm).getByRole("button", { name: "Deactivate" }));
+    expect(within(confirm).getByText(/Ended sessions do not come back/)).toBeTruthy();
+    await userEvent.click(within(confirm).getByRole("button", { name: "Deactivate provider" }));
     expect(await screen.findByText("This provider is deactivated")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Activate" }));
     await waitFor(() => expect(screen.queryByText("This provider is deactivated")).toBeNull());
@@ -852,6 +886,12 @@ describe("the sign-in settings of the instance", () => {
         "2 synchronized groups become ordinary groups and keep their members and permissions.",
       ),
     ).toBeTruthy();
+    await userEvent.click(within(confirm).getByRole("button", { name: "Remove provider" }));
+    expect(requests.some((request) => request.method === "DELETE")).toBe(false);
+    await userEvent.type(
+      within(confirm).getByLabelText("Type Microsoft Entra ID · Example to confirm"),
+      "Microsoft Entra ID · Example",
+    );
     await userEvent.click(within(confirm).getByRole("button", { name: "Remove provider" }));
     await waitFor(() => expect(requests.some((request) => request.method === "DELETE")).toBe(true));
   });

@@ -265,18 +265,22 @@ describe("the accounts page", () => {
     const table = await renderAccounts();
     await userEvent.click(await within(table).findByText("Max Member"));
     const panel = await screen.findByRole("dialog", { name: "Max Member" });
-    await userEvent.click(within(panel).getByRole("button", { name: "Anonymize…" }));
+    await userEvent.click(within(panel).getByRole("button", { name: "Anonymize account…" }));
     const dialog = await screen.findByRole("dialog", { name: "Anonymize account" });
     expect(
       within(dialog).getByText(/exported or streamed to other systems are outside Pagehall/),
     ).toBeTruthy();
     const confirm = within(dialog).getByRole("button", { name: "Anonymize" }) as HTMLButtonElement;
-    expect(confirm.disabled).toBe(true);
+    expect(confirm.disabled).toBe(false);
+    await userEvent.click(confirm);
+    expect(document.activeElement).toBe(within(dialog).getByLabelText("Reason"));
+    expect(within(dialog).getByText(/Enter why the account is anonymized/)).toBeTruthy();
     await userEvent.type(within(dialog).getByLabelText("Reason"), "Erasure request of 1 October 2026");
     await userEvent.type(within(dialog).getByLabelText("Type Max Member to confirm"), "Max");
-    expect(confirm.disabled).toBe(true);
+    await userEvent.click(confirm);
+    expect(document.activeElement).toBe(within(dialog).getByLabelText("Type Max Member to confirm"));
+    expect(requests.some((request) => request.path.endsWith("/anonymize"))).toBe(false);
     await userEvent.type(within(dialog).getByLabelText("Type Max Member to confirm"), " Member");
-    expect(confirm.disabled).toBe(false);
     await userEvent.click(confirm);
     expect(await screen.findByText("The account was anonymized")).toBeTruthy();
     expect(requests.find((request) => request.path.endsWith(`/accounts/${MAX}/anonymize`))?.body).toEqual({
@@ -409,8 +413,34 @@ describe("the accounts page", () => {
     await userEvent.click(await within(table).findByText("Olivia Owner"));
     const panel = await screen.findByRole("dialog", { name: "Olivia Owner" });
     expect(within(panel).getByText("You manage your own account on the Security page.")).toBeTruthy();
+    expect(within(panel).queryByRole("button", { name: "Reset second factor" })).toBeNull();
+    expect(within(panel).queryByRole("region", { name: "Danger zone" })).toBeNull();
+  });
+
+  it("keeps lasting actions in a danger zone at the end and names their effects", async () => {
+    const { requests } = api(() => ({ body: { endedSessions: 0 } }), {
+      [`POST /api/v1/accounts/${MAX}/deactivate`]: () => ({ status: 204 }),
+    });
+    const table = await renderAccounts();
+    await userEvent.click(await within(table).findByText("Max Member"));
+    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    await within(panel).findByText("Audit readers through Auditors", { exact: false });
+    const zone = within(panel).getByRole("region", { name: "Danger zone" });
+    const sections = within(panel).getAllByRole("region");
+    expect(sections.at(-1)).toBe(zone);
     expect(
-      (within(panel).getByRole("button", { name: "Reset second factor" }) as HTMLButtonElement).disabled,
-    ).toBe(true);
+      within(zone)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["End all sessions", "Reset second factor", "Deactivate account", "Anonymize account…"]);
+    await userEvent.click(within(zone).getByRole("button", { name: "Deactivate account" }));
+    const dialog = await screen.findByRole("dialog", { name: "Deactivate Max Member?" });
+    expect(
+      within(dialog).getByText(/sessions end at once and its API tokens are revoked for good/),
+    ).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Deactivate account" }));
+    await waitFor(() =>
+      expect(requests.some((request) => request.path.endsWith(`/accounts/${MAX}/deactivate`))).toBe(true),
+    );
   });
 });

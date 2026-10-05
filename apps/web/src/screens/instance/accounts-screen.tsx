@@ -2,6 +2,8 @@ import {
   Badge,
   Button,
   ConfirmDialog,
+  DangerAction,
+  DangerZone,
   Dialog,
   Drawer,
   Field,
@@ -320,17 +322,13 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
     }
   };
 
-  const ownReason = own ? t("instance.accounts.ownAccount") : undefined;
-  const actionButton = (kind: PanelAction, label: string, danger = false) => (
-    <Button
-      variant={danger ? "danger" : "secondary"}
-      size="sm"
-      disabled={own}
-      onClick={() => setAction(kind)}
-    >
+  const dangerButton = (kind: PanelAction, label: string) => (
+    <Button variant="danger" size="sm" onClick={() => setAction(kind)}>
       {label}
     </Button>
   );
+  const anonymizable =
+    current.state !== "anonymized" && (account.type === "standard" || account.type === "guest");
 
   return (
     <Drawer
@@ -339,7 +337,7 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
       title={accountName(t, account)}
       size="panel"
     >
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 p-4">
         <div className="flex flex-col gap-1 text-sm">
           <span>{account.email ?? "—"}</span>
           <span className="text-text-muted">
@@ -347,22 +345,14 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
           </span>
           {home ? <span>{t("instance.accounts.managedBy", { organization: home.name })}</span> : null}
         </div>
-        {manage ? (
-          <div className="flex flex-col gap-2">
-            {own ? <p className="text-sm text-text-muted">{ownReason}</p> : null}
-            <div className="flex flex-wrap gap-2">
-              {current.state === "active"
-                ? actionButton("deactivate", t("members.actions.deactivate"), true)
-                : current.state === "deactivated"
-                  ? actionButton("reactivate", t("instance.accounts.reactivate"))
-                  : null}
-              {current.state === "active"
-                ? actionButton("endSessions", t("instance.accounts.endSessions"))
-                : null}
-              {current.state === "active"
-                ? actionButton("reset", t("instance.accounts.resetSecondFactor"))
-                : null}
-            </div>
+        {manage && own ? (
+          <p className="text-sm text-text-muted">{t("instance.accounts.ownAccount")}</p>
+        ) : null}
+        {manage && !own && current.state === "deactivated" ? (
+          <div>
+            <Button size="sm" onClick={() => setAction("reactivate")}>
+              {t("instance.accounts.reactivate")}
+            </Button>
           </div>
         ) : null}
         {manage &&
@@ -493,19 +483,35 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
             </PanelSection>
           </>
         ) : null}
-        {manage &&
-        !own &&
-        current.state !== "anonymized" &&
-        (account.type === "standard" || account.type === "guest") ? (
-          <section className="flex flex-col gap-2 rounded-md border border-danger p-4">
-            <h3 className="font-semibold">{t("lifecycle.anonymize.title")}</h3>
-            <p className="text-sm text-text-muted">{t("lifecycle.anonymize.summary")}</p>
-            <div>
-              <Button variant="danger" size="sm" onClick={() => setAction("anonymize")}>
-                {t("lifecycle.anonymize.open")}
-              </Button>
-            </div>
-          </section>
+        {manage && !own && (current.state === "active" || anonymizable) ? (
+          <DangerZone title={t("common.dangerZone")}>
+            {current.state === "active" ? (
+              <>
+                <DangerAction
+                  title={t("instance.accounts.endSessions")}
+                  description={t("instance.accounts.endSessionsSummary", { name: account.name })}
+                  action={dangerButton("endSessions", t("instance.accounts.endSessions"))}
+                />
+                <DangerAction
+                  title={t("instance.accounts.resetSecondFactor")}
+                  description={t("instance.accounts.resetSummary", { name: account.name })}
+                  action={dangerButton("reset", t("instance.accounts.resetSecondFactor"))}
+                />
+                <DangerAction
+                  title={t("members.actions.deactivate")}
+                  description={t("instance.accounts.deactivateSummary")}
+                  action={dangerButton("deactivate", t("members.actions.deactivate"))}
+                />
+              </>
+            ) : null}
+            {anonymizable ? (
+              <DangerAction
+                title={t("lifecycle.anonymize.title")}
+                description={t("lifecycle.anonymize.summary")}
+                action={dangerButton("anonymize", t("lifecycle.anonymize.open"))}
+              />
+            ) : null}
+          </DangerZone>
         ) : null}
       </div>
       {action === "anonymize" ? (

@@ -6,6 +6,8 @@ import {
   Combobox,
   type ComboboxItem,
   ConfirmDialog,
+  DangerAction,
+  DangerZone,
   Dialog,
   Field,
   Input,
@@ -40,12 +42,7 @@ import { roleName } from "./roles.js";
 
 const route = getRouteApi("/app/settings/organizations/$organizationId/groups/$groupId");
 
-type Pending =
-  | { kind: "addMember" }
-  | { kind: "addManager" }
-  | { kind: "removeMember"; accountId: string; name: string }
-  | { kind: "removeManager"; accountId: string; name: string }
-  | { kind: "delete" };
+type Pending = { kind: "addMember" } | { kind: "addManager" } | { kind: "delete" };
 
 export function GroupScreen() {
   const { t } = useTranslation();
@@ -86,6 +83,59 @@ export function GroupScreen() {
     }
   };
 
+  const addMember = (accountId: string, expiresAt: string | null) =>
+    request(() =>
+      api.POST("/api/v1/groups/{groupId}/members", {
+        params: { path: { groupId } },
+        body: { accountId, ...(expiresAt ? { expiresAt } : {}) },
+      }),
+    );
+  const addManager = (accountId: string) =>
+    request(() =>
+      api.POST("/api/v1/groups/{groupId}/managers", { params: { path: { groupId } }, body: { accountId } }),
+    );
+  const undoable = async (remove: () => Promise<unknown>, title: string, restore: () => Promise<unknown>) => {
+    try {
+      await remove();
+      await refresh();
+    } catch (failure) {
+      showFailure(t("failures.changeGroup"), failure);
+      return;
+    }
+    toast({
+      title,
+      undo: {
+        onUndo: () => {
+          void restore()
+            .then(refresh)
+            .catch((failure: unknown) => showFailure(t("failures.changeGroup"), failure));
+        },
+      },
+    });
+  };
+  const removeMember = (member: { accountId: string; name: string; expiresAt: string | null }) =>
+    undoable(
+      () =>
+        request(() =>
+          api.DELETE("/api/v1/groups/{groupId}/members/{accountId}", {
+            params: { path: { groupId, accountId: member.accountId } },
+          }),
+        ),
+      t("groups.memberRemovedName", { name: member.name }),
+      () => addMember(member.accountId, member.expiresAt),
+    );
+  const removeManager = (manager: { accountId: string; name: string }) =>
+    undoable(
+      () =>
+        request(() =>
+          api.DELETE("/api/v1/groups/{groupId}/managers/{accountId}", {
+            params: { path: { groupId, accountId: manager.accountId } },
+          }),
+        ),
+      t("groups.managerRemovedName", { name: manager.name }),
+      () => addManager(manager.accountId),
+    );
+
   if (group.isError)
     return <LoadError what={t("failures.loadGroup")} error={group.error} onRetry={() => group.refetch()} />;
 
@@ -99,13 +149,6 @@ export function GroupScreen() {
         { label: t("groups.title"), href: `/settings/organizations/${organizationId}/groups` },
         { label: group.data?.name ?? "" },
       ]}
-      actions={
-        canManage ? (
-          <Button variant="danger" icon={Trash2} onClick={() => setPending({ kind: "delete" })}>
-            {t("groups.delete")}
-          </Button>
-        ) : null
-      }
     >
       {group.isPending ? <Skeleton className="h-12 w-full" /> : null}
       {managedBy ? (
@@ -162,14 +205,8 @@ export function GroupScreen() {
               title={manager.name}
               actions={
                 canManage ? (
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() =>
-                      setPending({ kind: "removeManager", accountId: manager.accountId, name: manager.name })
-                    }
-                  >
-                    {t("common.remove")}
+                  <Button variant="danger" size="sm" onClick={() => void removeManager(manager)}>
+                    {t("groups.removeManager")}
                   </Button>
                 ) : null
               }
@@ -208,22 +245,27 @@ export function GroupScreen() {
                 <Badge variant="warning">{t("groups.until", { date: format.date(member.expiresAt) })}</Badge>
               ) : null}
               {canManage ? (
-                <Button
-                  variant="danger"
-                  size="sm"
-                  icon={UserMinus}
-                  onClick={() =>
-                    setPending({ kind: "removeMember", accountId: member.accountId, name: member.name })
-                  }
-                >
-                  {t("common.remove")}
+                <Button variant="danger" size="sm" icon={UserMinus} onClick={() => void removeMember(member)}>
+                  {t("groups.removeMember")}
                 </Button>
               ) : null}
             </li>
           ))}
         </ul>
       </Section>
-
+      {canManage ? (
+        <DangerZone title={t("common.dangerZone")}>
+          <DangerAction
+            title={t("groups.delete")}
+            description={t("groups.deleteSummary")}
+            action={
+              <Button variant="danger" size="sm" icon={Trash2} onClick={() => setPending({ kind: "delete" })}>
+                {t("groups.delete")}
+              </Button>
+            }
+          />
+        </DangerZone>
+      ) : null}
       {pending?.kind === "addMember" || pending?.kind === "addManager" ? (
         <AddPersonDialog
           organizationId={organizationId}
@@ -240,75 +282,13 @@ export function GroupScreen() {
             run(
               () =>
                 pending.kind === "addManager"
-                  ? request(() =>
-                      api.POST("/api/v1/groups/{groupId}/managers", {
-                        params: { path: { groupId } },
-                        body: { accountId: person },
-                      }),
-                    )
-                  : request(() =>
-                      api.POST("/api/v1/groups/{groupId}/members", {
-                        params: { path: { groupId } },
-                        body: {
-                          accountId: person,
-                          ...(expiry ? { expiresAt: new Date(`${expiry}T23:59:59`).toISOString() } : {}),
-                        },
-                      }),
-                    ),
+                  ? addManager(person)
+                  : addMember(person, expiry ? new Date(`${expiry}T23:59:59`).toISOString() : null),
               pending.kind === "addManager" ? t("groups.managerAdded") : t("groups.memberAdded"),
             )
           }
         />
       ) : null}
-      <ConfirmDialog
-        open={pending?.kind === "removeMember" || pending?.kind === "removeManager"}
-        onOpenChange={(open) => {
-          if (!open) setPending(null);
-        }}
-        title={
-          pending?.kind === "removeManager"
-            ? t("groups.removeManagerTitle", { name: pending.name })
-            : t("groups.removeMemberTitle", { name: pending && "name" in pending ? pending.name : "" })
-        }
-        confirmLabel={t("common.remove")}
-        cancelLabel={t("common.cancel")}
-        destructive
-        onConfirm={() => {
-          if (pending?.kind === "removeMember")
-            return run(
-              () =>
-                request(() =>
-                  api.DELETE("/api/v1/groups/{groupId}/members/{accountId}", {
-                    params: { path: { groupId, accountId: pending.accountId } },
-                  }),
-                ),
-              t("groups.memberRemoved"),
-            );
-          if (pending?.kind === "removeManager")
-            return run(
-              () =>
-                request(() =>
-                  api.DELETE("/api/v1/groups/{groupId}/managers/{accountId}", {
-                    params: { path: { groupId, accountId: pending.accountId } },
-                  }),
-                ),
-              t("groups.managerRemoved"),
-            );
-          return undefined;
-        }}
-      >
-        {pending?.kind === "removeMember" ? (
-          <AccessImpact
-            change="loses"
-            people={[pending.name]}
-            what={
-              roleSummary
-                ? t("groups.losesRoles", { roles: roleSummary, name: group.data?.name ?? "" })
-                : t("groups.losesMembership", { name: group.data?.name ?? "" })
-            }
-          />
-        ) : null}
-      </ConfirmDialog>
       <ConfirmDialog
         open={pending?.kind === "delete"}
         onOpenChange={(open) => {
@@ -319,6 +299,11 @@ export function GroupScreen() {
         confirmLabel={t("groups.delete")}
         cancelLabel={t("common.cancel")}
         destructive
+        typedConfirmation={{
+          value: group.data?.name ?? "",
+          label: t("common.typeToConfirm", { name: group.data?.name ?? "" }),
+          mismatch: t("common.nameMismatch"),
+        }}
         onConfirm={async () => {
           try {
             await request(() => api.DELETE("/api/v1/groups/{groupId}", { params: { path: { groupId } } }));

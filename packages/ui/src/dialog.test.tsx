@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -109,5 +109,38 @@ describe("Drawer", () => {
       </Drawer>,
     );
     expect(screen.getByRole("dialog", { name: "Navigation" }).className).toContain("left-0");
+  });
+});
+
+describe("ConfirmDialog for an irreversible action", () => {
+  it("requires the name to be typed, marks a mismatch and moves focus to it", async () => {
+    const onConfirm = vi.fn();
+    renderUi(
+      <ConfirmDialog
+        open
+        onOpenChange={() => {}}
+        title="Delete Editors?"
+        confirmLabel="Delete group"
+        cancelLabel="Keep group"
+        destructive
+        typedConfirmation={{
+          value: "Editors",
+          label: "Type Editors to confirm",
+          mismatch: "Type the name exactly as shown.",
+        }}
+        onConfirm={onConfirm}
+      />,
+    );
+    const buttons = within(screen.getByRole("dialog")).getAllByRole("button", { name: /group/ });
+    expect(buttons.map((button) => button.textContent)).toEqual(["Delete group", "Keep group"]);
+    await userEvent.click(screen.getByRole("button", { name: "Delete group" }));
+    expect(onConfirm).not.toHaveBeenCalled();
+    const input = screen.getByLabelText("Type Editors to confirm");
+    expect(document.activeElement).toBe(input);
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByText("Type the name exactly as shown.")).toBeDefined();
+    await userEvent.type(input, "Editors");
+    await userEvent.click(screen.getByRole("button", { name: "Delete group" }));
+    expect(onConfirm).toHaveBeenCalledOnce();
   });
 });

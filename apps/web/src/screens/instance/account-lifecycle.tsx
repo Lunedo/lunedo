@@ -11,7 +11,7 @@ import {
   Textarea,
   useToast,
 } from "@pagehall/ui";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
@@ -274,10 +274,27 @@ export function AnonymizeDialog({
   const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const ready = reason.trim().length > 0 && confirmation.trim() === account.name.trim();
+  const [invalid, setInvalid] = useState<{ reason: boolean; confirmation: boolean }>({
+    reason: false,
+    confirmation: false,
+  });
+  const reasonRef = useRef<HTMLTextAreaElement>(null);
+  const confirmationRef = useRef<HTMLInputElement>(null);
 
   const submit = async () => {
-    if (!ready) return;
+    const problems = {
+      reason: reason.trim().length === 0,
+      confirmation: confirmation.trim() !== account.name.trim(),
+    };
+    setInvalid(problems);
+    if (problems.reason) {
+      reasonRef.current?.focus();
+      return;
+    }
+    if (problems.confirmation) {
+      confirmationRef.current?.focus();
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -309,7 +326,7 @@ export function AnonymizeDialog({
           <Button variant="secondary" onClick={onClose}>
             {t("common.cancel")}
           </Button>
-          <Button variant="dangerPrimary" loading={busy} disabled={!ready} onClick={() => void submit()}>
+          <Button variant="dangerPrimary" loading={busy} onClick={() => void submit()}>
             {t("lifecycle.anonymize.action")}
           </Button>
         </>
@@ -331,14 +348,35 @@ export function AnonymizeDialog({
             {error}
           </Notice>
         ) : null}
-        <Field label={t("lifecycle.anonymize.reason")} hint={t("lifecycle.anonymize.reasonHint")}>
-          <Textarea value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} />
+        <Field
+          label={t("lifecycle.anonymize.reason")}
+          hint={t("lifecycle.anonymize.reasonHint")}
+          {...(invalid.reason ? { error: t("lifecycle.anonymize.reasonRequired") } : {})}
+        >
+          <Textarea
+            ref={reasonRef}
+            value={reason}
+            maxLength={500}
+            onChange={(event) => {
+              setReason(event.target.value);
+              if (invalid.reason && event.target.value.trim())
+                setInvalid((current) => ({ ...current, reason: false }));
+            }}
+          />
         </Field>
-        <Field label={t("lifecycle.anonymize.confirm", { name: account.name })}>
+        <Field
+          label={t("lifecycle.anonymize.confirm", { name: account.name })}
+          {...(invalid.confirmation ? { error: t("common.nameMismatch") } : {})}
+        >
           <Input
+            ref={confirmationRef}
             value={confirmation}
             autoComplete="off"
-            onChange={(event) => setConfirmation(event.target.value)}
+            onChange={(event) => {
+              setConfirmation(event.target.value);
+              if (invalid.confirmation && event.target.value.trim() === account.name.trim())
+                setInvalid((current) => ({ ...current, confirmation: false }));
+            }}
           />
         </Field>
         <p className="text-sm text-text-muted">{t("lifecycle.anonymize.reauthentication")}</p>

@@ -50,7 +50,9 @@
       "removeDescription": "Members of {name} lose what this rule granted at their next sign-in or sync. Access granted by hand stays.",
       "hint": "Rules apply at every sign-in and sync. Removing someone from the group in {provider} removes what the rule granted. Groups created by rules are read-only in Pagehall.",
       "byNameTitle": "Groups are identified by their names",
-      "byName": "{provider} sends group names, not identifiers. Renaming a group in {provider} breaks every rule for it until the rule is changed here."
+      "byName": "{provider} sends group names, not identifiers. Renaming a group in {provider} breaks every rule for it until the rule is changed here.",
+      "remove": "Remove rule",
+      "removed": "The rule for {name} was removed."
     },
     "sync": {
       "now": "Sync now",
@@ -223,9 +225,9 @@
       "deactivatedTitle": "This provider is deactivated",
       "deactivatedNotice": "Nobody can sign in through it and it is not synchronized. Its settings, rules and groups stay. Activate it again in the settings.",
       "deactivateTitle": "Deactivate {name}",
-      "deactivateDescription": "Stops sign-ins and synchronization through this provider. Everything else stays, and you can activate it again at any time.",
-      "deactivateConfirm": "Nobody can sign in through this provider any more, and the sessions that came from it end now. Settings, rules, groups and access stay.",
-      "deactivate": "Deactivate",
+      "deactivateDescription": "Stops sign-ins and synchronization through this provider and ends the sessions that came from it. Settings, rules and groups stay, and you can activate it again.",
+      "deactivateConfirm": "Nobody can sign in through this provider any more, and the sessions that came from it end now. Ended sessions do not come back when you activate the provider again; people have to sign in anew. Settings, rules, groups and access stay.",
+      "deactivate": "Deactivate provider",
       "deactivated": "{name} is deactivated.",
       "activateTitle": "Activate {name}",
       "activateDescription": "People can sign in through this provider again, and synchronization continues.",
@@ -466,7 +468,12 @@
         "saml": "During a renewal, Pagehall's metadata lists old and new certificate. Remove the old one once the identity provider uses the new one.",
         "ldap": "The password has no expiry date in Pagehall. To rotate it, enter the new password and remove the old one.",
         "graph": "During a renewal, old and new credential both work. Remove the old one once the new one is in place."
-      }
+      },
+      "remove": "Remove credential",
+      "removeEntry": "{kind}, created {created}",
+      "removeLast": "Pagehall uses it now and has no other. Sign-in through {name} stops until you add a new one.",
+      "removeInUse": "Pagehall uses it now and switches to another credential of the same kind.",
+      "removeUnused": "Not in use. Removing it does not change how people sign in."
     },
     "logo": {
       "label": "Logo",
@@ -864,7 +871,10 @@
     "save": "Save",
     "saved": "Changes saved.",
     "unknown": "Unknown",
-    "yes": "Yes"
+    "yes": "Yes",
+    "dangerZone": "Danger zone",
+    "typeToConfirm": "Type {name} to confirm",
+    "nameMismatch": "The name does not match. Type it exactly as shown, including capitals."
   },
   "ui": {
     "clear": "Clear",
@@ -1823,7 +1833,10 @@
     "endSessionDescription": "The device has to sign in again.",
     "endOthers": "Sign out all other sessions",
     "endOthersTitle": "Sign out all other sessions?",
-    "endOthersDescription": "Every other device has to sign in again."
+    "endOthersDescription": "Every other device has to sign in again.",
+    "removeAuthenticator": "Remove authenticator app",
+    "removeAuthenticatorSummary": "Codes from the app no longer work for sign-in. Set up another second factor first if your organization requires one.",
+    "removePasskey": "Remove passkey"
   },
   "tokens": {
     "personal": "API tokens",
@@ -2177,7 +2190,7 @@
     "removeImpact": "They lose all access to {name}.",
     "removed": "The member was removed.",
     "deactivateTitle": "Deactivate {name}?",
-    "deactivateDescription": "The account can no longer sign in anywhere on this instance. Sessions end at once.",
+    "deactivateDescription": "The account can no longer sign in anywhere on this instance. Its sessions end at once and its API tokens are revoked for good; reactivating the account does not bring them back.",
     "deactivateImpact": "They lose access to every organization on this instance.",
     "deactivated": "The account was deactivated.",
     "expiryTitle": "Expiry for {name}",
@@ -2221,7 +2234,7 @@
     "assignTo": "Give a role to {name}",
     "assignAction": "Give role",
     "assigned": "The role was given.",
-    "unassign": "Remove",
+    "unassign": "Remove role",
     "unassignTitle": "Remove this role?",
     "unassigned": "The role was removed.",
     "createRole": "Create role",
@@ -2266,7 +2279,12 @@
       "group": "A group",
       "organizationMembers": "All members of the organization",
       "instanceUsers": "All internal users of the instance"
-    }
+    },
+    "unassignedNamed": "{name} no longer has the role {role}.",
+    "removeOwner": "Remove owner",
+    "removeOwnerTitle": "Remove {name} as owner?",
+    "removeOwnerSummary": "{name} loses full control of {organization}. Only another owner can give the role back.",
+    "removeOwnerEntry": "{name} is an owner"
   },
   "areas": {
     "levels": {
@@ -2350,11 +2368,16 @@
     "removeManagerTitle": "Remove {name} as manager?",
     "delete": "Delete group",
     "deleteTitle": "Delete {name}?",
-    "deleteDescription": "The group and its role assignments are removed.",
+    "deleteDescription": "The group and its role assignments are removed for good. This cannot be undone.",
     "gainsRoles": "They join {name} and receive its roles: {roles}.",
     "gainsMembership": "They join {name}.",
     "losesRoles": "They leave {name} and lose its roles: {roles}.",
-    "losesMembership": "They leave {name}."
+    "losesMembership": "They leave {name}.",
+    "removeMember": "Remove from group",
+    "removeManager": "Remove as manager",
+    "memberRemovedName": "{name} was removed from the group.",
+    "managerRemovedName": "{name} no longer manages the group.",
+    "deleteSummary": "Removes the group and its role assignments for good. Members lose the access the group gave them."
   },
   "serviceAccounts": {
     "open": "Open service account {name}",
@@ -2379,11 +2402,16 @@
     },
     "tokens": "Tokens",
     "tokenHint": "The token can do at most what the service account's roles allow.",
-    "deactivate": "Deactivate",
+    "deactivate": "Deactivate service account",
     "deactivateTitle": "Deactivate {name}?",
     "deactivateDescription": "All tokens are revoked. This cannot be undone.",
     "deactivateImpact": "{count, plural, one {Its token stops working.} other {Its # tokens stop working.}}",
-    "deactivatedNotice": "This service account is deactivated."
+    "deactivatedNotice": "This service account is deactivated.",
+    "deactivateSummary": "Revokes all its tokens for good. A deactivated service account cannot be activated again.",
+    "removeResponsible": "Remove responsible person",
+    "responsibleRemoved": "{name} is no longer responsible.",
+    "responsiblePerson": "Person",
+    "choosePersonFirst": "Choose the person to add, then select Add responsible person again."
   },
   "breakGlass": {
     "title": "Break-glass access",
@@ -2517,7 +2545,10 @@
       "newOwner": "New owner",
       "transferTitle": "Make {name} the instance owner?",
       "transferDescription": "You stay an administrator. Only the owner can transfer the ownership again.",
-      "transferImpact": "They become the owner of the instance and the break-glass account."
+      "transferImpact": "They become the owner of the instance and the break-glass account.",
+      "deactivateSummary": "Stops every sign-in, ends all sessions and revokes the API tokens for good.",
+      "endSessionsSummary": "Signs {name} out on every device. {name} can sign in again right away.",
+      "resetSummary": "Removes the authenticator app, passkeys and recovery codes and ends every session. {name} sets up a new second factor at the next sign-in."
     },
     "roles": {
       "title": "Roles",
@@ -3087,7 +3118,7 @@
     "anonymize": {
       "title": "Anonymize account",
       "summary": "Removes name, e-mail address and profile for good. Content then shows a former user.",
-      "open": "Anonymize…",
+      "open": "Anonymize account…",
       "irreversible": "This cannot be undone",
       "removesProfile": "Name, e-mail address, sign-in names and profile of {name} are removed. The account shows as a former user with a short ID.",
       "deletesAccess": "Linked sign-ins, sessions, API tokens, passkeys, second factors and personal settings are deleted.",
@@ -3100,7 +3131,8 @@
       "confirm": "Type {name} to confirm",
       "reauthentication": "Next, Pagehall asks you to confirm with your password, passkey or authenticator code.",
       "action": "Anonymize",
-      "done": "The account was anonymized"
+      "done": "The account was anonymized",
+      "reasonRequired": "Enter why the account is anonymized, for example the date of the erasure request."
     }
   }
 }

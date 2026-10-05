@@ -1,8 +1,9 @@
 import { X } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { Button, IconButton } from "./button.js";
 import { classNames } from "./class-names.js";
+import { Field, Input } from "./field.js";
 import { useUiLabels } from "./labels.js";
 import { useReturnFocus } from "./return-focus.js";
 
@@ -79,8 +80,15 @@ export interface ConfirmDialogProps {
   confirmLabel: string;
   cancelLabel: string;
   destructive?: boolean;
+  typedConfirmation?: TypedConfirmation;
   onConfirm: () => void | Promise<void>;
   children?: ReactNode;
+}
+
+export interface TypedConfirmation {
+  value: string;
+  label: ReactNode;
+  mismatch: string;
 }
 
 export function ConfirmDialog({
@@ -91,11 +99,20 @@ export function ConfirmDialog({
   confirmLabel,
   cancelLabel,
   destructive = false,
+  typedConfirmation,
   onConfirm,
   children,
 }: ConfirmDialogProps) {
   const [busy, setBusy] = useState(false);
+  const [typed, setTyped] = useState("");
+  const [mismatch, setMismatch] = useState(false);
+  const typedRef = useRef<HTMLInputElement>(null);
   const confirm = async () => {
+    if (typedConfirmation && typed.trim() !== typedConfirmation.value.trim()) {
+      setMismatch(true);
+      typedRef.current?.focus();
+      return;
+    }
     setBusy(true);
     try {
       await onConfirm();
@@ -110,16 +127,28 @@ export function ConfirmDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!busy) onOpenChange(next);
+        if (busy) return;
+        if (!next) {
+          setTyped("");
+          setMismatch(false);
+        }
+        onOpenChange(next);
       }}
       title={title}
       {...(description !== undefined ? { description } : {})}
       size="sm"
       footer={
-        <>
-          <Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
-            {cancelLabel}
-          </Button>
+        <div
+          className={classNames(
+            "flex w-full flex-wrap gap-2",
+            destructive ? "justify-between" : "justify-end",
+          )}
+        >
+          {destructive ? null : (
+            <Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
+              {cancelLabel}
+            </Button>
+          )}
           <Button
             variant={destructive ? "dangerPrimary" : "primary"}
             loading={busy}
@@ -127,10 +156,35 @@ export function ConfirmDialog({
           >
             {confirmLabel}
           </Button>
-        </>
+          {destructive ? (
+            <Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
+              {cancelLabel}
+            </Button>
+          ) : null}
+        </div>
       }
     >
       {children}
+      {typedConfirmation ? (
+        <Field label={typedConfirmation.label} {...(mismatch ? { error: typedConfirmation.mismatch } : {})}>
+          <Input
+            ref={typedRef}
+            value={typed}
+            autoComplete="off"
+            spellCheck={false}
+            onChange={(event) => {
+              setTyped(event.target.value);
+              if (mismatch && event.target.value.trim() === typedConfirmation.value.trim())
+                setMismatch(false);
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              void confirm();
+            }}
+          />
+        </Field>
+      ) : null}
     </Dialog>
   );
 }

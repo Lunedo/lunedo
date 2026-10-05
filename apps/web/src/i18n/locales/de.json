@@ -50,7 +50,9 @@
       "removeDescription": "Mitglieder von {name} verlieren bei ihrer nächsten Anmeldung oder Synchronisierung, was diese Regel gewährt hat. Von Hand vergebener Zugriff bleibt.",
       "hint": "Regeln gelten bei jeder Anmeldung und Synchronisierung. Wer in {provider} aus der Gruppe entfernt wird, verliert, was die Regel gewährt hat. Gruppen, die Regeln anlegen, sind in Pagehall schreibgeschützt.",
       "byNameTitle": "Gruppen werden über ihre Namen erkannt",
-      "byName": "{provider} sendet Gruppennamen statt Kennungen. Wird eine Gruppe in {provider} umbenannt, greift keine Regel für sie mehr, bis die Regel hier angepasst ist."
+      "byName": "{provider} sendet Gruppennamen statt Kennungen. Wird eine Gruppe in {provider} umbenannt, greift keine Regel für sie mehr, bis die Regel hier angepasst ist.",
+      "remove": "Regel entfernen",
+      "removed": "Die Regel für {name} wurde entfernt."
     },
     "sync": {
       "now": "Jetzt synchronisieren",
@@ -223,9 +225,9 @@
       "deactivatedTitle": "Dieser Anbieter ist deaktiviert",
       "deactivatedNotice": "Niemand kann sich darüber anmelden und er wird nicht synchronisiert. Einstellungen, Regeln und Gruppen bleiben. Aktiviere ihn in den Einstellungen wieder.",
       "deactivateTitle": "{name} deaktivieren",
-      "deactivateDescription": "Stoppt Anmeldungen und Synchronisierung über diesen Anbieter. Alles andere bleibt, und du kannst ihn jederzeit wieder aktivieren.",
-      "deactivateConfirm": "Niemand kann sich mehr über diesen Anbieter anmelden, und die Sitzungen, die von ihm kommen, enden jetzt. Einstellungen, Regeln, Gruppen und Zugriffe bleiben.",
-      "deactivate": "Deaktivieren",
+      "deactivateDescription": "Stoppt Anmeldungen und Synchronisierung über diesen Anbieter und beendet die Sitzungen, die von ihm kommen. Einstellungen, Regeln und Gruppen bleiben, und du kannst ihn wieder aktivieren.",
+      "deactivateConfirm": "Niemand kann sich mehr über diesen Anbieter anmelden, und die Sitzungen, die von ihm kommen, enden jetzt. Beendete Sitzungen kommen nicht zurück, wenn du den Anbieter wieder aktivierst; alle müssen sich neu anmelden. Einstellungen, Regeln, Gruppen und Zugriffe bleiben.",
+      "deactivate": "Anbieter deaktivieren",
       "deactivated": "{name} ist deaktiviert.",
       "activateTitle": "{name} aktivieren",
       "activateDescription": "Personen können sich wieder über diesen Anbieter anmelden, und die Synchronisierung läuft weiter.",
@@ -466,7 +468,12 @@
         "saml": "Während einer Erneuerung enthalten die Metadaten von Pagehall altes und neues Zertifikat. Entferne das alte, sobald der Identitätsanbieter das neue verwendet.",
         "ldap": "Das Passwort hat in Pagehall kein Ablaufdatum. Zum Wechseln gibst du das neue Passwort ein und entfernst das alte.",
         "graph": "Während eines Wechsels funktionieren alter und neuer Zugang. Entferne den alten, sobald der neue eingerichtet ist."
-      }
+      },
+      "remove": "Zugang entfernen",
+      "removeEntry": "{kind}, erstellt am {created}",
+      "removeLast": "Pagehall verwendet diesen Zugang gerade und hat keinen anderen. Die Anmeldung über {name} funktioniert erst wieder, wenn du einen neuen hinzufügst.",
+      "removeInUse": "Pagehall verwendet diesen Zugang gerade und wechselt zu einem anderen derselben Art.",
+      "removeUnused": "Nicht in Verwendung. Das Entfernen ändert nichts an der Anmeldung."
     },
     "logo": {
       "label": "Logo",
@@ -864,7 +871,10 @@
     "save": "Speichern",
     "saved": "Änderungen gespeichert.",
     "unknown": "Unbekannt",
-    "yes": "Ja"
+    "yes": "Ja",
+    "dangerZone": "Gefahrenbereich",
+    "typeToConfirm": "Gib {name} zur Bestätigung ein",
+    "nameMismatch": "Der Name stimmt nicht überein. Gib ihn genau so ein, wie er angezeigt wird, auch mit Groß- und Kleinschreibung."
   },
   "ui": {
     "clear": "Leeren",
@@ -1820,7 +1830,10 @@
     "endSessionDescription": "Das Gerät muss sich erneut anmelden.",
     "endOthers": "Alle anderen Sitzungen abmelden",
     "endOthersTitle": "Alle anderen Sitzungen abmelden?",
-    "endOthersDescription": "Alle anderen Geräte müssen sich erneut anmelden."
+    "endOthersDescription": "Alle anderen Geräte müssen sich erneut anmelden.",
+    "removeAuthenticator": "Authenticator-App entfernen",
+    "removeAuthenticatorSummary": "Codes aus der App funktionieren dann nicht mehr für die Anmeldung. Richte zuerst einen anderen zweiten Faktor ein, wenn deine Organisation einen verlangt.",
+    "removePasskey": "Passkey entfernen"
   },
   "tokens": {
     "personal": "API-Tokens",
@@ -2174,7 +2187,7 @@
     "removeImpact": "Sie verlieren jeden Zugriff auf {name}.",
     "removed": "Das Mitglied wurde entfernt.",
     "deactivateTitle": "{name} deaktivieren?",
-    "deactivateDescription": "Das Konto kann sich auf dieser Instanz nirgends mehr anmelden. Sitzungen enden sofort.",
+    "deactivateDescription": "Das Konto kann sich auf dieser Instanz nirgends mehr anmelden. Seine Sitzungen enden sofort, und seine API-Tokens werden endgültig widerrufen; eine Reaktivierung stellt sie nicht wieder her.",
     "deactivateImpact": "Sie verlieren den Zugriff auf alle Organisationen dieser Instanz.",
     "deactivated": "Das Konto wurde deaktiviert.",
     "expiryTitle": "Ablauf für {name}",
@@ -2218,7 +2231,7 @@
     "assignTo": "Rolle an {name} vergeben",
     "assignAction": "Rolle vergeben",
     "assigned": "Die Rolle wurde vergeben.",
-    "unassign": "Entfernen",
+    "unassign": "Rolle entfernen",
     "unassignTitle": "Diese Rolle entfernen?",
     "unassigned": "Die Rolle wurde entfernt.",
     "createRole": "Rolle anlegen",
@@ -2263,7 +2276,12 @@
       "group": "Eine Gruppe",
       "organizationMembers": "Alle Mitglieder der Organisation",
       "instanceUsers": "Alle internen Benutzer der Instanz"
-    }
+    },
+    "unassignedNamed": "{name} hat die Rolle {role} nicht mehr.",
+    "removeOwner": "Owner entfernen",
+    "removeOwnerTitle": "{name} als Owner entfernen?",
+    "removeOwnerSummary": "{name} verliert die volle Kontrolle über {organization}. Nur ein anderer Owner kann die Rolle zurückgeben.",
+    "removeOwnerEntry": "{name} ist Owner"
   },
   "areas": {
     "levels": {
@@ -2347,11 +2365,16 @@
     "removeManagerTitle": "{name} als Gruppenverwalter entfernen?",
     "delete": "Gruppe löschen",
     "deleteTitle": "{name} löschen?",
-    "deleteDescription": "Die Gruppe und ihre Rollenzuweisungen werden entfernt.",
+    "deleteDescription": "Die Gruppe und ihre Rollenzuweisungen werden endgültig entfernt. Das lässt sich nicht rückgängig machen.",
     "gainsRoles": "Sie treten {name} bei und erhalten deren Rollen: {roles}.",
     "gainsMembership": "Sie treten {name} bei.",
     "losesRoles": "Sie verlassen {name} und verlieren deren Rollen: {roles}.",
-    "losesMembership": "Sie verlassen {name}."
+    "losesMembership": "Sie verlassen {name}.",
+    "removeMember": "Aus der Gruppe entfernen",
+    "removeManager": "Als Gruppenverwalter entfernen",
+    "memberRemovedName": "{name} wurde aus der Gruppe entfernt.",
+    "managerRemovedName": "{name} verwaltet die Gruppe nicht mehr.",
+    "deleteSummary": "Entfernt die Gruppe und ihre Rollenzuweisungen endgültig. Mitglieder verlieren den Zugriff, den sie über die Gruppe hatten."
   },
   "serviceAccounts": {
     "open": "Service-Konto {name} öffnen",
@@ -2376,11 +2399,16 @@
     },
     "tokens": "Tokens",
     "tokenHint": "Das Token darf höchstens, was die Rollen des Dienstkontos erlauben.",
-    "deactivate": "Deaktivieren",
+    "deactivate": "Dienstkonto deaktivieren",
     "deactivateTitle": "{name} deaktivieren?",
     "deactivateDescription": "Alle Tokens werden widerrufen. Das lässt sich nicht rückgängig machen.",
     "deactivateImpact": "{count, plural, one {Sein Token funktioniert nicht mehr.} other {Seine # Tokens funktionieren nicht mehr.}}",
-    "deactivatedNotice": "Dieses Dienstkonto ist deaktiviert."
+    "deactivatedNotice": "Dieses Dienstkonto ist deaktiviert.",
+    "deactivateSummary": "Widerruft alle seine Tokens endgültig. Ein deaktiviertes Dienstkonto lässt sich nicht wieder aktivieren.",
+    "removeResponsible": "Verantwortliche Person entfernen",
+    "responsibleRemoved": "{name} ist nicht mehr verantwortlich.",
+    "responsiblePerson": "Person",
+    "choosePersonFirst": "Wähle die Person aus, die du hinzufügen möchtest, und wähle dann erneut „Verantwortliche Person hinzufügen“."
   },
   "breakGlass": {
     "title": "Notfallzugriff",
@@ -2514,7 +2542,10 @@
       "newOwner": "Neuer Owner",
       "transferTitle": "{name} zum Owner der Instanz machen?",
       "transferDescription": "Du bleibst Administrator. Nur der Owner kann die Rolle wieder übertragen.",
-      "transferImpact": "Sie werden Owner der Instanz und Notfallkonto."
+      "transferImpact": "Sie werden Owner der Instanz und Notfallkonto.",
+      "deactivateSummary": "Beendet jede Anmeldung und alle Sitzungen und widerruft die API-Tokens endgültig.",
+      "endSessionsSummary": "Meldet {name} auf allen Geräten ab. {name} kann sich sofort wieder anmelden.",
+      "resetSummary": "Entfernt Authenticator-App, Passkeys und Wiederherstellungscodes und beendet alle Sitzungen. {name} richtet bei der nächsten Anmeldung einen neuen zweiten Faktor ein."
     },
     "roles": {
       "title": "Rollen",
@@ -3084,7 +3115,7 @@
     "anonymize": {
       "title": "Konto anonymisieren",
       "summary": "Entfernt Name, E-Mail-Adresse und Profil endgültig. Inhalte zeigen danach eine ehemalige Person.",
-      "open": "Anonymisieren …",
+      "open": "Konto anonymisieren …",
       "irreversible": "Das lässt sich nicht rückgängig machen",
       "removesProfile": "Name, E-Mail-Adresse, Anmeldenamen und Profil von {name} werden entfernt. Das Konto erscheint als ehemalige Person mit einer kurzen ID.",
       "deletesAccess": "Verknüpfte Anmeldungen, Sitzungen, API-Tokens, Passkeys, zweite Faktoren und persönliche Einstellungen werden gelöscht.",
@@ -3097,7 +3128,8 @@
       "confirm": "Gib {name} zur Bestätigung ein",
       "reauthentication": "Danach bittet Pagehall dich, mit deinem Passwort, Passkey oder Authenticator-Code zu bestätigen.",
       "action": "Anonymisieren",
-      "done": "Das Konto wurde anonymisiert"
+      "done": "Das Konto wurde anonymisiert",
+      "reasonRequired": "Gib an, warum das Konto anonymisiert wird, zum Beispiel das Datum des Löschantrags."
     }
   }
 }

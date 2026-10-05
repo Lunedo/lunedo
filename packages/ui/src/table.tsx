@@ -59,6 +59,7 @@ const CONTROLS = "a, button, input, select, textarea, label, [role=menuitem], [r
 function fromControl(target: EventTarget, row: HTMLElement): boolean {
   const element = target as Partial<Element>;
   if (typeof element.closest !== "function") return false;
+  if (!row.contains(target as Node)) return true;
   const control = element.closest(CONTROLS);
   return control !== null && row.contains(control);
 }

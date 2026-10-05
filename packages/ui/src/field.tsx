@@ -102,12 +102,12 @@ export function PasswordInput({ className, ...props }: Omit<InputProps, "type">)
   const [visible, setVisible] = useState(false);
   return (
     <div data-password-field="" className="relative">
-      <Input {...props} type={visible ? "text" : "password"} className={classNames("pr-10", className)} />
+      <Input {...props} type={visible ? "text" : "password"} className={classNames("pr-12", className)} />
       <span className="absolute inset-y-0 right-1 flex items-center">
         <IconButton
           label={visible ? labels.hidePassword : labels.showPassword}
           icon={visible ? EyeOff : Eye}
-          size="sm"
+          size="md"
           tooltip={false}
           aria-pressed={visible}
           onClick={() => setVisible((current) => !current)}
