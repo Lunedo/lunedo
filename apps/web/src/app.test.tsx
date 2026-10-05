@@ -233,12 +233,40 @@ describe("the web client", () => {
     );
   });
 
+  it("names the rule that requires the second factor", async () => {
+    api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/security": () => ({
+        body: {
+          totp: true,
+          passkeys: [],
+          recoveryCodes: 8,
+          secondFactorRequired: true,
+          secondFactorRequiredBy: "instanceOwner",
+        },
+      }),
+      "GET /api/v1/account/sessions": () => ({ body: { items: [], nextCursor: null } }),
+      "GET /api/v1/account/tokens": () => ({ body: { items: [], nextCursor: null } }),
+    });
+    await renderApp("/settings/security");
+    expect(
+      await screen.findByText("As the owner of this instance you need a second factor. Keep at least one."),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Your organization requires/)).toBeNull();
+  });
+
   it("asks for the identity before a sensitive change and repeats it", async () => {
     let confirmed = false;
     const { requests } = api({
       "GET /api/v1/auth/session": () => ({ body: SESSION }),
       "GET /api/v1/account/security": () => ({
-        body: { totp: true, passkeys: [], recoveryCodes: 8, secondFactorRequired: true },
+        body: {
+          totp: true,
+          passkeys: [],
+          recoveryCodes: 8,
+          secondFactorRequired: true,
+          secondFactorRequiredBy: "organization",
+        },
       }),
       "GET /api/v1/account/sessions": () => ({ body: { items: [], nextCursor: null } }),
       "GET /api/v1/account/tokens": () => ({ body: { items: [], nextCursor: null } }),

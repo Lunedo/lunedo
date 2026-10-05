@@ -1354,7 +1354,12 @@
     "completeRegistrationTitle": "Complete your registration",
     "registrationComplete": "Your account is ready. Sign in to start.",
     "secondFactorSetupTitle": "Set up a second factor",
-    "secondFactorSetupDescription": "Your organization requires a second factor. Set one up to continue.",
+    "secondFactorSetupDescription": {
+      "instanceOwner": "As the owner of this instance you need a second factor. Set one up to continue.",
+      "reset": "An administrator reset your second factor. Set up a new one to continue.",
+      "instance": "This instance requires a second factor for every account. Set one up to continue.",
+      "organization": "Your organization requires a second factor. Set one up to continue."
+    },
     "secondFactorMethod": "Second factor",
     "registerLink": "No account yet? Create one",
     "directory": {
@@ -1823,7 +1828,12 @@
     "sendConfirmation": "Send confirmation",
     "emailConfirmationSent": "Check the inbox of the new address and open the link.",
     "twoFactor": "Two-factor authentication",
-    "twoFactorRequired": "Your organization requires a second factor. Keep at least one.",
+    "twoFactorRequired": {
+      "instanceOwner": "As the owner of this instance you need a second factor. Keep at least one.",
+      "reset": "An administrator reset your second factor. Keep at least one.",
+      "instance": "This instance requires a second factor for every account. Keep at least one.",
+      "organization": "Your organization requires a second factor. Keep at least one."
+    },
     "authenticatorApp": "Authenticator app",
     "authenticatorOn": "Codes from an app on your phone.",
     "authenticatorOff": "Use an app such as Aegis, Google Authenticator or 1Password.",

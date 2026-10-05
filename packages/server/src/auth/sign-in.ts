@@ -139,6 +139,8 @@ function secondsUntil(date: Date): number {
 
 class RecoveryCodeRejected extends Error {}
 
+export type SecondFactorRequirement = "instanceOwner" | "reset" | "instance" | "organization";
+
 export class SignInService {
   readonly #database: Database;
   readonly #accounts: AccountService;
@@ -194,15 +196,28 @@ export class SignInService {
   }
 
   async secondFactorRequired(accountId: string, executor: Executor = this.#database): Promise<boolean> {
-    if ((await this.#accounts.ownerId(executor)) === accountId) return true;
+    return (await this.secondFactorRequirement(accountId, executor)) !== null;
+  }
+
+  async secondFactorRequirement(
+    accountId: string,
+    executor: Executor = this.#database,
+  ): Promise<SecondFactorRequirement | null> {
+    if ((await this.#accounts.ownerId(executor)) === accountId) return "instanceOwner";
     const [reset] = await executor
       .select({ at: accounts.secondFactorResetAt })
       .from(accounts)
       .where(eq(accounts.id, accountId));
-    if (reset?.at) return true;
-    return this.#settings.get(twoFactorRequiredSetting, await accountScopeChain(executor, accountId), {
-      executor,
-    });
+    if (reset?.at) return "reset";
+    const setting = await this.#settings.explain(
+      twoFactorRequiredSetting,
+      await accountScopeChain(executor, accountId),
+      { executor },
+    );
+    if (!setting.value) return null;
+    return setting.source !== "default" && setting.source.level === "organization"
+      ? "organization"
+      : "instance";
   }
 
   async #checkAttempt(subjects: ThrottleSubjects, accountId: string | null, method: SignInMethod) {

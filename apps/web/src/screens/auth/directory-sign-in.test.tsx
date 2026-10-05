@@ -306,7 +306,13 @@ describe("confirming the identity with a directory password", () => {
         body: [identity],
       }),
       "GET /api/v1/account/security": () => ({
-        body: { totp: false, passkeys: [], recoveryCodes: 0, secondFactorRequired: false },
+        body: {
+          totp: false,
+          passkeys: [],
+          recoveryCodes: 0,
+          secondFactorRequired: false,
+          secondFactorRequiredBy: null,
+        },
       }),
       "GET /api/v1/account/sessions": () => ({ body: { items: [], nextCursor: null } }),
       "GET /api/v1/account/tokens": () => ({ body: { items: [], nextCursor: null } }),

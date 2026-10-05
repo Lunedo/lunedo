@@ -525,6 +525,7 @@ describe.skipIf(!databaseBaseUrl)("sign-in", () => {
       expect((await client.get("/api/v1/account/security")).json()).toMatchObject({
         totp: false,
         secondFactorRequired: true,
+        secondFactorRequiredBy: "instanceOwner",
       });
 
       const { recoveryCodes } = await addTotp(client);

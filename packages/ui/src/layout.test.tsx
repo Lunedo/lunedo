@@ -50,6 +50,34 @@ describe("Section, SettingRow and List", () => {
   });
 });
 
+describe("Section headers", () => {
+  it("are not darker than the card body", () => {
+    renderUi(
+      <Section title="Display">
+        <p>Body</p>
+      </Section>,
+    );
+    const header = screen.getByRole("heading", { name: "Display" }).parentElement;
+    expect(header?.className).toContain("bg-surface");
+    expect(header?.className).not.toContain("bg-surface-sunken");
+  });
+});
+
+describe("ListRow", () => {
+  it("shows details below the row across its full width", () => {
+    renderUi(
+      <List>
+        <ListRow title="Address" actions={<Badge>Next step</Badge>}>
+          <p>PAGEHALL_TRUSTED_PROXIES is not set.</p>
+        </ListRow>
+      </List>,
+    );
+    expect(screen.getByText("PAGEHALL_TRUSTED_PROXIES is not set.").parentElement?.className).toContain(
+      "basis-full",
+    );
+  });
+});
+
 describe("feedback components", () => {
   it("derive initials and a stable palette color", () => {
     expect(initialsOf("Lena Hofer")).toBe("LH");

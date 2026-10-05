@@ -1354,7 +1354,12 @@
     "completeRegistrationTitle": "Registrierung abschließen",
     "registrationComplete": "Dein Konto ist bereit. Melde dich an, um zu beginnen.",
     "secondFactorSetupTitle": "Zweiten Faktor einrichten",
-    "secondFactorSetupDescription": "Deine Organisation verlangt einen zweiten Faktor. Richte einen ein, um fortzufahren.",
+    "secondFactorSetupDescription": {
+      "instanceOwner": "Als Owner dieser Instanz brauchst du einen zweiten Faktor. Richte einen ein, um fortzufahren.",
+      "reset": "Ein Administrator hat deinen zweiten Faktor zurückgesetzt. Richte einen neuen ein, um fortzufahren.",
+      "instance": "Diese Instanz verlangt einen zweiten Faktor für jedes Konto. Richte einen ein, um fortzufahren.",
+      "organization": "Deine Organisation verlangt einen zweiten Faktor. Richte einen ein, um fortzufahren."
+    },
     "secondFactorMethod": "Zweiter Faktor",
     "registerLink": "Noch kein Konto? Lege eines an",
     "directory": {
@@ -1820,7 +1825,12 @@
     "sendConfirmation": "Bestätigung senden",
     "emailConfirmationSent": "Sieh im Postfach der neuen Adresse nach und öffne den Link.",
     "twoFactor": "Zwei-Faktor-Authentifizierung",
-    "twoFactorRequired": "Deine Organisation verlangt einen zweiten Faktor. Behalte mindestens einen.",
+    "twoFactorRequired": {
+      "instanceOwner": "Als Owner dieser Instanz brauchst du einen zweiten Faktor. Behalte mindestens einen.",
+      "reset": "Ein Administrator hat deinen zweiten Faktor zurückgesetzt. Behalte mindestens einen.",
+      "instance": "Diese Instanz verlangt einen zweiten Faktor für jedes Konto. Behalte mindestens einen.",
+      "organization": "Deine Organisation verlangt einen zweiten Faktor. Behalte mindestens einen."
+    },
     "authenticatorApp": "Authenticator-App",
     "authenticatorOn": "Codes aus einer App auf deinem Telefon.",
     "authenticatorOff": "Verwende eine App wie Aegis, Google Authenticator oder 1Password.",

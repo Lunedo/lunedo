@@ -300,13 +300,7 @@ export class InvitationService {
       .leftJoin(inviter, eq(inviter.id, invitations.invitedBy))
       .where(eq(invitations.tokenHash, hashToken(token)));
     if (!row) throw new InvalidTokenError();
-    const state = row.acceptedAt
-      ? "accepted"
-      : row.revokedAt
-        ? "revoked"
-        : row.expired
-          ? "expired"
-          : "open";
+    const state = row.acceptedAt ? "accepted" : row.revokedAt ? "revoked" : row.expired ? "expired" : "open";
     return {
       state,
       email: row.email,

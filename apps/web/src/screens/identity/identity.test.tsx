@@ -953,7 +953,13 @@ describe("linked identities", () => {
         ],
       }),
       "GET /api/v1/account/security": () => ({
-        body: { totp: true, passkeys: [], recoveryCodes: 8, secondFactorRequired: true },
+        body: {
+          totp: true,
+          passkeys: [],
+          recoveryCodes: 8,
+          secondFactorRequired: true,
+          secondFactorRequiredBy: "organization",
+        },
       }),
       "GET /api/v1/account/sessions": () => ({ body: { items: [], nextCursor: null } }),
       "GET /api/v1/account/tokens": () => ({ body: { items: [], nextCursor: null } }),

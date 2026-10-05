@@ -2263,13 +2263,31 @@
                     },
                     "secondFactorRequired": {
                       "type": "boolean"
+                    },
+                    "secondFactorRequiredBy": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "instanceOwner",
+                            "reset",
+                            "instance",
+                            "organization"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Why the account must keep a second factor: it owns the instance, an administrator reset its second factor, or the instance or organization requires one. Null when nothing requires it."
                     }
                   },
                   "required": [
                     "totp",
                     "passkeys",
                     "recoveryCodes",
-                    "secondFactorRequired"
+                    "secondFactorRequired",
+                    "secondFactorRequiredBy"
                   ],
                   "additionalProperties": false
                 }

@@ -292,9 +292,9 @@ function TwoFactorSection() {
 
   return (
     <Section title={t("security.twoFactor")}>
-      {data.secondFactorRequired ? (
+      {data.secondFactorRequiredBy ? (
         <div className="px-4 pt-4">
-          <Notice variant="info">{t("security.twoFactorRequired")}</Notice>
+          <Notice variant="info">{t(`security.twoFactorRequired.${data.secondFactorRequiredBy}`)}</Notice>
         </div>
       ) : null}
       <SettingRow

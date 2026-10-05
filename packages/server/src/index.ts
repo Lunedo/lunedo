@@ -78,7 +78,12 @@ export {
   SessionService,
 } from "./auth/sessions.js";
 export * from "./auth/settings.js";
-export type { ReauthenticationInput, SecondFactorInput, SecondFactorType } from "./auth/sign-in.js";
+export type {
+  ReauthenticationInput,
+  SecondFactorInput,
+  SecondFactorRequirement,
+  SecondFactorType,
+} from "./auth/sign-in.js";
 export { clientSubject } from "./auth/throttle.js";
 export { generateToken } from "./auth/tokens.js";
 export type { TotpSetup } from "./auth/two-factor.js";
