@@ -399,6 +399,38 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
         .toContainEqual({ spaceId, kind: "tree", itemId: created.json().id });
       await new Promise((resolve) => setTimeout(resolve, 300));
       expect(otherEvents.spaces).toEqual([]);
+
+      const team = await owner.post(`/api/v1/organizations/${organizationId}/groups`, {
+        name: "Live readers",
+      });
+      const teamId = team.json().id as string;
+      await owner.post(`/api/v1/groups/${teamId}/members`, { accountId: other.id });
+      await owner.post(`/api/v1/spaces/${spaceId}/permissions`, {
+        action: "grant",
+        principalKind: "group",
+        principalId: teamId,
+        role: "reader",
+      });
+      const secondPage = await owner.post(`/api/v1/spaces/${spaceId}/items`, {
+        kind: "page",
+        title: "Two",
+        parentId: null,
+      });
+      await expect
+        .poll(() => otherEvents.spaces, { timeout: 5000 })
+        .toContainEqual({ spaceId, kind: "tree", itemId: secondPage.json().id });
+      expect((await owner.delete(`/api/v1/groups/${teamId}/members/${other.id}`)).statusCode).toBe(204);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const third = await owner.post(`/api/v1/spaces/${spaceId}/items`, {
+        kind: "page",
+        title: "Three",
+        parentId: null,
+      });
+      await expect
+        .poll(() => readerEvents.spaces, { timeout: 5000 })
+        .toContainEqual({ spaceId, kind: "tree", itemId: third.json().id });
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(otherEvents.spaces).not.toContainEqual({ spaceId, kind: "tree", itemId: third.json().id });
     } finally {
       for (const response of responses) response.destroy();
       await second?.close();

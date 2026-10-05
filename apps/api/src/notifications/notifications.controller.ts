@@ -243,7 +243,9 @@ data: ${JSON.stringify(signal)}
         (await allowed("instance.audit.view", "instance"))
       );
     };
+    const spaceDecisions = new Map<string, { allowed: boolean; at: number }>();
     const sendChange = (signal: AuditChangeSignal) => {
+      spaceDecisions.clear();
       const data = JSON.stringify(signal);
       if (pendingChanges.has(data)) return;
       pendingChanges.add(data);
@@ -255,7 +257,6 @@ data: ${JSON.stringify(signal)}
         })
         .catch((error: unknown) => logger.warn({ err: error }, "Sending a change event failed"));
     };
-    const spaceDecisions = new Map<string, { allowed: boolean; at: number }>();
     const pendingSpaces = new Set<string>();
     const sendSpace = (signal: SpaceChangeSignal) => {
       const data = JSON.stringify(signal);
