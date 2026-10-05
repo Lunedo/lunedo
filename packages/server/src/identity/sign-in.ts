@@ -1441,7 +1441,7 @@ export class ProviderSignInService {
     const sameTarget =
       stored?.provider.type === "ldap" &&
       stored.provider.config.url === config.url &&
-      stored.provider.config.startTls === config.startTls &&
+      (stored.provider.config.startTls === config.startTls || config.startTls) &&
       (input.caCertificate == null || input.caCertificate === stored.provider.caCertificates);
     if (input.bindPassword === null && !sameTarget) {
       throw new OrganizationError(

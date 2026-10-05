@@ -533,6 +533,9 @@
     "check": {
       "failedTitle": "Pagehall could not reach the provider with these settings",
       "saveAnyway": "Save anyway",
+      "passwordNeeded": "Pagehall uses the stored password only for the server it belongs to. Enter the password of the service account to connect to this server.",
+      "serverPassword": "Password of the service account",
+      "serverPasswordHint": "Pagehall connects to the new server with it before saving. To store another password, replace it under Credentials.",
       "saveAnywayHint": "Correct the marked field, or save anyway and correct it later. The setup can then only be finished after you confirm the failed check.",
       "names": {
         "discovery": "the OpenID Connect discovery",

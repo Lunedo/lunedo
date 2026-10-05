@@ -1013,7 +1013,7 @@ describe("SAML and LDAP providers in the list and the details", () => {
     const field = await screen.findByLabelText("Server address");
     await userEvent.clear(field);
     await userEvent.type(field, "ldaps://dc01.verlag.example");
-    await userEvent.tab();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(await screen.findByText(/Enter an ldap:\/\/ address while StartTLS is on/)).toBeTruthy();
     expect(requests.some((request) => request.method === "PATCH")).toBe(false);
   });
@@ -1033,19 +1033,56 @@ describe("SAML and LDAP providers in the list and the details", () => {
     const field = await screen.findByLabelText("Server address");
     await userEvent.clear(field);
     await userEvent.type(field, "dc01 .verlag.example");
-    await userEvent.tab();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(
       await screen.findByText("Enter an address such as ldaps://dc01.example.org, without a path."),
     ).toBeTruthy();
     expect(requests.some((request) => request.method === "PATCH")).toBe(false);
     await userEvent.clear(field);
     await userEvent.type(field, "dc01.verlag.example");
-    await userEvent.tab();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("This field is required.")).toBeTruthy();
+    expect(requests.some((request) => request.method === "PATCH")).toBe(false);
+    await userEvent.type(screen.getByLabelText("Password of the service account"), "service password");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() =>
       expect(
         (bodyOf(requests, "PATCH", `${BASE}/${LDAP}`) as { config: { url: string } } | undefined)?.config.url,
       ).toBe("ldaps://dc01.verlag.example:636"),
     );
     expect(await screen.findByDisplayValue("ldaps://dc01.verlag.example:636")).toBeTruthy();
+    expect(bodyOf(requests, "POST", "/api/v1/instance/identity-provider-connection-checks")).toMatchObject({
+      type: "ldap",
+      bindPassword: "service password",
+      providerId: LDAP,
+      config: { url: "ldaps://dc01.verlag.example:636" },
+    });
+  });
+
+  it("keeps a connection change that the check refused and saves nothing", async () => {
+    const provider = ldapProvider();
+    const { requests } = adminApi({
+      [`GET ${BASE}/${LDAP}`]: () => ({ body: provider }),
+      [`GET ${BASE}`]: () => ({ body: [provider] }),
+      "POST /api/v1/instance/identity-provider-connection-checks": () => ({
+        body: {
+          ok: false,
+          check: "directory",
+          url: "ldaps://dc01.verlag.example:636",
+          status: null,
+          problem: "search",
+          detail: "No person matches the search",
+        },
+      }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${LDAP}?tab=settings`);
+    const field = await screen.findByLabelText("Base DN for people");
+    await userEvent.clear(field);
+    await userEvent.type(field, "OU=Nobody,DC=verlag,DC=example");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText(/Nobody was found under the base DN for people/)).toBeTruthy();
+    expect(requests.some((request) => request.method === "PATCH")).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect((field as HTMLInputElement).value).toBe(provider.config.userBaseDn);
   });
 });

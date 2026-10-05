@@ -1,10 +1,27 @@
-import { Field, Input, type SaveState, SaveStatus, Textarea } from "@pagehall/ui";
+import {
+  Button,
+  Field,
+  focusFirstInvalidSoon,
+  Input,
+  PasswordInput,
+  type SaveState,
+  SaveStatus,
+  Textarea,
+} from "@pagehall/ui";
 import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { z } from "zod";
 import { isRetryable } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { issueMessage } from "../forms/validation.js";
+
+export class FieldProblem extends Error {
+  override name = "FieldProblem";
+}
+
+function failureMessage(t: Parameters<typeof problemMessage>[0], failure: unknown): string {
+  return failure instanceof FieldProblem ? failure.message : problemMessage(t, failure);
+}
 
 export interface SaveTracker {
   state: SaveState;
@@ -30,7 +47,7 @@ export function useSaveState(): SaveTracker {
         setState("saved");
         return true;
       } catch (failure) {
-        setError(problemMessage(t, failure));
+        setError(failureMessage(t, failure));
         setRetryable(isRetryable(failure));
         setState("error");
         return false;
@@ -172,6 +189,125 @@ export function AutoSaveTextField({
         {control}
       </Field>
       {tracker.state === "error" && !tracker.retryable ? null : <SaveIndicator tracker={tracker} />}
+    </div>
+  );
+}
+
+export function ExplicitSaveTextField({
+  label,
+  hint,
+  value,
+  schema,
+  invalidMessage,
+  onSave,
+  disabled = false,
+  className,
+  secret,
+}: {
+  label: string;
+  hint?: string;
+  value: string;
+  schema?: z.ZodType<string>;
+  invalidMessage?: string;
+  onSave: (value: string, secret: string) => Promise<unknown>;
+  disabled?: boolean;
+  className?: string;
+  secret?: { label: string; hint: string };
+}) {
+  const { t } = useTranslation();
+  const tracker = useSaveState();
+  const [draft, setDraft] = useState(value);
+  const [saved, setSaved] = useState(value);
+  const [secretValue, setSecretValue] = useState("");
+  const [invalid, setInvalid] = useState<string | null>(null);
+  const [secretMissing, setSecretMissing] = useState(false);
+  if (saved !== value && draft === saved) {
+    setDraft(value);
+    setSaved(value);
+  }
+  const changed = draft.trim() !== saved;
+
+  const save = async () => {
+    const next = draft.trim();
+    if (schema) {
+      const parsed = schema.safeParse(next);
+      if (!parsed.success) {
+        const issue = parsed.error.issues[0];
+        setInvalid(issue ? issueMessage(t, issue, invalidMessage) : t("validation.invalid"));
+        focusFirstInvalidSoon();
+        return;
+      }
+    }
+    setInvalid(null);
+    if (secret && secretValue === "") {
+      setSecretMissing(true);
+      focusFirstInvalidSoon();
+      return;
+    }
+    setSecretMissing(false);
+    if (await tracker.run(() => onSave(next, secretValue))) {
+      setSaved(next);
+      setDraft(next);
+      setSecretValue("");
+    } else {
+      focusFirstInvalidSoon();
+    }
+  };
+  const cancel = () => {
+    setDraft(saved);
+    setSecretValue("");
+    setInvalid(null);
+    setSecretMissing(false);
+  };
+
+  const fieldError = invalid ?? (tracker.state === "error" && tracker.error ? tracker.error : undefined);
+  return (
+    <div className="flex flex-col gap-2">
+      <Field label={label} {...(hint ? { hint } : {})} {...(fieldError ? { error: fieldError } : {})}>
+        <Input
+          value={draft}
+          disabled={disabled}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              void save();
+            }
+            if (event.key === "Escape") cancel();
+          }}
+          {...(className ? { className } : {})}
+        />
+      </Field>
+      {changed && secret ? (
+        <Field
+          label={secret.label}
+          hint={secret.hint}
+          {...(secretMissing ? { error: t("validation.required") } : {})}
+        >
+          <PasswordInput
+            autoComplete="off"
+            value={secretValue}
+            onChange={(event) => setSecretValue(event.target.value)}
+          />
+        </Field>
+      ) : null}
+      {changed ? (
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button size="sm" onClick={cancel}>
+            {t("common.cancel")}
+          </Button>
+          <Button
+            size="sm"
+            variant="primary"
+            loading={tracker.state === "saving"}
+            onClick={() => void save()}
+          >
+            {t("common.save")}
+          </Button>
+        </div>
+      ) : tracker.state === "saved" ? (
+        <SaveIndicator tracker={tracker} />
+      ) : null}
     </div>
   );
 }

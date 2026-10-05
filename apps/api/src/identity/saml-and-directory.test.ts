@@ -207,6 +207,41 @@ describe.skipIf(!databaseBaseUrl)("SAML and directory providers through the API"
     expect(withPassword.body).not.toContain("another password");
   });
 
+  it("uses the stored password to turn StartTLS on but not to turn it off", async () => {
+    const config = {
+      preset: "generic",
+      url: "ldap://127.0.0.1:3",
+      startTls: false,
+      bindDn: "cn=pagehall,dc=example,dc=org",
+      userBaseDn: "ou=people,dc=example,dc=org",
+      groupBaseDn: "ou=groups,dc=example,dc=org",
+      domains: [],
+    };
+    const created = await owner.post("/api/v1/instance/identity-providers", {
+      type: "ldap",
+      name: "Plain directory",
+      config,
+      credential: { kind: "bindPassword", secret: "service password" },
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    const id = created.json().provider.id;
+    const check = (startTls: boolean) =>
+      owner.post("/api/v1/instance/identity-provider-connection-checks", {
+        type: "ldap",
+        config: { ...config, startTls },
+        providerId: id,
+      });
+    expect((await check(true)).statusCode).toBe(200);
+    expect(
+      (
+        await owner.patch(`/api/v1/instance/identity-providers/${id}`, {
+          config: { ...config, startTls: true },
+        })
+      ).statusCode,
+    ).toBe(200);
+    expect((await check(false)).json()).toMatchObject({ code: "invalidInput" });
+  });
+
   it("refuses a server certificate as uploaded certificate authority", async () => {
     const response = await owner.put(`/api/v1/instance/identity-providers/${ldapId}/ca-certificate`, {
       certificate: "-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----",

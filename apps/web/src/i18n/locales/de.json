@@ -533,6 +533,9 @@
     "check": {
       "failedTitle": "Pagehall hat den Anbieter mit diesen Einstellungen nicht erreicht",
       "saveAnyway": "Trotzdem speichern",
+      "passwordNeeded": "Pagehall verwendet das gespeicherte Passwort nur für den Server, zu dem es gehört. Gib das Passwort des Dienstkontos ein, um dich mit diesem Server zu verbinden.",
+      "serverPassword": "Passwort des Dienstkontos",
+      "serverPasswordHint": "Pagehall verbindet sich damit vor dem Speichern mit dem neuen Server. Um ein anderes Passwort zu speichern, ersetze es unter Zugangsdaten.",
       "saveAnywayHint": "Korrigiere das markierte Feld, oder speichere trotzdem und korrigiere es später. Die Einrichtung lässt sich dann erst abschließen, wenn du die fehlgeschlagene Prüfung bestätigst.",
       "names": {
         "discovery": "die OpenID-Connect-Discovery",
