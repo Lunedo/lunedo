@@ -104,6 +104,7 @@ export interface ErrorStateProps {
   title: ReactNode;
   cause?: ReactNode;
   action?: ReactNode;
+  details?: ReactNode;
   command?: string;
   documentationUrl?: string;
   onRetry?: () => void;
@@ -115,6 +116,7 @@ export function ErrorState({
   title,
   cause,
   action,
+  details,
   command,
   documentationUrl,
   onRetry,
@@ -137,6 +139,7 @@ export function ErrorState({
       <div className="flex flex-col gap-2">
         {cause && <p>{cause}</p>}
         {action && <p>{action}</p>}
+        {details && <p className="font-mono text-sm text-text-muted">{details}</p>}
         {command && (
           <div className="flex items-start gap-1 rounded-md border border-border bg-surface-sunken">
             <pre className="min-w-0 flex-1 overflow-x-auto p-2 font-mono text-sm whitespace-pre-wrap break-all">

@@ -112,9 +112,9 @@ describe("the e-mail settings", () => {
     });
     await renderMail();
     await userEvent.click(await screen.findByRole("radio", { name: "Microsoft Graph" }));
-    expect(await screen.findByText(/It cannot see how the permission was granted/)).toBeTruthy();
+    expect(await screen.findByText(/Pagehall cannot see how the permission was granted/)).toBeTruthy();
     expect(screen.getByText(/run Enable-OrganizationCustomization first/)).toBeTruthy();
-    expect(screen.getByText(/can then send as every mailbox of the tenant/)).toBeTruthy();
+    expect(screen.getByText(/can then send as any mailbox of your organization/)).toBeTruthy();
     await userEvent.type(screen.getByLabelText("Directory (tenant) ID"), TENANT);
     await userEvent.type(screen.getByLabelText("Client ID"), "client-id");
     await userEvent.type(screen.getByLabelText("Sender mailbox"), "wiki@example.org");
@@ -139,6 +139,21 @@ describe("the e-mail settings", () => {
     expect(within(document.body).queryByText("Pagehall sends through Microsoft Graph.")).toBeNull();
   });
 
+  it("lists the Microsoft 365 steps in the order they are done", async () => {
+    api({});
+    await renderMail();
+    await userEvent.click(await screen.findByRole("radio", { name: "Microsoft Graph" }));
+    const steps = within(screen.getByText("Set up in Microsoft 365").parentElement as HTMLElement)
+      .getAllByRole("listitem")
+      .map((item) => item.textContent);
+    expect(steps).toEqual([
+      expect.stringMatching(/^Create an app registration/),
+      expect.stringMatching(/^Allow the app to send e-mail/),
+      expect.stringMatching(/^Recommended: limit the app to the sender mailbox/),
+      expect.stringMatching(/^Enter the tenant ID/),
+    ]);
+  });
+
   it("says that Microsoft 365 only accepted the test mail and where a failed delivery shows", async () => {
     api({
       "POST /api/v1/instance/mail/graph/test": () => ({ body: { delivered: true, error: null } }),
@@ -153,6 +168,20 @@ describe("the e-mail settings", () => {
     const result = accepted.closest("[role=status]")?.textContent;
     expect(result).toContain("non-delivery report in the sender mailbox");
     expect(result).toContain("550 5.7.233");
+  });
+
+  it("explains a failed test mail in plain words and keeps the code for administrators", async () => {
+    api({
+      "POST /api/v1/instance/mail/test": () => ({
+        body: { delivered: false, error: { code: "EDNS", responseCode: null } },
+      }),
+    });
+    await renderMail();
+    await userEvent.type(await screen.findByLabelText("Server"), "smtp.exmaple.org");
+    await userEvent.type(screen.getByLabelText("Sender address"), "wiki@example.org");
+    await userEvent.click(screen.getByRole("button", { name: "Send test mail" }));
+    expect(await screen.findByText(/The name of the mail server could not be found/)).toBeTruthy();
+    expect(screen.getByText("Code for administrators: EDNS")).toBeTruthy();
   });
 
   it("says that the mail server only accepted the test mail and where a later bounce shows", async () => {

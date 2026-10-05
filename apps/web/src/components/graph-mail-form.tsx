@@ -168,14 +168,17 @@ export function GraphMailForm({
 
   return (
     <div className="flex flex-col gap-4">
-      <Notice variant="warning" title={t("mail.graph.permissionTitle")}>
-        <div className="flex flex-col gap-2">
-          <p>{t("mail.graph.permission")}</p>
-          <p>{t("mail.graph.permissionRecommended")}</p>
-          <p>{t("mail.graph.permissionSimple")}</p>
-        </div>
+      <Notice variant="info" title={t("mail.graph.steps.title")}>
+        <ol className="flex list-decimal flex-col gap-2 pl-5">
+          <li>{t("mail.graph.steps.create")}</li>
+          <li>{t("mail.graph.steps.grant")}</li>
+          <li>
+            {t("mail.graph.steps.restrict")}
+            <span className="mt-1 block text-sm text-text-muted">{t("mail.graph.steps.restrictNote")}</span>
+          </li>
+          <li>{t("mail.graph.steps.enter")}</li>
+        </ol>
       </Notice>
-      <Notice variant="info">{t("mail.graph.setup")}</Notice>
       {error ? (
         <Notice variant="danger" title={t("failures.saveMail")}>
           {error}

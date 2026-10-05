@@ -25,6 +25,7 @@ import { z } from "zod";
 import { problemMessage } from "../errors/problem-message.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../forms/use-schema-form.js";
 import { isLanguage } from "../i18n/index.js";
+import { mailFailure } from "./mail-failure.js";
 
 const smtpForm = z
   .object({
@@ -85,7 +86,11 @@ export function SmtpForm({
   const { t, i18n } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const [recipient, setRecipient] = useState(defaultRecipient ?? "");
-  const [testResult, setTestResult] = useState<{ delivered: boolean; detail: string | null } | null>(null);
+  const [testResult, setTestResult] = useState<{
+    delivered: boolean;
+    cause: string;
+    details: string | null;
+  } | null>(null);
   const [testing, setTesting] = useState(false);
   const [preset, setPreset] = useState(smtpPresetOf(initial) ?? "custom");
   const form = useSchemaForm(smtpForm, {
@@ -113,7 +118,7 @@ export function SmtpForm({
   const test = form.handleSubmit(async (values) => {
     setTestResult(null);
     if (!emailSchema.safeParse(recipient).success) {
-      setTestResult({ delivered: false, detail: t("validation.email") });
+      setTestResult({ delivered: false, cause: t("validation.email"), details: null });
       return;
     }
     setTesting(true);
@@ -123,14 +128,9 @@ export function SmtpForm({
         to: recipient,
         language: isLanguage(i18n.language) ? i18n.language : "en",
       });
-      setTestResult({
-        delivered: result.delivered,
-        detail: result.error
-          ? [result.error.code, result.error.responseCode].filter((part) => part !== null).join(" ")
-          : null,
-      });
+      setTestResult({ delivered: result.delivered, ...mailFailure(t, result.error) });
     } catch (failure) {
-      setTestResult({ delivered: false, detail: problemMessage(t, failure) });
+      setTestResult({ delivered: false, cause: problemMessage(t, failure), details: null });
     } finally {
       setTesting(false);
     }
@@ -225,8 +225,9 @@ export function SmtpForm({
         {testResult && !testResult.delivered ? (
           <ErrorState
             title={t("mail.testFailed")}
-            cause={testResult.detail ?? t("mail.testFailedUnknown")}
+            cause={testResult.cause}
             action={t("mail.testFailedAction")}
+            details={testResult.details}
             onRetry={() => void test()}
           />
         ) : null}
