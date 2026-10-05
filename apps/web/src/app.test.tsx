@@ -131,7 +131,7 @@ describe("the web client", () => {
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await userEvent.type(await screen.findByLabelText("Password"), "wrong");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
-    expect(await screen.findByText("The e-mail address or the password is not correct.")).toBeTruthy();
+    expect(await screen.findByText(/The password is not correct\./)).toBeTruthy();
 
     await userEvent.type(screen.getByLabelText("Password"), "correct horse battery");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));

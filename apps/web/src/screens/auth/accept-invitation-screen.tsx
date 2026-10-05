@@ -11,8 +11,8 @@ import { isApiError, request } from "../../api/request.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
-import { forgetLinkToken, useLinkToken } from "../../session/link-token.js";
 import { translateKey } from "../../i18n/translate.js";
+import { forgetLinkToken, useLinkToken } from "../../session/link-token.js";
 import { AuthCard } from "./auth-layout.js";
 
 const detailsForm = z

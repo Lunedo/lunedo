@@ -1185,6 +1185,7 @@
       "title": "Sign-in refused",
       "whatToDo": "What you can do:",
       "anotherAccount": "Sign in with another account",
+      "retry": "Try again",
       "reference": "Reference for your administrator:",
       "reasons": {
         "accountCreationDisabled": {
@@ -1295,7 +1296,8 @@
     "name": "Name",
     "forgotPassword": "Forgot password?",
     "sessionEnded": "Your session ended. Sign in again to continue where you were.",
-    "passkeyCancelled": "The passkey was not used. Try again or choose another method.",
+    "passkeyCancelled": "No passkey was used. Either the browser window was closed, or this device has no passkey for this Pagehall. Try again, use the device where you saved your passkey, or sign in with your e-mail address.",
+    "wrongPassword": "The password is not correct. Enter it again, or set a new one with \"Forgot password?\".",
     "passkeyHint": "Use Touch ID, Windows Hello or your security key when your browser asks.",
     "usePasskey": "Use passkey",
     "verifyTitle": "Confirm it's you",

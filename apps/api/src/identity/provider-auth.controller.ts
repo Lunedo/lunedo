@@ -219,7 +219,11 @@ export class ProviderAuthController {
         location = "/sign-in/link";
         break;
       case "refused":
-        location = withQuery("/sign-in/refused", { reference: result.reference, reason: result.reason });
+        location = withQuery("/sign-in/refused", {
+          reference: result.reference,
+          reason: result.reason,
+          provider: providerId,
+        });
         break;
       case "tested":
         location = withQuery(result.returnTo ?? "/settings", { providerTest: result.flowId });

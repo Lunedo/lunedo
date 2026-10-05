@@ -1185,6 +1185,7 @@
       "title": "Anmeldung abgelehnt",
       "whatToDo": "Was du tun kannst:",
       "anotherAccount": "Mit einem anderen Konto anmelden",
+      "retry": "Erneut versuchen",
       "reference": "Referenz für deine Administration:",
       "reasons": {
         "accountCreationDisabled": {
@@ -1295,7 +1296,8 @@
     "name": "Name",
     "forgotPassword": "Passwort vergessen?",
     "sessionEnded": "Deine Sitzung ist beendet. Melde dich erneut an, um dort weiterzumachen, wo du warst.",
-    "passkeyCancelled": "Der Passkey wurde nicht verwendet. Versuche es erneut oder wähle eine andere Methode.",
+    "passkeyCancelled": "Es wurde kein Passkey verwendet. Entweder wurde das Browserfenster geschlossen, oder dieses Gerät hat keinen Passkey für dieses Pagehall. Versuche es erneut, nutze das Gerät, auf dem du deinen Passkey gespeichert hast, oder melde dich mit deiner E-Mail-Adresse an.",
+    "wrongPassword": "Das Passwort ist nicht korrekt. Gib es erneut ein oder lege mit „Passwort vergessen?“ ein neues fest.",
     "passkeyHint": "Verwende Touch ID, Windows Hello oder deinen Sicherheitsschlüssel, wenn dein Browser danach fragt.",
     "usePasskey": "Passkey verwenden",
     "verifyTitle": "Bestätige, dass du es bist",

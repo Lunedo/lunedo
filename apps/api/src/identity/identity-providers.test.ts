@@ -362,6 +362,17 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     expect(identities.json()).toHaveLength(1);
   });
 
+  it("names the provider of a refused sign-in so the page can offer a retry", async () => {
+    const response = await signInThroughProvider(new TestClient(test.app), {
+      sub: "foreign-subject",
+      email: "someone@foreign.test",
+    });
+    const refused = new URL(String(response.headers.location), "https://pagehall.test");
+    expect(refused.pathname).toBe("/sign-in/refused");
+    expect(refused.searchParams.get("reason")).toBe("domainNotAllowed");
+    expect(refused.searchParams.get("provider")).toBe(providerId);
+  });
+
   it("lets a person decline a link after a wrong password", async () => {
     const existing = await createAccount(test, "declining.person@pagehall.test");
     const browser = new TestClient(test.app);

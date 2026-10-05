@@ -194,6 +194,39 @@ describe("the sign-in page", () => {
     expect(await screen.findByText("Your address is not accepted by this provider")).toBeTruthy();
     expect(screen.getByText(/sign in with your work account instead/)).toBeTruthy();
     expect(screen.getByText("01JB7Q4K2M9X")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
+  it("offers a retry at the same provider when the refusal says to try again", async () => {
+    const { requests } = signedOutApi({});
+    await renderPath(`/sign-in/refused?reason=invalidResponse&reference=01JB7Q4K2M9X&provider=${PROVIDER}`);
+    await userEvent.click(await screen.findByRole("button", { name: "Try again" }));
+    await waitFor(() =>
+      expect(requests.some((request) => request.path === `/api/v1/auth/providers/${PROVIDER}/start`)).toBe(
+        true,
+      ),
+    );
+  });
+
+  it("says what to do after a wrong password", async () => {
+    signedOutApi(
+      {},
+      {
+        "POST /api/v1/auth/sign-in/discover": () => ({ body: { step: "password" } }),
+        "POST /api/v1/auth/sign-in": () => problem(401, "invalidCredentials"),
+      },
+    );
+    await renderPath("/sign-in");
+    await userEvent.type(await screen.findByLabelText("Work e-mail address or sign-in name"), "olivia@example.org");
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await userEvent.type(await screen.findByLabelText("Password"), "wrong password");
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(
+      await screen.findByText(
+        'The password is not correct. Enter it again, or set a new one with "Forgot password?".',
+      ),
+    ).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Forgot password?" })).toBeTruthy();
   });
 });
 
