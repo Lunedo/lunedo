@@ -71465,6 +71465,158 @@
         }
       }
     },
+    "/api/v1/invitations/preview": {
+      "post": {
+        "operationId": "accounts.previewInvitation",
+        "summary": "Look up an invitation",
+        "tags": [
+          "Accounts"
+        ],
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "token"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "What the invitation is for and whether it can still be accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "open",
+                        "expired",
+                        "accepted",
+                        "revoked"
+                      ],
+                      "description": "Whether the invitation can be accepted, or why not."
+                    },
+                    "email": {
+                      "type": "string",
+                      "description": "The invited e-mail address."
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the invitation expires."
+                    },
+                    "organizationName": {
+                      "type": "string",
+                      "description": "The organization the invitation is for."
+                    },
+                    "invitedByName": {
+                      "description": "The person who sent the invitation, when the account still exists.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "state",
+                    "email",
+                    "expiresAt",
+                    "organizationName",
+                    "invitedByName"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid. `invalidToken`: The link or code is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidToken",
+                      "title": "The link or code is not valid",
+                      "status": 400,
+                      "code": "invalidToken"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/notifications": {
       "get": {
         "operationId": "notifications.list",

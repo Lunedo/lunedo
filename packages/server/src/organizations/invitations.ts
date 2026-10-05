@@ -1,4 +1,5 @@
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { type AccountService, emailSchema } from "../accounts/accounts.js";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
@@ -48,6 +49,14 @@ export interface Invitation {
 
 function scopeOf(organizationId: string) {
   return { type: "organization" as const, id: organizationId };
+}
+
+export interface InvitationPreview {
+  state: "open" | "expired" | "accepted" | "revoked";
+  email: string;
+  expiresAt: Date;
+  organizationName: string;
+  invitedByName: string | null;
 }
 
 export class InvitationService {
@@ -270,6 +279,41 @@ export class InvitationService {
   async #limit(key: string, limit: number): Promise<void> {
     const result = await this.#rateLimiter.consume(key, limit, HOUR_SECONDS);
     if (!result.allowed) throw new RateLimitedError(result.retryAfterSeconds);
+  }
+
+  async preview(token: string, clientIp: string | undefined): Promise<InvitationPreview> {
+    await this.#limit(`invitation:client:${clientSubject(clientIp ?? "unknown")}`, ACCEPTANCES_PER_CLIENT);
+    if (!isWellFormedToken(token)) throw new InvalidTokenError();
+    const inviter = alias(accounts, "inviter");
+    const [row] = await this.#database
+      .select({
+        email: invitations.email,
+        expiresAt: invitations.expiresAt,
+        acceptedAt: invitations.acceptedAt,
+        revokedAt: invitations.revokedAt,
+        expired: sql<boolean>`${invitations.expiresAt} <= now()`,
+        organizationName: organizations.name,
+        invitedByName: inviter.name,
+      })
+      .from(invitations)
+      .innerJoin(organizations, eq(organizations.id, invitations.organizationId))
+      .leftJoin(inviter, eq(inviter.id, invitations.invitedBy))
+      .where(eq(invitations.tokenHash, hashToken(token)));
+    if (!row) throw new InvalidTokenError();
+    const state = row.acceptedAt
+      ? "accepted"
+      : row.revokedAt
+        ? "revoked"
+        : row.expired
+          ? "expired"
+          : "open";
+    return {
+      state,
+      email: row.email,
+      expiresAt: row.expiresAt,
+      organizationName: row.organizationName,
+      invitedByName: row.invitedByName,
+    };
   }
 
   async accept(

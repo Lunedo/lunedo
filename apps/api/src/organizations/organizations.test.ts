@@ -131,12 +131,27 @@ describe.skipIf(!databaseBaseUrl)("organizations through the API", () => {
     const mail = await mailTo("new.member@engineering.example");
     expect(mail?.subject).toBe("Olivia Owner hat Sie zu Engineering Team auf Test wiki eingeladen");
 
+    const preview = () =>
+      new TestClient(test.app).post("/api/v1/invitations/preview", { token: linkToken(mail?.text) });
+    expect((await preview()).json()).toEqual({
+      state: "open",
+      email: "new.member@engineering.example",
+      expiresAt: expect.any(String),
+      organizationName: "Engineering Team",
+      invitedByName: "Olivia Owner",
+    });
     const accepted = await new TestClient(test.app).post("/api/v1/invitations/accept", {
       token: linkToken(mail?.text),
       name: "New Member",
       password: "a member passphrase",
     });
     expect(accepted.json()).toMatchObject({ organizationId, accountCreated: true });
+    expect((await preview()).json()).toMatchObject({ state: "accepted" });
+    expect(
+      (
+        await new TestClient(test.app).post("/api/v1/invitations/preview", { token: "x".repeat(43) })
+      ).json(),
+    ).toMatchObject({ code: "invalidToken" });
     memberId = accepted.json().accountId;
     memberClient = await signedInClient(test, "new.member@engineering.example", "a member passphrase");
     const members = (await memberClient.get(`/api/v1/organizations/${organizationId}/members`)).json().items;
@@ -147,6 +162,22 @@ describe.skipIf(!databaseBaseUrl)("organizations through the API", () => {
     expect(members.find((entry: { accountId: string }) => entry.accountId === memberId).roles).toEqual([
       expect.objectContaining({ role: "Audit readers", customRoleId: roleId }),
     ]);
+  });
+
+  it("tells an expired invitation apart from an open one", async () => {
+    await owner.post(`/api/v1/organizations/${organizationId}/invitations`, {
+      email: "late@engineering.example",
+      kind: "member",
+    });
+    const token = linkToken((await mailTo("late@engineering.example"))?.text);
+    await test.runtime.pool.query(
+      "update invitations set expires_at = now() - interval '1 minute' where email = 'late@engineering.example'",
+    );
+    const preview = await new TestClient(test.app).post("/api/v1/invitations/preview", { token });
+    expect(preview.json()).toMatchObject({ state: "expired", organizationName: "Engineering Team" });
+    expect(
+      (await new TestClient(test.app).post("/api/v1/invitations/accept", { token })).json(),
+    ).toMatchObject({ code: "invalidToken" });
   });
 
   it("invites a guest who sees the organization but not its members", async () => {
