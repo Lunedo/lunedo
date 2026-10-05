@@ -1,5 +1,5 @@
 import { accountNameSchema, emailSchema } from "@pagehall/shared";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import type { AuditEvents, AuditLog } from "../audit/audit-log.js";
 import type { PasswordHasher, PasswordProblem } from "../auth/passwords.js";
 import { passwordProblem } from "../auth/passwords.js";
@@ -100,7 +100,10 @@ export class AccountService {
     return { ...(await accountScopeChain(this.#database, accountId)), user: accountId };
   }
 
-  async list(page: PageRequest = FIRST_PAGE): Promise<Page<Omit<Account, "passwordHash">>> {
+  async list(
+    page: PageRequest = FIRST_PAGE,
+    filter: { withoutOrganization?: boolean; state?: AccountState } = {},
+  ): Promise<Page<Omit<Account, "passwordHash">>> {
     const { passwordHash: _passwordHash, ...columns } = accountColumns;
     const sortName = sql<string>`lower(${accounts.name})`;
     const rows = await this.#database
@@ -110,6 +113,12 @@ export class AccountService {
         and(
           afterKey([sortName, accounts.id], page.after),
           matchesSearch([accounts.name, accounts.email], page.search),
+          isNull(accounts.mergedIntoId),
+          filter.state ? eq(accounts.state, filter.state) : undefined,
+          filter.withoutOrganization
+            ? sql`not exists (select 1 from memberships m where m.account_id = ${accounts.id}
+                and (m.expires_at is null or m.expires_at > now()))`
+            : undefined,
         ),
       )
       .orderBy(sortName, accounts.id)
@@ -155,7 +164,7 @@ export class AccountService {
       type: "standard" | "guest";
       email: string;
       name: string;
-      password: string;
+      password: string | null;
       homeOrganizationId: string | null;
       emailVerified?: boolean;
     },
@@ -163,7 +172,7 @@ export class AccountService {
   ): Promise<Account> {
     const email = emailSchema.parse(input.email.trim());
     const name = accountNameSchema.parse(input.name);
-    const passwordHash = await this.hashPassword(input.password);
+    const passwordHash = input.password === null ? null : await this.hashPassword(input.password);
     const now = new Date();
     const [row] = await withUniqueEmail(() =>
       tx
@@ -174,7 +183,7 @@ export class AccountService {
           email,
           name,
           passwordHash,
-          passwordChangedAt: now,
+          passwordChangedAt: passwordHash ? now : null,
           emailVerifiedAt: input.emailVerified ? now : null,
           homeOrganizationId: input.type === "standard" ? input.homeOrganizationId : null,
         })
@@ -219,6 +228,14 @@ export class AccountService {
     options: { collect?: AuditEvents } = {},
   ): Promise<Account> {
     return this.create(tx, { ...input, type: "standard" }, options);
+  }
+
+  async createFromProvider(
+    tx: Transaction,
+    input: { email: string; name: string; homeOrganizationId: string | null },
+    options: { collect?: AuditEvents } = {},
+  ): Promise<Account> {
+    return this.create(tx, { ...input, type: "standard", password: null, emailVerified: true }, options);
   }
 
   async lock(tx: Transaction, id: string): Promise<Account | null> {

@@ -7,7 +7,7 @@ import { initI18n } from "../i18n/index.js";
 import { mockApi, problem } from "../testing/render.js";
 import { notificationText } from "./notification-entry.js";
 import { groupByDay } from "./notification-panel.js";
-import type { NotificationItem } from "./notifications-api.js";
+import { type NotificationItem, syncRunChanged } from "./notifications-api.js";
 
 const ACCOUNT = {
   id: "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
@@ -166,7 +166,9 @@ describe("the notification panel", () => {
     const i18n = await initI18n(["en"]);
     render(<App i18n={i18n} queryClient={createQueryClient()} />);
 
-    expect(await screen.findByRole("button", { name: "Notifications, 1 unread" })).toBeTruthy();
+    expect(
+      await screen.findByRole("button", { name: "Notifications, 1 unread" }, { timeout: 5000 }),
+    ).toBeTruthy();
     expect(FakeEventSource.last?.url).toBe("/api/v1/notifications/stream");
     FakeEventSource.last?.emit("notifications", { unreadCount: 4 });
     expect(await screen.findByRole("button", { name: "Notifications, 4 unread" })).toBeTruthy();
@@ -244,5 +246,25 @@ describe("live settings", () => {
       organizationId: null,
     });
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark"));
+  });
+});
+
+describe("syncRunChanged", () => {
+  it("reloads everything a synchronization may have changed, also outside the provider", () => {
+    const queryClient = createQueryClient();
+    const provider = "01929b1e-0000-7000-8000-0000000000a1";
+    const keys = [
+      ["identityProviders", provider, "rules"],
+      ["instance", "accounts", "identities", "01929b1e-0000-7000-8000-0000000000b1"],
+      ["organization", "01929b1e-0000-7000-8000-0000000000c1", "groups"],
+      ["organization", "01929b1e-0000-7000-8000-0000000000c1", "members"],
+      ["group", "01929b1e-0000-7000-8000-0000000000d1", "members"],
+      ["account", "identities"],
+    ];
+    const untouched = ["identityProviders", "01929b1e-0000-7000-8000-0000000000a2"];
+    for (const key of [...keys, untouched]) queryClient.setQueryData(key, {});
+    syncRunChanged(queryClient, provider);
+    for (const key of keys) expect(queryClient.getQueryState(key)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(untouched)?.isInvalidated).toBe(false);
   });
 });

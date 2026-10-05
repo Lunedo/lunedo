@@ -82,7 +82,14 @@ export class SessionService {
 
   async create(
     tx: Transaction,
-    options: { accountId: string; kind: SessionKind; methods: SignInMethod[]; client: ClientInfo },
+    options: {
+      accountId: string;
+      kind: SessionKind;
+      methods: SignInMethod[];
+      client: ClientInfo;
+      identityId?: string | null;
+      providerSessionId?: string | null;
+    },
   ): Promise<{ session: Session; token: string }> {
     const { accountId, client } = options;
     await tx.select({ id: accounts.id }).from(accounts).where(eq(accounts.id, accountId)).for("update");
@@ -109,6 +116,8 @@ export class SessionService {
         kind: options.kind,
         deviceHash: client.deviceToken ? hashToken(client.deviceToken) : null,
         methods: options.methods,
+        identityId: options.identityId ?? null,
+        providerSessionId: options.providerSessionId ?? null,
         clientIp: client.ip ?? null,
         ...describeClient(client.userAgent),
         createdAt: now,

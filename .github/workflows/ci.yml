@@ -217,6 +217,55 @@ jobs:
           path: apps/web/playwright-report
           retention-days: 7
 
+  identity-providers:
+    name: Sign-in through identity providers
+    needs: scope
+    if: needs.scope.outputs.identity-providers == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PAGEHALL_E2E_IDP: "1"
+      PAGEHALL_E2E_HOST: 0.0.0.0
+      PAGEHALL_E2E_KEYCLOAK_URL: http://keycloak.localhost:8080
+      PAGEHALL_E2E_AUTHENTIK_URL: http://authentik.localhost:9000
+      PAGEHALL_E2E_LDAP_URL: ldap://localhost:3389
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Resolve the identity provider host names to this machine
+        run: echo "127.0.0.1 keycloak.localhost authentik.localhost" | sudo tee -a /etc/hosts
+      - name: Start PostgreSQL, Mailpit, Keycloak, Authentik and OpenLDAP
+        run: >-
+          docker compose -f docker/compose.dev.yml --profile idp up --detach --wait
+          postgres mailpit keycloak authentik-postgres authentik-server authentik-worker openldap
+      - name: Wait until Authentik has applied the test blueprint
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl -fsS "$PAGEHALL_E2E_AUTHENTIK_URL/application/o/pagehall/.well-known/openid-configuration" > /dev/null; then exit 0; fi
+            sleep 5
+          done
+          docker compose -f docker/compose.dev.yml --profile idp logs authentik-worker
+          exit 1
+      - run: corepack enable
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm --filter @pagehall/web build:e2e
+      - run: pnpm --filter @pagehall/web exec playwright install --with-deps chromium
+      - run: pnpm --filter @pagehall/web exec playwright test --project=idp
+      - if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: identity-provider-report
+          path: apps/web/playwright-report
+          retention-days: 7
+      - if: failure()
+        run: docker compose -f docker/compose.dev.yml --profile idp logs keycloak authentik-server authentik-worker openldap
+
   dependencies:
     name: Licenses and audit
     needs: scope
@@ -259,7 +308,7 @@ jobs:
 
   result:
     name: CI result
-    needs: [scope, checks, unit, backup, e2e, dependencies, dco]
+    needs: [scope, checks, unit, backup, e2e, identity-providers, dependencies, dco]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 5

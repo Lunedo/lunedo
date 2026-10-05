@@ -37,6 +37,40 @@ export const notificationParamSchemas = {
     reason: z.string(),
     minutes: z.number().int(),
   }),
+  "auth.emergencySignIn": z.object({
+    accountName: z.string(),
+    browser: z.string().nullable(),
+    operatingSystem: z.string().nullable(),
+    clientIp: z.string().nullable(),
+  }),
+  "account.rolesWithheld": z.object({
+    accountName: z.string(),
+    providerName: z.string(),
+    roles: z.number().int(),
+  }),
+  "account.withoutOrganization": z.object({
+    accountName: z.string(),
+    email: z.string().nullable(),
+    providerName: z.string(),
+  }),
+  "account.homeOrganizationChanged": z.object({
+    accountName: z.string(),
+    previousOrganizationName: z.string().nullable(),
+    organizationName: z.string().nullable(),
+    reason: z.enum(["providerRule", "manual"]),
+  }),
+  "mail.credentialExpiring": z.object({ expiresAt: instant }),
+  "identityProvider.credentialExpiring": z.object({
+    providerName: z.string(),
+    expiresAt: instant,
+    providerId: idSchema,
+  }),
+  "identityProvider.syncHeld": z.object({
+    providerName: z.string(),
+    providerId: idSchema,
+    deactivations: z.number().int(),
+    accounts: z.number().int(),
+  }),
   "signIn.newBrowser": z.object({
     browser: z.string().nullable(),
     operatingSystem: z.string().nullable(),

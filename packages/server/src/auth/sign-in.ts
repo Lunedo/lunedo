@@ -5,17 +5,21 @@ import { accounts } from "../accounts/schema.js";
 import { accountScopeChain } from "../accounts/scope.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { SignInMethod } from "../audit/catalog.js";
-import type { Database, Transaction } from "../database/database.js";
+import type { Database, Executor, Transaction } from "../database/database.js";
+import { identities } from "../identity/schema.js";
 import type { MailService } from "../mail/mail-service.js";
 import { knownDevices } from "../notifications/schema.js";
 import type { NotificationService } from "../notifications/service.js";
+import { languageSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import type { ChallengeStore } from "./challenges.js";
+import { emergencyRecipientsOf } from "./emergency-recipients.js";
 import {
   ChallengeExpiredError,
   InvalidCredentialsError,
   InvalidSecondFactorError,
   LockedError,
+  PasswordSignInDisabledError,
   RateLimitedError,
   SetupIncompleteError,
 } from "./errors.js";
@@ -27,7 +31,7 @@ import {
   type SessionKind,
   type SessionService,
 } from "./sessions.js";
-import { twoFactorRequiredSetting } from "./settings.js";
+import { passwordSignInSetting, twoFactorRequiredSetting } from "./settings.js";
 import {
   clientSubject,
   type Lockout,
@@ -63,6 +67,26 @@ export interface SignedIn {
   token: string;
 }
 
+export interface PendingIdentity {
+  providerId: string;
+  subject: string;
+  email: string | null;
+  signInName: string | null;
+  displayName: string | null;
+  providerSessionId: string | null;
+  groups: { id: string; name: string | null }[] | null;
+}
+
+export type IdentityLinkedHook = (
+  tx: Transaction,
+  link: {
+    providerId: string;
+    identityId: string;
+    accountId: string;
+    groups: { id: string; name: string | null }[] | null;
+  },
+) => Promise<unknown>;
+
 export interface SecondFactorRequired {
   status: "secondFactorRequired";
   pendingToken: string;
@@ -81,6 +105,25 @@ function canSignIn(account: Account | null): account is Account & { email: strin
 }
 
 const PASSKEY_OPTIONS_PER_CLIENT_PER_MINUTE = 30;
+
+export interface PendingProviderSession {
+  providerId: string;
+  identityId: string;
+  providerSessionId: string | null;
+}
+
+function providerOfPending(payload: unknown): PendingProviderSession | null {
+  if (typeof payload !== "object" || payload === null || !("provider" in payload)) return null;
+  const provider = (payload as { provider: unknown }).provider;
+  if (typeof provider !== "object" || provider === null) return null;
+  const { providerId, identityId, providerSessionId } = provider as Record<string, unknown>;
+  if (typeof providerId !== "string" || typeof identityId !== "string") return null;
+  return {
+    providerId,
+    identityId,
+    providerSessionId: typeof providerSessionId === "string" ? providerSessionId : null,
+  };
+}
 
 function availableFactors(factors: SecondFactors): SecondFactorType[] {
   const available: SecondFactorType[] = [];
@@ -112,6 +155,7 @@ export class SignInService {
   readonly #notifications: NotificationService;
   readonly #settings: SettingsService;
   readonly #setupComplete: () => Promise<boolean>;
+  readonly #onIdentityLinked: IdentityLinkedHook | undefined;
 
   constructor(options: {
     database: Database;
@@ -129,6 +173,7 @@ export class SignInService {
     notifications: NotificationService;
     settings: SettingsService;
     setupComplete: () => Promise<boolean>;
+    onIdentityLinked?: IdentityLinkedHook;
   }) {
     this.#database = options.database;
     this.#accounts = options.accounts;
@@ -145,16 +190,19 @@ export class SignInService {
     this.#notifications = options.notifications;
     this.#settings = options.settings;
     this.#setupComplete = options.setupComplete;
+    this.#onIdentityLinked = options.onIdentityLinked;
   }
 
-  async secondFactorRequired(accountId: string): Promise<boolean> {
-    if ((await this.#accounts.ownerId()) === accountId) return true;
-    const [reset] = await this.#database
+  async secondFactorRequired(accountId: string, executor: Executor = this.#database): Promise<boolean> {
+    if ((await this.#accounts.ownerId(executor)) === accountId) return true;
+    const [reset] = await executor
       .select({ at: accounts.secondFactorResetAt })
       .from(accounts)
       .where(eq(accounts.id, accountId));
     if (reset?.at) return true;
-    return this.#settings.get(twoFactorRequiredSetting, await accountScopeChain(this.#database, accountId));
+    return this.#settings.get(twoFactorRequiredSetting, await accountScopeChain(executor, accountId), {
+      executor,
+    });
   }
 
   async #checkAttempt(subjects: ThrottleSubjects, accountId: string | null, method: SignInMethod) {
@@ -208,6 +256,101 @@ export class SignInService {
     return new Date(result.rows[0]?.now ?? Date.now());
   }
 
+  async passwordSignInAllowed(executor: Executor = this.#database): Promise<boolean> {
+    return this.#settings.get(passwordSignInSetting, {}, { executor });
+  }
+
+  async #emergencySignIn(
+    tx: Transaction,
+    account: Account,
+    sessionId: string,
+    client: ClientInfo,
+    mailIds: string[],
+  ): Promise<void> {
+    await this.#audit.record(tx, {
+      name: "auth.emergencySignIn",
+      actor: accountPrincipal(account.id),
+      targetId: account.id,
+      fields: { sessionId },
+    });
+    const recipients = await emergencyRecipientsOf(tx, this.#settings);
+    const described = describeClient(client.userAgent);
+    const result = await this.#notifications.notify(tx, {
+      type: "auth.emergencySignIn",
+      recipients: recipients.accountIds,
+      organizationId: null,
+      targetId: account.id,
+      params: {
+        accountName: account.name,
+        browser: described.browser,
+        operatingSystem: described.operatingSystem,
+        clientIp: client.ip ?? null,
+      },
+    });
+    mailIds.push(...result.mailIds);
+    const language = await this.#settings.get(languageSetting, {}, { executor: tx });
+    for (const address of recipients.addresses) {
+      mailIds.push(
+        await this.#mail.queue(tx, {
+          to: address,
+          template: "emergencySignIn",
+          language,
+          params: {
+            accountName: account.name,
+            browser: described.browser,
+            operatingSystem: described.operatingSystem,
+            clientIp: client.ip ?? null,
+          },
+        }),
+      );
+    }
+  }
+
+  async createProviderSession(
+    tx: Transaction,
+    account: Account,
+    provider: {
+      providerId: string;
+      identityId: string;
+      providerSessionId: string | null;
+      methods?: SignInMethod[];
+    },
+    client: ClientInfo,
+    mailIds: string[],
+    verifiedSince: Date,
+    kind: SessionKind = "full",
+  ): Promise<SignedIn> {
+    return this.#createSession(
+      tx,
+      account,
+      provider.methods ?? ["identityProvider"],
+      kind,
+      client,
+      mailIds,
+      verifiedSince,
+      provider,
+    );
+  }
+
+  async providerSecondFactor(
+    tx: Transaction,
+    account: Account,
+    provider: PendingProviderSession,
+    client: ClientInfo,
+  ): Promise<{ pendingToken: string; factors: SecondFactorType[] } | null> {
+    const factors = await secondFactorsOf(tx, account.id);
+    if (!hasSecondFactor(factors)) return null;
+    const pending = await this.#challenges.create(tx, {
+      purpose: "secondFactor",
+      accountId: account.id,
+      methods: ["identityProvider"],
+      deviceHash: client.deviceToken ? hashToken(client.deviceToken) : null,
+      payload: { provider },
+      withToken: true,
+    });
+    return { pendingToken: pending.token ?? "", factors: availableFactors(factors) };
+  }
+
   async #createSession(
     tx: Transaction,
     account: Account,
@@ -216,6 +359,7 @@ export class SignInService {
     client: ClientInfo,
     mailIds: string[],
     verifiedSince: Date,
+    provider: { providerId: string; identityId: string; providerSessionId: string | null } | null = null,
   ): Promise<SignedIn> {
     const [current] = await tx
       .select({ resetAt: accounts.secondFactorResetAt })
@@ -230,14 +374,23 @@ export class SignInService {
       kind,
       methods,
       client,
+      ...(provider ? { identityId: provider.identityId, providerSessionId: provider.providerSessionId } : {}),
     });
     await tx.update(accounts).set({ lastSignInAt: new Date() }).where(eq(accounts.id, account.id));
     await this.#audit.record(tx, {
       name: "auth.signedIn",
       actor: accountPrincipal(account.id),
       targetId: account.id,
-      fields: { sessionId: session.id, methods },
+      fields: { sessionId: session.id, methods, ...(provider ? { providerId: provider.providerId } : {}) },
     });
+    if (
+      provider === null &&
+      methods.includes("password") &&
+      (await this.#accounts.ownerId(tx)) === account.id &&
+      !(await this.passwordSignInAllowed(tx))
+    ) {
+      await this.#emergencySignIn(tx, account, session.id, client, mailIds);
+    }
     await this.#recordDevice(tx, account.id, client, mailIds);
     return { status: "signedIn", session, token };
   }
@@ -309,6 +462,9 @@ export class SignInService {
     if (!account || !valid) {
       await this.#recordFailure(subjects, account?.id ?? null, "password", "invalidCredentials");
       throw new InvalidCredentialsError();
+    }
+    if (!(await this.passwordSignInAllowed()) && (await this.#accounts.ownerId()) !== account.id) {
+      throw new PasswordSignInDisabledError();
     }
 
     const factors = await secondFactorsOf(this.#database, account.id);
@@ -402,6 +558,7 @@ export class SignInService {
           input.client,
           mailIds,
           started,
+          providerOfPending(pending.payload),
         );
         if (remaining !== null) {
           await this.#audit.record(tx, {
@@ -427,6 +584,194 @@ export class SignInService {
     }
     await this.#throttle.recordSuccess(account.email);
     await this.#mail.dispatch(mailIds);
+    return result;
+  }
+
+  async #pendingLink(pendingToken: string) {
+    const pending = await this.#challenges.findByToken(pendingToken, "identityLink");
+    const account = pending?.accountId ? await this.#accounts.get(pending.accountId) : null;
+    if (!pending || !canSignIn(account) || !pending.payload) throw new ChallengeExpiredError();
+    return { pending, account, identity: pending.payload as PendingIdentity };
+  }
+
+  async passwordConfirmsLink(account: Account, executor: Executor = this.#database): Promise<boolean> {
+    if (!account.passwordHash) return false;
+    return (
+      (await this.passwordSignInAllowed(executor)) || (await this.#accounts.ownerId(executor)) === account.id
+    );
+  }
+
+  async identityLinkPasskeyOptions(pendingToken: string, use: "signIn" | "secondFactor" = "secondFactor") {
+    const { pending, account } = await this.#pendingLink(pendingToken);
+    const options = await this.#webauthn.authenticationOptions({
+      accountId: account.id,
+      userVerification: use === "signIn" ? "required" : "preferred",
+    });
+    await this.#challenges.setChallenge(pending.id, options.challenge);
+    return options;
+  }
+
+  async confirmIdentityLink(input: {
+    pendingToken: string;
+    password?: string | null;
+    passkey?: AuthenticationResponseJSON | null;
+    factor: SecondFactorInput | null;
+    client: ClientInfo;
+  }): Promise<SignedIn> {
+    const started = await this.#databaseNow();
+    const { pending, account } = await this.#pendingLink(input.pendingToken);
+    const subjects = { email: account.email, clientIp: input.client.ip };
+    const factors = await secondFactorsOf(this.#database, account.id);
+    let methods: SignInMethod[];
+    let factorNeeded: boolean;
+    if (input.passkey) {
+      await this.#checkAttempt(subjects, account.id, "passkey");
+      const expectedChallenge = pending.challenge;
+      await this.#challenges.setChallenge(pending.id, "");
+      const assertion = expectedChallenge
+        ? await this.#webauthn.verify({
+            response: input.passkey,
+            expectedChallenge,
+            accountId: account.id,
+            requireUserVerification: true,
+          })
+        : null;
+      if (!assertion?.userVerified) {
+        await this.#challenges.recordFailure(pending.id);
+        await this.#recordFailure(subjects, account.id, "passkey", "invalidCredentials");
+        throw new InvalidCredentialsError();
+      }
+      methods = ["passkey"];
+      factorNeeded = false;
+    } else if (typeof input.password === "string") {
+      await this.#checkAttempt(subjects, account.id, "password");
+      let passwordValid = false;
+      if (account.passwordHash) {
+        passwordValid = (await this.#hasher.verify(account.passwordHash, input.password)).valid;
+      } else {
+        await this.#hasher.verifyNothing(input.password);
+      }
+      if (!passwordValid) {
+        await this.#challenges.recordFailure(pending.id);
+        await this.#recordFailure(subjects, account.id, "password", "invalidCredentials");
+        throw new InvalidCredentialsError();
+      }
+      if (!(await this.passwordConfirmsLink(account))) throw new PasswordSignInDisabledError();
+      methods = ["password"];
+      factorNeeded = hasSecondFactor(factors);
+    } else if (pending.methods.includes("identityProvider")) {
+      await this.#checkAttempt(subjects, account.id, "identityProvider");
+      methods = ["identityProvider"];
+      factorNeeded = true;
+    } else {
+      throw new InvalidCredentialsError();
+    }
+    const factor = input.factor;
+    const failedFactor = async (method: SignInMethod) => {
+      await this.#challenges.recordFailure(pending.id);
+      await this.#recordFailure(subjects, account.id, method, "invalidSecondFactor");
+      return new InvalidSecondFactorError();
+    };
+    if (factorNeeded) {
+      if (!factor || !hasSecondFactor(factors)) throw await failedFactor("totp");
+      if (factor.type === "totp" && !(await this.#totp.verify(this.#database, account.id, factor.code))) {
+        throw await failedFactor("totp");
+      }
+      if (factor.type === "passkey") {
+        const expectedChallenge = pending.challenge;
+        await this.#challenges.setChallenge(pending.id, "");
+        const verified =
+          !!expectedChallenge &&
+          (await this.#webauthn.verify({
+            response: factor.response,
+            expectedChallenge,
+            accountId: account.id,
+            requireUserVerification: false,
+          })) !== null;
+        if (!verified) throw await failedFactor("passkey");
+      }
+      methods.push(factor.type);
+    }
+    const kind =
+      factorNeeded || methods.includes("passkey") || !(await this.secondFactorRequired(account.id))
+        ? "full"
+        : "secondFactorSetup";
+    try {
+      return await this.completeIdentityLink(pending.id, methods, kind, input.client, started, {
+        beforeLink: async (tx) => {
+          if (factorNeeded && factor?.type === "recoveryCode") {
+            const remaining = await this.#recoveryCodes.use(tx, account.id, factor.code);
+            if (remaining === null) throw new RecoveryCodeRejected();
+          }
+        },
+      });
+    } catch (error) {
+      if (error instanceof RecoveryCodeRejected) throw await failedFactor("recoveryCode");
+      throw error;
+    }
+  }
+
+  async #pendingLinkById(pendingId: string) {
+    const pending = await this.#challenges.findById(pendingId, "identityLink");
+    const account = pending?.accountId ? await this.#accounts.get(pending.accountId) : null;
+    if (!pending || !canSignIn(account) || !pending.payload) throw new ChallengeExpiredError();
+    return { pending, account, identity: pending.payload as PendingIdentity };
+  }
+
+  async markIdentityLinkConfirmed(pendingId: string, method: SignInMethod): Promise<void> {
+    const { pending } = await this.#pendingLinkById(pendingId);
+    await this.#challenges.addMethod(pending.id, method);
+  }
+
+  async completeIdentityLink(
+    pendingId: string,
+    confirmedBy: SignInMethod[],
+    kind: "full" | "secondFactorSetup",
+    client: ClientInfo,
+    started: Date,
+    options: { beforeLink?: (tx: Transaction) => Promise<void> } = {},
+  ): Promise<SignedIn> {
+    const { pending, account, identity } = await this.#pendingLinkById(pendingId);
+    const methods: SignInMethod[] = [...confirmedBy, "identityProvider"];
+    const mailIds: string[] = [];
+    const result = await this.#database.transaction(async (tx) => {
+      if (!(await this.#challenges.consume(tx, pending.id))) throw new ChallengeExpiredError();
+      await options.beforeLink?.(tx);
+      const [linked] = await tx
+        .insert(identities)
+        .values({
+          accountId: account.id,
+          providerId: identity.providerId,
+          subject: identity.subject,
+          email: identity.email,
+          emailVerified: true,
+          signInName: identity.signInName,
+          displayName: identity.displayName,
+          lastSignInAt: new Date(),
+        })
+        .onConflictDoNothing()
+        .returning({ id: identities.id });
+      if (!linked) throw new ChallengeExpiredError();
+      await this.#onIdentityLinked?.(tx, {
+        providerId: identity.providerId,
+        identityId: linked.id,
+        accountId: account.id,
+        groups: identity.groups ?? null,
+      });
+      await this.#audit.record(tx, {
+        name: "identity.linked",
+        actor: accountPrincipal(account.id),
+        targetId: account.id,
+        fields: { providerId: identity.providerId, via: "signIn" },
+      });
+      return this.#createSession(tx, account, [...new Set(methods)], kind, client, mailIds, started, {
+        providerId: identity.providerId,
+        identityId: linked.id,
+        providerSessionId: identity.providerSessionId,
+      });
+    });
+    await this.#throttle.recordSuccess(account.email);
+    await this.#notifications.dispatch(mailIds);
     return result;
   }
 

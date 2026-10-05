@@ -1,5 +1,6 @@
 import { type Browser, type BrowserContext, expect, type Page, test } from "@playwright/test";
 import { OWNER_STORAGE, readState } from "../support/environment.js";
+import { signInWithPassword } from "../support/helpers.js";
 
 test.describe.configure({ mode: "serial" });
 
@@ -45,9 +46,7 @@ async function memberPage(browser: Browser): Promise<{ context: BrowserContext; 
   const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
   const page = await context.newPage();
   await page.goto("/sign-in");
-  await page.getByLabel("E-mail").fill(memberEmail ?? "");
-  await page.getByLabel("Password", { exact: true }).fill(memberPassword ?? "");
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await signInWithPassword(page, memberEmail ?? "", memberPassword ?? "");
   await expect(page.getByRole("heading", { name: "Preferences", level: 1 })).toBeVisible();
   return { context, page };
 }

@@ -159,9 +159,6 @@ const FOCUS_RING = `@utility focus-ring {
 
 const SETTING_ROW = `@utility grid-cols-setting-row {
   grid-template-columns: minmax(0, 1fr) auto;
-}
-@utility grid-cols-setting-row-wide {
-  grid-template-columns: minmax(0, 1fr) auto auto;
 }`;
 
 export function generateThemeCss(tokens: DesignTokens): string {

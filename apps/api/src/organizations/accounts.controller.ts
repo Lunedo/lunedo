@@ -1,4 +1,4 @@
-import { Body, Controller, Inject, Param, Post, Req } from "@nestjs/common";
+import { Body, Controller, Inject, Param, Post, Put, Req } from "@nestjs/common";
 import {
   accountNameSchema,
   idSchema,
@@ -119,6 +119,28 @@ export class AccountsController {
     @Req() request: FastifyRequest,
   ) {
     return this.#services.administration.resetSecondFactor(actorOf(request), accountId, body.reason);
+  }
+
+  @Put("accounts/:accountId/home-organization")
+  @Permission("account.homeOrganization.change", { type: "account", param: "accountId" })
+  @ApiRoute({
+    summary: "Change the home organization of an account",
+    description:
+      "Makes another organization the account is a member of its home organization. Instance administrators and administrators of the current home organization can do this. The person and the administrators of both organizations are notified.",
+    tags: ["Accounts"],
+    params: z.object({ accountId: idSchema }).strict(),
+    body: z
+      .object({ organizationId: idSchema.describe("ID of the new home organization.") })
+      .strict()
+      .describe("The new home organization."),
+    errors: ["notMember", "notFound"],
+  })
+  async changeHomeOrganization(
+    @Param("accountId") accountId: string,
+    @Body() body: { organizationId: string },
+    @Req() request: FastifyRequest,
+  ) {
+    await this.#services.homeOrganizations.change(actorOf(request), accountId, body.organizationId);
   }
 
   @Post("invitations/accept")

@@ -81,6 +81,8 @@ export const setupStepSchemas = {
           ...checkHelp,
           cause: z.enum(["notSet"]).nullable(),
           configured: z.boolean(),
+          url: z.string().nullable(),
+          source: z.enum(["configuration", "setting"]).nullable(),
         }),
         https: z.object({
           status: checkStatus,
@@ -115,7 +117,6 @@ export const setupStepSchemas = {
             email: emailSchema,
             name: accountNameSchema,
             password: z.string().min(1).max(PASSWORD_MAX_LENGTH),
-            language: languageSchema.optional(),
           })
           .strict(),
         result: empty,
@@ -149,13 +150,6 @@ export const setupStepSchemas = {
           .strict(),
         result: z.object({ organizationId: idSchema }),
       },
-    },
-  },
-  mail: {
-    details: z.object({ smtp: smtpConfigurationSchema.nullable(), passwordSet: z.boolean() }),
-    actions: {
-      save: { input: smtpInputSchema, result: empty },
-      test: { input: smtpTestInputSchema, result: smtpTestResultSchema },
     },
   },
 } as const;

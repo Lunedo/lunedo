@@ -117,19 +117,28 @@ export function SettingRow({ label, description, meta, control, menu, status }: 
   return (
     <div
       data-setting-row=""
-      className="grid grid-cols-setting-row items-center gap-x-3 gap-y-2 px-4 py-3 sm:grid-cols-setting-row-wide"
+      className="grid grid-cols-1 items-center gap-x-3 gap-y-2 px-4 py-3 sm:grid-cols-setting-row"
     >
-      <div className="col-span-2 flex min-w-0 flex-col gap-1 sm:col-span-1">
+      <div className="flex min-w-0 flex-col gap-1">
         <span className="font-medium text-text">{label}</span>
         {description && <span className="text-sm text-text-muted">{description}</span>}
         {meta && <span className="text-xs text-text-muted">{meta}</span>}
       </div>
-      <div data-setting-control="" className="flex w-full min-w-0 flex-col items-end gap-1 sm:w-field">
-        <div className="flex w-full justify-end">{control}</div>
-        {status}
-      </div>
-      <div data-setting-menu="" className="flex w-control-md justify-end">
-        {menu}
+      <div className="flex min-w-0 flex-col gap-1">
+        <div data-setting-line="" className="flex items-center justify-end gap-3">
+          <div data-setting-control="" className="flex w-full min-w-0 justify-end sm:w-field">
+            {control}
+          </div>
+          <div data-setting-menu="" className="flex w-control-md shrink-0 justify-end">
+            {menu}
+          </div>
+        </div>
+        {status ? (
+          <div className="flex justify-end gap-3">
+            <div className="flex w-full min-w-0 justify-end sm:w-field">{status}</div>
+            <div aria-hidden="true" className="w-control-md shrink-0" />
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -3,9 +3,20 @@ import {
   type Language,
   type SmtpConfiguration,
   smtpConfigurationSchema,
+  smtpPresetOf,
+  smtpPresets,
   smtpSecurityModes,
 } from "@pagehall/shared";
-import { Button, ErrorState, Field, Input, Notice, PasswordInput, SegmentedControl } from "@pagehall/ui";
+import {
+  Button,
+  ErrorState,
+  Field,
+  Input,
+  Notice,
+  PasswordInput,
+  SegmentedControl,
+  Select,
+} from "@pagehall/ui";
 import { Send } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Controller } from "react-hook-form";
@@ -76,6 +87,7 @@ export function SmtpForm({
   const [recipient, setRecipient] = useState(defaultRecipient ?? "");
   const [testResult, setTestResult] = useState<{ delivered: boolean; detail: string | null } | null>(null);
   const [testing, setTesting] = useState(false);
+  const [preset, setPreset] = useState(smtpPresetOf(initial) ?? "custom");
   const form = useSchemaForm(smtpForm, {
     defaultValues: {
       host: initial?.host ?? "",
@@ -131,6 +143,24 @@ export function SmtpForm({
           {error}
         </Notice>
       ) : null}
+      <Field label={t("mail.preset")} hint={t("mail.presetHint")}>
+        <Select
+          aria-label={t("mail.preset")}
+          value={preset}
+          onValueChange={(value) => {
+            setPreset(value);
+            const chosen = smtpPresets.find((entry) => entry.id === value);
+            if (!chosen) return;
+            form.setValue("host", chosen.host, { shouldDirty: true });
+            form.setValue("port", String(chosen.port), { shouldDirty: true });
+            form.setValue("security", chosen.security, { shouldDirty: true });
+          }}
+          options={[
+            { value: "custom", label: t("mail.presetCustom") },
+            ...smtpPresets.map((entry) => ({ value: entry.id, label: entry.name })),
+          ]}
+        />
+      </Field>
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="sm:col-span-2">
           <Field label={t("mail.host")} error={form.formState.errors.host?.message}>
@@ -185,12 +215,13 @@ export function SmtpForm({
           <Button variant="outline" icon={Send} loading={testing} onClick={() => void test()}>
             {t("mail.sendTest")}
           </Button>
-          {testResult?.delivered ? (
-            <span role="status" className="text-success">
-              {t("mail.testDelivered")}
-            </span>
-          ) : null}
         </div>
+        {testResult?.delivered ? (
+          <div role="status" className="flex flex-col gap-1">
+            <span className="text-success">{t("mail.testDelivered")}</span>
+            <span className="text-sm text-text-muted">{t("mail.testDeliveryFollows")}</span>
+          </div>
+        ) : null}
         {testResult && !testResult.delivered ? (
           <ErrorState
             title={t("mail.testFailed")}

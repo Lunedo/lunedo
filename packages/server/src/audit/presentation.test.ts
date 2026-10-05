@@ -36,12 +36,23 @@ describe("presentAuditEntry", () => {
     expect(view).toEqual({
       labelKey: "audit.events.settings.changed",
       changeKind: "setting",
-      actor: { type: "account", id: ACCOUNT, name: "Olivia Owner" },
-      target: { type: "setting", id: "branding.accentColor", name: null },
+      actor: { type: "account", id: ACCOUNT, name: "Olivia Owner", former: false },
+      target: { type: "setting", id: "branding.accentColor", name: null, former: false },
       scope: { type: "instance", id: null, name: null },
       changes: [{ property: "value", old: "violet", new: "blue" }],
       references: {},
+      formerAccounts: [],
     });
+  });
+
+  it("marks accounts whose personal data is gone as former users", () => {
+    const view = presentAuditEntry({
+      ...entry({ name: "auth.signedIn", targetType: "account", targetId: ACCOUNT, labels: null }),
+      formerSubjects: [ACCOUNT],
+    });
+    expect(view.actor).toEqual({ type: "account", id: ACCOUNT, name: null, former: true });
+    expect(view.target).toEqual({ type: "account", id: ACCOUNT, name: null, former: true });
+    expect(view.formerAccounts).toEqual([ACCOUNT]);
   });
 
   it("shows the account as the scope of personal events instead of the instance", () => {

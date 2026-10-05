@@ -21,7 +21,7 @@ function renderStep() {
 }
 
 describe("the organization step", () => {
-  it("proposes formats for the language and time zone until they are chosen", async () => {
+  it("keeps the formats when the language changes", async () => {
     const { requests } = mockApi({
       "POST /api/v1/setup/steps/organization/save": () => ({
         body: { organizationId: "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f" },
@@ -32,9 +32,7 @@ describe("the organization step", () => {
 
     await userEvent.click(screen.getByRole("combobox", { name: "Default language" }));
     await userEvent.click(await screen.findByRole("option", { name: "Deutsch" }));
-    await waitFor(() =>
-      expect(screen.getByRole("combobox", { name: "Date format" }).textContent).toContain("DD.MM.YYYY"),
-    );
+    expect(screen.getByRole("combobox", { name: "Date format" }).textContent).toContain("DD/MM/YYYY");
 
     await userEvent.click(screen.getByRole("combobox", { name: "Date format" }));
     await userEvent.click(await screen.findByRole("option", { name: /^YYYY-MM-DD/ }));
@@ -54,7 +52,7 @@ describe("the organization step", () => {
         formats: {
           dateFormat: "YYYY-MM-DD",
           timeFormat: "24h",
-          numberFormat: "de-DE",
+          numberFormat: "en-US",
           firstDayOfWeek: "monday",
         },
       }),

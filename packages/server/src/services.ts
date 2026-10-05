@@ -1,5 +1,6 @@
 import { AccountService } from "./accounts/accounts.js";
 import { AccountAdministrationService } from "./accounts/administration.js";
+import { AccountLifecycleService } from "./accounts/lifecycle.js";
 import { AccountOverviewService } from "./accounts/overview.js";
 import { AuditLog } from "./audit/audit-log.js";
 import { AuditReader } from "./audit/reader.js";
@@ -7,6 +8,7 @@ import { AUDIT_RETENTION_SCHEDULE, applyAuditRetention, auditRetentionJob } from
 import { AccountSecurityService, passwordResetRequestJob } from "./auth/account-security.js";
 import { ChallengeStore } from "./auth/challenges.js";
 import { AUTH_CLEANUP_SCHEDULE, authCleanupJob } from "./auth/cleanup.js";
+import { EmergencyRecipientsService } from "./auth/emergency-recipients.js";
 import { PasswordHasher } from "./auth/passwords.js";
 import { SessionService } from "./auth/sessions.js";
 import { SignInService } from "./auth/sign-in.js";
@@ -21,13 +23,39 @@ import type { KeyRing } from "./crypto/key-ring.js";
 import type { KeyRingHolder } from "./crypto/key-ring-holder.js";
 import type { Database } from "./database/database.js";
 import type { DatabasePool } from "./database/pool.js";
+import { GroupMappingService } from "./identity/groups.js";
+import { LdapAdapter } from "./identity/ldap.js";
+import type { DirectoryConnector } from "./identity/ldap-connection.js";
+import { MappingRuleService } from "./identity/mapping.js";
+import { OidcAdapter } from "./identity/oidc.js";
+import {
+  IdentityProviderService,
+  PROVIDER_CREDENTIAL_REMINDER_SCHEDULE,
+  providerCredentialReminderJob,
+  SAML_METADATA_REFRESH_SCHEDULE,
+  samlMetadataRefreshJob,
+} from "./identity/providers.js";
+import { SamlAdapter } from "./identity/saml.js";
+import { ScimService } from "./identity/scim.js";
+import { ScimTokenService } from "./identity/scim-tokens.js";
+import { ProviderSignInService } from "./identity/sign-in.js";
+import {
+  PROVIDER_SYNC_RETENTION_SCHEDULE,
+  PROVIDER_SYNC_SCHEDULE,
+  ProviderSyncService,
+  providerSyncJob,
+  providerSyncRetentionJob,
+  providerSyncScheduleJob,
+} from "./identity/sync.js";
 import type { JobQueue } from "./jobs/job-queue.js";
 import type { Logger } from "./logging/logger.js";
 import {
   DISPATCH_PENDING_MAIL_SCHEDULE,
   deliverMailJob,
   dispatchPendingMailJob,
+  MAIL_CREDENTIAL_REMINDER_SCHEDULE,
   MailService,
+  mailCredentialReminderJob,
 } from "./mail/mail-service.js";
 import type { MailTransport, SmtpOptions } from "./mail/transport.js";
 import { NotificationRegistry } from "./notifications/registry.js";
@@ -36,6 +64,7 @@ import { NotificationService } from "./notifications/service.js";
 import { builtinNotificationTypes } from "./notifications/types.js";
 import { BreakGlassService } from "./organizations/break-glass.js";
 import { GroupService } from "./organizations/groups.js";
+import { HomeOrganizationService } from "./organizations/home.js";
 import { InvitationService, registrationRequestJob } from "./organizations/invitations.js";
 import {
   ORGANIZATION_EXPIRY_SCHEDULE,
@@ -73,17 +102,27 @@ export interface AccountServices {
   authorization: AuthorizationService;
   organizations: OrganizationService;
   memberships: MembershipService;
+  homeOrganizations: HomeOrganizationService;
   administration: AccountAdministrationService;
+  accountLifecycle: AccountLifecycleService;
   overview: AccountOverviewService;
   roles: RoleService;
   groups: GroupService;
   invitations: InvitationService;
   breakGlass: BreakGlassService;
+  emergencyRecipients: EmergencyRecipientsService;
   lifecycle: OrganizationLifecycle;
   auditReader: AuditReader;
   serviceAccounts: ServiceAccountService;
   apiTokens: ApiTokenService;
   notifications: NotificationService;
+  identityProviders: IdentityProviderService;
+  providerSignIn: ProviderSignInService;
+  groupMapping: GroupMappingService;
+  mappingRules: MappingRuleService;
+  providerSync: ProviderSyncService;
+  scim: ScimService;
+  scimTokens: ScimTokenService;
 }
 
 export function createAccountServices(options: {
@@ -99,7 +138,10 @@ export function createAccountServices(options: {
   filesDir: string;
   configuredInstanceUrl?: string | undefined;
   passwordHashConcurrency: number;
+  insecureIdentityProviders?: boolean;
+  directoryConnector?: DirectoryConnector;
   mailTransport?: (options: SmtpOptions) => MailTransport;
+  mailFetch?: typeof fetch;
 }): AccountServices {
   const { database, settings, audit, encryption, jobs, logger } = options;
   const hasher = new PasswordHasher({
@@ -121,7 +163,9 @@ export function createAccountServices(options: {
     audit,
     jobs,
     logger,
+    allowInsecure: options.insecureIdentityProviders ?? false,
     ...(options.mailTransport ? { transport: options.mailTransport } : {}),
+    ...(options.mailFetch ? { fetch: options.mailFetch } : {}),
   });
   const authorization = new AuthorizationService({
     database,
@@ -130,7 +174,6 @@ export function createAccountServices(options: {
   });
   const organizations = new OrganizationService({ database, settings, audit });
   const memberships = new MembershipService({ database, audit, authorization });
-  const administration = new AccountAdministrationService({ database, authorization, audit, mail });
   const overview = new AccountOverviewService({ database, accounts });
   const roles = new RoleService({ database, audit, authorization });
   const groups = new GroupService({ database, audit, authorization });
@@ -141,7 +184,43 @@ export function createAccountServices(options: {
     authorization,
     registry: new NotificationRegistry().register(...builtinNotificationTypes),
   });
+  mail.useNotifications(notifications);
+  const homeOrganizations = new HomeOrganizationService({ database, audit, authorization, notifications });
+  const groupMapping = new GroupMappingService({
+    roles,
+    memberships,
+    audit,
+    notifications,
+    home: homeOrganizations,
+  });
+  const identityProviders = new IdentityProviderService({
+    database,
+    audit,
+    encryption,
+    notifications,
+    settings,
+    mapping: groupMapping,
+    allowInsecure: options.insecureIdentityProviders ?? false,
+  });
+  const administration = new AccountAdministrationService({
+    database,
+    authorization,
+    audit,
+    mail,
+    providers: identityProviders,
+    mapping: groupMapping,
+    settings,
+    memberships,
+  });
+  const accountLifecycle = new AccountLifecycleService({
+    database,
+    audit,
+    authorization,
+    memberships,
+    encryption,
+  });
   const breakGlass = new BreakGlassService({ database, audit, notifications, settings });
+  const emergencyRecipients = new EmergencyRecipientsService({ database, settings, authorization });
   const lifecycle = new OrganizationLifecycle({
     database,
     audit,
@@ -190,7 +269,67 @@ export function createAccountServices(options: {
     notifications,
     settings,
     setupComplete: () => setup.isComplete(),
+    onIdentityLinked: (tx, link) => groupMapping.applyAtSignIn(tx, link),
   });
+  const allowInsecure = options.insecureIdentityProviders ?? false;
+  const providerAdapters = [
+    new OidcAdapter({ allowInsecure }),
+    new SamlAdapter({ allowInsecure }),
+    new LdapAdapter({
+      allowInsecure,
+      ...(options.directoryConnector ? { connector: options.directoryConnector } : {}),
+    }),
+  ];
+  const mappingRules = new MappingRuleService({
+    database,
+    providers: identityProviders,
+    adapters: providerAdapters,
+    roles,
+    authorization,
+    audit,
+    mapping: groupMapping,
+  });
+  const providerSync = new ProviderSyncService({
+    database,
+    providers: identityProviders,
+    adapters: providerAdapters,
+    mapping: groupMapping,
+    memberships,
+    administration,
+    audit,
+    settings,
+    jobs,
+    notifications,
+  });
+  const providerSignIn = new ProviderSignInService({
+    database,
+    providers: identityProviders,
+    adapters: providerAdapters,
+    mapping: groupMapping,
+    accounts,
+    signIn,
+    sessions,
+    challenges,
+    audit,
+    notifications,
+    settings,
+    rateLimiter,
+    throttle,
+    lifecycle: accountLifecycle,
+  });
+  const scim = new ScimService({
+    database,
+    providers: identityProviders,
+    accounts,
+    organizations,
+    mapping: groupMapping,
+    memberships,
+    administration,
+    lifecycle: accountLifecycle,
+    audit,
+    rateLimiter,
+  });
+  const scimTokens = new ScimTokenService({ database, audit });
   const security = new AccountSecurityService({
     database,
     accounts,
@@ -243,17 +382,27 @@ export function createAccountServices(options: {
     authorization,
     organizations,
     memberships,
+    homeOrganizations,
     administration,
+    accountLifecycle,
     overview,
     roles,
     groups,
     invitations,
     breakGlass,
+    emergencyRecipients,
     lifecycle,
     auditReader,
     serviceAccounts,
     apiTokens,
     notifications,
+    identityProviders,
+    providerSignIn,
+    groupMapping,
+    mappingRules,
+    providerSync,
+    scim,
+    scimTokens,
   };
 }
 
@@ -297,8 +446,39 @@ export async function workAccountJobs(
       setupSessions: await services.setup.cleanup(),
       failedMails: await services.mail.cleanup(),
       invitations: await services.invitations.cleanup(),
+      providerFlows: await services.providerSignIn.cleanup(),
     };
     job.logger.debug(removed, "Authentication data cleaned up");
+  });
+  await jobs.work(providerCredentialReminderJob, async (job) => {
+    const sent = await services.identityProviders.sendCredentialReminders();
+    if (sent > 0) job.logger.info({ sent }, "Provider credential reminders sent");
+  });
+  await jobs.work(mailCredentialReminderJob, async (job) => {
+    const sent = await services.mail.sendCredentialReminders();
+    if (sent > 0) job.logger.info({ sent }, "Mail credential reminders sent");
+  });
+  await jobs.work(samlMetadataRefreshJob, async (job) => {
+    const refreshed = await services.identityProviders.refreshDueMetadata();
+    if (refreshed > 0) job.logger.info({ refreshed }, "SAML metadata refreshed");
+  });
+  await jobs.work(providerSyncJob, async (job) => {
+    const { providerId, trigger, actorId, confirmedRunId } = job.payload;
+    const run = await services.providerSync.run(
+      providerId,
+      trigger,
+      actorId ? { type: "account", id: actorId } : undefined,
+      job.signal,
+      confirmedRunId,
+    );
+    if (run) job.logger.info({ providerId, status: run.status }, "Identity provider synchronized");
+  });
+  await jobs.work(providerSyncScheduleJob, async () => {
+    await services.providerSync.scheduleDue();
+  });
+  await jobs.work(providerSyncRetentionJob, async (job) => {
+    const removed = await services.providerSync.applyRetention();
+    if (removed > 0) job.logger.info({ removed }, "Old sync runs removed");
   });
   await jobs.work(notificationRetentionJob, async (job) => {
     const removed = await services.notifications.applyRetention();
@@ -315,4 +495,14 @@ export async function workAccountJobs(
   await jobs.schedule(organizationExpiryJob, ORGANIZATION_EXPIRY_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(apiTokenExpiryJob, API_TOKEN_EXPIRY_SCHEDULE, {}, { key: "regular" });
   await jobs.schedule(organizationRemindersJob, ORGANIZATION_REMINDERS_SCHEDULE, {}, { key: "hourly" });
+  await jobs.schedule(providerSyncScheduleJob, PROVIDER_SYNC_SCHEDULE, {}, { key: "regular" });
+  await jobs.schedule(providerSyncRetentionJob, PROVIDER_SYNC_RETENTION_SCHEDULE, {}, { key: "daily" });
+  await jobs.schedule(samlMetadataRefreshJob, SAML_METADATA_REFRESH_SCHEDULE, {}, { key: "hourly" });
+  await jobs.schedule(mailCredentialReminderJob, MAIL_CREDENTIAL_REMINDER_SCHEDULE, {}, { key: "hourly" });
+  await jobs.schedule(
+    providerCredentialReminderJob,
+    PROVIDER_CREDENTIAL_REMINDER_SCHEDULE,
+    {},
+    { key: "hourly" },
+  );
 }

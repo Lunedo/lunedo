@@ -22,6 +22,7 @@ export interface AuditEntry {
   requestId: string | null;
   clientIp: string | null;
   userAgent: string | null;
+  formerSubjects: string[];
 }
 
 export interface AuditFilter {
@@ -73,6 +74,7 @@ const columns = {
   targetId: auditEvents.targetId,
   fields: auditEvents.fields,
   labels: auditEvents.labels,
+  sealed: auditEvents.sealed,
   occurredAt: auditEvents.occurredAt,
   requestId: auditEvents.requestId,
   clientIp: auditEvents.clientIp,
@@ -123,13 +125,26 @@ export class AuditReader {
     );
   }
 
+  async #readable(rows: (Omit<AuditEntry, "formerSubjects"> & { sealed: unknown })[]): Promise<AuditEntry[]> {
+    const prepared = rows.map((row) => ({ ...row, formerSubjects: [] as string[] }));
+    const sealer = this.#audit?.sealer;
+    const unsealed = sealer
+      ? await sealer.unseal(this.#database, prepared)
+      : prepared.map((row) => ({
+          ...row,
+          formerSubjects: Object.keys((row.sealed ?? {}) as Record<string, string>).sort(),
+        }));
+    return unsealed.map(({ sealed: _sealed, ...entry }) => entry);
+  }
+
   async #page(filter: AuditFilter, cursor: AuditCursor | undefined, limit: number): Promise<AuditEntry[]> {
-    return this.#database
+    const rows = await this.#database
       .select(columns)
       .from(auditEvents)
       .where(this.#where(filter, cursor))
       .orderBy(desc(auditEvents.occurredAt), desc(auditEvents.id))
       .limit(limit);
+    return this.#readable(rows);
   }
 
   async list(
@@ -179,7 +194,7 @@ export class AuditReader {
       )
       .orderBy(desc(auditEvents.occurredAt), desc(auditEvents.id))
       .limit(limit + 1);
-    const items = rows.slice(0, limit);
+    const items = await this.#readable(rows.slice(0, limit));
     const last = items.at(-1);
     return { items, next: rows.length > limit && last ? { occurredAt: last.occurredAt, id: last.id } : null };
   }

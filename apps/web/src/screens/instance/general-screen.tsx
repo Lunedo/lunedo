@@ -1,8 +1,9 @@
-import { Section } from "@pagehall/ui";
+import { Notice, Section } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { SlidersHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { instanceSettingsQuery } from "../../api/instance-queries.js";
+import { instanceSettingsQuery, mailQuery } from "../../api/instance-queries.js";
 import { SettingsList } from "../../components/settings-list.js";
 import { type SettingChange, useInstanceSettingMutation } from "../../settings/setting-mutations.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
@@ -28,6 +29,25 @@ export function useInstanceSettingsEditor() {
   };
 }
 
+function MailNotice() {
+  const { t } = useTranslation();
+  const mail = useQuery({ ...mailQuery, throwOnError: false, retry: false });
+  const data = mail.data;
+  if (!data) return null;
+  const configured = data.method === "graph" ? data.graph !== null : data.smtp !== null;
+  if (configured) return null;
+  return (
+    <Notice variant="warning" title={t("instance.general.mailMissingTitle")}>
+      <div className="flex flex-col gap-2">
+        <p>{t("instance.general.mailMissing")}</p>
+        <Link to="/settings/instance/mail" className="font-medium text-accent hover:underline">
+          {t("instance.general.mailSettings")}
+        </Link>
+      </div>
+    </Notice>
+  );
+}
+
 export function InstanceGeneralScreen() {
   const { t } = useTranslation();
   const editor = useInstanceSettingsEditor();
@@ -37,6 +57,7 @@ export function InstanceGeneralScreen() {
       description={t("instance.general.description")}
       icon={SlidersHorizontal}
     >
+      <MailNotice />
       <Section title={t("instance.general.identity")}>
         <SettingsList
           {...editor}

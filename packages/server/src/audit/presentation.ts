@@ -11,11 +11,12 @@ export interface AuditChange {
 export interface AuditPresentation {
   labelKey: string;
   changeKind: AuditChangeKind;
-  actor: { type: string; id: string | null; name: string | null };
-  target: { type: string; id: string | null; name: string | null };
+  actor: { type: string; id: string | null; name: string | null; former: boolean };
+  target: { type: string; id: string | null; name: string | null; former: boolean };
   scope: { type: "instance" | "organization" | "account"; id: string | null; name: string | null };
   changes: AuditChange[];
   references: Record<string, string>;
+  formerAccounts: string[];
 }
 
 export interface PresentableAuditEntry {
@@ -28,6 +29,7 @@ export interface PresentableAuditEntry {
   targetId: string | null;
   fields: unknown;
   labels: unknown;
+  formerSubjects?: string[];
 }
 
 const HIDDEN_FIELDS = new Set(["sessionId", "credentialId", "scopeId", "previous", "level", "action"]);
@@ -106,11 +108,22 @@ export function presentAuditEntry(entry: PresentableAuditEntry): AuditPresentati
       ? (entry.fields as Record<string, unknown>)
       : {};
   const account = accountScope(entry, fields, labels);
+  const former = new Set(entry.formerSubjects ?? []);
   return {
     labelKey: `audit.events.${entry.name}`,
     changeKind,
-    actor: { type: entry.actorType, id: entry.actorId, name: labels.actor ?? null },
-    target: { type: entry.targetType, id: entry.targetId, name: labels.target ?? null },
+    actor: {
+      type: entry.actorType,
+      id: entry.actorId,
+      name: labels.actor ?? null,
+      former: entry.actorId !== null && former.has(entry.actorId),
+    },
+    target: {
+      type: entry.targetType,
+      id: entry.targetId,
+      name: labels.target ?? null,
+      former: entry.targetId !== null && former.has(entry.targetId),
+    },
     scope: account
       ? { type: "account", id: account.id, name: account.name }
       : {
@@ -120,5 +133,6 @@ export function presentAuditEntry(entry: PresentableAuditEntry): AuditPresentati
         },
     changes: changeKind === "setting" ? settingChanges(fields) : fieldChanges(fields),
     references: labels.references ?? {},
+    formerAccounts: [...former],
   };
 }

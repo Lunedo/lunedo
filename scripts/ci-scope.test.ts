@@ -55,6 +55,11 @@ describe("scopeOf", () => {
   it("runs the identity provider tests for identity, authentication, sign-in and their setup", () => {
     for (const file of [
       "packages/server/src/identity/oidc.ts",
+      "packages/server/src/identity/saml.ts",
+      "packages/server/src/identity/ldap.ts",
+      "packages/server/src/testing/fakes/ldap-directory.ts",
+      "packages/shared/src/identity-providers.ts",
+      "docker/idp/openldap/seed.ldif",
       "packages/server/src/auth/sign-in.ts",
       "apps/api/src/auth/auth.controller.ts",
       "docker/idp/keycloak/pagehall-realm.json",

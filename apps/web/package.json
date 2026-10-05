@@ -50,6 +50,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
     "happy-dom": "^20.14.5",
+    "ldapts": "^9.2.0",
     "otpauth": "^9.5.2",
     "pg": "^8.23.0",
     "tailwindcss": "^4.3.3",

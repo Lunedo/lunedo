@@ -15,6 +15,7 @@ export interface Challenge {
   methods: SignInMethod[];
   failedAttempts: number;
   deviceHash: Buffer | null;
+  payload: unknown;
   expiresAt: Date;
 }
 
@@ -27,10 +28,12 @@ const columns = {
   methods: authChallenges.methods,
   failedAttempts: authChallenges.failedAttempts,
   deviceHash: authChallenges.deviceHash,
+  payload: authChallenges.payload,
   expiresAt: authChallenges.expiresAt,
 };
 
 export const CHALLENGE_LIFETIME_MS = 5 * 60 * 1000;
+export const IDENTITY_LINK_LIFETIME_MS = 15 * 60 * 1000;
 
 export const MAX_CHALLENGE_FAILURES = 5;
 
@@ -52,7 +55,9 @@ export class ChallengeStore {
       challenge?: string;
       methods?: SignInMethod[];
       deviceHash?: Buffer | null;
+      payload?: unknown;
       withToken: boolean;
+      lifetimeMs?: number;
     },
   ): Promise<{ id: string; token: string | null }> {
     const token = options.withToken ? generateToken() : null;
@@ -66,7 +71,8 @@ export class ChallengeStore {
         challenge: options.challenge ?? null,
         methods: options.methods ?? [],
         deviceHash: options.deviceHash ?? null,
-        expiresAt: new Date(this.#clock().getTime() + CHALLENGE_LIFETIME_MS),
+        payload: options.payload ?? null,
+        expiresAt: new Date(this.#clock().getTime() + (options.lifetimeMs ?? CHALLENGE_LIFETIME_MS)),
       })
       .returning({ id: authChallenges.id });
     if (!row) throw new Error("The challenge was not created");
@@ -126,6 +132,27 @@ export class ChallengeStore {
         .where(and(eq(authChallenges.sessionId, sessionId), eq(authChallenges.purpose, purpose)));
       await this.create(tx, { purpose, sessionId, accountId, challenge, withToken: false });
     });
+  }
+
+  async addMethod(id: string, method: SignInMethod): Promise<void> {
+    await this.#database
+      .update(authChallenges)
+      .set({ methods: sql`array_append(array_remove(${authChallenges.methods}, ${method}), ${method})` })
+      .where(eq(authChallenges.id, id));
+  }
+
+  async findById(id: string, purpose: ChallengePurpose): Promise<Challenge | null> {
+    const [row] = await this.#database
+      .select(columns)
+      .from(authChallenges)
+      .where(
+        and(
+          eq(authChallenges.id, id),
+          eq(authChallenges.purpose, purpose),
+          gt(authChallenges.expiresAt, this.#clock()),
+        ),
+      );
+    return row ?? null;
   }
 
   async recordFailure(id: string): Promise<void> {

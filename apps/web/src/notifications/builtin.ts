@@ -1,4 +1,13 @@
-import { Bot, KeyRound, ShieldAlert, ShieldCheck, UserRound, UserRoundX } from "lucide-react";
+import {
+  Bot,
+  Building2,
+  KeyRound,
+  Mail,
+  ShieldAlert,
+  ShieldCheck,
+  UserRound,
+  UserRoundX,
+} from "lucide-react";
 import { notificationTypes } from "./notification-types.js";
 import type { NotificationItem } from "./notifications-api.js";
 
@@ -42,4 +51,34 @@ notificationTypes.register(
   },
   { id: "breakGlass.started", icon: ShieldAlert, link: (item) => inOrganization(item, "/audit-log") },
   { id: "signIn.newBrowser", icon: KeyRound, link: () => ({ to: "/settings/security" }) },
+  { id: "auth.emergencySignIn", icon: ShieldAlert, link: () => ({ to: "/settings/instance/audit-log" }) },
+  { id: "account.withoutOrganization", icon: UserRound, link: () => ({ to: "/settings/instance/accounts" }) },
+  {
+    id: "account.rolesWithheld",
+    icon: ShieldAlert,
+    link: () => ({ to: "/settings/instance/sign-in-providers" }),
+  },
+  {
+    id: "account.homeOrganizationChanged",
+    icon: Building2,
+    link: (item) =>
+      item.organizationId ? inOrganization(item, "/members") : { to: "/settings/preferences" },
+  },
+  { id: "mail.credentialExpiring", icon: Mail, link: () => ({ to: "/settings/instance/mail" }) },
+  {
+    id: "identityProvider.syncHeld",
+    icon: ShieldAlert,
+    link: (item) => ({
+      to: "/settings/instance/sign-in-providers/$providerId",
+      params: { providerId: (item.params as { providerId: string }).providerId },
+    }),
+  },
+  {
+    id: "identityProvider.credentialExpiring",
+    icon: KeyRound,
+    link: (item) => ({
+      to: "/settings/instance/sign-in-providers/$providerId",
+      params: { providerId: (item.params as { providerId: string }).providerId },
+    }),
+  },
 );

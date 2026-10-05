@@ -19,6 +19,7 @@ export type AdministeredAccount = Omit<Account, "passwordHash"> & {
   lastSignInAt: Date | null;
   twoFactorActive: boolean;
   instanceRoles: InstanceRoleSummary[];
+  organizations: { id: string; name: string; home: boolean }[];
 };
 
 export interface OrganizationOverview {
@@ -97,8 +98,11 @@ export class AccountOverviewService {
     this.#accounts = options.accounts;
   }
 
-  async listAccounts(page: PageRequest): Promise<Page<AdministeredAccount>> {
-    const result = await this.#accounts.list(page);
+  async listAccounts(
+    page: PageRequest,
+    filter: { withoutOrganization?: boolean; state?: Account["state"] } = {},
+  ): Promise<Page<AdministeredAccount>> {
+    const result = await this.#accounts.list(page, filter);
     const details = await this.#details(result.items.map((item) => item.id));
     return {
       next: result.next,
@@ -110,7 +114,9 @@ export class AccountOverviewService {
     details: Map<string, Omit<AdministeredAccount, keyof Omit<Account, "passwordHash">>>,
     id: string,
   ): Omit<AdministeredAccount, keyof Omit<Account, "passwordHash">> {
-    return details.get(id) ?? { lastSignInAt: null, twoFactorActive: false, instanceRoles: [] };
+    return (
+      details.get(id) ?? { lastSignInAt: null, twoFactorActive: false, instanceRoles: [], organizations: [] }
+    );
   }
 
   async #details(
@@ -133,6 +139,7 @@ export class AccountOverviewService {
         lastSignInAt: date(row.last_sign_in_at),
         twoFactorActive: row.two_factor,
         instanceRoles: [],
+        organizations: [],
       });
     }
     const roles = await this.#database.execute<{
@@ -156,6 +163,21 @@ export class AccountOverviewService {
         customRoleId: row.custom_role_id,
         name: row.name,
       });
+    }
+    const organizations = await this.#database.execute<{
+      account_id: string;
+      id: string;
+      name: string;
+      home: boolean;
+    }>(sql`
+      select m.account_id, o.id, o.name, a.home_organization_id = o.id as home
+      from memberships m
+      join organizations o on o.id = m.organization_id
+      join accounts a on a.id = m.account_id
+      where m.account_id in (${list}) and (m.expires_at is null or m.expires_at > now())
+      order by a.home_organization_id = o.id desc, lower(o.name), o.id`);
+    for (const row of organizations.rows) {
+      result.get(row.account_id)?.organizations.push({ id: row.id, name: row.name, home: row.home === true });
     }
     return result;
   }

@@ -1,6 +1,6 @@
 # Authentication
 
-Local accounts sign in with e-mail address and password, followed by a second factor if the account has one, or without a password with a passkey. Identity providers (OIDC, SAML, LDAP) follow in a later release.
+Local accounts sign in with e-mail address and password, followed by a second factor if the account has one, or without a password with a passkey. People can also sign in through identity providers; the sign-in page asks for the e-mail address first and chooses the provider by its domain.
 
 ## Accounts
 
@@ -37,6 +37,8 @@ The instance records its owner, the account created during setup. The owner alwa
 Passwordless sign-in: `POST /api/v1/auth/sign-in/passkey-options`, then `POST /api/v1/auth/sign-in/passkey`.
 
 Unknown addresses take the same time and get the same answer as wrong passwords. Sign-in is not possible before setup is complete.
+
+Sign-in through identity providers, linking of identities and the emergency sign-in of the instance owner are described in [identity-providers.md](identity-providers.md). When the instance turns `auth.passwordSignIn` off, a correct password is answered with `403` and the code `passwordSignInDisabled`, except for the instance owner.
 
 ### Rate limits and lockouts
 
@@ -81,11 +83,11 @@ A background job removes expired sessions, pending sign-ins, used and expired to
 
 ## Re-authentication
 
-Sensitive actions answer `403` with the code `reauthenticationRequired` unless the session was authenticated within `auth.reauthenticationMinutes`. `POST /api/v1/auth/reauthenticate` confirms the identity with the password, a TOTP code or a passkey.
+Sensitive actions answer `403` with the code `reauthenticationRequired` unless the session was authenticated within `auth.reauthenticationMinutes`. `POST /api/v1/auth/reauthenticate` confirms the identity with the password, a TOTP code or a passkey; accounts without a password confirm it through their provider (`POST /api/v1/auth/reauthenticate/provider`).
 
 ## CSRF protection
 
-State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) must carry the header `X-Pagehall-Request: 1` and an `Origin` header equal to the instance URL. Before the instance URL is set during setup, the origin must match the host the request was sent to. Until setup is complete, setup requests also pass with the origin the setup session was started from, and entering the setup code passes with the origin of the host the request was sent to, so a wrong instance URL can still be corrected. Other requests are answered with `403` and the code `csrfRejected`. Requests with an API token and without session cookies are exempt, because browsers do not attach tokens on their own (see [api.md](api.md)).
+State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) must carry the header `X-Pagehall-Request: 1` and an `Origin` header equal to the instance URL. Before the instance URL is set during setup, the origin must match the host the request was sent to. Until setup is complete, setup requests also pass with the origin the setup session was started from, and entering the setup code passes with the origin of the host the request was sent to, so a wrong instance URL can still be corrected. Other requests are answered with `403` and the code `csrfRejected`. Requests with an API token and without session cookies are exempt, because browsers do not attach tokens on their own (see [api.md](api.md)). Back-channel logout requests of identity providers without cookies are exempt too; they are authenticated by the signed logout token.
 
 ## Endpoints
 

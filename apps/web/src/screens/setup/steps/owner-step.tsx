@@ -10,7 +10,6 @@ import { RecoveryCodes } from "../../../components/recovery-codes.js";
 import { TotpEnrollment } from "../../../components/totp-enrollment.js";
 import { problemMessage } from "../../../errors/problem-message.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../../forms/use-schema-form.js";
-import { isLanguage } from "../../../i18n/index.js";
 import { runSetupAction } from "../setup-api.js";
 import type { StepProps } from "./step-props.js";
 
@@ -102,7 +101,7 @@ export function OwnerStep({ details, back, onDone, refresh }: StepProps<"owner">
 }
 
 function OwnerForm({ back, onSaved }: { back: StepProps<"owner">["back"]; onSaved: () => Promise<void> }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const info = useQuery(instanceInfoQuery);
   const [error, setError] = useState<string | null>(null);
   const form = useSchemaForm(ownerForm, {
@@ -116,7 +115,6 @@ function OwnerForm({ back, onSaved }: { back: StepProps<"owner">["back"]; onSave
         name: values.name,
         email: values.email,
         password: values.password,
-        ...(isLanguage(i18n.language) ? { language: i18n.language } : {}),
       });
       await onSaved();
     } catch (failure) {

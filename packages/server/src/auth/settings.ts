@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { defineSetting } from "../settings/definition.js";
+import { emergencyRecipientsSetting } from "./emergency-recipients.js";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH_FLOOR } from "./passwords.js";
 
 const minutes = (min: number, max: number) => z.number().int().min(min).max(max);
@@ -115,8 +116,18 @@ export const lockoutMaxDurationSetting = defineSetting({
   lockable: false,
 });
 
+export const passwordSignInSetting = defineSetting({
+  key: "auth.passwordSignIn",
+  schema: z.boolean(),
+  default: true,
+  levels: ["instance"],
+  lockable: false,
+});
+
 export const authSettings = [
   passwordMinLengthSetting,
+  passwordSignInSetting,
+  emergencyRecipientsSetting,
   twoFactorRequiredSetting,
   maxSessionsSetting,
   sessionIdleTimeoutSetting,

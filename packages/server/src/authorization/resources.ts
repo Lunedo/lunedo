@@ -40,6 +40,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "instance.roles.view": instanceArea("accounts", "view"),
       "instance.roles.manage": instanceArea("accounts", "manage"),
       "instance.ownership.transfer": { scope: "instance", ownerOnly: true },
+      "instance.emergencyRecipients.manage": { scope: "instance", ownerOnly: true },
       "instance.signIn.view": instanceArea("signInAndSecurity", "view"),
       "instance.signIn.manage": instanceArea("signInAndSecurity", "manage"),
       "instance.settings.view": instanceArea("settings", "view"),
@@ -135,6 +136,18 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
         rule: "homeOrganizationAdministrator",
       },
       "account.secondFactor.reset": {
+        ...instanceArea("accounts", "manage"),
+        rule: "homeOrganizationAdministrator",
+      },
+      "account.identities.view": {
+        ...instanceArea("accounts", "view"),
+        rule: "homeOrganizationAdministrator",
+      },
+      "account.identities.manage": {
+        ...instanceArea("accounts", "manage"),
+        rule: "homeOrganizationAdministrator",
+      },
+      "account.homeOrganization.change": {
         ...instanceArea("accounts", "manage"),
         rule: "homeOrganizationAdministrator",
       },

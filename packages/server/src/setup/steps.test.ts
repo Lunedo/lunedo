@@ -1,8 +1,12 @@
 import { chmodSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
-import { checkFileStorage } from "./steps.js";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { testDatabaseBaseUrl } from "../testing/database.js";
+import { createTestServices, type TestServices } from "../testing/services.js";
+import { checkFileStorage, type SetupStepDependencies, systemCheckStep } from "./steps.js";
+
+const baseUrl = testDatabaseBaseUrl();
 
 const unixUser = process.getuid !== undefined && process.getuid() !== 0;
 
@@ -48,5 +52,51 @@ describe("checkFileStorage", () => {
     } finally {
       chmodSync(directory, 0o700);
     }
+  });
+});
+
+describe.skipIf(!baseUrl)("the system check", () => {
+  let test: TestServices;
+
+  beforeAll(async () => {
+    test = await createTestServices(baseUrl ?? "");
+  });
+
+  afterAll(async () => {
+    await test?.close();
+  });
+
+  function check(configuredInstanceUrl: string | undefined) {
+    const step = systemCheckStep({
+      pool: test.pool,
+      settings: test.settings,
+      filesDir: mkdtempSync(path.join(tmpdir(), "pagehall-check-")),
+      configuredInstanceUrl,
+    } as SetupStepDependencies);
+    return step.describe({ request: { protocol: "http", host: "10.0.0.5:3000" }, state: {} }) as Promise<{
+      checks: Record<string, Record<string, unknown>>;
+    }>;
+  }
+
+  it("checks the configured instance URL instead of the address of the request", async () => {
+    const { checks } = await check("https://wiki.example.org");
+    expect(checks.instanceUrl).toMatchObject({
+      status: "ok",
+      configured: true,
+      url: "https://wiki.example.org",
+      source: "configuration",
+    });
+    expect(checks.https).toMatchObject({ status: "ok", cause: null });
+  });
+
+  it("warns when the configured instance URL does not use HTTPS", async () => {
+    const { checks } = await check("http://wiki.example.org");
+    expect(checks.https).toMatchObject({ status: "warning", cause: "instanceUrlNotHttps" });
+  });
+
+  it("warns about the request without any instance URL", async () => {
+    const { checks } = await check(undefined);
+    expect(checks.instanceUrl).toMatchObject({ status: "warning", cause: "notSet", source: null });
+    expect(checks.https).toMatchObject({ status: "warning", cause: "requestNotHttps" });
   });
 });

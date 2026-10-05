@@ -15,6 +15,7 @@ export async function createTestApp(context: Partial<ApiContext> = {}): Promise<
     readiness: {},
     webRoot: undefined,
     trustedProxies: [],
+    configuredInstanceUrl: undefined,
     services: undefined,
     settings: undefined,
     settingsRegistry: undefined,

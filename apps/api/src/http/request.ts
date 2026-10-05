@@ -27,7 +27,7 @@ export function bearerToken(request: FastifyRequest): string | undefined {
 }
 
 export function carriesCookieCredentials(request: FastifyRequest): boolean {
-  return [COOKIES.session, COOKIES.pending, COOKIES.setup].some(
+  return [COOKIES.session, COOKIES.pending, COOKIES.setup, COOKIES.link].some(
     (name) => readCookie(request, name) !== undefined,
   );
 }

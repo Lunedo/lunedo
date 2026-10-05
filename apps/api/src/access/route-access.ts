@@ -11,6 +11,7 @@ export type RouteAccess =
   | { kind: "setupCode" }
   | { kind: "setupSession" }
   | { kind: "apiDocumentation" }
+  | { kind: "scimToken"; param: string }
   | {
       kind: "permission";
       action: string;
@@ -43,6 +44,9 @@ export const SetupCodeRoute = () => SetMetadata(ROUTE_ACCESS, { kind: "setupCode
 
 export const SetupSessionRoute = () =>
   SetMetadata(ROUTE_ACCESS, { kind: "setupSession" } satisfies RouteAccess);
+
+export const ScimTokenRoute = (param = "providerId") =>
+  SetMetadata(ROUTE_ACCESS, { kind: "scimToken", param } satisfies RouteAccess);
 
 export const ApiDocumentationRoute = () =>
   SetMetadata(ROUTE_ACCESS, { kind: "apiDocumentation" } satisfies RouteAccess);

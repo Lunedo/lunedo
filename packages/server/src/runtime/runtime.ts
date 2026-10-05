@@ -22,6 +22,7 @@ import { runMigrations } from "../database/migrate.js";
 import { NotificationListener } from "../database/notifications.js";
 import { createDatabasePool, type DatabasePool } from "../database/pool.js";
 import { readinessChecks } from "../health/readiness.js";
+import { syncLogRetentionDaysSetting } from "../identity/sync.js";
 import type { JobQueue } from "../jobs/job-queue.js";
 import { PgBossQueue } from "../jobs/pg-boss-queue.js";
 import {
@@ -30,7 +31,7 @@ import {
   cleanupJobProgressJob,
 } from "../jobs/progress-cleanup.js";
 import { createLogger, type Logger } from "../logging/logger.js";
-import { smtpSetting } from "../mail/mail-service.js";
+import { graphMailSetting, mailMethodSetting, smtpSetting } from "../mail/mail-service.js";
 import type { MailTransport, SmtpOptions } from "../mail/transport.js";
 import { NotificationHub } from "../notifications/hub.js";
 import { notificationSettings } from "../notifications/types.js";
@@ -85,6 +86,14 @@ export function resolveGeneratedSecrets(config: ServerConfig): {
   }
 }
 
+export function startupWarnings(config: Pick<ServerConfig, "insecureIdentityProviders">): string[] {
+  return config.insecureIdentityProviders
+    ? [
+        "PAGEHALL_INSECURE_IDENTITY_PROVIDERS is set: identity providers may use plain HTTP and any host. Use it only for local tests.",
+      ]
+    : [];
+}
+
 /**
  * Starts the shared server foundation of a process: configuration, secrets, database,
  * migrations, master keys, settings and jobs. Every role runs migrations at startup;
@@ -101,6 +110,7 @@ export async function createServerRuntime(options: {
   const { role } = options;
   const config = loadConfig(options.env);
   const logger = createLogger({ service: role, level: config.logLevel });
+  for (const warning of startupWarnings(config)) logger.warn(warning);
   await checkRestoreComplete(config.paths.files);
   const { metricsToken, backupKeys } = resolveGeneratedSecrets(config);
 
@@ -141,10 +151,13 @@ export async function createServerRuntime(options: {
         ...notificationSettings,
         auditRetentionSetting,
         smtpSetting,
+        mailMethodSetting,
+        graphMailSetting,
+        syncLogRetentionDaysSetting,
       ] as SettingDefinition<never>[]),
       ...(options.settings ?? []),
     );
-    const audit = new AuditLog({ database });
+    const audit = new AuditLog({ database, encryption });
     const settings = new SettingsService({ database, logger, onChange: auditSettingChanges(audit) });
     await settings.enableCache(listener);
 
@@ -181,6 +194,7 @@ export async function createServerRuntime(options: {
       filesDir: config.paths.files,
       configuredInstanceUrl: config.instanceUrl,
       passwordHashConcurrency: config.passwordHashConcurrency,
+      insecureIdentityProviders: config.insecureIdentityProviders,
       ...(options.mailTransport ? { mailTransport: options.mailTransport } : {}),
     });
 

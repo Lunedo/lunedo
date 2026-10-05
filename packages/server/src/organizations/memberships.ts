@@ -15,6 +15,7 @@ import {
   pageLimit,
   toPage,
 } from "../database/keyset.js";
+import { providerDeactivations } from "../identity/schema.js";
 import { responsiblesOf } from "../tokens/service-accounts.js";
 import {
   customRoles,
@@ -53,6 +54,28 @@ function scopeOf(organizationId: string) {
 
 function actorId(actor: Principal): string | null {
   return actor.type === "account" ? actor.id : null;
+}
+
+export async function claimHomeOrganization(
+  tx: Transaction,
+  accountId: string,
+  organizationId: string,
+): Promise<Event | null> {
+  const claimed = await tx
+    .update(accounts)
+    .set({ homeOrganizationId: organizationId })
+    .where(
+      and(eq(accounts.id, accountId), eq(accounts.type, "standard"), isNull(accounts.homeOrganizationId)),
+    )
+    .returning({ id: accounts.id });
+  if (claimed.length === 0) return null;
+  return {
+    name: "account.organizationAssigned",
+    actor: SYSTEM,
+    targetId: accountId,
+    fields: { organizationId },
+    scope: scopeOf(organizationId),
+  };
 }
 
 export async function lockOrganization(tx: Transaction, organizationId: string): Promise<void> {
@@ -172,6 +195,18 @@ export class MembershipService {
     },
     options: { collect?: AuditEvents } = {},
   ): Promise<void> {
+    if (input.kind !== "guest") {
+      const [account] = await tx
+        .select({ type: accounts.type })
+        .from(accounts)
+        .where(eq(accounts.id, input.accountId));
+      if (account?.type === "guest" || account?.type === "portal") {
+        throw new OrganizationError(
+          "guestMembership",
+          "Guest and portal accounts can only hold guest memberships",
+        );
+      }
+    }
     const inserted = await tx
       .insert(memberships)
       .values({
@@ -194,8 +229,13 @@ export class MembershipService {
       fields: { kind: input.kind, expiresAt: input.expiresAt?.toISOString() ?? null },
       scope: scopeOf(input.organizationId),
     };
-    if (options.collect) options.collect.push(event);
-    else await this.#audit.record(tx, event);
+    const events = [event];
+    if (input.kind === "member") {
+      const assigned = await claimHomeOrganization(tx, input.accountId, input.organizationId);
+      if (assigned) events.push(assigned);
+    }
+    if (options.collect) options.collect.push(...events);
+    else await this.#audit.recordMany(tx, events);
   }
 
   async #checkRank(
@@ -215,6 +255,7 @@ export class MembershipService {
     actor: Principal,
     organizationId: string,
     accountId: string,
+    reason: "removed" | "anonymized" = "removed",
   ): Promise<Event[]> {
     const events: Event[] = [];
     const removedAssignments = await tx
@@ -240,7 +281,7 @@ export class MembershipService {
           role: assignment.builtInRole ?? assignment.customRoleId ?? "",
           principalKind: "account",
           principalId: accountId,
-          reason: "removed",
+          reason,
         },
         scope: scopeOf(organizationId),
       });
@@ -258,7 +299,7 @@ export class MembershipService {
         name: "group.memberRemoved",
         actor,
         targetId: removed.groupId,
-        fields: { accountId, reason: "removed" },
+        fields: { accountId, reason },
         scope: scopeOf(organizationId),
       });
     }
@@ -329,9 +370,10 @@ export class MembershipService {
     actor: Principal,
     organizationId: string,
     accountId: string,
-    reason: "removed" | "left" = "removed",
+    reason: "removed" | "left" | "providerRule" = "removed",
+    options: { tx?: Transaction; releaseHome?: boolean } = {},
   ): Promise<boolean> {
-    return this.#database.transaction(async (tx) => {
+    const run = async (tx: Transaction) => {
       await lockOrganization(tx, organizationId);
       const [membership] = await tx
         .select({ kind: memberships.kind })
@@ -342,7 +384,7 @@ export class MembershipService {
         .select({ home: accounts.homeOrganizationId })
         .from(accounts)
         .where(eq(accounts.id, accountId));
-      if (account?.home === organizationId) {
+      if (account?.home === organizationId && !options.releaseHome) {
         throw new OrganizationError(
           "homeOrganization",
           "An account cannot leave its home organization; deactivate the account instead",
@@ -368,7 +410,71 @@ export class MembershipService {
       });
       await this.#audit.recordMany(tx, events);
       return true;
-    });
+    };
+    return options.tx ? run(options.tx) : this.#database.transaction(run);
+  }
+
+  async endAll(
+    tx: Transaction,
+    actor: Principal,
+    accountId: string,
+  ): Promise<{ events: AuditEvents; ended: number }> {
+    const held = await tx
+      .select({ organizationId: memberships.organizationId, kind: memberships.kind })
+      .from(memberships)
+      .where(eq(memberships.accountId, accountId))
+      .orderBy(asc(memberships.organizationId));
+    const events: Event[] = [];
+    for (const membership of held) {
+      await lockOrganization(tx, membership.organizationId);
+      if (
+        (await ownerCount(tx, membership.organizationId)) > 0 &&
+        (await ownerCount(tx, membership.organizationId, { accountId })) === 0
+      ) {
+        throw new LastOwnerError();
+      }
+      await tx
+        .delete(memberships)
+        .where(
+          and(
+            eq(memberships.organizationId, membership.organizationId),
+            eq(memberships.accountId, accountId),
+          ),
+        );
+      events.push({
+        name: "membership.removed",
+        actor,
+        targetId: accountId,
+        fields: { kind: membership.kind, reason: "anonymized" },
+        scope: scopeOf(membership.organizationId),
+      });
+      events.push(...(await this.#detach(tx, actor, membership.organizationId, accountId, "anonymized")));
+    }
+    const instanceRoles = await tx
+      .delete(roleAssignments)
+      .where(and(eq(roleAssignments.principalKind, "account"), eq(roleAssignments.principalId, accountId)))
+      .returning({
+        id: roleAssignments.id,
+        organizationId: roleAssignments.organizationId,
+        builtInRole: roleAssignments.builtInRole,
+        customRoleId: roleAssignments.customRoleId,
+      });
+    for (const assignment of instanceRoles) {
+      events.push({
+        name: "role.unassigned",
+        actor,
+        targetId: assignment.id,
+        fields: {
+          role: assignment.builtInRole ?? assignment.customRoleId ?? "",
+          principalKind: "account",
+          principalId: accountId,
+          reason: "anonymized",
+        },
+        ...(assignment.organizationId ? { scope: scopeOf(assignment.organizationId) } : {}),
+      });
+    }
+    events.push(...(await this.#releaseGuests(tx, actor, accountId)));
+    return { events, ended: held.length };
   }
 
   async expire(organizationId: string, accountId: string): Promise<boolean> {
@@ -461,7 +567,11 @@ export class MembershipService {
     });
   }
 
-  async deactivate(actor: Principal, accountId: string): Promise<number> {
+  async deactivate(
+    actor: Principal,
+    accountId: string,
+    options: { byProvider?: { providerId: string; state: "disabled" | "deleted" } } = {},
+  ): Promise<number> {
     return this.#database.transaction(async (tx) => {
       const [target] = await tx
         .select({ id: accounts.id, state: accounts.state, home: accounts.homeOrganizationId })
@@ -519,6 +629,12 @@ export class MembershipService {
         .update(accounts)
         .set({ state: "deactivated", updatedAt: new Date() })
         .where(eq(accounts.id, accountId));
+      await tx.delete(providerDeactivations).where(eq(providerDeactivations.accountId, target.id));
+      if (options.byProvider) {
+        await tx
+          .insert(providerDeactivations)
+          .values({ accountId: target.id, providerId: options.byProvider.providerId });
+      }
       const ended = await tx
         .delete(sessions)
         .where(eq(sessions.accountId, accountId))
@@ -546,6 +662,14 @@ export class MembershipService {
         fields: { endedSessions: ended.length },
         ...(target.home ? { scope: scopeOf(target.home) } : {}),
       });
+      if (options.byProvider) {
+        events.push({
+          name: "account.deactivatedByProvider",
+          actor,
+          targetId: accountId,
+          fields: { providerId: options.byProvider.providerId, state: options.byProvider.state },
+        });
+      }
       await this.#audit.recordMany(tx, events);
       return ended.length;
     });

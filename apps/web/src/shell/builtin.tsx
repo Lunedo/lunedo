@@ -195,6 +195,15 @@ navigationItems.register(
     permission: "instance.signIn.view",
   },
   {
+    id: "instance.signInProviders",
+    order: 55,
+    section: "instance",
+    icon: KeyRound,
+    labelKey: "navigation.signInProviders",
+    to: `${INSTANCE}/sign-in-providers`,
+    permission: "instance.signIn.view",
+  },
+  {
     id: "instance.mail",
     order: 60,
     section: "instance",

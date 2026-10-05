@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   check,
   index,
   pgEnum,
@@ -38,6 +39,7 @@ export const accounts = pgTable(
     inactivityNotifiedAt: timestamp({ withTimezone: true, mode: "date" }),
     secondFactorResetAt: timestamp({ withTimezone: true, mode: "date" }),
     lastSignInAt: timestamp({ withTimezone: true, mode: "date" }),
+    mergedIntoId: uuid().references((): AnyPgColumn => accounts.id),
     ...timestamps(),
   },
   (table) => [

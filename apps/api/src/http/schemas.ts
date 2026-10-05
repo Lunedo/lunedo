@@ -113,6 +113,23 @@ export const groupSchema = z
     organizationId: uuid("ID of the organization the group belongs to."),
     name: z.string().describe("Name of the group, unique in the organization, 1 to 100 characters."),
     description: z.string().describe("Description, up to 1000 characters."),
+    managedBy: z
+      .object({
+        providerId: uuid("ID of the identity provider."),
+        providerName: z.string().describe("Name of the identity provider."),
+      })
+      .nullable()
+      .optional()
+      .describe(
+        "The identity provider that manages the members of a synchronized group, or null. Members of such a group cannot be changed in Pagehall; its permissions can.",
+      ),
+    formerlySynchronizedFrom: z
+      .string()
+      .nullable()
+      .optional()
+      .describe(
+        "Name of the removed identity provider this group was synchronized from, or null. Such a group is an ordinary group now.",
+      ),
   })
   .describe("A group of accounts.");
 
@@ -401,6 +418,9 @@ export const auditEntrySchema = z
         type: z.string().describe("`account`, `system` or `anonymous`."),
         id: z.string().nullable().describe("ID of the account, or null."),
         name: z.string().nullable().describe("Name of the account when the event happened, or null."),
+        former: z
+          .boolean()
+          .describe("Whether the account was anonymized; its name and other personal data are gone."),
       })
       .describe("Who acted."),
     target: z
@@ -408,6 +428,11 @@ export const auditEntrySchema = z
         type: z.string().describe("Kind of object."),
         id: z.string().nullable().describe("ID of the object, or for settings the setting key."),
         name: z.string().nullable().describe("Name of the object when the event happened, or null."),
+        former: z
+          .boolean()
+          .describe(
+            "Whether the object is an anonymized account; its name and other personal data are gone.",
+          ),
       })
       .describe("What the event is about."),
     scope: z
@@ -436,6 +461,9 @@ export const auditEntrySchema = z
     references: z
       .record(z.string(), z.string())
       .describe("Names of accounts, organizations, groups and roles that the fields refer to, by ID."),
+    formerAccounts: z
+      .array(z.string())
+      .describe("Anonymized accounts the event refers to, shown as former users with their ID."),
   })
   .describe("An entry of the audit log.");
 
@@ -456,8 +484,8 @@ export const exampleAuditEntry = {
   userAgent: "curl/8.9.1",
   labelKey: "audit.events.role.assigned",
   changeKind: "fields",
-  actor: { type: "account", id: exampleMember.accountId, name: "Olivia Owner" },
-  target: { type: "roleAssignment", id: exampleRoleAssignment.id, name: null },
+  actor: { type: "account", id: exampleMember.accountId, name: "Olivia Owner", former: false },
+  target: { type: "roleAssignment", id: exampleRoleAssignment.id, name: null, former: false },
   scope: { type: "organization", id: exampleOrganization.id, name: "Platform Team" },
   changes: [
     { property: "role", old: null, new: "Handbook editors" },
@@ -465,6 +493,7 @@ export const exampleAuditEntry = {
     { property: "principalId", old: null, new: exampleGroup.id },
   ],
   references: { [exampleGroup.id]: "Editors" },
+  formerAccounts: [],
 };
 
 export const decisionSchema = z

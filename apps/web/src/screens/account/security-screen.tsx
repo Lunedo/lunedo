@@ -31,6 +31,7 @@ import {
 import { api } from "../../api/client.js";
 import { instanceInfoQuery } from "../../api/queries.js";
 import { request } from "../../api/request.js";
+import { OwnIdentities } from "../../components/linked-identities.js";
 import { RecoveryCodes } from "../../components/recovery-codes.js";
 import { SecurityActivitySection } from "../../components/security-activity.js";
 import { CreateTokenDialog, RevokeTokenDialog, scopeSummary } from "../../components/token-dialogs.js";
@@ -49,6 +50,9 @@ export function SecurityScreen() {
   return (
     <SettingsPage title={t("security.title")} description={t("security.description")} icon={LockKeyhole}>
       <SignInSection />
+      <Section title={t("identities.title")}>
+        <OwnIdentities />
+      </Section>
       <TwoFactorSection />
       <SessionsSection />
       <TokensSection />

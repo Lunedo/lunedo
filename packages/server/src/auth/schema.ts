@@ -4,6 +4,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -15,6 +16,7 @@ import { accounts } from "../accounts/schema.js";
 import { signInMethods } from "../audit/catalog.js";
 import { encrypted } from "../crypto/encrypted-column.js";
 import { bytes, primaryId, timestamps } from "../database/columns.js";
+import { identities } from "../identity/schema.js";
 
 const timestampColumn = () => timestamp({ withTimezone: true, mode: "date" });
 
@@ -39,11 +41,14 @@ export const sessions = pgTable(
     createdAt: timestampColumn().notNull().defaultNow(),
     lastUsedAt: timestampColumn().notNull().defaultNow(),
     reauthenticatedAt: timestampColumn(),
+    identityId: uuid().references(() => identities.id, { onDelete: "set null" }),
+    providerSessionId: text(),
   },
   (table) => [
     uniqueIndex().on(table.tokenHash),
     index().on(table.accountId, table.lastUsedAt),
     index().on(table.deviceHash),
+    index().on(table.identityId),
   ],
 );
 
@@ -52,6 +57,7 @@ export const challengePurpose = pgEnum("challenge_purpose", [
   "passkeySignIn",
   "passkeyRegistration",
   "reauthentication",
+  "identityLink",
 ]);
 
 export const authChallenges = pgTable(
@@ -66,6 +72,7 @@ export const authChallenges = pgTable(
     methods: signInMethod().array().notNull().default(sql`'{}'`),
     failedAttempts: integer().notNull().default(0),
     deviceHash: bytes(),
+    payload: jsonb(),
     expiresAt: timestampColumn().notNull(),
     createdAt: timestampColumn().notNull().defaultNow(),
   },

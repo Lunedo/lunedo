@@ -64,13 +64,11 @@ export async function applyConfiguredSetup(options: {
         proposeFormats(organization.language, organization.timeZone),
         { tx },
       );
-      const steps = ["systemCheck", "instance", "owner", "keyBackup", "organization"];
       if (setup.smtp) {
         const { password, ...configuration } = setup.smtp;
         await options.mail.configureSmtp(configuration, password?.reveal() ?? null, { tx });
-        steps.push("mail");
       }
-      await service.completeSteps(tx, steps);
+      await service.completeSteps(tx, ["systemCheck", "instance", "owner", "keyBackup", "organization"]);
       await service.markComplete(tx, "configuration");
       return true;
     }),

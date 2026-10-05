@@ -6,6 +6,8 @@ export {
   type HealthStatus,
   runHealthChecks,
 } from "./health.js";
+export * from "./identity-providers.js";
+export * from "./mail.js";
 export * from "./notifications.js";
 export * from "./preferences.js";
 export { isServiceRole, type ServiceRole, serviceRoles } from "./roles.js";

@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 import { BASE_URL } from "./e2e/support/environment.js";
 
 const ci = Boolean(process.env.CI);
+const identityProviders = process.env.PAGEHALL_E2E_IDP === "1";
 
 export default defineConfig({
   testDir: "e2e",
@@ -38,5 +39,18 @@ export default defineConfig({
       testMatch: /components\/.*\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
+    ...(identityProviders
+      ? [
+          {
+            name: "idp",
+            testMatch: /idp\/.*\.spec\.ts/,
+            dependencies: ["setup"],
+            use: {
+              ...devices["Desktop Chrome"],
+              launchOptions: { args: ["--host-resolver-rules=MAP *.localhost 127.0.0.1"] },
+            },
+          },
+        ]
+      : []),
   ],
 });

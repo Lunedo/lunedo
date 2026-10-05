@@ -59,11 +59,16 @@ services:
     environment:
       PAGEHALL_DATABASE_URL: postgres://pagehall:pagehall@postgres:5432/pagehall
       PAGEHALL_LOG_LEVEL: debug
+      PAGEHALL_INSECURE_IDENTITY_PROVIDERS: "true"
       # Optional: a fixed setup code instead of the link in the log, at least 12 characters.
       # PAGEHALL_SETUP_CODE: choose-a-long-setup-code
       PAGEHALL_DEV_HOST: 0.0.0.0
       PAGEHALL_DEV_POLLING: "true"
       PAGEHALL_DEV_API_URL: http://localhost:3000
+      # Optional: a public HTTPS address in front of the Vite dev server, for example a tunnel.
+      PAGEHALL_INSTANCE_URL: ${PAGEHALL_INSTANCE_URL:-}
+      # Only the Vite dev proxy in this container forwards the client's address and protocol.
+      PAGEHALL_TRUSTED_PROXIES: 127.0.0.1,::1
       TURBO_TELEMETRY_DISABLED: "1"
       DO_NOT_TRACK: "1"
     ports:
@@ -72,6 +77,9 @@ services:
       - "127.0.0.1:3001:3001"
       - "127.0.0.1:3002:3002"
     volumes: *node-modules
+    extra_hosts:
+      - "keycloak.localhost:host-gateway"
+      - "authentik.localhost:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -81,6 +89,97 @@ services:
       timeout: 10s
       start_period: 180s
       retries: 3
+
+  # Identity providers for development and tests, started with the profile "idp".
+  # Browsers and Pagehall reach them under the same *.localhost address, so issuers match.
+  keycloak:
+    profiles: [idp]
+    image: quay.io/keycloak/keycloak:26.7.5@sha256:37dbaf6f0722c9ec246335f36e1ef8b2e6cb960f7c27e0d8c615121a3d475a85
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_HOSTNAME: http://keycloak.localhost:8080
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HEALTH_ENABLED: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      PAGEHALL_KEYCLOAK_BACKCHANNEL_LOGOUT_URL: ${PAGEHALL_KEYCLOAK_BACKCHANNEL_LOGOUT_URL:-}
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./idp/keycloak:/opt/keycloak/data/import:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q '"status": "UP"' <&3
+      interval: 5s
+      timeout: 5s
+      start_period: 60s
+      retries: 30
+
+  openldap:
+    profiles: [idp]
+    build: ./idp/openldap
+    ports:
+      - "127.0.0.1:3389:389"
+
+  authentik-postgres:
+    profiles: [idp]
+    image: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+    environment:
+      POSTGRES_USER: authentik
+      POSTGRES_PASSWORD: authentik
+      POSTGRES_DB: authentik
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U authentik -d authentik"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  authentik-server:
+    profiles: [idp]
+    image: ghcr.io/goauthentik/server:2026.8.3@sha256:ab9b4e8cc4ab3f8d1198d2db6aeea66bafea1963b3f2843589e0d163f97d9849
+    command: server
+    environment: &authentik-environment
+      AUTHENTIK_SECRET_KEY: pagehall-development-only-secret-key-not-for-production
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: authentik
+      AUTHENTIK_BOOTSTRAP_PASSWORD: admin
+      AUTHENTIK_BOOTSTRAP_TOKEN: pagehall-authentik-api-token
+      AUTHENTIK_BOOTSTRAP_EMAIL: admin@example.org
+      AUTHENTIK_LOG_LEVEL: warning
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+      AUTHENTIK_DISABLE_UPDATE_CHECK: "true"
+      AUTHENTIK_DISABLE_STARTUP_ANALYTICS: "true"
+      PAGEHALL_AUTHENTIK_BACKCHANNEL_LOGOUT_URL: ${PAGEHALL_AUTHENTIK_BACKCHANNEL_LOGOUT_URL:-}
+    ports:
+      - "127.0.0.1:9000:9000"
+    volumes:
+      - ./idp/authentik:/blueprints/custom:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      authentik-postgres:
+        condition: service_healthy
+
+  authentik-worker:
+    profiles: [idp]
+    image: ghcr.io/goauthentik/server:2026.8.3@sha256:ab9b4e8cc4ab3f8d1198d2db6aeea66bafea1963b3f2843589e0d163f97d9849
+    command: worker
+    environment: *authentik-environment
+    volumes:
+      - ./idp/authentik:/blueprints/custom:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      authentik-postgres:
+        condition: service_healthy
 
 volumes:
   postgres-data:

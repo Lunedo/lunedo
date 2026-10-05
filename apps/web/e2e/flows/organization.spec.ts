@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { OWNER_STORAGE, writeState } from "../support/environment.js";
-import { expectAccessible, linkFrom, waitForMail } from "../support/helpers.js";
+import { expectAccessible, linkFrom, signInWithPassword, waitForMail } from "../support/helpers.js";
 
 test.describe.configure({ mode: "serial" });
 test.use({ storageState: OWNER_STORAGE });
@@ -41,9 +41,7 @@ test("invites a member who accepts and signs in", async ({ page, browser }) => {
   await invitee.getByRole("button", { name: "Create account" }).click();
   await expect(invitee.getByText("Your account is ready. Sign in to start.")).toBeVisible();
   await invitee.getByRole("link", { name: "Sign in" }).click();
-  await invitee.getByLabel("E-mail").fill(MEMBER.email);
-  await invitee.getByLabel("Password", { exact: true }).fill(MEMBER.password);
-  await invitee.getByRole("button", { name: "Sign in", exact: true }).click();
+  await signInWithPassword(invitee, MEMBER.email, MEMBER.password);
   await expect(invitee.getByRole("heading", { name: "Preferences" })).toBeVisible();
   await expect(invitee.getByRole("link", { name: "Audit log" })).toHaveCount(0);
   await invited.close();

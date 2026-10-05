@@ -2,7 +2,7 @@ import { ToastProvider, TooltipProvider, type UiLabels, UiProvider } from "@page
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import type { i18n } from "i18next";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { I18nextProvider, useTranslation } from "react-i18next";
 import { ApiError } from "./api/request.js";
 import { createAppRouter } from "./router.js";
@@ -84,6 +84,13 @@ function TranslatedUi({ children }: { children: ReactNode }) {
 export function App({ i18n, queryClient: providedClient }: { i18n: i18n; queryClient?: QueryClient }) {
   const [queryClient] = useState(() => providedClient ?? createQueryClient());
   const [router] = useState(() => createAppRouter(queryClient));
+  useEffect(() => {
+    const restored = (event: PageTransitionEvent) => {
+      if (event.persisted) void queryClient.invalidateQueries();
+    };
+    globalThis.addEventListener("pageshow", restored);
+    return () => globalThis.removeEventListener("pageshow", restored);
+  }, [queryClient]);
   return (
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={queryClient}>

@@ -180,6 +180,88 @@ const signInNewBrowser = defineNotificationType({
   mail: (params) => ({ template: "signInNewBrowser", params }),
 });
 
+const emergencySignIn = defineNotificationType({
+  type: "auth.emergencySignIn",
+  targetType: "account",
+  params: notificationParamSchemas["auth.emergencySignIn"],
+  setting: settingOf("auth.emergencySignIn"),
+  visible: async (context) => context.can("instance.signIn.view", { type: "instance" }),
+  mail: (params) => ({ template: "emergencySignIn", params }),
+});
+
+const accountRolesWithheld = defineNotificationType({
+  type: "account.rolesWithheld",
+  targetType: "account",
+  params: notificationParamSchemas["account.rolesWithheld"],
+  setting: settingOf("account.rolesWithheld"),
+  visible: async (context) => context.can("instance.accounts.view", { type: "instance" }),
+  mail: (params) => ({ template: "accountRolesWithheld", params }),
+});
+
+const accountWithoutOrganization = defineNotificationType({
+  type: "account.withoutOrganization",
+  targetType: "account",
+  params: notificationParamSchemas["account.withoutOrganization"],
+  setting: settingOf("account.withoutOrganization"),
+  visible: async (context) => context.can("instance.accounts.view", { type: "instance" }),
+  mail: (params) => ({ template: "accountWithoutOrganization", params }),
+});
+
+const providerCredentialExpiring = defineNotificationType({
+  type: "identityProvider.credentialExpiring",
+  targetType: "identityProvider",
+  params: notificationParamSchemas["identityProvider.credentialExpiring"],
+  setting: settingOf("identityProvider.credentialExpiring"),
+  visible: async (context) => context.can("instance.signIn.view", { type: "instance" }),
+  mail: (params, locale) => ({
+    template: "providerCredentialExpiring",
+    params: { providerName: params.providerName, date: formatDay(params.expiresAt, locale) },
+  }),
+});
+
+const providerSyncHeld = defineNotificationType({
+  type: "identityProvider.syncHeld",
+  targetType: "identityProvider",
+  params: notificationParamSchemas["identityProvider.syncHeld"],
+  setting: settingOf("identityProvider.syncHeld"),
+  visible: async (context) => context.can("instance.signIn.view", { type: "instance" }),
+  mail: (params) => ({
+    template: "providerSyncHeld",
+    params: {
+      providerName: params.providerName,
+      deactivations: params.deactivations,
+      accounts: params.accounts,
+    },
+  }),
+});
+
+const homeOrganizationChanged = defineNotificationType({
+  type: "account.homeOrganizationChanged",
+  targetType: "account",
+  params: notificationParamSchemas["account.homeOrganizationChanged"],
+  setting: settingOf("account.homeOrganizationChanged"),
+  async visible(context) {
+    if (context.targetId === context.recipientId) return true;
+    return (
+      context.organizationId !== null &&
+      context.can("organization.members.view", { type: "organization", id: context.organizationId })
+    );
+  },
+  mail: (params) => ({ template: "homeOrganizationChanged", params }),
+});
+
+const mailCredentialExpiring = defineNotificationType({
+  type: "mail.credentialExpiring",
+  targetType: "instance",
+  params: notificationParamSchemas["mail.credentialExpiring"],
+  setting: settingOf("mail.credentialExpiring"),
+  visible: async (context) => context.can("instance.settings.view", { type: "instance" }),
+  mail: (params, locale) => ({
+    template: "mailCredentialExpiring",
+    params: { date: formatDay(params.expiresAt, locale) },
+  }),
+});
+
 export const builtinNotificationTypes = [
   apiTokenExpiring,
   apiTokenUnused,
@@ -189,4 +271,11 @@ export const builtinNotificationTypes = [
   serviceAccountUnattended,
   breakGlassStarted,
   signInNewBrowser,
+  emergencySignIn,
+  accountWithoutOrganization,
+  accountRolesWithheld,
+  providerCredentialExpiring,
+  providerSyncHeld,
+  homeOrganizationChanged,
+  mailCredentialExpiring,
 ];

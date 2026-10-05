@@ -29,9 +29,10 @@ Steps are registered by the modules; the assistant shows them in order:
 | `owner` | yes | Owner account with password and TOTP, then ten recovery codes. The step can be repeated until setup is complete. |
 | `keyBackup` | yes | One-time download of the master keys and backup keys, then a confirmation that they are stored safely. |
 | `organization` | yes | The first organization with name, language, time zone and formats. The owner becomes its owner and has it as home organization. |
-| `mail` | no | SMTP settings with a test mail. |
 
-The organization step proposes date format, time format, number format and first day of the week from the chosen language and time zone: German gets `DD.MM.YYYY`, 24-hour time, `de-DE` numbers (`de-CH` in Swiss time zones) and Monday; English in time zones of the Americas gets `MM/DD/YYYY`, 12-hour time, `en-US` and Sunday, otherwise `DD/MM/YYYY`, 24-hour time, `en-US` and Monday. The proposal is shown for confirmation and stored at the organization level. It is made once: changing the language later changes only texts.
+E-mail is set up afterwards in the instance settings. Until then, the instance overview shows that invitations and e-mail notifications are not sent.
+
+The organization step proposes date format, time format, number format and first day of the week from the language and time zone it opens with: German gets `DD.MM.YYYY`, 24-hour time, `de-DE` numbers (`de-CH` in Swiss time zones) and Monday; English in time zones of the Americas gets `MM/DD/YYYY`, 12-hour time, `en-US` and Sunday, otherwise `DD/MM/YYYY`, 24-hour time, `en-US` and Monday. The proposal is shown for confirmation and stored at the organization level. Choosing another language in the step does not change the formats.
 
 The setup state is stored in the database, so all nodes agree on it.
 
@@ -57,11 +58,11 @@ The check writes and removes a file in `PAGEHALL_FILES_DIR` and reports the `pat
 
 ### Instance URL
 
-`notSet`: the address of the instance is not stored yet. The instance step sets it; `PAGEHALL_INSTANCE_URL` prefills it.
+`notSet`: neither the instance step nor `PAGEHALL_INSTANCE_URL` has set the address of the instance yet. When `PAGEHALL_INSTANCE_URL` is set, the check shows it as configured until the instance step stores an address.
 
 ### HTTPS
 
-`instanceUrlNotHttps`: the instance URL does not start with `https:`. `requestNotHttps`: the request reached Pagehall without TLS, or a reverse proxy is not listed in `PAGEHALL_TRUSTED_PROXIES` and its `X-Forwarded-Proto` header is ignored. Run Pagehall behind a reverse proxy with TLS before inviting people.
+`instanceUrlNotHttps`: the instance URL, stored or from `PAGEHALL_INSTANCE_URL`, does not start with `https:`. Once an instance URL is known, only that address is checked, not the address the setup is opened with. `requestNotHttps`: no instance URL is known and the request reached Pagehall without TLS, or a reverse proxy is not listed in `PAGEHALL_TRUSTED_PROXIES` and its `X-Forwarded-Proto` header is ignored. Run Pagehall behind a reverse proxy with TLS before inviting people.
 
 ## Endpoints
 
@@ -75,7 +76,7 @@ All endpoints are internal. After setup they answer `404` like routes that do no
 | `POST /api/v1/setup/steps/{step}/{action}` | setup session |
 | `POST /api/v1/setup/complete` | setup session |
 
-Actions: `systemCheck/acknowledge`, `instance/save`, `owner/createAccount`, `owner/beginTotp`, `owner/confirmTotp`, `keyBackup/download`, `keyBackup/confirm`, `organization/save`, `mail/save`, `mail/test`.
+Actions: `systemCheck/acknowledge`, `instance/save`, `owner/createAccount`, `owner/beginTotp`, `owner/confirmTotp`, `keyBackup/download`, `keyBackup/confirm`, `organization/save`.
 
 ## Setup through configuration
 

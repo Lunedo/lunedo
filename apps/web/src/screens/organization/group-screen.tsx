@@ -65,7 +65,8 @@ export function GroupScreen() {
   const [pending, setPending] = useState<Pending | null>(null);
   const accountId = state.session.account?.id;
   const isManager = group.data?.managers.some((manager) => manager.accountId === accountId) ?? false;
-  const canManage = isManager || state.can("organization.members.manage");
+  const managedBy = group.data?.managedBy ?? null;
+  const canManage = (isManager || state.can("organization.members.manage")) && managedBy === null;
   const groupRoles = (assignments.data ?? []).filter(
     (entry) => entry.principalKind === "group" && entry.principalId === groupId,
   );
@@ -107,6 +108,16 @@ export function GroupScreen() {
       }
     >
       {group.isPending ? <Skeleton className="h-12 w-full" /> : null}
+      {managedBy ? (
+        <Notice variant="info" title={t("groups.managedByTitle", { provider: managedBy.providerName })}>
+          {t("groups.managedByDescription", { provider: managedBy.providerName })}
+        </Notice>
+      ) : null}
+      {!managedBy && group.data?.formerlySynchronizedFrom ? (
+        <Notice variant="info">
+          {t("groups.formerlySynchronizedDescription", { provider: group.data.formerlySynchronizedFrom })}
+        </Notice>
+      ) : null}
       {group.data && canManage ? <DetailsSection group={group.data} onSaved={refresh} /> : null}
       <Section title={t("groups.access")} icon={ShieldCheck}>
         {groupRoles.length === 0 ? (

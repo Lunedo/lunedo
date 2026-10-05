@@ -14,6 +14,8 @@ export const auditTargetTypes = [
   "breakGlassAccess",
   "apiToken",
   "audit",
+  "identityProvider",
+  "mappingRule",
 ] as const;
 export type AuditTargetType = (typeof auditTargetTypes)[number];
 
@@ -21,12 +23,15 @@ export type AuditVisibility = "instance" | "organization";
 
 export type AuditChangeKind = "setting" | "fields";
 
+export type PersonalDataOwner = "actor" | "target";
+
 export interface AuditEventDefinition<TFields extends z.ZodObject = z.ZodObject> {
   actor: readonly PrincipalType[];
   target: AuditTargetType;
   fields: TFields;
   visibility: AuditVisibility;
   change?: AuditChangeKind;
+  personal?: Readonly<Record<string, PersonalDataOwner>>;
 }
 
 function event<TFields extends z.ZodObject>(
@@ -35,26 +40,347 @@ function event<TFields extends z.ZodObject>(
   return definition;
 }
 
-export const signInMethods = ["password", "totp", "passkey", "recoveryCode"] as const;
+export const signInMethods = ["password", "totp", "passkey", "recoveryCode", "identityProvider"] as const;
 export type SignInMethod = (typeof signInMethods)[number];
 
 const methods = z.array(z.enum(signInMethods)).min(1);
+const refusalReasons = [
+  "accountCreationDisabled",
+  "domainNotAllowed",
+  "emailNotVerified",
+  "groupRequired",
+  "accountInactive",
+  "linkDeclined",
+  "linkUnavailable",
+  "invalidResponse",
+] as const;
+const credentialKinds = ["clientSecret", "certificate", "samlSigning", "bindPassword"] as const;
 const sessionReference = z.object({ sessionId: z.uuid() });
 const credential = z.object({ credentialId: z.uuid(), name: z.string() });
 const previous = z.record(z.string(), z.json()).optional();
+const mappingRuleFields = z.object({
+  providerId: z.uuid(),
+  group: z.string(),
+  groupName: z.string().nullable(),
+  target: z.enum(["organization", "instance"]),
+  organizationId: z.uuid().nullable(),
+  role: z.string().nullable(),
+  synchronizedGroupId: z.uuid().nullable(),
+  homeOrganization: z.boolean(),
+});
 
 export const auditCatalog = {
   "auth.signedIn": event({
     actor: ["account"],
     target: "account",
-    fields: sessionReference.extend({ methods }),
+    fields: sessionReference.extend({ methods, providerId: z.uuid().optional() }),
+    visibility: "organization",
+  }),
+  "auth.emergencySignIn": event({
+    actor: ["account"],
+    target: "account",
+    fields: sessionReference,
+    visibility: "instance",
+  }),
+  "auth.signInRefused": event({
+    actor: ["anonymous"],
+    target: "identityProvider",
+    fields: z.object({ reason: z.enum(refusalReasons), reference: z.string() }),
+    visibility: "organization",
+  }),
+  "auth.providerSignedOut": event({
+    actor: ["system"],
+    target: "identityProvider",
+    fields: z.object({ endedSessions: z.number().int().nonnegative() }),
+    visibility: "organization",
+  }),
+  "identity.linked": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({ providerId: z.uuid(), via: z.enum(["signIn", "administrator", "scim"]) }),
+    visibility: "organization",
+  }),
+  "identity.unlinked": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({ providerId: z.uuid(), endedSessions: z.number().int().nonnegative() }),
+    visibility: "organization",
+  }),
+  "account.createdAtSignIn": event({
+    actor: ["system"],
+    target: "account",
+    fields: z.object({ providerId: z.uuid(), organizationId: z.uuid().nullable() }),
+    visibility: "organization",
+  }),
+  "identityProvider.created": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({
+      name: z.string(),
+      type: z.string(),
+      preset: z.string(),
+    }),
+    visibility: "instance",
+  }),
+  "identityProvider.updated": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({ name: z.string(), config: z.record(z.string(), z.json()), previous }),
+    visibility: "instance",
+  }),
+  "identityProvider.removed": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({
+      name: z.string(),
+      endedSessions: z.number().int().nonnegative(),
+      releasedGroups: z.number().int().nonnegative(),
+    }),
+    visibility: "instance",
+  }),
+  "identityProvider.deactivated": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({ name: z.string(), endedSessions: z.number().int().nonnegative() }),
+    visibility: "instance",
+  }),
+  "identityProvider.setupCompleted": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({ name: z.string() }),
+    visibility: "instance",
+  }),
+  "identityProvider.activated": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({ name: z.string() }),
+    visibility: "instance",
+  }),
+  "identityProvider.credentialAdded": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({
+      credentialId: z.uuid(),
+      kind: z.enum(credentialKinds),
+      expiresAt: z.iso.datetime().nullable(),
+    }),
+    visibility: "instance",
+  }),
+  "identityProvider.credentialRemoved": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({ credentialId: z.uuid(), kind: z.enum(credentialKinds) }),
+    visibility: "instance",
+  }),
+  "identityProvider.credentialChosen": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({ credentialId: z.uuid(), kind: z.enum(credentialKinds), automatic: z.boolean() }),
+    visibility: "instance",
+  }),
+  "identityProvider.directoryKeyChanged": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({ action: z.enum(["set", "removed"]), serviceAccount: z.string().nullable() }),
+    visibility: "instance",
+  }),
+  "identityProvider.metadataChanged": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({
+      source: z.enum(["url", "file"]),
+      entityId: z.string(),
+      certificates: z.array(z.string()),
+      previousCertificates: z.array(z.string()),
+    }),
+    visibility: "instance",
+  }),
+  "identityProvider.metadataRefreshFailed": event({
+    actor: ["system"],
+    target: "identityProvider",
+    fields: z.object({ url: z.string(), error: z.string() }),
+    visibility: "instance",
+  }),
+  "identityProvider.caCertificateChanged": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({
+      action: z.enum(["set", "removed"]),
+      fingerprint: z.string().nullable(),
+      subject: z.string().nullable(),
+      expiresAt: z.iso.datetime().nullable(),
+      previousFingerprint: z.string().nullable(),
+    }),
+    visibility: "instance",
+  }),
+  "mappingRule.created": event({
+    actor: ["account", "system"],
+    target: "mappingRule",
+    fields: mappingRuleFields,
+    visibility: "organization",
+  }),
+  "mappingRule.updated": event({
+    actor: ["account", "system"],
+    target: "mappingRule",
+    fields: mappingRuleFields.extend({ previous: mappingRuleFields.nullable() }),
+    visibility: "organization",
+  }),
+  "mappingRule.removed": event({
+    actor: ["account", "system"],
+    target: "mappingRule",
+    fields: mappingRuleFields,
+    visibility: "organization",
+  }),
+  "identityProvider.scimTokenCreated": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({ credentialId: z.uuid(), prefix: z.string() }),
+    visibility: "instance",
+  }),
+  "identityProvider.scimTokenRenewed": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({
+      credentialId: z.uuid(),
+      prefix: z.string(),
+      previousCredentialId: z.uuid(),
+      previousExpiresAt: z.iso.datetime(),
+    }),
+    visibility: "instance",
+  }),
+  "identityProvider.scimTokenRemoved": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({ credentialId: z.uuid(), prefix: z.string() }),
+    visibility: "instance",
+  }),
+  "scim.userChanged": event({
+    actor: ["system"],
+    target: "account",
+    fields: z.object({
+      providerId: z.uuid(),
+      operation: z.enum(["created", "updated", "deactivated", "reactivated"]),
+      attributes: z.array(z.string()),
+    }),
+    visibility: "organization",
+  }),
+  "scim.groupChanged": event({
+    actor: ["system"],
+    target: "identityProvider",
+    fields: z.object({
+      groupId: z.uuid(),
+      externalId: z.string(),
+      name: z.string().nullable(),
+      operation: z.enum(["created", "updated", "deleted"]),
+      membersAdded: z.number().int().nonnegative(),
+      membersRemoved: z.number().int().nonnegative(),
+    }),
+    visibility: "instance",
+  }),
+  "identityProvider.syncCancelled": event({
+    actor: ["account"],
+    target: "identityProvider",
+    fields: z.object({ runId: z.uuid() }),
+    visibility: "instance",
+  }),
+  "identityProvider.syncConfirmed": event({
+    actor: ["account"],
+    target: "identityProvider",
+    fields: z.object({ runId: z.uuid(), deactivations: z.number().int() }),
+    visibility: "instance",
+  }),
+  "identityProvider.synchronized": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({
+      runId: z.uuid(),
+      trigger: z.enum(["schedule", "manual", "scim", "reconciliation", "signIn"]),
+      status: z.enum(["succeeded", "warnings", "failed", "cancelled"]),
+      changes: z.number().int().nonnegative(),
+      warnings: z.number().int().nonnegative(),
+      durationMs: z.number().int().nonnegative(),
+    }),
+    visibility: "instance",
+  }),
+  "account.deactivatedByProvider": event({
+    actor: ["system"],
+    target: "account",
+    fields: z.object({ providerId: z.uuid(), state: z.enum(["disabled", "deleted"]) }),
+    visibility: "organization",
+  }),
+  "account.organizationAssigned": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({ organizationId: z.uuid() }),
+    visibility: "organization",
+  }),
+  "account.homeOrganizationChanged": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({
+      previousOrganizationId: z.uuid().nullable(),
+      organizationId: z.uuid().nullable(),
+      reason: z.enum(["providerRule", "manual"]),
+    }),
+    visibility: "organization",
+  }),
+  "account.placeholderCreated": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({ email: z.string() }),
+    visibility: "instance",
+    personal: { email: "target" },
+  }),
+  "account.placeholderMerged": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({
+      placeholderId: z.uuid(),
+      via: z.enum(["signIn", "administrator"]),
+      memberships: z.number().int().nonnegative(),
+      groups: z.number().int().nonnegative(),
+      roles: z.number().int().nonnegative(),
+    }),
+    visibility: "organization",
+  }),
+  "account.anonymized": event({
+    actor: ["account"],
+    target: "account",
+    fields: z.object({
+      reason: z.string().min(1).max(500),
+      endedSessions: z.number().int().nonnegative(),
+      removedIdentities: z.number().int().nonnegative(),
+      endedMemberships: z.number().int().nonnegative(),
+    }),
+    visibility: "organization",
+  }),
+  "account.reactivatedByProvider": event({
+    actor: ["system"],
+    target: "account",
+    fields: z.object({ providerId: z.uuid() }),
+    visibility: "organization",
+  }),
+  "identityProvider.logoChanged": event({
+    actor: ["account", "system"],
+    target: "identityProvider",
+    fields: z.object({ removed: z.boolean() }),
     visibility: "organization",
   }),
   "auth.signInFailed": event({
     actor: ["anonymous"],
     target: "account",
     fields: z.object({
-      reason: z.enum(["invalidCredentials", "invalidSecondFactor", "accountLocked", "clientLocked"]),
+      reason: z.enum([
+        "invalidCredentials",
+        "invalidSecondFactor",
+        "accountLocked",
+        "clientLocked",
+        "directoryPasswordExpired",
+        "directoryPasswordMustChange",
+        "directoryAccountLocked",
+        "directoryAccountDisabled",
+        "directoryOutsideSignInHours",
+      ]),
       method: z.enum(signInMethods),
     }),
     visibility: "organization",
@@ -104,6 +430,7 @@ export const auditCatalog = {
       homeOrganizationId: z.uuid().nullable().optional(),
     }),
     visibility: "organization",
+    personal: { email: "target" },
   }),
   "account.passwordChanged": event({
     actor: ["account", "system"],
@@ -128,12 +455,14 @@ export const auditCatalog = {
     target: "account",
     fields: z.object({ newEmail: z.string() }),
     visibility: "organization",
+    personal: { newEmail: "target" },
   }),
   "account.emailChanged": event({
     actor: ["anonymous", "account"],
     target: "account",
     fields: z.object({ previousEmail: z.string(), newEmail: z.string() }),
     visibility: "organization",
+    personal: { previousEmail: "target", newEmail: "target" },
   }),
   "twoFactor.totpAdded": event({
     actor: ["account", "anonymous"],
@@ -211,11 +540,57 @@ export const auditCatalog = {
     }),
     visibility: "instance",
   }),
+  "mail.methodChanged": event({
+    actor: ["account", "system"],
+    target: "instance",
+    fields: z.object({ method: z.enum(["smtp", "graph"]), previousMethod: z.enum(["smtp", "graph"]) }),
+    visibility: "instance",
+  }),
+  "mail.graphChanged": event({
+    actor: ["account", "system"],
+    target: "instance",
+    fields: z.object({
+      tenantId: z.string(),
+      clientId: z.string(),
+      sender: z.string(),
+      senderName: z.string().nullable(),
+      previous: z
+        .object({
+          tenantId: z.string(),
+          clientId: z.string(),
+          sender: z.string(),
+          senderName: z.string().nullable(),
+        })
+        .nullable(),
+    }),
+    visibility: "instance",
+  }),
+  "mail.credentialAdded": event({
+    actor: ["account", "system"],
+    target: "instance",
+    fields: z.object({
+      credentialId: z.uuid(),
+      kind: z.enum(["clientSecret", "certificate"]),
+      expiresAt: z.iso.datetime().nullable(),
+    }),
+    visibility: "instance",
+  }),
+  "mail.credentialRemoved": event({
+    actor: ["account", "system"],
+    target: "instance",
+    fields: z.object({ credentialId: z.uuid(), kind: z.enum(["clientSecret", "certificate"]) }),
+    visibility: "instance",
+  }),
   "mail.testSent": event({
     actor: ["account", "anonymous"],
     target: "instance",
-    fields: z.object({ recipient: z.string(), delivered: z.boolean() }),
+    fields: z.object({
+      recipient: z.string(),
+      delivered: z.boolean(),
+      method: z.enum(["smtp", "graph"]).optional(),
+    }),
     visibility: "instance",
+    personal: { recipient: "actor" },
   }),
   "settings.changed": event({
     actor: ["account", "anonymous", "system"],
@@ -271,7 +646,10 @@ export const auditCatalog = {
   "membership.removed": event({
     actor: ["account", "system"],
     target: "account",
-    fields: z.object({ kind: z.string(), reason: z.enum(["removed", "left", "expired"]) }),
+    fields: z.object({
+      kind: z.string(),
+      reason: z.enum(["removed", "left", "expired", "providerRule", "merged", "anonymized"]),
+    }),
     visibility: "organization",
   }),
   "role.created": event({
@@ -311,7 +689,7 @@ export const auditCatalog = {
       role: z.string(),
       principalKind: z.string(),
       principalId: z.uuid().nullable(),
-      reason: z.enum(["removed", "expired"]),
+      reason: z.enum(["removed", "expired", "providerRule", "merged", "anonymized"]),
     }),
     visibility: "organization",
   }),
@@ -342,7 +720,10 @@ export const auditCatalog = {
   "group.memberRemoved": event({
     actor: ["account", "system"],
     target: "group",
-    fields: z.object({ accountId: z.uuid(), reason: z.enum(["removed", "expired"]) }),
+    fields: z.object({
+      accountId: z.uuid(),
+      reason: z.enum(["removed", "expired", "providerRule", "merged", "anonymized"]),
+    }),
     visibility: "organization",
   }),
   "group.managerAdded": event({
@@ -362,6 +743,7 @@ export const auditCatalog = {
     target: "invitation",
     fields: z.object({ email: z.string(), kind: z.string(), expiresAt: z.iso.datetime() }),
     visibility: "organization",
+    personal: { email: "target" },
   }),
   "invitation.accepted": event({
     actor: ["anonymous", "account"],

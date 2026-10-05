@@ -99,7 +99,7 @@ export class GroupsController {
     body: updateSchema,
     bodyExample: { description: "Everyone who edits or reviews the handbook" },
     response: { description: "The changed group.", schema: groupSchema, example: exampleGroup },
-    errors: ["groupNameTaken"],
+    errors: ["groupNameTaken", "groupManagedByProvider"],
   })
   async update(
     @Param("groupId") groupId: string,
@@ -116,6 +116,7 @@ export class GroupsController {
     description: "Deletes the group. Roles given to the group end at once.",
     tags: [TAG],
     params: groupParams,
+    errors: ["groupManagedByProvider"],
   })
   async delete(@Param("groupId") groupId: string, @Req() request: FastifyRequest) {
     await this.#services.groups.delete(actorOf(request), groupId);
@@ -130,7 +131,7 @@ export class GroupsController {
     params: groupParams,
     body: memberSchema,
     bodyExample: { accountId: exampleMember.accountId },
-    errors: ["notMember", "alreadyMember", "expiryInPast"],
+    errors: ["notMember", "alreadyMember", "expiryInPast", "groupManagedByProvider"],
   })
   async addMember(
     @Param("groupId") groupId: string,
@@ -147,6 +148,7 @@ export class GroupsController {
     description: "Removes the account from the group.",
     tags: [TAG],
     params: accountParams,
+    errors: ["groupManagedByProvider"],
   })
   async removeMember(
     @Param("groupId") groupId: string,
@@ -165,7 +167,7 @@ export class GroupsController {
     params: groupParams,
     body: managerSchema,
     bodyExample: { accountId: exampleMember.accountId },
-    errors: ["notMember"],
+    errors: ["notMember", "groupManagedByProvider"],
   })
   async addManager(
     @Param("groupId") groupId: string,
@@ -182,6 +184,7 @@ export class GroupsController {
     description: "Takes the management of the group away from the account.",
     tags: [TAG],
     params: accountParams,
+    errors: ["groupManagedByProvider"],
   })
   async removeManager(
     @Param("groupId") groupId: string,

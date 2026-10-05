@@ -154,9 +154,13 @@ describe("layout patterns", () => {
     const rows = document.querySelectorAll("[data-setting-row]");
     expect(rows).toHaveLength(2);
     for (const row of rows) {
-      expect(row.children).toHaveLength(3);
-      expect(row.querySelector("[data-setting-control]")?.className).toContain("sm:w-field");
-      expect(row.querySelector("[data-setting-menu]")?.className).toContain("w-control-md");
+      expect(row.children).toHaveLength(2);
+      const control = row.querySelector("[data-setting-control]");
+      const menu = row.querySelector("[data-setting-menu]");
+      expect(control?.className).toContain("sm:w-field");
+      expect(menu?.className).toContain("w-control-md");
+      expect(control?.parentElement).toBe(menu?.parentElement);
+      expect(control?.parentElement?.className).toContain("items-center");
     }
   });
 

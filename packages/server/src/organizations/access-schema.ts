@@ -127,6 +127,7 @@ export const groups = pgTable(
       .references(() => organizations.id, { onDelete: "cascade" }),
     name: text().notNull(),
     description: text().notNull().default(""),
+    formerProvider: text(),
     createdBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     ...timestamps(),
   },

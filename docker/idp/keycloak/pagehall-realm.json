@@ -1,0 +1,144 @@
+{
+  "realm": "pagehall",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "accessTokenLifespan": 300,
+  "groups": [
+    {
+      "id": "6f1c2b8e-3a4d-4c5e-9f60-7a8b9c0d1e2f",
+      "name": "engineering",
+      "path": "/engineering",
+      "attributes": { "pagehall_group_id": ["6f1c2b8e-3a4d-4c5e-9f60-7a8b9c0d1e2f"] }
+    },
+    {
+      "id": "0b9a8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d",
+      "name": "admins",
+      "path": "/admins",
+      "attributes": { "pagehall_group_id": ["0b9a8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d"] }
+    }
+  ],
+  "users": [
+    {
+      "id": "a11ce000-0000-4000-8000-000000000001",
+      "username": "alice",
+      "email": "alice@example.org",
+      "emailVerified": true,
+      "firstName": "Alice",
+      "lastName": "Example",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "pagehall-test-password", "temporary": false }],
+      "groups": ["/engineering", "/admins"]
+    },
+    {
+      "id": "b0b00000-0000-4000-8000-000000000002",
+      "username": "bob",
+      "email": "bob@example.org",
+      "emailVerified": true,
+      "firstName": "Bob",
+      "lastName": "Example",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "pagehall-test-password", "temporary": false }],
+      "groups": ["/engineering"]
+    },
+    {
+      "id": "ca401000-0000-4000-8000-000000000003",
+      "username": "carol",
+      "email": "carol@example.org",
+      "emailVerified": true,
+      "firstName": "Carol",
+      "lastName": "Example",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "pagehall-test-password", "temporary": false }],
+      "groups": []
+    },
+    {
+      "id": "da7e0000-0000-4000-8000-000000000004",
+      "username": "dave",
+      "email": "dave@example.org",
+      "emailVerified": true,
+      "firstName": "Dave",
+      "lastName": "Example",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "pagehall-test-password", "temporary": false }],
+      "groups": ["/engineering"]
+    },
+    {
+      "id": "e4140000-0000-4000-8000-000000000005",
+      "username": "erin",
+      "email": "erin@example.net",
+      "emailVerified": true,
+      "firstName": "Erin",
+      "lastName": "Outside",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "pagehall-test-password", "temporary": false }],
+      "groups": []
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "pagehall",
+      "name": "Pagehall",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "pagehall-keycloak-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": false,
+      "redirectUris": [
+        "http://localhost:4310/*",
+        "http://localhost:5173/*",
+        "http://localhost:3000/*",
+        "http://127.0.0.1:4310/*",
+        "http://127.0.0.1:5173/*",
+        "http://127.0.0.1:3000/*"
+      ],
+      "webOrigins": ["+"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "backchannel.logout.url": "${PAGEHALL_KEYCLOAK_BACKCHANNEL_LOGOUT_URL:}",
+        "backchannel.logout.session.required": "true",
+        "backchannel.logout.revoke.offline.tokens": "false"
+      },
+      "defaultClientScopes": ["profile", "email", "roles", "web-origins"],
+      "protocolMappers": [
+        {
+          "name": "group ids",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "pagehall_group_id",
+            "claim.name": "groups",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "aggregate.attrs": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "group names",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "group_names",
+            "full.path": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ]
+}

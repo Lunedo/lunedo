@@ -20,7 +20,12 @@ export const settingUpdateSchema = z
 
 export type SettingUpdate = z.output<typeof settingUpdateSchema>;
 
-const MANAGED_ELSEWHERE = new Set(["mail.smtp"]);
+const MANAGED_ELSEWHERE = new Set([
+  "mail.smtp",
+  "mail.method",
+  "mail.graph",
+  "auth.emergencySignInRecipients",
+]);
 
 export function definitionFor(
   registry: SettingsRegistry,

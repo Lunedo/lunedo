@@ -1,13 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
-import { ANONYMOUS, enterRequestContext, instanceUrlSetting, type Logger } from "@pagehall/server";
+import { ANONYMOUS, enterRequestContext, type Logger } from "@pagehall/server";
 import { type FastifyRequest, LogController } from "fastify";
 import { AppModule } from "./app.module.js";
 import type { ApiContext } from "./context.js";
 import { COOKIES, readCookie } from "./http/cookies.js";
 import { changesState, isCsrfSafe, ownOrigin } from "./http/csrf.js";
 import { sendProblem } from "./http/error.filter.js";
+import { instanceUrlOf } from "./http/instance-url.js";
 import { bearerToken, carriesCookieCredentials } from "./http/request.js";
 import { NestLogger } from "./nest-logger.js";
 import { registerWebClient } from "./web-client.js";
@@ -22,8 +23,8 @@ export function createFastifyAdapter(logger: Logger, trustedProxies: string[] = 
 }
 
 async function allowedOrigins(request: FastifyRequest, context: ApiContext): Promise<string[]> {
-  const instanceUrl = context.settings ? await context.settings.get(instanceUrlSetting, {}) : "";
-  const origins = [instanceUrl || ownOrigin(request)];
+  const instanceUrl = await instanceUrlOf(context);
+  const origins = [instanceUrl ? new URL(instanceUrl).origin : ownOrigin(request)];
   const setup = context.services?.setup;
   const path = request.url.split("?")[0] ?? "";
   if (setup && path.startsWith("/api/v1/setup/") && !(await setup.isComplete())) {
@@ -35,8 +36,25 @@ async function allowedOrigins(request: FastifyRequest, context: ApiContext): Pro
   return origins;
 }
 
+const BACKCHANNEL_LOGOUT = /^\/api\/v1\/auth\/providers\/[0-9A-Fa-f-]{36}\/backchannel-logout$/;
+
+function isBackchannelLogout(request: FastifyRequest): boolean {
+  return BACKCHANNEL_LOGOUT.test(request.url.split("?")[0] ?? "");
+}
+
+const SAML_RESPONSE = /^\/api\/v1\/auth\/providers\/[0-9A-Fa-f-]{36}\/saml\/acs$/;
+
+function isSamlResponse(request: FastifyRequest): boolean {
+  return request.method === "POST" && SAML_RESPONSE.test(request.url.split("?")[0] ?? "");
+}
+
 export async function configureApp(app: NestFastifyApplication, context: ApiContext): Promise<void> {
   const fastify = app.getHttpAdapter().getInstance();
+  fastify.addContentTypeParser(
+    "application/scim+json",
+    { parseAs: "string" },
+    fastify.getDefaultJsonParser("error", "error"),
+  );
 
   fastify.addHook("onRequest", async (request, reply) => {
     const userAgent = request.headers["user-agent"];
@@ -55,6 +73,8 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
       }
       if (!carriesCookieCredentials(request)) return;
     }
+    if (isBackchannelLogout(request) && !carriesCookieCredentials(request)) return;
+    if (isSamlResponse(request)) return;
     if (!changesState(request) || isCsrfSafe(request, await allowedOrigins(request, context))) return;
     return sendProblem(
       reply,

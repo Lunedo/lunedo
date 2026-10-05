@@ -20,6 +20,7 @@ const TARGET_NAMES: Partial<Record<AuditTargetType, (id: string) => SQL>> = {
   role: (id) => sql`select name from custom_roles where id = ${id}`,
   apiToken: (id) => sql`select name from api_tokens where id = ${id}`,
   invitation: (id) => sql`select email as name from invitations where id = ${id}`,
+  identityProvider: (id) => sql`select name from identity_providers where id = ${id}`,
 };
 
 function referencedIds(fields: unknown): string[] {
@@ -48,8 +49,9 @@ export async function resolveAuditLabels(
     fields: unknown;
     scope: { type: "instance" | "organization"; id: string };
   },
-): Promise<AuditLabels | null> {
+): Promise<{ labels: AuditLabels | null; accountReferences: string[] }> {
   const labels: AuditLabels = {};
+  const accountReferences: string[] = [];
   if (event.actor.type === "account") {
     const actor = await nameOf(executor, sql`select name from accounts where id = ${event.actor.id}`);
     if (actor) labels.actor = actor;
@@ -71,14 +73,15 @@ export async function resolveAuditLabels(
       ids.map((id) => sql`${id}::uuid`),
       sql`, `,
     );
-    const rows = await executor.execute<{ id: string; name: string }>(sql`
-      select id::text as id, name from accounts where id in (${list})
-      union all select id::text, name from organizations where id in (${list})
-      union all select id::text, name from groups where id in (${list})
-      union all select id::text, name from custom_roles where id in (${list})`);
+    const rows = await executor.execute<{ id: string; name: string; kind: string }>(sql`
+      select id::text as id, name, 'account' as kind from accounts where id in (${list})
+      union all select id::text, name, 'organization' from organizations where id in (${list})
+      union all select id::text, name, 'group' from groups where id in (${list})
+      union all select id::text, name, 'role' from custom_roles where id in (${list})`);
     if (rows.rows.length > 0) {
       labels.references = Object.fromEntries(rows.rows.map((row) => [row.id, row.name]));
     }
+    accountReferences.push(...rows.rows.filter((row) => row.kind === "account").map((row) => row.id));
   }
-  return Object.keys(labels).length > 0 ? labels : null;
+  return { labels: Object.keys(labels).length > 0 ? labels : null, accountReferences };
 }

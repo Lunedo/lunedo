@@ -54,7 +54,15 @@ async function describeSession(services: AccountServices, session: Session) {
   const account = await services.accounts.get(session.accountId);
   return {
     sessionKind: session.kind satisfies SessionKind,
-    account: account ? { id: account.id, email: account.email, name: account.name } : null,
+    account: account
+      ? {
+          id: account.id,
+          email: account.email,
+          name: account.name,
+          type: account.type,
+          homeOrganizationId: account.homeOrganizationId,
+        }
+      : null,
   };
 }
 

@@ -1,0 +1,74 @@
+dn: dc=example,dc=org
+objectClass: dcObject
+objectClass: organization
+dc: example
+o: Example
+
+dn: ou=people,dc=example,dc=org
+objectClass: organizationalUnit
+ou: people
+
+dn: ou=groups,dc=example,dc=org
+objectClass: organizationalUnit
+ou: groups
+
+dn: ou=service,dc=example,dc=org
+objectClass: organizationalUnit
+ou: service
+
+dn: cn=pagehall,ou=service,dc=example,dc=org
+objectClass: organizationalRole
+objectClass: simpleSecurityObject
+cn: pagehall
+userPassword: pagehall-ldap-service-password
+
+dn: uid=lena,ou=people,dc=example,dc=org
+objectClass: inetOrgPerson
+uid: lena
+cn: Lena Directory
+sn: Directory
+mail: lena@directory.example.org
+userPassword: pagehall-test-password
+
+dn: uid=max,ou=people,dc=example,dc=org
+objectClass: inetOrgPerson
+uid: max
+cn: Max Directory
+sn: Directory
+mail: max@directory.example.org
+userPassword: pagehall-test-password
+
+dn: uid=nora,ou=people,dc=example,dc=org
+objectClass: inetOrgPerson
+uid: nora
+cn: Nora Directory
+sn: Directory
+mail: nora@directory.example.org
+userPassword: pagehall-test-password
+
+dn: uid=otto,ou=people,dc=example,dc=org
+objectClass: inetOrgPerson
+uid: otto
+cn: Otto Disabled
+sn: Disabled
+mail: otto@directory.example.org
+employeeType: disabled
+userPassword: pagehall-test-password
+
+dn: cn=staff,ou=groups,dc=example,dc=org
+objectClass: groupOfNames
+cn: staff
+member: uid=lena,ou=people,dc=example,dc=org
+member: uid=max,ou=people,dc=example,dc=org
+member: uid=nora,ou=people,dc=example,dc=org
+
+dn: cn=platform,ou=groups,dc=example,dc=org
+objectClass: groupOfNames
+cn: platform
+member: uid=lena,ou=people,dc=example,dc=org
+member: uid=max,ou=people,dc=example,dc=org
+
+dn: cn=engineering,ou=groups,dc=example,dc=org
+objectClass: groupOfNames
+cn: engineering
+member: cn=platform,ou=groups,dc=example,dc=org

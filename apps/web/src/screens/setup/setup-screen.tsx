@@ -16,14 +16,13 @@ import { AuthCard } from "../auth/auth-layout.js";
 import { setupStateQuery, setupStepsQuery } from "./setup-api.js";
 import { InstanceStep } from "./steps/instance-step.js";
 import { KeyBackupStep } from "./steps/key-backup-step.js";
-import { MailStep } from "./steps/mail-step.js";
 import { OrganizationStep } from "./steps/organization-step.js";
 import { OwnerStep } from "./steps/owner-step.js";
 import { SystemCheckStep } from "./steps/system-check-step.js";
 
 const SETUP_CODE_COMMAND = 'docker compose logs pagehall | grep "Setup link"';
 
-const STEP_ORDER: SetupStepId[] = ["systemCheck", "instance", "owner", "keyBackup", "organization", "mail"];
+const STEP_ORDER: SetupStepId[] = ["systemCheck", "instance", "owner", "keyBackup", "organization"];
 
 export function SetupScreen() {
   const router = useRouter();
@@ -100,7 +99,6 @@ function SetupSteps() {
   const queryClient = useQueryClient();
   const steps = useQuery({ ...setupStepsQuery, throwOnError: false });
   const [current, setCurrent] = useState<SetupStepId | null>(null);
-  const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (steps.isPending) return <SetupFrame step={1} total={STEP_ORDER.length + 1} title="" loading />;
@@ -115,7 +113,7 @@ function SetupSteps() {
   const list = steps.data.steps;
   const order = STEP_ORDER.filter((id) => list.some((step) => step.id === id));
   const firstOpen =
-    order.find((id) => !list.find((step) => step.id === id)?.completed) ?? order.at(-1) ?? "mail";
+    order.find((id) => !list.find((step) => step.id === id)?.completed) ?? order.at(-1) ?? "organization";
   const active = current ?? firstOpen;
   const index = order.indexOf(active);
   const refresh = () => queryClient.invalidateQueries({ queryKey: setupStepsQuery.queryKey });
@@ -124,19 +122,17 @@ function SetupSteps() {
     await refresh();
     const following = order[index + 1];
     if (following) setCurrent(following);
+    else await finish();
   };
 
   const finish = async () => {
     setError(null);
-    setFinishing(true);
     try {
       await request(() => api.POST("/api/v1/setup/complete"), { sessionHandling: false });
       await queryClient.invalidateQueries({ queryKey: queryKeys.instanceInfo });
       await navigate({ to: "/sign-in" });
     } catch (failure) {
       setError(problemMessage(t, failure));
-    } finally {
-      setFinishing(false);
     }
   };
 
@@ -171,15 +167,10 @@ function SetupSteps() {
       {active === "owner" && step ? <OwnerStep {...common} details={step.details as never} /> : null}
       {active === "keyBackup" && step ? <KeyBackupStep {...common} details={step.details as never} /> : null}
       {active === "organization" && step ? (
-        <OrganizationStep {...common} details={step.details as never} />
-      ) : null}
-      {active === "mail" && step ? (
-        <MailStep
+        <OrganizationStep
           {...common}
           details={step.details as never}
-          ready={steps.data.ready}
-          finishing={finishing}
-          onFinish={() => void finish()}
+          submitLabel={index === order.length - 1 ? t("setup.finish") : t("setup.continue")}
         />
       ) : null}
     </SetupFrame>

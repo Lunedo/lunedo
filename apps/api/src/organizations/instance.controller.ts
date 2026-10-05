@@ -1,4 +1,17 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Query, Req } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Query,
+  Req,
+  Res,
+} from "@nestjs/common";
 import {
   accentColorSetting,
   instanceNameSetting,
@@ -10,13 +23,17 @@ import {
 } from "@pagehall/server";
 import {
   accentColors,
+  accountNameSchema,
+  emailSchema,
   idSchema,
-  setupStepSchemas,
+  type MailMethod,
+  mailMethods,
+  smtpConfigurationSchema,
   smtpInputSchema,
   smtpTestInputSchema,
   smtpTestResultSchema,
 } from "@pagehall/shared";
-import type { FastifyRequest } from "fastify";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission, PublicRoute } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
@@ -49,6 +66,7 @@ import {
   optionalExpiry,
   roleAssignmentSchema,
   settingSchema,
+  timestamp,
   uuid,
 } from "../http/schemas.js";
 import { definitionFor, listSettings, settingUpdateSchema, updateSetting } from "../http/settings.js";
@@ -193,6 +211,148 @@ function settingPermission(key: string): string {
 
 const byName = (item: { name: string; id: string }) => [item.name.toLowerCase(), item.id];
 
+const graphMailInputSchema = z
+  .object({
+    tenantId: z.string().describe("Directory (tenant) ID of the app registration."),
+    clientId: z.string().describe("Application (client) ID of the app registration."),
+    sender: z.string().describe("The mailbox Pagehall sends from. The app may send only as this mailbox."),
+    senderName: z
+      .string()
+      .nullable()
+      .optional()
+      .describe("Name shown as sender, or null for the mailbox name."),
+    authority: z
+      .string()
+      .optional()
+      .describe("Sign-in authority of the Microsoft cloud; the global cloud by default."),
+    graphUrl: z.string().optional().describe("Microsoft Graph endpoint of that cloud."),
+  })
+  .strict()
+  .describe("Settings for sending e-mail through Microsoft Graph.");
+
+const graphMailSchema = z
+  .object({
+    tenantId: z.string().describe("Directory (tenant) ID."),
+    clientId: z.string().describe("Application (client) ID."),
+    sender: z.string().describe("Sender mailbox."),
+    senderName: z.string().nullable().describe("Name shown as sender, or null."),
+    authority: z.string().describe("Sign-in authority."),
+    graphUrl: z.string().describe("Microsoft Graph endpoint."),
+  })
+  .describe("Settings for sending e-mail through Microsoft Graph.");
+
+const mailCredentialSchema = z
+  .object({
+    id: uuid("ID of the credential."),
+    kind: z.enum(["clientSecret", "certificate"]).describe("Client secret or certificate."),
+    keyId: z.string().nullable().describe("Thumbprint of the certificate, or null."),
+    expiresAt: timestamp("When it expires, or null.").nullable(),
+    createdAt: timestamp("When it was added."),
+  })
+  .describe("A credential of the app registration.");
+
+const addedMailCredentialSchema = mailCredentialSchema
+  .extend({ certificate: z.string().nullable().describe("The public certificate in PEM format, or null.") })
+  .describe("The added credential.");
+
+const mailCredentialInputSchema = z
+  .discriminatedUnion("kind", [
+    z
+      .object({
+        kind: z.literal("clientSecret").describe("A client secret from the app registration."),
+        secret: z.string().min(1).max(4096).describe("The secret value."),
+        expiresAt: z.iso.datetime().nullable().describe("When the secret expires, as shown in Entra ID."),
+      })
+      .strict(),
+    z
+      .object({
+        kind: z.literal("certificate").describe("A certificate Pagehall creates."),
+        validDays: z.number().int().min(30).max(1095).describe("How long the certificate is valid, in days."),
+      })
+      .strict(),
+  ])
+  .describe("A credential to add.");
+
+const graphMailTestSchema = z
+  .object({
+    to: emailSchema.describe("Recipient of the test e-mail."),
+    language: z.enum(supportedLanguages).default("en").describe("Language of the test e-mail."),
+    configuration: graphMailInputSchema.optional(),
+  })
+  .strict()
+  .describe("A test e-mail through Microsoft Graph.");
+
+const mailSettingsSchema = z
+  .object({
+    smtp: smtpConfigurationSchema.nullable(),
+    passwordSet: z.boolean(),
+    method: z.enum(mailMethods).describe("How e-mail is sent."),
+    graph: graphMailSchema.nullable(),
+    graphCredentials: z
+      .array(mailCredentialSchema)
+      .describe("Credentials of the app registration, newest first."),
+  })
+  .describe("The e-mail settings.");
+
+const accountListQuerySchema = searchQuerySchema
+  .extend({
+    withoutOrganization: z
+      .enum(["true", "false"])
+      .optional()
+      .describe("With true, only accounts without any current membership in an organization."),
+    state: z
+      .enum(["active", "deactivated", "anonymized", "placeholder"])
+      .optional()
+      .describe("Only accounts in this lifecycle state."),
+  })
+  .strict();
+
+const placeholderSchema = z
+  .object({
+    name: accountNameSchema.describe("Name of the person, as content will show it."),
+    email: emailSchema.describe(
+      "E-mail address of the person. A verified sign-in with this address turns the placeholder into the account.",
+    ),
+  })
+  .strict()
+  .describe("A person who has no account yet.");
+
+const mergeSchema = z
+  .object({ accountId: uuid("ID of the account that takes over the placeholder.") })
+  .strict()
+  .describe("The account to merge the placeholder into.");
+
+const mergedSchema = z
+  .object({
+    memberships: z.number().int().describe("Memberships the placeholder had."),
+    groups: z.number().int().describe("Group memberships the placeholder had."),
+    roles: z.number().int().describe("Role assignments the placeholder had."),
+  })
+  .describe("What moved from the placeholder to the account.");
+
+const anonymizeSchema = z
+  .object({
+    reason: z
+      .string()
+      .trim()
+      .min(1)
+      .max(500)
+      .describe(
+        "Why the account is anonymized, 1 to 500 characters. Kept in the audit log; do not name the person.",
+      ),
+    confirmation: z.string().max(200).describe("The current name of the account, typed to confirm."),
+  })
+  .strict()
+  .describe("Confirmation of the anonymization.");
+
+const anonymizedSchema = z
+  .object({
+    endedSessions: z.number().int().describe("Sessions that ended."),
+    removedIdentities: z.number().int().describe("Linked identities that were removed."),
+    endedMemberships: z.number().int().describe("Memberships that ended."),
+  })
+  .describe("What the anonymization removed.");
+
 @Controller("api/v1/instance")
 export class InstanceController {
   constructor(@Inject(API_CONTEXT) private readonly context: ApiContext) {}
@@ -254,16 +414,136 @@ export class InstanceController {
   @Permission("instance.settings.view")
   @InternalRoute()
   @ApiRoute({
-    summary: "Get the mail server",
+    summary: "Get the e-mail settings",
     tags: [TAG],
     response: {
-      description: "The SMTP configuration, without the password.",
-      schema: setupStepSchemas.mail.details,
+      description: "The sending method, the SMTP and Microsoft Graph settings, without passwords or secrets.",
+      schema: mailSettingsSchema,
     },
   })
   async mail() {
     const mail = this.#services.mail;
-    return { smtp: await mail.smtpConfiguration(), passwordSet: await mail.hasSmtpPassword() };
+    return {
+      smtp: await mail.smtpConfiguration(),
+      passwordSet: await mail.hasSmtpPassword(),
+      method: await mail.method(),
+      graph: await mail.graphConfiguration(),
+      graphCredentials: await mail.graphCredentials(),
+    };
+  }
+
+  @Put("mail/method")
+  @Permission("instance.settings.manage", { type: "instance" }, { recentAuthentication: true })
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Choose how e-mail is sent",
+    tags: [TAG],
+    body: z.object({ method: z.enum(mailMethods).describe("SMTP or Microsoft Graph.") }).strict(),
+    errors: ["mailNotReady", "reauthenticationRequired"],
+  })
+  async setMailMethod(@Body() body: { method: MailMethod }, @Req() request: FastifyRequest) {
+    await this.#services.mail.setMethod(actorOf(request), body.method);
+  }
+
+  @Put("mail/graph")
+  @Permission("instance.settings.manage", { type: "instance" }, { recentAuthentication: true })
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Configure e-mail through Microsoft Graph",
+    tags: [TAG],
+    body: graphMailInputSchema,
+    errors: ["invalidMailConfiguration", "reauthenticationRequired"],
+  })
+  async configureGraphMail(@Body() body: unknown, @Req() request: FastifyRequest) {
+    await this.#services.mail.configureGraph(actorOf(request), body);
+  }
+
+  @Post("mail/graph/credentials")
+  @Permission("instance.settings.manage", { type: "instance" }, { recentAuthentication: true })
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Add a credential for e-mail through Microsoft Graph",
+    tags: [TAG],
+    status: 201,
+    body: mailCredentialInputSchema,
+    response: {
+      description: "The credential, with the certificate to upload to the app registration.",
+      schema: addedMailCredentialSchema,
+    },
+    errors: ["expiryInPast", "invalidInput", "reauthenticationRequired"],
+  })
+  async addGraphMailCredential(
+    @Body() body: z.output<typeof mailCredentialInputSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.mail.addGraphCredential(
+      actorOf(request),
+      body.kind === "clientSecret"
+        ? {
+            kind: "clientSecret",
+            secret: body.secret,
+            expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
+          }
+        : body,
+    );
+  }
+
+  @Delete("mail/graph/credentials/:credentialId")
+  @Permission("instance.settings.manage", { type: "instance" }, { recentAuthentication: true })
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Remove a credential for e-mail through Microsoft Graph",
+    tags: [TAG],
+    params: z.object({ credentialId: uuid("ID of the credential.") }).strict(),
+    errors: ["lastCredential", "notFound", "reauthenticationRequired"],
+  })
+  async removeGraphMailCredential(
+    @Param("credentialId") credentialId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    await this.#services.mail.removeGraphCredential(actorOf(request), credentialId);
+  }
+
+  @Get("mail/graph/credentials/:credentialId/certificate")
+  @Permission("instance.settings.view")
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Download the certificate of a Microsoft Graph credential",
+    tags: [TAG],
+    params: z.object({ credentialId: uuid("ID of the credential.") }).strict(),
+    raw: {
+      contentTypes: ["application/x-pem-file"],
+      description: "The public certificate in PEM format.",
+      example: "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n",
+    },
+    errors: ["notFound"],
+  })
+  async graphMailCertificate(
+    @Param("credentialId") credentialId: string,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const pem = await this.#services.mail.graphCertificate(credentialId);
+    reply
+      .type("application/x-pem-file")
+      .header("content-disposition", 'attachment; filename="pagehall-mail.pem"');
+    return pem;
+  }
+
+  @Post("mail/graph/test")
+  @Permission("instance.settings.manage", { type: "instance" }, { recentAuthentication: true })
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Send a test e-mail through Microsoft Graph",
+    description:
+      "Sends with the given settings, or the stored ones without them, and the stored credentials. Errors name what failed: a mailbox outside the scope of the app, a missing permission, an unknown mailbox or an expired or wrong credential.",
+    tags: [TAG],
+    status: 200,
+    body: graphMailTestSchema,
+    response: { description: "Whether Microsoft Graph accepted the e-mail.", schema: smtpTestResultSchema },
+    errors: ["invalidMailConfiguration"],
+  })
+  async testGraphMail(@Body() body: z.output<typeof graphMailTestSchema>, @Req() request: FastifyRequest) {
+    return this.#services.mail.sendGraphTest(actorOf(request), body.to, body.language, body.configuration);
   }
 
   @Put("mail")
@@ -281,7 +561,7 @@ export class InstanceController {
   }
 
   @Post("mail/test")
-  @Permission("instance.settings.manage")
+  @Permission("instance.settings.manage", { type: "instance" }, { recentAuthentication: true })
   @InternalRoute()
   @ApiRoute({
     summary: "Send a test mail",
@@ -329,15 +609,138 @@ export class InstanceController {
     description:
       "Lists every account of the instance, including service accounts, with instance roles, second-factor state and last sign-in. `q` searches name and e-mail address.",
     tags: [TAG],
-    query: searchQuerySchema,
+    query: accountListQuerySchema,
     response: {
       description: "Accounts of the instance.",
       schema: pageSchema(administeredAccountSchema, "Accounts, ordered by name."),
       example: { items: [exampleAdministeredAccount], nextCursor: null },
     },
   })
-  async accounts(@Query() query: z.output<typeof searchQuerySchema>) {
-    return toApiPage(await this.#services.overview.listAccounts(pageRequest(query, nameCursor)));
+  async accounts(@Query() query: z.output<typeof accountListQuerySchema>) {
+    return toApiPage(
+      await this.#services.overview.listAccounts(pageRequest(query, nameCursor), {
+        withoutOrganization: query.withoutOrganization === "true",
+        ...(query.state ? { state: query.state } : {}),
+      }),
+    );
+  }
+
+  @Post("accounts/placeholders")
+  @Permission("instance.accounts.manage")
+  @ApiRoute({
+    summary: "Create a placeholder",
+    description:
+      "Creates an account for a person who has not signed in yet, for example the author of imported content. When the person signs in through a provider with this e-mail address and the provider verifies it, the placeholder becomes their account; otherwise an administrator merges it.",
+    tags: [TAG],
+    status: 201,
+    body: placeholderSchema,
+    bodyExample: { name: "Erika Example", email: "erika@example.com" },
+    response: {
+      description: "The placeholder.",
+      schema: z
+        .object({
+          id: uuid("ID of the placeholder."),
+          name: z.string().describe("Name."),
+          email: z.string().describe("E-mail address."),
+        })
+        .describe("A placeholder."),
+      example: {
+        id: "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9f",
+        name: "Erika Example",
+        email: "erika@example.com",
+      },
+    },
+    errors: ["emailInUse"],
+  })
+  async createPlaceholder(@Body() body: z.output<typeof placeholderSchema>, @Req() request: FastifyRequest) {
+    return this.#services.accountLifecycle.createPlaceholder(actorOf(request), body);
+  }
+
+  @Post("accounts/:accountId/merge")
+  @Permission("instance.accounts.manage", { type: "instance" }, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "Merge a placeholder into an account",
+    description:
+      "Moves the memberships, group memberships and organization roles of the placeholder to the account. The placeholder keeps its ID and points to the account. Nobody can merge a placeholder into their own account. Needs a recent confirmation of identity.",
+    tags: [TAG],
+    status: 200,
+    params: z.object({ accountId: uuid("ID of the placeholder.") }).strict(),
+    body: mergeSchema,
+    bodyExample: { accountId: "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c" },
+    response: {
+      description: "What moved.",
+      schema: mergedSchema,
+      example: { memberships: 1, groups: 2, roles: 0 },
+    },
+    errors: ["notPlaceholder", "notFound", "reauthenticationRequired"],
+  })
+  async mergePlaceholder(
+    @Param("accountId") placeholderId: string,
+    @Body() body: z.output<typeof mergeSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.accountLifecycle.mergePlaceholder(actorOf(request), placeholderId, body.accountId);
+  }
+
+  @Post("accounts/:accountId/anonymize")
+  @Permission(
+    "instance.accounts.manage",
+    { type: "instance" },
+    { recentAuthentication: true, sessionOnly: true },
+  )
+  @ApiRoute({
+    summary: "Anonymize an account",
+    description:
+      "Removes the name, e-mail address, sign-in names and profile of the account for good, and deletes its identities, sessions, tokens, passkeys, second factors and personal settings. Its memberships end. The account stays as a former user with its ID; content keeps this pseudonym, and the audit log can no longer show its personal data. Copies of the audit log exported or streamed before are outside Pagehall. Needs a signed-in session with a recent confirmation of identity.",
+    tags: [TAG],
+    status: 200,
+    params: z.object({ accountId: uuid("ID of the account.") }).strict(),
+    body: anonymizeSchema,
+    bodyExample: { reason: "Erasure request of 1 October 2026", confirmation: "Erika Example" },
+    response: {
+      description: "What was removed.",
+      schema: anonymizedSchema,
+      example: { endedSessions: 1, removedIdentities: 1, endedMemberships: 2 },
+    },
+    errors: [
+      "confirmationMismatch",
+      "anonymizeSelf",
+      "instanceOwner",
+      "lastOwner",
+      "notFound",
+      "reauthenticationRequired",
+    ],
+  })
+  async anonymize(
+    @Param("accountId") accountId: string,
+    @Body() body: z.output<typeof anonymizeSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.accountLifecycle.anonymize(actorOf(request), accountId, body);
+  }
+
+  @Post("accounts/:accountId/organization")
+  @Permission("instance.accounts.manage")
+  @ApiRoute({
+    summary: "Assign an organization to an account without one",
+    description:
+      "Makes the organization the home organization of the account and adds the account as a member. Only for accounts that have no organization yet.",
+    tags: [TAG],
+    status: 204,
+    params: z.object({ accountId: uuid("ID of the account.") }).strict(),
+    body: z
+      .object({ organizationId: uuid("ID of the organization the account belongs to from now on.") })
+      .strict()
+      .describe("The organization to assign."),
+    bodyExample: { organizationId: "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9e" },
+    errors: ["notFound", "accountHasOrganization", "guestMembership"],
+  })
+  async assignOrganization(
+    @Param("accountId") accountId: string,
+    @Body() body: { organizationId: string },
+    @Req() request: FastifyRequest,
+  ) {
+    await this.#services.administration.assignOrganization(actorOf(request), accountId, body.organizationId);
   }
 
   @Get("accounts/:accountId")

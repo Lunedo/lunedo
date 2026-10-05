@@ -174,9 +174,13 @@ export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
     required: true,
     async describe({ request }) {
       const [database, clock] = await checkDatabaseAndClock(deps.pool);
-      const url = await deps.settings.get(instanceUrlSetting, {});
+      const stored = await deps.settings.get(instanceUrlSetting, {});
+      const configured = deps.configuredInstanceUrl ?? "";
+      const url = stored || configured;
+      const source = stored ? "setting" : configured ? "configuration" : null;
       const httpsUrl = url.startsWith("https:");
       const httpsRequest = request.protocol === "https";
+      const httpsOk = url ? httpsUrl : httpsRequest;
       return {
         checks: {
           database,
@@ -188,10 +192,12 @@ export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
             fixCommand: null,
             docs: "setup.md#instance-url",
             configured: url !== "",
+            url: url || null,
+            source,
           },
           https: {
-            status: httpsUrl && httpsRequest ? "ok" : "warning",
-            cause: !httpsUrl ? "instanceUrlNotHttps" : httpsRequest ? null : "requestNotHttps",
+            status: httpsOk ? "ok" : "warning",
+            cause: httpsOk ? null : url ? "instanceUrlNotHttps" : "requestNotHttps",
             fixCommand: null,
             docs: "setup.md#https",
             instanceUrl: httpsUrl,
@@ -269,7 +275,6 @@ export function ownerStep(deps: SetupStepDependencies): SetupStep {
         input: setupStepSchemas.owner.actions.createAccount.input,
         async run(context, input) {
           const existing = await ownerOf(context);
-          let accountId: string;
           if (existing) {
             const passwordHash = await deps.accounts.hashPassword(input.password, existing.id);
             await withUniqueEmail(() =>
@@ -281,7 +286,6 @@ export function ownerStep(deps: SetupStepDependencies): SetupStep {
             for (const table of [totpCredentials, webauthnCredentials, recoveryCodes, sessions]) {
               await context.tx.delete(table).where(eq(table.accountId, existing.id));
             }
-            accountId = existing.id;
           } else {
             const account = await deps.accounts.createStandard(context.tx, {
               email: input.email,
@@ -291,12 +295,6 @@ export function ownerStep(deps: SetupStepDependencies): SetupStep {
             });
             await context.tx.insert(instance).values({ id: 1 }).onConflictDoNothing();
             await context.tx.update(instance).set({ ownerAccountId: account.id }).where(eq(instance.id, 1));
-            accountId = account.id;
-          }
-          if (input.language) {
-            await deps.settings.set(languageSetting, { user: accountId }, "user", input.language, {
-              tx: context.tx,
-            });
           }
           await context.reopen();
           return {};
@@ -396,39 +394,6 @@ export function keyBackupStep(deps: SetupStepDependencies): SetupStep {
   };
 }
 
-export function mailStep(deps: SetupStepDependencies): SetupStep {
-  return {
-    id: "mail",
-    order: 60,
-    required: false,
-    async describe() {
-      return { smtp: await deps.mail.smtpConfiguration(), passwordSet: await deps.mail.hasSmtpPassword() };
-    },
-    actions: {
-      save: defineSetupAction({
-        input: setupStepSchemas.mail.actions.save.input,
-        async run(context, input) {
-          const { password, ...configuration } = input;
-          await deps.mail.configureSmtp(configuration, password, { tx: context.tx });
-          await context.complete();
-          return {};
-        },
-      }),
-      test: defineSetupAction({
-        input: setupStepSchemas.mail.actions.test.input,
-        async run(_context, input) {
-          const { to, language, password, ...configuration } = input;
-          const result = await deps.mail.sendTest(to, language, {
-            configuration,
-            password,
-          });
-          return { body: result };
-        },
-      }),
-    },
-  };
-}
-
 export function organizationStep(deps: SetupStepDependencies): SetupStep {
   return {
     id: "organization",
@@ -508,6 +473,5 @@ export function builtinSetupSteps(deps: SetupStepDependencies): SetupStep[] {
     ownerStep(deps),
     keyBackupStep(deps),
     organizationStep(deps),
-    mailStep(deps),
   ];
 }

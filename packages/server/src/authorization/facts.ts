@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { AccountState, AccountType } from "../accounts/schema.js";
 import type { Executor } from "../database/database.js";
+import { withheldAssignmentIds } from "../identity/withheld.js";
 import { currentRequestContext } from "../observability/request-context.js";
 import type {
   BuiltInRoleKey,
@@ -124,6 +125,7 @@ export async function instanceFacts(
         select ${assignmentColumns}
         from role_assignments ra left join custom_roles cr on cr.id = ra.custom_role_id
         where ra.scope = 'instance' and (ra.expires_at is null or ra.expires_at > now())
+          and ra.id not in (${withheldAssignmentIds(accountId)})
           and ((ra.principal_kind = 'account' and ra.principal_id = ${accountId})
             or (ra.principal_kind = 'instanceUsers' and ${internal}))`);
       const roles: HeldRole[] = assignments.rows.map((row) =>
@@ -208,6 +210,7 @@ export async function organizationFacts(
           from role_assignments ra left join custom_roles cr on cr.id = ra.custom_role_id
           where ra.scope = 'organization' and ra.organization_id = ${organizationId}
             and (ra.expires_at is null or ra.expires_at > now())
+            and ra.id not in (${withheldAssignmentIds(accountId)})
             and ((ra.principal_kind = 'account' and ra.principal_id = ${accountId})
               or (ra.principal_kind = 'group' and ra.principal_id = any(${sql.param(groupIds)}::uuid[]))
               or ra.principal_kind = 'organizationMembers'

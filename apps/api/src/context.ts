@@ -12,6 +12,7 @@ export const API_CONTEXT = Symbol("API_CONTEXT");
 export type ApiContext = Pick<ServerRuntime, "logger" | "metrics" | "metricsToken" | "readiness"> & {
   webRoot: string | undefined;
   trustedProxies: string[];
+  configuredInstanceUrl: string | undefined;
   services: AccountServices | undefined;
   settings: SettingsService | undefined;
   settingsRegistry: SettingsRegistry | undefined;
@@ -26,6 +27,7 @@ export function apiContextOf(runtime: ServerRuntime): ApiContext {
     readiness: runtime.readiness,
     webRoot: runtime.config.paths.webRoot,
     trustedProxies: runtime.config.trustedProxies,
+    configuredInstanceUrl: runtime.config.instanceUrl,
     services: runtime.services,
     settings: runtime.settings,
     settingsRegistry: runtime.settingsRegistry,

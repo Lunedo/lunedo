@@ -6,8 +6,14 @@ export {
   emailSchema,
   PasswordPolicyError,
 } from "./accounts/accounts.js";
-export { AccountAdministrationService } from "./accounts/administration.js";
+export { AccountAdministrationService, type IdentitySummary } from "./accounts/administration.js";
 export { instanceNameSetting, instanceUrlSetting } from "./accounts/instance-settings.js";
+export {
+  AccountLifecycleService,
+  type Anonymization,
+  formerUserName,
+  type PlaceholderMerge,
+} from "./accounts/lifecycle.js";
 export {
   type AccountDetail,
   type AccountMembership,
@@ -38,6 +44,7 @@ export type { AuditCursor, AuditEntry, AuditFilter } from "./audit/reader.js";
 export { auditRetentionSetting } from "./audit/retention.js";
 export type { FactorAdded } from "./auth/account-security.js";
 export { BusyError } from "./auth/concurrency.js";
+export type { EmergencyRecipients } from "./auth/emergency-recipients.js";
 export {
   AuthError,
   ChallengeExpiredError,
@@ -141,6 +148,65 @@ export { createDatabasePool, type DatabasePool, pingDatabase } from "./database/
 export { handleOperationsRequest, type OperationsEndpoints, operationsPaths } from "./health/health-http.js";
 export { readinessChecks } from "./health/readiness.js";
 export {
+  type DirectoryTestResult,
+  type ProviderCapabilities,
+  type ProviderProfile,
+  ProviderResponseError,
+} from "./identity/adapter.js";
+export type { SyncChange, SyncReport, SyncWarning } from "./identity/groups.js";
+export type { MappingRule, ProviderGroupMatch, RulePreview } from "./identity/mapping.js";
+export {
+  type AddedCredential,
+  type CredentialInput,
+  type CredentialSummary,
+  callbackPath,
+  type LdapSummary,
+  type ProviderDraft,
+  type ProviderSummary,
+  type ProviderWarning,
+  type RemovalPreview,
+  type SamlSummary,
+  type SignInProvider,
+} from "./identity/providers.js";
+export type { CertificateInfo } from "./identity/saml-metadata.js";
+export { signInRefusalReasons } from "./identity/schema.js";
+export { SCIM_REQUESTS_PER_MINUTE, type ScimPage, ScimService } from "./identity/scim.js";
+export {
+  resourceTypes as scimResourceTypes,
+  ScimError,
+  schemaDefinitions as scimSchemaDefinitions,
+  scimErrorBody,
+  serviceProviderConfig as scimServiceProviderConfig,
+} from "./identity/scim-protocol.js";
+export {
+  type CreatedScimToken,
+  SCIM_TOKEN_OVERLAP_DAYS,
+  ScimTokenRejectedError,
+  ScimTokenService,
+  type ScimTokenSummary,
+} from "./identity/scim-tokens.js";
+export {
+  type CallbackResult,
+  type LinkInfo,
+  type SignInOptions,
+  type SignInRefusal,
+  type SignInStep,
+  type TestFailure,
+  type TestFailureReason,
+  type TestResult,
+  testFailureReasons,
+} from "./identity/sign-in.js";
+export {
+  ProviderSyncService,
+  providerSyncJob,
+  type SyncRunDetails,
+  type SyncRunFilter,
+  type SyncRunSummary,
+  syncLogRetentionDaysSetting,
+} from "./identity/sync.js";
+export { type SyncRunSignal, signalRun } from "./identity/sync-signals.js";
+export type { WithheldRole } from "./identity/withheld.js";
+export {
   defineJob,
   type EnqueueOptions,
   type JobContext,
@@ -152,7 +218,17 @@ export {
 } from "./jobs/job-queue.js";
 export { PgBossQueue } from "./jobs/pg-boss-queue.js";
 export { createLogger, type Logger, type LogLevel, logLevels } from "./logging/logger.js";
-export { MailNotConfiguredError, SmtpConfigurationError, smtpSetting } from "./mail/mail-service.js";
+export { GraphMailError } from "./mail/graph.js";
+export {
+  graphMailSetting,
+  type MailCredentialInput,
+  type MailCredentialSummary,
+  MailNotConfiguredError,
+  type MailTestResult,
+  mailMethodSetting,
+  SmtpConfigurationError,
+  smtpSetting,
+} from "./mail/mail-service.js";
 export type { MailMessage, MailTransport, SmtpOptions } from "./mail/transport.js";
 export { NotificationHub } from "./notifications/hub.js";
 export {

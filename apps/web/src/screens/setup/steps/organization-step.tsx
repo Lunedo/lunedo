@@ -8,7 +8,7 @@ import {
   timeZoneSchema,
 } from "@pagehall/shared";
 import { Button, Combobox, Field, Input, Notice, Select, TimeZoneCombobox } from "@pagehall/ui";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Controller } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -36,7 +36,12 @@ const FORMAT_FIELDS: { name: keyof Formats; key: string; labelKey: string }[] = 
   { name: "firstDayOfWeek", key: "locale.firstDayOfWeek", labelKey: "preferences.firstDayOfWeek" },
 ];
 
-export function OrganizationStep({ details, back, onDone }: StepProps<"organization">) {
+export function OrganizationStep({
+  details,
+  back,
+  onDone,
+  submitLabel,
+}: StepProps<"organization"> & { submitLabel?: string }) {
   const { t, i18n } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const existing = details.organization;
@@ -50,12 +55,6 @@ export function OrganizationStep({ details, back, onDone }: StepProps<"organizat
       formats: details.formats ?? proposeFormats(language, timeZone),
     },
   });
-  const formatsChosen = useRef(details.formats !== null);
-  const chosenLanguage = form.watch("language");
-  const chosenTimeZone = form.watch("timeZone");
-  useEffect(() => {
-    if (!formatsChosen.current) form.setValue("formats", proposeFormats(chosenLanguage, chosenTimeZone));
-  }, [form, chosenLanguage, chosenTimeZone]);
   const submit = form.handleSubmit(async (values) => {
     setError(null);
     try {
@@ -122,10 +121,7 @@ export function OrganizationStep({ details, back, onDone }: StepProps<"organizat
                 render={({ field }) => (
                   <Select
                     value={field.value}
-                    onValueChange={(value) => {
-                      formatsChosen.current = true;
-                      field.onChange(value);
-                    }}
+                    onValueChange={field.onChange}
                     options={localeOptionSet(format.key)?.options(t, i18n.language) ?? []}
                   />
                 )}
@@ -137,7 +133,7 @@ export function OrganizationStep({ details, back, onDone }: StepProps<"organizat
       <div className="flex justify-between gap-2">
         {back}
         <Button type="submit" variant="primary" loading={form.formState.isSubmitting}>
-          {t("setup.continue")}
+          {submitLabel ?? t("setup.continue")}
         </Button>
       </div>
     </form>

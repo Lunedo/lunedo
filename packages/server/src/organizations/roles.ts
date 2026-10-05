@@ -458,11 +458,21 @@ export class RoleService {
     role: RoleInput,
     executor: Transaction,
   ): Promise<string> {
-    const resolved = await this.#resolveRole(executor, "organization", organizationId, role);
+    return this.checkGrantable(actor, "organization", organizationId, role, executor);
+  }
+
+  async checkGrantable(
+    actor: Principal,
+    scope: RoleScope,
+    organizationId: string | null,
+    role: RoleInput,
+    executor: Transaction,
+  ): Promise<string> {
+    const resolved = await this.#resolveRole(executor, scope, organizationId, role);
     await this.#authorization.checkGrant(
       actor,
       {
-        scope: "organization",
+        scope,
         organizationId,
         areas: resolved.areas,
         owner: "builtIn" in resolved.reference && resolved.reference.builtIn === "owner",
@@ -477,8 +487,9 @@ export class RoleService {
     scope: RoleScope,
     organizationId: string | null,
     id: string,
+    options: { tx?: Transaction; reason?: "removed" | "providerRule" } = {},
   ): Promise<boolean> {
-    return this.#database.transaction(async (tx) => {
+    const run = async (tx: Transaction) => {
       if (organizationId) await lockOrganization(tx, organizationId);
       const [row] = await tx
         .select()
@@ -524,11 +535,12 @@ export class RoleService {
           role: role.name,
           principalKind: row.principalKind,
           principalId: row.principalId,
-          reason: "removed",
+          reason: options.reason ?? "removed",
         },
         ...(scopeOf(scope, organizationId) ? { scope: scopeOf(scope, organizationId) } : {}),
       });
       return true;
-    });
+    };
+    return options.tx ? run(options.tx) : this.#database.transaction(run);
   }
 }

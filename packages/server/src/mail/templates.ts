@@ -32,6 +32,30 @@ export interface MailTemplates {
   tokenExpiring: { instanceName: string; tokenName: string; date: string };
   tokenUnused: { instanceName: string; tokenName: string; days: number };
   serviceAccountUnattended: { instanceName: string; serviceAccountName: string; organizationName: string };
+  emergencySignIn: {
+    instanceName: string;
+    accountName: string;
+    browser: string | null;
+    operatingSystem: string | null;
+    clientIp: string | null;
+  };
+  providerCredentialExpiring: { instanceName: string; providerName: string; date: string };
+  providerSyncHeld: { instanceName: string; providerName: string; deactivations: number; accounts: number };
+  homeOrganizationChanged: {
+    instanceName: string;
+    accountName: string;
+    previousOrganizationName: string | null;
+    organizationName: string | null;
+    reason: "providerRule" | "manual";
+  };
+  mailCredentialExpiring: { instanceName: string; date: string };
+  accountRolesWithheld: { instanceName: string; accountName: string; providerName: string; roles: number };
+  accountWithoutOrganization: {
+    instanceName: string;
+    accountName: string;
+    email: string | null;
+    providerName: string;
+  };
   signInNewBrowser: {
     instanceName: string;
     browser: string | null;
@@ -181,6 +205,62 @@ const catalogs: Record<Language, Catalog> = {
         `The API token ${tokenName} on ${instanceName} expires on ${date}. Create a new token before then, or scripts using it will stop working.`,
       ],
     }),
+    emergencySignIn: ({ instanceName, accountName, browser, operatingSystem, clientIp }) => ({
+      subject: `Emergency sign-in to ${instanceName}`,
+      paragraphs: [
+        `${accountName}, the owner of ${instanceName}, signed in with a password while password sign-in is turned off: ${describeBrowser(browser, operatingSystem, "an unknown browser", "on")}${clientIp ? `, address ${clientIp}` : ""}.`,
+        "This sign-in is meant for emergencies, for example when the identity provider fails. Check the audit log if you did not expect it.",
+      ],
+    }),
+    accountRolesWithheld: ({ instanceName, accountName, providerName, roles }) => ({
+      subject: `Administrative roles of ${accountName} on ${instanceName} are paused`,
+      paragraphs: [
+        `Pagehall could not read the groups of ${accountName} from ${providerName} for longer than twice the sync interval. ${roles} administrative role${roles === 1 ? "" : "s"} granted by mapping rules ${roles === 1 ? "is" : "are"} paused until the groups can be read again. Memberships stay as last known.`,
+        "Check the connection to the provider and its sync log.",
+      ],
+    }),
+    accountWithoutOrganization: ({ instanceName, accountName, email, providerName }) => ({
+      subject: `${accountName} is not a member of any organization on ${instanceName}`,
+      paragraphs: [
+        `${accountName}${email ? ` (${email})` : ""} signed in to ${instanceName} through ${providerName} for the first time. No mapping rule and no organization domain made the account a member of an organization.`,
+        "Assign an organization in the account list of the instance settings, filtered by accounts without an organization.",
+      ],
+    }),
+    homeOrganizationChanged: ({
+      instanceName,
+      accountName,
+      previousOrganizationName,
+      organizationName,
+      reason,
+    }) => ({
+      subject: `Home organization of ${accountName} on ${instanceName} changed`,
+      paragraphs: [
+        `${organizationName ? `The home organization of ${accountName} on ${instanceName} is now ${organizationName}` : `${accountName} on ${instanceName} has no home organization anymore`}${previousOrganizationName ? `; before, it was ${previousOrganizationName}` : ""}.`,
+        reason === "providerRule"
+          ? "The mapping rule or the group at the identity provider that gave this membership no longer applies."
+          : "An administrator changed it.",
+        "The home organization decides whose administrators manage the account and whose defaults apply to its settings.",
+      ],
+    }),
+    mailCredentialExpiring: ({ instanceName, date }) => ({
+      subject: `E-mail on ${instanceName} stops on ${date}`,
+      paragraphs: [
+        `The client secret or certificate that ${instanceName} uses to send e-mail through Microsoft Graph expires on ${date}. Add a new one in the e-mail settings before then, or Pagehall can no longer send e-mail.`,
+      ],
+    }),
+    providerCredentialExpiring: ({ instanceName, providerName, date }) => ({
+      subject: `Credential of ${providerName} on ${instanceName} expires soon`,
+      paragraphs: [
+        `A client secret or certificate of the identity provider ${providerName} on ${instanceName} expires on ${date}. Add a new credential in the provider settings and register it with the provider before then, or sign-in through ${providerName} stops working.`,
+      ],
+    }),
+    providerSyncHeld: ({ instanceName, providerName, deactivations, accounts }) => ({
+      subject: `Synchronization of ${providerName} on ${instanceName} stopped`,
+      paragraphs: [
+        `The synchronization with ${providerName} would have deactivated ${deactivations} of ${accounts} accounts at once. It stopped and deactivated nobody, because a changed search base, a moved directory unit or missing read permissions look the same as people leaving.`,
+        "Check the provider settings and the directory. If the people really left, confirm the run in the sync log of the provider.",
+      ],
+    }),
     signInNewBrowser: ({ instanceName, browser, operatingSystem, clientIp }) => ({
       subject: `New sign-in to ${instanceName}`,
       paragraphs: [
@@ -301,6 +381,62 @@ const catalogs: Record<Language, Catalog> = {
       subject: `API-Token ${tokenName} auf ${instanceName} läuft bald ab`,
       paragraphs: [
         `Das API-Token ${tokenName} auf ${instanceName} läuft am ${date} ab. Erstellen Sie vorher ein neues Token, sonst funktionieren Skripte, die es verwenden, nicht mehr.`,
+      ],
+    }),
+    emergencySignIn: ({ instanceName, accountName, browser, operatingSystem, clientIp }) => ({
+      subject: `Notfallanmeldung bei ${instanceName}`,
+      paragraphs: [
+        `${accountName}, Eigentümer von ${instanceName}, hat sich mit Passwort angemeldet, obwohl die Anmeldung mit Passwort ausgeschaltet ist: ${describeBrowser(browser, operatingSystem, "ein unbekannter Browser", "unter")}${clientIp ? `, Adresse ${clientIp}` : ""}.`,
+        "Diese Anmeldung ist für Notfälle gedacht, zum Beispiel wenn der Identitätsanbieter ausfällt. Prüfen Sie das Audit-Log, wenn Sie sie nicht erwartet haben.",
+      ],
+    }),
+    accountRolesWithheld: ({ instanceName, accountName, providerName, roles }) => ({
+      subject: `Administrative Rollen von ${accountName} auf ${instanceName} sind ausgesetzt`,
+      paragraphs: [
+        `Pagehall konnte die Gruppen von ${accountName} länger als das doppelte Synchronisierungsintervall nicht aus ${providerName} lesen. ${roles === 1 ? "Eine administrative Rolle" : `${roles} administrative Rollen`} aus Zuordnungsregeln ${roles === 1 ? "ist" : "sind"} ausgesetzt, bis die Gruppen wieder gelesen werden können. Mitgliedschaften bleiben wie zuletzt bekannt.`,
+        "Prüfen Sie die Verbindung zum Anbieter und sein Sync-Protokoll.",
+      ],
+    }),
+    accountWithoutOrganization: ({ instanceName, accountName, email, providerName }) => ({
+      subject: `${accountName} ist auf ${instanceName} in keiner Organisation Mitglied`,
+      paragraphs: [
+        `${accountName}${email ? ` (${email})` : ""} hat sich zum ersten Mal über ${providerName} bei ${instanceName} angemeldet. Weder eine Zuordnungsregel noch eine Domain einer Organisation hat das Konto zum Mitglied einer Organisation gemacht.`,
+        "Weisen Sie in der Kontenliste der Instanz-Einstellungen eine Organisation zu, gefiltert nach Konten ohne Organisation.",
+      ],
+    }),
+    homeOrganizationChanged: ({
+      instanceName,
+      accountName,
+      previousOrganizationName,
+      organizationName,
+      reason,
+    }) => ({
+      subject: `Heimatorganisation von ${accountName} auf ${instanceName} geändert`,
+      paragraphs: [
+        `${organizationName ? `Die Heimatorganisation von ${accountName} auf ${instanceName} ist jetzt ${organizationName}` : `${accountName} hat auf ${instanceName} keine Heimatorganisation mehr`}${previousOrganizationName ? `; vorher war es ${previousOrganizationName}` : ""}.`,
+        reason === "providerRule"
+          ? "Die Zuordnungsregel oder die Gruppe beim Identitätsanbieter, aus der diese Mitgliedschaft kam, gilt nicht mehr."
+          : "Eine Administratorin oder ein Administrator hat sie geändert.",
+        "Die Heimatorganisation bestimmt, wessen Administration das Konto verwaltet und wessen Standards für seine Einstellungen gelten.",
+      ],
+    }),
+    mailCredentialExpiring: ({ instanceName, date }) => ({
+      subject: `E-Mail-Versand auf ${instanceName} endet am ${date}`,
+      paragraphs: [
+        `Das Client-Secret oder Zertifikat, mit dem ${instanceName} E-Mails über Microsoft Graph sendet, läuft am ${date} ab. Fügen Sie vorher in den E-Mail-Einstellungen neue Zugangsdaten hinzu, sonst kann Pagehall keine E-Mails mehr senden.`,
+      ],
+    }),
+    providerCredentialExpiring: ({ instanceName, providerName, date }) => ({
+      subject: `Zugangsdaten von ${providerName} auf ${instanceName} laufen bald ab`,
+      paragraphs: [
+        `Ein Client-Secret oder Zertifikat des Identitätsanbieters ${providerName} auf ${instanceName} läuft am ${date} ab. Fügen Sie vorher in den Einstellungen des Anbieters neue Zugangsdaten hinzu und hinterlegen Sie sie beim Anbieter, sonst funktioniert die Anmeldung über ${providerName} nicht mehr.`,
+      ],
+    }),
+    providerSyncHeld: ({ instanceName, providerName, deactivations, accounts }) => ({
+      subject: `Synchronisierung von ${providerName} auf ${instanceName} angehalten`,
+      paragraphs: [
+        `Die Synchronisierung mit ${providerName} hätte ${deactivations} von ${accounts} Konten auf einmal deaktiviert. Sie wurde angehalten und hat niemanden deaktiviert, denn eine geänderte Suchbasis, eine verschobene Organisationseinheit oder fehlende Leserechte sehen genauso aus wie ausgeschiedene Personen.`,
+        "Prüfen Sie die Einstellungen des Anbieters und das Verzeichnis. Wenn die Personen wirklich ausgeschieden sind, bestätigen Sie den Lauf im Sync-Protokoll des Anbieters.",
       ],
     }),
     signInNewBrowser: ({ instanceName, browser, operatingSystem, clientIp }) => ({
