@@ -274,12 +274,15 @@ export class PageDocumentService {
     return {
       people: Object.fromEntries(people.map((person) => [person.id, person.name])),
       pages: Object.fromEntries(
-        pages.map((page) => [
-          page.id,
-          page.accessible
-            ? { title: page.title, spaceKey: page.key, kind: page.kind, accessible: true }
-            : { title: "", spaceKey: "", kind: page.kind, accessible: false },
-        ]),
+        pageIds.map((id) => {
+          const page = pages.find((candidate) => candidate.id === id && candidate.accessible);
+          return [
+            id,
+            page
+              ? { title: page.title, spaceKey: page.key, kind: page.kind, accessible: true }
+              : { title: "", spaceKey: "", kind: "page", accessible: false },
+          ];
+        }),
       ),
     };
   }
