@@ -99,6 +99,9 @@ function tokenAreas(token: TokenGrant, scope: RoleScope, organizationId: string 
 }
 
 function tokenAllows(token: TokenGrant, action: RegisteredAction, organizationId: string | null): boolean {
+  if (action.tokenScope) {
+    return grantsLevel(token.scopes.organization?.[action.tokenScope.area], action.tokenScope.level);
+  }
   if (action.scope === "space") {
     if (token.organizationId && token.organizationId !== organizationId) return false;
     const level = action.spaceRole === "editor" || action.spaceRole === "admin" ? "manage" : "view";

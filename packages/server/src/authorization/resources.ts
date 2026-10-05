@@ -54,6 +54,11 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "instance.personalSpaces.view": instanceArea("accounts", "view"),
       "instance.personalSpaces.manage": instanceArea("accounts", "manage"),
       "instance.personalSpace.use": { scope: "instance", rule: "personalSpace" },
+      "instance.content.view": {
+        scope: "instance",
+        rule: "activeAccount",
+        tokenScope: { area: "spaces", level: "view" },
+      },
     },
     rules: {
       selfService: async (context) => {
@@ -62,6 +67,12 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
         );
         if (account.rows[0]?.type !== "standard") return false;
         return settings.get(selfServiceOrganizationsSetting, {});
+      },
+      activeAccount: async (context) => {
+        const account = await context.executor.execute<{ id: string }>(
+          sql`select id from accounts where id = ${context.accountId} and state = 'active'`,
+        );
+        return account.rows.length > 0;
       },
       personalSpace: async (context) => {
         const account = await context.executor.execute<{ type: string }>(

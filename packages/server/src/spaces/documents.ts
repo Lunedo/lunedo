@@ -5,6 +5,8 @@ import {
   extractMentions,
   extractPageLinks,
   migrateDocument,
+  renderMarkdown,
+  slugify,
   type ValidationProblem,
   validateDocument,
 } from "@pagehall/editor-schema";
@@ -78,6 +80,26 @@ export async function recordClient(
   await executor.execute(sql`
     insert into collaboration_clients (item_id, client_id, account_id) values (${itemId}, ${clientId}, ${accountId})
     on conflict do nothing`);
+}
+
+export function pagePath(spaceKey: string, itemId: string, title: string): string {
+  return `/spaces/${encodeURIComponent(spaceKey)}/pages/${itemId}/${slugify(title)}`;
+}
+
+export function renderPageMarkdown(document: DocumentJson, references: PageReferences): string {
+  return renderMarkdown(document, {
+    mention: (id) => {
+      const name = references.people[id];
+      return name ? { name } : null;
+    },
+    pageLink: (link) => {
+      if (!link.pageId) return null;
+      const page = references.pages[link.pageId];
+      return page?.accessible
+        ? { href: pagePath(page.spaceKey, link.pageId, page.title), title: page.title, accessible: true }
+        : { href: "", title: "", accessible: false };
+    },
+  });
 }
 
 export function normalizeLabel(label: string): string {

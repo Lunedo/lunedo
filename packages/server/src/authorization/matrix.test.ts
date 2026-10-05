@@ -120,6 +120,7 @@ type Rule =
   | "membersCreateGroups"
   | "membersCreateSpaces"
   | "personalSpace"
+  | "activeAccount"
   | "homeOrganizationAdministrator"
   | "manager"
   | "memberOrManager"
@@ -171,6 +172,7 @@ const EXPECTED: Record<string, Expectation> = {
   "instance.personalSpaces.view": instance("accounts", "view"),
   "instance.personalSpaces.manage": instance("accounts", "manage"),
   "instance.personalSpace.use": { scope: "instance", rule: "personalSpace" },
+  "instance.content.view": { scope: "instance", rule: "activeAccount" },
   "organization.view": { scope: "organization", membership: ALL_MEMBERSHIPS, breakGlass: true },
   "organization.leave": { scope: "organization", membership: ALL_MEMBERSHIPS },
   "organization.update": organization("settings", "manage"),
@@ -223,6 +225,7 @@ function expectedAllowed(held: Held, actionName: string): boolean {
     membersCreateGroups: () => false,
     membersCreateSpaces: () => facts.membership === "member",
     personalSpace: () => facts.type === "standard",
+    activeAccount: () => true,
     homeOrganizationAdministrator: () => grantsLevel(organizationAreas.membersAndGroups, "manage"),
     self: () => false,
     manager: () => false,

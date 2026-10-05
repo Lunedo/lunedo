@@ -338,6 +338,8 @@ export {
   MERGE_ORIGIN,
   normalizeLabel,
   type PageReferences,
+  pagePath,
+  renderPageMarkdown,
   type PageSnapshot,
   recordClient,
 } from "./spaces/documents.js";

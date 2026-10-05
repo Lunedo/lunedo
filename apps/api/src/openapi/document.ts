@@ -55,6 +55,8 @@ const TAG_DESCRIPTIONS: Record<string, string> = {
   "Service accounts": "Accounts for scripts and integrations, owned by an organization.",
   "API tokens": "Personal tokens and tokens of service accounts.",
   "Audit log": "Reading and exporting the tamper-evident audit log.",
+  Spaces: "Spaces, their settings and permissions, and personal spaces.",
+  Pages: "The page tree with pages, folders and links, page content, labels and backlinks.",
 };
 
 const ROOT = "root";

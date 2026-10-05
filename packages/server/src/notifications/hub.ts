@@ -6,12 +6,14 @@ import {
   SETTING_CHANGES_CHANNEL,
   type SettingChangeSignal,
 } from "../settings/service.js";
+import { parseSpaceChangeSignal, SPACE_CHANGES_CHANNEL, type SpaceChangeSignal } from "../spaces/signals.js";
 import { NOTIFICATIONS_CHANNEL } from "./service.js";
 
 type Handler = () => void;
 type SettingsHandler = (signal: SettingChangeSignal) => void;
 type SyncRunHandler = (signal: SyncRunSignal) => void;
 type ChangeHandler = (signal: AuditChangeSignal) => void;
+type SpaceHandler = (signal: SpaceChangeSignal) => void;
 
 export class NotificationHub {
   readonly #listener: NotificationListener;
@@ -19,6 +21,7 @@ export class NotificationHub {
   readonly #settingsHandlers = new Set<SettingsHandler>();
   readonly #syncRunHandlers = new Set<SyncRunHandler>();
   readonly #changeHandlers = new Set<ChangeHandler>();
+  readonly #spaceHandlers = new Set<SpaceHandler>();
   #listening: Promise<void> | undefined;
 
   constructor(listener: NotificationListener) {
@@ -54,6 +57,14 @@ export class NotificationHub {
     this.#changeHandlers.add(handler);
     return () => {
       this.#changeHandlers.delete(handler);
+    };
+  }
+
+  async subscribeSpaces(handler: SpaceHandler): Promise<() => void> {
+    await this.#ready();
+    this.#spaceHandlers.add(handler);
+    return () => {
+      this.#spaceHandlers.delete(handler);
     };
   }
 
@@ -96,6 +107,11 @@ export class NotificationHub {
       const signal = parseAuditChangeSignal(payload);
       if (!signal) return;
       for (const handler of this.#changeHandlers) handler(signal);
+    });
+    await this.#listener.listen(SPACE_CHANGES_CHANNEL, (payload) => {
+      const signal = parseSpaceChangeSignal(payload);
+      if (!signal) return;
+      for (const handler of this.#spaceHandlers) handler(signal);
     });
     this.#listener.onReconnect(() => {
       for (const handlers of this.#handlers.values()) for (const handler of handlers) handler();
