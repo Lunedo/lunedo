@@ -20,6 +20,8 @@ import { uuid } from "../http/schemas.js";
 import {
   addedCredentialSchema,
   caCertificateUploadSchema,
+  connectionCheckResultSchema,
+  connectionCheckSchema,
   createDraftSchema,
   createdProviderSchema,
   createdScimTokenSchema,
@@ -772,6 +774,28 @@ export class IdentityProvidersController {
   async removeCaCertificate(@Param("providerId") providerId: string, @Req() request: FastifyRequest) {
     const provider = await this.#services.identityProviders.removeCaCertificate(actorOf(request), providerId);
     return this.#present(request, provider);
+  }
+
+  @Post("instance/identity-provider-connection-checks")
+  @Permission("instance.signIn.manage")
+  @ApiRoute({
+    summary: "Check connection settings before saving them",
+    description:
+      "Reads the OIDC discovery document, loads the SAML metadata or connects to the directory with the given settings. Saves nothing.",
+    tags: [TAG],
+    status: 200,
+    body: connectionCheckSchema,
+    response: { description: "The result of the check.", schema: connectionCheckResultSchema },
+    errors: ["invalidProviderConfiguration", "notFound", "invalidInput"],
+  })
+  async checkConnection(@Body() body: z.output<typeof connectionCheckSchema>) {
+    if (body.providerId) await this.#services.identityProviders.get(body.providerId);
+    return this.#services.providerSignIn.checkConnection({
+      type: body.type,
+      config: body.config,
+      bindPassword: body.type === "ldap" ? (body.bindPassword ?? null) : null,
+      providerId: body.providerId ?? null,
+    });
   }
 
   @Post("instance/identity-providers/:providerId/directory-test")

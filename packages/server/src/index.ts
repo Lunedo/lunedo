@@ -175,6 +175,7 @@ export type { SyncChange, SyncReport, SyncWarning } from "./identity/groups.js";
 export type { MappingRule, ProviderGroupMatch, RulePreview } from "./identity/mapping.js";
 export {
   type AddedCredential,
+  type ConnectionCheck,
   type CredentialInput,
   type CredentialSummary,
   callbackPath,

@@ -362,6 +362,27 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     expect(identities.json()).toHaveLength(1);
   });
 
+  it("checks the discovery document of an issuer before anything is saved", async () => {
+    const check = (issuer: string) =>
+      owner.post("/api/v1/instance/identity-provider-connection-checks", {
+        type: "oidc",
+        config: { preset: "generic", issuer, clientId: "check", domains: [] },
+      });
+    expect((await check(idp.issuer)).json()).toMatchObject({ ok: true, check: "discovery", status: 200 });
+    const wrong = (await check(`${idp.issuer}/realms/wrong`)).json();
+    expect(wrong).toMatchObject({
+      ok: false,
+      status: 404,
+      problem: "status",
+      url: `${idp.issuer}/realms/wrong/.well-known/openid-configuration`,
+    });
+    const before = await test.runtime.pool.query("select count(*)::int as count from identity_providers");
+    await check(idp.issuer);
+    expect(
+      (await test.runtime.pool.query("select count(*)::int as count from identity_providers")).rows,
+    ).toEqual(before.rows);
+  });
+
   it("names the provider of a refused sign-in so the page can offer a retry", async () => {
     const response = await signInThroughProvider(new TestClient(test.app), {
       sub: "foreign-subject",

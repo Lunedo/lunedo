@@ -79,6 +79,27 @@ export type ProviderWarning =
   | "caCertificateExpiring"
   | "noGraphCredential";
 
+export type ConnectionProblem =
+  | "unreachable"
+  | "status"
+  | "invalidDocument"
+  | "issuerMismatch"
+  | "connection"
+  | "certificate"
+  | "serviceAccount"
+  | "search";
+
+export interface ConnectionCheck {
+  ok: boolean;
+  check: "discovery" | "metadata" | "directory";
+  url: string | null;
+  status: number | null;
+  problem: ConnectionProblem | null;
+  detail: string | null;
+}
+
+const DISCOVERY_TIMEOUT_MS = 10_000;
+
 export type CredentialKind = "clientSecret" | "certificate" | "samlSigning" | "bindPassword";
 
 export interface CredentialSummary {
@@ -656,6 +677,74 @@ export class IdentityProviderService {
     const [summary] = await this.#summaries(this.#database, [row]);
     if (!summary) throw notFound();
     return summary;
+  }
+
+  parseConnection(type: IdentityProviderType, input: unknown): OidcConfig | SamlConfig | LdapConfig {
+    return this.#parseConfig(type, input);
+  }
+
+  async checkDiscovery(config: OidcConfig): Promise<ConnectionCheck> {
+    const issuer = oidcIssuer(config);
+    const url = `${issuer.replace(/\/+$/, "")}/.well-known/openid-configuration`;
+    const result = (problem: ConnectionProblem | null, status: number | null, detail: string | null) => ({
+      ok: problem === null,
+      check: "discovery" as const,
+      url,
+      status,
+      problem,
+      detail,
+    });
+    let response: Response;
+    try {
+      response = await (this.#fetch ?? fetch)(url, {
+        redirect: "error",
+        headers: { accept: "application/json" },
+        signal: AbortSignal.timeout(DISCOVERY_TIMEOUT_MS),
+      });
+    } catch (error) {
+      return result("unreachable", null, plainText((error as Error).message));
+    }
+    if (!response.ok) return result("status", response.status, null);
+    let document: unknown;
+    try {
+      document = await response.json();
+    } catch {
+      return result("invalidDocument", response.status, null);
+    }
+    const found =
+      typeof document === "object" && document !== null && "issuer" in document ? document.issuer : null;
+    if (typeof found !== "string") return result("invalidDocument", response.status, null);
+    if (found !== issuer) return result("issuerMismatch", response.status, plainText(found));
+    return result(null, response.status, null);
+  }
+
+  async checkMetadata(config: SamlConfig): Promise<ConnectionCheck> {
+    const url = config.metadata.source === "url" ? config.metadata.url : null;
+    const result = (problem: ConnectionProblem | null, status: number | null, detail: string | null) => ({
+      ok: problem === null,
+      check: "metadata" as const,
+      url,
+      status,
+      problem,
+      detail,
+    });
+    if (!url) return result(null, null, null);
+    try {
+      this.#parseMetadata(
+        await fetchSamlMetadata(url, {
+          allowInsecure: this.#allowInsecure,
+          ...(this.#fetch ? { fetch: this.#fetch } : {}),
+        }),
+      );
+      return result(null, 200, null);
+    } catch (error) {
+      if (error instanceof SamlMetadataError) {
+        const problem = error.reason === "invalid" ? "invalidDocument" : error.reason;
+        return result(problem, error.status, error.message);
+      }
+      if (error instanceof OrganizationError) return result("invalidDocument", 200, error.message);
+      throw error;
+    }
   }
 
   async #loadMetadata(config: SamlConfig, uploaded: string | null | undefined): Promise<string> {
@@ -1329,7 +1418,7 @@ export class IdentityProviderService {
         throw new OrganizationError("invalidInput", "A certificate is valid for 30 days to 3 years");
       }
       const generated = await generateCertificate({
-        commonName: `Pagehall ${provider.name}`,
+        commonName: `Pagehall $provider.name`,
         validDays: input.validDays,
         now,
       });
@@ -1579,12 +1668,12 @@ export class IdentityProviderService {
           eq(identityProviderCredentials.providerId, id),
           or(
             isNull(identityProviderCredentials.expiresAt),
-            sql`${identityProviderCredentials.expiresAt} > ${now}`,
+            sql`$identityProviderCredentials.expiresAt> $now`,
           ),
         ),
       )
       .orderBy(
-        sql`${identityProviderCredentials.chosenAt} desc nulls last`,
+        sql`$identityProviderCredentials.chosenAtdesc nulls last`,
         desc(identityProviderCredentials.createdAt),
         desc(identityProviderCredentials.id),
       );
@@ -1691,7 +1780,7 @@ export class IdentityProviderService {
         .where(
           and(
             isNotNull(identityProviderCredentials.expiresAt),
-            sql`${identityProviderCredentials.expiresAt} > ${now}`,
+            sql`$identityProviderCredentials.expiresAt> $now`,
             lte(identityProviderCredentials.expiresAt, new Date(now.getTime() + threshold.days * DAY_MS)),
             isNull(column),
           ),
@@ -1710,7 +1799,7 @@ export class IdentityProviderService {
           if (!marked?.expiresAt) return null;
           const newer = await tx.execute(sql`
             select 1 from identity_provider_credentials
-            where provider_id = ${marked.providerId} and id <> ${id}
+            where provider_id = $marked.providerIdand id <> $id
               and (expires_at is null or expires_at > ${marked.expiresAt})`);
           if (newer.rows.length > 0) return null;
           const [provider] = await tx

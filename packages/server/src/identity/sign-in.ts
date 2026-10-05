@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { directoryPasswordSchema } from "@pagehall/shared";
+import { directoryPasswordSchema, type LdapConfig, type OidcConfig, type SamlConfig } from "@pagehall/shared";
 import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import * as client from "openid-client";
 import { ZodError } from "zod";
@@ -49,7 +49,7 @@ import {
 } from "./adapter.js";
 import type { ReceivedClaim } from "./claims.js";
 import type { GroupMappingService } from "./groups.js";
-import type { IdentityProviderService, SignInProvider } from "./providers.js";
+import type { ConnectionCheck, IdentityProviderService, SignInProvider } from "./providers.js";
 import { callbackPath } from "./providers.js";
 import { SamlAdapter, samlPaths } from "./saml.js";
 import {
@@ -1421,6 +1421,54 @@ export class ProviderSignInService {
       });
       return token;
     });
+  }
+
+  async checkConnection(input: {
+    type: "oidc" | "saml" | "ldap";
+    config: unknown;
+    bindPassword: string | null;
+    providerId: string | null;
+  }): Promise<ConnectionCheck> {
+    const parsed = this.#providers.parseConnection(input.type, input.config);
+    if (input.type === "oidc") return this.#providers.checkDiscovery(parsed as OidcConfig);
+    if (input.type === "saml") return this.#providers.checkMetadata(parsed as SamlConfig);
+    const config = parsed as LdapConfig;
+    const stored = input.providerId ? await this.#load(input.providerId) : null;
+    const credentials =
+      input.bindPassword !== null
+        ? [
+            {
+              id: "connection-check",
+              kind: "bindPassword" as const,
+              secret: input.bindPassword,
+              keyId: null,
+              certificate: null,
+            },
+          ]
+        : (stored?.credentials ?? []);
+    const adapter = this.#adapter("ldap");
+    if (!adapter.testDirectory) throw new Error("The directory adapter cannot test connections");
+    const result = await adapter.testDirectory(
+      {
+        id: stored?.provider.id ?? "connection-check",
+        name: stored?.provider.name ?? "",
+        directoryKey: null,
+        type: "ldap",
+        config,
+        caCertificates: stored?.provider.type === "ldap" ? stored.provider.caCertificates : null,
+      },
+      credentials,
+      null,
+    );
+    const failed = result.steps.find((step) => !step.ok);
+    return {
+      ok: failed === undefined,
+      check: "directory",
+      url: config.url,
+      status: null,
+      problem: failed?.step ?? null,
+      detail: failed?.detail ?? null,
+    };
   }
 
   async testDirectory(providerId: string, signInName: string | null): Promise<DirectoryTestResult> {

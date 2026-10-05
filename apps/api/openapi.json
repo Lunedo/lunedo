@@ -17532,6 +17532,1997 @@
         }
       }
     },
+    "/api/v1/instance/identity-provider-connection-checks": {
+      "post": {
+        "operationId": "identityProviders.checkConnection",
+        "summary": "Check connection settings before saving them",
+        "description": "Reads the OIDC discovery document, loads the SAML metadata or connects to the directory with the given settings. Saves nothing.\n\nRequires the permission `instance.signIn.manage` on the instance.",
+        "tags": [
+          "Identity providers"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.signIn.manage",
+          "resource": "instance"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "oidc",
+                        "description": "OpenID Connect: reads the discovery document of the issuer."
+                      },
+                      "config": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "preset": {
+                                "type": "string",
+                                "const": "entraId"
+                              },
+                              "clientId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 500
+                              },
+                              "domains": {
+                                "default": [],
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 253,
+                                  "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                }
+                              },
+                              "idTokenAlgorithm": {
+                                "default": "RS256",
+                                "type": "string",
+                                "enum": [
+                                  "RS256",
+                                  "RS384",
+                                  "RS512",
+                                  "PS256",
+                                  "PS384",
+                                  "PS512",
+                                  "ES256",
+                                  "ES384",
+                                  "ES512"
+                                ]
+                              },
+                              "accountCreation": {
+                                "default": {
+                                  "enabled": false,
+                                  "requiredGroups": []
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "enabled": {
+                                    "default": false,
+                                    "type": "boolean"
+                                  },
+                                  "requiredGroups": {
+                                    "default": [],
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "sync": {
+                                "default": {
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20,
+                                  "deactivationLimitAccounts": 5
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "intervalMinutes": {
+                                    "default": 60,
+                                    "type": "integer",
+                                    "minimum": 15,
+                                    "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
+                                  },
+                                  "deactivationLimitAccounts": {
+                                    "default": 5,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 100000
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "secondFactor": {
+                                "default": {
+                                  "mode": "provider",
+                                  "proofValues": [
+                                    "mfa"
+                                  ]
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "default": "provider",
+                                    "type": "string",
+                                    "enum": [
+                                      "provider",
+                                      "providerProof",
+                                      "pagehall"
+                                    ]
+                                  },
+                                  "proofValues": {
+                                    "default": [
+                                      "mfa"
+                                    ],
+                                    "minItems": 1,
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 50
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "tenantId": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                              },
+                              "authority": {
+                                "type": "string",
+                                "maxLength": 2048,
+                                "format": "uri"
+                              },
+                              "graphUrl": {
+                                "type": "string",
+                                "maxLength": 2048,
+                                "format": "uri"
+                              },
+                              "emailSource": {
+                                "default": "email",
+                                "type": "string",
+                                "enum": [
+                                  "email",
+                                  "userPrincipalName",
+                                  "graphMail"
+                                ]
+                              },
+                              "signInNameSource": {
+                                "default": "userPrincipalName",
+                                "type": "string",
+                                "enum": [
+                                  "preferredUsername",
+                                  "userPrincipalName",
+                                  "email"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "preset",
+                              "clientId",
+                              "tenantId"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "preset": {
+                                "type": "string",
+                                "const": "google"
+                              },
+                              "clientId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 500
+                              },
+                              "domains": {
+                                "minItems": 1,
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 253,
+                                  "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                }
+                              },
+                              "idTokenAlgorithm": {
+                                "default": "RS256",
+                                "type": "string",
+                                "enum": [
+                                  "RS256",
+                                  "RS384",
+                                  "RS512",
+                                  "PS256",
+                                  "PS384",
+                                  "PS512",
+                                  "ES256",
+                                  "ES384",
+                                  "ES512"
+                                ]
+                              },
+                              "accountCreation": {
+                                "default": {
+                                  "enabled": false,
+                                  "requiredGroups": []
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "enabled": {
+                                    "default": false,
+                                    "type": "boolean"
+                                  },
+                                  "requiredGroups": {
+                                    "default": [],
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "sync": {
+                                "default": {
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20,
+                                  "deactivationLimitAccounts": 5
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "intervalMinutes": {
+                                    "default": 60,
+                                    "type": "integer",
+                                    "minimum": 15,
+                                    "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
+                                  },
+                                  "deactivationLimitAccounts": {
+                                    "default": 5,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 100000
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "secondFactor": {
+                                "default": {
+                                  "mode": "provider",
+                                  "proofValues": [
+                                    "mfa"
+                                  ]
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "default": "provider",
+                                    "type": "string",
+                                    "enum": [
+                                      "provider",
+                                      "providerProof",
+                                      "pagehall"
+                                    ]
+                                  },
+                                  "proofValues": {
+                                    "default": [
+                                      "mfa"
+                                    ],
+                                    "minItems": 1,
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 50
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "issuer": {
+                                "default": "https://accounts.google.com",
+                                "type": "string",
+                                "maxLength": 2048,
+                                "format": "uri"
+                              },
+                              "directory": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "method": {
+                                        "default": "adminRole",
+                                        "type": "string",
+                                        "enum": [
+                                          "adminRole",
+                                          "delegation"
+                                        ]
+                                      },
+                                      "adminEmail": {
+                                        "default": null,
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 254,
+                                            "format": "email"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "readUsers": {
+                                        "default": false,
+                                        "type": "boolean"
+                                      },
+                                      "url": {
+                                        "type": "string",
+                                        "maxLength": 2048,
+                                        "format": "uri"
+                                      },
+                                      "tokenUrl": {
+                                        "type": "string",
+                                        "maxLength": 2048,
+                                        "format": "uri"
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "preset",
+                              "clientId",
+                              "domains"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "preset": {
+                                "type": "string",
+                                "const": "generic"
+                              },
+                              "clientId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 500
+                              },
+                              "domains": {
+                                "default": [],
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 253,
+                                  "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                }
+                              },
+                              "idTokenAlgorithm": {
+                                "default": "RS256",
+                                "type": "string",
+                                "enum": [
+                                  "RS256",
+                                  "RS384",
+                                  "RS512",
+                                  "PS256",
+                                  "PS384",
+                                  "PS512",
+                                  "ES256",
+                                  "ES384",
+                                  "ES512"
+                                ]
+                              },
+                              "accountCreation": {
+                                "default": {
+                                  "enabled": false,
+                                  "requiredGroups": []
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "enabled": {
+                                    "default": false,
+                                    "type": "boolean"
+                                  },
+                                  "requiredGroups": {
+                                    "default": [],
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "sync": {
+                                "default": {
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20,
+                                  "deactivationLimitAccounts": 5
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "intervalMinutes": {
+                                    "default": 60,
+                                    "type": "integer",
+                                    "minimum": 15,
+                                    "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
+                                  },
+                                  "deactivationLimitAccounts": {
+                                    "default": 5,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 100000
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "secondFactor": {
+                                "default": {
+                                  "mode": "provider",
+                                  "proofValues": [
+                                    "mfa"
+                                  ]
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "default": "provider",
+                                    "type": "string",
+                                    "enum": [
+                                      "provider",
+                                      "providerProof",
+                                      "pagehall"
+                                    ]
+                                  },
+                                  "proofValues": {
+                                    "default": [
+                                      "mfa"
+                                    ],
+                                    "minItems": 1,
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 50
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "issuer": {
+                                "type": "string",
+                                "maxLength": 2048,
+                                "format": "uri"
+                              },
+                              "scopes": {
+                                "default": [
+                                  "openid",
+                                  "profile",
+                                  "email"
+                                ],
+                                "maxItems": 20,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100
+                                }
+                              },
+                              "claims": {
+                                "default": {
+                                  "email": "email",
+                                  "signInName": "preferred_username",
+                                  "displayName": "name",
+                                  "groups": null,
+                                  "groupNames": null
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "email": {
+                                    "default": "email",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^[A-Za-z0-9_:./-]+$"
+                                  },
+                                  "signInName": {
+                                    "default": "preferred_username",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^[A-Za-z0-9_:./-]+$"
+                                  },
+                                  "displayName": {
+                                    "default": "name",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^[A-Za-z0-9_:./-]+$"
+                                  },
+                                  "groups": {
+                                    "default": null,
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 100,
+                                        "pattern": "^[A-Za-z0-9_:./-]+$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "groupNames": {
+                                    "default": null,
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 100,
+                                        "pattern": "^[A-Za-z0-9_:./-]+$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "preset",
+                              "clientId",
+                              "issuer"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ],
+                        "description": "Configuration to check."
+                      },
+                      "providerId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "ID of the provider whose stored password and CA certificate the check uses when none is sent."
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "config"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "saml",
+                        "description": "SAML 2.0: loads and reads the metadata address."
+                      },
+                      "config": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "preset": {
+                                "type": "string",
+                                "const": "entraId"
+                              },
+                              "domains": {
+                                "default": [],
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 253,
+                                  "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                }
+                              },
+                              "metadata": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "source": {
+                                        "type": "string",
+                                        "const": "url"
+                                      },
+                                      "url": {
+                                        "type": "string",
+                                        "maxLength": 2048,
+                                        "format": "uri"
+                                      }
+                                    },
+                                    "required": [
+                                      "source",
+                                      "url"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "source": {
+                                        "type": "string",
+                                        "const": "file"
+                                      }
+                                    },
+                                    "required": [
+                                      "source"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "idpInitiated": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "requireSignedResponse": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "encryptedAssertions": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "accountCreation": {
+                                "default": {
+                                  "enabled": false,
+                                  "requiredGroups": []
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "enabled": {
+                                    "default": false,
+                                    "type": "boolean"
+                                  },
+                                  "requiredGroups": {
+                                    "default": [],
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "sync": {
+                                "default": {
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20,
+                                  "deactivationLimitAccounts": 5
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "intervalMinutes": {
+                                    "default": 60,
+                                    "type": "integer",
+                                    "minimum": 15,
+                                    "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
+                                  },
+                                  "deactivationLimitAccounts": {
+                                    "default": 5,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 100000
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "secondFactor": {
+                                "default": {
+                                  "mode": "provider",
+                                  "proofValues": [
+                                    "mfa"
+                                  ]
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "default": "provider",
+                                    "type": "string",
+                                    "enum": [
+                                      "provider",
+                                      "providerProof",
+                                      "pagehall"
+                                    ]
+                                  },
+                                  "proofValues": {
+                                    "default": [
+                                      "mfa"
+                                    ],
+                                    "minItems": 1,
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 50
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "tenantId": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                              },
+                              "authority": {
+                                "type": "string",
+                                "maxLength": 2048,
+                                "format": "uri"
+                              },
+                              "graphUrl": {
+                                "type": "string",
+                                "maxLength": 2048,
+                                "format": "uri"
+                              },
+                              "graphClientId": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 500
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "emailSource": {
+                                "default": "email",
+                                "type": "string",
+                                "enum": [
+                                  "email",
+                                  "userPrincipalName"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "preset",
+                              "metadata",
+                              "tenantId"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "preset": {
+                                "type": "string",
+                                "const": "adfs"
+                              },
+                              "domains": {
+                                "default": [],
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 253,
+                                  "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                }
+                              },
+                              "metadata": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "source": {
+                                        "type": "string",
+                                        "const": "url"
+                                      },
+                                      "url": {
+                                        "type": "string",
+                                        "maxLength": 2048,
+                                        "format": "uri"
+                                      }
+                                    },
+                                    "required": [
+                                      "source",
+                                      "url"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "source": {
+                                        "type": "string",
+                                        "const": "file"
+                                      }
+                                    },
+                                    "required": [
+                                      "source"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "idpInitiated": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "requireSignedResponse": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "encryptedAssertions": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "accountCreation": {
+                                "default": {
+                                  "enabled": false,
+                                  "requiredGroups": []
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "enabled": {
+                                    "default": false,
+                                    "type": "boolean"
+                                  },
+                                  "requiredGroups": {
+                                    "default": [],
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "sync": {
+                                "default": {
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20,
+                                  "deactivationLimitAccounts": 5
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "intervalMinutes": {
+                                    "default": 60,
+                                    "type": "integer",
+                                    "minimum": 15,
+                                    "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
+                                  },
+                                  "deactivationLimitAccounts": {
+                                    "default": 5,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 100000
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "secondFactor": {
+                                "default": {
+                                  "mode": "provider",
+                                  "proofValues": [
+                                    "mfa"
+                                  ]
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "default": "provider",
+                                    "type": "string",
+                                    "enum": [
+                                      "provider",
+                                      "providerProof",
+                                      "pagehall"
+                                    ]
+                                  },
+                                  "proofValues": {
+                                    "default": [
+                                      "mfa"
+                                    ],
+                                    "minItems": 1,
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 50
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "identifierAttribute": {
+                                "default": "objectGUID",
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 256,
+                                "pattern": "^[A-Za-z0-9_:./#-]+$"
+                              },
+                              "attributes": {
+                                "default": {
+                                  "email": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+                                  "signInName": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn",
+                                  "displayName": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name",
+                                  "groups": "http://schemas.microsoft.com/ws/2008/06/identity/claims/groupsid"
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "email": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256,
+                                    "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                  },
+                                  "signInName": {
+                                    "default": null,
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "displayName": {
+                                    "default": null,
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "groups": {
+                                    "default": null,
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "email"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "groupValues": {
+                                "default": "identifiers",
+                                "type": "string",
+                                "enum": [
+                                  "identifiers",
+                                  "names"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "preset",
+                              "metadata"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "preset": {
+                                "type": "string",
+                                "const": "generic"
+                              },
+                              "domains": {
+                                "default": [],
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 253,
+                                  "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                }
+                              },
+                              "metadata": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "source": {
+                                        "type": "string",
+                                        "const": "url"
+                                      },
+                                      "url": {
+                                        "type": "string",
+                                        "maxLength": 2048,
+                                        "format": "uri"
+                                      }
+                                    },
+                                    "required": [
+                                      "source",
+                                      "url"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "source": {
+                                        "type": "string",
+                                        "const": "file"
+                                      }
+                                    },
+                                    "required": [
+                                      "source"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "idpInitiated": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "requireSignedResponse": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "encryptedAssertions": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "accountCreation": {
+                                "default": {
+                                  "enabled": false,
+                                  "requiredGroups": []
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "enabled": {
+                                    "default": false,
+                                    "type": "boolean"
+                                  },
+                                  "requiredGroups": {
+                                    "default": [],
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "sync": {
+                                "default": {
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20,
+                                  "deactivationLimitAccounts": 5
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "intervalMinutes": {
+                                    "default": 60,
+                                    "type": "integer",
+                                    "minimum": 15,
+                                    "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
+                                  },
+                                  "deactivationLimitAccounts": {
+                                    "default": 5,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 100000
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "secondFactor": {
+                                "default": {
+                                  "mode": "provider",
+                                  "proofValues": [
+                                    "mfa"
+                                  ]
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "default": "provider",
+                                    "type": "string",
+                                    "enum": [
+                                      "provider",
+                                      "providerProof",
+                                      "pagehall"
+                                    ]
+                                  },
+                                  "proofValues": {
+                                    "default": [
+                                      "mfa"
+                                    ],
+                                    "minItems": 1,
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 50
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "identifierAttribute": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256,
+                                    "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "attributes": {
+                                "default": {
+                                  "email": "email",
+                                  "signInName": null,
+                                  "displayName": null,
+                                  "groups": null
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "email": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256,
+                                    "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                  },
+                                  "signInName": {
+                                    "default": null,
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "displayName": {
+                                    "default": null,
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "groups": {
+                                    "default": null,
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "email"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "groupValues": {
+                                "default": "names",
+                                "type": "string",
+                                "enum": [
+                                  "identifiers",
+                                  "names"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "preset",
+                              "metadata"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ],
+                        "description": "Configuration to check."
+                      },
+                      "providerId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "ID of the provider whose stored password and CA certificate the check uses when none is sent."
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "config"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "ldap",
+                        "description": "LDAP: connects, checks the certificate, binds and searches once."
+                      },
+                      "config": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "preset": {
+                                "type": "string",
+                                "const": "activeDirectory"
+                              },
+                              "url": {
+                                "type": "string",
+                                "maxLength": 2048
+                              },
+                              "startTls": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "bindDn": {
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 1000
+                              },
+                              "userBaseDn": {
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 1000,
+                                "pattern": "="
+                              },
+                              "groupBaseDn": {
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 1000,
+                                "pattern": "="
+                              },
+                              "domains": {
+                                "default": [],
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 253,
+                                  "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                }
+                              },
+                              "accountCreation": {
+                                "default": {
+                                  "enabled": false,
+                                  "requiredGroups": []
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "enabled": {
+                                    "default": false,
+                                    "type": "boolean"
+                                  },
+                                  "requiredGroups": {
+                                    "default": [],
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "sync": {
+                                "default": {
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20,
+                                  "deactivationLimitAccounts": 5
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "intervalMinutes": {
+                                    "default": 60,
+                                    "type": "integer",
+                                    "minimum": 15,
+                                    "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
+                                  },
+                                  "deactivationLimitAccounts": {
+                                    "default": 5,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 100000
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "secondFactor": {
+                                "default": {
+                                  "mode": "pagehall"
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "default": "pagehall",
+                                    "type": "string",
+                                    "enum": [
+                                      "pagehall",
+                                      "provider"
+                                    ]
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "userFilter": {
+                                "default": "(&(objectCategory=person)(objectClass=user))",
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 1000
+                              },
+                              "groupFilter": {
+                                "default": "(objectClass=group)",
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 1000
+                              },
+                              "signInAttribute": {
+                                "default": "userPrincipalName",
+                                "type": "string",
+                                "enum": [
+                                  "userPrincipalName",
+                                  "sAMAccountName",
+                                  "mail"
+                                ]
+                              },
+                              "attributes": {
+                                "default": {
+                                  "email": "mail",
+                                  "displayName": "displayName"
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "email": {
+                                    "default": "mail",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                  },
+                                  "displayName": {
+                                    "default": "displayName",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                  }
+                                },
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "preset",
+                              "url",
+                              "bindDn",
+                              "userBaseDn",
+                              "groupBaseDn"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "preset": {
+                                "type": "string",
+                                "const": "generic"
+                              },
+                              "url": {
+                                "type": "string",
+                                "maxLength": 2048
+                              },
+                              "startTls": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "bindDn": {
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 1000,
+                                "pattern": "="
+                              },
+                              "userBaseDn": {
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 1000,
+                                "pattern": "="
+                              },
+                              "groupBaseDn": {
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 1000,
+                                "pattern": "="
+                              },
+                              "domains": {
+                                "default": [],
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 253,
+                                  "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                }
+                              },
+                              "accountCreation": {
+                                "default": {
+                                  "enabled": false,
+                                  "requiredGroups": []
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "enabled": {
+                                    "default": false,
+                                    "type": "boolean"
+                                  },
+                                  "requiredGroups": {
+                                    "default": [],
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "sync": {
+                                "default": {
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20,
+                                  "deactivationLimitAccounts": 5
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "intervalMinutes": {
+                                    "default": 60,
+                                    "type": "integer",
+                                    "minimum": 15,
+                                    "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
+                                  },
+                                  "deactivationLimitAccounts": {
+                                    "default": 5,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 100000
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "secondFactor": {
+                                "default": {
+                                  "mode": "pagehall"
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "default": "pagehall",
+                                    "type": "string",
+                                    "enum": [
+                                      "pagehall",
+                                      "provider"
+                                    ]
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "userFilter": {
+                                "default": "(objectClass=inetOrgPerson)",
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 1000
+                              },
+                              "groupFilter": {
+                                "default": "(|(objectClass=groupOfNames)(objectClass=groupOfUniqueNames))",
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 1000
+                              },
+                              "signInAttribute": {
+                                "default": "mail",
+                                "type": "string",
+                                "enum": [
+                                  "mail",
+                                  "uid"
+                                ]
+                              },
+                              "attributes": {
+                                "default": {
+                                  "email": "mail",
+                                  "signInName": "uid",
+                                  "displayName": "cn",
+                                  "groupName": "cn"
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "email": {
+                                    "default": "mail",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                  },
+                                  "signInName": {
+                                    "default": "uid",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                  },
+                                  "displayName": {
+                                    "default": "cn",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                  },
+                                  "groupName": {
+                                    "default": "cn",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "groupMembership": {
+                                "default": "member",
+                                "type": "string",
+                                "enum": [
+                                  "member",
+                                  "memberOf"
+                                ]
+                              },
+                              "disabled": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "attribute": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 100,
+                                        "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                      },
+                                      "values": {
+                                        "default": [],
+                                        "maxItems": 20,
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 256
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "attribute"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "preset",
+                              "url",
+                              "bindDn",
+                              "userBaseDn",
+                              "groupBaseDn"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ],
+                        "description": "Configuration to check."
+                      },
+                      "bindPassword": {
+                        "description": "Password of the service account. Without it, the stored password of the provider is used.",
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "providerId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "ID of the provider whose stored password and CA certificate the check uses when none is sent."
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "config"
+                    ],
+                    "additionalProperties": false
+                  }
+                ],
+                "description": "Connection settings to check before they are saved."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The result of the check.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "description": "Whether Pagehall reached the provider with these settings."
+                    },
+                    "check": {
+                      "type": "string",
+                      "enum": [
+                        "discovery",
+                        "metadata",
+                        "directory"
+                      ],
+                      "description": "What was checked."
+                    },
+                    "url": {
+                      "description": "The address Pagehall contacted.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "status": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The HTTP status of the answer, when there was one."
+                    },
+                    "problem": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "unreachable",
+                            "status",
+                            "invalidDocument",
+                            "issuerMismatch",
+                            "connection",
+                            "certificate",
+                            "serviceAccount",
+                            "search"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "What went wrong, or null."
+                    },
+                    "detail": {
+                      "description": "The message of the provider or the network, for administrators.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "check",
+                    "url",
+                    "status",
+                    "problem",
+                    "detail"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidProviderConfiguration`: The identity provider configuration is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidProviderConfiguration": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidProviderConfiguration",
+                      "title": "The identity provider configuration is not valid",
+                      "status": 400,
+                      "code": "invalidProviderConfiguration"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/instance/identity-provider-drafts": {
       "get": {
         "operationId": "identityProviders.listDrafts",
