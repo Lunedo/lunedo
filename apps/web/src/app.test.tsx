@@ -158,6 +158,25 @@ describe("the web client", () => {
     expect(within(navigation).queryByRole("link", { name: "Organizations" })).toBeNull();
   });
 
+  it("searches the settings of every area it shows and offers to clear an empty result", async () => {
+    api({ "GET /api/v1/auth/session": () => ({ body: SESSION }) });
+    await renderApp("/settings/preferences");
+    await screen.findByRole("heading", { name: "Preferences", level: 1 });
+    const navigation = screen.getByRole("navigation", { name: "Settings" });
+    const search = within(navigation).getByRole("searchbox", { name: "Search settings" });
+    await userEvent.type(search, "scales text");
+    expect(await screen.findByText("1 setting matches “scales text”")).toBeTruthy();
+    const result = screen.getByRole("link", { name: /Text size/ });
+    expect(within(result).getByText("Preferences › Display")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Preferences", level: 1 })).toBeNull();
+    await userEvent.clear(search);
+    await userEvent.type(search, "password policy of the moon");
+    expect(await screen.findByText(/No setting matches “password policy of the moon”/)).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Clear search" }));
+    expect(await screen.findByRole("heading", { name: "Preferences", level: 1 })).toBeTruthy();
+    expect((search as HTMLInputElement).value).toBe("");
+  });
+
   it("steps the text size and offers the default only when it differs", async () => {
     const { requests } = api({
       "GET /api/v1/auth/session": () => ({ body: SESSION }),

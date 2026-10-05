@@ -1783,7 +1783,13 @@
     "limitDuration": "Set a limit",
     "lockTitle": "Lock {name}?",
     "lockImpactInstance": "Every organization and all its members will use {value} for {name} and can no longer change it.",
-    "lockImpactOrganization": "All members of {organization} will use {value} for {name} and can no longer change it."
+    "lockImpactOrganization": "All members of {organization} will use {value} for {name} and can no longer change it.",
+    "searchLabel": "Search settings",
+    "searchPlaceholder": "Search by name or description",
+    "searchResults": "{count, plural, one {# setting matches “{query}”} other {# settings match “{query}”}}",
+    "searchNone": "No setting matches “{query}”. Check the spelling or search for another word.",
+    "searchClear": "Clear search",
+    "searchWhere": "{page} › {section}"
   },
   "security": {
     "activity": {

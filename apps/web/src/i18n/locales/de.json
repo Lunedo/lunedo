@@ -1780,7 +1780,13 @@
     "limitDuration": "Begrenzen",
     "lockTitle": "{name} sperren?",
     "lockImpactInstance": "Alle Organisationen und ihre Mitglieder verwenden dann {value} für {name} und können es nicht mehr ändern.",
-    "lockImpactOrganization": "Alle Mitglieder von {organization} verwenden dann {value} für {name} und können es nicht mehr ändern."
+    "lockImpactOrganization": "Alle Mitglieder von {organization} verwenden dann {value} für {name} und können es nicht mehr ändern.",
+    "searchLabel": "Einstellungen durchsuchen",
+    "searchPlaceholder": "Nach Name oder Beschreibung suchen",
+    "searchResults": "{count, plural, one {# Einstellung passt zu „{query}“} other {# Einstellungen passen zu „{query}“}}",
+    "searchNone": "Keine Einstellung passt zu „{query}“. Prüfe die Schreibweise oder suche nach einem anderen Wort.",
+    "searchClear": "Suche leeren",
+    "searchWhere": "{page} › {section}"
   },
   "security": {
     "activity": {
