@@ -11,7 +11,7 @@ import { setAccentColor } from "../../preferences/preferences-provider.js";
 import { BrandMark } from "../../shell/brand.js";
 
 export function AuthLayout() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const info = useQuery(instanceInfoQuery);
   const accent = info.data?.organization?.accentColor ?? info.data?.accentColor;
 
@@ -27,19 +27,26 @@ export function AuthLayout() {
       <footer className="flex flex-wrap items-center justify-center gap-3 px-4 pb-6 text-sm text-text-muted">
         <span>{info.data?.name ?? ""}</span>
         <span aria-hidden="true">·</span>
-        <div className="w-field max-w-full">
-          <Combobox
-            aria-label={t("auth.language")}
-            value={i18n.language}
-            onValueChange={(language) => {
-              if (!isLanguage(language)) return;
-              rememberLanguage(language);
-              void i18n.changeLanguage(language);
-            }}
-            items={languageItems(t)}
-          />
-        </div>
+        <LanguagePicker label={t("auth.language")} />
       </footer>
+    </div>
+  );
+}
+
+export function LanguagePicker({ label }: { label: string }) {
+  const { t, i18n } = useTranslation();
+  return (
+    <div className="w-field max-w-full">
+      <Combobox
+        aria-label={label}
+        value={i18n.language}
+        onValueChange={(language) => {
+          if (!isLanguage(language)) return;
+          rememberLanguage(language);
+          void i18n.changeLanguage(language);
+        }}
+        items={languageItems(t)}
+      />
     </div>
   );
 }

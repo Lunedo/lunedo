@@ -1102,7 +1102,7 @@
     "challengeExpired": "Die Anmeldung hat zu lange gedauert. Beginne neu.",
     "notSignedIn": "Melde dich an, um fortzufahren.",
     "sessionEnded": "Deine Sitzung ist beendet. Melde dich erneut an.",
-    "invalidSetupCode": "Der Setup-Code ist nicht korrekt.",
+    "invalidSetupCode": "Der Setup-Code ist nicht korrekt oder wurde schon verwendet. Kopiere den Code aus PAGEHALL_SETUP_CODE in der .env-Datei (das Setup-Skript schreibt ihn dort hinein) oder aus dem neuesten Setup-Link im Log des Pagehall-Containers, wie unten gezeigt. Jeder Code funktioniert einmal: Wurde er verwendet, starte den Pagehall-Container neu. Dann gilt er wieder oder ein neuer steht im Log.",
     "setupSessionRequired": "Die Einrichtungssitzung ist beendet. Gib den Setup-Code erneut ein.",
     "forbidden": "Deine Rollen erlauben das nicht. Bitte einen Owner der Organisation, wenn du es brauchst.",
     "csrfRejected": "Die Anfrage wurde blockiert. Lade die Seite neu und versuche es erneut.",
@@ -1139,6 +1139,7 @@
     "keysAlreadyDownloaded": "Die Schlüssel wurden bereits heruntergeladen und werden nicht erneut angezeigt. Verwende deine gespeicherte Kopie.",
     "totpExists": "Eine Authenticator-App ist bereits eingerichtet. Entferne sie zuerst, um eine andere einzurichten.",
     "ownerMissing": "Das Owner-Konto gibt es noch nicht. Lege es zuerst an.",
+    "totpMissing": "Die Authenticator-App ist noch nicht bestätigt. Gib zuerst einen Code aus der App ein.",
     "lastSecondFactor": "Dein zweiter Faktor ist erforderlich. Füge einen weiteren hinzu, bevor du diesen entfernst.",
     "noSecondFactor": "Es ist kein zweiter Faktor eingerichtet. Füge zuerst einen hinzu.",
     "secondFactorExists": "Dieser zweite Faktor existiert bereits. Es ist nichts zu ändern.",
@@ -1393,10 +1394,10 @@
       "where": "Der Code steht in der Datei .env, wenn du das Setup-Skript verwendet oder PAGEHALL_SETUP_CODE gesetzt hast. Sonst steht er im Log des Pagehall-Containers:",
       "hint": "Der Code funktioniert nicht mehr, sobald die Einrichtung abgeschlossen ist."
     },
+    "language": "Sprache der Einrichtung",
     "systemCheck": {
       "title": "Systemprüfung",
       "description": "Pagehall hat seine Umgebung geprüft. Warnungen blockieren die Einrichtung nicht.",
-      "language": "Sprache der Einrichtung",
       "blocked": "Behebe die Fehler oben, bevor du fortfährst.",
       "checks": {
         "database": "Datenbank",
@@ -1408,8 +1409,10 @@
       "status": {
         "ok": "OK",
         "warning": "Prüfen",
-        "error": "Muss behoben werden"
+        "error": "Muss behoben werden",
+        "later": "Nächster Schritt"
       },
+      "urlNextStep": "Die Adresse legst du im nächsten Schritt fest.",
       "databaseOk": "PostgreSQL {version}, Migrationen ausgeführt",
       "storageFree": "Beschreibbar, {free} frei",
       "clockOk": "Stimmt mit der Datenbank überein",
@@ -1457,12 +1460,6 @@
             "action": "Schaffe Platz oder vergrößere das Volume, bevor Personen Dateien hochladen."
           }
         },
-        "instanceUrl": {
-          "notSet": {
-            "cause": "Die Adresse, unter der Personen Pagehall erreichen, ist noch nicht festgelegt.",
-            "action": "Du legst sie im nächsten Schritt fest."
-          }
-        },
         "https": {
           "instanceUrlNotHttps": {
             "cause": "Die Adresse der Instanz beginnt nicht mit https://.",
@@ -1491,7 +1488,9 @@
       "twoFactorDescription": "Scanne den Code mit einer Authenticator-App und gib dann den sechsstelligen Code ein.",
       "ready": "Das Owner-Konto ist bereit",
       "summary": "{name} ({email}), mit Authenticator-App",
-      "change": "Owner ändern"
+      "change": "Owner ändern",
+      "recoveryCodesFailed": "Die Wiederherstellungscodes konnten nicht erstellt werden",
+      "acknowledgeFailed": "Der Schritt „Owner-Konto“ konnte nicht abgeschlossen werden"
     },
     "keyBackup": {
       "title": "Schlüssel sichern",

@@ -20,6 +20,7 @@ import { isLanguage } from "../../../i18n/index.js";
 import { translateKey } from "../../../i18n/translate.js";
 import { localeOptionSet } from "../../../settings/locale-options.js";
 import { runSetupAction } from "../setup-api.js";
+import { useDraftDefaults, useKeepDraft } from "../setup-drafts.js";
 import type { StepProps } from "./step-props.js";
 
 const organizationForm = z.object({
@@ -48,13 +49,14 @@ export function OrganizationStep({
   const language = existing?.language ?? (isLanguage(i18n.language) ? i18n.language : "en");
   const timeZone = existing?.timeZone ?? browserTimeZone();
   const form = useSchemaForm(organizationForm, {
-    defaultValues: {
+    defaultValues: useDraftDefaults("organization", {
       name: existing?.name ?? "",
       language,
       timeZone,
       formats: details.formats ?? proposeFormats(language, timeZone),
-    },
+    }),
   });
+  useKeepDraft("organization", form);
   const submit = form.handleSubmit(async (values) => {
     setError(null);
     try {

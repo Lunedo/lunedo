@@ -217,11 +217,13 @@ export function ListRow({
   title,
   description,
   actions,
+  children,
 }: {
   icon?: LucideIcon | ReactNode;
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
+  children?: ReactNode;
 }) {
   const glyph = isLucideIcon(icon) ? <Icon icon={icon} /> : icon;
   return (
@@ -232,6 +234,7 @@ export function ListRow({
         {description && <div className="text-sm text-text-muted">{description}</div>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {children && <div className="min-w-0 basis-full">{children}</div>}
     </li>
   );
 }

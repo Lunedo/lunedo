@@ -8,6 +8,7 @@ describe("the instance step", () => {
   it("warns about an address without HTTPS unless it is a loopback address", async () => {
     await renderWithProviders(
       <InstanceStep
+        completed={false}
         details={{
           url: "",
           name: "Pagehall",
@@ -32,6 +33,7 @@ describe("the instance step", () => {
   it("shows an address from the server environment as read-only", async () => {
     await renderWithProviders(
       <InstanceStep
+        completed={false}
         details={{
           url: "https://old.example.org",
           name: "Pagehall",

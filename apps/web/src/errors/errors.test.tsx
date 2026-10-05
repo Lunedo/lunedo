@@ -75,6 +75,7 @@ describe("the system check", () => {
       <PreferencesProvider>
         <SystemCheckStep
           details={{ checks: checks() } as never}
+          completed={false}
           back={null}
           onDone={async () => undefined}
           refresh={refresh}
@@ -92,7 +93,10 @@ describe("the system check", () => {
     expect(screen.getAllByRole("link", { name: /Read the documentation/ })[0]?.getAttribute("href")).toBe(
       "https://github.com/pagehall/pagehall/blob/main/docs/setup.md#file-storage",
     );
-    expect(screen.getByText("You set it in the next step.")).toBeTruthy();
+    expect(screen.getByText("You set the address in the next step.")).toBeTruthy();
+    expect(screen.getByText("Next step")).toBeTruthy();
+    expect(screen.queryByText("Address did not pass the check")).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Check again" })).toHaveLength(1);
     expect(screen.getByRole("button", { name: "Continue" }).hasAttribute("disabled")).toBe(true);
 
     await userEvent.click(screen.getAllByRole("button", { name: "Check again" })[0] as HTMLElement);
@@ -105,6 +109,7 @@ describe("the system check", () => {
     await renderWithProviders(
       <PreferencesProvider>
         <SystemCheckStep
+          completed={false}
           details={
             {
               checks: checks({

@@ -1102,7 +1102,7 @@
     "challengeExpired": "This sign-in took too long. Start again.",
     "notSignedIn": "Sign in to continue.",
     "sessionEnded": "Your session ended. Sign in again.",
-    "invalidSetupCode": "The setup code is not correct.",
+    "invalidSetupCode": "The setup code is not correct or was already used. Copy the code from PAGEHALL_SETUP_CODE in the .env file (the setup script writes it there) or from the newest setup link in the log of the Pagehall container, as shown below. Each code works once: if it was used, restart the Pagehall container to make it valid again or to get a new one in the log.",
     "setupSessionRequired": "The setup session has ended. Enter the setup code again.",
     "forbidden": "Your roles do not allow this. Ask an owner of the organization if you need it.",
     "csrfRejected": "The request was blocked. Reload the page and try again.",
@@ -1139,6 +1139,7 @@
     "keysAlreadyDownloaded": "The keys were already downloaded and cannot be shown again. Use the copy you stored.",
     "totpExists": "An authenticator app is already set up. Remove it first to set up another one.",
     "ownerMissing": "The owner account does not exist yet. Create it first.",
+    "totpMissing": "The authenticator app is not confirmed yet. Enter a code from the app first.",
     "lastSecondFactor": "Your second factor is required. Add another one before removing this one.",
     "noSecondFactor": "No second factor is set up. Add one first.",
     "secondFactorExists": "This second factor already exists. Nothing needs to change.",
@@ -1393,10 +1394,10 @@
       "where": "The code is in the .env file if you used the setup script or set PAGEHALL_SETUP_CODE. Otherwise it is in the log of the Pagehall container:",
       "hint": "The code stops working once the setup is complete."
     },
+    "language": "Language of the setup",
     "systemCheck": {
       "title": "System check",
       "description": "Pagehall checked its environment. Warnings do not block the setup.",
-      "language": "Language of the setup",
       "blocked": "Fix the errors above before you continue.",
       "checks": {
         "database": "Database",
@@ -1408,8 +1409,10 @@
       "status": {
         "ok": "OK",
         "warning": "Check",
-        "error": "Must be fixed"
+        "error": "Must be fixed",
+        "later": "Next step"
       },
+      "urlNextStep": "You set the address in the next step.",
       "databaseOk": "PostgreSQL {version}, migrations applied",
       "storageFree": "Writable, {free} free",
       "clockOk": "In sync with the database",
@@ -1457,12 +1460,6 @@
             "action": "Free up space or give the volume more space before people upload files."
           }
         },
-        "instanceUrl": {
-          "notSet": {
-            "cause": "The address under which people reach Pagehall is not set yet.",
-            "action": "You set it in the next step."
-          }
-        },
         "https": {
           "instanceUrlNotHttps": {
             "cause": "The address of the instance does not start with https://.",
@@ -1491,7 +1488,9 @@
       "twoFactorDescription": "Scan the code with an authenticator app, then enter the 6-digit code.",
       "ready": "The owner account is ready",
       "summary": "{name} ({email}), with an authenticator app",
-      "change": "Change owner"
+      "change": "Change owner",
+      "recoveryCodesFailed": "The recovery codes could not be created",
+      "acknowledgeFailed": "The owner step could not be completed"
     },
     "keyBackup": {
       "title": "Back up your keys",

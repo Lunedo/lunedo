@@ -7,6 +7,7 @@ import { problemMessage } from "../../../errors/problem-message.js";
 import { needsHttpsWarning } from "../../../forms/addresses.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../../forms/use-schema-form.js";
 import { runSetupAction } from "../setup-api.js";
+import { useDraftDefaults, useKeepDraft } from "../setup-drafts.js";
 import type { StepProps } from "./step-props.js";
 
 const instanceForm = z.object({ url: instanceUrlSchema, name: instanceNameSchema });
@@ -15,15 +16,16 @@ export function InstanceStep({ details, back, onDone }: StepProps<"instance">) {
   const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const form = useSchemaForm(instanceForm, {
-    defaultValues: {
+    defaultValues: useDraftDefaults("instance", {
       url:
         (details.urlFromEnvironment ? details.suggestedUrl : details.url || details.suggestedUrl) ||
         globalThis.location?.origin ||
         "",
       name: details.name,
-    },
+    }),
     messages: { url: t("validation.instanceUrl") },
   });
+  useKeepDraft("instance", form);
   const submit = form.handleSubmit(async (values) => {
     setError(null);
     try {

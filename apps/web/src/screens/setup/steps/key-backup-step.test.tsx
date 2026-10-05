@@ -8,6 +8,7 @@ function renderStep(downloaded: boolean) {
   const onDone = vi.fn(async () => undefined);
   const result = renderWithProviders(
     <KeyBackupStep
+      completed={false}
       details={{ downloaded } as never}
       back={null}
       onDone={onDone}
