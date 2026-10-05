@@ -24,11 +24,14 @@ import {
   scimBoolean,
   scimText,
 } from "./scim-protocol.js";
+import { signalRun } from "./sync-signals.js";
 
 export const SCIM_REQUESTS_PER_MINUTE = 1200;
 const DEFAULT_COUNT = 100;
 const MAX_COUNT = 200;
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ENTRA_EXTERNAL_ID_HINT =
+  "in Microsoft Entra ID, open Provisioning, Mappings, Provision Microsoft Entra ID Users and set the source attribute of externalId to objectId";
 
 export interface ScimPage {
   startIndex?: number | undefined;
@@ -224,7 +227,7 @@ export class ScimService {
         throw new ScimError(
           400,
           "invalidValue",
-          "externalId must be the object ID of the user; map objectId to externalId in the attribute mappings",
+          `externalId must be the object ID of the user, but ${externalId ? `"${externalId}" was sent` : "none was sent"}; ${ENTRA_EXTERNAL_ID_HINT}`,
         );
       }
       return `${provider.config.tenantId}:${externalId.toLowerCase()}`;
@@ -472,13 +475,7 @@ export class ScimService {
     input: UserInput,
     report: SyncReport,
   ) {
-    if (
-      input.externalId !== undefined &&
-      identity.scimExternalId !== null &&
-      input.externalId !== identity.scimExternalId
-    ) {
-      throw new ScimError(400, "mutability", "externalId cannot change");
-    }
+    const externalId = this.#acceptedExternalId(provider, identity, input.externalId);
     const email =
       input.email === undefined
         ? undefined
@@ -493,8 +490,8 @@ export class ScimService {
     if (input.displayName !== undefined && input.displayName !== identity.displayName)
       changes.displayName = input.displayName;
     if (email !== undefined && email !== identity.email) changes.email = email;
-    if (input.externalId !== undefined && identity.scimExternalId === null)
-      changes.scimExternalId = input.externalId;
+    if (externalId !== undefined && externalId !== identity.scimExternalId)
+      changes.scimExternalId = externalId;
     if (Object.keys(changes).length > 0) {
       try {
         await this.#database.transaction(async (tx) => {
@@ -541,6 +538,29 @@ export class ScimService {
     if (input.active !== undefined) {
       await this.#setActive(provider.id, identity.accountId, input.active, "disabled", report);
     }
+  }
+
+  #acceptedExternalId(
+    provider: ProviderDefinition,
+    identity: IdentityRow,
+    externalId: string | undefined,
+  ): string | undefined {
+    if (externalId === undefined) return undefined;
+    if (provider.config.preset === "entraId" && "tenantId" in provider.config) {
+      const objectId = identity.subject.slice(identity.subject.indexOf(":") + 1);
+      if (!GUID.test(externalId) || externalId.toLowerCase() !== objectId) {
+        throw new ScimError(
+          400,
+          "invalidValue",
+          `externalId must be the object ID of the user: "${externalId}" was sent, "${objectId}" was expected; ${ENTRA_EXTERNAL_ID_HINT}`,
+        );
+      }
+      return externalId;
+    }
+    if (identity.scimExternalId !== null && externalId !== identity.scimExternalId) {
+      throw new ScimError(400, "mutability", "externalId cannot change");
+    }
+    return externalId;
   }
 
   async #setActive(
@@ -973,17 +993,21 @@ export class ScimService {
     } finally {
       await this.#mapping.dispatch(report.mailIds);
       if (failure !== null || report.changes.length > 0 || report.warnings.length > 0) {
-        await this.#database.insert(providerSyncRuns).values({
-          providerId,
-          trigger: "scim",
-          status: failure !== null ? "failed" : report.warnings.length > 0 ? "warnings" : "succeeded",
-          startedAt: started,
-          heartbeatAt: new Date(),
-          finishedAt: new Date(),
-          changes: report.changes,
-          warnings: report.warnings,
-          error: failure === null ? null : message(failure).slice(0, 500),
-        });
+        const [run] = await this.#database
+          .insert(providerSyncRuns)
+          .values({
+            providerId,
+            trigger: "scim",
+            status: failure !== null ? "failed" : report.warnings.length > 0 ? "warnings" : "succeeded",
+            startedAt: started,
+            heartbeatAt: new Date(),
+            finishedAt: new Date(),
+            changes: report.changes,
+            warnings: report.warnings,
+            error: failure === null ? null : message(failure).slice(0, 500),
+          })
+          .returning({ id: providerSyncRuns.id });
+        if (run) await signalRun(this.#database, providerId, run.id);
       }
     }
   }

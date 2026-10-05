@@ -327,10 +327,83 @@ describe.skipIf(!databaseBaseUrl)("SCIM provisioning", () => {
       scimType: "invalidValue",
     });
     const withoutObjectId = { ...entraUser(person()), externalId: "mailNickname" };
-    expect((await scim("POST", "/Users", withoutObjectId)).json()).toMatchObject({
-      status: "400",
-      detail: expect.stringContaining("objectId"),
+    const refused = (await scim("POST", "/Users", withoutObjectId)).json();
+    expect(refused).toMatchObject({ status: "400", scimType: "invalidValue" });
+    expect(refused.detail).toContain('"mailNickname" was sent');
+    expect(refused.detail).toContain("set the source attribute of externalId to objectId");
+  });
+
+  it("refuses an externalId in PATCH and PUT that is not the object ID of the user and stores nothing of the request", async () => {
+    const user = await provision();
+    const replace = (externalId: string) => ({
+      schemas: ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+      Operations: [
+        { op: "Replace", path: "externalId", value: externalId },
+        { op: "Replace", path: "displayName", value: "Changed Name" },
+      ],
     });
+    for (const sent of ["mailNickname", randomUUID()]) {
+      const patched = await scim("PATCH", `/Users/${user.id}`, replace(sent));
+      expect(patched.statusCode).toBe(400);
+      expect(patched.json()).toMatchObject({ status: "400", scimType: "invalidValue" });
+      expect(patched.json().detail).toContain(`"${sent}" was sent, "${user.objectId}" was expected`);
+      expect(patched.json().detail).toContain("set the source attribute of externalId to objectId");
+      const replaced = await scim("PUT", `/Users/${user.id}`, {
+        ...entraUser(user),
+        externalId: sent,
+        displayName: "Changed Name",
+      });
+      expect(replaced.statusCode).toBe(400);
+      expect(replaced.json().detail).toContain(`"${user.objectId}" was expected`);
+    }
+    const stored = await test.runtime.pool.query<{ scim_external_id: string; display_name: string }>(
+      "select scim_external_id, display_name from identities where id = $1",
+      [user.id],
+    );
+    expect(stored.rows[0]).toEqual({ scim_external_id: user.objectId, display_name: "Ada Lovelace" });
+  });
+
+  it("accepts the object ID as externalId although a wrong value was stored earlier", async () => {
+    const first = await provision();
+    const second = await provision();
+    await test.runtime.pool.query(
+      "update identities set scim_external_id = 'mailNickname' where id = any($1::uuid[])",
+      [[first.id, second.id]],
+    );
+    const patched = await scim("PATCH", `/Users/${first.id}`, {
+      schemas: ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+      Operations: [{ op: "Replace", path: "externalId", value: first.objectId.toUpperCase() }],
+    });
+    expect(patched.statusCode).toBe(200);
+    expect(patched.json().externalId).toBe(first.objectId.toUpperCase());
+    const replaced = await scim("PUT", `/Users/${second.id}`, entraUser(second));
+    expect(replaced.statusCode).toBe(200);
+    expect(replaced.json().externalId).toBe(second.objectId);
+  });
+
+  it("tells open clients about every SCIM change so that lists reload without a reload of the page", async () => {
+    const listener = await test.runtime.pool.connect();
+    const signals: { providerId: string; runId: string }[] = [];
+    try {
+      listener.on("notification", (notification) => {
+        if (notification.channel === "pagehall_sync_runs" && notification.payload)
+          signals.push(JSON.parse(notification.payload));
+      });
+      await listener.query("listen pagehall_sync_runs");
+      const user = await provision();
+      await expect.poll(() => signals.length, { timeout: 5000 }).toBe(1);
+      await scim("PATCH", `/Users/${user.id}`, entraDisable());
+      await expect.poll(() => signals.length, { timeout: 5000 }).toBe(2);
+      expect(signals.every((signal) => signal.providerId === providerId)).toBe(true);
+      const runs = await test.runtime.pool.query<{ id: string }>(
+        "select id from provider_sync_runs where id = any($1::uuid[]) and trigger = 'scim'",
+        [signals.map((signal) => signal.runId)],
+      );
+      expect(runs.rowCount).toBe(2);
+    } finally {
+      await listener.query("unlisten pagehall_sync_runs");
+      listener.release();
+    }
   });
 
   it("shows SCIM requests in the sync log as their own trigger, without the token", async () => {
