@@ -10,8 +10,10 @@ import {
   Notice,
   Select,
   Textarea,
+  Tooltip,
   useToast,
 } from "@pagehall/ui";
+import { House } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -209,12 +211,26 @@ export function HomeOrganizationChange({
   const { t } = useTranslation();
   const { toast } = useToast();
   const candidates = memberships.filter((membership) => membership.kind === "member");
-  const current = candidates.find((membership) => membership.home)?.organizationId ?? "";
+  const home = memberships.find((membership) => membership.home);
+  const current = home?.organizationId ?? "";
   const [organizationId, setOrganizationId] = useState(current);
   const [unchanged, setUnchanged] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  if (candidates.length < 2) return null;
+  const currentLine = (
+    <p className="flex items-center gap-1.5 font-medium">
+      <HomeMark />
+      {home?.name ?? "—"}
+    </p>
+  );
+  if (candidates.length < 2) {
+    return (
+      <div className="flex flex-col gap-2 text-sm">
+        {currentLine}
+        <p className="text-text-muted">{t("lifecycle.home.onlyOne")}</p>
+      </div>
+    );
+  }
 
   const change = async () => {
     if (organizationId === current) {
@@ -244,6 +260,7 @@ export function HomeOrganizationChange({
 
   return (
     <div className="flex flex-col gap-3">
+      <div className="text-sm">{currentLine}</div>
       <p className="text-sm text-text-muted">{t("lifecycle.home.description")}</p>
       {error ? (
         <Notice variant="danger" title={t("failures.changeHomeOrganization")}>
@@ -396,5 +413,20 @@ export function AnonymizeDialog({
         <p className="text-sm text-text-muted">{t("lifecycle.anonymize.reauthentication")}</p>
       </div>
     </Dialog>
+  );
+}
+
+export function HomeMark() {
+  const { t } = useTranslation();
+  return (
+    <Tooltip content={t("instance.accounts.homeHint")}>
+      <span
+        role="img"
+        aria-label={t("instance.accounts.homeHint")}
+        className="inline-flex shrink-0 text-text-muted"
+      >
+        <House aria-hidden className="size-4" />
+      </span>
+    </Tooltip>
   );
 }

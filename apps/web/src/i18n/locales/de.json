@@ -3196,7 +3196,8 @@
       "action": "Heimatorganisation ändern",
       "changed": "{organization} ist jetzt die Heimatorganisation",
       "newHome": "Neue Heimatorganisation",
-      "chooseOther": "Wähle eine andere Organisation als die aktuelle Heimatorganisation."
+      "chooseOther": "Wähle eine andere Organisation als die aktuelle Heimatorganisation.",
+      "onlyOne": "Die Person ist nur Mitglied dieser Organisation. Um das Konto zu verschieben, füge die Person zuerst als Mitglied einer anderen Organisation hinzu und ändere dann hier die Heimatorganisation."
     },
     "anonymize": {
       "title": "Konto anonymisieren",

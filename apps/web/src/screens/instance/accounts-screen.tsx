@@ -20,7 +20,7 @@ import {
 } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { House, Info, UserPlus, UserRound } from "lucide-react";
+import { Info, UserPlus, UserRound } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -37,6 +37,7 @@ import { useOrganizationState, useSession } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 import {
   AnonymizeDialog,
+  HomeMark,
   HomeOrganizationChange,
   MergePlaceholder,
   PlaceholderDialog,
@@ -195,7 +196,9 @@ export function InstanceAccountsScreen() {
               key: "twoFactor",
               header: t("instance.accounts.twoFactor"),
               cell: (account) =>
-                account.twoFactorActive ? (
+                !canHaveSecondFactor(account) ? (
+                  "—"
+                ) : account.twoFactorActive ? (
                   <Badge variant="success">{t("instance.accounts.twoFactorOn")}</Badge>
                 ) : (
                   <Badge variant="warning">{t("instance.accounts.twoFactorOff")}</Badge>
@@ -234,21 +237,6 @@ export function InstanceAccountsScreen() {
       )}
       {open ? <AccountPanel account={open} onClose={() => setOpen(null)} /> : null}
     </SettingsPage>
-  );
-}
-
-function HomeMark() {
-  const { t } = useTranslation();
-  return (
-    <Tooltip content={t("instance.accounts.homeHint")}>
-      <span
-        role="img"
-        aria-label={t("instance.accounts.homeHint")}
-        className="inline-flex shrink-0 text-text-muted"
-      >
-        <House aria-hidden className="size-4" />
-      </span>
-    </Tooltip>
   );
 }
 
@@ -395,20 +383,22 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
         ) : null}
         {detail.data ? (
           <>
-            <PanelSection title={t("instance.accounts.twoFactorStatus")}>
-              <ul className="flex flex-col gap-1 text-sm">
-                <li>
-                  {t("security.authenticatorApp")}:{" "}
-                  {detail.data.twoFactor.totp
-                    ? t("instance.accounts.twoFactorOn")
-                    : t("instance.accounts.twoFactorOff")}
-                </li>
-                <li>{t("instance.accounts.passkeyCount", { count: detail.data.twoFactor.passkeys })}</li>
-                <li>
-                  {t("instance.accounts.recoveryCodeCount", { count: detail.data.twoFactor.recoveryCodes })}
-                </li>
-              </ul>
-            </PanelSection>
+            {canHaveSecondFactor({ type: account.type, state: current.state }) ? (
+              <PanelSection title={t("instance.accounts.twoFactorStatus")}>
+                <ul className="flex flex-col gap-1 text-sm">
+                  <li>
+                    {t("security.authenticatorApp")}:{" "}
+                    {detail.data.twoFactor.totp
+                      ? t("instance.accounts.twoFactorOn")
+                      : t("instance.accounts.twoFactorOff")}
+                  </li>
+                  <li>{t("instance.accounts.passkeyCount", { count: detail.data.twoFactor.passkeys })}</li>
+                  <li>
+                    {t("instance.accounts.recoveryCodeCount", { count: detail.data.twoFactor.recoveryCodes })}
+                  </li>
+                </ul>
+              </PanelSection>
+            ) : null}
             <PanelSection title={t("identities.title")}>
               <AccountIdentities accountId={account.id} manage={manage} />
             </PanelSection>
@@ -633,6 +623,14 @@ function AssignOrganization({
         </Button>
       </div>
     </PanelSection>
+  );
+}
+
+function canHaveSecondFactor(account: { type: string; state: string }): boolean {
+  return (
+    (account.type === "standard" || account.type === "guest") &&
+    account.state !== "placeholder" &&
+    account.state !== "anonymized"
   );
 }
 

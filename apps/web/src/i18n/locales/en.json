@@ -3199,7 +3199,8 @@
       "action": "Change home organization",
       "changed": "{organization} is the home organization now",
       "newHome": "New home organization",
-      "chooseOther": "Choose an organization other than the current home organization."
+      "chooseOther": "Choose an organization other than the current home organization.",
+      "onlyOne": "The person is a member of this organization only. To move the account, first add the person as a member to another organization, then change the home organization here."
     },
     "anonymize": {
       "title": "Anonymize account",

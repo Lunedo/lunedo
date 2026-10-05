@@ -218,6 +218,58 @@ describe("the accounts page", () => {
     expect(within(panel).getByText("Managed by: Platform Team")).toBeTruthy();
   });
 
+  it("shows no two-factor status for accounts that cannot have a second factor", async () => {
+    api(() => ({ body: {} }), {
+      "GET /api/v1/instance/accounts": () => ({
+        body: {
+          items: [
+            { ...account(MAX, "CI pipeline", ""), type: "service", email: null, twoFactorActive: false },
+            { ...account(OLIVIA.id, "Imported Author", ""), state: "placeholder", twoFactorActive: false },
+            { ...account(RESEARCH, "Lena Lind", "lena@example.org"), twoFactorActive: false },
+          ],
+          nextCursor: null,
+        },
+      }),
+    });
+    const table = await renderAccounts();
+    const row = (name: string) => within(table).getByText(name).closest("tr") as HTMLElement;
+    await within(table).findByText("CI pipeline");
+    expect(within(row("CI pipeline")).queryByText("Not set up")).toBeNull();
+    expect(within(row("Imported Author")).queryByText("Not set up")).toBeNull();
+    expect(within(row("Lena Lind")).getByText("Not set up")).toBeTruthy();
+  });
+
+  it("shows the home organization also when the account belongs to one organization only", async () => {
+    api(() => ({ body: {} }), {
+      [`GET /api/v1/instance/accounts/${MAX}`]: () => ({
+        body: {
+          account: { ...account(MAX, "Max Member", "max@example.org"), homeOrganizationId: ORGANIZATION },
+          memberships: [
+            {
+              organizationId: ORGANIZATION,
+              name: "Platform Team",
+              kind: "member",
+              expiresAt: null,
+              home: true,
+              roles: [],
+            },
+          ],
+          sessions: [],
+          tokens: [],
+          twoFactor: { totp: true, passkeys: 0, recoveryCodes: 10 },
+        },
+      }),
+    });
+    const table = await renderAccounts();
+    await userEvent.click(await within(table).findByText("Max Member"));
+    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    const home = (await within(panel).findByRole("heading", { name: "Home organization" })).closest(
+      "section",
+    ) as HTMLElement;
+    expect(within(home).getByText("Platform Team")).toBeTruthy();
+    expect(within(home).getByText(/first add the person as a member to another organization/)).toBeTruthy();
+  });
+
   it("filters accounts without an organization and assigns one", async () => {
     const { requests } = api(() => ({ body: { endedSessions: 0 } }));
     const table = await renderAccounts();
