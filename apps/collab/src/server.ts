@@ -177,6 +177,7 @@ export async function createCollabServer(options: {
           if (!(await may(context, "item.edit"))) connection.close(closeReasons.permissionRevoked);
         } catch (error) {
           logger.warn({ err: error }, "Checking a collaboration connection failed");
+          connection.close(closeReasons.unavailable);
         }
       }
     }

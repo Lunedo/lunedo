@@ -1,7 +1,7 @@
 import { documentFromYDoc } from "@pagehall/editor-schema/yjs";
 import { accountPrincipal, type ServerRuntime } from "@pagehall/server";
 import { testDatabaseBaseUrl, testRedisUrl } from "@pagehall/server/testing";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
 import {
   appendParagraph,
@@ -278,6 +278,23 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
       role: "reader",
     });
     await waitFor(() => client.closeReasons.includes("permissionRevoked"), 3000);
+  });
+
+  it("closes connections whose permission cannot be checked instead of keeping them", async () => {
+    const target = await editor();
+    const client = open(first.url, target.itemId, { token: target.token });
+    await client.authenticated;
+    const services = first.runtime.services;
+    const failing = vi.spyOn(services.authorization, "explain").mockRejectedValue(new Error("database down"));
+    try {
+      await services.spaces.update(accountPrincipal(target.admin), target.space.id, {
+        description: "Changed",
+      });
+      await services.spaces.changeVisibility(accountPrincipal(target.admin), target.space.id, "organization");
+      await waitFor(() => client.closeReasons.includes("unavailable"), 3000);
+    } finally {
+      failing.mockRestore();
+    }
   });
 
   it("brings content written through the API to open editors at once", async () => {

@@ -25,6 +25,7 @@ export const closeReasons = {
   sessionEnded: { code: 4401, reason: "sessionEnded" },
   permissionRevoked: { code: 4403, reason: "permissionRevoked" },
   tooManyMessages: { code: 4429, reason: "tooManyMessages" },
+  unavailable: { code: 4503, reason: "unavailable" },
 } as const;
 
 export const refusalReasons = [

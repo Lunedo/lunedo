@@ -67,6 +67,25 @@ describe("DocumentGuard", () => {
     expect(await guard.check(update, "account-b")).toMatchObject({ ok: true });
   });
 
+  it("lets only one of two accounts claim a new client at the same moment", async () => {
+    const live = yDocFromDocument({ type: "doc", content: [{ type: "paragraph" }] });
+    const slowOwners = {
+      owners: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        return new Map<number, string>();
+      },
+    };
+    const guard = new DocumentGuard(live, slowOwners);
+    const writer = new Y.Doc();
+    Y.applyUpdate(writer, Y.encodeStateAsUpdate(live));
+    const before = Y.encodeStateVector(writer);
+    appendParagraph(writer, "Claimed");
+    const update = Y.encodeStateAsUpdate(writer, before);
+    const verdicts = await Promise.all([guard.check(update, "account-a"), guard.check(update, "account-b")]);
+    expect(verdicts.map((verdict) => verdict.ok)).toEqual([true, false]);
+    expect(verdicts[1]).toMatchObject({ reason: "foreignClient" });
+  });
+
   it("validates a typing update on a page of about 200 KB quickly", async () => {
     const document = largeDocument();
     expect(documentSize(document)).toBeGreaterThan(190_000);
