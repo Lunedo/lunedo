@@ -1,5 +1,5 @@
 import { totpCodeSchema } from "@pagehall/shared";
-import { Button, Field, Input, Notice, Skeleton } from "@pagehall/ui";
+import { Button, Field, Notice, Skeleton } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -7,6 +7,7 @@ import { z } from "zod";
 import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { submitWith, useSchemaForm } from "../forms/use-schema-form.js";
+import { CodeInput } from "./code-input.js";
 import { QrCode } from "./qr-code.js";
 
 const codeForm = z.object({ code: totpCodeSchema.min(1) });
@@ -64,7 +65,7 @@ export function TotpEnrollment({ queryKey, begin, confirm, submitLabel }: TotpEn
           <p className="font-medium">{t("security.totpScan")}</p>
           <p className="text-sm text-text-muted">{t("security.totpManual")}</p>
           {setup.data ? (
-            <code className="break-all rounded-sm bg-surface-sunken px-2 py-1 font-mono text-sm">
+            <code className="rounded-sm bg-surface-sunken px-2 py-1 font-mono text-sm">
               {formatSecret(setup.data.secret)}
             </code>
           ) : null}
@@ -80,12 +81,7 @@ export function TotpEnrollment({ queryKey, begin, confirm, submitLabel }: TotpEn
         hint={t("auth.authenticatorCodeHint")}
         error={form.formState.errors.code?.message}
       >
-        <Input
-          autoComplete="one-time-code"
-          inputMode="numeric"
-          className="font-mono"
-          {...form.register("code")}
-        />
+        <CodeInput control={form.control} name="code" />
       </Field>
       <Button type="submit" variant="primary" loading={form.formState.isSubmitting} disabled={!setup.data}>
         {submitLabel ?? t("security.totpConfirm")}

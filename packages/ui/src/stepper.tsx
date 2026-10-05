@@ -38,7 +38,11 @@ export function Stepper({
     disabled
       ? { disabled: true }
       : atEnd
-        ? { "aria-disabled": true, className: "aria-disabled:cursor-not-allowed aria-disabled:border-dashed aria-disabled:bg-surface-sunken aria-disabled:text-text-muted" }
+        ? {
+            "aria-disabled": true,
+            className:
+              "aria-disabled:cursor-not-allowed aria-disabled:border-dashed aria-disabled:bg-surface-sunken aria-disabled:text-text-muted",
+          }
         : {};
   const move = (offset: number) => {
     if (disabled) return;

@@ -19,6 +19,7 @@ import { z } from "zod";
 import { api } from "../../api/client.js";
 import { queryKeys } from "../../api/queries.js";
 import { ApiError, request } from "../../api/request.js";
+import { CodeInput } from "../../components/code-input.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
@@ -281,11 +282,11 @@ export function LinkAccountScreen() {
               label={active === "totp" ? t("auth.authenticatorCode") : t("auth.recoveryCode")}
               error={form.formState.errors.code?.message}
             >
-              <Input
-                autoComplete="one-time-code"
-                {...(active === "totp" ? { inputMode: "numeric" as const } : {})}
-                {...form.register("code")}
-              />
+              {active === "totp" ? (
+                <CodeInput control={form.control} name="code" />
+              ) : (
+                <Input autoComplete="one-time-code" {...form.register("code")} />
+              )}
             </Field>
           ) : null}
           {active === "passkey" ? <Notice variant="info">{t("auth.link.passkeyHint")}</Notice> : null}
