@@ -61,6 +61,16 @@ describe("Section headers", () => {
     expect(header?.className).toContain("bg-surface");
     expect(header?.className).not.toContain("bg-surface-sunken");
   });
+
+  it("let actions move below a long title instead of cutting them", () => {
+    renderUi(
+      <Section title="Gruppenverwalter" actions={<Button>Gruppenverwalter hinzufügen</Button>}>
+        <p>Body</p>
+      </Section>,
+    );
+    const header = screen.getByRole("heading", { name: "Gruppenverwalter" }).parentElement;
+    expect(header?.className).toContain("flex-wrap");
+  });
 });
 
 describe("ListRow", () => {

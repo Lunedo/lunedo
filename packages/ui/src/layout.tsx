@@ -92,9 +92,9 @@ export function Section({
   const id = useId();
   return (
     <section aria-labelledby={id} className="overflow-hidden rounded-md border border-border bg-surface">
-      <div className="flex items-center gap-2 border-b border-border bg-surface px-4 py-3">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-surface px-4 py-3">
         {icon && <Icon icon={icon} className="text-text-muted" />}
-        <h2 id={id} className="flex-1 font-semibold">
+        <h2 id={id} className="min-w-0 flex-1 font-semibold">
           {title}
         </h2>
         {actions}
