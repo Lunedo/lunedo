@@ -380,6 +380,12 @@ describe("adding an LDAP directory", () => {
     await userEvent.click(await screen.findByRole("button", { name: /LDAP or Active Directory/ }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("heading", { name: "Connect a directory" })).toBeTruthy();
+    expect(
+      screen.getByText(/^The address of your directory server, for example ldaps:\/\/dc01\.example\.org\./),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/^The part of the directory that holds the people who may sign in, for example/),
+    ).toBeTruthy();
     expect(screen.queryByText(/Enter these values at/)).toBeNull();
     await userEvent.clear(screen.getByLabelText("Name on the sign-in page"));
     await userEvent.type(screen.getByLabelText("Name on the sign-in page"), "Active Directory · Verlag");
