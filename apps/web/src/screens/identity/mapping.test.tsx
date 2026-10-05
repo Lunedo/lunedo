@@ -314,7 +314,21 @@ describe("group mapping", () => {
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=scim`);
     expect(await screen.findByDisplayValue(`https://wiki.example.org/scim/v2/${PROVIDER}`)).toBeTruthy();
     expect(screen.getByText("No token yet. SCIM is off until you create one.")).toBeTruthy();
-    expect(screen.getByText(/map objectId to externalId/)).toBeTruthy();
+    const mappings = screen.getByRole("table", { name: "Attribute mappings in Entra ID" });
+    const rows = within(mappings)
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) =>
+        within(row)
+          .getAllByRole("cell")
+          .slice(0, 2)
+          .map((cell) => cell.textContent),
+      );
+    expect(rows).toEqual([
+      ["externalId", "objectId"],
+      ['emails[type eq "work"].value', "userPrincipalName"],
+    ]);
+    expect(within(mappings).getByText(/When accounts have no mailbox/)).toBeTruthy();
     expect(
       screen.getByText(/gets an account, even when account creation at first sign-in is off/),
     ).toBeTruthy();

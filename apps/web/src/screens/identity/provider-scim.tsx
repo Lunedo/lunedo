@@ -9,6 +9,7 @@ import {
   Section,
   SettingRow,
   Skeleton,
+  Table,
   useToast,
 } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,6 +31,21 @@ import { useFormat } from "../../preferences/preferences-provider.js";
 import { CopyField } from "./provider-config.js";
 
 type ScimToken = ScimStatus["tokens"][number];
+
+interface EntraMapping {
+  target: string;
+  source: string;
+  when: "identityProviders.scim.mappingExternalIdWhen" | "identityProviders.scim.mappingEmailWhen";
+}
+
+const ENTRA_MAPPINGS: EntraMapping[] = [
+  { target: "externalId", source: "objectId", when: "identityProviders.scim.mappingExternalIdWhen" },
+  {
+    target: 'emails[type eq "work"].value',
+    source: "userPrincipalName",
+    when: "identityProviders.scim.mappingEmailWhen",
+  },
+];
 
 export function ScimTab({ provider, canManage }: { provider: IdentityProvider; canManage: boolean }) {
   const { t } = useTranslation();
@@ -77,6 +93,33 @@ export function ScimTab({ provider, canManage }: { provider: IdentityProvider; c
           )}
         </div>
       </Notice>
+      {entra ? (
+        <Section title={t("identityProviders.scim.entraMappings")}>
+          <p className="px-4 pt-3 text-sm text-text-muted">{t("identityProviders.scim.entraMappingsHint")}</p>
+          <Table
+            caption={t("identityProviders.scim.entraMappings")}
+            rowKey={(row) => row.target}
+            rows={ENTRA_MAPPINGS}
+            columns={[
+              {
+                key: "target",
+                header: t("identityProviders.scim.mappingTarget"),
+                cell: (row) => <code className="font-mono">{row.target}</code>,
+              },
+              {
+                key: "source",
+                header: t("identityProviders.scim.mappingSource"),
+                cell: (row) => <code className="font-mono">{row.source}</code>,
+              },
+              {
+                key: "when",
+                header: t("identityProviders.scim.mappingWhen"),
+                cell: (row) => t(row.when),
+              },
+            ]}
+          />
+        </Section>
+      ) : null}
       <Section title={t("identityProviders.scim.connection")}>
         <div className="flex flex-col gap-4 px-4 py-3">
           <CopyField
