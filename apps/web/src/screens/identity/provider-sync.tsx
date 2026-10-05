@@ -40,6 +40,7 @@ import {
   syncRunQuery,
   syncRunsQuery,
 } from "../../api/identity-queries.js";
+import { ApiError } from "../../api/request.js";
 import { AutoSaveTextField, SaveIndicator, useSaveState } from "../../components/auto-save.js";
 import { FailureNotice, LoadError, useFailureToast } from "../../errors/failure.js";
 import { translateKey } from "../../i18n/translate.js";
@@ -240,8 +241,13 @@ function RunDetail({
     try {
       await cancelSync(providerId, runId);
       toast({ title: t("identityProviders.sync.cancelRequested"), variant: "success" });
-      await queryClient.invalidateQueries({ queryKey: ["identityProviders", providerId, "syncRuns"] });
+      await queryClient.invalidateQueries({ queryKey: identityKeys.provider(providerId) });
     } catch (failure) {
+      if (failure instanceof ApiError && failure.code === "syncNotRunning") {
+        toast({ title: t("identityProviders.sync.alreadyEnded") });
+        await queryClient.invalidateQueries({ queryKey: identityKeys.provider(providerId) });
+        return;
+      }
       showFailure(t("failures.cancelSync"), failure);
     } finally {
       setCancelling(false);

@@ -13,6 +13,7 @@ import { createTestServices, type TestServices } from "../testing/services.js";
 import { guidFromBytes } from "./ldap.js";
 import { providerSyncRuns } from "./schema.js";
 import { type CallbackResult, DirectorySignInRefusedError } from "./sign-in.js";
+import { SYNC_RUNS_CHANNEL } from "./sync-signals.js";
 
 const baseUrl = testDatabaseBaseUrl();
 const PASSWORD = "directory password";
@@ -288,6 +289,24 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
       expect(detail).toMatch(/v65f4$/);
     } finally {
       delete service.bindError;
+    }
+  });
+
+  it("signals the start and the end of a sync run to every node", async () => {
+    const ad = await activeDirectoryProvider();
+    const client = await test.pool.connect();
+    const signals: unknown[] = [];
+    try {
+      client.on("notification", (message) => {
+        if (message.channel === SYNC_RUNS_CHANNEL) signals.push(JSON.parse(message.payload ?? "{}"));
+      });
+      await client.query(`listen ${SYNC_RUNS_CHANNEL}`);
+      const run = await test.services.providerSync.run(ad.id, "manual");
+      const expected = { providerId: ad.id, runId: run?.id };
+      await expect.poll(() => signals, { timeout: 5000 }).toEqual([expected, expected]);
+    } finally {
+      await client.query(`unlisten ${SYNC_RUNS_CHANNEL}`);
+      client.release();
     }
   });
 

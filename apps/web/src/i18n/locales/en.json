@@ -95,6 +95,7 @@
       "cancelledSummary": "Stopped on request. Changes made until then stay.",
       "cancel": "Cancel run",
       "cancelRequested": "The run stops before the next account.",
+      "alreadyEnded": "This run has already ended. The sync log shows its result.",
       "failedWithoutReason": "The run failed without a reason. Check the connection and try again.",
       "changes": "{count, plural, one {# change} other {# changes}}",
       "warnings": "{count, plural, one {# warning} other {# warnings}}",

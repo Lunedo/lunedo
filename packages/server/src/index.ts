@@ -204,6 +204,7 @@ export {
   type SyncRunSummary,
   syncLogRetentionDaysSetting,
 } from "./identity/sync.js";
+export { type SyncRunSignal, signalRun } from "./identity/sync-signals.js";
 export type { WithheldRole } from "./identity/withheld.js";
 export {
   defineJob,

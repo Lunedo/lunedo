@@ -29,6 +29,7 @@ import {
   providerGroups,
   providerSyncRuns,
 } from "./schema.js";
+import { signalRun } from "./sync-signals.js";
 
 export const syncLogRetentionDaysSetting = defineSetting({
   key: "identityProviders.syncLogRetentionDays",
@@ -192,6 +193,7 @@ export class ProviderSyncService {
         )
         .returning({ held: providerSyncRuns.heldDeactivations });
       if (!run) return false;
+      await signalRun(tx, providerId, runId);
       await this.#audit.record(tx, {
         name: "identityProvider.syncConfirmed",
         actor,
@@ -267,6 +269,7 @@ export class ProviderSyncService {
         )
         .returning({ id: providerSyncRuns.id });
       if (!run) return false;
+      await signalRun(tx, providerId, runId);
       await this.#audit.record(tx, {
         name: "identityProvider.syncCancelled",
         actor,
@@ -293,7 +296,7 @@ export class ProviderSyncService {
     signal?: AbortSignal,
     confirmedRunId: string | null = null,
   ): Promise<SyncRunSummary | null> {
-    await this.#database
+    const silent = await this.#database
       .update(providerSyncRuns)
       .set({ status: "failed", finishedAt: new Date(), error: "The run stopped without a sign of life" })
       .where(
@@ -302,7 +305,9 @@ export class ProviderSyncService {
           eq(providerSyncRuns.status, "running"),
           lt(providerSyncRuns.heartbeatAt, sql`now() - make_interval(mins => ${SILENT_RUN_MINUTES})`),
         ),
-      );
+      )
+      .returning({ id: providerSyncRuns.id });
+    for (const stopped of silent) await signalRun(this.#database, providerId, stopped.id);
     let runId: string;
     try {
       const [created] = await this.#database
@@ -311,6 +316,7 @@ export class ProviderSyncService {
         .returning({ id: providerSyncRuns.id });
       if (!created) return null;
       runId = created.id;
+      await signalRun(this.#database, providerId, runId);
     } catch (error) {
       if (isUniqueViolation(error)) return null;
       throw error;
@@ -424,6 +430,7 @@ export class ProviderSyncService {
         .update(providerSyncRuns)
         .set({ status: "failed", finishedAt: new Date(), error: STORE_FAILED })
         .where(eq(providerSyncRuns.id, runId));
+      await signalRun(this.#database, providerId, runId);
       throw error;
     }
     await this.#mapping.dispatch(report.mailIds);
@@ -458,6 +465,7 @@ export class ProviderSyncService {
           heldDeactivations: held,
         })
         .where(eq(providerSyncRuns.id, runId));
+      await signalRun(tx, providerId, runId);
       if (notifyHeld && held !== null && this.#notifications) {
         const notified = await this.#notifications.notify(tx, {
           type: "identityProvider.syncHeld",

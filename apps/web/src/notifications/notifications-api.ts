@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { api } from "../api/client.js";
+import { identityKeys } from "../api/identity-queries.js";
 import { instanceKeys } from "../api/instance-queries.js";
 import { organizationKeys } from "../api/organization-queries.js";
 import { queryKeys } from "../api/queries.js";
@@ -115,11 +116,22 @@ export function useNotificationStream(enabled: boolean): void {
         return;
       }
     };
+    const onSyncRuns = (event: MessageEvent<string>) => {
+      try {
+        const data = JSON.parse(event.data) as { providerId?: unknown };
+        if (typeof data.providerId !== "string") return;
+        void queryClient.invalidateQueries({ queryKey: identityKeys.provider(data.providerId) });
+      } catch {
+        return;
+      }
+    };
     source.addEventListener("notifications", onChange);
     source.addEventListener("settings", onSettings);
+    source.addEventListener("syncRuns", onSyncRuns);
     return () => {
       source.removeEventListener("notifications", onChange);
       source.removeEventListener("settings", onSettings);
+      source.removeEventListener("syncRuns", onSyncRuns);
       source.close();
     };
   }, [enabled, queryClient]);

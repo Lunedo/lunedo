@@ -8,6 +8,7 @@ import {
   createServerRuntime,
   type NotifyInput,
   type ServerRuntime,
+  signalRun,
 } from "@pagehall/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { apiContextOf } from "../context.js";
@@ -193,6 +194,51 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
       await expect.poll(() => events.at(-1), { timeout: 5000 }).toBe(0);
     } finally {
       response?.destroy();
+      await second?.close();
+      await secondRuntime.close();
+    }
+  });
+
+  it("tells clients of another node that may view sign-in providers about changed sync runs", async () => {
+    const secondRuntime = await createServerRuntime({ role: "api", env: test.env });
+    let second: NestFastifyApplication | undefined;
+    const responses: IncomingMessage[] = [];
+    const other = await createAccount(test, "sync-runs-other@pagehall.test");
+    const otherClient = await signedInClient(test, other.email, other.password);
+    try {
+      second = await createTestApp(apiContextOf(secondRuntime));
+      await second.listen(0, "127.0.0.1");
+      const { port } = second.getHttpServer().address() as AddressInfo;
+      const follow = async (client: TestClient) => {
+        const received = { connected: false, runs: [] as unknown[] };
+        const response = await new Promise<IncomingMessage>((resolve, reject) => {
+          get(
+            `http://127.0.0.1:${port}/api/v1/notifications/stream`,
+            { headers: { cookie: `${SESSION_COOKIE}=${client.cookies.get(SESSION_COOKIE)}` } },
+            resolve,
+          ).on("error", reject);
+        });
+        responses.push(response);
+        response.setEncoding("utf8");
+        response.on("data", (chunk: string) => {
+          if (chunk.includes("event: notifications")) received.connected = true;
+          for (const match of chunk.matchAll(/event: syncRuns\ndata: (\{.*\})\n\n/g)) {
+            received.runs.push(JSON.parse(match[1] ?? "{}"));
+          }
+        });
+        await expect.poll(() => received.connected, { timeout: 5000 }).toBe(true);
+        return received;
+      };
+      const administrator = await follow(owner);
+      const member = await follow(otherClient);
+      const signal = { providerId: randomUUID(), runId: randomUUID() };
+      await signalRun(test.runtime.database, signal.providerId, signal.runId);
+      await expect.poll(() => administrator.runs, { timeout: 5000 }).toEqual([signal]);
+      await signalRun(test.runtime.database, signal.providerId, signal.runId);
+      await expect.poll(() => administrator.runs.length, { timeout: 5000 }).toBe(2);
+      expect(member.runs).toEqual([]);
+    } finally {
+      for (const response of responses) response.destroy();
       await second?.close();
       await secondRuntime.close();
     }

@@ -1,5 +1,10 @@
 import { Body, Controller, Get, Inject, Param, Post, Query, Req, Res } from "@nestjs/common";
-import type { NotificationCursor, SettingChangeSignal } from "@pagehall/server";
+import {
+  accountPrincipal,
+  type NotificationCursor,
+  type SettingChangeSignal,
+  type SyncRunSignal,
+} from "@pagehall/server";
 import { idSchema } from "@pagehall/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
@@ -113,9 +118,9 @@ export class NotificationsController {
     raw: {
       contentTypes: ["text/event-stream"],
       description:
-        "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting.",
+        "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log.",
       example:
-        'event: notifications\ndata: {"unreadCount":2}\n\nevent: settings\ndata: {"key":"branding.accentColor","level":"instance","organizationId":null}\n\n',
+        'event: notifications\ndata: {"unreadCount":2}\n\nevent: settings\ndata: {"key":"branding.accentColor","level":"instance","organizationId":null}\n\nevent: syncRuns\ndata: {"providerId":"01929b1e-0000-7000-8000-000000000001","runId":"01929b1e-0000-7000-8000-000000000002"}\n\n',
     },
   })
   async stream(@Req() request: FastifyRequest, @Res() reply: FastifyReply) {
@@ -149,8 +154,26 @@ export class NotificationsController {
         })
         .catch((error: unknown) => logger.warn({ err: error }, "Sending a settings event failed"));
     };
+    const sendSyncRun = (signal: SyncRunSignal) => {
+      queue = queue
+        .then(async () => {
+          if (closed) return;
+          const decision = await services.authorization.explain(
+            accountPrincipal(session.accountId),
+            "instance.signIn.view",
+            { type: "instance" },
+          );
+          if (!decision.allowed || closed) return;
+          raw.write(`event: syncRuns
+data: ${JSON.stringify(signal)}
+
+`);
+        })
+        .catch((error: unknown) => logger.warn({ err: error }, "Sending a sync run event failed"));
+    };
     const unsubscribe = await hub.subscribe(session.accountId, send);
     const unsubscribeSettings = await hub.subscribeSettings(sendSetting);
+    const unsubscribeSyncRuns = await hub.subscribeSyncRuns(sendSyncRun);
     const heartbeat = setInterval(() => {
       services.sessions.isActive(session.id).then(
         (active) => {
@@ -168,6 +191,7 @@ export class NotificationsController {
       clearInterval(heartbeat);
       unsubscribe();
       unsubscribeSettings();
+      unsubscribeSyncRuns();
       raw.end();
     };
     reply.hijack();

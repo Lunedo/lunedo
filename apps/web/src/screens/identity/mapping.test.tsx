@@ -18,7 +18,16 @@ const BASE = `/api/v1/instance/identity-providers/${PROVIDER}`;
 
 type Handler = (request: RecordedRequest) => { status?: number; body?: unknown };
 
+type StreamListener = (event: MessageEvent<string>) => void;
+const streams: Map<string, StreamListener>[] = [];
+
+function emitStream(type: string, data: unknown) {
+  for (const listeners of streams)
+    listeners.get(type)?.({ data: JSON.stringify(data) } as MessageEvent<string>);
+}
+
 beforeEach(() => {
+  streams.length = 0;
   vi.stubGlobal("matchMedia", () => ({
     matches: false,
     addEventListener: () => {},
@@ -27,8 +36,16 @@ beforeEach(() => {
   vi.stubGlobal(
     "EventSource",
     class {
-      addEventListener() {}
-      removeEventListener() {}
+      readonly listeners = new Map<string, StreamListener>();
+      constructor() {
+        streams.push(this.listeners);
+      }
+      addEventListener(type: string, listener: StreamListener) {
+        this.listeners.set(type, listener);
+      }
+      removeEventListener(type: string) {
+        this.listeners.delete(type);
+      }
       close() {}
     },
   );
@@ -455,6 +472,74 @@ describe("the sync log", () => {
     await waitFor(() =>
       expect(requests.some((entry) => entry.path === `${BASE}/sync-runs/${RUN}/cancel`)).toBe(true),
     );
+  });
+
+  it("shows that a run ended before it could be cancelled and refreshes it", async () => {
+    let status = "running";
+    const run = () => ({
+      id: RUN,
+      providerId: PROVIDER,
+      trigger: "schedule",
+      status,
+      startedAt: "2026-10-02T11:52:00.000Z",
+      finishedAt: status === "running" ? null : "2026-10-02T11:52:10.000Z",
+      durationMs: status === "running" ? null : 10_000,
+      changeCount: 0,
+      warningCount: 0,
+      error: null,
+    });
+    adminApi({
+      [`GET ${BASE}/mapping-rules`]: () => ({ body: [] }),
+      [`GET ${BASE}/sync-runs`]: () => ({ body: { items: [run()], nextCursor: null } }),
+      [`GET ${BASE}/sync-runs/${RUN}`]: () => ({
+        body: { ...run(), changes: [], warnings: [], references: {} },
+      }),
+      [`POST ${BASE}/sync-runs/${RUN}/cancel`]: () => {
+        status = "succeeded";
+        return problem(409, "syncNotRunning");
+      },
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=sync`);
+    await userEvent.click(await screen.findByRole("row", { name: /Show the run of/ }));
+    const panel = await screen.findByRole("dialog", { name: "Synchronization run" });
+    await userEvent.click(await within(panel).findByRole("button", { name: "Cancel run" }));
+    expect(
+      await screen.findByText("This run has already ended. The sync log shows its result."),
+    ).toBeTruthy();
+    await waitFor(() => expect(within(panel).queryByRole("button", { name: "Cancel run" })).toBeNull());
+    expect(screen.queryByText(/could not be cancelled/i)).toBeNull();
+  });
+
+  it("shows new runs and their results in the sync log as they happen", async () => {
+    const runs: unknown[] = [];
+    adminApi({
+      [`GET ${BASE}/mapping-rules`]: () => ({ body: [] }),
+      [`GET ${BASE}/sync-runs`]: () => ({ body: { items: runs, nextCursor: null } }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=sync`);
+    expect(await screen.findByText("No runs yet.")).toBeTruthy();
+    runs.push({
+      id: RUN,
+      providerId: PROVIDER,
+      trigger: "manual",
+      status: "running",
+      startedAt: "2026-10-02T11:52:00.000Z",
+      finishedAt: null,
+      durationMs: null,
+      changeCount: 0,
+      warningCount: 0,
+      error: null,
+    });
+    emitStream("syncRuns", { providerId: PROVIDER, runId: RUN });
+    expect(await screen.findByRole("row", { name: /Show the run of/ })).toBeTruthy();
+    runs[0] = {
+      ...(runs[0] as object),
+      status: "succeeded",
+      finishedAt: "2026-10-02T11:52:10.000Z",
+      durationMs: 10_000,
+    };
+    emitStream("syncRuns", { providerId: PROVIDER, runId: RUN });
+    expect(await screen.findByText("Completed")).toBeTruthy();
   });
 
   it("confirms the deactivations a run held back", async () => {
