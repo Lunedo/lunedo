@@ -94,6 +94,14 @@ export function settingsChanged(queryClient: QueryClient, event: SettingsEvent):
   }
 }
 
+export function syncRunChanged(queryClient: QueryClient, providerId: string): void {
+  void queryClient.invalidateQueries({ queryKey: identityKeys.provider(providerId) });
+  void queryClient.invalidateQueries({ queryKey: identityKeys.ownIdentities });
+  void queryClient.invalidateQueries({ queryKey: instanceKeys.accounts });
+  void queryClient.invalidateQueries({ queryKey: ["organization"] });
+  void queryClient.invalidateQueries({ queryKey: ["group"] });
+}
+
 export function useNotificationStream(enabled: boolean): void {
   const queryClient = useQueryClient();
   useEffect(() => {
@@ -120,7 +128,7 @@ export function useNotificationStream(enabled: boolean): void {
       try {
         const data = JSON.parse(event.data) as { providerId?: unknown };
         if (typeof data.providerId !== "string") return;
-        void queryClient.invalidateQueries({ queryKey: identityKeys.provider(data.providerId) });
+        syncRunChanged(queryClient, data.providerId);
       } catch {
         return;
       }

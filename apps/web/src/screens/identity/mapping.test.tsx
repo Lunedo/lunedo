@@ -250,6 +250,21 @@ describe("group mapping", () => {
     expect(screen.queryByRole("option", { name: /Use this text as group value/ })).toBeNull();
   });
 
+  it("shows a group renamed by a synchronization without a reload", async () => {
+    let name = "Engineering";
+    adminApi({
+      [`GET ${BASE}/mapping-rules`]: () => ({
+        body: [rule({ group: { id: "sg-engineering", name, missing: false } })],
+      }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
+    const table = await screen.findByRole("table", { name: "Mapping rules" });
+    expect(within(table).getAllByText("Engineering").length).toBeGreaterThan(0);
+    name = "Platform Engineering";
+    emitStream("syncRuns", { providerId: PROVIDER, runId: RUN });
+    expect(await within(table).findByText("Platform Engineering")).toBeTruthy();
+  });
+
   it("does not warn about renaming when groups have identifiers", async () => {
     adminApi({ [`GET ${BASE}/mapping-rules`]: () => ({ body: [rule()] }) });
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
