@@ -14,7 +14,13 @@ import {
   OWNER,
   signedInClient,
 } from "../testing/accounts.js";
-import { type AuthTestApp, createAuthTestApp, databaseBaseUrl, TestClient } from "../testing/auth-app.js";
+import {
+  type AuthTestApp,
+  createAuthTestApp,
+  databaseBaseUrl,
+  TEST_ORIGIN,
+  TestClient,
+} from "../testing/auth-app.js";
 
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
@@ -50,6 +56,7 @@ describe.skipIf(!databaseBaseUrl)("instance administration for the interface", (
     );
     const info = (await new TestClient(test.app).get("/api/v1/instance/info")).json();
     expect(info).toEqual({
+      url: TEST_ORIGIN,
       name: "Test wiki",
       setupComplete: true,
       language: "en",
