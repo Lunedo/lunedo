@@ -319,7 +319,9 @@ test.describe("linking an existing account", () => {
     await expect(page.getByRole("heading", { name: `Link your E2E ${provider.name} account` })).toBeVisible();
     await page.getByLabel(`Password of ${person.name}`).fill("not the password");
     await page.getByRole("button", { name: "Confirm and link" }).click();
-    await expect(page.getByText("The e-mail address or the password is not correct.")).toBeVisible();
+    await expect(
+      page.getByText(`This is not the Pagehall password of ${person.name}.`, { exact: false }),
+    ).toBeVisible();
     await page.getByLabel(`Password of ${person.name}`).fill(person.password);
     await page.getByRole("button", { name: "Confirm and link" }).click();
     await expect(page).not.toHaveURL(/\/sign-in/);
