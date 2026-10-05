@@ -305,6 +305,8 @@ function OverviewTiles({ provider }: { provider: IdentityProvider }) {
   );
 }
 
+const CA_SECTION = "ca-certificate";
+
 function Settings({ provider, canManage }: { provider: IdentityProvider; canManage: boolean }) {
   const { t } = useTranslation();
   return (
@@ -316,11 +318,25 @@ function Settings({ provider, canManage }: { provider: IdentityProvider; canMana
         {provider.type === "saml" ? <SamlConnectionFields provider={provider} canManage={canManage} /> : null}
         {provider.type === "ldap" ? <LdapConnectionFields provider={provider} canManage={canManage} /> : null}
       </Section>
-      {provider.type === "ldap" ? <CaCertificateSection provider={provider} canManage={canManage} /> : null}
+      {provider.type === "ldap" ? (
+        <div id={CA_SECTION} tabIndex={-1} className="focus-visible:focus-ring">
+          <CaCertificateSection provider={provider} canManage={canManage} />
+        </div>
+      ) : null}
       <Section title={t("identityProviders.attributes.mapping")}>
         {provider.type === "oidc" ? <AttributeFields provider={provider} canManage={canManage} /> : null}
         {provider.type === "saml" ? <SamlAttributeFields provider={provider} canManage={canManage} /> : null}
-        {provider.type === "ldap" ? <LdapAttributeFields provider={provider} canManage={canManage} /> : null}
+        {provider.type === "ldap" ? (
+          <LdapAttributeFields
+            provider={provider}
+            canManage={canManage}
+            onUploadCertificate={() => {
+              const section = document.getElementById(CA_SECTION);
+              section?.scrollIntoView({ block: "start" });
+              section?.focus();
+            }}
+          />
+        ) : null}
       </Section>
       <Section title={t("identityProviders.accounts.newPeople")}>
         <AccountFields provider={provider} canManage={canManage} />

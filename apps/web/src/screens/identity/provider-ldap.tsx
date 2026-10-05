@@ -326,7 +326,15 @@ export function CaCertificateSection({
   );
 }
 
-export function LdapAttributeFields({ provider, canManage }: { provider: LdapProvider; canManage: boolean }) {
+export function LdapAttributeFields({
+  provider,
+  canManage,
+  onUploadCertificate,
+}: {
+  provider: LdapProvider;
+  canManage: boolean;
+  onUploadCertificate: () => void;
+}) {
   const { t } = useTranslation();
   const update = useLdapUpdate(provider);
   const tracker = useSaveStates();
@@ -367,7 +375,7 @@ export function LdapAttributeFields({ provider, canManage }: { provider: LdapPro
         status={<SaveIndicator tracker={tracker("signInAttribute")} />}
       />
       <div className="px-4 py-3">
-        <TestPersonLookup provider={provider} onFound={setFound} />
+        <TestPersonLookup provider={provider} onFound={setFound} onUploadCertificate={onUploadCertificate} />
       </div>
       {config.preset === "activeDirectory"
         ? (["email", "displayName"] as const).map((attribute) => (
@@ -515,16 +523,21 @@ function AttributeSelect({
 function TestPersonLookup({
   provider,
   onFound,
+  onUploadCertificate,
 }: {
   provider: LdapProvider;
   onFound: (attributes: FoundAttribute[]) => void;
+  onUploadCertificate: () => void;
 }) {
   const { t } = useTranslation();
   const [signInName, setSignInName] = useState("");
   const [busy, setBusy] = useState(false);
-  const [problem, setProblem] = useState<{ title: string; detail: string | null; action: string } | null>(
-    null,
-  );
+  const [problem, setProblem] = useState<{
+    title: string;
+    detail: string | null;
+    action: string;
+    certificate: boolean;
+  } | null>(null);
   const [count, setCount] = useState<number | null>(null);
   const run = async () => {
     setBusy(true);
@@ -540,6 +553,7 @@ function TestPersonLookup({
           }),
           detail: failed.detail,
           action: t(`identityProviders.directoryTest.actions.${failed.step}`),
+          certificate: failed.step === "certificate",
         });
         return;
       }
@@ -554,6 +568,7 @@ function TestPersonLookup({
         title: t("failures.testDirectory"),
         detail: null,
         action: problemMessage(t, failure),
+        certificate: false,
       });
     } finally {
       setBusy(false);
@@ -575,10 +590,19 @@ function TestPersonLookup({
         </Button>
       </div>
       {problem ? (
-        <Notice variant="danger" title={problem.title}>
+        <Notice variant={problem.certificate ? "warning" : "danger"} title={problem.title}>
           <div className="flex flex-col gap-2">
             {problem.detail ? <p>{problem.detail}</p> : null}
             <p>{problem.action}</p>
+            {problem.certificate ? (
+              <button
+                type="button"
+                className="self-start font-medium text-accent hover:underline focus-visible:focus-ring"
+                onClick={onUploadCertificate}
+              >
+                {t("identityProviders.ldap.goToCaUpload")}
+              </button>
+            ) : null}
           </div>
         </Notice>
       ) : null}

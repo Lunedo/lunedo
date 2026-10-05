@@ -714,6 +714,7 @@
       "disabledValuesHint": "Durch Kommas getrennt. Ohne Werte bedeutet jeder Wert des Attributs deaktiviert.",
       "disabledValuesInvalid": "Gib bis zu 20 Werte mit höchstens 256 Zeichen ein, durch Kommas getrennt.",
       "caTitle": "CA-Zertifikat",
+      "goToCaUpload": "Zum CA-Zertifikat",
       "caDescription": "Nötig, wenn das Serverzertifikat des Verzeichnisses von deiner eigenen Zertifizierungsstelle ausgestellt wurde.",
       "caNone": "Kein CA-Zertifikat hochgeladen",
       "caNoneHint": "Pagehall vertraut nur Zertifikaten öffentlicher Zertifizierungsstellen.",

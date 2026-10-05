@@ -714,6 +714,7 @@
       "disabledValuesHint": "Separated by commas. Without values, any value of the attribute means disabled.",
       "disabledValuesInvalid": "Enter up to 20 values of up to 256 characters, separated by commas.",
       "caTitle": "CA certificate",
+      "goToCaUpload": "Go to the CA certificate",
       "caDescription": "Needed when the server certificate of the directory was issued by your own certificate authority.",
       "caNone": "No CA certificate uploaded",
       "caNoneHint": "Pagehall trusts only certificates of public certificate authorities.",

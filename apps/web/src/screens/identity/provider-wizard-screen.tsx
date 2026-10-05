@@ -28,6 +28,7 @@ import { SettingsPage } from "../settings/settings-page.js";
 import {
   AccountFields,
   AttributeFields,
+  ConnectionFields,
   CopyField,
   LinkFields,
   RedirectUriField,
@@ -41,8 +42,14 @@ import {
   credentialInput,
   emptyCredentialDraft,
 } from "./provider-credentials.js";
-import { DirectoryTest, LdapAttributeFields, LdapSecondFactorFields } from "./provider-ldap.js";
-import { SamlAttributeFields, SamlGraphClientField } from "./provider-saml.js";
+import {
+  CaCertificateSection,
+  DirectoryTest,
+  LdapAttributeFields,
+  LdapConnectionFields,
+  LdapSecondFactorFields,
+} from "./provider-ldap.js";
+import { SamlAttributeFields, SamlConnectionFields, SamlGraphClientField } from "./provider-saml.js";
 import { StartTestButton, TestResult } from "./provider-test.js";
 import {
   type CommonStepProps,
@@ -260,7 +267,7 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
       ? connected.type === "saml" && connected.config.preset === "entraId"
       : draft.choice === "saml" && draft.saml.preset === "entraId",
   );
-  const index = providerId ? Math.min(Math.max(search.step ?? 2, 2), steps.length - 1) : draftId ? 1 : 0;
+  const index = providerId ? Math.min(Math.max(search.step ?? 2, 1), steps.length - 1) : draftId ? 1 : 0;
   const step = steps[index] ?? "type";
   const canManage = state.can("instance.signIn.manage");
   const listPath = { to: "/settings/instance/sign-in-providers" as const };
@@ -332,7 +339,7 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
         <nav aria-label={t("identityProviders.wizard.steps")} className="md:w-sidebar">
           <ol className="flex flex-col gap-1">
             {steps.map((name, position) => {
-              const reachable = providerId ? position >= 2 : position === index;
+              const reachable = providerId ? position >= 1 : position === index;
               return (
                 <li key={name}>
                   <button
@@ -377,7 +384,7 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
               onContinue={() => void start()}
             />
           ) : null}
-          {step === "connection" && draftId ? (
+          {step === "connection" && draftId && !providerId ? (
             saved.isPending || restoredFrom !== draftId ? (
               saved.isError ? (
                 <LoadError
@@ -419,7 +426,7 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
               </>
             )
           ) : null}
-          {providerId && step !== "type" && step !== "connection" ? (
+          {providerId && step !== "type" ? (
             provider.isPending ? (
               <Skeleton className="h-48 w-full" />
             ) : provider.isError ? (
@@ -442,8 +449,9 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
                   canManage={canManage}
                   flowId={search.providerTest}
                   isLast={index === steps.length - 1}
-                  onBack={() => goTo(index - 1)}
+                  {...(index > 1 ? { onBack: () => goTo(index - 1) } : {})}
                   onContinue={() => goTo(index + 1)}
+                  onConnection={() => goTo(steps.indexOf("connection"))}
                   onFinish={() => void finish(provider.data.id)}
                 />
               </>
@@ -763,6 +771,7 @@ function SavedProviderStep({
   isLast,
   onBack,
   onContinue,
+  onConnection,
   onFinish,
 }: {
   provider: IdentityProvider;
@@ -771,8 +780,9 @@ function SavedProviderStep({
   canManage: boolean;
   flowId: string | undefined;
   isLast: boolean;
-  onBack: () => void;
+  onBack?: () => void;
   onContinue: () => void;
+  onConnection: () => void;
   onFinish: () => void;
 }) {
   const { t } = useTranslation();
@@ -783,6 +793,23 @@ function SavedProviderStep({
   );
   return (
     <>
+      {step === "connection" ? (
+        <>
+          <h2 className="font-semibold text-lg">{t("identityProviders.wizard.stepNames.connection")}</h2>
+          <Section title={t("identityProviders.settings.signIn")}>
+            {provider.type === "oidc" ? <ConnectionFields provider={provider} canManage={canManage} /> : null}
+            {provider.type === "saml" ? (
+              <SamlConnectionFields provider={provider} canManage={canManage} />
+            ) : null}
+            {provider.type === "ldap" ? (
+              <LdapConnectionFields provider={provider} canManage={canManage} />
+            ) : null}
+          </Section>
+          {provider.type === "ldap" ? (
+            <CaCertificateSection provider={provider} canManage={canManage} />
+          ) : null}
+        </>
+      ) : null}
       {step === "attributes" ? (
         <>
           <Notice variant="success" title={t("identityProviders.wizard.saved", { name: provider.name })}>
@@ -796,7 +823,11 @@ function SavedProviderStep({
               <SamlAttributeFields provider={provider} canManage={canManage} />
             ) : null}
             {provider.type === "ldap" ? (
-              <LdapAttributeFields provider={provider} canManage={canManage} />
+              <LdapAttributeFields
+                provider={provider}
+                canManage={canManage}
+                onUploadCertificate={onConnection}
+              />
             ) : null}
           </Section>
         </>
@@ -862,7 +893,7 @@ function SavedProviderStep({
           )}
         </>
       ) : null}
-      <WizardFooter onBack={onBack} next={next} />
+      <WizardFooter {...(onBack ? { onBack } : {})} next={next} />
     </>
   );
 }

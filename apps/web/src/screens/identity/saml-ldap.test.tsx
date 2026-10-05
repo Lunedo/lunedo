@@ -407,6 +407,49 @@ describe("adding an LDAP directory", () => {
     expect(screen.queryByRole("switch", { name: "Use StartTLS" })).toBeNull();
   });
 
+  it("goes back to the connection after saving and links a missing CA certificate to it as a warning", async () => {
+    adminApi({
+      [`GET ${BASE}/${LDAP}`]: () => ({ body: ldapProvider() }),
+      [`POST ${BASE}/${LDAP}/directory-test`]: () => ({
+        body: {
+          steps: [
+            { step: "connection", ok: true, detail: null },
+            {
+              step: "certificate",
+              ok: false,
+              detail: "The certificate of the directory server is not trusted",
+            },
+          ],
+          sample: null,
+          attributes: [],
+        },
+      }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/new?providerId=${LDAP}&step=2`);
+    await userEvent.click(await screen.findByRole("button", { name: "Read attributes" }));
+    const warning = await screen.findByText(
+      "Upload the CA certificate that issued the server's certificate, then test again.",
+    );
+    expect(warning).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Go to the CA certificate" }));
+    expect(await screen.findByRole("heading", { name: "CA certificate" })).toBeTruthy();
+    expect(screen.getByLabelText("Server address")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("button", { name: "Read attributes" })).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(await screen.findByRole("heading", { name: "CA certificate" })).toBeTruthy();
+    await userEvent.click(
+      within(screen.getByRole("navigation", { name: "Steps" })).getByRole("button", { name: /Test/ }),
+    );
+    expect(await screen.findByRole("button", { name: "Test the directory" })).toBeTruthy();
+    await userEvent.click(
+      within(screen.getByRole("navigation", { name: "Steps" })).getByRole("button", { name: /Connection/ }),
+    );
+    expect(await screen.findByRole("heading", { name: "CA certificate" })).toBeTruthy();
+  });
+
   it("explains a failed directory test, takes the CA certificate right there and tests again", async () => {
     let trusted = false;
     const { requests } = adminApi({
