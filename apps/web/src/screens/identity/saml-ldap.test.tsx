@@ -855,6 +855,59 @@ describe("SAML and LDAP providers in the list and the details", () => {
     });
   });
 
+  it("keeps Pagehall's signing certificate apart from the credentials for Microsoft Graph", async () => {
+    const entra = samlProvider({
+      name: "Entra ID SAML",
+      credentials: [
+        ...samlProvider().credentials,
+        {
+          id: "01929b1e-0000-7000-8000-0000000000b6",
+          kind: "clientSecret",
+          keyId: null,
+          expiresAt: "2027-10-01T00:00:00.000Z",
+          createdAt: "2026-10-02T00:00:00.000Z",
+        },
+      ],
+      config: {
+        ...samlProvider().config,
+        preset: "entraId",
+        tenantId: "3f2a9c1e-7b4d-4e8a-9c21-5d6f0a8b2e17",
+        authority: "https://login.microsoftonline.com",
+        graphUrl: "https://graph.microsoft.com",
+        graphClientId: "a91b7e04-2c6d-4f13-8e5a-0b9d4c7f2a61",
+        emailSource: "email",
+      },
+    });
+    adminApi({
+      [`GET ${BASE}/${SAML}`]: () => ({ body: entra }),
+      [`GET ${BASE}`]: () => ({ body: [entra] }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${SAML}`);
+    const signing = (await screen.findByRole("heading", { name: "Pagehall's signing certificate" })).closest(
+      "section",
+    ) as HTMLElement;
+    const graph = screen
+      .getByRole("heading", { name: "Credentials for Microsoft Graph" })
+      .closest("section") as HTMLElement;
+    expect(within(signing).getByText("Signing certificate")).toBeTruthy();
+    expect(within(signing).queryByText("Client secret for Microsoft Graph")).toBeNull();
+    expect(within(graph).getByText("Client secret for Microsoft Graph")).toBeTruthy();
+    expect(within(graph).queryByText("Signing certificate")).toBeNull();
+
+    await userEvent.click(within(signing).getByRole("button", { name: "Add signing certificate" }));
+    let dialog = await screen.findByRole("dialog", { name: "New credential for Entra ID SAML" });
+    expect(within(dialog).queryByRole("radio")).toBeNull();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+    await userEvent.click(within(graph).getByRole("button", { name: "Add Graph credential" }));
+    dialog = await screen.findByRole("dialog", { name: "New credential for Entra ID SAML" });
+    expect(
+      within(dialog)
+        .getAllByRole("radio")
+        .map((radio) => radio.textContent),
+    ).toEqual(["Client secret for Microsoft Graph", "Certificate for Microsoft Graph"]);
+  });
+
   it("offers every attribute the directory returns for a test person", async () => {
     let current = ldapProvider();
     const { requests } = adminApi({

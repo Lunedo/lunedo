@@ -398,6 +398,10 @@
     },
     "credentials": {
       "title": "Zugänge",
+      "groupTitles": {
+        "signing": "Signaturzertifikat von Pagehall",
+        "graph": "Zugänge für Microsoft Graph"
+      },
       "kind": "Zugang",
       "kinds": {
         "clientSecret": "Client-Secret",
@@ -437,17 +441,20 @@
       "addFor": {
         "oidc": "Zugang hinzufügen",
         "saml": "Signaturzertifikat hinzufügen",
-        "ldap": "Neues Passwort eingeben"
+        "ldap": "Neues Passwort eingeben",
+        "graph": "Graph-Zugang hinzufügen"
       },
       "saveFor": {
         "oidc": "Zugang hinzufügen",
         "saml": "Hinzufügen",
-        "ldap": "Passwort speichern"
+        "ldap": "Passwort speichern",
+        "graph": "Zugang hinzufügen"
       },
       "addDescriptions": {
         "oidc": "Der bisherige Zugang funktioniert weiter, bis du ihn entfernst. So wechselst du ohne Unterbrechung.",
         "saml": "Das bisherige Zertifikat funktioniert weiter, bis du es entfernst. So kann der Identitätsanbieter ohne Unterbrechung wechseln.",
-        "ldap": "Ändere zuerst das Passwort des Dienstkontos im Verzeichnis und trag es dann hier ein. Entferne danach das alte."
+        "ldap": "Ändere zuerst das Passwort des Dienstkontos im Verzeichnis und trag es dann hier ein. Entferne danach das alte.",
+        "graph": "Der bisherige Zugang für Microsoft Graph funktioniert weiter, bis du ihn entfernst, damit du ohne Unterbrechung wechseln kannst."
       },
       "noneDescriptions": {
         "oidc": "Die Anmeldung über diesen Anbieter funktioniert erst, wenn du ein Client-Secret oder ein Zertifikat hinzufügst.",
@@ -457,7 +464,8 @@
       "renewHints": {
         "oidc": "Während einer Erneuerung funktionieren alter und neuer Zugang. Entferne den alten, sobald der neue eingetragen ist.",
         "saml": "Während einer Erneuerung enthalten die Metadaten von Pagehall altes und neues Zertifikat. Entferne das alte, sobald der Identitätsanbieter das neue verwendet.",
-        "ldap": "Das Passwort hat in Pagehall kein Ablaufdatum. Zum Wechseln gibst du das neue Passwort ein und entfernst das alte."
+        "ldap": "Das Passwort hat in Pagehall kein Ablaufdatum. Zum Wechseln gibst du das neue Passwort ein und entfernst das alte.",
+        "graph": "Während eines Wechsels funktionieren alter und neuer Zugang. Entferne den alten, sobald der neue eingerichtet ist."
       }
     },
     "logo": {

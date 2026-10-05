@@ -847,9 +847,9 @@ function SavedProviderStep({
           <Section title={t("identityProviders.wizard.graphApp")}>
             <SamlGraphClientField provider={provider} canManage={canManage} />
           </Section>
-          <Section title={t("identityProviders.credentials.title")}>
+          <Section title={t("identityProviders.credentials.groupTitles.graph")}>
             <div className="px-4 py-3">
-              <CredentialsList provider={provider} canManage={canManage} />
+              <CredentialsList provider={provider} canManage={canManage} group="graph" />
             </div>
           </Section>
         </>

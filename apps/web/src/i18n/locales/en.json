@@ -398,6 +398,10 @@
     },
     "credentials": {
       "title": "Credentials",
+      "groupTitles": {
+        "signing": "Pagehall's signing certificate",
+        "graph": "Credentials for Microsoft Graph"
+      },
       "kind": "Credential",
       "kinds": {
         "clientSecret": "Client secret",
@@ -437,17 +441,20 @@
       "addFor": {
         "oidc": "Add credential",
         "saml": "Add signing certificate",
-        "ldap": "Enter new password"
+        "ldap": "Enter new password",
+        "graph": "Add Graph credential"
       },
       "saveFor": {
         "oidc": "Add credential",
         "saml": "Add",
-        "ldap": "Save password"
+        "ldap": "Save password",
+        "graph": "Add credential"
       },
       "addDescriptions": {
         "oidc": "The current credential keeps working until you remove it, so you can switch without interruption.",
         "saml": "The current certificate keeps working until you remove it, so the identity provider can switch without interruption.",
-        "ldap": "Change the password of the service account in the directory first, then enter it here. Remove the old one afterwards."
+        "ldap": "Change the password of the service account in the directory first, then enter it here. Remove the old one afterwards.",
+        "graph": "The current credential for Microsoft Graph keeps working until you remove it, so you can switch without interruption."
       },
       "noneDescriptions": {
         "oidc": "Sign-in through this provider does not work until you add a client secret or a certificate.",
@@ -457,7 +464,8 @@
       "renewHints": {
         "oidc": "During a renewal, old and new credential both work. Remove the old one once the new one is in place.",
         "saml": "During a renewal, Pagehall's metadata lists old and new certificate. Remove the old one once the identity provider uses the new one.",
-        "ldap": "The password has no expiry date in Pagehall. To rotate it, enter the new password and remove the old one."
+        "ldap": "The password has no expiry date in Pagehall. To rotate it, enter the new password and remove the old one.",
+        "graph": "During a renewal, old and new credential both work. Remove the old one once the new one is in place."
       }
     },
     "logo": {

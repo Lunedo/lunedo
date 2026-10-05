@@ -48,6 +48,13 @@ export function emptyCredentialDraft(kind: CredentialKind = "clientSecret"): Cre
   return { kind: "clientSecret", secret: "", expiresOn: "" };
 }
 
+export type CredentialGroup = "signing" | "graph";
+
+const GROUP_KINDS: Record<CredentialGroup, CredentialKind[]> = {
+  signing: ["samlSigning"],
+  graph: ["clientSecret", "certificate"],
+};
+
 export function credentialKinds(provider: Pick<IdentityProvider, "type" | "config">): CredentialKind[] {
   if (provider.type === "ldap") return ["bindPassword"];
   if (provider.type === "saml") {
@@ -206,15 +213,27 @@ export function CredentialFields({
   );
 }
 
-export function CredentialsList({ provider, canManage }: { provider: IdentityProvider; canManage: boolean }) {
+export function CredentialsList({
+  provider,
+  canManage,
+  group,
+}: {
+  provider: IdentityProvider;
+  canManage: boolean;
+  group?: CredentialGroup;
+}) {
   const { t } = useTranslation();
+  const kinds = group ? GROUP_KINDS[group] : credentialKinds(provider);
+  const texts = group === "graph" ? "graph" : provider.type;
   const format = useFormat();
   const queryClient = useQueryClient();
   const showFailure = useFailureToast();
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<ProviderCredential | null>(null);
   const [choosing, setChoosing] = useState<string | null>(null);
-  const credentials = [...provider.credentials].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const credentials = provider.credentials
+    .filter((credential) => kinds.includes(credential.kind))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const refresh = () => queryClient.invalidateQueries({ queryKey: identityKeys.providers });
   const choose = async (credential: ProviderCredential, use: "this" | "newest") => {
     setChoosing(credential.id);
@@ -229,12 +248,18 @@ export function CredentialsList({ provider, canManage }: { provider: IdentityPro
   };
   return (
     <div className="flex flex-col gap-3">
-      {credentials.length === 0 ? (
+      {credentials.length === 0 && texts !== "graph" ? (
         <Notice variant="danger" title={t("identityProviders.credentials.noneTitle")}>
-          {t(`identityProviders.credentials.noneDescriptions.${provider.type}`)}
+          {t(`identityProviders.credentials.noneDescriptions.${texts}`)}
         </Notice>
       ) : null}
-      <List label={t("identityProviders.credentials.title")}>
+      <List
+        label={t(
+          group
+            ? `identityProviders.credentials.groupTitles.${group}`
+            : "identityProviders.credentials.title",
+        )}
+      >
         {credentials.map((credential) => (
           <ListRow
             key={credential.id}
@@ -305,16 +330,16 @@ export function CredentialsList({ provider, canManage }: { provider: IdentityPro
       {canManage ? (
         <div>
           <Button variant="secondary" icon={Plus} onClick={() => setAdding(true)}>
-            {t(`identityProviders.credentials.addFor.${provider.type}`)}
+            {t(`identityProviders.credentials.addFor.${texts}`)}
           </Button>
         </div>
       ) : null}
-      <p className="text-sm text-text-muted">
-        {t(`identityProviders.credentials.renewHints.${provider.type}`)}
-      </p>
+      <p className="text-sm text-text-muted">{t(`identityProviders.credentials.renewHints.${texts}`)}</p>
       {adding ? (
         <AddCredentialDialog
           provider={provider}
+          kinds={kinds}
+          texts={texts}
           onClose={() => setAdding(false)}
           onAdded={() => void refresh()}
         />
@@ -370,15 +395,18 @@ export function CertificateCreated({ pem, name, kind }: { pem: string; name: str
 
 function AddCredentialDialog({
   provider,
+  kinds,
+  texts,
   onClose,
   onAdded,
 }: {
   provider: IdentityProvider;
+  kinds: CredentialKind[];
+  texts: IdentityProvider["type"] | "graph";
   onClose: () => void;
   onAdded: () => void;
 }) {
   const { t } = useTranslation();
-  const kinds = credentialKinds(provider);
   const [draft, setDraft] = useState<CredentialDraft>(emptyCredentialDraft(kinds[0]));
   const [invalid, setInvalid] = useState<"secret" | "expiresOn" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -409,7 +437,7 @@ function AddCredentialDialog({
       open
       onOpenChange={(next) => (next ? undefined : onClose())}
       title={t("identityProviders.credentials.addTitle", { name: provider.name })}
-      description={t(`identityProviders.credentials.addDescriptions.${provider.type}`)}
+      description={t(`identityProviders.credentials.addDescriptions.${texts}`)}
       size="md"
       footer={
         certificate ? (
@@ -422,7 +450,7 @@ function AddCredentialDialog({
               {t("common.cancel")}
             </Button>
             <Button variant="primary" loading={busy} onClick={() => void save()}>
-              {t(`identityProviders.credentials.saveFor.${provider.type}`)}
+              {t(`identityProviders.credentials.saveFor.${texts}`)}
             </Button>
           </>
         )

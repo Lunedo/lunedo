@@ -248,11 +248,28 @@ function Overview({
           </div>
         </Section>
       ) : null}
-      <Section title={t("identityProviders.credentials.title")}>
-        <div className="px-4 py-3">
-          <CredentialsList provider={provider} canManage={canManage} />
-        </div>
-      </Section>
+      {provider.type === "saml" ? (
+        <>
+          <Section title={t("identityProviders.credentials.groupTitles.signing")}>
+            <div className="px-4 py-3">
+              <CredentialsList provider={provider} canManage={canManage} group="signing" />
+            </div>
+          </Section>
+          {provider.config.preset === "entraId" ? (
+            <Section title={t("identityProviders.credentials.groupTitles.graph")}>
+              <div className="px-4 py-3">
+                <CredentialsList provider={provider} canManage={canManage} group="graph" />
+              </div>
+            </Section>
+          ) : null}
+        </>
+      ) : (
+        <Section title={t("identityProviders.credentials.title")}>
+          <div className="px-4 py-3">
+            <CredentialsList provider={provider} canManage={canManage} />
+          </div>
+        </Section>
+      )}
     </div>
   );
 }
