@@ -1,6 +1,6 @@
 import { isIP } from "node:net";
 import type { ConnectionOptions } from "node:tls";
-import { Client, InvalidCredentialsError, ResultCodeError } from "ldapts";
+import { Client, type Filter, InvalidCredentialsError, ResultCodeError } from "ldapts";
 import { DirectoryConnectionError } from "./adapter.js";
 
 const CONNECT_TIMEOUT_MS = 10_000;
@@ -16,7 +16,7 @@ export interface DirectoryEntry {
 
 export interface DirectorySearch {
   scope: "base" | "sub";
-  filter: string;
+  filter: string | Filter;
   attributes: string[];
   binaryAttributes?: string[];
   sizeLimit?: number;

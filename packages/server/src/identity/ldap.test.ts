@@ -1,14 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { type LdapConfigInput, ldapConfigSchema } from "@pagehall/shared";
 import { describe, expect, it } from "vitest";
-import { FakeLdapDirectory, type FakeLdapEntry } from "../testing/fakes/ldap-directory.js";
+import { FakeLdapDirectory, type FakeLdapEntry, objectGuid } from "../testing/fakes/ldap-directory.js";
 import {
   DirectoryConnectionError,
   DirectorySignInError,
   type LdapProviderDefinition,
   type ProviderCredential,
 } from "./adapter.js";
-import { GROUP_DEPTH_LIMIT, guidFromBytes, guidToBytes, LdapAdapter } from "./ldap.js";
+import { GROUP_DEPTH_LIMIT, guidFromBytes, LdapAdapter } from "./ldap.js";
 
 const SERVICE_DN = "cn=pagehall,ou=service,dc=corp,dc=example";
 const SERVICE_PASSWORD = "service password";
@@ -17,10 +17,6 @@ const PASSWORD = "user password";
 const credentials: ProviderCredential[] = [
   { id: randomUUID(), kind: "bindPassword", secret: SERVICE_PASSWORD, keyId: null, certificate: null },
 ];
-
-function guid(): Buffer {
-  return guidToBytes(randomUUID());
-}
 
 function windowsTime(date: Date): string {
   return String((BigInt(date.getTime()) + 11_644_473_600_000n) * 10_000n);
@@ -37,7 +33,7 @@ function adUser(
     attributes: {
       objectClass: ["user"],
       objectCategory: ["person"],
-      objectGUID: [guid()],
+      objectGUID: [objectGuid()],
       userPrincipalName: [`${name}@corp.example`],
       sAMAccountName: [name],
       mail: [`${name}@corp.example`],
@@ -53,7 +49,7 @@ function adUser(
 function adGroup(name: string, members: string[]): FakeLdapEntry {
   return {
     dn: `CN=${name},OU=Groups,DC=corp,DC=example`,
-    attributes: { objectClass: ["group"], objectGUID: [guid()], cn: [name], member: members },
+    attributes: { objectClass: ["group"], objectGUID: [objectGuid()], cn: [name], member: members },
   };
 }
 
@@ -386,6 +382,27 @@ describe("LDAP and Active Directory", () => {
     const subject = guidFromBytes(alice?.attributes.objectGUID?.[0] as Buffer);
     expect(await adapter.verifyPassword(adProvider(), credentials, subject, PASSWORD)).toBe(true);
     expect(await adapter.verifyPassword(adProvider(), credentials, subject, "wrong")).toBe(false);
+  });
+
+  it("finds people and groups of Active Directory by objectGUID sent as raw bytes", async () => {
+    const directory = activeDirectory();
+    const adapter = new LdapAdapter({ allowInsecure: false, connector: directory.connector });
+    const alice = directory.find("CN=alice,OU=People,DC=corp,DC=example");
+    const staff = directory.find("CN=Staff,OU=Groups,DC=corp,DC=example");
+    const subject = guidFromBytes(alice?.attributes.objectGUID?.[0] as Buffer);
+    const groupId = guidFromBytes(staff?.attributes.objectGUID?.[0] as Buffer);
+    expect(await adapter.readGroup(adProvider(), credentials, groupId.toUpperCase())).toEqual({
+      id: groupId,
+      name: "Staff",
+    });
+    expect(await adapter.readProfile(adProvider(), credentials, subject)).toMatchObject({
+      subject,
+      email: "alice@corp.example",
+    });
+    expect(
+      (await adapter.readGroups(adProvider(), credentials, subject))?.map((group) => group.name),
+    ).toEqual(expect.arrayContaining(["Staff", "Engineering"]));
+    expect(await adapter.readGroup(adProvider(), credentials, randomUUID())).toBeNull();
   });
 
   it("returns every readable attribute of the test person but no passwords or binary values", async () => {

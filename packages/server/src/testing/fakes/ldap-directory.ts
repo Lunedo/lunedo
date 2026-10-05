@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   AndFilter,
   EqualityFilter,
@@ -10,6 +11,7 @@ import {
   SubstringFilter,
 } from "ldapts";
 import { DirectoryConnectionError } from "../../identity/adapter.js";
+import { guidToBytes } from "../../identity/ldap.js";
 import type {
   DirectoryConnector,
   DirectoryEntry,
@@ -46,8 +48,12 @@ function valuesOf(entry: FakeLdapEntry, attribute: string): Value[] {
 }
 
 function equal(value: Value, expected: string): boolean {
-  if (Buffer.isBuffer(value)) return value.equals(Buffer.from(expected, "latin1"));
+  if (Buffer.isBuffer(value)) return value.equals(Buffer.from(expected, "utf8"));
   return value.toLowerCase() === expected.toLowerCase();
+}
+
+function sent(value: Buffer | string): Buffer {
+  return Buffer.isBuffer(value) ? value : Buffer.from(value, "utf8");
 }
 
 export class FakeLdapDirectory {
@@ -99,7 +105,10 @@ export class FakeLdapDirectory {
     if (filter instanceof NotFilter) return !this.#matches(entry, filter.filter);
     if (filter instanceof PresenceFilter) return valuesOf(entry, filter.attribute).length > 0;
     if (filter instanceof EqualityFilter) {
-      return valuesOf(entry, filter.attribute).some((value) => equal(value, String(filter.value)));
+      const bytes = sent(filter.value);
+      return valuesOf(entry, filter.attribute).some((value) =>
+        Buffer.isBuffer(value) ? value.equals(bytes) : equal(value, bytes.toString("utf8")),
+      );
     }
     if (filter instanceof SubstringFilter) {
       return valuesOf(entry, filter.attribute).some((value) => {
@@ -127,11 +136,12 @@ export class FakeLdapDirectory {
   }
 
   search(base: string, search: DirectorySearch): FakeLdapEntry[] {
-    this.filters.push(search.filter);
+    this.filters.push(typeof search.filter === "string" ? search.filter : search.filter.toString());
     if (search.scope === "sub" && this.missingBases.has(normalize(base))) {
       throw new DirectoryConnectionError("searchFailed", `The search base ${base} does not exist`);
     }
-    const filter = FilterParser.parseString(search.filter);
+    const filter =
+      typeof search.filter === "string" ? FilterParser.parseString(search.filter) : search.filter;
     const scoped = this.entries.filter((entry) =>
       search.scope === "base"
         ? normalize(entry.dn) === normalize(base)
@@ -174,4 +184,11 @@ export class FakeLdapDirectory {
     };
     return session;
   };
+}
+
+export function objectGuid(): Buffer {
+  const bytes = guidToBytes(randomUUID());
+  bytes[0] = (bytes[0] ?? 0) | 0x80;
+  bytes[15] = 0x00;
+  return bytes;
 }

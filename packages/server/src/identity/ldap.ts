@@ -1,5 +1,5 @@
 import { isUuid, type LdapConfig } from "@pagehall/shared";
-import { escapeFilter, Filter, ResultCodeError } from "ldapts";
+import { AndFilter, EqualityFilter, escapeFilter, Filter, FilterParser, ResultCodeError } from "ldapts";
 import {
   type CallbackInput,
   DirectoryConnectionError,
@@ -88,6 +88,15 @@ function isText(value: string): boolean {
 
 function and(...filters: string[]): string {
   return `(&${filters.join("")})`;
+}
+
+function withObjectGuid(filter: string, guid: string): Filter {
+  return new AndFilter({
+    filters: [
+      FilterParser.parseString(filter),
+      new EqualityFilter({ attribute: "objectGUID", value: guidToBytes(guid) }),
+    ],
+  });
 }
 
 interface DirectoryUser {
@@ -260,17 +269,15 @@ export class LdapAdapter implements IdentityProviderAdapter {
     return and(provider.config.userFilter, escapeFilter`(${provider.config.signInAttribute}=${signInName})`);
   }
 
-  #subjectFilter(provider: LdapProviderDefinition, subject: string): string {
-    if (this.#isActiveDirectory(provider)) {
-      return and(provider.config.userFilter, `(objectGUID=${Filter.escape(guidToBytes(subject))})`);
-    }
+  #subjectFilter(provider: LdapProviderDefinition, subject: string): string | Filter {
+    if (this.#isActiveDirectory(provider)) return withObjectGuid(provider.config.userFilter, subject);
     return and(provider.config.userFilter, escapeFilter`(entryUUID=${subject})`);
   }
 
   async #findUser(
     session: DirectorySession,
     provider: LdapProviderDefinition,
-    filter: string,
+    filter: string | Filter,
   ): Promise<DirectoryUser | null> {
     const { attributes, binary } = this.#userAttributes(provider);
     const entries = await session.search(provider.config.userBaseDn, {
@@ -509,13 +516,12 @@ export class LdapAdapter implements IdentityProviderAdapter {
     const id = groupId.toLowerCase();
     if (!isUuid(id)) return null;
     return this.#serviceSession(provider, credentials, async (session, ldap) => {
-      const filter = this.#isActiveDirectory(ldap)
-        ? `(objectGUID=${Filter.escape(guidToBytes(id))})`
-        : escapeFilter`(entryUUID=${id})`;
       const { attributes, binary } = this.#groupAttributes(ldap);
       const [entry] = await session.search(ldap.config.groupBaseDn, {
         scope: "sub",
-        filter: and(ldap.config.groupFilter, filter),
+        filter: this.#isActiveDirectory(ldap)
+          ? withObjectGuid(ldap.config.groupFilter, id)
+          : and(ldap.config.groupFilter, escapeFilter`(entryUUID=${id})`),
         attributes,
         binaryAttributes: binary,
         sizeLimit: 1,

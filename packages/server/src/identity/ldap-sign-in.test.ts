@@ -6,9 +6,9 @@ import { InvalidCredentialsError, LockedError, RateLimitedError } from "../auth/
 import { runWithRequestContext } from "../observability/request-context.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { type FakeOidcProvider, startFakeOidcProvider } from "../testing/fake-oidc.js";
-import { FakeLdapDirectory, type FakeLdapEntry } from "../testing/fakes/ldap-directory.js";
+import { FakeLdapDirectory, type FakeLdapEntry, objectGuid } from "../testing/fakes/ldap-directory.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
-import { guidFromBytes, guidToBytes } from "./ldap.js";
+import { guidFromBytes } from "./ldap.js";
 import { type CallbackResult, DirectorySignInRefusedError } from "./sign-in.js";
 
 const baseUrl = testDatabaseBaseUrl();
@@ -176,7 +176,7 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
       attributes: {
         objectClass: ["user"],
         objectCategory: ["person"],
-        objectGUID: [guidToBytes(randomUUID())],
+        objectGUID: [objectGuid()],
         userPrincipalName: [`${name}@${domain}`],
         sAMAccountName: [name],
         mail: [`${name}@${domain}`],
@@ -189,7 +189,7 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
       dn: `CN=${name},OU=Groups,${base}`,
       attributes: {
         objectClass: ["group"],
-        objectGUID: [guidToBytes(randomUUID())],
+        objectGUID: [objectGuid()],
         cn: [name],
         member: members,
       },
