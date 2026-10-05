@@ -296,7 +296,13 @@
     "redirectUriHint": "Trage diese Adresse in der App-Registrierung deines Anbieters ein.",
     "fields": {
       "name": "Name auf der Anmeldeseite",
-      "nameHint": "Zum Beispiel Microsoft oder der Name deines Unternehmens.",
+      "nameHints": {
+        "entraId": "Zum Beispiel Microsoft oder der Name deines Unternehmens.",
+        "google": "Zum Beispiel Google oder der Name deines Unternehmens.",
+        "oidc": "Zum Beispiel Keycloak oder der Name deines Unternehmens.",
+        "saml": "Zum Beispiel ADFS oder der Name deines Unternehmens.",
+        "ldap": "Zum Beispiel Active Directory oder der Name deines Unternehmens."
+      },
       "clientId": "Client-ID",
       "tenantId": "Verzeichnis-ID (Tenant)",
       "tenantIdHint": "Steht in der Übersicht deines Entra-ID-Tenants.",
@@ -388,7 +394,8 @@
       "create": "Konten bei der ersten Anmeldung anlegen",
       "createHint": "Ohne diese Einstellung können sich nur eingeladene Personen und bestehende Konten anmelden.",
       "domains": "Domains",
-      "domainsHint": "Gib jede Domain ein, die im Tenant verifiziert ist, für Anmeldenamen und für E-Mail-Adressen, zum Beispiel example.com und example.at. Die Anmeldeseite schickt Personen mit diesen Domains zu diesem Anbieter, E-Mail-Adressen darin gelten als bestätigt, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Anbieter.",
+      "domainsHint": "Gib jede Domain ein, die deine Personen bei diesem Anbieter verwenden, für Anmeldenamen und für E-Mail-Adressen, zum Beispiel example.com und example.at. Die Anmeldeseite schickt Personen mit diesen Domains zu diesem Anbieter, E-Mail-Adressen darin gelten als bestätigt, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Anbieter.",
+      "domainsHintEntraId": "Gib jede Domain ein, die im Tenant verifiziert ist, für Anmeldenamen und für E-Mail-Adressen, zum Beispiel example.com und example.at. Die Anmeldeseite schickt Personen mit diesen Domains zu diesem Anbieter, E-Mail-Adressen darin gelten als bestätigt, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Anbieter.",
       "domainsHintGoogle": "Gib jede Domain deines Google Workspace ein, für Anmeldenamen und für E-Mail-Adressen. Die Anmeldeseite schickt Personen mit diesen Domains zu Google.",
       "domainsInvalid": "Gib Domains wie example.org ein, durch Kommas getrennt.",
       "requireGroup": "Gruppenmitgliedschaft verlangen",
@@ -537,11 +544,6 @@
       },
       "typeTitle": "Welchen Anbieter verwendest du?",
       "connectionTitle": "{type} verbinden",
-      "connectionHints": {
-        "entraId": "Erstelle im Entra Admin Center eine App-Registrierung. Nach dem Speichern zeigt Pagehall die Weiterleitungs-URI, die du dort einträgst. Schalte unter Unternehmensanwendungen „Zuweisung erforderlich“ ein und weise die Gruppen zu, die Pagehall verwenden dürfen.",
-        "google": "Erstelle in der Google Cloud Console einen OAuth-Client vom Typ Webanwendung. Nach dem Speichern zeigt Pagehall die Weiterleitungs-URI, die du dort einträgst.",
-        "generic": "Erstelle bei deinem Anbieter einen vertraulichen OIDC-Client. Nach dem Speichern zeigt Pagehall die Weiterleitungs-URI, die du dort einträgst."
-      },
       "saveConnection": "Speichern und weiter",
       "saved": "{name} ist gespeichert",
       "finish": "Fertig",
@@ -579,11 +581,6 @@
       },
       "samlTitle": "SAML-2.0-Anbieter verbinden",
       "samlPreset": "Identitätsanbieter",
-      "samlHints": {
-        "entraId": "Erstelle im Entra Admin Center eine Unternehmensanwendung mit SAML-Single-Sign-on. Nach dem Speichern zeigt Pagehall die Entity-ID und die Antwort-URL, die du dort einträgst.",
-        "adfs": "Füge in ADFS eine Vertrauensstellung der vertrauenden Seite hinzu. Nach dem Speichern zeigt Pagehall seine Metadatenadresse, die ADFS lesen kann.",
-        "generic": "Lege bei deinem Identitätsanbieter einen SAML-Dienstanbieter an. Nach dem Speichern zeigt Pagehall seine Entity-ID, seine Assertion-Consumer-Service-URL und seine Metadaten."
-      },
       "metadataUrlHints": {
         "entraId": "Die App-Verbundmetadaten-URL aus den SAML-Einstellungen der Unternehmensanwendung.",
         "adfs": "Meist https://adfs.example.org/FederationMetadata/2007-06/FederationMetadata.xml.",
@@ -607,10 +604,25 @@
       "graphApp": "App-Registrierung",
       "draftHint": "Pagehall speichert die Einrichtung ab dem nächsten Schritt als Entwurf. Du kannst den Assistenten schließen und später in der Liste der Identitätsanbieter fortsetzen.",
       "draftNotSaved": "Deine letzten Änderungen konnten nicht im Entwurf gespeichert werden. Prüfe die Verbindung; Pagehall versucht es bei der nächsten Änderung erneut.",
-      "copyTitle": "Diese Werte bei {provider} eintragen",
-      "copyHint": "Registriere Pagehall zuerst mit diesen Werten bei {provider}. Sie ändern sich nicht, du kannst sie also jetzt kopieren und die Felder unten danach ausfüllen.",
+      "copyTitle": "Diese Werte {place} eintragen",
+      "copyHint": "Registriere Pagehall zuerst {place} mit diesen Werten. Sie ändern sich nicht, du kannst sie also jetzt kopieren und die Felder weiter unten danach ausfüllen.",
+      "registerHints": {
+        "entraId": "Erstelle eine App-Registrierung mit der Weiterleitungs-URI unten. Schalte unter Unternehmensanwendungen „Zuweisung erforderlich“ ein und weise die Gruppen zu, die Pagehall verwenden dürfen.",
+        "google": "Erstelle einen OAuth-Client vom Typ Webanwendung mit der Weiterleitungs-URI unten.",
+        "oidc": "Erstelle einen vertraulichen OIDC-Client mit der Weiterleitungs-URI unten.",
+        "samlEntraId": "Erstelle eine Unternehmensanwendung mit SAML-Single-Sign-on und trage die Entity-ID und die Antwort-URL unten ein.",
+        "adfs": "Füge eine Vertrauensstellung der vertrauenden Seite hinzu, die die Metadatenadresse von Pagehall unten liest.",
+        "saml": "Lege einen SAML-Dienstanbieter mit der Entity-ID und der Assertion-Consumer-Service-URL unten an, oder lass ihn die Metadaten von Pagehall lesen."
+      },
       "signingCertificate": "Signaturzertifikat von Pagehall",
-      "signingCertificateHint": "Lade es bei {provider} hoch, wenn dort signierte Anfragen geprüft werden. Es ist auch in den Metadaten von Pagehall enthalten.",
+      "signingCertificateHint": "Lade es {place} hoch, wenn dort signierte Anfragen geprüft werden. Es ist auch in den Metadaten von Pagehall enthalten.",
+      "places": {
+        "entraId": "im Microsoft Entra Admin Center",
+        "google": "in der Google Cloud Console",
+        "oidc": "bei deinem OIDC-Anbieter",
+        "saml": "bei deinem Identitätsanbieter",
+        "adfs": "in ADFS"
+      },
       "typeFixed": "Nach dem Speichern nicht mehr änderbar",
       "stepLater": "Öffnet sich, sobald der aktuelle Schritt gespeichert ist"
     },

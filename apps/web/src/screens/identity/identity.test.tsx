@@ -490,7 +490,9 @@ describe("setting up a provider as a draft", () => {
     );
     const clientId = screen.getByLabelText("Client ID");
     expect(redirect.compareDocumentPosition(clientId) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByText("Enter these values at Microsoft Entra ID")).toBeTruthy();
+    expect(screen.getByText("Enter these values in the Microsoft Entra admin center")).toBeTruthy();
+    expect(screen.queryByText(/After saving/)).toBeNull();
+    expect(screen.getByText("For example Microsoft or the name of your company.")).toBeTruthy();
     expect(requests.find((request) => request.method === "POST")?.body).toEqual({
       type: "oidc",
       preset: "entraId",
@@ -817,6 +819,13 @@ describe("the sign-in settings of the instance", () => {
     });
     await renderPath("/settings/instance/sign-in-providers");
     expect(await screen.findByText("No organization is assigned to you yet")).toBeTruthy();
+  });
+
+  it("offers one primary action to add the first provider", async () => {
+    adminApi({ "GET /api/v1/instance/identity-providers": () => ({ body: [] }) });
+    await renderPath("/settings/instance/sign-in-providers");
+    await screen.findByText("No identity providers yet");
+    expect(screen.getAllByRole("button", { name: "Add provider" })).toHaveLength(1);
   });
 
   it("warns sign-in administrators when identity providers are not checked strictly", async () => {

@@ -38,6 +38,7 @@ import {
   AccountFields,
   AttributeFields,
   ConnectionFields,
+  domainsHintKey,
   LinkFields,
   NameRow,
   RedirectUriField,
@@ -219,7 +220,7 @@ function Overview({
         />
         <SettingRow
           label={t("identityProviders.accounts.domains")}
-          description={t("identityProviders.accounts.domainsHint")}
+          description={t(domainsHintKey(provider.type, provider.config.preset))}
           control={
             provider.config.domains.length === 0 ? (
               <span className="text-text-muted">{t("identityProviders.noDomains")}</span>

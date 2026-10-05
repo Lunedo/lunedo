@@ -161,6 +161,18 @@ function useFederatedUpdate(provider: OidcProvider | SamlProvider) {
   );
 }
 
+export function domainsHintKey(type: IdentityProvider["type"], preset: string) {
+  if (type === "ldap") return "identityProviders.accounts.domainsHintDirectory" as const;
+  if (preset === "google") return "identityProviders.accounts.domainsHintGoogle" as const;
+  if (preset === "entraId") return "identityProviders.accounts.domainsHintEntraId" as const;
+  return "identityProviders.accounts.domainsHint" as const;
+}
+
+export function providerKind(provider: IdentityProvider): "entraId" | "google" | "oidc" | "saml" | "ldap" {
+  if (provider.type !== "oidc") return provider.type;
+  return provider.config.preset === "generic" ? "oidc" : provider.config.preset;
+}
+
 export function NameRow({ provider, canManage }: { provider: IdentityProvider; canManage: boolean }) {
   const { t } = useTranslation();
   const update = useProviderUpdate(provider);
@@ -168,7 +180,7 @@ export function NameRow({ provider, canManage }: { provider: IdentityProvider; c
     <div className="px-4 py-3">
       <AutoSaveTextField
         label={t("identityProviders.fields.name")}
-        hint={t("identityProviders.fields.nameHint")}
+        hint={t(`identityProviders.fields.nameHints.${providerKind(provider)}`)}
         value={provider.name}
         schema={identityProviderNameSchema}
         disabled={!canManage}
@@ -392,13 +404,7 @@ export function AccountFields({ provider, canManage }: { provider: IdentityProvi
       <div className="px-4 py-3">
         <AutoSaveTextField
           label={t("identityProviders.accounts.domains")}
-          hint={
-            provider.type === "ldap"
-              ? t("identityProviders.accounts.domainsHintDirectory")
-              : config.preset === "google"
-                ? t("identityProviders.accounts.domainsHintGoogle")
-                : t("identityProviders.accounts.domainsHint")
-          }
+          hint={t(domainsHintKey(provider.type, config.preset))}
           value={config.domains.join(", ")}
           schema={domainList}
           invalidMessage={t("identityProviders.accounts.domainsInvalid")}

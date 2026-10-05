@@ -296,7 +296,13 @@
     "redirectUriHint": "Enter this address in the app registration of your provider.",
     "fields": {
       "name": "Name on the sign-in page",
-      "nameHint": "For example Microsoft or the name of your company.",
+      "nameHints": {
+        "entraId": "For example Microsoft or the name of your company.",
+        "google": "For example Google or the name of your company.",
+        "oidc": "For example Keycloak or the name of your company.",
+        "saml": "For example ADFS or the name of your company.",
+        "ldap": "For example Active Directory or the name of your company."
+      },
       "clientId": "Client ID",
       "tenantId": "Directory (tenant) ID",
       "tenantIdHint": "Found in the overview of your Entra ID tenant.",
@@ -388,7 +394,8 @@
       "create": "Create accounts at first sign-in",
       "createHint": "Without this, only invited people and existing accounts can sign in.",
       "domains": "Domains",
-      "domainsHint": "Enter every domain that is verified in the tenant, for sign-in names and for e-mail addresses, for example example.com and example.at. The sign-in page sends people with these domains to this provider, e-mail addresses in them count as confirmed, and accounts are created only for them. A domain belongs to one provider only.",
+      "domainsHint": "Enter every domain your people use at this provider, for sign-in names and for e-mail addresses, for example example.com and example.at. The sign-in page sends people with these domains to this provider, e-mail addresses in them count as confirmed, and accounts are created only for them. A domain belongs to one provider only.",
+      "domainsHintEntraId": "Enter every domain that is verified in the tenant, for sign-in names and for e-mail addresses, for example example.com and example.at. The sign-in page sends people with these domains to this provider, e-mail addresses in them count as confirmed, and accounts are created only for them. A domain belongs to one provider only.",
       "domainsHintGoogle": "Enter every domain of your Google Workspace, for sign-in names and for e-mail addresses. The sign-in page sends people with these domains to Google.",
       "domainsInvalid": "Enter domains like example.org, separated by commas.",
       "requireGroup": "Require group membership",
@@ -537,11 +544,6 @@
       },
       "typeTitle": "Which provider do you use?",
       "connectionTitle": "Connect {type}",
-      "connectionHints": {
-        "entraId": "In the Entra admin center, create an app registration. After saving, Pagehall shows the redirect URI to enter there. Under Enterprise applications, turn on Assignment required and assign the groups that may use Pagehall.",
-        "google": "In the Google Cloud console, create an OAuth client of type Web application. After saving, Pagehall shows the redirect URI to enter there.",
-        "generic": "Create a confidential OIDC client at your provider. After saving, Pagehall shows the redirect URI to enter there."
-      },
       "saveConnection": "Save and continue",
       "saved": "{name} is saved",
       "finish": "Finish",
@@ -579,11 +581,6 @@
       },
       "samlTitle": "Connect a SAML 2.0 provider",
       "samlPreset": "Identity provider",
-      "samlHints": {
-        "entraId": "In the Entra admin center, create an enterprise application with SAML single sign-on. After saving, Pagehall shows its entity ID and reply URL to enter there.",
-        "adfs": "In ADFS, add a relying party trust. After saving, Pagehall shows its metadata address, which ADFS can read.",
-        "generic": "Create a SAML service provider at your identity provider. After saving, Pagehall shows its entity ID, its assertion consumer service URL and its metadata."
-      },
       "metadataUrlHints": {
         "entraId": "The App Federation Metadata URL from the SAML settings of the enterprise application.",
         "adfs": "Usually https://adfs.example.org/FederationMetadata/2007-06/FederationMetadata.xml.",
@@ -607,10 +604,25 @@
       "graphApp": "App registration",
       "draftHint": "Pagehall saves the setup as a draft from the next step on. You can close the assistant and continue later from the list of identity providers.",
       "draftNotSaved": "Your last changes could not be saved to the draft. Check the connection; Pagehall tries again with your next change.",
-      "copyTitle": "Enter these values at {provider}",
-      "copyHint": "Register Pagehall at {provider} with these values first. They do not change, so you can copy them now and fill in the fields below afterwards.",
+      "copyTitle": "Enter these values {place}",
+      "copyHint": "Register Pagehall {place} with these values first. They do not change, so you can copy them now and fill in the fields further down afterwards.",
+      "registerHints": {
+        "entraId": "Create an app registration with the redirect URI below. Under Enterprise applications, turn on Assignment required and assign the groups that may use Pagehall.",
+        "google": "Create an OAuth client of type Web application with the redirect URI below.",
+        "oidc": "Create a confidential OIDC client with the redirect URI below.",
+        "samlEntraId": "Create an enterprise application with SAML single sign-on and enter the entity ID and the reply URL below.",
+        "adfs": "Add a relying party trust that reads Pagehall's metadata address below.",
+        "saml": "Create a SAML service provider with the entity ID and the assertion consumer service URL below, or let it read Pagehall's metadata."
+      },
       "signingCertificate": "Pagehall's signing certificate",
-      "signingCertificateHint": "Upload it at {provider} if it verifies signed requests. It is also part of Pagehall's metadata.",
+      "signingCertificateHint": "Upload it {place} if signed requests are checked there. It is also part of Pagehall's metadata.",
+      "places": {
+        "entraId": "in the Microsoft Entra admin center",
+        "google": "in the Google Cloud console",
+        "oidc": "at your OIDC provider",
+        "saml": "at your identity provider",
+        "adfs": "in ADFS"
+      },
       "typeFixed": "Fixed once the provider is saved",
       "stepLater": "Opens after the current step is saved"
     },

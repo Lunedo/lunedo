@@ -443,7 +443,7 @@ export function InstanceProvidersScreen() {
       description={t("identityProviders.description")}
       icon={KeyRound}
       actions={
-        canManage ? (
+        canManage && (providers.data?.length ?? 0) > 0 ? (
           <Button variant="primary" icon={Plus} onClick={() => void navigate(newProviderPath)}>
             {t("identityProviders.add")}
           </Button>

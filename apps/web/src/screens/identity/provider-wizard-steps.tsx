@@ -31,7 +31,7 @@ import {
 } from "../../api/identity-queries.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { FileButton, readFileText } from "./file-button.js";
-import { parseList } from "./provider-config.js";
+import { domainsHintKey, parseList } from "./provider-config.js";
 import { presetLabel } from "./provider-labels.js";
 import { CERTIFICATE_TYPES, isPlainLdap, ldapUrlSchema, serviceAccountField } from "./provider-ldap.js";
 import { METADATA_TYPES, metadataUrlSchema } from "./provider-saml.js";
@@ -75,10 +75,12 @@ export function validateCommon(
 }
 
 export function NameField({
+  kind,
   value,
   error,
   onChange,
 }: {
+  kind: "entraId" | "google" | "oidc" | "saml" | "ldap";
   value: string;
   error: string | undefined;
   onChange: (name: string) => void;
@@ -87,7 +89,7 @@ export function NameField({
   return (
     <Field
       label={t("identityProviders.fields.name")}
-      hint={t("identityProviders.fields.nameHint")}
+      hint={t(`identityProviders.fields.nameHints.${kind}`)}
       {...(error ? { error } : {})}
     >
       <Input value={value} onChange={(event) => onChange(event.target.value)} />
@@ -249,13 +251,12 @@ export function SamlConnectionStep({
         onValueChange={(preset) => set({ preset: preset as SamlDraft["preset"] })}
         options={SAML_PRESETS.map((preset) => ({ value: preset, label: presetLabel(t, "saml", preset) }))}
       />
-      <Notice variant="info">{t(`identityProviders.wizard.samlHints.${draft.preset}`)}</Notice>
       {error ? (
         <Notice variant="danger" title={t("failures.createProvider")}>
           {error}
         </Notice>
       ) : null}
-      <NameField value={name} error={errors.name} onChange={(next) => onCommonChange({ name: next })} />
+      <NameField kind="saml" value={name} error={errors.name} onChange={(next) => onCommonChange({ name: next })} />
       {draft.preset === "entraId" ? (
         <Field
           label={t("identityProviders.fields.tenantId")}
@@ -306,7 +307,7 @@ export function SamlConnectionStep({
       <DomainsField
         value={domains}
         error={errors.domains}
-        hint={t("identityProviders.accounts.domainsHint")}
+        hint={t(domainsHintKey("saml", draft.preset))}
         onChange={(next) => onCommonChange({ domains: next })}
       />
       <WizardFooter
@@ -472,7 +473,7 @@ export function LdapConnectionStep({
           {error}
         </Notice>
       ) : null}
-      <NameField value={name} error={errors.name} onChange={(next) => onCommonChange({ name: next })} />
+      <NameField kind="ldap" value={name} error={errors.name} onChange={(next) => onCommonChange({ name: next })} />
       <Field
         label={t("identityProviders.ldap.url")}
         hint={t("identityProviders.ldap.urlHint")}

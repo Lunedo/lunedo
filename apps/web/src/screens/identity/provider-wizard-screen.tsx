@@ -33,6 +33,7 @@ import {
 } from "../../api/identity-queries.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
+import { translateKey } from "../../i18n/translate.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 import {
@@ -488,12 +489,26 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
 
 function DraftCopyValues({ draft }: { draft: ProviderDraft }) {
   const { t } = useTranslation();
-  const provider = t(`identityProviders.wizard.choices.${choiceOf(draft.type, draft.preset)}.title`);
   if (draft.type === "ldap") return null;
+  const kind =
+    draft.type === "saml"
+      ? draft.preset === "entraId"
+        ? "samlEntraId"
+        : draft.preset === "adfs"
+          ? "adfs"
+          : "saml"
+      : choiceOf(draft.type, draft.preset);
+  const place = translateKey(
+    t,
+    `identityProviders.wizard.places.${kind === "samlEntraId" ? "entraId" : kind}`,
+  );
   return (
-    <Section title={t("identityProviders.wizard.copyTitle", { provider })}>
+    <Section title={t("identityProviders.wizard.copyTitle", { place })}>
       <div className="flex flex-col gap-4 px-4 py-3">
-        <p className="text-sm text-text-muted">{t("identityProviders.wizard.copyHint", { provider })}</p>
+        <p className="text-sm text-text-muted">
+          {translateKey(t, `identityProviders.wizard.registerHints.${kind}`)}{" "}
+          {t("identityProviders.wizard.copyHint", { place })}
+        </p>
         {draft.saml ? (
           <>
             <CopyField
@@ -525,7 +540,7 @@ function DraftCopyValues({ draft }: { draft: ProviderDraft }) {
               <div className="flex flex-col gap-1">
                 <span className="font-medium">{t("identityProviders.wizard.signingCertificate")}</span>
                 <span className="text-sm text-text-muted">
-                  {t("identityProviders.wizard.signingCertificateHint", { provider })}
+                  {t("identityProviders.wizard.signingCertificateHint", { place })}
                 </span>
                 <div>
                   <a
@@ -714,13 +729,12 @@ function OidcConnectionStep({
           type: t(`identityProviders.wizard.choices.${choice}.title`),
         })}
       </h2>
-      <Notice variant="info">{t(`identityProviders.wizard.connectionHints.${preset}`)}</Notice>
       {error ? (
         <Notice variant="danger" title={t("failures.createProvider")}>
           {error}
         </Notice>
       ) : null}
-      <NameField value={name} error={errors.name} onChange={(next) => onCommonChange({ name: next })} />
+      <NameField kind={choice} value={name} error={errors.name} onChange={(next) => onCommonChange({ name: next })} />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {preset === "entraId" ? (
           <Field
