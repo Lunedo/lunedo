@@ -32,6 +32,7 @@ import {
 } from "../../api/identity-queries.js";
 import {
   AutoSaveTextField,
+  ExplicitSaveTextField,
   SaveIndicator,
   type SaveTracker,
   useSaveStates,
@@ -40,7 +41,7 @@ import { useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { FileButton, readFileText } from "./file-button.js";
-import { useLdapUpdate, useStoreProvider } from "./provider-config.js";
+import { ldapConfigInput, useCheckedUpdate, useLdapUpdate, useStoreProvider } from "./provider-config.js";
 import { Entry, ReceivedClaims } from "./provider-test.js";
 
 export const CERTIFICATE_TYPES = ".pem,.crt,.cer,application/x-pem-file,application/x-x509-ca-cert";
@@ -101,7 +102,7 @@ export function LdapConnectionFields({
   canManage: boolean;
 }) {
   const { t } = useTranslation();
-  const update = useLdapUpdate(provider);
+  const checked = useCheckedUpdate(provider, () => ldapConfigInput(provider.config));
   const tracker = useSaveStates();
   const config = provider.config;
   const plain = isPlainLdap(config.url);
@@ -109,7 +110,7 @@ export function LdapConnectionFields({
   return (
     <>
       <div className="px-4 py-3">
-        <AutoSaveTextField
+        <ExplicitSaveTextField
           label={t("identityProviders.ldap.url")}
           hint={t("identityProviders.ldap.urlHint")}
           value={config.url}
@@ -121,7 +122,13 @@ export function LdapConnectionFields({
           }
           disabled={!canManage}
           className="font-mono"
-          onSave={(url) => update((current) => ({ ...current, url: ldapServerAddress(url) ?? url }))}
+          secret={{
+            label: t("identityProviders.check.serverPassword"),
+            hint: t("identityProviders.check.serverPasswordHint"),
+          }}
+          onSave={(url, password) =>
+            checked((current) => ({ ...current, url: ldapServerAddress(url) ?? url }), password)
+          }
         />
       </div>
       <SettingRow
@@ -143,14 +150,14 @@ export function LdapConnectionFields({
                     : t("identityProviders.noPermission"),
                 })}
             onCheckedChange={(startTls) =>
-              void tracker("startTls").run(() => update((current) => ({ ...current, startTls })))
+              void tracker("startTls").run(() => checked((current) => ({ ...current, startTls })))
             }
           />
         }
         status={<SaveIndicator tracker={tracker("startTls")} />}
       />
       <div className="grid grid-cols-1 gap-4 px-4 py-3 sm:grid-cols-2">
-        <AutoSaveTextField
+        <ExplicitSaveTextField
           label={t("identityProviders.ldap.bindDn")}
           hint={t(serviceAccount.hint)}
           value={config.bindDn}
@@ -158,10 +165,10 @@ export function LdapConnectionFields({
           invalidMessage={t(serviceAccount.invalid)}
           disabled={!canManage}
           className="font-mono"
-          onSave={(bindDn) => update((current) => ({ ...current, bindDn }))}
+          onSave={(bindDn) => checked((current) => ({ ...current, bindDn }))}
         />
         {(["userBaseDn", "groupBaseDn"] as const).map((field) => (
-          <AutoSaveTextField
+          <ExplicitSaveTextField
             key={field}
             label={t(`identityProviders.ldap.${field}`)}
             hint={t(`identityProviders.ldap.${field}Hint`)}
@@ -170,11 +177,11 @@ export function LdapConnectionFields({
             invalidMessage={t("identityProviders.ldap.dnInvalid")}
             disabled={!canManage}
             className="font-mono"
-            onSave={(value) => update((current) => ({ ...current, [field]: value }))}
+            onSave={(value) => checked((current) => ({ ...current, [field]: value }))}
           />
         ))}
         {(["userFilter", "groupFilter"] as const).map((field) => (
-          <AutoSaveTextField
+          <ExplicitSaveTextField
             key={field}
             label={t(`identityProviders.ldap.${field}`)}
             hint={t(`identityProviders.ldap.${field}Hint`)}
@@ -183,7 +190,7 @@ export function LdapConnectionFields({
             invalidMessage={t("identityProviders.ldap.filterInvalid")}
             disabled={!canManage}
             className="font-mono"
-            onSave={(value) => update((current) => ({ ...current, [field]: value }))}
+            onSave={(value) => checked((current) => ({ ...current, [field]: value }))}
           />
         ))}
       </div>
@@ -310,7 +317,7 @@ export function CaCertificateSection({
         onOpenChange={setRemoving}
         title={t("identityProviders.ldap.caRemoveTitle")}
         description={t("identityProviders.ldap.caRemoveDescription")}
-        confirmLabel={t("common.remove")}
+        confirmLabel={t("common.removeCertificate")}
         cancelLabel={t("common.cancel")}
         destructive
         onConfirm={async () => {
@@ -538,15 +545,30 @@ function TestPersonLookup({
     action: string;
     certificate: boolean;
   } | null>(null);
-  const [count, setCount] = useState<number | null>(null);
+  const [found, setFound] = useState<string | null>(null);
   const run = async () => {
     setBusy(true);
     setProblem(null);
-    setCount(null);
+    setFound(null);
     try {
       const result = await testDirectory(provider.id, signInName.trim() === "" ? null : signInName.trim());
       const failed = result.steps.find((step) => !step.ok);
+      if (failed?.step === "search" && result.searched) {
+        const { attribute, value } = result.searched;
+        onFound([]);
+        setProblem({
+          title: t("identityProviders.ldap.noMatchTitle"),
+          detail: t("identityProviders.ldap.noMatch", { attribute, value }),
+          action:
+            (attribute === "mail" || attribute === "userPrincipalName") && !value.includes("@")
+              ? t("identityProviders.ldap.noMatchAddress", { attribute })
+              : t("identityProviders.ldap.noMatchOther"),
+          certificate: false,
+        });
+        return;
+      }
       if (failed) {
+        onFound([]);
         setProblem({
           title: t("identityProviders.directoryTest.failed", {
             step: t(`identityProviders.directoryTest.steps.${failed.step}`),
@@ -561,7 +583,13 @@ function TestPersonLookup({
         name: attribute.name,
         example: attribute.values[0] ?? null,
       }));
-      setCount(attributes.length);
+      const sample = result.sample;
+      const person = sample?.displayName ?? sample?.signInName ?? sample?.email ?? sample?.subject ?? "";
+      setFound(
+        result.searched
+          ? t("identityProviders.ldap.attributesRead", { count: attributes.length, person })
+          : t("identityProviders.ldap.attributesReadFirst", { count: attributes.length, person }),
+      );
       onFound(attributes);
     } catch (failure) {
       setProblem({
@@ -606,9 +634,7 @@ function TestPersonLookup({
           </div>
         </Notice>
       ) : null}
-      {count !== null ? (
-        <Notice variant="success">{t("identityProviders.ldap.attributesRead", { count })}</Notice>
-      ) : null}
+      {found ? <Notice variant="success">{found}</Notice> : null}
     </div>
   );
 }

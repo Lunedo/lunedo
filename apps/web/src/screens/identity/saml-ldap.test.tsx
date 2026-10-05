@@ -70,6 +70,16 @@ function adminApi(overrides: Record<string, Handler> = {}) {
     "GET /api/v1/account/preferences": () => ({ body: [] }),
     "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
     "GET /api/v1/instance/settings": () => ({ body: { items: [], nextCursor: null } }),
+    "POST /api/v1/instance/identity-provider-connection-checks": (request) => ({
+      body: {
+        ok: true,
+        check: (request.body as { type: string }).type === "ldap" ? "directory" : "metadata",
+        url: null,
+        status: null,
+        problem: null,
+        detail: null,
+      },
+    }),
     ...overrides,
   });
 }
@@ -288,6 +298,29 @@ describe("adding a SAML provider", () => {
     });
   });
 
+  it("shows a failed metadata check at the field and saves only when asked", async () => {
+    const url = "https://idp.example.org/saml/wrong";
+    const { requests } = adminApi({
+      [`POST ${BASE}`]: () => ({ status: 201, body: { provider: samlProvider(), credential: null } }),
+      [`GET ${BASE}/${SAML}`]: () => ({ body: samlProvider() }),
+      "POST /api/v1/instance/identity-provider-connection-checks": () => ({
+        body: { ok: false, check: "metadata", url, status: 404, problem: "status", detail: null },
+      }),
+      ...draftApi(SAML, "saml", "generic"),
+    });
+    await renderPath("/settings/instance/sign-in-providers/new");
+    await userEvent.click(await screen.findByRole("button", { name: /SAML 2.0/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await userEvent.type(await screen.findByLabelText("Metadata address"), url);
+    await userEvent.click(screen.getByRole("button", { name: "Save and continue" }));
+    expect(await screen.findByText(`404 at ${url}. Check the metadata address.`)).toBeTruthy();
+    expect(requests.some((request) => request.method === "POST" && request.path === BASE)).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: "Save anyway" }));
+    await waitFor(() =>
+      expect(requests.some((request) => request.method === "POST" && request.path === BASE)).toBe(true),
+    );
+  });
+
   it("asks for the tenant and the metadata address of Entra ID", async () => {
     const { requests } = adminApi({
       [`POST ${BASE}`]: () => ({ status: 201, body: { provider: samlProvider(), credential: null } }),
@@ -347,6 +380,12 @@ describe("adding an LDAP directory", () => {
     await userEvent.click(await screen.findByRole("button", { name: /LDAP or Active Directory/ }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("heading", { name: "Connect a directory" })).toBeTruthy();
+    expect(
+      screen.getByText(/^The address of your directory server, for example ldaps:\/\/dc01\.example\.org\./),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/^The part of the directory that holds the people who may sign in, for example/),
+    ).toBeTruthy();
     expect(screen.queryByText(/Enter these values at/)).toBeNull();
     await userEvent.clear(screen.getByLabelText("Name on the sign-in page"));
     await userEvent.type(screen.getByLabelText("Name on the sign-in page"), "Active Directory · Verlag");
@@ -405,6 +444,33 @@ describe("adding an LDAP directory", () => {
     await userEvent.tab();
     expect(await screen.findByDisplayValue("ldaps://dc01.verlag.example:636")).toBeTruthy();
     expect(screen.queryByRole("switch", { name: "Use StartTLS" })).toBeNull();
+  });
+
+  it("says which attribute and value found nobody and suggests the sign-in name", async () => {
+    adminApi({
+      [`GET ${BASE}/${LDAP}`]: () => ({ body: ldapProvider() }),
+      [`POST ${BASE}/${LDAP}/directory-test`]: () => ({
+        body: {
+          steps: [
+            { step: "connection", ok: true, detail: null },
+            { step: "certificate", ok: true, detail: null },
+            { step: "serviceAccount", ok: true, detail: null },
+            { step: "search", ok: false, detail: "No person matches the search" },
+          ],
+          sample: null,
+          attributes: [],
+          searched: { attribute: "userPrincipalName", value: "lena" },
+        },
+      }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/new?providerId=${LDAP}&step=2`);
+    await userEvent.type(await screen.findByLabelText("Test person"), "lena");
+    await userEvent.click(screen.getByRole("button", { name: "Read attributes" }));
+    expect(await screen.findByText("No person has userPrincipalName = lena.")).toBeTruthy();
+    expect(
+      screen.getByText(/Enter the full address, or choose another attribute under Sign-in name/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/check the base DNs/)).toBeNull();
   });
 
   it("goes back to the connection after saving and links a missing CA certificate to it as a warning", async () => {
@@ -746,7 +812,16 @@ describe("SAML and LDAP providers in the list and the details", () => {
     expect(screen.getByText("Entra ID SAML cannot read groups through Microsoft Graph")).toBeTruthy();
     expect(screen.getByLabelText("Client ID for Microsoft Graph")).toBeTruthy();
     const steps = screen.getByRole("navigation", { name: "Steps" });
-    expect(within(steps).getAllByRole("button")).toHaveLength(6);
+    expect(within(steps).getAllByRole("listitem")).toHaveLength(6);
+    expect(within(steps).getAllByRole("button")).toHaveLength(5);
+    expect(within(steps).getByText("Fixed once the provider is saved")).toBeTruthy();
+  });
+
+  it("asks for the domains in the connection step only", async () => {
+    adminApi({ [`GET ${BASE}/${SAML}`]: () => ({ body: samlProvider() }) });
+    await renderPath(`/settings/instance/sign-in-providers/new?providerId=${SAML}&step=3`);
+    expect(await screen.findByLabelText("Create accounts at first sign-in")).toBeTruthy();
+    expect(screen.queryByLabelText("Domains")).toBeNull();
   });
 
   it("manages the CA certificate, the second factor and the service account password of a directory", async () => {
@@ -787,7 +862,7 @@ describe("SAML and LDAP providers in the list and the details", () => {
     expect(screen.getByRole("switch", { name: "Use StartTLS" }).getAttribute("aria-disabled")).toBe("true");
     await userEvent.click(screen.getByRole("button", { name: "Remove CA certificate" }));
     const confirm = await screen.findByRole("dialog", { name: "Remove the CA certificate?" });
-    await userEvent.click(within(confirm).getByRole("button", { name: "Remove" }));
+    await userEvent.click(within(confirm).getByRole("button", { name: "Remove certificate" }));
     expect(await screen.findByText("No CA certificate uploaded")).toBeTruthy();
 
     expect(screen.getByText(/A directory password proves no second factor/)).toBeTruthy();
@@ -936,6 +1011,7 @@ describe("SAML and LDAP providers in the list and the details", () => {
             { name: "objectGUID", values: ["972e766c-c3f5-49d6-96f6-d904e89e292c"] },
             { name: "userPrincipalName", values: ["alice@pagehall.lab"] },
           ],
+          searched: { attribute: "userPrincipalName", value: "alice@pagehall.lab" },
         },
       }),
     });
@@ -945,7 +1021,7 @@ describe("SAML and LDAP providers in the list and the details", () => {
     ).toBeGreaterThan(0);
     await userEvent.type(screen.getByLabelText("Test person"), "alice@pagehall.lab");
     await userEvent.click(screen.getByRole("button", { name: "Read attributes" }));
-    expect(await screen.findByText("The directory returned 3 attributes for this person.")).toBeTruthy();
+    expect(await screen.findByText("The directory returned 3 attributes for Alice Admin.")).toBeTruthy();
     expect(
       screen.getAllByText(/The directory returned no value of this attribute for the test person/),
     ).toHaveLength(2);
@@ -971,7 +1047,7 @@ describe("SAML and LDAP providers in the list and the details", () => {
     const field = await screen.findByLabelText("Server address");
     await userEvent.clear(field);
     await userEvent.type(field, "ldaps://dc01.verlag.example");
-    await userEvent.tab();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(await screen.findByText(/Enter an ldap:\/\/ address while StartTLS is on/)).toBeTruthy();
     expect(requests.some((request) => request.method === "PATCH")).toBe(false);
   });
@@ -991,19 +1067,56 @@ describe("SAML and LDAP providers in the list and the details", () => {
     const field = await screen.findByLabelText("Server address");
     await userEvent.clear(field);
     await userEvent.type(field, "dc01 .verlag.example");
-    await userEvent.tab();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(
       await screen.findByText("Enter an address such as ldaps://dc01.example.org, without a path."),
     ).toBeTruthy();
     expect(requests.some((request) => request.method === "PATCH")).toBe(false);
     await userEvent.clear(field);
     await userEvent.type(field, "dc01.verlag.example");
-    await userEvent.tab();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("This field is required.")).toBeTruthy();
+    expect(requests.some((request) => request.method === "PATCH")).toBe(false);
+    await userEvent.type(screen.getByLabelText("Password of the service account"), "service password");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() =>
       expect(
         (bodyOf(requests, "PATCH", `${BASE}/${LDAP}`) as { config: { url: string } } | undefined)?.config.url,
       ).toBe("ldaps://dc01.verlag.example:636"),
     );
     expect(await screen.findByDisplayValue("ldaps://dc01.verlag.example:636")).toBeTruthy();
+    expect(bodyOf(requests, "POST", "/api/v1/instance/identity-provider-connection-checks")).toMatchObject({
+      type: "ldap",
+      bindPassword: "service password",
+      providerId: LDAP,
+      config: { url: "ldaps://dc01.verlag.example:636" },
+    });
+  });
+
+  it("keeps a connection change that the check refused and saves nothing", async () => {
+    const provider = ldapProvider();
+    const { requests } = adminApi({
+      [`GET ${BASE}/${LDAP}`]: () => ({ body: provider }),
+      [`GET ${BASE}`]: () => ({ body: [provider] }),
+      "POST /api/v1/instance/identity-provider-connection-checks": () => ({
+        body: {
+          ok: false,
+          check: "directory",
+          url: "ldaps://dc01.verlag.example:636",
+          status: null,
+          problem: "search",
+          detail: "No person matches the search",
+        },
+      }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${LDAP}?tab=settings`);
+    const field = await screen.findByLabelText("Base DN for people");
+    await userEvent.clear(field);
+    await userEvent.type(field, "OU=Nobody,DC=verlag,DC=example");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText(/Nobody was found under the base DN for people/)).toBeTruthy();
+    expect(requests.some((request) => request.method === "PATCH")).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect((field as HTMLInputElement).value).toBe(provider.config.userBaseDn);
   });
 });

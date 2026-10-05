@@ -13,6 +13,8 @@ import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import {
+  type ConnectionCheckBody,
+  checkConnection,
   type IdentityProvider,
   identityKeys,
   type LdapConfig,
@@ -27,7 +29,15 @@ import {
   type SamlProvider,
   updateProvider,
 } from "../../api/identity-queries.js";
-import { AutoSaveTextField, SaveIndicator, useSaveStates } from "../../components/auto-save.js";
+import { isApiError } from "../../api/request.js";
+import {
+  AutoSaveTextField,
+  ExplicitSaveTextField,
+  FieldProblem,
+  SaveIndicator,
+  useSaveStates,
+} from "../../components/auto-save.js";
+import { connectionCheckMessage } from "./connection-check.js";
 
 export function oidcConfigInput(config: OidcConfig): OidcConfigInput {
   const common = {
@@ -134,6 +144,33 @@ function useConfigUpdate<C extends ProviderConfigInput>(providerId: string, curr
     store(await updateProvider(providerId, { config: change(current()) }));
 }
 
+export function useCheckedUpdate<C extends ProviderConfigInput>(
+  provider: IdentityProvider,
+  current: () => C,
+) {
+  const { t } = useTranslation();
+  const store = useStoreProvider();
+  return async (change: (current: C) => C, bindPassword?: string) => {
+    const next = change(current());
+    let check: Awaited<ReturnType<typeof checkConnection>>;
+    try {
+      check = await checkConnection({
+        type: provider.type,
+        config: next,
+        providerId: provider.id,
+        ...(bindPassword ? { bindPassword } : {}),
+      } as ConnectionCheckBody);
+    } catch (failure) {
+      if (provider.type === "ldap" && isApiError(failure, "invalidInput")) {
+        throw new FieldProblem(t("identityProviders.check.passwordNeeded"));
+      }
+      throw failure;
+    }
+    if (!check.ok) throw new FieldProblem(connectionCheckMessage(t, check));
+    store(await updateProvider(provider.id, { config: next }));
+  };
+}
+
 export function useProviderUpdate(provider: IdentityProvider) {
   const store = useStoreProvider();
   const config = useConfigUpdate(provider.id, () => toConfigInput(provider));
@@ -161,6 +198,18 @@ function useFederatedUpdate(provider: OidcProvider | SamlProvider) {
   );
 }
 
+export function domainsHintKey(type: IdentityProvider["type"], preset: string) {
+  if (type === "ldap") return "identityProviders.accounts.domainsHintDirectory" as const;
+  if (preset === "google") return "identityProviders.accounts.domainsHintGoogle" as const;
+  if (preset === "entraId") return "identityProviders.accounts.domainsHintEntraId" as const;
+  return "identityProviders.accounts.domainsHint" as const;
+}
+
+export function providerKind(provider: IdentityProvider): "entraId" | "google" | "oidc" | "saml" | "ldap" {
+  if (provider.type !== "oidc") return provider.type;
+  return provider.config.preset === "generic" ? "oidc" : provider.config.preset;
+}
+
 export function NameRow({ provider, canManage }: { provider: IdentityProvider; canManage: boolean }) {
   const { t } = useTranslation();
   const update = useProviderUpdate(provider);
@@ -168,7 +217,7 @@ export function NameRow({ provider, canManage }: { provider: IdentityProvider; c
     <div className="px-4 py-3">
       <AutoSaveTextField
         label={t("identityProviders.fields.name")}
-        hint={t("identityProviders.fields.nameHint")}
+        hint={t(`identityProviders.fields.nameHints.${providerKind(provider)}`)}
         value={provider.name}
         schema={identityProviderNameSchema}
         disabled={!canManage}
@@ -181,21 +230,22 @@ export function NameRow({ provider, canManage }: { provider: IdentityProvider; c
 export function ConnectionFields({ provider, canManage }: { provider: OidcProvider; canManage: boolean }) {
   const { t } = useTranslation();
   const update = { config: useOidcUpdate(provider) };
+  const checked = useCheckedUpdate(provider, () => oidcConfigInput(provider.config));
   const config = provider.config;
   const tracker = useSaveStates();
   return (
     <>
       <div className="flex flex-col gap-4 px-4 py-3">
-        <AutoSaveTextField
+        <ExplicitSaveTextField
           label={t("identityProviders.fields.clientId")}
           value={config.clientId}
           schema={z.string().trim().min(1).max(500)}
           disabled={!canManage}
           className="font-mono"
-          onSave={(clientId) => update.config((current) => ({ ...current, clientId }))}
+          onSave={(clientId) => checked((current) => ({ ...current, clientId }))}
         />
         {config.preset === "entraId" ? (
-          <AutoSaveTextField
+          <ExplicitSaveTextField
             label={t("identityProviders.fields.tenantId")}
             hint={t("identityProviders.fields.tenantIdHint")}
             value={config.tenantId}
@@ -203,12 +253,12 @@ export function ConnectionFields({ provider, canManage }: { provider: OidcProvid
             disabled={!canManage}
             className="font-mono"
             onSave={(tenantId) =>
-              update.config((current) => (current.preset === "entraId" ? { ...current, tenantId } : current))
+              checked((current) => (current.preset === "entraId" ? { ...current, tenantId } : current))
             }
           />
         ) : null}
         {config.preset === "generic" ? (
-          <AutoSaveTextField
+          <ExplicitSaveTextField
             label={t("identityProviders.fields.issuer")}
             hint={t("identityProviders.fields.issuerHint")}
             value={String(config.issuer ?? "")}
@@ -216,7 +266,7 @@ export function ConnectionFields({ provider, canManage }: { provider: OidcProvid
             disabled={!canManage}
             className="font-mono"
             onSave={(issuer) =>
-              update.config((current) => (current.preset === "generic" ? { ...current, issuer } : current))
+              checked((current) => (current.preset === "generic" ? { ...current, issuer } : current))
             }
           />
         ) : null}
@@ -357,7 +407,15 @@ export function AttributeFields({ provider, canManage }: { provider: OidcProvide
   );
 }
 
-export function AccountFields({ provider, canManage }: { provider: IdentityProvider; canManage: boolean }) {
+export function AccountFields({
+  provider,
+  canManage,
+  showDomains = true,
+}: {
+  provider: IdentityProvider;
+  canManage: boolean;
+  showDomains?: boolean;
+}) {
   const { t } = useTranslation();
   const update = useProviderUpdate(provider);
   const tracker = useSaveStates();
@@ -389,23 +447,19 @@ export function AccountFields({ provider, canManage }: { provider: IdentityProvi
         }
         status={<SaveIndicator tracker={tracker("create")} />}
       />
-      <div className="px-4 py-3">
-        <AutoSaveTextField
-          label={t("identityProviders.accounts.domains")}
-          hint={
-            provider.type === "ldap"
-              ? t("identityProviders.accounts.domainsHintDirectory")
-              : config.preset === "google"
-                ? t("identityProviders.accounts.domainsHintGoogle")
-                : t("identityProviders.accounts.domainsHint")
-          }
-          value={config.domains.join(", ")}
-          schema={domainList}
-          invalidMessage={t("identityProviders.accounts.domainsInvalid")}
-          disabled={!canManage}
-          onSave={(value) => update.config((current) => ({ ...current, domains: parseList(value) }))}
-        />
-      </div>
+      {showDomains ? (
+        <div className="px-4 py-3">
+          <ExplicitSaveTextField
+            label={t("identityProviders.accounts.domains")}
+            hint={t(domainsHintKey(provider.type, config.preset))}
+            value={config.domains.join(", ")}
+            schema={domainList}
+            invalidMessage={t("identityProviders.accounts.domainsInvalid")}
+            disabled={!canManage}
+            onSave={(value) => update.config((current) => ({ ...current, domains: parseList(value) }))}
+          />
+        </div>
+      ) : null}
       <SettingRow
         label={t("identityProviders.accounts.requireGroup")}
         description={t("identityProviders.accounts.requireGroupHint")}

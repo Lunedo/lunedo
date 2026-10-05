@@ -244,6 +244,108 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
     }
   });
 
+  it("tells clients of another node about changed objects only where they may look", async () => {
+    const secondRuntime = await createServerRuntime({ role: "api", env: test.env });
+    let second: NestFastifyApplication | undefined;
+    const responses: IncomingMessage[] = [];
+    const member = await createAccount(test, "changes-member@pagehall.test");
+    const memberClient = await signedInClient(test, member.email, member.password);
+    const elsewhere = await owner.post("/api/v1/organizations", { name: "Changes elsewhere" });
+    expect(elsewhere.statusCode).toBe(201);
+    const outsider = await createAccount(
+      test,
+      "changes-outsider@pagehall.test",
+      "a long enough passphrase",
+      elsewhere.json().id,
+    );
+    const outsiderClient = await signedInClient(test, outsider.email, outsider.password);
+    try {
+      second = await createTestApp(apiContextOf(secondRuntime));
+      await second.listen(0, "127.0.0.1");
+      const { port } = second.getHttpServer().address() as AddressInfo;
+      const follow = async (client: TestClient) => {
+        const received = { connected: false, changes: [] as unknown[] };
+        const response = await new Promise<IncomingMessage>((resolve, reject) => {
+          get(
+            `http://127.0.0.1:${port}/api/v1/notifications/stream`,
+            { headers: { cookie: `${SESSION_COOKIE}=${client.cookies.get(SESSION_COOKIE)}` } },
+            resolve,
+          ).on("error", reject);
+        });
+        responses.push(response);
+        response.setEncoding("utf8");
+        response.on("data", (chunk: string) => {
+          if (chunk.includes("event: notifications")) received.connected = true;
+          for (const match of chunk.matchAll(/event: changes\ndata: (\{.*\})\n\n/g)) {
+            received.changes.push(JSON.parse(match[1] ?? "{}"));
+          }
+        });
+        await expect.poll(() => received.connected, { timeout: 5000 }).toBe(true);
+        return received;
+      };
+      const administrator = await follow(owner);
+      const colleague = await follow(memberClient);
+      const stranger = await follow(outsiderClient);
+
+      const created = await owner.post(`/api/v1/organizations/${organizationId}/groups`, {
+        name: `Live ${randomUUID().slice(0, 8)}`,
+      });
+      expect(created.statusCode).toBe(201);
+      const groupChange = { scope: "organization", organizationId, target: "group" };
+      await expect.poll(() => administrator.changes, { timeout: 5000 }).toContainEqual(groupChange);
+      await expect.poll(() => colleague.changes, { timeout: 5000 }).toContainEqual(groupChange);
+
+      const placeholder = await owner.post("/api/v1/instance/accounts/placeholders", {
+        name: "Live Placeholder",
+        email: `live-${randomUUID().slice(0, 8)}@import.test`,
+      });
+      expect(placeholder.statusCode).toBe(201);
+      const accountChange = { scope: "instance", organizationId: null, target: "account" };
+      await expect.poll(() => administrator.changes, { timeout: 5000 }).toContainEqual(accountChange);
+      await test.runtime.audit.recordAlone({
+        name: "apiToken.revoked",
+        targetId: randomUUID(),
+        scope: { type: "organization", id: organizationId },
+        fields: { accountId: ownerId, reason: "revoked" },
+      });
+      const tokenChange = { scope: "organization", organizationId, target: "apiToken" };
+      await expect.poll(() => administrator.changes, { timeout: 5000 }).toContainEqual(tokenChange);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(colleague.changes).not.toContainEqual(accountChange);
+      expect(colleague.changes).not.toContainEqual(tokenChange);
+      expect(stranger.changes).toEqual([]);
+
+      const role = await owner.post("/api/v1/instance/roles", {
+        name: "Account readers",
+        areas: { accounts: "view" },
+      });
+      expect(role.statusCode).toBe(201);
+      const given = await owner.post("/api/v1/instance/role-assignments", {
+        role: { customRoleId: role.json().id },
+        principal: { kind: "account", id: member.id },
+      });
+      expect(given.statusCode).toBe(201);
+      const assignment = {
+        scope: "organization",
+        organizationId: elsewhere.json().id,
+        target: "roleAssignment",
+      };
+      await test.runtime.audit.recordAlone({
+        name: "role.unassigned",
+        targetId: randomUUID(),
+        scope: { type: "organization", id: elsewhere.json().id },
+        fields: { role: "administrator", principalKind: "account", principalId: ownerId, reason: "removed" },
+      });
+      await expect.poll(() => administrator.changes, { timeout: 5000 }).toContainEqual(assignment);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(colleague.changes).not.toContainEqual(assignment);
+    } finally {
+      for (const response of responses) response.destroy();
+      await second?.close();
+      await secondRuntime.close();
+    }
+  });
+
   it("tells a client of another node about settings whose value for it changed", async () => {
     const secondRuntime = await createServerRuntime({ role: "api", env: test.env });
     let second: NestFastifyApplication | undefined;

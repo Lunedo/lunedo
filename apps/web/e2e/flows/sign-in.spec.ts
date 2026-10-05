@@ -13,7 +13,7 @@ async function enterPassword(page: Page) {
 test("refuses a wrong password", async ({ page }) => {
   await page.goto("/sign-in");
   await signInWithPassword(page, OWNER.email, "not the password");
-  await expect(page.getByText("The e-mail address or the password is not correct.")).toBeVisible();
+  await expect(page.getByText(/^The password is not correct\./)).toBeVisible();
 });
 
 test("signs in with password and authenticator app", async ({ page }) => {

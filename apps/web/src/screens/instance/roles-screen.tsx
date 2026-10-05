@@ -6,6 +6,7 @@ import {
   ConfirmDialog,
   Dialog,
   Field,
+  focusFirstInvalidSoon,
   IconButton,
   Input,
   Menu,
@@ -27,6 +28,7 @@ import {
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
 import { accountLoader } from "../../components/pickers.js";
+import { useUnassignWithUndo } from "../../components/role-undo.js";
 import { TransferOwnershipDialog } from "../../components/transfer-ownership-dialog.js";
 import { useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
@@ -53,12 +55,12 @@ export function InstanceRolesScreen() {
   const [editing, setEditing] = useState<CustomRole | "new" | null>(null);
   const [deleting, setDeleting] = useState<CustomRole | null>(null);
   const [assigning, setAssigning] = useState(false);
-  const [removing, setRemoving] = useState<Assignment | null>(null);
   const [transferring, setTransferring] = useState<string | null>(null);
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: instanceKeys.roles });
     await queryClient.invalidateQueries({ queryKey: instanceKeys.assignments });
   };
+  const unassign = useUnassignWithUndo("instance", refresh);
   const principalName = (assignment: Assignment) =>
     assignment.principalKind === "instanceUsers"
       ? t("roles.principals.instanceUsers")
@@ -128,6 +130,7 @@ export function InstanceRolesScreen() {
             },
             {
               key: "actions",
+              sticky: true,
               header: t("settings.actions"),
               align: "end",
               cell: (role) =>
@@ -139,7 +142,7 @@ export function InstanceRolesScreen() {
                     }
                     items={[
                       { label: t("common.edit"), onSelect: () => setEditing(role) },
-                      { label: t("common.delete"), danger: true, onSelect: () => setDeleting(role) },
+                      { label: t("common.deleteRole"), danger: true, onSelect: () => setDeleting(role) },
                     ]}
                   />
                 ) : null,
@@ -168,6 +171,7 @@ export function InstanceRolesScreen() {
             },
             {
               key: "actions",
+              sticky: true,
               header: t("settings.actions"),
               align: "end",
               cell: (assignment) =>
@@ -182,7 +186,19 @@ export function InstanceRolesScreen() {
                     </Button>
                   ) : null
                 ) : manage ? (
-                  <Button variant="danger" size="sm" onClick={() => setRemoving(assignment)}>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() =>
+                      void unassign(
+                        assignment,
+                        t("roles.unassignedNamed", {
+                          name: principalName(assignment),
+                          role: roleName(t, assignment),
+                        }),
+                      )
+                    }
+                  >
                     {t("roles.unassign")}
                   </Button>
                 ) : null,
@@ -231,7 +247,7 @@ export function InstanceRolesScreen() {
         }}
         title={t("roles.deleteTitle", { name: deleting?.name ?? "" })}
         description={t("roles.deleteDescription")}
-        confirmLabel={t("common.delete")}
+        confirmLabel={t("common.deleteRole")}
         cancelLabel={t("common.cancel")}
         destructive
         onConfirm={async () => {
@@ -255,41 +271,6 @@ export function InstanceRolesScreen() {
           what={t("roles.deleteImpact", { name: deleting?.name ?? "" })}
         />
       </ConfirmDialog>
-      <ConfirmDialog
-        open={removing !== null}
-        onOpenChange={(open) => {
-          if (!open) setRemoving(null);
-        }}
-        title={t("roles.unassignTitle")}
-        confirmLabel={t("roles.unassign")}
-        cancelLabel={t("common.cancel")}
-        destructive
-        onConfirm={async () => {
-          if (!removing) return;
-          try {
-            await request(() =>
-              api.DELETE("/api/v1/instance/role-assignments/{assignmentId}", {
-                params: { path: { assignmentId: removing.id } },
-              }),
-            );
-            setRemoving(null);
-            await refresh();
-          } catch (failure) {
-            showFailure(t("failures.unassignRole"), failure);
-          }
-        }}
-      >
-        {removing ? (
-          <AccessImpact
-            change="loses"
-            people={removing.principalKind === "account" ? [principalName(removing)] : []}
-            {...(removing.principalKind === "instanceUsers"
-              ? { everyone: t("access.allInstanceUsers") }
-              : {})}
-            what={t("instance.roles.losesWhat", { role: roleName(t, removing) })}
-          />
-        ) : null}
-      </ConfirmDialog>
     </SettingsPage>
   );
 }
@@ -303,12 +284,18 @@ function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; rol
   const [expiry, setExpiry] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [missing, setMissing] = useState({ role: false, people: false });
   const builtIn = role?.startsWith("builtIn:") ? role.slice(8) : null;
   const custom = roles.find((entry) => `custom:${entry.id}` === role);
   const areas = custom ? (custom.areas as Areas) : builtIn ? (BUILT_IN_AREAS[builtIn]?.instance ?? {}) : {};
   const label = custom ? custom.name : builtIn ? translateKey(t, `roles.builtIn.${builtIn}`) : "";
 
   const submit = async () => {
+    if (people.length === 0 || !role) {
+      setMissing({ role: !role, people: people.length === 0 });
+      focusFirstInvalidSoon();
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -347,9 +334,8 @@ function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; rol
             {error}
           </Notice>
         ) : null}
-        <Field label={t("roles.role")}>
+        <Field label={t("roles.role")} {...(missing.role && !role ? { error: t("roles.chooseRole") } : {})}>
           <Combobox
-            aria-label={t("roles.role")}
             value={role}
             onValueChange={setRole}
             items={[
@@ -371,10 +357,13 @@ function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; rol
             ]}
           />
         </Field>
-        <Field label={t("roles.peopleLabel")} hint={t("roles.instancePrincipalsHint")}>
+        <Field
+          label={t("roles.peopleLabel")}
+          hint={t("roles.instancePrincipalsHint")}
+          {...(missing.people && people.length === 0 ? { error: t("roles.choosePeopleFirst") } : {})}
+        >
           <Combobox
             multiple
-            aria-label={t("roles.peopleLabel")}
             placeholder={t("roles.choosePeople")}
             value={people.map((item) => item.value)}
             selectedItems={people}
@@ -394,12 +383,7 @@ function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; rol
           <Button variant="secondary" onClick={onClose}>
             {t("common.cancel")}
           </Button>
-          <Button
-            variant="primary"
-            loading={busy}
-            disabled={people.length === 0 || !role}
-            onClick={() => void submit()}
-          >
+          <Button variant="primary" loading={busy} onClick={() => void submit()}>
             {t("roles.assignAction")}
           </Button>
         </div>

@@ -11,11 +11,22 @@ import {
   type SamlProvider,
   uploadSamlMetadata,
 } from "../../api/identity-queries.js";
-import { AutoSaveTextField, SaveIndicator, useSaveStates } from "../../components/auto-save.js";
+import {
+  AutoSaveTextField,
+  ExplicitSaveTextField,
+  SaveIndicator,
+  useSaveStates,
+} from "../../components/auto-save.js";
 import { useFailureToast } from "../../errors/failure.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { FileButton, readFileText } from "./file-button.js";
-import { CopyField, useSamlUpdate, useStoreProvider } from "./provider-config.js";
+import {
+  CopyField,
+  samlConfigInput,
+  useCheckedUpdate,
+  useSamlUpdate,
+  useStoreProvider,
+} from "./provider-config.js";
 
 export const METADATA_TYPES = ".xml,application/xml,text/xml,application/samlmetadata+xml";
 
@@ -236,6 +247,7 @@ export function SamlConnectionFields({
 }) {
   const { t } = useTranslation();
   const update = useSamlUpdate(provider);
+  const checked = useCheckedUpdate(provider, () => samlConfigInput(provider.config));
   const tracker = useSaveStates();
   const config = provider.config;
   const [source, setSource] = useState<"url" | "file">(config.metadata.source);
@@ -243,7 +255,7 @@ export function SamlConnectionFields({
     <>
       {config.preset === "entraId" ? (
         <div className="px-4 py-3">
-          <AutoSaveTextField
+          <ExplicitSaveTextField
             label={t("identityProviders.fields.tenantId")}
             hint={t("identityProviders.fields.tenantIdHint")}
             value={config.tenantId}
@@ -252,7 +264,7 @@ export function SamlConnectionFields({
             disabled={!canManage}
             className="font-mono"
             onSave={(tenantId) =>
-              update((current) => (current.preset === "entraId" ? { ...current, tenantId } : current))
+              checked((current) => (current.preset === "entraId" ? { ...current, tenantId } : current))
             }
           />
         </div>
@@ -284,7 +296,7 @@ export function SamlConnectionFields({
       />
       {source === "url" ? (
         <div className="px-4 py-3">
-          <AutoSaveTextField
+          <ExplicitSaveTextField
             label={t("identityProviders.saml.metadataAddress")}
             hint={t("identityProviders.saml.metadataAddressHint")}
             value={config.metadata.source === "url" ? config.metadata.url : ""}
@@ -292,7 +304,7 @@ export function SamlConnectionFields({
             invalidMessage={t("validation.url")}
             disabled={!canManage}
             className="font-mono"
-            onSave={(url) => update((current) => ({ ...current, metadata: { source: "url", url } }))}
+            onSave={(url) => checked((current) => ({ ...current, metadata: { source: "url", url } }))}
           />
         </div>
       ) : null}

@@ -21,9 +21,9 @@ export interface ChoiceTableProps {
 export function ChoiceTable({ caption, labelHeader, choiceHeader, rows }: ChoiceTableProps) {
   return (
     <div className="overflow-x-auto rounded-md border border-border">
-      <table className="w-full border-collapse">
+      <table className="w-full border-collapse max-sm:block">
         <caption className="sr-only">{caption}</caption>
-        <thead className="bg-surface-sunken">
+        <thead className="bg-surface-sunken max-sm:sr-only">
           <tr>
             <th
               scope="col"
@@ -39,10 +39,17 @@ export function ChoiceTable({ caption, labelHeader, choiceHeader, rows }: Choice
             </th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="max-sm:block">
           {rows.map((row) => (
-            <tr key={row.key} className="border-b border-border last:border-b-0">
-              <th scope="row" className="px-4 py-2 text-left align-middle font-normal">
+            <tr
+              key={row.key}
+              data-choice-row=""
+              className="border-b border-border last:border-b-0 max-sm:flex max-sm:flex-col max-sm:gap-2 max-sm:py-3"
+            >
+              <th
+                scope="row"
+                className="px-4 py-2 text-left align-middle font-normal max-sm:block max-sm:py-0"
+              >
                 <span className="flex flex-col gap-1">
                   <span className="font-medium text-text">{row.label}</span>
                   {row.description ? (
@@ -50,7 +57,7 @@ export function ChoiceTable({ caption, labelHeader, choiceHeader, rows }: Choice
                   ) : null}
                 </span>
               </th>
-              <td className="w-0 px-4 py-2 text-right align-middle whitespace-nowrap">
+              <td className="w-0 px-4 py-2 text-right align-middle whitespace-nowrap max-sm:block max-sm:w-full max-sm:py-0 max-sm:text-left max-sm:whitespace-normal">
                 <SegmentedControl
                   label={row.label}
                   value={row.value}

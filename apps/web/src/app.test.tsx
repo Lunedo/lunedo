@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App, createQueryClient } from "./app.js";
@@ -131,7 +131,7 @@ describe("the web client", () => {
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await userEvent.type(await screen.findByLabelText("Password"), "wrong");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
-    expect(await screen.findByText("The e-mail address or the password is not correct.")).toBeTruthy();
+    expect(await screen.findByText(/The password is not correct\./)).toBeTruthy();
 
     await userEvent.type(screen.getByLabelText("Password"), "correct horse battery");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
@@ -142,6 +142,42 @@ describe("the web client", () => {
     expect(await screen.findByRole("heading", { name: "Security", level: 1 })).toBeTruthy();
     const signIn = requests.find((request) => request.path === "/api/v1/auth/sign-in");
     expect(signIn?.headers.get("X-Pagehall-Request")).toBe("1");
+  });
+
+  it("makes the language chosen on the sign-in page the person's own when they have none", async () => {
+    let signedIn = false;
+    const { requests } = api({
+      "GET /api/v1/auth/session": () => (signedIn ? { body: SESSION } : problem(401, "notSignedIn")),
+      "GET /api/v1/account/preferences": () => ({
+        body: [{ ...preference("locale.language", "en"), source: "organization" }],
+      }),
+      "PUT /api/v1/account/preferences/locale.language": () => ({ status: 204 }),
+    });
+    await renderApp("/sign-in");
+    await userEvent.click(await screen.findByRole("combobox", { name: "Language" }));
+    await userEvent.click(screen.getByRole("option", { name: "Deutsch" }));
+    cleanup();
+    signedIn = true;
+    await renderApp("/settings/preferences");
+    await waitFor(() =>
+      expect(
+        requests.find((request) => request.path === "/api/v1/account/preferences/locale.language")?.body,
+      ).toEqual({ value: "de" }),
+    );
+  });
+
+  it("keeps a person's own language over the one chosen on the sign-in page", async () => {
+    const { requests } = api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/preferences": () => ({
+        body: [{ ...preference("locale.language", "en"), source: "user" }],
+      }),
+    });
+    localStorage.setItem("pagehall.chosenLanguage", "de");
+    await renderApp("/settings/preferences");
+    expect(await screen.findByRole("heading", { name: "Preferences", level: 1 })).toBeTruthy();
+    await waitFor(() => expect(localStorage.getItem("pagehall.chosenLanguage")).toBeNull());
+    expect(requests.some((request) => request.method === "PUT")).toBe(false);
   });
 
   it("applies the preferences and the organization's accent once signed in", async () => {
@@ -156,6 +192,25 @@ describe("the web client", () => {
     expect(within(navigation).getByRole("link", { name: "Members" })).toBeTruthy();
     expect(within(navigation).queryByRole("link", { name: "Roles" })).toBeNull();
     expect(within(navigation).queryByRole("link", { name: "Organizations" })).toBeNull();
+  });
+
+  it("searches the settings of every area it shows and offers to clear an empty result", async () => {
+    api({ "GET /api/v1/auth/session": () => ({ body: SESSION }) });
+    await renderApp("/settings/preferences");
+    await screen.findByRole("heading", { name: "Preferences", level: 1 });
+    const navigation = screen.getByRole("navigation", { name: "Settings" });
+    const search = within(navigation).getByRole("searchbox", { name: "Search settings" });
+    await userEvent.type(search, "scales text");
+    expect(await screen.findByText("1 setting matches “scales text”")).toBeTruthy();
+    const result = screen.getByRole("link", { name: /Text size/ });
+    expect(within(result).getByText("Preferences › Display")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Preferences", level: 1 })).toBeNull();
+    await userEvent.clear(search);
+    await userEvent.type(search, "password policy of the moon");
+    expect(await screen.findByText(/No setting matches “password policy of the moon”/)).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Clear search" }));
+    expect(await screen.findByRole("heading", { name: "Preferences", level: 1 })).toBeTruthy();
+    expect((search as HTMLInputElement).value).toBe("");
   });
 
   it("steps the text size and offers the default only when it differs", async () => {
@@ -178,12 +233,40 @@ describe("the web client", () => {
     );
   });
 
+  it("names the rule that requires the second factor", async () => {
+    api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/security": () => ({
+        body: {
+          totp: true,
+          passkeys: [],
+          recoveryCodes: 8,
+          secondFactorRequired: true,
+          secondFactorRequiredBy: "instanceOwner",
+        },
+      }),
+      "GET /api/v1/account/sessions": () => ({ body: { items: [], nextCursor: null } }),
+      "GET /api/v1/account/tokens": () => ({ body: { items: [], nextCursor: null } }),
+    });
+    await renderApp("/settings/security");
+    expect(
+      await screen.findByText("As the owner of this instance you need a second factor. Keep at least one."),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Your organization requires/)).toBeNull();
+  });
+
   it("asks for the identity before a sensitive change and repeats it", async () => {
     let confirmed = false;
     const { requests } = api({
       "GET /api/v1/auth/session": () => ({ body: SESSION }),
       "GET /api/v1/account/security": () => ({
-        body: { totp: true, passkeys: [], recoveryCodes: 8, secondFactorRequired: true },
+        body: {
+          totp: true,
+          passkeys: [],
+          recoveryCodes: 8,
+          secondFactorRequired: true,
+          secondFactorRequiredBy: "organization",
+        },
       }),
       "GET /api/v1/account/sessions": () => ({ body: { items: [], nextCursor: null } }),
       "GET /api/v1/account/tokens": () => ({ body: { items: [], nextCursor: null } }),

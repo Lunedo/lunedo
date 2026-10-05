@@ -1,4 +1,4 @@
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, CircleAlert } from "lucide-react";
 import {
   Checkbox as CheckboxPrimitive,
   RadioGroup as RadioGroupPrimitive,
@@ -7,7 +7,7 @@ import {
   Switch as SwitchPrimitive,
   ToggleGroup as ToggleGroupPrimitive,
 } from "radix-ui";
-import { type ReactNode, useId, useRef } from "react";
+import { type ReactNode, type RefObject, useId, useLayoutEffect, useRef, useState } from "react";
 import { classNames } from "./class-names.js";
 import { controlClassName, useFieldControl } from "./field.js";
 import { Icon } from "./icon.js";
@@ -87,7 +87,9 @@ export function Select({
       onValueChange={onValueChange}
       {...(disabled !== undefined ? { disabled } : {})}
     >
-      {truncated && selected ? <Tooltip content={optionText(selected)}>{trigger}</Tooltip> : trigger}
+      <Tooltip content={selected ? optionText(selected) : ""} disabled={!truncated || !selected}>
+        {trigger}
+      </Tooltip>
       <SelectPrimitive.Portal>
         <SelectPrimitive.Content
           position="popper"
@@ -107,7 +109,7 @@ export function Select({
                     key={option.value}
                     value={option.value}
                     {...(option.disabled !== undefined ? { disabled: option.disabled } : {})}
-                    className="relative flex h-row cursor-default items-center rounded-sm pr-2 pl-8 text-base text-text outline-none select-none data-disabled:opacity-50 data-highlighted:bg-hover"
+                    className="relative flex h-row cursor-default items-center rounded-sm pr-2 pl-8 text-base text-text outline-none select-none data-disabled:cursor-not-allowed data-disabled:text-text-muted data-highlighted:bg-hover"
                   >
                     <SelectPrimitive.ItemIndicator className="absolute left-2 inline-flex">
                       <Icon icon={Check} className="text-accent" />
@@ -137,6 +139,7 @@ export interface CheckboxProps {
   onCheckedChange: (checked: boolean) => void;
   label?: ReactNode;
   description?: ReactNode;
+  error?: ReactNode;
   disabled?: boolean;
   "aria-label"?: string;
 }
@@ -146,30 +149,34 @@ export function Checkbox({
   onCheckedChange,
   label,
   description,
+  error,
   disabled,
   ...props
 }: CheckboxProps) {
   const field = useFieldControl();
   const generated = useId();
   const id = field.id ?? `checkbox-${generated}`;
-  const descriptionId = description ? `${id}-description` : undefined;
+  const errorId = error ? `${id}-error` : undefined;
+  const descriptionId =
+    [errorId, description ? `${id}-description` : undefined].filter(Boolean).join(" ") || undefined;
   return (
     <div className="flex items-start gap-2">
       <CheckboxPrimitive.Root
         {...field}
+        {...(error ? { "aria-invalid": true } : {})}
         id={id}
         checked={checked}
         onCheckedChange={(state) => onCheckedChange(state === true)}
         {...(disabled !== undefined ? { disabled } : {})}
         {...(props["aria-label"] ? { "aria-label": props["aria-label"] } : {})}
         {...(descriptionId ? { "aria-describedby": descriptionId } : {})}
-        className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-sm border border-control-border bg-surface text-on-accent focus-visible:focus-ring disabled:opacity-60 aria-checked:border-accent aria-checked:bg-accent"
+        className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-sm border border-control-border bg-control text-on-accent focus-visible:focus-ring aria-invalid:border-danger disabled:cursor-not-allowed disabled:border-dashed disabled:bg-surface-sunken aria-checked:border-accent aria-checked:bg-accent disabled:aria-checked:border-control-border disabled:aria-checked:bg-control-border"
       >
         <CheckboxPrimitive.Indicator>
           <Icon icon={Check} size="sm" />
         </CheckboxPrimitive.Indicator>
       </CheckboxPrimitive.Root>
-      {(label || description) && (
+      {(label || description || error) && (
         <div className="flex flex-col">
           {label && (
             <label htmlFor={id} className="text-text">
@@ -177,8 +184,14 @@ export function Checkbox({
             </label>
           )}
           {description && (
-            <span id={descriptionId} className="text-sm text-text-muted">
+            <span id={`${id}-description`} className="text-sm text-text-muted">
               {description}
+            </span>
+          )}
+          {error && (
+            <span id={errorId} className="text-sm text-danger">
+              <Icon icon={CircleAlert} size="sm" className="mr-1 inline align-text-bottom" />
+              {error}
             </span>
           )}
         </div>
@@ -215,7 +228,7 @@ export function Switch({
       {...(disabled && !explained ? { disabled: true } : {})}
       {...(explained ? { "aria-disabled": true, "aria-describedby": reasonId, "data-disabled": "" } : {})}
       {...(labelHidden ? { "aria-label": label } : {})}
-      className="group relative inline-flex h-5 w-10 shrink-0 items-center rounded-full border border-control-border bg-surface px-1 transition-colors focus-visible:focus-ring aria-checked:border-accent aria-checked:bg-accent data-disabled:cursor-not-allowed data-disabled:border-dashed data-disabled:opacity-50 motion-reduce:transition-none"
+      className="group relative inline-flex h-5 w-10 shrink-0 items-center rounded-full border border-control-border bg-control px-1 transition-colors focus-visible:focus-ring aria-checked:border-accent aria-checked:bg-accent data-disabled:cursor-not-allowed data-disabled:border-dashed data-disabled:bg-surface-sunken data-disabled:aria-checked:border-control-border data-disabled:aria-checked:bg-control-border motion-reduce:transition-none"
     >
       <SwitchPrimitive.Thumb className="block size-3 rounded-full bg-control-border transition-transform group-aria-checked:translate-x-5 group-aria-checked:bg-on-accent motion-reduce:transition-none" />
     </SwitchPrimitive.Root>
@@ -275,7 +288,7 @@ export function RadioGroup({ value, onValueChange, options, label, variant = "de
             <RadioGroupPrimitive.Item
               id={itemId}
               value={option.value}
-              className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-full border border-control-border bg-surface focus-visible:focus-ring aria-checked:border-accent"
+              className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-full border border-control-border bg-control focus-visible:focus-ring aria-checked:border-accent"
             >
               <RadioGroupPrimitive.Indicator className="block size-2 rounded-full bg-accent" />
             </RadioGroupPrimitive.Item>
@@ -292,7 +305,7 @@ export function RadioGroup({ value, onValueChange, options, label, variant = "de
 
 export interface SegmentedOption {
   value: string;
-  label: ReactNode;
+  label: string;
   disabled?: boolean;
   disabledReason?: string;
 }
@@ -305,6 +318,9 @@ export interface SegmentedControlProps {
   disabled?: boolean;
 }
 
+const SEGMENTED_ROOT = "inline-flex gap-1 rounded-md border border-control-border bg-surface-sunken p-1";
+const SEGMENTED_ITEM = "h-control-sm rounded-sm px-3 font-medium whitespace-nowrap";
+
 function SegmentedItem({ option }: { option: SegmentedOption }) {
   const reasonId = useId();
   const blocked = option.disabled === true;
@@ -314,9 +330,10 @@ function SegmentedItem({ option }: { option: SegmentedOption }) {
       {...(blocked ? { "aria-disabled": true } : {})}
       {...(blocked && option.disabledReason ? { "aria-describedby": reasonId } : {})}
       className={classNames(
-        "h-control-sm rounded-sm px-3 font-medium whitespace-nowrap text-text-muted focus-visible:focus-ring aria-checked:bg-accent aria-checked:text-on-accent",
+        SEGMENTED_ITEM,
+        "text-text-muted focus-visible:focus-ring aria-checked:bg-accent aria-checked:text-on-accent",
         blocked
-          ? "cursor-not-allowed opacity-50"
+          ? "cursor-not-allowed border border-dashed border-control-border"
           : "hover:bg-hover hover:text-text aria-checked:hover:bg-accent-hover",
       )}
     >
@@ -334,23 +351,84 @@ function SegmentedItem({ option }: { option: SegmentedOption }) {
   );
 }
 
+export function useFits<T extends HTMLElement, M extends HTMLElement>(
+  container: RefObject<T | null>,
+  content: RefObject<M | null>,
+  key: string,
+): boolean {
+  const [fits, setFits] = useState(true);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: new content changes the width to measure
+  useLayoutEffect(() => {
+    const outer = container.current;
+    const inner = content.current;
+    if (!outer || !inner) return;
+    const measure = () => setFits(inner.scrollWidth <= outer.clientWidth + 1);
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(outer);
+    observer.observe(inner);
+    return () => observer.disconnect();
+  }, [container, content, key]);
+  return fits;
+}
+
 export function SegmentedControl({ value, onValueChange, options, label, disabled }: SegmentedControlProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const fits = useFits(containerRef, measureRef, options.map((option) => option.label).join("|"));
+  const choose = (next: string) => {
+    if (!next || options.find((option) => option.value === next)?.disabled) return;
+    onValueChange(next);
+  };
   return (
-    <ToggleGroupPrimitive.Root
-      type="single"
-      value={value}
-      {...(disabled !== undefined ? { disabled } : {})}
-      onValueChange={(next) => {
-        if (!next || options.find((option) => option.value === next)?.disabled) return;
-        onValueChange(next);
-      }}
-      aria-label={label}
-      className="inline-flex gap-1 rounded-md border border-border bg-surface-sunken p-1"
+    <div
+      ref={containerRef}
+      data-segmented=""
+      data-collapsed={fits ? undefined : ""}
+      className={classNames("relative min-w-0", fits ? "inline-flex max-w-full" : "flex w-full")}
     >
-      {options.map((option) => (
-        <SegmentedItem key={option.value} option={option} />
-      ))}
-    </ToggleGroupPrimitive.Root>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none invisible absolute inset-x-0 top-0 h-0 overflow-hidden"
+      >
+        <div ref={measureRef} className={classNames(SEGMENTED_ROOT, "w-max")}>
+          {options.map((option) => (
+            <span key={option.value} className={classNames(SEGMENTED_ITEM, "inline-flex items-center")}>
+              {option.label}
+            </span>
+          ))}
+        </div>
+      </div>
+      {fits ? (
+        <ToggleGroupPrimitive.Root
+          type="single"
+          value={value}
+          {...(disabled !== undefined ? { disabled } : {})}
+          onValueChange={choose}
+          aria-label={label}
+          className={classNames(SEGMENTED_ROOT, "max-w-full")}
+        >
+          {options.map((option) => (
+            <SegmentedItem key={option.value} option={option} />
+          ))}
+        </ToggleGroupPrimitive.Root>
+      ) : (
+        <Select
+          value={value}
+          onValueChange={choose}
+          aria-label={label}
+          {...(disabled !== undefined ? { disabled } : {})}
+          className="w-full"
+          options={options.map((option) => ({
+            value: option.value,
+            label: option.label,
+            ...(option.disabled ? { disabled: true } : {}),
+            ...(option.disabled && option.disabledReason ? { marker: option.disabledReason } : {}),
+          }))}
+        />
+      )}
+    </div>
   );
 }
 

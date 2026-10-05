@@ -96,7 +96,12 @@ export const setupStepSchemas = {
     actions: { acknowledge: { input: empty, result: empty } },
   },
   instance: {
-    details: z.object({ url: z.string(), name: z.string(), suggestedUrl: z.string().nullable() }),
+    details: z.object({
+      url: z.string(),
+      name: z.string(),
+      suggestedUrl: z.string().nullable(),
+      urlFromEnvironment: z.boolean(),
+    }),
     actions: {
       save: {
         input: z.object({ url: instanceUrlSchema, name: instanceNameSchema }).strict(),
@@ -126,6 +131,8 @@ export const setupStepSchemas = {
         input: z.object({ code: totpCodeSchema }).strict(),
         result: z.object({ recoveryCodes: z.array(z.string()) }),
       },
+      renewRecoveryCodes: { input: empty, result: z.object({ recoveryCodes: z.array(z.string()) }) },
+      acknowledgeRecoveryCodes: { input: empty, result: empty },
     },
   },
   keyBackup: {

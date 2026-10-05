@@ -119,6 +119,7 @@ export function BreakGlassScreen() {
             },
             {
               key: "actions",
+              sticky: true,
               header: t("settings.actions"),
               align: "end",
               cell: (entry) =>

@@ -50,7 +50,11 @@
       "removeDescription": "Members of {name} lose what this rule granted at their next sign-in or sync. Access granted by hand stays.",
       "hint": "Rules apply at every sign-in and sync. Removing someone from the group in {provider} removes what the rule granted. Groups created by rules are read-only in Pagehall.",
       "byNameTitle": "Groups are identified by their names",
-      "byName": "{provider} sends group names, not identifiers. Renaming a group in {provider} breaks every rule for it until the rule is changed here."
+      "byName": "{provider} sends group names, not identifiers. Renaming a group in {provider} breaks every rule for it until the rule is changed here.",
+      "remove": "Remove rule",
+      "removed": "The rule for {name} was removed.",
+      "chooseGroup": "Choose the group whose members the rule applies to.",
+      "chooseOrganization": "Choose the organization the rule gives access to."
     },
     "sync": {
       "now": "Sync now",
@@ -141,7 +145,7 @@
       "interval": "Sync interval",
       "intervalHint": "Groups and account status are also updated at every sign-in.",
       "deactivationLimit": "Largest share deactivated at once",
-      "deactivationLimitHint": "A run that would deactivate more of this provider's accounts at once, and more accounts than the minimum below, stops, deactivates nobody and notifies the instance administrators, who can confirm it in the sync log.",
+      "deactivationLimitHint": "Protects against deactivating many accounts by mistake. If one run would deactivate more of this provider's accounts than this share, and more than the minimum below, it stops and changes nobody. The instance administrators are told and can confirm the run in the sync log.",
       "deactivationMinimum": "Accounts a run may always deactivate",
       "deactivationMinimumHint": "A run stops only when it would deactivate more than this number of accounts as well as more than the share above. A run that finds none of the linked accounts always stops.",
       "accountsUnit": "accounts",
@@ -166,7 +170,8 @@
       "noKey": "Not set",
       "keyPlaceholder": "Paste the JSON key of the service account",
       "saveKey": "Save key",
-      "removeKey": "Remove key"
+      "removeKey": "Remove key",
+      "keyRequired": "Paste the JSON key of the service account."
     },
     "title": "Sign-in methods",
     "description": "How people sign in to this instance. Organizations follow from group mapping after sign-in.",
@@ -223,9 +228,9 @@
       "deactivatedTitle": "This provider is deactivated",
       "deactivatedNotice": "Nobody can sign in through it and it is not synchronized. Its settings, rules and groups stay. Activate it again in the settings.",
       "deactivateTitle": "Deactivate {name}",
-      "deactivateDescription": "Stops sign-ins and synchronization through this provider. Everything else stays, and you can activate it again at any time.",
-      "deactivateConfirm": "Nobody can sign in through this provider any more, and the sessions that came from it end now. Settings, rules, groups and access stay.",
-      "deactivate": "Deactivate",
+      "deactivateDescription": "Stops sign-ins and synchronization through this provider and ends the sessions that came from it. Settings, rules and groups stay, and you can activate it again.",
+      "deactivateConfirm": "Nobody can sign in through this provider any more, and the sessions that came from it end now. Ended sessions do not come back when you activate the provider again; people have to sign in anew. Settings, rules, groups and access stay.",
+      "deactivate": "Deactivate provider",
       "deactivated": "{name} is deactivated.",
       "activateTitle": "Activate {name}",
       "activateDescription": "People can sign in through this provider again, and synchronization continues.",
@@ -291,7 +296,13 @@
     "redirectUriHint": "Enter this address in the app registration of your provider.",
     "fields": {
       "name": "Name on the sign-in page",
-      "nameHint": "For example Microsoft or the name of your company.",
+      "nameHints": {
+        "entraId": "For example Microsoft or the name of your company.",
+        "google": "For example Google or the name of your company.",
+        "oidc": "For example Keycloak or the name of your company.",
+        "saml": "For example ADFS or the name of your company.",
+        "ldap": "For example Active Directory or the name of your company."
+      },
       "clientId": "Client ID",
       "tenantId": "Directory (tenant) ID",
       "tenantIdHint": "Found in the overview of your Entra ID tenant.",
@@ -383,7 +394,8 @@
       "create": "Create accounts at first sign-in",
       "createHint": "Without this, only invited people and existing accounts can sign in.",
       "domains": "Domains",
-      "domainsHint": "Enter every domain that is verified in the tenant, for sign-in names and for e-mail addresses, for example example.com and example.at. The sign-in page sends people with these domains to this provider, e-mail addresses in them count as confirmed, and accounts are created only for them. A domain belongs to one provider only.",
+      "domainsHint": "Enter every domain your people use at this provider, for sign-in names and for e-mail addresses, for example example.com and example.at. The sign-in page sends people with these domains to this provider, e-mail addresses in them count as confirmed, and accounts are created only for them. A domain belongs to one provider only.",
+      "domainsHintEntraId": "Enter every domain that is verified in the tenant, for sign-in names and for e-mail addresses, for example example.com and example.at. The sign-in page sends people with these domains to this provider, e-mail addresses in them count as confirmed, and accounts are created only for them. A domain belongs to one provider only.",
       "domainsHintGoogle": "Enter every domain of your Google Workspace, for sign-in names and for e-mail addresses. The sign-in page sends people with these domains to Google.",
       "domainsInvalid": "Enter domains like example.org, separated by commas.",
       "requireGroup": "Require group membership",
@@ -466,7 +478,12 @@
         "saml": "During a renewal, Pagehall's metadata lists old and new certificate. Remove the old one once the identity provider uses the new one.",
         "ldap": "The password has no expiry date in Pagehall. To rotate it, enter the new password and remove the old one.",
         "graph": "During a renewal, old and new credential both work. Remove the old one once the new one is in place."
-      }
+      },
+      "remove": "Remove credential",
+      "removeEntry": "{kind}, created {created}",
+      "removeLast": "Pagehall uses it now and has no other. Sign-in through {name} stops until you add a new one.",
+      "removeInUse": "Pagehall uses it now and switches to another credential of the same kind.",
+      "removeUnused": "Not in use. Removing it does not change how people sign in."
     },
     "logo": {
       "label": "Logo",
@@ -482,6 +499,7 @@
       "title": "Test the connection",
       "description": "Sign in once with a test account. Nothing is saved, and no account is created.",
       "start": "Start test sign-in",
+      "unreachable": "Pagehall could not reach {provider} to start the test. Check the connection settings of this provider, then test again.",
       "worked": "Sign-in worked",
       "summary": "Received {claims, plural, one {# claim} other {# claims}} and {groups, plural, one {# group} other {# groups}}.",
       "failed": "The test sign-in failed",
@@ -512,6 +530,43 @@
       "noEmailEntraId": "Without an address, Pagehall cannot create or link an account. Choose User principal name as the source of the e-mail address under User attributes, or set the e-mail address of the person in {provider}.",
       "noEmail": "Without an address, Pagehall cannot create or link an account. Set the e-mail address of the person in {provider}, or choose the claim or attribute that carries it under User attributes."
     },
+    "check": {
+      "failedTitle": "Pagehall could not reach the provider with these settings",
+      "saveAnyway": "Save anyway",
+      "passwordNeeded": "Pagehall uses the stored password only for the server it belongs to. Enter the password of the service account to connect to this server.",
+      "serverPassword": "Password of the service account",
+      "serverPasswordHint": "Pagehall connects to the new server with it before saving. To store another password, replace it under Credentials.",
+      "saveAnywayHint": "Correct the marked field, or save anyway and correct it later. The setup can then only be finished after you confirm the failed check.",
+      "names": {
+        "discovery": "the OpenID Connect discovery",
+        "metadata": "the SAML metadata",
+        "directory": "the directory connection"
+      },
+      "finishTitle": "Finish although the check failed?",
+      "finishDescription": "Pagehall checked {check} again and it failed: {message} People cannot sign in through this provider until this works.",
+      "finishAnyway": "Finish anyway",
+      "fixFirst": "Correct the settings",
+      "messages": {
+        "discovery": {
+          "status": "{status} at {url}. Check the issuer: Pagehall adds /.well-known/openid-configuration to it.",
+          "unreachable": "No answer from {url}. Check the issuer for typing errors and that this server can reach the provider.",
+          "invalidDocument": "{url} did not return an OpenID Connect discovery document. Check the issuer.",
+          "issuerMismatch": "The document at {url} names the issuer {detail}. Enter exactly this issuer."
+        },
+        "metadata": {
+          "status": "{status} at {url}. Check the metadata address.",
+          "unreachable": "No answer from {url}. Check the metadata address and that this server can reach it.",
+          "invalidDocument": "{url} did not return usable SAML metadata: {detail}"
+        },
+        "directory": {
+          "connection": "Pagehall could not connect to {url}: {detail} Check the server address and the port, and that this server can reach the directory.",
+          "certificate": "The certificate of {url} is not trusted: {detail} Choose the CA certificate of the directory, or check the server name.",
+          "serviceAccount": "The directory did not accept the service account: {detail} Check its name and password.",
+          "search": "Nobody was found under the base DN for people: {detail} Check the base DN.",
+          "unreachable": "Pagehall could not connect to {url}."
+        }
+      }
+    },
     "wizard": {
       "title": "Add identity provider",
       "new": "New",
@@ -527,11 +582,6 @@
       },
       "typeTitle": "Which provider do you use?",
       "connectionTitle": "Connect {type}",
-      "connectionHints": {
-        "entraId": "In the Entra admin center, create an app registration. After saving, Pagehall shows the redirect URI to enter there. Under Enterprise applications, turn on Assignment required and assign the groups that may use Pagehall.",
-        "google": "In the Google Cloud console, create an OAuth client of type Web application. After saving, Pagehall shows the redirect URI to enter there.",
-        "generic": "Create a confidential OIDC client at your provider. After saving, Pagehall shows the redirect URI to enter there."
-      },
       "saveConnection": "Save and continue",
       "saved": "{name} is saved",
       "finish": "Finish",
@@ -569,11 +619,6 @@
       },
       "samlTitle": "Connect a SAML 2.0 provider",
       "samlPreset": "Identity provider",
-      "samlHints": {
-        "entraId": "In the Entra admin center, create an enterprise application with SAML single sign-on. After saving, Pagehall shows its entity ID and reply URL to enter there.",
-        "adfs": "In ADFS, add a relying party trust. After saving, Pagehall shows its metadata address, which ADFS can read.",
-        "generic": "Create a SAML service provider at your identity provider. After saving, Pagehall shows its entity ID, its assertion consumer service URL and its metadata."
-      },
       "metadataUrlHints": {
         "entraId": "The App Federation Metadata URL from the SAML settings of the enterprise application.",
         "adfs": "Usually https://adfs.example.org/FederationMetadata/2007-06/FederationMetadata.xml.",
@@ -597,10 +642,27 @@
       "graphApp": "App registration",
       "draftHint": "Pagehall saves the setup as a draft from the next step on. You can close the assistant and continue later from the list of identity providers.",
       "draftNotSaved": "Your last changes could not be saved to the draft. Check the connection; Pagehall tries again with your next change.",
-      "copyTitle": "Enter these values at {provider}",
-      "copyHint": "Register Pagehall at {provider} with these values first. They do not change, so you can copy them now and fill in the fields below afterwards.",
+      "copyTitle": "Enter these values {place}",
+      "copyHint": "Register Pagehall {place} with these values first. They do not change, so you can copy them now and fill in the fields further down afterwards.",
+      "registerHints": {
+        "entraId": "Create an app registration with the redirect URI below. Under Enterprise applications, turn on Assignment required and assign the groups that may use Pagehall.",
+        "google": "Create an OAuth client of type Web application with the redirect URI below.",
+        "oidc": "Create a confidential OIDC client with the redirect URI below.",
+        "samlEntraId": "Create an enterprise application with SAML single sign-on and enter the entity ID and the reply URL below.",
+        "adfs": "Add a relying party trust that reads Pagehall's metadata address below.",
+        "saml": "Create a SAML service provider with the entity ID and the assertion consumer service URL below, or let it read Pagehall's metadata."
+      },
       "signingCertificate": "Pagehall's signing certificate",
-      "signingCertificateHint": "Upload it at {provider} if it verifies signed requests. It is also part of Pagehall's metadata."
+      "signingCertificateHint": "Upload it {place} if signed requests are checked there. It is also part of Pagehall's metadata.",
+      "places": {
+        "entraId": "in the Microsoft Entra admin center",
+        "google": "in the Google Cloud console",
+        "oidc": "at your OIDC provider",
+        "saml": "at your identity provider",
+        "adfs": "in ADFS"
+      },
+      "typeFixed": "Fixed once the provider is saved",
+      "stepLater": "Opens after the current step is saved"
     },
     "types": {
       "oidc": "OIDC",
@@ -668,7 +730,7 @@
     },
     "ldap": {
       "url": "Server address",
-      "urlHint": "For example ldaps://dc01.example.org. A host name alone, such as dc01.example.org, means ldaps:// on port 636. Use ldaps:// or ldap:// with StartTLS, so passwords are never sent unencrypted.",
+      "urlHint": "The address of your directory server, for example ldaps://dc01.example.org. A server name alone, such as dc01.example.org, is enough; Pagehall then uses ldaps:// on port 636. Plain ldap:// works only with StartTLS, so passwords are never sent unencrypted.",
       "urlInvalid": "Enter an address such as ldaps://dc01.example.org, without a path.",
       "urlInvalidStartTls": "Enter an ldap:// address while StartTLS is on. To use ldaps://, turn StartTLS off first.",
       "startTls": "Use StartTLS",
@@ -676,18 +738,18 @@
       "startTlsLdaps": "Only for ldap:// addresses; ldaps:// is encrypted already.",
       "plainWarning": "Without StartTLS, passwords travel unencrypted. Pagehall refuses such a connection unless the instance runs with insecure identity providers allowed.",
       "bindDn": "Service account",
-      "bindDnHint": "The distinguished name of the account Pagehall uses to search the directory, for example CN=pagehall,OU=Service,DC=example,DC=org.",
-      "bindDnHintActiveDirectory": "The account Pagehall uses to search the directory: its distinguished name, its user principal name such as svc-pagehall@example.org, or EXAMPLE\\svc-pagehall.",
+      "bindDnHint": "The account Pagehall uses to look people up, for example CN=pagehall,OU=Service,DC=example,DC=org. It only needs to read people and groups.",
+      "bindDnHintActiveDirectory": "The account Pagehall uses to look people up, for example svc-pagehall@example.org. EXAMPLE\\svc-pagehall or the full distinguished name work as well. It only needs to read people and groups.",
       "userBaseDn": "Base DN for people",
-      "userBaseDnHint": "Pagehall searches for people below this entry, for example OU=Staff,DC=example,DC=org.",
+      "userBaseDnHint": "The part of the directory that holds the people who may sign in, for example OU=Staff,DC=example,DC=org. Pagehall also looks in everything below it.",
       "groupBaseDn": "Base DN for groups",
-      "groupBaseDnHint": "Pagehall searches for groups below this entry, for example OU=Groups,DC=example,DC=org.",
+      "groupBaseDnHint": "The part of the directory that holds the groups, for example OU=Groups,DC=example,DC=org. Pagehall also looks in everything below it.",
       "dnInvalid": "Enter a distinguished name such as OU=Staff,DC=example,DC=org.",
       "serviceAccountInvalid": "Enter a distinguished name, a user principal name such as svc-pagehall@example.org, or EXAMPLE\\svc-pagehall.",
       "userFilter": "Filter for people",
-      "userFilterHint": "Only entries matching this LDAP filter can sign in.",
+      "userFilterHint": "Which entries count as people who can sign in, for example (objectClass=person). The suggested value fits most directories.",
       "groupFilter": "Filter for groups",
-      "groupFilterHint": "Only entries matching this LDAP filter count as groups.",
+      "groupFilterHint": "Which entries count as groups, for example (objectClass=group). The suggested value fits most directories.",
       "filterInvalid": "Enter an LDAP filter in parentheses, such as (objectClass=person).",
       "signInAttribute": "Sign-in name",
       "signInAttributeHint": "What people enter on the sign-in page besides their password.",
@@ -707,7 +769,12 @@
       "testPerson": "Test person",
       "testPersonHint": "Sign-in name of a person in the directory. Pagehall reads every attribute the directory returns for this person, so you can choose from them below.",
       "readAttributes": "Read attributes",
-      "attributesRead": "{count, plural, one {The directory returned # attribute for this person.} other {The directory returned # attributes for this person.}}",
+      "attributesRead": "{count, plural, one {The directory returned # attribute for {person}.} other {The directory returned # attributes for {person}.}}",
+      "attributesReadFirst": "{count, plural, one {No test person was entered, so Pagehall read the first person the directory returned: {person}, with # attribute.} other {No test person was entered, so Pagehall read the first person the directory returned: {person}, with # attributes.}}",
+      "noMatchTitle": "Nobody was found",
+      "noMatch": "No person has {attribute} = {value}.",
+      "noMatchAddress": "{attribute} holds an address such as lena@example.org. Enter the full address, or choose another attribute under Sign-in name.",
+      "noMatchOther": "If people sign in with another value, choose it under Sign-in name. Otherwise check the base DN and the filter for people.",
       "attributeChoiceHint": "Read the attributes of a test person to choose from every attribute the directory returns.",
       "attributeExample": "Value of the test person: {value}",
       "attributeNotReturned": "The directory returned no value of this attribute for the test person. Choose another attribute or check the person in the directory.",
@@ -864,7 +931,17 @@
     "save": "Save",
     "saved": "Changes saved.",
     "unknown": "Unknown",
-    "yes": "Yes"
+    "yes": "Yes",
+    "dangerZone": "Danger zone",
+    "typeToConfirm": "Type {name} to confirm",
+    "nameMismatch": "The name does not match. Type it exactly as shown, including capitals.",
+    "removeLogo": "Remove logo",
+    "removeToken": "Remove token",
+    "removeDraft": "Remove draft",
+    "removeCertificate": "Remove certificate",
+    "removeDomain": "Remove domain",
+    "deleteRole": "Delete role",
+    "removeCredential": "Remove credential"
   },
   "ui": {
     "clear": "Clear",
@@ -908,7 +985,9 @@
     "resetFilters": "Reset filters",
     "suggested": "Suggested",
     "allTimeZones": "All time zones",
-    "browserTimeZone": "This browser"
+    "browserTimeZone": "This browser",
+    "undo": "Undo",
+    "secondsLeft": "{seconds} s"
   },
   "emergencyRecipients": {
     "title": "Emergency sign-in",
@@ -1078,7 +1157,7 @@
     "challengeExpired": "This sign-in took too long. Start again.",
     "notSignedIn": "Sign in to continue.",
     "sessionEnded": "Your session ended. Sign in again.",
-    "invalidSetupCode": "The setup code is not correct.",
+    "invalidSetupCode": "The setup code is not correct or was already used. Copy the code from PAGEHALL_SETUP_CODE in the .env file (the setup script writes it there) or from the newest setup link in the log of the Pagehall container, as shown below. Each code works once: if it was used, restart the Pagehall container to make it valid again or to get a new one in the log.",
     "setupSessionRequired": "The setup session has ended. Enter the setup code again.",
     "forbidden": "Your roles do not allow this. Ask an owner of the organization if you need it.",
     "csrfRejected": "The request was blocked. Reload the page and try again.",
@@ -1115,6 +1194,7 @@
     "keysAlreadyDownloaded": "The keys were already downloaded and cannot be shown again. Use the copy you stored.",
     "totpExists": "An authenticator app is already set up. Remove it first to set up another one.",
     "ownerMissing": "The owner account does not exist yet. Create it first.",
+    "totpMissing": "The authenticator app is not confirmed yet. Enter a code from the app first.",
     "lastSecondFactor": "Your second factor is required. Add another one before removing this one.",
     "noSecondFactor": "No second factor is set up. Add one first.",
     "secondFactorExists": "This second factor already exists. Nothing needs to change.",
@@ -1141,7 +1221,9 @@
     "anonymizeSelf": "You cannot anonymize your own account. Ask another administrator.",
     "notPlaceholder": "This account is not a placeholder anymore, or it was merged already. Reload the page.",
     "invalidMailConfiguration": "The e-mail settings are not valid. Check the marked fields, then save again.",
-    "mailNotReady": "This sending method is not set up yet. Save its settings and, for Microsoft Graph, add a credential first."
+    "mailNotReady": "This sending method is not set up yet. Save its settings and, for Microsoft Graph, add a credential first.",
+    "instanceUrlFromEnvironment": "The server environment sets the address with PAGEHALL_INSTANCE_URL. Change the variable and restart Pagehall.",
+    "instanceMoved": "Pagehall has moved to another address. Open it at its new address."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -1158,6 +1240,7 @@
       "title": "Sign-in refused",
       "whatToDo": "What you can do:",
       "anotherAccount": "Sign in with another account",
+      "retry": "Try again",
       "reference": "Reference for your administrator:",
       "reasons": {
         "accountCreationDisabled": {
@@ -1214,6 +1297,7 @@
       "signedInAs": "Signed in as {email}",
       "verified": "Verified",
       "password": "Password of {name}",
+      "wrongPassword": "This is not the Pagehall password of {name}. Enter it again, or reset it with \"Forgot password?\" on the sign-in page.",
       "secondFactor": "Second factor",
       "factors": {
         "totp": "Authenticator app",
@@ -1267,7 +1351,8 @@
     "name": "Name",
     "forgotPassword": "Forgot password?",
     "sessionEnded": "Your session ended. Sign in again to continue where you were.",
-    "passkeyCancelled": "The passkey was not used. Try again or choose another method.",
+    "passkeyCancelled": "No passkey was used. Either the browser window was closed, or this device has no passkey for this Pagehall. Try again, use the device where you saved your passkey, or sign in with your e-mail address.",
+    "wrongPassword": "The password is not correct. Enter it again, or set a new one with \"Forgot password?\".",
     "passkeyHint": "Use Touch ID, Windows Hello or your security key when your browser asks.",
     "usePasskey": "Use passkey",
     "verifyTitle": "Confirm it's you",
@@ -1301,12 +1386,22 @@
     "emailConfirmed": "Your new e-mail address is confirmed.",
     "continue": "Continue",
     "invitationTitle": "Join an organization",
-    "invitationDescription": "You were invited to work together on Pagehall.",
     "acceptInvitation": "Accept invitation",
     "createAccountForInvitation": "Create your account to accept the invitation.",
     "createAccount": "Create account",
     "invitationAccountCreated": "Your account is ready. Sign in to start.",
     "invitationJoined": "You joined the organization. Sign in to continue.",
+    "invitationFor": "Join {organization}",
+    "invitationFrom": "{inviter} invited you ({email}) to work together in {organization} on Pagehall.",
+    "invitationFromUnknown": "You ({email}) were invited to work together in {organization} on Pagehall.",
+    "invitationMissing": "This page needs the link from your invitation e-mail. Open the link in the e-mail again. If it does not work, ask the person who invited you for a new invitation.",
+    "invitationInvalid": "This invitation link is not valid. Check that you opened the complete link from the e-mail. If it still does not work, ask the person who invited you for a new invitation.",
+    "invitationExpired": "The invitation to {organization} has expired. Ask {inviter} for a new invitation.",
+    "invitationExpiredUnknown": "The invitation to {organization} has expired. Ask an administrator of the organization for a new invitation.",
+    "invitationRevoked": "The invitation to {organization} was withdrawn. Ask {inviter} for a new invitation if you still need access.",
+    "invitationRevokedUnknown": "The invitation to {organization} was withdrawn. Ask an administrator of the organization for a new invitation if you still need access.",
+    "invitationAccepted": "This invitation to {organization} was already accepted. Sign in to continue.",
+    "invitationUnavailableTitle": "The invitation cannot be accepted",
     "registerTitle": "Create an account",
     "registerDescription": "Enter your work e-mail address. If your organization allows registration, we send you a link.",
     "sendRegistrationLink": "Send link",
@@ -1314,7 +1409,12 @@
     "completeRegistrationTitle": "Complete your registration",
     "registrationComplete": "Your account is ready. Sign in to start.",
     "secondFactorSetupTitle": "Set up a second factor",
-    "secondFactorSetupDescription": "Your organization requires a second factor. Set one up to continue.",
+    "secondFactorSetupDescription": {
+      "instanceOwner": "As the owner of this instance you need a second factor. Set one up to continue.",
+      "reset": "An administrator reset your second factor. Set up a new one to continue.",
+      "instance": "This instance requires a second factor for every account. Set one up to continue.",
+      "organization": "Your organization requires a second factor. Set one up to continue."
+    },
     "secondFactorMethod": "Second factor",
     "registerLink": "No account yet? Create one",
     "directory": {
@@ -1367,10 +1467,10 @@
       "where": "The code is in the .env file if you used the setup script or set PAGEHALL_SETUP_CODE. Otherwise it is in the log of the Pagehall container:",
       "hint": "The code stops working once the setup is complete."
     },
+    "language": "Language of the setup",
     "systemCheck": {
       "title": "System check",
       "description": "Pagehall checked its environment. Warnings do not block the setup.",
-      "language": "Language of the setup",
       "blocked": "Fix the errors above before you continue.",
       "checks": {
         "database": "Database",
@@ -1382,8 +1482,10 @@
       "status": {
         "ok": "OK",
         "warning": "Check",
-        "error": "Must be fixed"
+        "error": "Must be fixed",
+        "later": "Next step"
       },
+      "urlNextStep": "You set the address in the next step.",
       "databaseOk": "PostgreSQL {version}, migrations applied",
       "storageFree": "Writable, {free} free",
       "clockOk": "In sync with the database",
@@ -1431,12 +1533,6 @@
             "action": "Free up space or give the volume more space before people upload files."
           }
         },
-        "instanceUrl": {
-          "notSet": {
-            "cause": "The address under which people reach Pagehall is not set yet.",
-            "action": "You set it in the next step."
-          }
-        },
         "https": {
           "instanceUrlNotHttps": {
             "cause": "The address of the instance does not start with https://.",
@@ -1465,7 +1561,9 @@
       "twoFactorDescription": "Scan the code with an authenticator app, then enter the 6-digit code.",
       "ready": "The owner account is ready",
       "summary": "{name} ({email}), with an authenticator app",
-      "change": "Change owner"
+      "change": "Change owner",
+      "recoveryCodesFailed": "The recovery codes could not be created",
+      "acknowledgeFailed": "The owner step could not be completed"
     },
     "keyBackup": {
       "title": "Back up your keys",
@@ -1475,7 +1573,9 @@
       "copied": "The keys were copied.",
       "keys": "Master key and backup key",
       "alreadyDownloaded": "The keys were already downloaded. For security, they can be downloaded only once.",
-      "stored": "I stored both keys in a safe place outside this server, for example in a password manager."
+      "stored": "I stored both keys in a safe place outside this server, for example in a password manager.",
+      "downloadFirst": "Download the keys first. Without them, a backup cannot be restored.",
+      "confirmStored": "Confirm that you stored the keys outside this server."
     },
     "organization": {
       "title": "First organization",
@@ -1755,7 +1855,13 @@
     "limitDuration": "Set a limit",
     "lockTitle": "Lock {name}?",
     "lockImpactInstance": "Every organization and all its members will use {value} for {name} and can no longer change it.",
-    "lockImpactOrganization": "All members of {organization} will use {value} for {name} and can no longer change it."
+    "lockImpactOrganization": "All members of {organization} will use {value} for {name} and can no longer change it.",
+    "searchLabel": "Search settings",
+    "searchPlaceholder": "Search by name or description",
+    "searchResults": "{count, plural, one {# setting matches “{query}”} other {# settings match “{query}”}}",
+    "searchNone": "No setting matches “{query}”. Check the spelling or search for another word.",
+    "searchClear": "Clear search",
+    "searchWhere": "{page} › {section}"
   },
   "security": {
     "activity": {
@@ -1777,7 +1883,12 @@
     "sendConfirmation": "Send confirmation",
     "emailConfirmationSent": "Check the inbox of the new address and open the link.",
     "twoFactor": "Two-factor authentication",
-    "twoFactorRequired": "Your organization requires a second factor. Keep at least one.",
+    "twoFactorRequired": {
+      "instanceOwner": "As the owner of this instance you need a second factor. Keep at least one.",
+      "reset": "An administrator reset your second factor. Keep at least one.",
+      "instance": "This instance requires a second factor for every account. Keep at least one.",
+      "organization": "Your organization requires a second factor. Keep at least one."
+    },
     "authenticatorApp": "Authenticator app",
     "authenticatorOn": "Codes from an app on your phone.",
     "authenticatorOff": "Use an app such as Aegis, Google Authenticator or 1Password.",
@@ -1821,7 +1932,10 @@
     "endSessionDescription": "The device has to sign in again.",
     "endOthers": "Sign out all other sessions",
     "endOthersTitle": "Sign out all other sessions?",
-    "endOthersDescription": "Every other device has to sign in again."
+    "endOthersDescription": "Every other device has to sign in again.",
+    "removeAuthenticator": "Remove authenticator app",
+    "removeAuthenticatorSummary": "Codes from the app no longer work for sign-in. Set up another second factor first if your organization requires one.",
+    "removePasskey": "Remove passkey"
   },
   "tokens": {
     "personal": "API tokens",
@@ -1977,6 +2091,19 @@
     "testDeliveryFollowsGraph": "Delivery follows. If the test mail does not arrive, look for a non-delivery report in the sender mailbox. New and trial tenants may not send to external recipients yet, which the report shows as 550 5.7.233.",
     "testFailed": "The test mail was not sent",
     "testFailedUnknown": "The mail server did not accept the message.",
+    "failureCode": "Code for administrators: {code}",
+    "failureCauses": {
+      "dns": "The name of the mail server could not be found. Check its spelling, for example smtp.example.org.",
+      "connection": "Pagehall could not connect to the mail server. Check the server name and the port, and that no firewall blocks the connection.",
+      "timeout": "The mail server did not answer in time. Check the port and that no firewall blocks the connection.",
+      "socket": "The connection to the mail server broke off. Check the connection security: port 465 usually needs TLS, port 587 STARTTLS.",
+      "tls": "The secure connection to the mail server failed. Check the connection security and that the certificate of the mail server is valid.",
+      "auth": "The mail server did not accept the user name or the password.",
+      "envelope": "The mail server did not accept the sender or the recipient. Many servers only allow the address of the account that signs in as sender.",
+      "refused": "The mail server refused the message.",
+      "deferred": "The mail server cannot take the message right now. Try again in a few minutes.",
+      "unknown": "The mail server did not accept the message."
+    },
     "testFailedAction": "Check the server, port, connection security and credentials, then send the test again.",
     "preset": "Service",
     "presetHint": "Fills in server, port and connection security. All services are used through SMTP.",
@@ -1992,11 +2119,14 @@
     "saveTogether": "Tenant, app and sender are only valid together, so they are saved with one button.",
     "graph": {
       "title": "Microsoft Graph",
-      "permissionTitle": "Grant the app the right to send",
-      "permission": "Pagehall sends only through sendMail of the sender mailbox. It cannot see how the permission was granted, so it cannot tell whether the app is limited to this mailbox.",
-      "permissionRecommended": "Recommended: grant the permission only for this mailbox in Exchange Online. With RBAC for applications, assign the role Application Mail.Send with a management scope that contains only this mailbox, and do not grant Mail.Send in Entra ID. In a new tenant, run Enable-OrganizationCustomization first; this can take several hours.",
-      "permissionSimple": "Simple: grant Mail.Send as an application permission in Entra ID. The app can then send as every mailbox of the tenant.",
-      "setup": "Create an app registration for e-mail only, separate from sign-in. Enter its tenant and client ID, the sender mailbox and a client secret or a certificate that Pagehall creates.",
+      "steps": {
+        "title": "Set up in Microsoft 365",
+        "create": "Create an app registration in Microsoft Entra ID that is only for e-mail, separate from the one for sign-in.",
+        "grant": "Allow the app to send e-mail: add the application permission Mail.Send and grant admin consent. The app can then send as any mailbox of your organization.",
+        "restrict": "Recommended: limit the app to the sender mailbox. In Exchange Online, give the app the role Application Mail.Send for a scope that contains only this mailbox, then remove Mail.Send from the app registration. In a new tenant, run Enable-OrganizationCustomization first; this can take several hours.",
+        "restrictNote": "Pagehall cannot see how the permission was granted, so it cannot check whether the app is limited to this mailbox.",
+        "enter": "Enter the tenant ID, the client ID and the sender mailbox below, then add a client secret or create a certificate."
+      },
       "sender": "Sender mailbox",
       "senderHint": "The mailbox Pagehall sends as.",
       "senderName": "Sender name",
@@ -2175,7 +2305,7 @@
     "removeImpact": "They lose all access to {name}.",
     "removed": "The member was removed.",
     "deactivateTitle": "Deactivate {name}?",
-    "deactivateDescription": "The account can no longer sign in anywhere on this instance. Sessions end at once.",
+    "deactivateDescription": "The account can no longer sign in anywhere on this instance. Its sessions end at once and its API tokens are revoked for good; reactivating the account does not bring them back.",
     "deactivateImpact": "They lose access to every organization on this instance.",
     "deactivated": "The account was deactivated.",
     "expiryTitle": "Expiry for {name}",
@@ -2186,7 +2316,9 @@
     "permissionsDescription": "Every action in the organization and why it is allowed or not.",
     "permission": "Permission",
     "allowed": "Allowed",
-    "why": "Why"
+    "why": "Why",
+    "emailsRequired": "Enter at least one e-mail address.",
+    "chooseDate": "Choose the date the membership ends, or select “no expiry”."
   },
   "roles": {
     "transferOwnership": "Transfer ownership",
@@ -2219,7 +2351,7 @@
     "assignTo": "Give a role to {name}",
     "assignAction": "Give role",
     "assigned": "The role was given.",
-    "unassign": "Remove",
+    "unassign": "Remove role",
     "unassignTitle": "Remove this role?",
     "unassigned": "The role was removed.",
     "createRole": "Create role",
@@ -2264,7 +2396,14 @@
       "group": "A group",
       "organizationMembers": "All members of the organization",
       "instanceUsers": "All internal users of the instance"
-    }
+    },
+    "unassignedNamed": "{name} no longer has the role {role}.",
+    "removeOwner": "Remove owner",
+    "removeOwnerTitle": "Remove {name} as owner?",
+    "removeOwnerSummary": "{name} loses full control of {organization}. Only another owner can give the role back.",
+    "removeOwnerEntry": "{name} is an owner",
+    "chooseRole": "Choose the role to give.",
+    "choosePeopleFirst": "Choose at least one person."
   },
   "areas": {
     "levels": {
@@ -2348,11 +2487,16 @@
     "removeManagerTitle": "Remove {name} as manager?",
     "delete": "Delete group",
     "deleteTitle": "Delete {name}?",
-    "deleteDescription": "The group and its role assignments are removed.",
+    "deleteDescription": "The group and its role assignments are removed for good. This cannot be undone.",
     "gainsRoles": "They join {name} and receive its roles: {roles}.",
     "gainsMembership": "They join {name}.",
     "losesRoles": "They leave {name} and lose its roles: {roles}.",
-    "losesMembership": "They leave {name}."
+    "losesMembership": "They leave {name}.",
+    "removeMember": "Remove from group",
+    "removeManager": "Remove as manager",
+    "memberRemovedName": "{name} was removed from the group.",
+    "managerRemovedName": "{name} no longer manages the group.",
+    "deleteSummary": "Removes the group and its role assignments for good. Members lose the access the group gave them."
   },
   "serviceAccounts": {
     "open": "Open service account {name}",
@@ -2377,11 +2521,16 @@
     },
     "tokens": "Tokens",
     "tokenHint": "The token can do at most what the service account's roles allow.",
-    "deactivate": "Deactivate",
+    "deactivate": "Deactivate service account",
     "deactivateTitle": "Deactivate {name}?",
     "deactivateDescription": "All tokens are revoked. This cannot be undone.",
     "deactivateImpact": "{count, plural, one {Its token stops working.} other {Its # tokens stop working.}}",
-    "deactivatedNotice": "This service account is deactivated."
+    "deactivatedNotice": "This service account is deactivated.",
+    "deactivateSummary": "Revokes all its tokens for good. A deactivated service account cannot be activated again.",
+    "removeResponsible": "Remove responsible person",
+    "responsibleRemoved": "{name} is no longer responsible.",
+    "responsiblePerson": "Person",
+    "choosePersonFirst": "Choose the person to add, then select Add responsible person again."
   },
   "breakGlass": {
     "title": "Break-glass access",
@@ -2419,7 +2568,21 @@
       "retention": "Retention and API",
       "mailMissingTitle": "E-mail is not set up",
       "mailMissing": "Pagehall sends no invitations and no e-mail notifications until a mail server or Microsoft Graph is set up. Notifications still appear in the app.",
-      "mailSettings": "Set up e-mail"
+      "mailSettings": "Set up e-mail",
+      "addressFromEnvironment": "Set by PAGEHALL_INSTANCE_URL in the server environment. To change it, change the variable and restart Pagehall.",
+      "addressInvalid": "Enter an address with http:// or https:// and without a path, for example https://wiki.example.org.",
+      "addressUnchanged": "This is the current address. Enter the new one.",
+      "addressConfirmTitle": "Move Pagehall to {url}?",
+      "addressConfirmIntro": "Make sure Pagehall is reachable at the new address first. Then:",
+      "addressEffectPasskeys": "Passkeys registered under the old address stop working. Everyone signs in with another method and adds a new passkey.",
+      "addressEffectProviders": "Redirect and reply URLs at every identity provider must be updated to the new address, or sign-in through them fails.",
+      "addressEffectSessions": "All open sessions end, also yours. This browser opens the new address, where you sign in again.",
+      "addressMove": "Move to new address",
+      "addressKeep": "Keep current address",
+      "movedTitle": "Pagehall has moved",
+      "movedDescription": "This page is open under {old}, but Pagehall is now at {url}. Changes made here cannot be saved. Sessions under the old address have ended.",
+      "movedAction": "Open {url}",
+      "movedPasskeys": "If you signed in with a passkey, sign in with another method at the new address and add a new passkey there."
     },
     "organizations": {
       "search": "Search by name or short name",
@@ -2453,7 +2616,7 @@
       "organization": "Organization",
       "chooseOrganization": "Choose an organization",
       "assign": "Assign organization",
-      "accountType": "Account type",
+      "accountType": "Type",
       "typesHint": "Standard accounts belong to people in an organization. Guests and portal users see only what is shared with them. Service accounts belong to integrations and sign in only with API tokens.",
       "instanceRole": "Instance role",
       "twoFactor": "Two-factor",
@@ -2515,7 +2678,11 @@
       "newOwner": "New owner",
       "transferTitle": "Make {name} the instance owner?",
       "transferDescription": "You stay an administrator. Only the owner can transfer the ownership again.",
-      "transferImpact": "They become the owner of the instance and the break-glass account."
+      "transferImpact": "They become the owner of the instance and the break-glass account.",
+      "deactivateSummary": "Stops every sign-in, ends all sessions and revokes the API tokens for good.",
+      "endSessionsSummary": "Signs {name} out on every device. {name} can sign in again right away.",
+      "resetSummary": "Removes the authenticator app, passkeys and recovery codes and ends every session. {name} sets up a new second factor at the next sign-in.",
+      "chooseNewOwner": "Choose who becomes the new owner."
     },
     "roles": {
       "title": "Roles",
@@ -2678,7 +2845,8 @@
         "responsibleChanged": "Responsible person changed"
       },
       "instance": {
-        "ownershipTransferred": "Instance ownership transferred"
+        "ownershipTransferred": "Instance ownership transferred",
+        "addressChanged": "Instance address changed"
       },
       "breakGlass": {
         "started": "Break-glass access started",
@@ -2741,7 +2909,9 @@
       "invitation": "Invitation",
       "breakGlassAccess": "Break-glass access",
       "apiToken": "API token",
-      "audit": "Audit log"
+      "audit": "Audit log",
+      "identityProvider": "Identity provider",
+      "mappingRule": "Mapping rule"
     },
     "properties": {
       "value": "Value",
@@ -2768,7 +2938,8 @@
       "lockedUntil": "Locked until",
       "logoRef": "Logo",
       "masterKeyVersions": "Master key versions",
-      "method": "Sending method",
+      "method": "Sign-in method",
+      "mailMethod": "Sending method",
       "methods": "Methods",
       "name": "Name",
       "notifiedCount": "People notified",
@@ -2819,7 +2990,9 @@
       "tenantId": "Tenant",
       "clientId": "Client ID",
       "sender": "Sender",
-      "senderName": "Sender name"
+      "senderName": "Sender name",
+      "url": "Address",
+      "previousUrl": "Previous address"
     },
     "values": {
       "account": "Account",
@@ -2989,6 +3162,7 @@
     "changeEmail": "The e-mail address was not changed",
     "addPasskey": "The passkey was not added",
     "acceptInvitation": "The invitation was not accepted",
+    "loadInvitation": "The invitation could not be loaded",
     "completeRegistration": "The registration was not completed",
     "register": "The registration was not sent",
     "requestReset": "The reset link was not sent",
@@ -3052,7 +3226,8 @@
     "startProviderDraft": "The setup could not be started",
     "finishProviderSetup": "The setup could not be finished",
     "removeDraft": "The draft could not be removed",
-    "loadDrafts": "The drafts could not be loaded"
+    "loadDrafts": "The drafts could not be loaded",
+    "changeAddress": "The address was not changed"
   },
   "lifecycle": {
     "placeholder": {
@@ -3073,19 +3248,22 @@
       "noAccounts": "No active account matches",
       "notOwn": "You cannot merge a placeholder into your own account.",
       "action": "Merge",
-      "done": "{placeholder} merged into {account}: {memberships, plural, one {# membership} other {# memberships}}, {groups, plural, one {# group} other {# groups}}, {roles, plural, one {# role} other {# roles}}"
+      "done": "{placeholder} merged into {account}: {memberships, plural, one {# membership} other {# memberships}}, {groups, plural, one {# group} other {# groups}}, {roles, plural, one {# role} other {# roles}}",
+      "chooseAccount": "Choose the account the placeholder belongs to."
     },
     "home": {
       "title": "Home organization",
       "description": "The home organization decides whose administrators manage the account and whose defaults apply to its settings. The person and the administrators of both organizations are notified.",
       "action": "Change home organization",
       "changed": "{organization} is the home organization now",
-      "newHome": "New home organization"
+      "newHome": "New home organization",
+      "chooseOther": "Choose an organization other than the current home organization.",
+      "onlyOne": "The person is a member of this organization only. To move the account, first add the person as a member to another organization, then change the home organization here."
     },
     "anonymize": {
       "title": "Anonymize account",
       "summary": "Removes name, e-mail address and profile for good. Content then shows a former user.",
-      "open": "Anonymize…",
+      "open": "Anonymize account…",
       "irreversible": "This cannot be undone",
       "removesProfile": "Name, e-mail address, sign-in names and profile of {name} are removed. The account shows as a former user with a short ID.",
       "deletesAccess": "Linked sign-ins, sessions, API tokens, passkeys, second factors and personal settings are deleted.",
@@ -3098,7 +3276,8 @@
       "confirm": "Type {name} to confirm",
       "reauthentication": "Next, Pagehall asks you to confirm with your password, passkey or authenticator code.",
       "action": "Anonymize",
-      "done": "The account was anonymized"
+      "done": "The account was anonymized",
+      "reasonRequired": "Enter why the account is anonymized, for example the date of the erasure request."
     }
   }
 }

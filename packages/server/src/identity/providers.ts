@@ -79,6 +79,27 @@ export type ProviderWarning =
   | "caCertificateExpiring"
   | "noGraphCredential";
 
+export type ConnectionProblem =
+  | "unreachable"
+  | "status"
+  | "invalidDocument"
+  | "issuerMismatch"
+  | "connection"
+  | "certificate"
+  | "serviceAccount"
+  | "search";
+
+export interface ConnectionCheck {
+  ok: boolean;
+  check: "discovery" | "metadata" | "directory";
+  url: string | null;
+  status: number | null;
+  problem: ConnectionProblem | null;
+  detail: string | null;
+}
+
+const DISCOVERY_TIMEOUT_MS = 10_000;
+
 export type CredentialKind = "clientSecret" | "certificate" | "samlSigning" | "bindPassword";
 
 export interface CredentialSummary {
@@ -656,6 +677,74 @@ export class IdentityProviderService {
     const [summary] = await this.#summaries(this.#database, [row]);
     if (!summary) throw notFound();
     return summary;
+  }
+
+  parseConnection(type: IdentityProviderType, input: unknown): OidcConfig | SamlConfig | LdapConfig {
+    return this.#parseConfig(type, input);
+  }
+
+  async checkDiscovery(config: OidcConfig): Promise<ConnectionCheck> {
+    const issuer = oidcIssuer(config);
+    const url = `${issuer.replace(/\/+$/, "")}/.well-known/openid-configuration`;
+    const result = (problem: ConnectionProblem | null, status: number | null, detail: string | null) => ({
+      ok: problem === null,
+      check: "discovery" as const,
+      url,
+      status,
+      problem,
+      detail,
+    });
+    let response: Response;
+    try {
+      response = await (this.#fetch ?? fetch)(url, {
+        redirect: "error",
+        headers: { accept: "application/json" },
+        signal: AbortSignal.timeout(DISCOVERY_TIMEOUT_MS),
+      });
+    } catch {
+      return result("unreachable", null, null);
+    }
+    if (!response.ok) return result("status", response.status, null);
+    let document: unknown;
+    try {
+      document = await response.json();
+    } catch {
+      return result("invalidDocument", response.status, null);
+    }
+    const found =
+      typeof document === "object" && document !== null && "issuer" in document ? document.issuer : null;
+    if (typeof found !== "string") return result("invalidDocument", response.status, null);
+    if (found !== issuer) return result("issuerMismatch", response.status, plainText(found));
+    return result(null, response.status, null);
+  }
+
+  async checkMetadata(config: SamlConfig): Promise<ConnectionCheck> {
+    const url = config.metadata.source === "url" ? config.metadata.url : null;
+    const result = (problem: ConnectionProblem | null, status: number | null, detail: string | null) => ({
+      ok: problem === null,
+      check: "metadata" as const,
+      url,
+      status,
+      problem,
+      detail,
+    });
+    if (!url) return result(null, null, null);
+    try {
+      this.#parseMetadata(
+        await fetchSamlMetadata(url, {
+          allowInsecure: this.#allowInsecure,
+          ...(this.#fetch ? { fetch: this.#fetch } : {}),
+        }),
+      );
+      return result(null, 200, null);
+    } catch (error) {
+      if (error instanceof SamlMetadataError) {
+        if (error.reason !== "invalid") return result(error.reason, error.status, null);
+        return result("invalidDocument", error.status, error.message);
+      }
+      if (error instanceof OrganizationError) return result("invalidDocument", 200, error.message);
+      throw error;
+    }
   }
 
   async #loadMetadata(config: SamlConfig, uploaded: string | null | undefined): Promise<string> {

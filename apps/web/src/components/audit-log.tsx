@@ -4,6 +4,7 @@ import {
   Combobox,
   type ComboboxItem,
   Drawer,
+  Field,
   Input,
   Table,
   TableToolbar,
@@ -143,22 +144,22 @@ export function AuditLog({
       <TableToolbar
         filters={
           <>
-            <Input
-              type="date"
-              aria-label={t("audit.from")}
-              title={t("audit.from")}
-              className="w-auto"
-              value={filters.from}
-              onChange={(event) => update({ from: event.target.value })}
-            />
-            <Input
-              type="date"
-              aria-label={t("audit.to")}
-              title={t("audit.to")}
-              className="w-auto"
-              value={filters.to}
-              onChange={(event) => update({ to: event.target.value })}
-            />
+            <Field label={t("audit.from")}>
+              <Input
+                type="date"
+                className="w-auto"
+                value={filters.from}
+                onChange={(event) => update({ from: event.target.value })}
+              />
+            </Field>
+            <Field label={t("audit.to")}>
+              <Input
+                type="date"
+                className="w-auto"
+                value={filters.to}
+                onChange={(event) => update({ to: event.target.value })}
+              />
+            </Field>
             <div className="w-field max-w-full">
               <Combobox
                 aria-label={t("audit.action")}
@@ -238,7 +239,7 @@ export function AuditLog({
             key: "actor",
             header: t("audit.actor"),
             hideBelow: "sm",
-            cell: (event) => <TruncatedText text={actorLabel(t, event)} />,
+            cell: (event) => <TruncatedText text={actorLabel(t, event)} className="max-w-field" />,
           },
           {
             key: "action",
@@ -261,7 +262,7 @@ export function AuditLog({
             key: "target",
             header: t("audit.target"),
             cell: (event) => (
-              <div className="flex min-w-0 flex-col">
+              <div className="flex max-w-field min-w-0 flex-col">
                 <TruncatedText text={targetLabel(t, event)} />
                 <span className="text-text-muted text-xs">{scopeLabel(t, event)}</span>
               </div>

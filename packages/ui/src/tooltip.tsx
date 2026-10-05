@@ -7,13 +7,15 @@ export function Tooltip({
   content,
   children,
   side = "top",
+  disabled = false,
 }: {
   content: ReactNode;
   children: ReactNode;
   side?: "top" | "right" | "bottom" | "left";
+  disabled?: boolean;
 }) {
   return (
-    <TooltipPrimitive.Root>
+    <TooltipPrimitive.Root {...(disabled ? { open: false } : {})}>
       <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
       <TooltipPrimitive.Portal>
         <TooltipPrimitive.Content

@@ -1,25 +1,23 @@
 import type { SetupStepDetails } from "@pagehall/shared";
-import { Badge, Button, Combobox, ErrorState, Field, List, ListRow, Notice } from "@pagehall/ui";
+import { Badge, Button, ErrorState, List, ListRow, Notice } from "@pagehall/ui";
 import type { TFunction } from "i18next";
-import { CircleAlert, CircleCheck, CircleX, RotateCcw } from "lucide-react";
+import { CircleAlert, CircleCheck, CircleDashed, CircleX, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { languageItems } from "../../../components/pickers.js";
 import { docsUrl } from "../../../docs/docs-url.js";
 import { FailureNotice } from "../../../errors/failure.js";
 import type { Formatter } from "../../../format/format.js";
-import { isLanguage, rememberLanguage } from "../../../i18n/index.js";
 import { translateKey } from "../../../i18n/translate.js";
 import { useFormat } from "../../../preferences/preferences-provider.js";
 import { runSetupAction } from "../setup-api.js";
 import type { StepProps } from "./step-props.js";
 
-type Status = "ok" | "warning" | "error";
+type Status = "ok" | "warning" | "error" | "later";
 type Checks = SetupStepDetails<"systemCheck">["checks"];
 type CheckKey = keyof Checks;
 
-const ICONS = { ok: CircleCheck, warning: CircleAlert, error: CircleX } as const;
-const BADGES = { ok: "success", warning: "warning", error: "danger" } as const;
+const ICONS = { ok: CircleCheck, warning: CircleAlert, error: CircleX, later: CircleDashed } as const;
+const BADGES = { ok: "success", warning: "warning", error: "danger", later: "neutral" } as const;
 const CHECK_ORDER: CheckKey[] = ["database", "fileStorage", "clock", "instanceUrl", "https"];
 
 function unknownId(t: TFunction, id: number | null): string {
@@ -43,6 +41,10 @@ function passedDescription(t: TFunction, format: Formatter, checks: Checks, key:
   }
 }
 
+function setLater(checks: Checks, key: CheckKey): boolean {
+  return key === "instanceUrl" && checks.instanceUrl.cause === "notSet";
+}
+
 export function checkExplanation(
   t: TFunction,
   format: Formatter,
@@ -50,7 +52,7 @@ export function checkExplanation(
   key: CheckKey,
 ): { cause: string; action: string } | null {
   const check = checks[key];
-  if (check.status === "ok" || check.cause === null) return null;
+  if (check.status === "ok" || check.cause === null || setLater(checks, key)) return null;
   const storage = checks.fileStorage;
   const values: Record<string, string | number> = {
     path: storage.path,
@@ -69,7 +71,7 @@ export function checkExplanation(
 }
 
 export function SystemCheckStep({ details, back, onDone, refresh }: StepProps<"systemCheck">) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const format = useFormat();
   const [failure, setFailure] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
@@ -101,22 +103,10 @@ export function SystemCheckStep({ details, back, onDone, refresh }: StepProps<"s
 
   return (
     <div className="flex flex-col gap-4">
-      <Field label={t("setup.systemCheck.language")}>
-        <Combobox
-          aria-label={t("setup.systemCheck.language")}
-          value={i18n.language}
-          onValueChange={(language) => {
-            if (!isLanguage(language)) return;
-            rememberLanguage(language);
-            void i18n.changeLanguage(language);
-          }}
-          items={languageItems(t)}
-        />
-      </Field>
       <List>
         {CHECK_ORDER.map((key) => {
           const check = checks[key];
-          const status: Status = check.status;
+          const status: Status = setLater(checks, key) ? "later" : check.status;
           const title = translateKey(t, `setup.systemCheck.checks.${key}`);
           const explanation = checkExplanation(t, format, checks, key);
           return (
@@ -125,27 +115,29 @@ export function SystemCheckStep({ details, back, onDone, refresh }: StepProps<"s
               icon={ICONS[status]}
               title={title}
               description={
-                explanation ? (
-                  <div className="mt-2">
-                    <ErrorState
-                      variant={status === "error" ? "danger" : "warning"}
-                      title={t("setup.systemCheck.failedTitle", { check: title })}
-                      cause={explanation.cause}
-                      action={explanation.action}
-                      {...(check.fixCommand ? { command: check.fixCommand } : {})}
-                      documentationUrl={docsUrl(check.docs)}
-                      onRetry={() => void checkAgain(key)}
-                      retryLabel={
-                        checking === key ? t("setup.systemCheck.checking") : t("setup.systemCheck.checkAgain")
-                      }
-                    />
-                  </div>
-                ) : (
-                  passedDescription(t, format, checks, key)
-                )
+                status === "later"
+                  ? t("setup.systemCheck.urlNextStep")
+                  : explanation
+                    ? null
+                    : passedDescription(t, format, checks, key)
               }
               actions={<Badge variant={BADGES[status]}>{t(`setup.systemCheck.status.${status}`)}</Badge>}
-            />
+            >
+              {explanation ? (
+                <ErrorState
+                  variant={status === "error" ? "danger" : "warning"}
+                  title={t("setup.systemCheck.failedTitle", { check: title })}
+                  cause={explanation.cause}
+                  action={explanation.action}
+                  {...(check.fixCommand ? { command: check.fixCommand } : {})}
+                  documentationUrl={docsUrl(check.docs)}
+                  onRetry={() => void checkAgain(key)}
+                  retryLabel={
+                    checking === key ? t("setup.systemCheck.checking") : t("setup.systemCheck.checkAgain")
+                  }
+                />
+              ) : null}
+            </ListRow>
           );
         })}
       </List>

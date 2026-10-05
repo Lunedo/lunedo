@@ -7,6 +7,7 @@ import { problemMessage } from "../../../errors/problem-message.js";
 import { needsHttpsWarning } from "../../../forms/addresses.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../../forms/use-schema-form.js";
 import { runSetupAction } from "../setup-api.js";
+import { useDraftDefaults, useKeepDraft } from "../setup-drafts.js";
 import type { StepProps } from "./step-props.js";
 
 const instanceForm = z.object({ url: instanceUrlSchema, name: instanceNameSchema });
@@ -15,12 +16,16 @@ export function InstanceStep({ details, back, onDone }: StepProps<"instance">) {
   const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const form = useSchemaForm(instanceForm, {
-    defaultValues: {
-      url: details.url || details.suggestedUrl || globalThis.location?.origin || "",
+    defaultValues: useDraftDefaults("instance", {
+      url:
+        (details.urlFromEnvironment ? details.suggestedUrl : details.url || details.suggestedUrl) ||
+        globalThis.location?.origin ||
+        "",
       name: details.name,
-    },
+    }),
     messages: { url: t("validation.instanceUrl") },
   });
+  useKeepDraft("instance", form);
   const submit = form.handleSubmit(async (values) => {
     setError(null);
     try {
@@ -40,10 +45,19 @@ export function InstanceStep({ details, back, onDone }: StepProps<"instance">) {
       ) : null}
       <Field
         label={t("setup.instance.url")}
-        hint={t("setup.instance.urlHint")}
+        hint={
+          details.urlFromEnvironment
+            ? t("instance.general.addressFromEnvironment")
+            : t("setup.instance.urlHint")
+        }
         error={form.formState.errors.url?.message}
       >
-        <Input type="url" autoComplete="url" {...form.register("url")} />
+        <Input
+          type="url"
+          autoComplete="url"
+          readOnly={details.urlFromEnvironment}
+          {...form.register("url")}
+        />
       </Field>
       {needsHttpsWarning(form.watch("url")) ? (
         <Notice variant="warning" title={t("setup.instance.notHttpsTitle")}>

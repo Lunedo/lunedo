@@ -271,6 +271,69 @@ export const caCertificateUploadSchema = z
   .strict()
   .describe("The certificate authority to trust for this directory.");
 
+const checkedProvider = uuid(
+  "ID of the provider whose stored password and CA certificate the check uses when none is sent.",
+)
+  .nullable()
+  .optional();
+
+export const connectionCheckSchema = z
+  .discriminatedUnion("type", [
+    z
+      .object({
+        type: z.literal("oidc").describe("OpenID Connect: reads the discovery document of the issuer."),
+        config: oidcConfigSchema.describe("Configuration to check."),
+        providerId: checkedProvider,
+      })
+      .strict(),
+    z
+      .object({
+        type: z.literal("saml").describe("SAML 2.0: loads and reads the metadata address."),
+        config: samlConfigSchema.describe("Configuration to check."),
+        providerId: checkedProvider,
+      })
+      .strict(),
+    z
+      .object({
+        type: z.literal("ldap").describe("LDAP: connects, checks the certificate, binds and searches once."),
+        config: ldapConfigSchema.describe("Configuration to check."),
+        bindPassword: directoryPasswordSchema
+          .nullable()
+          .optional()
+          .describe(
+            "Password of the service account. Without it, the stored password of the provider is used.",
+          ),
+        caCertificate: caCertificateSchema
+          .nullable()
+          .optional()
+          .describe("CA certificate to trust. Without it, the stored certificate of the provider is used."),
+        providerId: checkedProvider,
+      })
+      .strict(),
+  ])
+  .describe("Connection settings to check before they are saved.");
+
+export const connectionCheckResultSchema = z.object({
+  ok: z.boolean().describe("Whether Pagehall reached the provider with these settings."),
+  check: z.enum(["discovery", "metadata", "directory"]).describe("What was checked."),
+  url: z.string().nullable().describe("The address Pagehall contacted."),
+  status: z.number().int().nullable().describe("The HTTP status of the answer, when there was one."),
+  problem: z
+    .enum([
+      "unreachable",
+      "status",
+      "invalidDocument",
+      "issuerMismatch",
+      "connection",
+      "certificate",
+      "serviceAccount",
+      "search",
+    ])
+    .nullable()
+    .describe("What went wrong, or null."),
+  detail: z.string().nullable().describe("The message of the provider or the network, for administrators."),
+});
+
 export const directoryTestSchema = z
   .object({
     signInName: z
@@ -320,6 +383,13 @@ export const directoryTestResultSchema = z
       })
       .nullable()
       .describe("The person found, or null."),
+    searched: z
+      .object({
+        attribute: z.string().describe("The attribute Pagehall searched."),
+        value: z.string().describe("The value it searched for."),
+      })
+      .nullable()
+      .describe("What Pagehall searched for when a sign-in name was given."),
     attributes: receivedClaimsSchema,
   })
   .describe("Result of the directory test.");

@@ -101,6 +101,7 @@ function themeDeclarations(tokens: DesignTokens): Declarations {
     ...sizeDeclarations(tokens, "spacing"),
     ["--spacing-qr", tokens.layout.qrCodeSize],
     ["--spacing-field", tokens.layout.fieldWidth],
+    ["--spacing-hit", tokens.layout.hitArea],
     ["--spacing-number-field", tokens.layout.numberFieldWidth],
     ["--spacing-unit-field", tokens.layout.unitFieldWidth],
     ["--spacing-select-trigger", "var(--radix-select-trigger-width)"],

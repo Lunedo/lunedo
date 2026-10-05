@@ -12,8 +12,9 @@ import { request } from "../../api/request.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
-import { AuthCard } from "../auth/auth-layout.js";
+import { AuthCard, LanguagePicker } from "../auth/auth-layout.js";
 import { setupStateQuery, setupStepsQuery } from "./setup-api.js";
+import { SetupDraftsProvider } from "./setup-drafts.js";
 import { InstanceStep } from "./steps/instance-step.js";
 import { KeyBackupStep } from "./steps/key-backup-step.js";
 import { OrganizationStep } from "./steps/organization-step.js";
@@ -32,7 +33,13 @@ export function SetupScreen() {
     if (window.location.hash) router.history.replace(`${window.location.pathname}${window.location.search}`);
   }, [router]);
   if (state.isPending) return <SetupFrame step={0} total={STEP_ORDER.length + 1} title="" loading />;
-  if (state.data?.session) return <SetupSteps />;
+  if (state.data?.session) {
+    return (
+      <SetupDraftsProvider>
+        <SetupSteps />
+      </SetupDraftsProvider>
+    );
+  }
   return <SetupCode linkedCode={linkedCode} />;
 }
 
@@ -146,7 +153,7 @@ function SetupSteps() {
     );
 
   const step = list.find((candidate) => candidate.id === active);
-  const common = { back, onDone: next, refresh };
+  const common = { back, onDone: next, refresh, completed: step?.completed ?? false };
   return (
     <SetupFrame
       step={index + 1}
@@ -196,30 +203,39 @@ function SetupFrame({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex min-h-full items-center justify-center bg-sidebar px-4 py-10">
-      <AuthCard
-        wide
-        title={title}
-        description={
-          <>
-            <span className="mb-1 block text-sm">
-              {t("setup.progress", { step: step + 1, total: total, name: stepName ?? t("setup.code.name") })}
-            </span>
-            {description}
-          </>
-        }
-      >
-        <div className="flex gap-1" aria-hidden="true">
-          {Array.from({ length: total }, (_, position) => (
-            <span
-              // biome-ignore lint/suspicious/noArrayIndexKey: the bars have no identity besides their position
-              key={position}
-              className={`h-1 min-w-6 flex-1 rounded-full ${position <= step ? "bg-accent" : "bg-border"}`}
-            />
-          ))}
-        </div>
-        {loading ? <Skeleton className="h-12 w-full" /> : children}
-      </AuthCard>
+    <div className="flex min-h-full flex-col bg-sidebar">
+      <main className="flex flex-1 items-center justify-center px-4 py-10">
+        <AuthCard
+          wide
+          title={title}
+          description={
+            <>
+              <span className="mb-1 block text-sm">
+                {t("setup.progress", {
+                  step: step + 1,
+                  total: total,
+                  name: stepName ?? t("setup.code.name"),
+                })}
+              </span>
+              {description}
+            </>
+          }
+        >
+          <div className="flex gap-1" aria-hidden="true">
+            {Array.from({ length: total }, (_, position) => (
+              <span
+                // biome-ignore lint/suspicious/noArrayIndexKey: the bars have no identity besides their position
+                key={position}
+                className={`h-1 min-w-6 flex-1 rounded-full ${position <= step ? "bg-accent" : "bg-border"}`}
+              />
+            ))}
+          </div>
+          {loading ? <Skeleton className="h-12 w-full" /> : children}
+        </AuthCard>
+      </main>
+      <footer className="flex justify-center px-4 pb-6">
+        <LanguagePicker label={t("setup.language")} />
+      </footer>
     </div>
   );
 }

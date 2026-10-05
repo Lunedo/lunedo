@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { twoFactorRequiredSetting } from "../auth/settings.js";
 import { ForbiddenError } from "../authorization/service.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { deliverPendingMail } from "../testing/jobs.js";
@@ -93,6 +94,21 @@ describe.skipIf(!baseUrl)("resetting another account's second factor", () => {
     return result.rows[0]?.count ?? 0;
   }
 
+  it("names the level that requires a second factor", async () => {
+    const org = await organization();
+    const person = await standard(org.id);
+    expect(await test.services.signIn.secondFactorRequirement(person)).toBeNull();
+    await test.settings.set(twoFactorRequiredSetting, { organization: org.id }, "organization", true);
+    expect(await test.services.signIn.secondFactorRequirement(person)).toBe("organization");
+    await test.settings.clear(twoFactorRequiredSetting, { organization: org.id }, "organization");
+    await test.settings.set(twoFactorRequiredSetting, {}, "instance", true);
+    try {
+      expect(await test.services.signIn.secondFactorRequirement(person)).toBe("instance");
+    } finally {
+      await test.settings.clear(twoFactorRequiredSetting, {}, "instance");
+    }
+  });
+
   it("removes every factor, ends the sessions, requires a new factor, mails and audits the reason", async () => {
     const org = await organization();
     const admin = await standard(org.id);
@@ -113,6 +129,7 @@ describe.skipIf(!baseUrl)("resetting another account's second factor", () => {
       expect(await count(table, person), table).toBe(0);
     }
     expect(await test.services.signIn.secondFactorRequired(person)).toBe(true);
+    expect(await test.services.signIn.secondFactorRequirement(person)).toBe("reset");
     const audit = await test.pool.query(
       "select actor_id, scope_id, fields from audit_events where name = 'account.secondFactorReset' and target_id = $1",
       [person],

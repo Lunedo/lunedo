@@ -3,6 +3,7 @@ import { DropdownMenu, Popover as PopoverPrimitive, Tabs as TabsPrimitive } from
 import type { ReactNode } from "react";
 import { classNames } from "./class-names.js";
 import { Icon } from "./icon.js";
+import { ScrollArea } from "./scroll-area.js";
 
 type Side = "top" | "right" | "bottom" | "left";
 type Align = "start" | "center" | "end";
@@ -103,7 +104,7 @@ export function Menu({ trigger, items, align = "end", side = "bottom" }: MenuPro
                 onSelect={item.onSelect}
                 {...(item.disabled !== undefined ? { disabled: item.disabled } : {})}
                 className={classNames(
-                  "flex h-row cursor-default items-center gap-2 rounded-sm px-2 outline-none select-none data-disabled:opacity-50 data-highlighted:bg-hover",
+                  "flex h-row cursor-default items-center gap-2 rounded-sm px-2 outline-none select-none data-disabled:cursor-not-allowed data-disabled:text-text-muted data-highlighted:bg-hover",
                   item.danger ? "text-danger" : "text-text",
                 )}
               >
@@ -130,18 +131,20 @@ export interface TabsProps {
 export function Tabs({ value, onValueChange, tabs, label, children }: TabsProps) {
   return (
     <TabsPrimitive.Root value={value} onValueChange={onValueChange} className="flex flex-col gap-4">
-      <TabsPrimitive.List aria-label={label} className="flex gap-1 overflow-x-auto border-b border-border">
-        {tabs.map((tab) => (
-          <TabsPrimitive.Trigger
-            key={tab.value}
-            value={tab.value}
-            className="-mb-px inline-flex h-control-field items-center gap-2 border-b-2 border-transparent px-3 font-medium whitespace-nowrap text-text-muted hover:text-text focus-visible:focus-ring aria-selected:border-accent aria-selected:text-text"
-          >
-            {tab.label}
-            {tab.count !== undefined && <span className="text-text-muted">{tab.count}</span>}
-          </TabsPrimitive.Trigger>
-        ))}
-      </TabsPrimitive.List>
+      <ScrollArea surface="bg">
+        <TabsPrimitive.List aria-label={label} className="flex w-max min-w-full gap-1 border-b border-border">
+          {tabs.map((tab) => (
+            <TabsPrimitive.Trigger
+              key={tab.value}
+              value={tab.value}
+              className="-mb-px inline-flex h-control-field items-center gap-2 border-b-2 border-transparent px-3 font-medium whitespace-nowrap text-text-muted hover:text-text focus-visible:focus-ring aria-selected:border-accent aria-selected:text-text"
+            >
+              {tab.label}
+              {tab.count !== undefined && <span className="text-text-muted">{tab.count}</span>}
+            </TabsPrimitive.Trigger>
+          ))}
+        </TabsPrimitive.List>
+      </ScrollArea>
       <TabsPrimitive.Content value={value} className="focus-visible:focus-ring">
         {children}
       </TabsPrimitive.Content>

@@ -3,6 +3,8 @@ import {
   Button,
   ChoiceTable,
   ConfirmDialog,
+  DangerAction,
+  DangerZone,
   Dialog,
   Field,
   IconButton,
@@ -29,6 +31,7 @@ import {
 } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
+import { useUnassignWithUndo } from "../../components/role-undo.js";
 import { useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
@@ -61,6 +64,12 @@ export function OrganizationRolesScreen() {
   const [assigning, setAssigning] = useState(false);
   const [removing, setRemoving] = useState<Assignment | null>(null);
   const organizationName = organization.data?.name ?? "";
+  const refreshAssignments = async () => {
+    await queryClient.invalidateQueries({ queryKey: organizationKeys.assignments(organizationId) });
+    await queryClient.invalidateQueries({ queryKey: organizationKeys.members(organizationId) });
+  };
+  const unassign = useUnassignWithUndo({ organizationId }, refreshAssignments);
+  const owners = (assignments.data ?? []).filter((assignment) => assignment.builtInRole === "owner");
 
   const principalName = (assignment: Assignment) => {
     if (assignment.principalKind === "organizationMembers") return t("roles.principals.organizationMembers");
@@ -142,6 +151,7 @@ export function OrganizationRolesScreen() {
             },
             {
               key: "actions",
+              sticky: true,
               header: t("settings.actions"),
               align: "end",
               cell: (role) =>
@@ -153,7 +163,7 @@ export function OrganizationRolesScreen() {
                     }
                     items={[
                       { label: t("common.edit"), onSelect: () => setEditing(role) },
-                      { label: t("common.delete"), danger: true, onSelect: () => setDeleting(role) },
+                      { label: t("common.deleteRole"), danger: true, onSelect: () => setDeleting(role) },
                     ]}
                   />
                 ) : null,
@@ -180,11 +190,24 @@ export function OrganizationRolesScreen() {
             },
             {
               key: "actions",
+              sticky: true,
               header: t("settings.actions"),
               align: "end",
               cell: (assignment) =>
-                manage ? (
-                  <Button variant="danger" size="sm" onClick={() => setRemoving(assignment)}>
+                manage && assignment.builtInRole !== "owner" ? (
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() =>
+                      void unassign(
+                        assignment,
+                        t("roles.unassignedNamed", {
+                          name: principalName(assignment),
+                          role: roleName(t, assignment),
+                        }),
+                      )
+                    }
+                  >
                     {t("roles.unassign")}
                   </Button>
                 ) : null,
@@ -193,6 +216,25 @@ export function OrganizationRolesScreen() {
         />
       </Section>
 
+      {manage && owners.length > 0 ? (
+        <DangerZone title={t("common.dangerZone")}>
+          {owners.map((assignment) => (
+            <DangerAction
+              key={assignment.id}
+              title={t("roles.removeOwnerEntry", { name: principalName(assignment) })}
+              description={t("roles.removeOwnerSummary", {
+                name: principalName(assignment),
+                organization: organizationName,
+              })}
+              action={
+                <Button variant="danger" size="sm" onClick={() => setRemoving(assignment)}>
+                  {t("roles.removeOwner")}
+                </Button>
+              }
+            />
+          ))}
+        </DangerZone>
+      ) : null}
       <AssignRoleDialog
         open={assigning}
         onOpenChange={setAssigning}
@@ -240,7 +282,7 @@ export function OrganizationRolesScreen() {
         }}
         title={t("roles.deleteTitle", { name: deleting?.name ?? "" })}
         description={t("roles.deleteDescription")}
-        confirmLabel={t("common.delete")}
+        confirmLabel={t("common.deleteRole")}
         cancelLabel={t("common.cancel")}
         destructive
         onConfirm={async () => {
@@ -272,8 +314,13 @@ export function OrganizationRolesScreen() {
         onOpenChange={(open) => {
           if (!open) setRemoving(null);
         }}
-        title={t("roles.unassignTitle")}
-        confirmLabel={t("roles.unassign")}
+        title={t("roles.removeOwnerTitle", { name: removing ? principalName(removing) : "" })}
+        description={
+          removing
+            ? t("roles.removeOwnerSummary", { name: principalName(removing), organization: organizationName })
+            : undefined
+        }
+        confirmLabel={t("roles.removeOwner")}
         cancelLabel={t("common.cancel")}
         destructive
         onConfirm={async () => {
@@ -285,8 +332,7 @@ export function OrganizationRolesScreen() {
               }),
             );
             setRemoving(null);
-            await queryClient.invalidateQueries({ queryKey: organizationKeys.assignments(organizationId) });
-            await queryClient.invalidateQueries({ queryKey: organizationKeys.members(organizationId) });
+            await refreshAssignments();
           } catch (failure) {
             showFailure(t("failures.unassignRole"), failure);
           }

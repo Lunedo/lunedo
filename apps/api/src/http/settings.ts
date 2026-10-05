@@ -25,6 +25,7 @@ const MANAGED_ELSEWHERE = new Set([
   "mail.method",
   "mail.graph",
   "auth.emergencySignInRecipients",
+  "instance.url",
 ]);
 
 export function definitionFor(

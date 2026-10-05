@@ -270,7 +270,7 @@ export function Combobox(props: ComboboxProps) {
           className={classNames(
             controlClassName,
             "flex min-h-control-field w-full flex-wrap items-center gap-1 py-1",
-            disabled && "cursor-not-allowed opacity-60",
+            disabled && "cursor-not-allowed border-dashed bg-surface-sunken text-text-muted",
           )}
           {...(invalid ? { "data-invalid": "" } : {})}
         >

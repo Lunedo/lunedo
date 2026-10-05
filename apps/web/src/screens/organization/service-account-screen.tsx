@@ -4,11 +4,15 @@ import {
   Combobox,
   type ComboboxItem,
   ConfirmDialog,
+  DangerAction,
+  DangerZone,
+  Field,
   List,
   ListRow,
   Notice,
   Section,
   Skeleton,
+  useToast,
 } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
@@ -62,6 +66,8 @@ export function ServiceAccountScreen() {
   const [revoking, setRevoking] = useState<ApiToken | null>(null);
   const [deactivating, setDeactivating] = useState(false);
   const [adding, setAdding] = useState<ComboboxItem | null>(null);
+  const [addingError, setAddingError] = useState(false);
+  const toast = useToast().toast;
   const names = new Map((members.data ?? []).map((member) => [member.accountId, member.name]));
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: organizationKeys.serviceAccount(serviceAccountId) });
@@ -70,18 +76,34 @@ export function ServiceAccountScreen() {
     });
     await queryClient.invalidateQueries({ queryKey: organizationKeys.serviceAccounts(organizationId) });
   };
-  const updateResponsible = async (ids: string[]) => {
+  const saveResponsible = async (change: (current: string[]) => string[]) => {
+    const current = await queryClient.fetchQuery({ ...serviceAccountQuery(serviceAccountId), staleTime: 0 });
+    await request(() =>
+      api.PATCH("/api/v1/service-accounts/{serviceAccountId}", {
+        params: { path: { serviceAccountId } },
+        body: { responsibleAccountIds: change(current.responsibleAccountIds) },
+      }),
+    );
+    await refresh();
+  };
+  const updateResponsible = async (change: (current: string[]) => string[]) => {
     try {
-      await request(() =>
-        api.PATCH("/api/v1/service-accounts/{serviceAccountId}", {
-          params: { path: { serviceAccountId } },
-          body: { responsibleAccountIds: ids },
-        }),
-      );
-      await refresh();
+      await saveResponsible(change);
+      return true;
     } catch (failure) {
       showFailure(t("failures.changeServiceAccount"), failure);
+      return false;
     }
+  };
+  const removeResponsible = async (id: string) => {
+    if (!(await updateResponsible((current) => current.filter((entry) => entry !== id)))) return;
+    toast({
+      title: t("serviceAccounts.responsibleRemoved", { name: names.get(id) ?? t("common.unknown") }),
+      undo: {
+        onUndo: () =>
+          void updateResponsible((current) => (current.includes(id) ? current : [...current, id])),
+      },
+    });
   };
 
   const responsibleIds = (account.data?.responsibleAccountIds ?? []).join(",");
@@ -113,13 +135,6 @@ export function ServiceAccountScreen() {
         },
         { label: data?.name ?? "" },
       ]}
-      actions={
-        manage && active ? (
-          <Button variant="danger" icon={PowerOff} onClick={() => setDeactivating(true)}>
-            {t("serviceAccounts.deactivate")}
-          </Button>
-        ) : null
-      }
     >
       {account.isPending ? <Skeleton className="h-12 w-full" /> : null}
       {data && !active ? <Notice variant="warning">{t("serviceAccounts.deactivatedNotice")}</Notice> : null}
@@ -136,14 +151,8 @@ export function ServiceAccountScreen() {
                 title={names.get(id) ?? t("common.unknown")}
                 actions={
                   manage && active ? (
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() =>
-                        void updateResponsible(data.responsibleAccountIds.filter((entry) => entry !== id))
-                      }
-                    >
-                      {t("common.remove")}
+                    <Button variant="danger" size="sm" onClick={() => void removeResponsible(id)}>
+                      {t("serviceAccounts.removeResponsible")}
                     </Button>
                   ) : null
                 }
@@ -151,23 +160,36 @@ export function ServiceAccountScreen() {
             ))}
           </List>
           {manage && active ? (
-            <div className="flex flex-wrap items-center gap-2 p-4">
+            <div className="flex flex-wrap items-end gap-2 p-4">
               <div className="w-field max-w-full">
-                <Combobox
-                  aria-label={t("serviceAccounts.addResponsible")}
-                  placeholder={t("roles.choosePeople")}
-                  value={adding?.value ?? null}
-                  selectedItem={adding}
-                  load={responsibleLoader}
-                  onValueChange={(_value, item) => setAdding(item)}
-                />
+                <Field
+                  label={t("serviceAccounts.responsiblePerson")}
+                  id="responsible-person"
+                  {...(addingError ? { error: t("serviceAccounts.choosePersonFirst") } : {})}
+                >
+                  <Combobox
+                    placeholder={t("roles.choosePeople")}
+                    value={adding?.value ?? null}
+                    selectedItem={adding}
+                    load={responsibleLoader}
+                    onValueChange={(_value, item) => {
+                      setAdding(item);
+                      if (item) setAddingError(false);
+                    }}
+                  />
+                </Field>
               </div>
               <Button
                 variant="outline"
                 icon={Plus}
-                disabled={!adding}
                 onClick={() => {
-                  if (adding) void updateResponsible([...data.responsibleAccountIds, adding.value]);
+                  if (!adding) {
+                    setAddingError(true);
+                    document.getElementById("responsible-person")?.focus();
+                    return;
+                  }
+                  const id = adding.value;
+                  void updateResponsible((current) => (current.includes(id) ? current : [...current, id]));
                   setAdding(null);
                 }}
               >
@@ -214,6 +236,19 @@ export function ServiceAccountScreen() {
           ))}
         </List>
       </Section>
+      {data && manage && active ? (
+        <DangerZone title={t("common.dangerZone")}>
+          <DangerAction
+            title={t("serviceAccounts.deactivate")}
+            description={t("serviceAccounts.deactivateSummary")}
+            action={
+              <Button variant="danger" size="sm" icon={PowerOff} onClick={() => setDeactivating(true)}>
+                {t("serviceAccounts.deactivate")}
+              </Button>
+            }
+          />
+        </DangerZone>
+      ) : null}
       <CreateTokenDialog
         open={creating}
         onOpenChange={setCreating}
@@ -260,6 +295,11 @@ export function ServiceAccountScreen() {
         confirmLabel={t("serviceAccounts.deactivate")}
         cancelLabel={t("common.cancel")}
         destructive
+        typedConfirmation={{
+          value: data?.name ?? "",
+          label: t("common.typeToConfirm", { name: data?.name ?? "" }),
+          mismatch: t("common.nameMismatch"),
+        }}
         onConfirm={async () => {
           try {
             await request(() =>

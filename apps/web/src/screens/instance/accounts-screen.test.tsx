@@ -218,6 +218,58 @@ describe("the accounts page", () => {
     expect(within(panel).getByText("Managed by: Platform Team")).toBeTruthy();
   });
 
+  it("shows no two-factor status for accounts that cannot have a second factor", async () => {
+    api(() => ({ body: {} }), {
+      "GET /api/v1/instance/accounts": () => ({
+        body: {
+          items: [
+            { ...account(MAX, "CI pipeline", ""), type: "service", email: null, twoFactorActive: false },
+            { ...account(OLIVIA.id, "Imported Author", ""), state: "placeholder", twoFactorActive: false },
+            { ...account(RESEARCH, "Lena Lind", "lena@example.org"), twoFactorActive: false },
+          ],
+          nextCursor: null,
+        },
+      }),
+    });
+    const table = await renderAccounts();
+    const row = (name: string) => within(table).getByText(name).closest("tr") as HTMLElement;
+    await within(table).findByText("CI pipeline");
+    expect(within(row("CI pipeline")).queryByText("Not set up")).toBeNull();
+    expect(within(row("Imported Author")).queryByText("Not set up")).toBeNull();
+    expect(within(row("Lena Lind")).getByText("Not set up")).toBeTruthy();
+  });
+
+  it("shows the home organization also when the account belongs to one organization only", async () => {
+    api(() => ({ body: {} }), {
+      [`GET /api/v1/instance/accounts/${MAX}`]: () => ({
+        body: {
+          account: { ...account(MAX, "Max Member", "max@example.org"), homeOrganizationId: ORGANIZATION },
+          memberships: [
+            {
+              organizationId: ORGANIZATION,
+              name: "Platform Team",
+              kind: "member",
+              expiresAt: null,
+              home: true,
+              roles: [],
+            },
+          ],
+          sessions: [],
+          tokens: [],
+          twoFactor: { totp: true, passkeys: 0, recoveryCodes: 10 },
+        },
+      }),
+    });
+    const table = await renderAccounts();
+    await userEvent.click(await within(table).findByText("Max Member"));
+    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    const home = (await within(panel).findByRole("heading", { name: "Home organization" })).closest(
+      "section",
+    ) as HTMLElement;
+    expect(within(home).getByText("Platform Team")).toBeTruthy();
+    expect(within(home).getByText(/first add the person as a member to another organization/)).toBeTruthy();
+  });
+
   it("filters accounts without an organization and assigns one", async () => {
     const { requests } = api(() => ({ body: { endedSessions: 0 } }));
     const table = await renderAccounts();
@@ -265,18 +317,22 @@ describe("the accounts page", () => {
     const table = await renderAccounts();
     await userEvent.click(await within(table).findByText("Max Member"));
     const panel = await screen.findByRole("dialog", { name: "Max Member" });
-    await userEvent.click(within(panel).getByRole("button", { name: "Anonymize…" }));
+    await userEvent.click(within(panel).getByRole("button", { name: "Anonymize account…" }));
     const dialog = await screen.findByRole("dialog", { name: "Anonymize account" });
     expect(
       within(dialog).getByText(/exported or streamed to other systems are outside Pagehall/),
     ).toBeTruthy();
     const confirm = within(dialog).getByRole("button", { name: "Anonymize" }) as HTMLButtonElement;
-    expect(confirm.disabled).toBe(true);
+    expect(confirm.disabled).toBe(false);
+    await userEvent.click(confirm);
+    expect(document.activeElement).toBe(within(dialog).getByLabelText("Reason"));
+    expect(within(dialog).getByText(/Enter why the account is anonymized/)).toBeTruthy();
     await userEvent.type(within(dialog).getByLabelText("Reason"), "Erasure request of 1 October 2026");
     await userEvent.type(within(dialog).getByLabelText("Type Max Member to confirm"), "Max");
-    expect(confirm.disabled).toBe(true);
+    await userEvent.click(confirm);
+    expect(document.activeElement).toBe(within(dialog).getByLabelText("Type Max Member to confirm"));
+    expect(requests.some((request) => request.path.endsWith("/anonymize"))).toBe(false);
     await userEvent.type(within(dialog).getByLabelText("Type Max Member to confirm"), " Member");
-    expect(confirm.disabled).toBe(false);
     await userEvent.click(confirm);
     expect(await screen.findByText("The account was anonymized")).toBeTruthy();
     expect(requests.find((request) => request.path.endsWith(`/accounts/${MAX}/anonymize`))?.body).toEqual({
@@ -343,7 +399,11 @@ describe("the accounts page", () => {
     const change = (await within(panel).findByRole("button", {
       name: "Change home organization",
     })) as HTMLButtonElement;
-    expect(change.disabled).toBe(true);
+    await userEvent.click(change);
+    expect(
+      within(panel).getByText(/Choose an organization other than the current home organization/),
+    ).toBeTruthy();
+    expect(requests.some((request) => request.path.endsWith("/home-organization"))).toBe(false);
     await userEvent.click(within(panel).getByRole("combobox", { name: "New home organization" }));
     await userEvent.click(await screen.findByRole("option", { name: "Research" }));
     await userEvent.click(change);
@@ -392,7 +452,8 @@ describe("the accounts page", () => {
     expect(
       await within(panel).findByText("You cannot merge a placeholder into your own account."),
     ).toBeTruthy();
-    expect((within(panel).getByRole("button", { name: "Merge" }) as HTMLButtonElement).disabled).toBe(true);
+    await userEvent.click(within(panel).getByRole("button", { name: "Merge" }));
+    expect(requests.some((request) => request.path.endsWith("/merge"))).toBe(false);
     await userEvent.clear(field);
     await userEvent.type(field, "m");
     await userEvent.click(await screen.findByRole("option", { name: /Max Member/ }));
@@ -409,8 +470,34 @@ describe("the accounts page", () => {
     await userEvent.click(await within(table).findByText("Olivia Owner"));
     const panel = await screen.findByRole("dialog", { name: "Olivia Owner" });
     expect(within(panel).getByText("You manage your own account on the Security page.")).toBeTruthy();
+    expect(within(panel).queryByRole("button", { name: "Reset second factor" })).toBeNull();
+    expect(within(panel).queryByRole("region", { name: "Danger zone" })).toBeNull();
+  });
+
+  it("keeps lasting actions in a danger zone at the end and names their effects", async () => {
+    const { requests } = api(() => ({ body: { endedSessions: 0 } }), {
+      [`POST /api/v1/accounts/${MAX}/deactivate`]: () => ({ status: 204 }),
+    });
+    const table = await renderAccounts();
+    await userEvent.click(await within(table).findByText("Max Member"));
+    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    await within(panel).findByText("Audit readers through Auditors", { exact: false });
+    const zone = within(panel).getByRole("region", { name: "Danger zone" });
+    const sections = within(panel).getAllByRole("region");
+    expect(sections.at(-1)).toBe(zone);
     expect(
-      (within(panel).getByRole("button", { name: "Reset second factor" }) as HTMLButtonElement).disabled,
-    ).toBe(true);
+      within(zone)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["End all sessions", "Reset second factor", "Deactivate account", "Anonymize account…"]);
+    await userEvent.click(within(zone).getByRole("button", { name: "Deactivate account" }));
+    const dialog = await screen.findByRole("dialog", { name: "Deactivate Max Member?" });
+    expect(
+      within(dialog).getByText(/sessions end at once and its API tokens are revoked for good/),
+    ).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Deactivate account" }));
+    await waitFor(() =>
+      expect(requests.some((request) => request.path.endsWith(`/accounts/${MAX}/deactivate`))).toBe(true),
+    );
   });
 });

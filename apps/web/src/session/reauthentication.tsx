@@ -1,5 +1,5 @@
 import { passwordSchema, totpCodeSchema } from "@pagehall/shared";
-import { Button, Dialog, Field, Input, Notice, PasswordInput, SegmentedControl } from "@pagehall/ui";
+import { Button, Dialog, Field, Notice, PasswordInput, SegmentedControl } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Fingerprint } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
@@ -13,6 +13,7 @@ import {
 } from "../api/identity-queries.js";
 import { queryKeys, sessionQuery } from "../api/queries.js";
 import { request, setReauthenticationHandler } from "../api/request.js";
+import { CodeInput } from "../components/code-input.js";
 import { directoryProblemMessage, problemMessage } from "../errors/problem-message.js";
 import { submitWith, useSchemaForm } from "../forms/use-schema-form.js";
 import { getPasskeyAssertion, isPasskeyCancelled, passkeysSupported } from "./passkeys.js";
@@ -181,7 +182,7 @@ function ReauthenticationDialog() {
             )}
           >
             <Field label={t("auth.authenticatorCode")} error={code.formState.errors.code?.message}>
-              <Input autoComplete="one-time-code" inputMode="numeric" autoFocus {...code.register("code")} />
+              <CodeInput control={code.control} name="code" autoFocus />
             </Field>
             <DialogActions busy={busy} />
           </form>

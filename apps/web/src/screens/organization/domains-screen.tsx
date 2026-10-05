@@ -19,6 +19,7 @@ import { useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { useOrganizationSettingMutation } from "../../settings/setting-mutations.js";
+import { GUEST_KEYS, REGISTRATION_KEYS } from "../../settings/settings-index.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 
@@ -85,7 +86,7 @@ export function DomainsScreen() {
               actions={
                 manageDomains ? (
                   <Button variant="danger" size="sm" onClick={() => setRemoving(entry.domain)}>
-                    {t("common.remove")}
+                    {t("common.removeDomain")}
                   </Button>
                 ) : null
               }
@@ -117,7 +118,7 @@ export function DomainsScreen() {
       <Section title={t("organization.domains.registration")}>
         <SettingsList
           settings={settings.data}
-          keys={["organizations.selfRegistration", "organizations.membersCreateGroups"]}
+          keys={REGISTRATION_KEYS}
           level="organization"
           organizationName={name}
           canManage={() => state.can("organization.settings.manage")}
@@ -127,11 +128,7 @@ export function DomainsScreen() {
       <Section title={t("organization.domains.guests")}>
         <SettingsList
           settings={settings.data}
-          keys={[
-            "organizations.guestExpiryReminderDays",
-            "organizations.guestInactivityDays",
-            "organizations.expiryReminderDays",
-          ]}
+          keys={GUEST_KEYS}
           level="organization"
           organizationName={name}
           canManage={() => state.can("organization.settings.manage")}
@@ -145,7 +142,7 @@ export function DomainsScreen() {
         }}
         title={t("organization.domains.removeTitle", { domain: removing ?? "" })}
         description={t("organization.domains.removeDescription")}
-        confirmLabel={t("common.remove")}
+        confirmLabel={t("common.removeDomain")}
         cancelLabel={t("common.cancel")}
         destructive
         onConfirm={async () => {

@@ -69,6 +69,8 @@ function TranslatedUi({ children }: { children: ReactNode }) {
       suggested: t("ui.suggested"),
       allTimeZones: t("ui.allTimeZones"),
       browserTimeZone: t("ui.browserTimeZone"),
+      undo: t("ui.undo"),
+      secondsLeft: t("ui.secondsLeft", { seconds: "{seconds}" }),
     }),
     [t],
   );

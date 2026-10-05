@@ -1,6 +1,6 @@
-import { Button, ButtonGroup, Checkbox, Notice, useToast } from "@pagehall/ui";
-import { Copy, Download } from "lucide-react";
-import { useState } from "react";
+import { Button, ButtonGroup, Checkbox, Icon, Notice, useToast } from "@pagehall/ui";
+import { CircleAlert, Copy, Download } from "lucide-react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { downloadText } from "../../../components/download.js";
 import { problemMessage } from "../../../errors/problem-message.js";
@@ -16,6 +16,9 @@ export function KeyBackupStep({ details, back, onDone, refresh }: StepProps<"key
   const [stored, setStored] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<"download" | "stored" | null>(null);
+  const downloadRef = useRef<HTMLButtonElement>(null);
+  const storedRef = useRef<HTMLDivElement>(null);
 
   const download = async () => {
     setError(null);
@@ -33,6 +36,17 @@ export function KeyBackupStep({ details, back, onDone, refresh }: StepProps<"key
   };
 
   const confirm = async () => {
+    if (!details.downloaded) {
+      setProblem("download");
+      downloadRef.current?.focus();
+      return;
+    }
+    if (!stored) {
+      setProblem("stored");
+      storedRef.current?.querySelector("button")?.focus();
+      return;
+    }
+    setProblem(null);
     setError(null);
     setBusy(true);
     try {
@@ -69,7 +83,14 @@ export function KeyBackupStep({ details, back, onDone, refresh }: StepProps<"key
       ) : null}
       <ButtonGroup label={t("setup.keyBackup.keys")}>
         {!details.downloaded ? (
-          <Button variant="outline" icon={Download} loading={busy} onClick={() => void download()}>
+          <Button
+            ref={downloadRef}
+            variant="outline"
+            icon={Download}
+            loading={busy}
+            aria-describedby={problem === "download" ? "key-download-problem" : undefined}
+            onClick={() => void download()}
+          >
             {t("setup.keyBackup.download")}
           </Button>
         ) : null}
@@ -93,20 +114,26 @@ export function KeyBackupStep({ details, back, onDone, refresh }: StepProps<"key
           </>
         ) : null}
       </ButtonGroup>
-      <Checkbox
-        checked={stored}
-        onCheckedChange={(checked) => setStored(checked === true)}
-        label={t("setup.keyBackup.stored")}
-        disabled={!details.downloaded}
-      />
+      {problem === "download" && !details.downloaded ? (
+        <p id="key-download-problem" className="text-sm text-danger">
+          <Icon icon={CircleAlert} size="sm" className="mr-1 inline align-text-bottom" />
+          {t("setup.keyBackup.downloadFirst")}
+        </p>
+      ) : null}
+      <div ref={storedRef}>
+        <Checkbox
+          checked={stored}
+          onCheckedChange={(checked) => {
+            setStored(checked === true);
+            if (checked === true) setProblem(null);
+          }}
+          label={t("setup.keyBackup.stored")}
+          {...(problem === "stored" && !stored ? { error: t("setup.keyBackup.confirmStored") } : {})}
+        />
+      </div>
       <div className="flex justify-between gap-2">
         {back}
-        <Button
-          variant="primary"
-          loading={busy}
-          disabled={!details.downloaded || !stored}
-          onClick={() => void confirm()}
-        >
+        <Button variant="primary" loading={busy} onClick={() => void confirm()}>
           {t("setup.continue")}
         </Button>
       </div>

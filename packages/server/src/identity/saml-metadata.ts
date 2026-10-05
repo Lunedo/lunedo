@@ -19,6 +19,14 @@ export const METADATA_MAX_BYTES = 1_000_000;
 
 export class SamlMetadataError extends Error {
   override name = "SamlMetadataError";
+
+  constructor(
+    message: string,
+    readonly reason: "unreachable" | "status" | "invalid" = "invalid",
+    readonly status: number | null = null,
+  ) {
+    super(message);
+  }
 }
 
 export interface CertificateInfo {
@@ -127,9 +135,18 @@ export async function fetchSamlMetadata(
       signal: AbortSignal.timeout(METADATA_TIMEOUT_MS),
     });
   } catch (error) {
-    throw new SamlMetadataError(`The metadata could not be loaded: ${(error as Error).message}`);
+    throw new SamlMetadataError(
+      `The metadata could not be loaded: ${(error as Error).message}`,
+      "unreachable",
+    );
   }
-  if (!response.ok) throw new SamlMetadataError(`The metadata address answered ${response.status}`);
+  if (!response.ok) {
+    throw new SamlMetadataError(
+      `The metadata address answered ${response.status}`,
+      "status",
+      response.status,
+    );
+  }
   const declared = Number(response.headers.get("content-length") ?? "0");
   if (declared > METADATA_MAX_BYTES) throw new SamlMetadataError("The metadata is larger than 1 MB");
   const reader = response.body?.getReader();

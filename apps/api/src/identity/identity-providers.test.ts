@@ -329,6 +329,9 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     const browser = new TestClient(test.app);
     const response = await signInThroughProvider(browser, { sub: "existing-subject", email: existing.email });
     expect(response.headers.location).toBe("/sign-in/link");
+    expect([response.headers["set-cookie"]].flat()).toContainEqual(
+      expect.stringMatching(/^__Host-pagehall-link=[\w-]+; Path=\/; Max-Age=900; /),
+    );
     expect((await browser.get("/api/v1/auth/link")).json()).toMatchObject({
       providerName: "Company login",
       email: existing.email,
@@ -357,6 +360,48 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     ]);
     const identities = await owner.get(`/api/v1/accounts/${existing.id}/identities`);
     expect(identities.json()).toHaveLength(1);
+  });
+
+  it("checks the discovery document of an issuer before anything is saved", async () => {
+    const check = (issuer: string) =>
+      owner.post("/api/v1/instance/identity-provider-connection-checks", {
+        type: "oidc",
+        config: { preset: "generic", issuer, clientId: "check", domains: [] },
+      });
+    expect((await check(idp.issuer)).json()).toMatchObject({ ok: true, check: "discovery", status: 200 });
+    const wrong = (await check(`${idp.issuer}/realms/wrong`)).json();
+    expect(wrong).toMatchObject({
+      ok: false,
+      status: 404,
+      problem: "status",
+      url: `${idp.issuer}/realms/wrong/.well-known/openid-configuration`,
+    });
+    const before = await test.runtime.pool.query("select count(*)::int as count from identity_providers");
+    await check(idp.issuer);
+    expect(
+      (await test.runtime.pool.query("select count(*)::int as count from identity_providers")).rows,
+    ).toEqual(before.rows);
+  });
+
+  it("names the provider of a refused sign-in so the page can offer a retry", async () => {
+    const response = await signInThroughProvider(new TestClient(test.app), {
+      sub: "foreign-subject",
+      email: "someone@foreign.test",
+    });
+    const refused = new URL(String(response.headers.location), "https://pagehall.test");
+    expect(refused.pathname).toBe("/sign-in/refused");
+    expect(refused.searchParams.get("reason")).toBe("domainNotAllowed");
+    expect(refused.searchParams.get("provider")).toBe(providerId);
+  });
+
+  it("lets a person decline a link after a wrong password", async () => {
+    const existing = await createAccount(test, "declining.person@pagehall.test");
+    const browser = new TestClient(test.app);
+    await signInThroughProvider(browser, { sub: "declining-subject", email: existing.email });
+    expect((await browser.post("/api/v1/auth/link", { password: "wrong password" })).statusCode).toBe(401);
+    const declined = await browser.post("/api/v1/auth/link/decline");
+    expect(declined.statusCode).toBe(200);
+    expect(declined.json().reference).toMatch(/^[0-9A-Z]{4}-[0-9A-Z]{4}$/);
   });
 
   it("answers the same for known and unknown addresses and limits the questions per client", async () => {

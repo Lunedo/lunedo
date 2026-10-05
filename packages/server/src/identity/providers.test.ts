@@ -76,6 +76,73 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     return provider;
   }
 
+  it("checks the discovery document and the metadata address before saving", async () => {
+    const answers = new Map<string, () => Response>([
+      [
+        "https://id.example.org/realms/wrong/.well-known/openid-configuration",
+        () => new Response("", { status: 404 }),
+      ],
+      [
+        "https://id.example.org/realms/other/.well-known/openid-configuration",
+        () => Response.json({ issuer: "https://id.example.org/realms/main" }),
+      ],
+      [
+        "https://id.example.org/realms/main/.well-known/openid-configuration",
+        () => Response.json({ issuer: "https://id.example.org/realms/main" }),
+      ],
+      ["https://id.example.org/saml/missing", () => new Response("", { status: 404 })],
+      ["https://id.example.org/saml/broken", () => new Response("<not-metadata/>")],
+    ]);
+    const service = new IdentityProviderService({
+      database: test.database,
+      audit: test.services.audit,
+      encryption: test.encryption,
+      notifications: test.services.notifications,
+      settings: test.settings,
+      allowInsecure: false,
+      fetch: async (input) => {
+        const answer = answers.get(String(input));
+        if (!answer) throw new Error("getaddrinfo ENOTFOUND unknown.example.org");
+        return answer();
+      },
+    });
+    const oidc = (issuer: string) =>
+      service.checkDiscovery(service.parseConnection("oidc", { ...GENERIC, issuer }) as never);
+    expect(await oidc("https://id.example.org/realms/wrong/")).toEqual({
+      ok: false,
+      check: "discovery",
+      url: "https://id.example.org/realms/wrong/.well-known/openid-configuration",
+      status: 404,
+      problem: "status",
+      detail: null,
+    });
+    expect(await oidc("https://id.example.org/realms/other")).toMatchObject({
+      ok: false,
+      problem: "issuerMismatch",
+      detail: "https://id.example.org/realms/main",
+    });
+    expect(await oidc("https://unknown.example.org")).toMatchObject({
+      ok: false,
+      problem: "unreachable",
+      status: null,
+    });
+    expect(await oidc("https://id.example.org/realms/main")).toMatchObject({ ok: true, problem: null });
+    const saml = (url: string) =>
+      service.checkMetadata(
+        service.parseConnection("saml", { preset: "generic", metadata: { source: "url", url } }) as never,
+      );
+    expect(await saml("https://id.example.org/saml/missing")).toMatchObject({
+      ok: false,
+      check: "metadata",
+      status: 404,
+      problem: "status",
+    });
+    expect(await saml("https://id.example.org/saml/broken")).toMatchObject({
+      ok: false,
+      problem: "invalidDocument",
+    });
+  });
+
   it("declares what each provider can do with its configuration", async () => {
     const credential = { kind: "clientSecret" as const, secret: "x", expiresAt: null };
     const generic = await instanceProvider();

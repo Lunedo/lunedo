@@ -1,3 +1,4 @@
+import { idSchema } from "@pagehall/shared";
 import type { QueryClient } from "@tanstack/react-query";
 import {
   createRootRouteWithContext,
@@ -93,6 +94,7 @@ const signInRefusedRoute = createRoute({
   validateSearch: z.object({
     reference: z.string().max(100).optional(),
     reason: z.string().max(100).optional(),
+    provider: idSchema.optional().catch(undefined),
   }),
   component: lazyRouteComponent(
     () => import("./screens/auth/sign-in-refused-screen.js"),

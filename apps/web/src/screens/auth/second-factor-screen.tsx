@@ -9,6 +9,7 @@ import { z } from "zod";
 import { api } from "../../api/client.js";
 import { queryKeys } from "../../api/queries.js";
 import { isApiError, request } from "../../api/request.js";
+import { CodeInput } from "../../components/code-input.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { getPasskeyAssertion, isPasskeyCancelled, passkeysSupported } from "../../session/passkeys.js";
@@ -113,13 +114,7 @@ export function SecondFactorScreen() {
             hint={t("auth.authenticatorCodeHint")}
             error={totp.formState.errors.code?.message}
           >
-            <Input
-              autoComplete="one-time-code"
-              inputMode="numeric"
-              autoFocus
-              className="font-mono text-lg tracking-label"
-              {...totp.register("code")}
-            />
+            <CodeInput control={totp.control} name="code" autoFocus />
           </Field>
           <Button type="submit" variant="primary" size="lg" block loading={busy}>
             {t("auth.verify")}

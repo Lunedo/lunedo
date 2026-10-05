@@ -35,5 +35,9 @@ export function TruncatedText({ text, className }: TruncatedTextProps) {
       {text}
     </span>
   );
-  return truncated ? <Tooltip content={text}>{span}</Tooltip> : span;
+  return (
+    <Tooltip content={text} disabled={!truncated}>
+      {span}
+    </Tooltip>
+  );
 }

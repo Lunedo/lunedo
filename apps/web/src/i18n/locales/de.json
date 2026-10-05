@@ -50,7 +50,11 @@
       "removeDescription": "Mitglieder von {name} verlieren bei ihrer nächsten Anmeldung oder Synchronisierung, was diese Regel gewährt hat. Von Hand vergebener Zugriff bleibt.",
       "hint": "Regeln gelten bei jeder Anmeldung und Synchronisierung. Wer in {provider} aus der Gruppe entfernt wird, verliert, was die Regel gewährt hat. Gruppen, die Regeln anlegen, sind in Pagehall schreibgeschützt.",
       "byNameTitle": "Gruppen werden über ihre Namen erkannt",
-      "byName": "{provider} sendet Gruppennamen statt Kennungen. Wird eine Gruppe in {provider} umbenannt, greift keine Regel für sie mehr, bis die Regel hier angepasst ist."
+      "byName": "{provider} sendet Gruppennamen statt Kennungen. Wird eine Gruppe in {provider} umbenannt, greift keine Regel für sie mehr, bis die Regel hier angepasst ist.",
+      "remove": "Regel entfernen",
+      "removed": "Die Regel für {name} wurde entfernt.",
+      "chooseGroup": "Wähle die Gruppe, für deren Mitglieder die Regel gilt.",
+      "chooseOrganization": "Wähle die Organisation, zu der die Regel Zugriff gibt."
     },
     "sync": {
       "now": "Jetzt synchronisieren",
@@ -106,7 +110,7 @@
       "noWarnings": "Keine Warnungen",
       "heldTitle": "Deaktivierungen zurückgehalten",
       "heldDescription": "Der Lauf hätte {count, plural, one {# Konto} other {# Konten}} auf einmal deaktiviert und wurde angehalten, ohne jemanden zu deaktivieren. Eine falsche Suchbasis, eine verschobene Organisationseinheit oder fehlende Leserechte sehen genauso aus wie ausgeschiedene Personen. Prüfe zuerst den Anbieter; wenn die Personen wirklich ausgeschieden sind, bestätige den Lauf.",
-      "heldConfirmed": "Eine Administratorin oder ein Administrator hat am {time} die Deaktivierung von bis zu {count, plural, one {# Konto} other {# Konten}} bestätigt.",
+      "heldConfirmed": "Ein Administrator hat am {time} die Deaktivierung von bis zu {count, plural, one {# Konto} other {# Konten}} bestätigt.",
       "confirm": "Deaktivierungen bestätigen",
       "confirmTitle": "Diese Konten deaktivieren?",
       "confirmDescription": "Ein neuer Lauf startet und darf bis zu {count, plural, one {# Konto} other {# Konten}} deaktivieren. Ihre Sitzungen enden und ihre persönlichen API-Tokens werden widerrufen. Die Konten kommen zurück, sobald sie beim Anbieter wieder aktiv sind; widerrufene Tokens nicht.",
@@ -141,7 +145,7 @@
       "interval": "Sync-Intervall",
       "intervalHint": "Gruppen und Kontostatus werden auch bei jeder Anmeldung aktualisiert.",
       "deactivationLimit": "Größter Anteil, der auf einmal deaktiviert wird",
-      "deactivationLimitHint": "Ein Lauf, der mehr Konten dieses Anbieters auf einmal und mehr Konten als die Mindestzahl unten deaktivieren würde, hält an, deaktiviert niemanden und benachrichtigt die Instanz-Administration, die ihn im Sync-Protokoll bestätigen kann.",
+      "deactivationLimitHint": "Schützt davor, versehentlich viele Konten zu deaktivieren. Würde ein Lauf mehr Konten dieses Anbieters als diesen Anteil deaktivieren, und mehr als die Mindestzahl unten, hält er an und ändert niemanden. Die Instanz-Administration wird benachrichtigt und kann den Lauf im Sync-Protokoll bestätigen.",
       "deactivationMinimum": "Konten, die ein Lauf immer deaktivieren darf",
       "deactivationMinimumHint": "Ein Lauf hält nur an, wenn er mehr als diese Zahl von Konten und zugleich mehr als den Anteil oben deaktivieren würde. Ein Lauf, der keines der verknüpften Konten findet, hält immer an.",
       "accountsUnit": "Konten",
@@ -166,7 +170,8 @@
       "noKey": "Nicht gesetzt",
       "keyPlaceholder": "JSON-Schlüssel des Dienstkontos einfügen",
       "saveKey": "Schlüssel speichern",
-      "removeKey": "Schlüssel entfernen"
+      "removeKey": "Schlüssel entfernen",
+      "keyRequired": "Füge den JSON-Schlüssel des Dienstkontos ein."
     },
     "title": "Anmeldemethoden",
     "description": "Wie sich Personen bei dieser Instanz anmelden. Die Organisationen ergeben sich nach der Anmeldung aus der Gruppenzuordnung.",
@@ -223,9 +228,9 @@
       "deactivatedTitle": "Dieser Anbieter ist deaktiviert",
       "deactivatedNotice": "Niemand kann sich darüber anmelden und er wird nicht synchronisiert. Einstellungen, Regeln und Gruppen bleiben. Aktiviere ihn in den Einstellungen wieder.",
       "deactivateTitle": "{name} deaktivieren",
-      "deactivateDescription": "Stoppt Anmeldungen und Synchronisierung über diesen Anbieter. Alles andere bleibt, und du kannst ihn jederzeit wieder aktivieren.",
-      "deactivateConfirm": "Niemand kann sich mehr über diesen Anbieter anmelden, und die Sitzungen, die von ihm kommen, enden jetzt. Einstellungen, Regeln, Gruppen und Zugriffe bleiben.",
-      "deactivate": "Deaktivieren",
+      "deactivateDescription": "Stoppt Anmeldungen und Synchronisierung über diesen Anbieter und beendet die Sitzungen, die von ihm kommen. Einstellungen, Regeln und Gruppen bleiben, und du kannst ihn wieder aktivieren.",
+      "deactivateConfirm": "Niemand kann sich mehr über diesen Anbieter anmelden, und die Sitzungen, die von ihm kommen, enden jetzt. Beendete Sitzungen kommen nicht zurück, wenn du den Anbieter wieder aktivierst; alle müssen sich neu anmelden. Einstellungen, Regeln, Gruppen und Zugriffe bleiben.",
+      "deactivate": "Anbieter deaktivieren",
       "deactivated": "{name} ist deaktiviert.",
       "activateTitle": "{name} aktivieren",
       "activateDescription": "Personen können sich wieder über diesen Anbieter anmelden, und die Synchronisierung läuft weiter.",
@@ -291,7 +296,13 @@
     "redirectUriHint": "Trage diese Adresse in der App-Registrierung deines Anbieters ein.",
     "fields": {
       "name": "Name auf der Anmeldeseite",
-      "nameHint": "Zum Beispiel Microsoft oder der Name deines Unternehmens.",
+      "nameHints": {
+        "entraId": "Zum Beispiel Microsoft oder der Name deines Unternehmens.",
+        "google": "Zum Beispiel Google oder der Name deines Unternehmens.",
+        "oidc": "Zum Beispiel Keycloak oder der Name deines Unternehmens.",
+        "saml": "Zum Beispiel ADFS oder der Name deines Unternehmens.",
+        "ldap": "Zum Beispiel Active Directory oder der Name deines Unternehmens."
+      },
       "clientId": "Client-ID",
       "tenantId": "Verzeichnis-ID (Tenant)",
       "tenantIdHint": "Steht in der Übersicht deines Entra-ID-Tenants.",
@@ -383,7 +394,8 @@
       "create": "Konten bei der ersten Anmeldung anlegen",
       "createHint": "Ohne diese Einstellung können sich nur eingeladene Personen und bestehende Konten anmelden.",
       "domains": "Domains",
-      "domainsHint": "Gib jede Domain ein, die im Tenant verifiziert ist, für Anmeldenamen und für E-Mail-Adressen, zum Beispiel example.com und example.at. Die Anmeldeseite schickt Personen mit diesen Domains zu diesem Anbieter, E-Mail-Adressen darin gelten als bestätigt, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Anbieter.",
+      "domainsHint": "Gib jede Domain ein, die deine Personen bei diesem Anbieter verwenden, für Anmeldenamen und für E-Mail-Adressen, zum Beispiel example.com und example.at. Die Anmeldeseite schickt Personen mit diesen Domains zu diesem Anbieter, E-Mail-Adressen darin gelten als bestätigt, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Anbieter.",
+      "domainsHintEntraId": "Gib jede Domain ein, die im Tenant verifiziert ist, für Anmeldenamen und für E-Mail-Adressen, zum Beispiel example.com und example.at. Die Anmeldeseite schickt Personen mit diesen Domains zu diesem Anbieter, E-Mail-Adressen darin gelten als bestätigt, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Anbieter.",
       "domainsHintGoogle": "Gib jede Domain deines Google Workspace ein, für Anmeldenamen und für E-Mail-Adressen. Die Anmeldeseite schickt Personen mit diesen Domains zu Google.",
       "domainsInvalid": "Gib Domains wie example.org ein, durch Kommas getrennt.",
       "requireGroup": "Gruppenmitgliedschaft verlangen",
@@ -466,7 +478,12 @@
         "saml": "Während einer Erneuerung enthalten die Metadaten von Pagehall altes und neues Zertifikat. Entferne das alte, sobald der Identitätsanbieter das neue verwendet.",
         "ldap": "Das Passwort hat in Pagehall kein Ablaufdatum. Zum Wechseln gibst du das neue Passwort ein und entfernst das alte.",
         "graph": "Während eines Wechsels funktionieren alter und neuer Zugang. Entferne den alten, sobald der neue eingerichtet ist."
-      }
+      },
+      "remove": "Zugang entfernen",
+      "removeEntry": "{kind}, erstellt am {created}",
+      "removeLast": "Pagehall verwendet diesen Zugang gerade und hat keinen anderen. Die Anmeldung über {name} funktioniert erst wieder, wenn du einen neuen hinzufügst.",
+      "removeInUse": "Pagehall verwendet diesen Zugang gerade und wechselt zu einem anderen derselben Art.",
+      "removeUnused": "Nicht in Verwendung. Das Entfernen ändert nichts an der Anmeldung."
     },
     "logo": {
       "label": "Logo",
@@ -482,6 +499,7 @@
       "title": "Verbindung testen",
       "description": "Melde dich einmal mit einem Testkonto an. Es wird nichts gespeichert und kein Konto angelegt.",
       "start": "Testanmeldung starten",
+      "unreachable": "Pagehall hat {provider} nicht erreicht, um den Test zu starten. Prüfe die Verbindungseinstellungen dieses Anbieters und teste dann erneut.",
       "worked": "Die Anmeldung hat funktioniert",
       "summary": "{claims, plural, one {# Claim} other {# Claims}} und {groups, plural, one {# Gruppe} other {# Gruppen}} empfangen.",
       "failed": "Die Testanmeldung ist fehlgeschlagen",
@@ -512,6 +530,43 @@
       "noEmailEntraId": "Ohne Adresse kann Pagehall kein Konto anlegen oder verknüpfen. Wähle unter Benutzerattribute den Benutzerprinzipalnamen als Quelle der E-Mail-Adresse oder hinterlege die E-Mail-Adresse der Person in {provider}.",
       "noEmail": "Ohne Adresse kann Pagehall kein Konto anlegen oder verknüpfen. Hinterlege die E-Mail-Adresse der Person in {provider} oder wähle unter Benutzerattribute den Claim oder das Attribut, das sie enthält."
     },
+    "check": {
+      "failedTitle": "Pagehall hat den Anbieter mit diesen Einstellungen nicht erreicht",
+      "saveAnyway": "Trotzdem speichern",
+      "passwordNeeded": "Pagehall verwendet das gespeicherte Passwort nur für den Server, zu dem es gehört. Gib das Passwort des Dienstkontos ein, um dich mit diesem Server zu verbinden.",
+      "serverPassword": "Passwort des Dienstkontos",
+      "serverPasswordHint": "Pagehall verbindet sich damit vor dem Speichern mit dem neuen Server. Um ein anderes Passwort zu speichern, ersetze es unter Zugangsdaten.",
+      "saveAnywayHint": "Korrigiere das markierte Feld, oder speichere trotzdem und korrigiere es später. Die Einrichtung lässt sich dann erst abschließen, wenn du die fehlgeschlagene Prüfung bestätigst.",
+      "names": {
+        "discovery": "die OpenID-Connect-Discovery",
+        "metadata": "die SAML-Metadaten",
+        "directory": "die Verbindung zum Verzeichnis"
+      },
+      "finishTitle": "Trotz fehlgeschlagener Prüfung abschließen?",
+      "finishDescription": "Pagehall hat {check} erneut geprüft, und die Prüfung ist fehlgeschlagen: {message} Personen können sich über diesen Anbieter erst anmelden, wenn das funktioniert.",
+      "finishAnyway": "Trotzdem abschließen",
+      "fixFirst": "Einstellungen korrigieren",
+      "messages": {
+        "discovery": {
+          "status": "{status} bei {url}. Prüfe den Aussteller: Pagehall hängt /.well-known/openid-configuration daran an.",
+          "unreachable": "Keine Antwort von {url}. Prüfe den Aussteller auf Tippfehler und ob dieser Server den Anbieter erreicht.",
+          "invalidDocument": "{url} hat kein OpenID-Connect-Discovery-Dokument geliefert. Prüfe den Aussteller.",
+          "issuerMismatch": "Das Dokument bei {url} nennt den Aussteller {detail}. Trage genau diesen Aussteller ein."
+        },
+        "metadata": {
+          "status": "{status} bei {url}. Prüfe die Metadatenadresse.",
+          "unreachable": "Keine Antwort von {url}. Prüfe die Metadatenadresse und ob dieser Server sie erreicht.",
+          "invalidDocument": "{url} hat keine verwendbaren SAML-Metadaten geliefert: {detail}"
+        },
+        "directory": {
+          "connection": "Pagehall konnte keine Verbindung zu {url} aufbauen: {detail} Prüfe Serveradresse und Port und ob dieser Server das Verzeichnis erreicht.",
+          "certificate": "Dem Zertifikat von {url} wird nicht vertraut: {detail} Wähle das CA-Zertifikat des Verzeichnisses, oder prüfe den Servernamen.",
+          "serviceAccount": "Das Verzeichnis hat das Dienstkonto nicht akzeptiert: {detail} Prüfe Name und Passwort.",
+          "search": "Unter der Basis-DN für Personen wurde niemand gefunden: {detail} Prüfe die Basis-DN.",
+          "unreachable": "Pagehall konnte keine Verbindung zu {url} aufbauen."
+        }
+      }
+    },
     "wizard": {
       "title": "Identitätsanbieter hinzufügen",
       "new": "Neu",
@@ -527,11 +582,6 @@
       },
       "typeTitle": "Welchen Anbieter verwendest du?",
       "connectionTitle": "{type} verbinden",
-      "connectionHints": {
-        "entraId": "Erstelle im Entra Admin Center eine App-Registrierung. Nach dem Speichern zeigt Pagehall die Weiterleitungs-URI, die du dort einträgst. Schalte unter Unternehmensanwendungen „Zuweisung erforderlich“ ein und weise die Gruppen zu, die Pagehall verwenden dürfen.",
-        "google": "Erstelle in der Google Cloud Console einen OAuth-Client vom Typ Webanwendung. Nach dem Speichern zeigt Pagehall die Weiterleitungs-URI, die du dort einträgst.",
-        "generic": "Erstelle bei deinem Anbieter einen vertraulichen OIDC-Client. Nach dem Speichern zeigt Pagehall die Weiterleitungs-URI, die du dort einträgst."
-      },
       "saveConnection": "Speichern und weiter",
       "saved": "{name} ist gespeichert",
       "finish": "Fertig",
@@ -569,11 +619,6 @@
       },
       "samlTitle": "SAML-2.0-Anbieter verbinden",
       "samlPreset": "Identitätsanbieter",
-      "samlHints": {
-        "entraId": "Erstelle im Entra Admin Center eine Unternehmensanwendung mit SAML-Single-Sign-on. Nach dem Speichern zeigt Pagehall die Entity-ID und die Antwort-URL, die du dort einträgst.",
-        "adfs": "Füge in ADFS eine Vertrauensstellung der vertrauenden Seite hinzu. Nach dem Speichern zeigt Pagehall seine Metadatenadresse, die ADFS lesen kann.",
-        "generic": "Lege bei deinem Identitätsanbieter einen SAML-Dienstanbieter an. Nach dem Speichern zeigt Pagehall seine Entity-ID, seine Assertion-Consumer-Service-URL und seine Metadaten."
-      },
       "metadataUrlHints": {
         "entraId": "Die App-Verbundmetadaten-URL aus den SAML-Einstellungen der Unternehmensanwendung.",
         "adfs": "Meist https://adfs.example.org/FederationMetadata/2007-06/FederationMetadata.xml.",
@@ -597,10 +642,27 @@
       "graphApp": "App-Registrierung",
       "draftHint": "Pagehall speichert die Einrichtung ab dem nächsten Schritt als Entwurf. Du kannst den Assistenten schließen und später in der Liste der Identitätsanbieter fortsetzen.",
       "draftNotSaved": "Deine letzten Änderungen konnten nicht im Entwurf gespeichert werden. Prüfe die Verbindung; Pagehall versucht es bei der nächsten Änderung erneut.",
-      "copyTitle": "Diese Werte bei {provider} eintragen",
-      "copyHint": "Registriere Pagehall zuerst mit diesen Werten bei {provider}. Sie ändern sich nicht, du kannst sie also jetzt kopieren und die Felder unten danach ausfüllen.",
+      "copyTitle": "Diese Werte {place} eintragen",
+      "copyHint": "Registriere Pagehall zuerst {place} mit diesen Werten. Sie ändern sich nicht, du kannst sie also jetzt kopieren und die Felder weiter unten danach ausfüllen.",
+      "registerHints": {
+        "entraId": "Erstelle eine App-Registrierung mit der Weiterleitungs-URI unten. Schalte unter Unternehmensanwendungen „Zuweisung erforderlich“ ein und weise die Gruppen zu, die Pagehall verwenden dürfen.",
+        "google": "Erstelle einen OAuth-Client vom Typ Webanwendung mit der Weiterleitungs-URI unten.",
+        "oidc": "Erstelle einen vertraulichen OIDC-Client mit der Weiterleitungs-URI unten.",
+        "samlEntraId": "Erstelle eine Unternehmensanwendung mit SAML-Single-Sign-on und trage die Entity-ID und die Antwort-URL unten ein.",
+        "adfs": "Füge eine Vertrauensstellung der vertrauenden Seite hinzu, die die Metadatenadresse von Pagehall unten liest.",
+        "saml": "Lege einen SAML-Dienstanbieter mit der Entity-ID und der Assertion-Consumer-Service-URL unten an, oder lass ihn die Metadaten von Pagehall lesen."
+      },
       "signingCertificate": "Signaturzertifikat von Pagehall",
-      "signingCertificateHint": "Lade es bei {provider} hoch, wenn dort signierte Anfragen geprüft werden. Es ist auch in den Metadaten von Pagehall enthalten."
+      "signingCertificateHint": "Lade es {place} hoch, wenn dort signierte Anfragen geprüft werden. Es ist auch in den Metadaten von Pagehall enthalten.",
+      "places": {
+        "entraId": "im Microsoft Entra Admin Center",
+        "google": "in der Google Cloud Console",
+        "oidc": "bei deinem OIDC-Anbieter",
+        "saml": "bei deinem Identitätsanbieter",
+        "adfs": "in ADFS"
+      },
+      "typeFixed": "Nach dem Speichern nicht mehr änderbar",
+      "stepLater": "Öffnet sich, sobald der aktuelle Schritt gespeichert ist"
     },
     "types": {
       "oidc": "OIDC",
@@ -668,7 +730,7 @@
     },
     "ldap": {
       "url": "Serveradresse",
-      "urlHint": "Zum Beispiel ldaps://dc01.example.org. Ein Hostname allein, etwa dc01.example.org, bedeutet ldaps:// auf Port 636. Verwende ldaps:// oder ldap:// mit StartTLS, damit Passwörter nie unverschlüsselt übertragen werden.",
+      "urlHint": "Die Adresse deines Verzeichnisservers, zum Beispiel ldaps://dc01.example.org. Ein Servername allein, etwa dc01.example.org, genügt; Pagehall verwendet dann ldaps:// auf Port 636. Einfaches ldap:// funktioniert nur mit StartTLS, damit Passwörter nie unverschlüsselt übertragen werden.",
       "urlInvalid": "Gib eine Adresse wie ldaps://dc01.example.org ohne Pfad ein.",
       "urlInvalidStartTls": "Gib eine ldap://-Adresse ein, solange StartTLS eingeschaltet ist. Für ldaps:// schalte zuerst StartTLS aus.",
       "startTls": "StartTLS verwenden",
@@ -676,18 +738,18 @@
       "startTlsLdaps": "Nur für ldap://-Adressen; ldaps:// ist bereits verschlüsselt.",
       "plainWarning": "Ohne StartTLS werden Passwörter unverschlüsselt übertragen. Pagehall lehnt eine solche Verbindung ab, außer die Instanz läuft mit erlaubten unsicheren Identitätsanbietern.",
       "bindDn": "Dienstkonto",
-      "bindDnHint": "Der Distinguished Name des Kontos, mit dem Pagehall im Verzeichnis sucht, zum Beispiel CN=pagehall,OU=Service,DC=example,DC=org.",
-      "bindDnHintActiveDirectory": "Das Konto, mit dem Pagehall im Verzeichnis sucht: sein Distinguished Name, sein Benutzerprinzipalname wie svc-pagehall@example.org oder EXAMPLE\\svc-pagehall.",
+      "bindDnHint": "Das Konto, mit dem Pagehall Personen nachschlägt, zum Beispiel CN=pagehall,OU=Service,DC=example,DC=org. Es braucht nur Leserechte für Personen und Gruppen.",
+      "bindDnHintActiveDirectory": "Das Konto, mit dem Pagehall Personen nachschlägt, zum Beispiel svc-pagehall@example.org. EXAMPLE\\svc-pagehall oder der vollständige Distinguished Name funktionieren ebenso. Es braucht nur Leserechte für Personen und Gruppen.",
       "userBaseDn": "Basis-DN für Personen",
-      "userBaseDnHint": "Pagehall sucht Personen unterhalb dieses Eintrags, zum Beispiel OU=Staff,DC=example,DC=org.",
+      "userBaseDnHint": "Der Teil des Verzeichnisses mit den Personen, die sich anmelden dürfen, zum Beispiel OU=Staff,DC=example,DC=org. Pagehall sucht auch in allem darunter.",
       "groupBaseDn": "Basis-DN für Gruppen",
-      "groupBaseDnHint": "Pagehall sucht Gruppen unterhalb dieses Eintrags, zum Beispiel OU=Groups,DC=example,DC=org.",
+      "groupBaseDnHint": "Der Teil des Verzeichnisses mit den Gruppen, zum Beispiel OU=Groups,DC=example,DC=org. Pagehall sucht auch in allem darunter.",
       "dnInvalid": "Gib einen Distinguished Name wie OU=Staff,DC=example,DC=org ein.",
       "serviceAccountInvalid": "Gib einen Distinguished Name, einen Benutzerprinzipalnamen wie svc-pagehall@example.org oder EXAMPLE\\svc-pagehall ein.",
       "userFilter": "Filter für Personen",
-      "userFilterHint": "Nur Einträge, die diesem LDAP-Filter entsprechen, können sich anmelden.",
+      "userFilterHint": "Welche Einträge als Personen gelten, die sich anmelden können, zum Beispiel (objectClass=person). Der vorgeschlagene Wert passt für die meisten Verzeichnisse.",
       "groupFilter": "Filter für Gruppen",
-      "groupFilterHint": "Nur Einträge, die diesem LDAP-Filter entsprechen, gelten als Gruppen.",
+      "groupFilterHint": "Welche Einträge als Gruppen gelten, zum Beispiel (objectClass=group). Der vorgeschlagene Wert passt für die meisten Verzeichnisse.",
       "filterInvalid": "Gib einen LDAP-Filter in Klammern ein, etwa (objectClass=person).",
       "signInAttribute": "Anmeldename",
       "signInAttributeHint": "Was Personen auf der Anmeldeseite neben ihrem Passwort eingeben.",
@@ -707,7 +769,12 @@
       "testPerson": "Testperson",
       "testPersonHint": "Anmeldename einer Person im Verzeichnis. Pagehall liest alle Attribute, die das Verzeichnis für diese Person liefert, damit du unten daraus wählen kannst.",
       "readAttributes": "Attribute lesen",
-      "attributesRead": "{count, plural, one {Das Verzeichnis hat # Attribut für diese Person geliefert.} other {Das Verzeichnis hat # Attribute für diese Person geliefert.}}",
+      "attributesRead": "{count, plural, one {Das Verzeichnis hat # Attribut für {person} geliefert.} other {Das Verzeichnis hat # Attribute für {person} geliefert.}}",
+      "attributesReadFirst": "{count, plural, one {Es wurde keine Testperson eingegeben, also hat Pagehall die erste Person gelesen, die das Verzeichnis geliefert hat: {person}, mit # Attribut.} other {Es wurde keine Testperson eingegeben, also hat Pagehall die erste Person gelesen, die das Verzeichnis geliefert hat: {person}, mit # Attributen.}}",
+      "noMatchTitle": "Niemand gefunden",
+      "noMatch": "Keine Person hat {attribute} = {value}.",
+      "noMatchAddress": "{attribute} enthält eine Adresse wie lena@example.org. Gib die vollständige Adresse ein, oder wähle unter Anmeldename ein anderes Attribut.",
+      "noMatchOther": "Wenn sich Personen mit einem anderen Wert anmelden, wähle ihn unter Anmeldename. Prüfe sonst die Basis-DN und den Filter für Personen.",
       "attributeChoiceHint": "Lies die Attribute einer Testperson, um aus allen Attributen des Verzeichnisses zu wählen.",
       "attributeExample": "Wert der Testperson: {value}",
       "attributeNotReturned": "Das Verzeichnis hat für die Testperson keinen Wert dieses Attributs geliefert. Wähle ein anderes Attribut oder prüfe die Person im Verzeichnis.",
@@ -864,7 +931,17 @@
     "save": "Speichern",
     "saved": "Änderungen gespeichert.",
     "unknown": "Unbekannt",
-    "yes": "Ja"
+    "yes": "Ja",
+    "dangerZone": "Gefahrenbereich",
+    "typeToConfirm": "Gib {name} zur Bestätigung ein",
+    "nameMismatch": "Der Name stimmt nicht überein. Gib ihn genau so ein, wie er angezeigt wird, auch mit Groß- und Kleinschreibung.",
+    "removeLogo": "Logo entfernen",
+    "removeToken": "Token entfernen",
+    "removeDraft": "Entwurf entfernen",
+    "removeCertificate": "Zertifikat entfernen",
+    "removeDomain": "Domain entfernen",
+    "deleteRole": "Rolle löschen",
+    "removeCredential": "Zugang entfernen"
   },
   "ui": {
     "clear": "Leeren",
@@ -908,7 +985,9 @@
     "resetFilters": "Filter zurücksetzen",
     "suggested": "Vorschläge",
     "allTimeZones": "Alle Zeitzonen",
-    "browserTimeZone": "Dieser Browser"
+    "browserTimeZone": "Dieser Browser",
+    "undo": "Rückgängig",
+    "secondsLeft": "{seconds} s"
   },
   "emergencyRecipients": {
     "title": "Notfall-Anmeldung",
@@ -1078,7 +1157,7 @@
     "challengeExpired": "Die Anmeldung hat zu lange gedauert. Beginne neu.",
     "notSignedIn": "Melde dich an, um fortzufahren.",
     "sessionEnded": "Deine Sitzung ist beendet. Melde dich erneut an.",
-    "invalidSetupCode": "Der Setup-Code ist nicht korrekt.",
+    "invalidSetupCode": "Der Setup-Code ist nicht korrekt oder wurde schon verwendet. Kopiere den Code aus PAGEHALL_SETUP_CODE in der .env-Datei (das Setup-Skript schreibt ihn dort hinein) oder aus dem neuesten Setup-Link im Log des Pagehall-Containers, wie unten gezeigt. Jeder Code funktioniert einmal: Wurde er verwendet, starte den Pagehall-Container neu. Dann gilt er wieder oder ein neuer steht im Log.",
     "setupSessionRequired": "Die Einrichtungssitzung ist beendet. Gib den Setup-Code erneut ein.",
     "forbidden": "Deine Rollen erlauben das nicht. Bitte einen Owner der Organisation, wenn du es brauchst.",
     "csrfRejected": "Die Anfrage wurde blockiert. Lade die Seite neu und versuche es erneut.",
@@ -1115,6 +1194,7 @@
     "keysAlreadyDownloaded": "Die Schlüssel wurden bereits heruntergeladen und werden nicht erneut angezeigt. Verwende deine gespeicherte Kopie.",
     "totpExists": "Eine Authenticator-App ist bereits eingerichtet. Entferne sie zuerst, um eine andere einzurichten.",
     "ownerMissing": "Das Owner-Konto gibt es noch nicht. Lege es zuerst an.",
+    "totpMissing": "Die Authenticator-App ist noch nicht bestätigt. Gib zuerst einen Code aus der App ein.",
     "lastSecondFactor": "Dein zweiter Faktor ist erforderlich. Füge einen weiteren hinzu, bevor du diesen entfernst.",
     "noSecondFactor": "Es ist kein zweiter Faktor eingerichtet. Füge zuerst einen hinzu.",
     "secondFactorExists": "Dieser zweite Faktor existiert bereits. Es ist nichts zu ändern.",
@@ -1141,7 +1221,9 @@
     "anonymizeSelf": "Du kannst dein eigenes Konto nicht anonymisieren. Bitte eine andere Person aus der Administration.",
     "notPlaceholder": "Dieses Konto ist kein Platzhalter mehr oder wurde bereits zusammengeführt. Lade die Seite neu.",
     "invalidMailConfiguration": "Die E-Mail-Einstellungen sind ungültig. Prüfe die markierten Felder und speichere erneut.",
-    "mailNotReady": "Diese Versandart ist noch nicht eingerichtet. Speichere ihre Einstellungen und füge für Microsoft Graph zuerst Zugangsdaten hinzu."
+    "mailNotReady": "Diese Versandart ist noch nicht eingerichtet. Speichere ihre Einstellungen und füge für Microsoft Graph zuerst Zugangsdaten hinzu.",
+    "instanceUrlFromEnvironment": "Die Serverumgebung legt die Adresse mit PAGEHALL_INSTANCE_URL fest. Ändere die Variable und starte Pagehall neu.",
+    "instanceMoved": "Pagehall ist an eine andere Adresse umgezogen. Öffne es unter der neuen Adresse."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -1158,6 +1240,7 @@
       "title": "Anmeldung abgelehnt",
       "whatToDo": "Was du tun kannst:",
       "anotherAccount": "Mit einem anderen Konto anmelden",
+      "retry": "Erneut versuchen",
       "reference": "Referenz für deine Administration:",
       "reasons": {
         "accountCreationDisabled": {
@@ -1214,6 +1297,7 @@
       "signedInAs": "Angemeldet als {email}",
       "verified": "Bestätigt",
       "password": "Passwort von {name}",
+      "wrongPassword": "Das ist nicht das Pagehall-Passwort von {name}. Gib es erneut ein oder setze es mit „Passwort vergessen?“ auf der Anmeldeseite zurück.",
       "secondFactor": "Zweiter Faktor",
       "factors": {
         "totp": "Authenticator-App",
@@ -1236,9 +1320,9 @@
       "directoryPassword": "Passwort bei {provider}"
     },
     "emergency": {
-      "link": "Notfall-Anmeldung für die Instanz-Ownerin oder den Instanz-Owner",
+      "link": "Notfall-Anmeldung für den Instanz-Owner",
       "title": "Notfall-Anmeldung",
-      "description": "Nur für die Instanz-Ownerin oder den Instanz-Owner, wenn die Anmeldung über Anbieter nicht funktioniert. Jede Verwendung steht im Audit-Log, und alle Instanz-Administratoren werden sofort benachrichtigt.",
+      "description": "Nur für den Instanz-Owner, wenn die Anmeldung über Anbieter nicht funktioniert. Jede Verwendung steht im Audit-Log, und alle Instanz-Administratoren werden sofort benachrichtigt.",
       "submit": "Weiter"
     },
     "providers": {
@@ -1267,7 +1351,8 @@
     "name": "Name",
     "forgotPassword": "Passwort vergessen?",
     "sessionEnded": "Deine Sitzung ist beendet. Melde dich erneut an, um dort weiterzumachen, wo du warst.",
-    "passkeyCancelled": "Der Passkey wurde nicht verwendet. Versuche es erneut oder wähle eine andere Methode.",
+    "passkeyCancelled": "Es wurde kein Passkey verwendet. Entweder wurde das Browserfenster geschlossen, oder dieses Gerät hat keinen Passkey für dieses Pagehall. Versuche es erneut, nutze das Gerät, auf dem du deinen Passkey gespeichert hast, oder melde dich mit deiner E-Mail-Adresse an.",
+    "wrongPassword": "Das Passwort ist nicht korrekt. Gib es erneut ein oder lege mit „Passwort vergessen?“ ein neues fest.",
     "passkeyHint": "Verwende Touch ID, Windows Hello oder deinen Sicherheitsschlüssel, wenn dein Browser danach fragt.",
     "usePasskey": "Passkey verwenden",
     "verifyTitle": "Bestätige, dass du es bist",
@@ -1301,12 +1386,22 @@
     "emailConfirmed": "Deine neue E-Mail-Adresse ist bestätigt.",
     "continue": "Weiter",
     "invitationTitle": "Einer Organisation beitreten",
-    "invitationDescription": "Du wurdest eingeladen, auf Pagehall zusammenzuarbeiten.",
     "acceptInvitation": "Einladung annehmen",
     "createAccountForInvitation": "Lege dein Konto an, um die Einladung anzunehmen.",
     "createAccount": "Konto anlegen",
     "invitationAccountCreated": "Dein Konto ist bereit. Melde dich an, um zu beginnen.",
     "invitationJoined": "Du bist der Organisation beigetreten. Melde dich an, um fortzufahren.",
+    "invitationFor": "{organization} beitreten",
+    "invitationFrom": "{inviter} hat dich ({email}) eingeladen, in {organization} auf Pagehall zusammenzuarbeiten.",
+    "invitationFromUnknown": "Du ({email}) wurdest eingeladen, in {organization} auf Pagehall zusammenzuarbeiten.",
+    "invitationMissing": "Diese Seite braucht den Link aus deiner Einladungs-E-Mail. Öffne den Link in der E-Mail erneut. Funktioniert er nicht, bitte die Person, die dich eingeladen hat, um eine neue Einladung.",
+    "invitationInvalid": "Dieser Einladungslink ist ungültig. Prüfe, ob du den vollständigen Link aus der E-Mail geöffnet hast. Funktioniert er weiterhin nicht, bitte die Person, die dich eingeladen hat, um eine neue Einladung.",
+    "invitationExpired": "Die Einladung zu {organization} ist abgelaufen. Bitte {inviter} um eine neue Einladung.",
+    "invitationExpiredUnknown": "Die Einladung zu {organization} ist abgelaufen. Bitte die Administration der Organisation um eine neue Einladung.",
+    "invitationRevoked": "Die Einladung zu {organization} wurde zurückgezogen. Bitte {inviter} um eine neue Einladung, wenn du weiterhin Zugang brauchst.",
+    "invitationRevokedUnknown": "Die Einladung zu {organization} wurde zurückgezogen. Bitte die Administration der Organisation um eine neue Einladung, wenn du weiterhin Zugang brauchst.",
+    "invitationAccepted": "Diese Einladung zu {organization} wurde bereits angenommen. Melde dich an, um fortzufahren.",
+    "invitationUnavailableTitle": "Die Einladung kann nicht angenommen werden",
     "registerTitle": "Konto anlegen",
     "registerDescription": "Gib deine geschäftliche E-Mail-Adresse ein. Wenn deine Organisation die Registrierung erlaubt, senden wir dir einen Link.",
     "sendRegistrationLink": "Link senden",
@@ -1314,7 +1409,12 @@
     "completeRegistrationTitle": "Registrierung abschließen",
     "registrationComplete": "Dein Konto ist bereit. Melde dich an, um zu beginnen.",
     "secondFactorSetupTitle": "Zweiten Faktor einrichten",
-    "secondFactorSetupDescription": "Deine Organisation verlangt einen zweiten Faktor. Richte einen ein, um fortzufahren.",
+    "secondFactorSetupDescription": {
+      "instanceOwner": "Als Owner dieser Instanz brauchst du einen zweiten Faktor. Richte einen ein, um fortzufahren.",
+      "reset": "Ein Administrator hat deinen zweiten Faktor zurückgesetzt. Richte einen neuen ein, um fortzufahren.",
+      "instance": "Diese Instanz verlangt einen zweiten Faktor für jedes Konto. Richte einen ein, um fortzufahren.",
+      "organization": "Deine Organisation verlangt einen zweiten Faktor. Richte einen ein, um fortzufahren."
+    },
     "secondFactorMethod": "Zweiter Faktor",
     "registerLink": "Noch kein Konto? Lege eines an",
     "directory": {
@@ -1367,10 +1467,10 @@
       "where": "Der Code steht in der Datei .env, wenn du das Setup-Skript verwendet oder PAGEHALL_SETUP_CODE gesetzt hast. Sonst steht er im Log des Pagehall-Containers:",
       "hint": "Der Code funktioniert nicht mehr, sobald die Einrichtung abgeschlossen ist."
     },
+    "language": "Sprache der Einrichtung",
     "systemCheck": {
       "title": "Systemprüfung",
       "description": "Pagehall hat seine Umgebung geprüft. Warnungen blockieren die Einrichtung nicht.",
-      "language": "Sprache der Einrichtung",
       "blocked": "Behebe die Fehler oben, bevor du fortfährst.",
       "checks": {
         "database": "Datenbank",
@@ -1382,8 +1482,10 @@
       "status": {
         "ok": "OK",
         "warning": "Prüfen",
-        "error": "Muss behoben werden"
+        "error": "Muss behoben werden",
+        "later": "Nächster Schritt"
       },
+      "urlNextStep": "Die Adresse legst du im nächsten Schritt fest.",
       "databaseOk": "PostgreSQL {version}, Migrationen ausgeführt",
       "storageFree": "Beschreibbar, {free} frei",
       "clockOk": "Stimmt mit der Datenbank überein",
@@ -1431,12 +1533,6 @@
             "action": "Schaffe Platz oder vergrößere das Volume, bevor Personen Dateien hochladen."
           }
         },
-        "instanceUrl": {
-          "notSet": {
-            "cause": "Die Adresse, unter der Personen Pagehall erreichen, ist noch nicht festgelegt.",
-            "action": "Du legst sie im nächsten Schritt fest."
-          }
-        },
         "https": {
           "instanceUrlNotHttps": {
             "cause": "Die Adresse der Instanz beginnt nicht mit https://.",
@@ -1465,7 +1561,9 @@
       "twoFactorDescription": "Scanne den Code mit einer Authenticator-App und gib dann den sechsstelligen Code ein.",
       "ready": "Das Owner-Konto ist bereit",
       "summary": "{name} ({email}), mit Authenticator-App",
-      "change": "Owner ändern"
+      "change": "Owner ändern",
+      "recoveryCodesFailed": "Die Wiederherstellungscodes konnten nicht erstellt werden",
+      "acknowledgeFailed": "Der Schritt „Owner-Konto“ konnte nicht abgeschlossen werden"
     },
     "keyBackup": {
       "title": "Schlüssel sichern",
@@ -1475,7 +1573,9 @@
       "copied": "Die Schlüssel wurden kopiert.",
       "keys": "Master-Schlüssel und Backup-Schlüssel",
       "alreadyDownloaded": "Die Schlüssel wurden bereits heruntergeladen. Aus Sicherheitsgründen geht das nur einmal.",
-      "stored": "Ich habe beide Schlüssel an einem sicheren Ort außerhalb dieses Servers abgelegt, zum Beispiel in einem Passwortmanager."
+      "stored": "Ich habe beide Schlüssel an einem sicheren Ort außerhalb dieses Servers abgelegt, zum Beispiel in einem Passwortmanager.",
+      "downloadFirst": "Lade zuerst die Schlüssel herunter. Ohne sie lässt sich eine Sicherung nicht wiederherstellen.",
+      "confirmStored": "Bestätige, dass du die Schlüssel außerhalb dieses Servers aufbewahrst."
     },
     "organization": {
       "title": "Erste Organisation",
@@ -1584,7 +1684,7 @@
     "keys": {
       "auth_passwordSignIn": {
         "label": "Anmeldung mit Passwort",
-        "description": "Wenn sie aus ist, melden sich Personen nur über einen Anbieter oder mit einem Passkey an. Die Notfall-Anmeldung der Instanz-Ownerin oder des Instanz-Owners funktioniert immer."
+        "description": "Wenn sie aus ist, melden sich Personen nur über einen Anbieter oder mit einem Passkey an. Die Notfall-Anmeldung des Instanz-Owners funktioniert immer."
       },
       "appearance_colorMode": { "label": "Farbmodus", "description": "Hell, dunkel oder wie das System." },
       "appearance_highContrast": { "label": "Hoher Kontrast", "description": "Kräftigere Rahmen und Texte." },
@@ -1752,7 +1852,13 @@
     "limitDuration": "Begrenzen",
     "lockTitle": "{name} sperren?",
     "lockImpactInstance": "Alle Organisationen und ihre Mitglieder verwenden dann {value} für {name} und können es nicht mehr ändern.",
-    "lockImpactOrganization": "Alle Mitglieder von {organization} verwenden dann {value} für {name} und können es nicht mehr ändern."
+    "lockImpactOrganization": "Alle Mitglieder von {organization} verwenden dann {value} für {name} und können es nicht mehr ändern.",
+    "searchLabel": "Einstellungen durchsuchen",
+    "searchPlaceholder": "Nach Name oder Beschreibung suchen",
+    "searchResults": "{count, plural, one {# Einstellung passt zu „{query}“} other {# Einstellungen passen zu „{query}“}}",
+    "searchNone": "Keine Einstellung passt zu „{query}“. Prüfe die Schreibweise oder suche nach einem anderen Wort.",
+    "searchClear": "Suche leeren",
+    "searchWhere": "{page} › {section}"
   },
   "security": {
     "activity": {
@@ -1774,7 +1880,12 @@
     "sendConfirmation": "Bestätigung senden",
     "emailConfirmationSent": "Sieh im Postfach der neuen Adresse nach und öffne den Link.",
     "twoFactor": "Zwei-Faktor-Authentifizierung",
-    "twoFactorRequired": "Deine Organisation verlangt einen zweiten Faktor. Behalte mindestens einen.",
+    "twoFactorRequired": {
+      "instanceOwner": "Als Owner dieser Instanz brauchst du einen zweiten Faktor. Behalte mindestens einen.",
+      "reset": "Ein Administrator hat deinen zweiten Faktor zurückgesetzt. Behalte mindestens einen.",
+      "instance": "Diese Instanz verlangt einen zweiten Faktor für jedes Konto. Behalte mindestens einen.",
+      "organization": "Deine Organisation verlangt einen zweiten Faktor. Behalte mindestens einen."
+    },
     "authenticatorApp": "Authenticator-App",
     "authenticatorOn": "Codes aus einer App auf deinem Telefon.",
     "authenticatorOff": "Verwende eine App wie Aegis, Google Authenticator oder 1Password.",
@@ -1818,7 +1929,10 @@
     "endSessionDescription": "Das Gerät muss sich erneut anmelden.",
     "endOthers": "Alle anderen Sitzungen abmelden",
     "endOthersTitle": "Alle anderen Sitzungen abmelden?",
-    "endOthersDescription": "Alle anderen Geräte müssen sich erneut anmelden."
+    "endOthersDescription": "Alle anderen Geräte müssen sich erneut anmelden.",
+    "removeAuthenticator": "Authenticator-App entfernen",
+    "removeAuthenticatorSummary": "Codes aus der App funktionieren dann nicht mehr für die Anmeldung. Richte zuerst einen anderen zweiten Faktor ein, wenn deine Organisation einen verlangt.",
+    "removePasskey": "Passkey entfernen"
   },
   "tokens": {
     "personal": "API-Tokens",
@@ -1974,6 +2088,19 @@
     "testDeliveryFollowsGraph": "Die Zustellung folgt. Kommt die Testmail nicht an, such im Absenderpostfach nach einem Unzustellbarkeitsbericht. Neue Mandanten und Testmandanten dürfen noch nicht an externe Empfänger senden; der Bericht zeigt das als 550 5.7.233.",
     "testFailed": "Die Test-E-Mail wurde nicht gesendet",
     "testFailedUnknown": "Der Mailserver hat die Nachricht nicht angenommen.",
+    "failureCode": "Code für Administratoren: {code}",
+    "failureCauses": {
+      "dns": "Der Name des Mailservers wurde nicht gefunden. Prüfe die Schreibweise, zum Beispiel smtp.example.org.",
+      "connection": "Pagehall konnte keine Verbindung zum Mailserver aufbauen. Prüfe Servername und Port und ob eine Firewall die Verbindung blockiert.",
+      "timeout": "Der Mailserver hat nicht rechtzeitig geantwortet. Prüfe den Port und ob eine Firewall die Verbindung blockiert.",
+      "socket": "Die Verbindung zum Mailserver ist abgebrochen. Prüfe die Verbindungssicherheit: Port 465 braucht meist TLS, Port 587 STARTTLS.",
+      "tls": "Die sichere Verbindung zum Mailserver ist fehlgeschlagen. Prüfe die Verbindungssicherheit und ob das Zertifikat des Mailservers gültig ist.",
+      "auth": "Der Mailserver hat den Benutzernamen oder das Passwort nicht akzeptiert.",
+      "envelope": "Der Mailserver hat Absender oder Empfänger nicht akzeptiert. Viele Server erlauben als Absender nur die Adresse des Kontos, das sich anmeldet.",
+      "refused": "Der Mailserver hat die Nachricht abgelehnt.",
+      "deferred": "Der Mailserver kann die Nachricht gerade nicht annehmen. Versuche es in ein paar Minuten erneut.",
+      "unknown": "Der Mailserver hat die Nachricht nicht angenommen."
+    },
     "testFailedAction": "Prüfe Server, Port, Verbindungssicherheit und Zugangsdaten und sende den Test dann erneut.",
     "preset": "Dienst",
     "presetHint": "Füllt Server, Port und Verbindungssicherheit aus. Alle Dienste werden über SMTP genutzt.",
@@ -1989,11 +2116,14 @@
     "saveTogether": "Mandant, App und Absender gelten nur zusammen und werden deshalb mit einer Schaltfläche gespeichert.",
     "graph": {
       "title": "Microsoft Graph",
-      "permissionTitle": "Gib der App das Recht zum Senden",
-      "permission": "Pagehall sendet nur über sendMail des Absenderpostfachs. Wie das Recht erteilt wurde, kann Pagehall nicht sehen, also auch nicht, ob die App auf dieses Postfach beschränkt ist.",
-      "permissionRecommended": "Empfohlen: Erteile das Recht nur für dieses Postfach in Exchange Online. Weise mit RBAC für Anwendungen die Rolle Application Mail.Send mit einem Verwaltungsbereich zu, der nur dieses Postfach enthält, und erteile Mail.Send nicht in Entra ID. In einem neuen Mandanten führe zuerst Enable-OrganizationCustomization aus; das kann mehrere Stunden dauern.",
-      "permissionSimple": "Einfach: Erteile Mail.Send als Anwendungsberechtigung in Entra ID. Die App darf dann als jedes Postfach des Mandanten senden.",
-      "setup": "Lege eine App-Registrierung nur für E-Mail an, getrennt von der Anmeldung. Trage ihren Mandanten, die Client-ID, das Absenderpostfach und ein Client-Secret oder ein von Pagehall erstelltes Zertifikat ein.",
+      "steps": {
+        "title": "In Microsoft 365 einrichten",
+        "create": "Lege in Microsoft Entra ID eine App-Registrierung nur für E-Mail an, getrennt von der für die Anmeldung.",
+        "grant": "Erlaube der App, E-Mails zu senden: Füge die Anwendungsberechtigung Mail.Send hinzu und erteile die Administratorzustimmung. Die App darf dann als jedes Postfach deiner Organisation senden.",
+        "restrict": "Empfohlen: Beschränke die App auf das Absenderpostfach. Weise ihr in Exchange Online die Rolle Application Mail.Send für einen Bereich zu, der nur dieses Postfach enthält, und entferne dann Mail.Send aus der App-Registrierung. In einem neuen Mandanten führe zuerst Enable-OrganizationCustomization aus; das kann mehrere Stunden dauern.",
+        "restrictNote": "Pagehall sieht nicht, wie das Recht erteilt wurde, und kann daher nicht prüfen, ob die App auf dieses Postfach beschränkt ist.",
+        "enter": "Trage unten die Mandanten-ID, die Client-ID und das Absenderpostfach ein und füge dann ein Client-Secret hinzu oder erstelle ein Zertifikat."
+      },
       "sender": "Absenderpostfach",
       "senderHint": "Das Postfach, als das Pagehall sendet.",
       "senderName": "Absendername",
@@ -2172,7 +2302,7 @@
     "removeImpact": "Sie verlieren jeden Zugriff auf {name}.",
     "removed": "Das Mitglied wurde entfernt.",
     "deactivateTitle": "{name} deaktivieren?",
-    "deactivateDescription": "Das Konto kann sich auf dieser Instanz nirgends mehr anmelden. Sitzungen enden sofort.",
+    "deactivateDescription": "Das Konto kann sich auf dieser Instanz nirgends mehr anmelden. Seine Sitzungen enden sofort, und seine API-Tokens werden endgültig widerrufen; eine Reaktivierung stellt sie nicht wieder her.",
     "deactivateImpact": "Sie verlieren den Zugriff auf alle Organisationen dieser Instanz.",
     "deactivated": "Das Konto wurde deaktiviert.",
     "expiryTitle": "Ablauf für {name}",
@@ -2183,7 +2313,9 @@
     "permissionsDescription": "Jede Aktion in der Organisation und warum sie erlaubt ist oder nicht.",
     "permission": "Berechtigung",
     "allowed": "Erlaubt",
-    "why": "Warum"
+    "why": "Warum",
+    "emailsRequired": "Gib mindestens eine E-Mail-Adresse ein.",
+    "chooseDate": "Wähle das Datum, an dem die Mitgliedschaft endet, oder wähle „kein Ablauf“."
   },
   "roles": {
     "transferOwnership": "Owner-Rolle übertragen",
@@ -2216,7 +2348,7 @@
     "assignTo": "Rolle an {name} vergeben",
     "assignAction": "Rolle vergeben",
     "assigned": "Die Rolle wurde vergeben.",
-    "unassign": "Entfernen",
+    "unassign": "Rolle entfernen",
     "unassignTitle": "Diese Rolle entfernen?",
     "unassigned": "Die Rolle wurde entfernt.",
     "createRole": "Rolle anlegen",
@@ -2261,7 +2393,14 @@
       "group": "Eine Gruppe",
       "organizationMembers": "Alle Mitglieder der Organisation",
       "instanceUsers": "Alle internen Benutzer der Instanz"
-    }
+    },
+    "unassignedNamed": "{name} hat die Rolle {role} nicht mehr.",
+    "removeOwner": "Owner entfernen",
+    "removeOwnerTitle": "{name} als Owner entfernen?",
+    "removeOwnerSummary": "{name} verliert die volle Kontrolle über {organization}. Nur ein anderer Owner kann die Rolle zurückgeben.",
+    "removeOwnerEntry": "{name} ist Owner",
+    "chooseRole": "Wähle die Rolle, die du vergeben möchtest.",
+    "choosePeopleFirst": "Wähle mindestens eine Person."
   },
   "areas": {
     "levels": {
@@ -2345,11 +2484,16 @@
     "removeManagerTitle": "{name} als Gruppenverwalter entfernen?",
     "delete": "Gruppe löschen",
     "deleteTitle": "{name} löschen?",
-    "deleteDescription": "Die Gruppe und ihre Rollenzuweisungen werden entfernt.",
+    "deleteDescription": "Die Gruppe und ihre Rollenzuweisungen werden endgültig entfernt. Das lässt sich nicht rückgängig machen.",
     "gainsRoles": "Sie treten {name} bei und erhalten deren Rollen: {roles}.",
     "gainsMembership": "Sie treten {name} bei.",
     "losesRoles": "Sie verlassen {name} und verlieren deren Rollen: {roles}.",
-    "losesMembership": "Sie verlassen {name}."
+    "losesMembership": "Sie verlassen {name}.",
+    "removeMember": "Aus der Gruppe entfernen",
+    "removeManager": "Als Gruppenverwalter entfernen",
+    "memberRemovedName": "{name} wurde aus der Gruppe entfernt.",
+    "managerRemovedName": "{name} verwaltet die Gruppe nicht mehr.",
+    "deleteSummary": "Entfernt die Gruppe und ihre Rollenzuweisungen endgültig. Mitglieder verlieren den Zugriff, den sie über die Gruppe hatten."
   },
   "serviceAccounts": {
     "open": "Service-Konto {name} öffnen",
@@ -2374,11 +2518,16 @@
     },
     "tokens": "Tokens",
     "tokenHint": "Das Token darf höchstens, was die Rollen des Dienstkontos erlauben.",
-    "deactivate": "Deaktivieren",
+    "deactivate": "Dienstkonto deaktivieren",
     "deactivateTitle": "{name} deaktivieren?",
     "deactivateDescription": "Alle Tokens werden widerrufen. Das lässt sich nicht rückgängig machen.",
     "deactivateImpact": "{count, plural, one {Sein Token funktioniert nicht mehr.} other {Seine # Tokens funktionieren nicht mehr.}}",
-    "deactivatedNotice": "Dieses Dienstkonto ist deaktiviert."
+    "deactivatedNotice": "Dieses Dienstkonto ist deaktiviert.",
+    "deactivateSummary": "Widerruft alle seine Tokens endgültig. Ein deaktiviertes Dienstkonto lässt sich nicht wieder aktivieren.",
+    "removeResponsible": "Verantwortliche Person entfernen",
+    "responsibleRemoved": "{name} ist nicht mehr verantwortlich.",
+    "responsiblePerson": "Person",
+    "choosePersonFirst": "Wähle die Person aus, die du hinzufügen möchtest, und wähle dann erneut „Verantwortliche Person hinzufügen“."
   },
   "breakGlass": {
     "title": "Notfallzugriff",
@@ -2416,7 +2565,21 @@
       "retention": "Aufbewahrung und API",
       "mailMissingTitle": "E-Mail ist nicht eingerichtet",
       "mailMissing": "Pagehall versendet keine Einladungen und keine Benachrichtigungen per E-Mail, bis ein Mailserver oder Microsoft Graph eingerichtet ist. Benachrichtigungen erscheinen weiterhin in der App.",
-      "mailSettings": "E-Mail einrichten"
+      "mailSettings": "E-Mail einrichten",
+      "addressFromEnvironment": "Festgelegt durch PAGEHALL_INSTANCE_URL in der Serverumgebung. Um sie zu ändern, ändere die Variable und starte Pagehall neu.",
+      "addressInvalid": "Gib eine Adresse mit http:// oder https:// und ohne Pfad ein, zum Beispiel https://wiki.example.org.",
+      "addressUnchanged": "Das ist die aktuelle Adresse. Gib die neue ein.",
+      "addressConfirmTitle": "Pagehall nach {url} umziehen?",
+      "addressConfirmIntro": "Stell zuerst sicher, dass Pagehall unter der neuen Adresse erreichbar ist. Dann:",
+      "addressEffectPasskeys": "Passkeys, die unter der alten Adresse registriert wurden, funktionieren nicht mehr. Alle melden sich mit einer anderen Methode an und fügen einen neuen Passkey hinzu.",
+      "addressEffectProviders": "Redirect- und Reply-URLs müssen bei jedem Identitätsanbieter auf die neue Adresse geändert werden, sonst schlägt die Anmeldung darüber fehl.",
+      "addressEffectSessions": "Alle offenen Sitzungen enden, auch deine. Dieser Browser öffnet die neue Adresse, wo du dich neu anmeldest.",
+      "addressMove": "Zur neuen Adresse umziehen",
+      "addressKeep": "Aktuelle Adresse behalten",
+      "movedTitle": "Pagehall ist umgezogen",
+      "movedDescription": "Diese Seite ist unter {old} geöffnet, Pagehall ist aber jetzt unter {url} erreichbar. Änderungen hier können nicht gespeichert werden. Sitzungen unter der alten Adresse wurden beendet.",
+      "movedAction": "{url} öffnen",
+      "movedPasskeys": "Wenn du dich mit einem Passkey angemeldet hast, melde dich unter der neuen Adresse mit einer anderen Methode an und füge dort einen neuen Passkey hinzu."
     },
     "organizations": {
       "search": "Nach Name oder Kurzname suchen",
@@ -2450,7 +2613,7 @@
       "organization": "Organisation",
       "chooseOrganization": "Organisation auswählen",
       "assign": "Organisation zuweisen",
-      "accountType": "Kontotyp",
+      "accountType": "Typ",
       "typesHint": "Standardkonten gehören Personen einer Organisation. Gäste und Portalnutzer sehen nur, was mit ihnen geteilt ist. Service-Konten gehören zu Integrationen und melden sich nur mit API-Tokens an.",
       "instanceRole": "Instanzrolle",
       "twoFactor": "Zwei-Faktor",
@@ -2512,7 +2675,11 @@
       "newOwner": "Neuer Owner",
       "transferTitle": "{name} zum Owner der Instanz machen?",
       "transferDescription": "Du bleibst Administrator. Nur der Owner kann die Rolle wieder übertragen.",
-      "transferImpact": "Sie werden Owner der Instanz und Notfallkonto."
+      "transferImpact": "Sie werden Owner der Instanz und Notfallkonto.",
+      "deactivateSummary": "Beendet jede Anmeldung und alle Sitzungen und widerruft die API-Tokens endgültig.",
+      "endSessionsSummary": "Meldet {name} auf allen Geräten ab. {name} kann sich sofort wieder anmelden.",
+      "resetSummary": "Entfernt Authenticator-App, Passkeys und Wiederherstellungscodes und beendet alle Sitzungen. {name} richtet bei der nächsten Anmeldung einen neuen zweiten Faktor ein.",
+      "chooseNewOwner": "Wähle, wer neuer Owner wird."
     },
     "roles": {
       "title": "Rollen",
@@ -2675,7 +2842,8 @@
         "responsibleChanged": "Verantwortliche Person geändert"
       },
       "instance": {
-        "ownershipTransferred": "Owner der Instanz übertragen"
+        "ownershipTransferred": "Owner der Instanz übertragen",
+        "addressChanged": "Adresse der Instanz geändert"
       },
       "breakGlass": {
         "started": "Notfallzugriff begonnen",
@@ -2738,7 +2906,9 @@
       "invitation": "Einladung",
       "breakGlassAccess": "Notfallzugriff",
       "apiToken": "API-Token",
-      "audit": "Audit-Log"
+      "audit": "Audit-Log",
+      "identityProvider": "Identitätsanbieter",
+      "mappingRule": "Gruppenzuordnung"
     },
     "properties": {
       "value": "Wert",
@@ -2765,7 +2935,8 @@
       "lockedUntil": "Gesperrt bis",
       "logoRef": "Logo",
       "masterKeyVersions": "Versionen der Hauptschlüssel",
-      "method": "Versandart",
+      "method": "Anmeldemethode",
+      "mailMethod": "Versandart",
       "methods": "Methoden",
       "name": "Name",
       "notifiedCount": "Benachrichtigte Personen",
@@ -2816,7 +2987,9 @@
       "tenantId": "Mandant",
       "clientId": "Client-ID",
       "sender": "Absender",
-      "senderName": "Absendername"
+      "senderName": "Absendername",
+      "url": "Adresse",
+      "previousUrl": "Vorherige Adresse"
     },
     "values": {
       "account": "Konto",
@@ -2986,6 +3159,7 @@
     "changeEmail": "Die E-Mail-Adresse wurde nicht geändert",
     "addPasskey": "Der Passkey wurde nicht hinzugefügt",
     "acceptInvitation": "Die Einladung wurde nicht angenommen",
+    "loadInvitation": "Die Einladung konnte nicht geladen werden",
     "completeRegistration": "Die Registrierung wurde nicht abgeschlossen",
     "register": "Die Registrierung wurde nicht gesendet",
     "requestReset": "Der Link zum Zurücksetzen wurde nicht gesendet",
@@ -3049,13 +3223,14 @@
     "startProviderDraft": "Die Einrichtung konnte nicht begonnen werden",
     "finishProviderSetup": "Die Einrichtung konnte nicht abgeschlossen werden",
     "removeDraft": "Der Entwurf konnte nicht entfernt werden",
-    "loadDrafts": "Die Entwürfe konnten nicht geladen werden"
+    "loadDrafts": "Die Entwürfe konnten nicht geladen werden",
+    "changeAddress": "Die Adresse wurde nicht geändert"
   },
   "lifecycle": {
     "placeholder": {
       "add": "Platzhalter anlegen",
       "title": "Platzhalter anlegen",
-      "description": "Ein Platzhalter steht für eine Person, die noch kein Konto hat, zum Beispiel die Autorin oder den Autor importierter Inhalte. Er kann sich nicht anmelden.",
+      "description": "Ein Platzhalter steht für eine Person, die noch kein Konto hat, zum Beispiel den Autor importierter Inhalte. Er kann sich nicht anmelden.",
       "name": "Name",
       "email": "E-Mail-Adresse",
       "emailHint": "Meldet sich die Person mit dieser Adresse über einen Anbieter an und bestätigt der Anbieter sie, wird der Platzhalter zu ihrem Konto.",
@@ -3070,19 +3245,22 @@
       "noAccounts": "Kein aktives Konto passt",
       "notOwn": "Du kannst einen Platzhalter nicht mit deinem eigenen Konto zusammenführen.",
       "action": "Zusammenführen",
-      "done": "{placeholder} mit {account} zusammengeführt: {memberships, plural, one {# Mitgliedschaft} other {# Mitgliedschaften}}, {groups, plural, one {# Gruppe} other {# Gruppen}}, {roles, plural, one {# Rolle} other {# Rollen}}"
+      "done": "{placeholder} mit {account} zusammengeführt: {memberships, plural, one {# Mitgliedschaft} other {# Mitgliedschaften}}, {groups, plural, one {# Gruppe} other {# Gruppen}}, {roles, plural, one {# Rolle} other {# Rollen}}",
+      "chooseAccount": "Wähle das Konto, zu dem der Platzhalter gehört."
     },
     "home": {
       "title": "Heimatorganisation",
       "description": "Die Heimatorganisation bestimmt, wessen Administration das Konto verwaltet und wessen Standards für seine Einstellungen gelten. Die Person und die Administration beider Organisationen werden benachrichtigt.",
       "action": "Heimatorganisation ändern",
       "changed": "{organization} ist jetzt die Heimatorganisation",
-      "newHome": "Neue Heimatorganisation"
+      "newHome": "Neue Heimatorganisation",
+      "chooseOther": "Wähle eine andere Organisation als die aktuelle Heimatorganisation.",
+      "onlyOne": "Die Person ist nur Mitglied dieser Organisation. Um das Konto zu verschieben, füge die Person zuerst als Mitglied einer anderen Organisation hinzu und ändere dann hier die Heimatorganisation."
     },
     "anonymize": {
       "title": "Konto anonymisieren",
       "summary": "Entfernt Name, E-Mail-Adresse und Profil endgültig. Inhalte zeigen danach eine ehemalige Person.",
-      "open": "Anonymisieren …",
+      "open": "Konto anonymisieren …",
       "irreversible": "Das lässt sich nicht rückgängig machen",
       "removesProfile": "Name, E-Mail-Adresse, Anmeldenamen und Profil von {name} werden entfernt. Das Konto erscheint als ehemalige Person mit einer kurzen ID.",
       "deletesAccess": "Verknüpfte Anmeldungen, Sitzungen, API-Tokens, Passkeys, zweite Faktoren und persönliche Einstellungen werden gelöscht.",
@@ -3095,7 +3273,8 @@
       "confirm": "Gib {name} zur Bestätigung ein",
       "reauthentication": "Danach bittet Pagehall dich, mit deinem Passwort, Passkey oder Authenticator-Code zu bestätigen.",
       "action": "Anonymisieren",
-      "done": "Das Konto wurde anonymisiert"
+      "done": "Das Konto wurde anonymisiert",
+      "reasonRequired": "Gib an, warum das Konto anonymisiert wird, zum Beispiel das Datum des Löschantrags."
     }
   }
 }

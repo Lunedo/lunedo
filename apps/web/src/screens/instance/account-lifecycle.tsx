@@ -5,13 +5,16 @@ import {
   type ComboboxItem,
   Dialog,
   Field,
+  focusFirstInvalidSoon,
   Input,
   Notice,
   Select,
   Textarea,
+  Tooltip,
   useToast,
 } from "@pagehall/ui";
-import { useState } from "react";
+import { House } from "lucide-react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
@@ -37,7 +40,10 @@ export function PlaceholderDialog({
     if (!accountNameSchema.safeParse(name).success) found.name = t("validation.required");
     if (!emailSchema.safeParse(email.trim()).success) found.email = t("validation.email");
     setErrors(found);
-    if (found.name || found.email) return;
+    if (found.name || found.email) {
+      focusFirstInvalidSoon();
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -124,12 +130,17 @@ export function MergePlaceholder({
   const { t } = useTranslation();
   const { toast } = useToast();
   const [target, setTarget] = useState<ComboboxItem | null>(null);
+  const [missing, setMissing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const own = target !== null && target.value === ownAccountId;
 
   const merge = async () => {
-    if (!target || own) return;
+    if (!target || own) {
+      setMissing(!target);
+      focusFirstInvalidSoon();
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -159,7 +170,14 @@ export function MergePlaceholder({
           {error}
         </Notice>
       ) : null}
-      <Field label={t("lifecycle.merge.account")} {...(own ? { error: t("lifecycle.merge.notOwn") } : {})}>
+      <Field
+        label={t("lifecycle.merge.account")}
+        {...(own
+          ? { error: t("lifecycle.merge.notOwn") }
+          : missing && !target
+            ? { error: t("lifecycle.merge.chooseAccount") }
+            : {})}
+      >
         <Combobox
           value={target?.value ?? null}
           selectedItem={target}
@@ -173,13 +191,7 @@ export function MergePlaceholder({
         />
       </Field>
       <div>
-        <Button
-          variant="primary"
-          size="sm"
-          loading={busy}
-          disabled={!target || own}
-          onClick={() => void merge()}
-        >
+        <Button variant="primary" size="sm" loading={busy} onClick={() => void merge()}>
           {t("lifecycle.merge.action")}
         </Button>
       </div>
@@ -199,13 +211,34 @@ export function HomeOrganizationChange({
   const { t } = useTranslation();
   const { toast } = useToast();
   const candidates = memberships.filter((membership) => membership.kind === "member");
-  const current = candidates.find((membership) => membership.home)?.organizationId ?? "";
+  const home = memberships.find((membership) => membership.home);
+  const current = home?.organizationId ?? "";
   const [organizationId, setOrganizationId] = useState(current);
+  const [unchanged, setUnchanged] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  if (candidates.length < 2) return null;
+  const currentLine = (
+    <p className="flex items-center gap-1.5 font-medium">
+      <HomeMark />
+      {home?.name ?? "—"}
+    </p>
+  );
+  if (candidates.length < 2) {
+    return (
+      <div className="flex flex-col gap-2 text-sm">
+        {currentLine}
+        <p className="text-text-muted">{t("lifecycle.home.onlyOne")}</p>
+      </div>
+    );
+  }
 
   const change = async () => {
+    if (organizationId === current) {
+      setUnchanged(true);
+      focusFirstInvalidSoon();
+      return;
+    }
+    setUnchanged(false);
     setBusy(true);
     setError(null);
     try {
@@ -227,13 +260,17 @@ export function HomeOrganizationChange({
 
   return (
     <div className="flex flex-col gap-3">
+      <div className="text-sm">{currentLine}</div>
       <p className="text-sm text-text-muted">{t("lifecycle.home.description")}</p>
       {error ? (
         <Notice variant="danger" title={t("failures.changeHomeOrganization")}>
           {error}
         </Notice>
       ) : null}
-      <Field label={t("lifecycle.home.newHome")}>
+      <Field
+        label={t("lifecycle.home.newHome")}
+        {...(unchanged && organizationId === current ? { error: t("lifecycle.home.chooseOther") } : {})}
+      >
         <Select
           aria-label={t("lifecycle.home.newHome")}
           value={organizationId}
@@ -245,13 +282,7 @@ export function HomeOrganizationChange({
         />
       </Field>
       <div>
-        <Button
-          variant="secondary"
-          size="sm"
-          loading={busy}
-          disabled={organizationId === current}
-          onClick={() => void change()}
-        >
+        <Button variant="secondary" size="sm" loading={busy} onClick={() => void change()}>
           {t("lifecycle.home.action")}
         </Button>
       </div>
@@ -274,10 +305,27 @@ export function AnonymizeDialog({
   const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const ready = reason.trim().length > 0 && confirmation.trim() === account.name.trim();
+  const [invalid, setInvalid] = useState<{ reason: boolean; confirmation: boolean }>({
+    reason: false,
+    confirmation: false,
+  });
+  const reasonRef = useRef<HTMLTextAreaElement>(null);
+  const confirmationRef = useRef<HTMLInputElement>(null);
 
   const submit = async () => {
-    if (!ready) return;
+    const problems = {
+      reason: reason.trim().length === 0,
+      confirmation: confirmation.trim() !== account.name.trim(),
+    };
+    setInvalid(problems);
+    if (problems.reason) {
+      reasonRef.current?.focus();
+      return;
+    }
+    if (problems.confirmation) {
+      confirmationRef.current?.focus();
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -309,7 +357,7 @@ export function AnonymizeDialog({
           <Button variant="secondary" onClick={onClose}>
             {t("common.cancel")}
           </Button>
-          <Button variant="dangerPrimary" loading={busy} disabled={!ready} onClick={() => void submit()}>
+          <Button variant="dangerPrimary" loading={busy} onClick={() => void submit()}>
             {t("lifecycle.anonymize.action")}
           </Button>
         </>
@@ -331,18 +379,54 @@ export function AnonymizeDialog({
             {error}
           </Notice>
         ) : null}
-        <Field label={t("lifecycle.anonymize.reason")} hint={t("lifecycle.anonymize.reasonHint")}>
-          <Textarea value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} />
+        <Field
+          label={t("lifecycle.anonymize.reason")}
+          hint={t("lifecycle.anonymize.reasonHint")}
+          {...(invalid.reason ? { error: t("lifecycle.anonymize.reasonRequired") } : {})}
+        >
+          <Textarea
+            ref={reasonRef}
+            value={reason}
+            maxLength={500}
+            onChange={(event) => {
+              setReason(event.target.value);
+              if (invalid.reason && event.target.value.trim())
+                setInvalid((current) => ({ ...current, reason: false }));
+            }}
+          />
         </Field>
-        <Field label={t("lifecycle.anonymize.confirm", { name: account.name })}>
+        <Field
+          label={t("lifecycle.anonymize.confirm", { name: account.name })}
+          {...(invalid.confirmation ? { error: t("common.nameMismatch") } : {})}
+        >
           <Input
+            ref={confirmationRef}
             value={confirmation}
             autoComplete="off"
-            onChange={(event) => setConfirmation(event.target.value)}
+            onChange={(event) => {
+              setConfirmation(event.target.value);
+              if (invalid.confirmation && event.target.value.trim() === account.name.trim())
+                setInvalid((current) => ({ ...current, confirmation: false }));
+            }}
           />
         </Field>
         <p className="text-sm text-text-muted">{t("lifecycle.anonymize.reauthentication")}</p>
       </div>
     </Dialog>
+  );
+}
+
+export function HomeMark() {
+  const { t } = useTranslation();
+  return (
+    <Tooltip content={t("instance.accounts.homeHint")}>
+      <span
+        role="img"
+        aria-label={t("instance.accounts.homeHint")}
+        className="inline-flex shrink-0 text-text-muted"
+      >
+        <House aria-hidden className="size-4" />
+      </span>
+    </Tooltip>
   );
 }

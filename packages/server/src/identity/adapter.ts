@@ -98,6 +98,7 @@ export interface DirectoryTestResult {
   steps: { step: DirectoryTestStep; ok: boolean; detail: string | null }[];
   sample: ProviderProfile | null;
   attributes: ReceivedClaim[];
+  searched: { attribute: string; value: string } | null;
 }
 
 export interface RedirectSignInResult {

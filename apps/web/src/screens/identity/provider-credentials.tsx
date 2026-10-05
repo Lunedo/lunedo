@@ -3,8 +3,10 @@ import {
   Badge,
   Button,
   ConfirmDialog,
+  DangerAction,
   Dialog,
   Field,
+  focusFirstInvalidSoon,
   Input,
   List,
   ListRow,
@@ -217,10 +219,12 @@ export function CredentialsList({
   provider,
   canManage,
   group,
+  removeInline = true,
 }: {
   provider: IdentityProvider;
   canManage: boolean;
   group?: CredentialGroup;
+  removeInline?: boolean;
 }) {
   const { t } = useTranslation();
   const kinds = group ? GROUP_KINDS[group] : credentialKinds(provider);
@@ -317,9 +321,9 @@ export function CredentialsList({
                     {t("identityProviders.credentials.download")}
                   </Button>
                 ) : null}
-                {canManage ? (
+                {canManage && removeInline ? (
                   <Button variant="danger" size="sm" icon={Trash2} onClick={() => setRemoving(credential)}>
-                    {t("common.remove")}
+                    {t("identityProviders.credentials.remove")}
                   </Button>
                 ) : null}
               </span>
@@ -344,26 +348,89 @@ export function CredentialsList({
           onAdded={() => void refresh()}
         />
       ) : null}
-      <ConfirmDialog
-        open={removing !== null}
-        onOpenChange={(next) => (next ? undefined : setRemoving(null))}
-        title={t("identityProviders.credentials.removeTitle")}
-        description={t("identityProviders.credentials.removeDescription")}
-        confirmLabel={t("common.remove")}
-        cancelLabel={t("common.cancel")}
-        destructive
-        onConfirm={async () => {
-          if (!removing) return;
-          try {
-            await removeCredential(provider.id, removing.id);
-            setRemoving(null);
-            await refresh();
-          } catch (failure) {
-            showFailure(t("failures.removeCredential"), failure);
-          }
-        }}
-      />
+      <RemoveCredentialDialog provider={provider} credential={removing} onClose={() => setRemoving(null)} />
     </div>
+  );
+}
+
+function RemoveCredentialDialog({
+  provider,
+  credential,
+  onClose,
+}: {
+  provider: IdentityProvider;
+  credential: ProviderCredential | null;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const showFailure = useFailureToast();
+  return (
+    <ConfirmDialog
+      open={credential !== null}
+      onOpenChange={(next) => (next ? undefined : onClose())}
+      title={t("identityProviders.credentials.removeTitle")}
+      description={credential ? removalEffect(t, provider, credential) : undefined}
+      confirmLabel={t("identityProviders.credentials.remove")}
+      cancelLabel={t("common.cancel")}
+      destructive
+      onConfirm={async () => {
+        if (!credential) return;
+        try {
+          await removeCredential(provider.id, credential.id);
+          onClose();
+          await queryClient.invalidateQueries({ queryKey: identityKeys.providers });
+        } catch (failure) {
+          showFailure(t("failures.removeCredential"), failure);
+        }
+      }}
+    />
+  );
+}
+
+function siblingKinds(provider: IdentityProvider, kind: CredentialKind): CredentialKind[] {
+  const group = (Object.keys(GROUP_KINDS) as CredentialGroup[]).find(
+    (candidate) => provider.type === "saml" && GROUP_KINDS[candidate].includes(kind),
+  );
+  return group ? GROUP_KINDS[group] : credentialKinds(provider);
+}
+
+function removalEffect(t: TFunction, provider: IdentityProvider, credential: ProviderCredential): string {
+  if (!credential.inUse) return t("identityProviders.credentials.removeUnused");
+  const kinds = siblingKinds(provider, credential.kind);
+  const others = provider.credentials.filter(
+    (other) => other.id !== credential.id && kinds.includes(other.kind) && !expired(other),
+  );
+  return others.length === 0
+    ? t("identityProviders.credentials.removeLast", { name: provider.name })
+    : t("identityProviders.credentials.removeInUse");
+}
+
+export function CredentialRemovalZone({ provider }: { provider: IdentityProvider }) {
+  const { t } = useTranslation();
+  const format = useFormat();
+  const [removing, setRemoving] = useState<ProviderCredential | null>(null);
+  const credentials = [...provider.credentials].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  if (credentials.length === 0) return null;
+  return (
+    <>
+      {credentials.map((credential) => (
+        <DangerAction
+          key={credential.id}
+          title={t("identityProviders.credentials.removeEntry", {
+            kind: credentialKindLabel(t, provider, credential.kind),
+            created: format.date(credential.createdAt),
+          })}
+          description={removalEffect(t, provider, credential)}
+          action={
+            <Button variant="danger" size="sm" icon={Trash2} onClick={() => setRemoving(credential)}>
+              {t("identityProviders.credentials.remove")}
+            </Button>
+          }
+        />
+      ))}
+      <RemoveCredentialDialog provider={provider} credential={removing} onClose={() => setRemoving(null)} />
+    </>
   );
 }
 
@@ -416,6 +483,7 @@ function AddCredentialDialog({
     const input = credentialInput(draft);
     if (!input.ok) {
       setInvalid(input.field);
+      focusFirstInvalidSoon();
       return;
     }
     setInvalid(null);

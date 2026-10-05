@@ -7,6 +7,13 @@ export {
   PasswordPolicyError,
 } from "./accounts/accounts.js";
 export { AccountAdministrationService, type IdentitySummary } from "./accounts/administration.js";
+export {
+  type InstanceAddress,
+  InstanceAddressConfiguredError,
+  InstanceAddressInvalidError,
+  InstanceAddressService,
+  type InstanceAddressSource,
+} from "./accounts/instance-address.js";
 export { instanceNameSetting, instanceUrlSetting } from "./accounts/instance-settings.js";
 export {
   AccountLifecycleService,
@@ -31,7 +38,12 @@ export {
   type TokenScopes,
 } from "./accounts/principal.js";
 export { accountScopeChain } from "./accounts/scope.js";
-export { AuditLog, type AuditScope, type AuditVerification } from "./audit/audit-log.js";
+export {
+  type AuditChangeSignal,
+  AuditLog,
+  type AuditScope,
+  type AuditVerification,
+} from "./audit/audit-log.js";
 export {
   type AuditChangeKind,
   type AuditEventName,
@@ -43,6 +55,7 @@ export { type AuditChange, type AuditPresentation, presentAuditEntry } from "./a
 export type { AuditCursor, AuditEntry, AuditFilter } from "./audit/reader.js";
 export { auditRetentionSetting } from "./audit/retention.js";
 export type { FactorAdded } from "./auth/account-security.js";
+export { IDENTITY_LINK_LIFETIME_MS } from "./auth/challenges.js";
 export { BusyError } from "./auth/concurrency.js";
 export type { EmergencyRecipients } from "./auth/emergency-recipients.js";
 export {
@@ -65,7 +78,12 @@ export {
   SessionService,
 } from "./auth/sessions.js";
 export * from "./auth/settings.js";
-export type { ReauthenticationInput, SecondFactorInput, SecondFactorType } from "./auth/sign-in.js";
+export type {
+  ReauthenticationInput,
+  SecondFactorInput,
+  SecondFactorRequirement,
+  SecondFactorType,
+} from "./auth/sign-in.js";
 export { clientSubject } from "./auth/throttle.js";
 export { generateToken } from "./auth/tokens.js";
 export type { TotpSetup } from "./auth/two-factor.js";
@@ -157,6 +175,7 @@ export type { SyncChange, SyncReport, SyncWarning } from "./identity/groups.js";
 export type { MappingRule, ProviderGroupMatch, RulePreview } from "./identity/mapping.js";
 export {
   type AddedCredential,
+  type ConnectionCheck,
   type CredentialInput,
   type CredentialSummary,
   callbackPath,

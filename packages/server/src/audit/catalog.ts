@@ -793,6 +793,16 @@ export const auditCatalog = {
     }),
     visibility: "organization",
   }),
+  "instance.addressChanged": event({
+    actor: ["account"],
+    target: "instance",
+    fields: z.object({
+      url: z.string(),
+      previousUrl: z.string().nullable(),
+      endedSessions: z.number().int().nonnegative(),
+    }),
+    visibility: "instance",
+  }),
   "instance.ownershipTransferred": event({
     actor: ["account", "system"],
     target: "account",

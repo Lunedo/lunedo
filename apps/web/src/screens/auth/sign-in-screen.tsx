@@ -9,7 +9,7 @@ import { z } from "zod";
 import { api } from "../../api/client.js";
 import { type DiscoveredStep, discoverSignIn, signInOptionsQuery } from "../../api/identity-queries.js";
 import { instanceInfoQuery, queryKeys } from "../../api/queries.js";
-import { request } from "../../api/request.js";
+import { isApiError, request } from "../../api/request.js";
 import { ProviderButton } from "../../components/provider-button.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
@@ -97,6 +97,15 @@ export function SignInScreen() {
     try {
       await signInWithPassword(step.email, password);
     } catch (failure) {
+      if (isApiError(failure, "invalidCredentials")) {
+        passwordStep.resetField("password");
+        passwordStep.setError(
+          "password",
+          { type: "server", message: t("auth.wrongPassword") },
+          { shouldFocus: true },
+        );
+        return;
+      }
       setError(problemMessage(t, failure));
       passwordStep.resetField("password");
     }
@@ -180,7 +189,7 @@ export function SignInScreen() {
     <p className="text-center text-sm">
       <button
         type="button"
-        className="font-medium text-text-muted hover:underline focus-visible:focus-ring"
+        className="inline-flex min-h-hit items-center rounded-sm px-2 font-medium text-text-muted hover:underline focus-visible:focus-ring"
         onClick={() => setEmergency(true)}
       >
         {t("auth.emergency.link")}

@@ -1,5 +1,5 @@
 import { toNestErrors } from "@hookform/resolvers";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
   type DefaultValues,
   type FieldErrors,
@@ -39,18 +39,28 @@ export function useSchemaForm<TInput extends FieldValues, TOutput>(
   schema: z.ZodType<TOutput, TInput>,
   options: SchemaFormOptions<TInput> = {},
 ): UseFormReturn<TInput, unknown, TOutput> {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const messages = options.messages;
   const message = useCallback(
     (issue: z.core.$ZodIssue) => issueMessage(t, issue, messages?.[issuePath(issue)]),
     [t, messages],
   );
-  return useForm<TInput, unknown, TOutput>({
+  const form = useForm<TInput, unknown, TOutput>({
     resolver: schemaResolver(schema, message),
     mode: "onSubmit",
     reValidateMode: "onChange",
     ...(options.defaultValues ? { defaultValues: options.defaultValues } : {}),
   });
+  const language = useRef(i18n.language);
+  useEffect(() => {
+    if (language.current === i18n.language) return;
+    language.current = i18n.language;
+    const shown = Object.entries(form.formState.errors)
+      .filter(([, error]) => error && error.type !== "server")
+      .map(([name]) => name as Path<TInput>);
+    if (shown.length > 0) void form.trigger(shown);
+  }, [i18n.language, form]);
+  return form;
 }
 
 export function submitWith<T>(handler: (event?: T) => Promise<void>): (event: T) => void {

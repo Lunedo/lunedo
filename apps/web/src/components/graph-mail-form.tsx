@@ -5,6 +5,7 @@ import {
   Dialog,
   ErrorState,
   Field,
+  focusFirstInvalidSoon,
   Input,
   List,
   ListRow,
@@ -101,6 +102,7 @@ export function GraphMailForm({
       setErrors({});
       return parsed.data;
     }
+    focusFirstInvalidSoon();
     setErrors(
       Object.fromEntries(
         parsed.error.issues.map((issue) => [
@@ -166,14 +168,17 @@ export function GraphMailForm({
 
   return (
     <div className="flex flex-col gap-4">
-      <Notice variant="warning" title={t("mail.graph.permissionTitle")}>
-        <div className="flex flex-col gap-2">
-          <p>{t("mail.graph.permission")}</p>
-          <p>{t("mail.graph.permissionRecommended")}</p>
-          <p>{t("mail.graph.permissionSimple")}</p>
-        </div>
+      <Notice variant="info" title={t("mail.graph.steps.title")}>
+        <ol className="flex list-decimal flex-col gap-2 pl-5">
+          <li>{t("mail.graph.steps.create")}</li>
+          <li>{t("mail.graph.steps.grant")}</li>
+          <li>
+            {t("mail.graph.steps.restrict")}
+            <span className="mt-1 block text-sm text-text-muted">{t("mail.graph.steps.restrictNote")}</span>
+          </li>
+          <li>{t("mail.graph.steps.enter")}</li>
+        </ol>
       </Notice>
-      <Notice variant="info">{t("mail.graph.setup")}</Notice>
       {error ? (
         <Notice variant="danger" title={t("failures.saveMail")}>
           {error}
@@ -253,7 +258,7 @@ export function GraphMailForm({
                       icon={Trash2}
                       onClick={() => setRemoving(credential)}
                     >
-                      {t("common.remove")}
+                      {t("common.removeCredential")}
                     </Button>
                   </div>
                 }
@@ -320,7 +325,7 @@ export function GraphMailForm({
         }}
         title={t("mail.graph.removeTitle")}
         description={t("mail.graph.removeDescription")}
-        confirmLabel={t("common.remove")}
+        confirmLabel={t("common.removeCredential")}
         cancelLabel={t("common.cancel")}
         destructive
         onConfirm={async () => {

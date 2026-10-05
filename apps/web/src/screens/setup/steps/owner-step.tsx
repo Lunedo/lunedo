@@ -1,5 +1,5 @@
 import { accountNameSchema, emailSchema, PASSWORD_MAX_LENGTH } from "@pagehall/shared";
-import { Button, Field, Input, Notice, PasswordInput } from "@pagehall/ui";
+import { Button, Field, Input, Notice, PasswordInput, Skeleton } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
 import { CircleCheck } from "lucide-react";
 import { useState } from "react";
@@ -8,9 +8,11 @@ import { z } from "zod";
 import { instanceInfoQuery } from "../../../api/queries.js";
 import { RecoveryCodes } from "../../../components/recovery-codes.js";
 import { TotpEnrollment } from "../../../components/totp-enrollment.js";
+import { FailureNotice, LoadError } from "../../../errors/failure.js";
 import { problemMessage } from "../../../errors/problem-message.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../../forms/use-schema-form.js";
 import { runSetupAction } from "../setup-api.js";
+import { useDraftDefaults, useKeepDraft } from "../setup-drafts.js";
 import type { StepProps } from "./step-props.js";
 
 const ownerForm = z
@@ -22,22 +24,15 @@ const ownerForm = z
   })
   .refine((values) => values.password === values.repeated, { path: ["repeated"], message: "mismatch" });
 
-export function OwnerStep({ details, back, onDone, refresh }: StepProps<"owner">) {
+export function OwnerStep({ details, completed, back, onDone, refresh }: StepProps<"owner">) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(details.owner === null);
   const [codes, setCodes] = useState<string[] | null>(null);
 
-  if (codes) {
-    return (
-      <div className="flex flex-col gap-4">
-        <RecoveryCodes codes={codes} />
-        <div className="flex justify-end">
-          <Button variant="primary" onClick={() => void onDone()}>
-            {t("setup.continue")}
-          </Button>
-        </div>
-      </div>
-    );
+  if (codes) return <ShownRecoveryCodes codes={codes} onDone={onDone} />;
+
+  if (details.owner && details.totpConfirmed && !completed && !editing) {
+    return <RenewedRecoveryCodes onDone={onDone} />;
   }
 
   if (editing || !details.owner) {
@@ -100,14 +95,73 @@ export function OwnerStep({ details, back, onDone, refresh }: StepProps<"owner">
   );
 }
 
+function RenewedRecoveryCodes({ onDone }: { onDone: () => Promise<void> }) {
+  const { t } = useTranslation();
+  const renewed = useQuery({
+    queryKey: ["setup", "owner", "recoveryCodes"],
+    queryFn: () => runSetupAction("owner", "renewRecoveryCodes", {}),
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: Number.POSITIVE_INFINITY,
+    retry: false,
+    throwOnError: false,
+  });
+  if (renewed.isPending) return <Skeleton className="h-40 w-full" />;
+  if (renewed.isError) {
+    return (
+      <LoadError
+        what={t("setup.owner.recoveryCodesFailed")}
+        error={renewed.error}
+        onRetry={() => renewed.refetch()}
+      />
+    );
+  }
+  return <ShownRecoveryCodes codes={renewed.data.recoveryCodes} onDone={onDone} />;
+}
+
+function ShownRecoveryCodes({ codes, onDone }: { codes: readonly string[]; onDone: () => Promise<void> }) {
+  const { t } = useTranslation();
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<unknown>(null);
+  const acknowledge = async () => {
+    setFailure(null);
+    setBusy(true);
+    try {
+      await runSetupAction("owner", "acknowledgeRecoveryCodes", {});
+      await onDone();
+    } catch (error) {
+      setFailure(error);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="flex flex-col gap-4">
+      <RecoveryCodes codes={codes} />
+      {failure ? (
+        <FailureNotice
+          what={t("setup.owner.acknowledgeFailed")}
+          error={failure}
+          onRetry={() => void acknowledge()}
+        />
+      ) : null}
+      <div className="flex justify-end">
+        <Button variant="primary" loading={busy} onClick={() => void acknowledge()}>
+          {t("setup.continue")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function OwnerForm({ back, onSaved }: { back: StepProps<"owner">["back"]; onSaved: () => Promise<void> }) {
   const { t } = useTranslation();
   const info = useQuery(instanceInfoQuery);
   const [error, setError] = useState<string | null>(null);
   const form = useSchemaForm(ownerForm, {
-    defaultValues: { name: "", email: "", password: "", repeated: "" },
+    defaultValues: useDraftDefaults("owner", { name: "", email: "", password: "", repeated: "" }),
     messages: { repeated: t("auth.passwordsDiffer") },
   });
+  useKeepDraft("owner", form);
   const submit = form.handleSubmit(async (values) => {
     setError(null);
     try {

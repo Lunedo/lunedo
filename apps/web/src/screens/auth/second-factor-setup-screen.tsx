@@ -1,9 +1,10 @@
 import { Button, Notice, SegmentedControl } from "@pagehall/ui";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Fingerprint } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { securityQuery } from "../../api/account-queries.js";
 import { api } from "../../api/client.js";
 import { queryKeys } from "../../api/queries.js";
 import { request } from "../../api/request.js";
@@ -19,6 +20,8 @@ export function SecondFactorSetupScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const security = useQuery({ ...securityQuery, throwOnError: false });
+  const requiredBy = security.data?.secondFactorRequiredBy;
   const [method, setMethod] = useState<Method>("totp");
   const [codes, setCodes] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +66,7 @@ export function SecondFactorSetupScreen() {
   return (
     <AuthCard
       title={t("auth.secondFactorSetupTitle")}
-      description={t("auth.secondFactorSetupDescription")}
+      description={requiredBy ? t(`auth.secondFactorSetupDescription.${requiredBy}`) : undefined}
       wide
     >
       {passkeysSupported() ? (

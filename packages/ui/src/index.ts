@@ -55,6 +55,7 @@ export {
   type DialogSize,
   Drawer,
   type DrawerProps,
+  type TypedConfirmation,
 } from "./dialog.js";
 export {
   DURATION_UNITS,
@@ -94,10 +95,13 @@ export {
   type TextareaProps,
   useFieldControl,
 } from "./field.js";
+export { focusFirstInvalid, focusFirstInvalidSoon } from "./focus-invalid.js";
 export { Icon, type IconSize } from "./icon.js";
 export { type UiLabels, UiProvider, useUiLabels } from "./labels.js";
 export {
   type Breadcrumb,
+  DangerAction,
+  DangerZone,
   List,
   ListRow,
   PageContainer,
@@ -108,6 +112,7 @@ export {
   SettingRow,
   type SettingRowProps,
 } from "./layout.js";
+export { cleanCode, OneTimeCodeInput, type OneTimeCodeInputProps } from "./one-time-code.js";
 export {
   Menu,
   type MenuItem,
@@ -125,6 +130,13 @@ export {
   type RailLinkProps,
   type RailProps,
 } from "./rail.js";
+export {
+  ScrollArea,
+  type ScrollAreaProps,
+  type ScrollEdges,
+  scrollEdges,
+  useScrollEdges,
+} from "./scroll-area.js";
 export {
   DurationSelect,
   type DurationSelectProps,
@@ -163,6 +175,6 @@ export {
   timeZoneItems,
   timeZoneOffset,
 } from "./time-zone-combobox.js";
-export { type ToastOptions, ToastProvider, type ToastVariant, useToast } from "./toast.js";
+export { type ToastOptions, ToastProvider, type ToastVariant, UNDO_SECONDS, useToast } from "./toast.js";
 export { Tooltip, TooltipProvider } from "./tooltip.js";
 export { isTruncated, TruncatedText, type TruncatedTextProps, useTruncated } from "./truncated-text.js";

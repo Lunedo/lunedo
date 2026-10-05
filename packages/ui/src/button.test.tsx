@@ -36,7 +36,7 @@ describe("Button", () => {
     expect(screen.getByRole("button").getAttribute("type")).toBe("button");
   });
 
-  it("disables itself and announces loading", async () => {
+  it("stays focusable while busy, announces loading and ignores clicks", async () => {
     const onClick = vi.fn();
     renderUi(
       <Button loading onClick={onClick}>
@@ -44,11 +44,20 @@ describe("Button", () => {
       </Button>,
     );
     const button = screen.getByRole("button", { name: /Save/ });
-    expect(button).toHaveProperty("disabled", true);
+    expect(button).toHaveProperty("disabled", false);
     expect(button.getAttribute("aria-busy")).toBe("true");
+    expect(button.getAttribute("aria-disabled")).toBe("true");
     expect(button.textContent).toContain("Loading");
     await userEvent.click(button);
     expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("marks the disabled state with fill and cursor instead of opacity", () => {
+    renderUi(<Button disabled>Give role</Button>);
+    const className = screen.getByRole("button", { name: "Give role" }).className;
+    expect(className).toContain("disabled:bg-surface-sunken");
+    expect(className).toContain("disabled:cursor-not-allowed");
+    expect(className).not.toContain("opacity-60");
   });
 
   it("renders a link through asChild", () => {
@@ -80,5 +89,10 @@ describe("IconButton", () => {
     expect(button.textContent).toBe("3");
     await userEvent.click(button);
     expect(onClick).toHaveBeenCalledOnce();
+  });
+
+  it("extends its hit area to the minimum target size", () => {
+    renderUi(<IconButton label="More" icon={MoreHorizontal} size="sm" />);
+    expect(screen.getByRole("button", { name: "More" }).className).toContain("after:size-hit");
   });
 });

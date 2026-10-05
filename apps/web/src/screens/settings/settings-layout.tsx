@@ -9,6 +9,7 @@ import {
 } from "@pagehall/ui";
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { translateKey } from "../../i18n/translate.js";
 import {
@@ -20,6 +21,7 @@ import {
 import { useRegistry } from "../../shell/registry.js";
 import { useShell } from "../../shell/shell.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
+import { SettingsSearchField, SettingsSearchResults } from "./settings-search.js";
 
 function resolvePath(to: string, organizationId: string | null): string {
   return organizationId ? to.replace("$organizationId", organizationId) : to;
@@ -32,6 +34,7 @@ export function SettingsLayout() {
   const navigation = useRegistry(navigationItems);
   const location = useLocation();
   const navigate = useNavigate();
+  const [query, setQuery] = useState("");
 
   const sections: { section: NavigationSection; label: string; items: NavigationItem[] }[] = (
     [
@@ -74,6 +77,9 @@ export function SettingsLayout() {
             >
               {t("navigation.settings")}
             </SidebarHeader>
+            <div className="px-2 pb-2">
+              <SettingsSearchField value={query} onChange={setQuery} />
+            </div>
             {sections.map((section) => (
               <SidebarGroup key={section.section} label={section.label}>
                 {section.section === "organization" && organization.multipleOrganizations ? (
@@ -108,7 +114,8 @@ export function SettingsLayout() {
         </div>
       )}
       <main id="main" tabIndex={-1} className="min-w-0 flex-1 overflow-y-auto outline-none">
-        <div className="flex items-center gap-2 px-4 pt-3 md:hidden">
+        <div className="flex flex-col gap-2 px-4 pt-3 md:hidden">
+          <SettingsSearchField value={query} onChange={setQuery} />
           <div className="flex-1">
             <Select
               aria-label={t("navigation.settingsSection")}
@@ -136,7 +143,16 @@ export function SettingsLayout() {
             />
           </div>
         ) : null}
-        <Outlet />
+        {query.trim() ? (
+          <SettingsSearchResults
+            query={query}
+            areas={sections.map((section) => ({ label: section.label, items: section.items }))}
+            params={params}
+            onClear={() => setQuery("")}
+          />
+        ) : (
+          <Outlet />
+        )}
       </main>
     </div>
   );

@@ -3,6 +3,8 @@ import {
   Badge,
   Button,
   ConfirmDialog,
+  DangerAction,
+  DangerZone,
   Dialog,
   Field,
   Input,
@@ -57,7 +59,50 @@ export function SecurityScreen() {
       <SessionsSection />
       <TokensSection />
       {session.account ? <SecurityActivitySection accountId={session.account.id} /> : null}
+      <SecurityDangerZone />
     </SettingsPage>
+  );
+}
+
+function SecurityDangerZone() {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const showFailure = useFailureToast();
+  const queryClient = useQueryClient();
+  const security = useQuery({ ...securityQuery, throwOnError: false });
+  const [open, setOpen] = useState(false);
+  if (!security.data?.totp) return null;
+  return (
+    <DangerZone title={t("common.dangerZone")}>
+      <DangerAction
+        title={t("security.removeAuthenticator")}
+        description={t("security.removeAuthenticatorSummary")}
+        action={
+          <Button variant="danger" size="sm" onClick={() => setOpen(true)}>
+            {t("security.removeAuthenticator")}
+          </Button>
+        }
+      />
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={t("security.removeAuthenticatorTitle")}
+        description={t("security.removeAuthenticatorDescription")}
+        confirmLabel={t("security.removeAuthenticator")}
+        cancelLabel={t("common.cancel")}
+        destructive
+        onConfirm={async () => {
+          try {
+            await request(() => api.DELETE("/api/v1/account/totp"));
+            toast({ title: t("security.authenticatorRemoved"), variant: "success" });
+            setOpen(false);
+            await queryClient.invalidateQueries({ queryKey: accountKeys.security });
+          } catch (failure) {
+            showFailure(t("failures.removeAuthenticator"), failure);
+          }
+        }}
+      />
+    </DangerZone>
   );
 }
 
@@ -218,7 +263,7 @@ function TwoFactorSection() {
   const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const security = useQuery({ ...securityQuery, throwOnError: false });
-  const [dialog, setDialog] = useState<"totp" | "removeTotp" | "passkey" | "codes" | null>(null);
+  const [dialog, setDialog] = useState<"totp" | "passkey" | "codes" | null>(null);
   const [removePasskey, setRemovePasskey] = useState<{ id: string; name: string } | null>(null);
   const [codes, setCodes] = useState<string[] | null>(null);
   const refresh = () => queryClient.invalidateQueries({ queryKey: accountKeys.security });
@@ -247,9 +292,9 @@ function TwoFactorSection() {
 
   return (
     <Section title={t("security.twoFactor")}>
-      {data.secondFactorRequired ? (
+      {data.secondFactorRequiredBy ? (
         <div className="px-4 pt-4">
-          <Notice variant="info">{t("security.twoFactorRequired")}</Notice>
+          <Notice variant="info">{t(`security.twoFactorRequired.${data.secondFactorRequiredBy}`)}</Notice>
         </div>
       ) : null}
       <SettingRow
@@ -257,12 +302,7 @@ function TwoFactorSection() {
         description={data.totp ? t("security.authenticatorOn") : t("security.authenticatorOff")}
         control={
           data.totp ? (
-            <div className="flex items-center gap-2">
-              <Badge variant="success">{t("common.on")}</Badge>
-              <Button variant="danger" onClick={() => setDialog("removeTotp")}>
-                {t("common.remove")}
-              </Button>
-            </div>
+            <Badge variant="success">{t("common.on")}</Badge>
           ) : (
             <Button variant="outline" onClick={() => setDialog("totp")}>
               {t("security.setUp")}
@@ -298,7 +338,7 @@ function TwoFactorSection() {
               })}
               actions={
                 <Button variant="danger" icon={Trash2} onClick={() => setRemovePasskey(passkey)}>
-                  {t("common.remove")}
+                  {t("security.removePasskey")}
                 </Button>
               }
             />
@@ -337,25 +377,6 @@ function TwoFactorSection() {
           }}
         />
       </Dialog>
-      <ConfirmDialog
-        open={dialog === "removeTotp"}
-        onOpenChange={(open) => setDialog(open ? "removeTotp" : null)}
-        title={t("security.removeAuthenticatorTitle")}
-        description={t("security.removeAuthenticatorDescription")}
-        confirmLabel={t("common.remove")}
-        cancelLabel={t("common.cancel")}
-        destructive
-        onConfirm={async () => {
-          try {
-            await request(() => api.DELETE("/api/v1/account/totp"));
-            toast({ title: t("security.authenticatorRemoved"), variant: "success" });
-            setDialog(null);
-            await refresh();
-          } catch (failure) {
-            showFailure(t("failures.removeAuthenticator"), failure);
-          }
-        }}
-      />
       <AddPasskeyDialog
         open={dialog === "passkey"}
         onOpenChange={(open) => setDialog(open ? "passkey" : null)}
@@ -372,7 +393,7 @@ function TwoFactorSection() {
         }}
         title={t("security.removePasskeyTitle", { name: removePasskey?.name ?? "" })}
         description={t("security.removePasskeyDescription")}
-        confirmLabel={t("common.remove")}
+        confirmLabel={t("security.removePasskey")}
         cancelLabel={t("common.cancel")}
         destructive
         onConfirm={async () => {

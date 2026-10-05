@@ -1,5 +1,16 @@
 import { identityProviderNameSchema } from "@pagehall/shared";
-import { Button, buttonClassName, classNames, Field, Input, Notice, Section, Skeleton } from "@pagehall/ui";
+import {
+  Button,
+  buttonClassName,
+  ConfirmDialog,
+  classNames,
+  Field,
+  focusFirstInvalidSoon,
+  Input,
+  Notice,
+  Section,
+  Skeleton,
+} from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { Check, Download, KeyRound } from "lucide-react";
@@ -7,7 +18,10 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import {
+  type ConnectionCheckBody,
+  type ConnectionCheckResult,
   certificateUrl,
+  checkConnection,
   completeSetup,
   createDraft,
   createProvider,
@@ -23,8 +37,10 @@ import {
 } from "../../api/identity-queries.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
+import { translateKey } from "../../i18n/translate.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
+import { connectionCheckField, connectionCheckMessage, FailedCheckNotice } from "./connection-check.js";
 import {
   AccountFields,
   AttributeFields,
@@ -33,6 +49,7 @@ import {
   LinkFields,
   RedirectUriField,
   SecondFactorFields,
+  toConfigInput,
 } from "./provider-config.js";
 import {
   CertificateCreated,
@@ -226,6 +243,7 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
   const [startError, setStartError] = useState<string | null>(null);
   const [draftSaveFailed, setDraftSaveFailed] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
+  const [finishCheck, setFinishCheck] = useState<ConnectionCheckResult | null>(null);
   const lastSaved = useRef<string | null>(null);
 
   useEffect(() => {
@@ -300,9 +318,20 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
       setStarting(false);
     }
   };
-  const finish = async (id: string) => {
+  const finish = async (id: string, despiteCheck = false) => {
     setFinishError(null);
     try {
+      if (!despiteCheck && provider.data) {
+        const check = await checkConnection({
+          type: provider.data.type,
+          config: toConfigInput(provider.data),
+          providerId: id,
+        } as ConnectionCheckBody);
+        if (!check.ok) {
+          setFinishCheck(check);
+          return;
+        }
+      }
       await completeSetup(id);
       await queryClient.invalidateQueries({ queryKey: identityKeys.providers });
       void navigate(providerPath(id));
@@ -340,27 +369,40 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
           <ol className="flex flex-col gap-1">
             {steps.map((name, position) => {
               const reachable = providerId ? position >= 1 : position === index;
+              const marker = (
+                <span className="flex size-icon-lg shrink-0 items-center justify-center rounded-full border border-control-border text-xs">
+                  {position < index ? <Check aria-hidden="true" className="size-icon-sm" /> : position + 1}
+                </span>
+              );
+              const stepName = t(`identityProviders.wizard.stepNames.${name}`);
               return (
                 <li key={name}>
-                  <button
-                    type="button"
-                    disabled={!reachable}
-                    aria-current={position === index ? "step" : undefined}
-                    onClick={() => goTo(position)}
-                    className={classNames(
-                      "flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left focus-visible:focus-ring disabled:cursor-not-allowed disabled:text-text-muted",
-                      position === index && "bg-selected font-semibold text-selected-text",
-                    )}
-                  >
-                    <span className="flex size-icon-lg shrink-0 items-center justify-center rounded-full border border-control-border text-xs">
-                      {position < index ? (
-                        <Check aria-hidden="true" className="size-icon-sm" />
-                      ) : (
-                        position + 1
+                  {reachable ? (
+                    <button
+                      type="button"
+                      aria-current={position === index ? "step" : undefined}
+                      onClick={() => goTo(position)}
+                      className={classNames(
+                        "flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left focus-visible:focus-ring",
+                        position === index && "bg-selected font-semibold text-selected-text",
                       )}
-                    </span>
-                    {t(`identityProviders.wizard.stepNames.${name}`)}
-                  </button>
+                    >
+                      {marker}
+                      {stepName}
+                    </button>
+                  ) : (
+                    <div className="flex items-start gap-2 px-2 py-1 text-text-muted">
+                      {marker}
+                      <span className="flex flex-col">
+                        <span>{stepName}</span>
+                        <span className="text-xs">
+                          {providerId && position === 0
+                            ? t("identityProviders.wizard.typeFixed")
+                            : t("identityProviders.wizard.stepLater")}
+                        </span>
+                      </span>
+                    </div>
+                  )}
                 </li>
               );
             })}
@@ -442,6 +484,24 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
                     {finishError}
                   </Notice>
                 ) : null}
+                <ConfirmDialog
+                  open={finishCheck !== null}
+                  onOpenChange={(open) => {
+                    if (!open) setFinishCheck(null);
+                  }}
+                  title={t("identityProviders.check.finishTitle")}
+                  description={
+                    finishCheck
+                      ? t("identityProviders.check.finishDescription", {
+                          check: t(`identityProviders.check.names.${finishCheck.check}`),
+                          message: connectionCheckMessage(t, finishCheck),
+                        })
+                      : ""
+                  }
+                  confirmLabel={t("identityProviders.check.finishAnyway")}
+                  cancelLabel={t("identityProviders.check.fixFirst")}
+                  onConfirm={() => finish(provider.data.id, true)}
+                />
                 <SavedProviderStep
                   provider={provider.data}
                   step={step}
@@ -465,12 +525,26 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
 
 function DraftCopyValues({ draft }: { draft: ProviderDraft }) {
   const { t } = useTranslation();
-  const provider = t(`identityProviders.wizard.choices.${choiceOf(draft.type, draft.preset)}.title`);
   if (draft.type === "ldap") return null;
+  const kind =
+    draft.type === "saml"
+      ? draft.preset === "entraId"
+        ? "samlEntraId"
+        : draft.preset === "adfs"
+          ? "adfs"
+          : "saml"
+      : choiceOf(draft.type, draft.preset);
+  const place = translateKey(
+    t,
+    `identityProviders.wizard.places.${kind === "samlEntraId" ? "entraId" : kind}`,
+  );
   return (
-    <Section title={t("identityProviders.wizard.copyTitle", { provider })}>
+    <Section title={t("identityProviders.wizard.copyTitle", { place })}>
       <div className="flex flex-col gap-4 px-4 py-3">
-        <p className="text-sm text-text-muted">{t("identityProviders.wizard.copyHint", { provider })}</p>
+        <p className="text-sm text-text-muted">
+          {translateKey(t, `identityProviders.wizard.registerHints.${kind}`)}{" "}
+          {t("identityProviders.wizard.copyHint", { place })}
+        </p>
         {draft.saml ? (
           <>
             <CopyField
@@ -502,7 +576,7 @@ function DraftCopyValues({ draft }: { draft: ProviderDraft }) {
               <div className="flex flex-col gap-1">
                 <span className="font-medium">{t("identityProviders.wizard.signingCertificate")}</span>
                 <span className="text-sm text-text-muted">
-                  {t("identityProviders.wizard.signingCertificateHint", { provider })}
+                  {t("identityProviders.wizard.signingCertificateHint", { place })}
                 </span>
                 <div>
                   <a
@@ -613,6 +687,7 @@ function OidcConnectionStep({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [certificate, setCertificate] = useState<{ pem: string; provider: IdentityProvider } | null>(null);
+  const [checkFailed, setCheckFailed] = useState(false);
   const preset = OIDC_PRESETS[choice];
   const set = (patch: Partial<OidcDraft>) => onChange({ ...draft, ...patch });
 
@@ -632,20 +707,34 @@ function OidcConnectionStep({
     const credential = credentialInput(draft.credential);
     if (!credential.ok) found[credential.field] = t("validation.required");
     setErrors(found);
-    if (Object.keys(found).length > 0) return null;
+    if (Object.keys(found).length > 0) {
+      focusFirstInvalidSoon();
+      return null;
+    }
     const config = { clientId: draft.clientId.trim(), domains: common.domains };
     if (preset === "entraId") return { preset: "entraId", ...config, tenantId: draft.tenantId.trim() };
     if (preset === "google") return { preset: "google", ...config };
     return { preset: "generic", ...config, issuer: draft.issuer.trim() };
   };
 
-  const create = async () => {
+  const create = async (despiteCheck = false) => {
     const config = validate();
     const credential = credentialInput(draft.credential);
     if (!config || !credential.ok) return;
     setBusy(true);
     setError(null);
     try {
+      if (!despiteCheck) {
+        const check = await checkConnection({ type: "oidc", config });
+        if (!check.ok) {
+          const field = connectionCheckField(check, preset === "entraId" ? "tenantId" : "issuer");
+          setErrors((current) => ({ ...current, [field]: connectionCheckMessage(t, check) }));
+          setCheckFailed(true);
+          focusFirstInvalidSoon();
+          return;
+        }
+      }
+      setCheckFailed(false);
       const result = await createProvider({
         type: "oidc",
         name: name.trim(),
@@ -688,13 +777,17 @@ function OidcConnectionStep({
           type: t(`identityProviders.wizard.choices.${choice}.title`),
         })}
       </h2>
-      <Notice variant="info">{t(`identityProviders.wizard.connectionHints.${preset}`)}</Notice>
       {error ? (
         <Notice variant="danger" title={t("failures.createProvider")}>
           {error}
         </Notice>
       ) : null}
-      <NameField value={name} error={errors.name} onChange={(next) => onCommonChange({ name: next })} />
+      <NameField
+        kind={choice}
+        value={name}
+        error={errors.name}
+        onChange={(next) => onCommonChange({ name: next })}
+      />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {preset === "entraId" ? (
           <Field
@@ -751,6 +844,7 @@ function OidcConnectionStep({
           />
         </div>
       </Section>
+      {checkFailed ? <FailedCheckNotice busy={busy} onSaveAnyway={() => void create(true)} /> : null}
       <WizardFooter
         next={
           <Button variant="primary" loading={busy} disabled={!canManage} onClick={() => void create()}>
@@ -858,7 +952,11 @@ function SavedProviderStep({
         <>
           <h2 className="font-semibold text-lg">{t("identityProviders.wizard.stepNames.accounts")}</h2>
           <Section title={t("identityProviders.accounts.newPeople")}>
-            <AccountFields provider={provider} canManage={canManage} />
+            <AccountFields
+              provider={provider}
+              canManage={canManage}
+              showDomains={provider.type === "oidc" && provider.config.preset !== "google"}
+            />
           </Section>
           <Section title={t("identityProviders.accounts.existing")}>
             <LinkFields />

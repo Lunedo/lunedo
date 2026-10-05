@@ -30,6 +30,18 @@ const completeSchema = z
   })
   .strict();
 const joinedSchema = z.object({ accountId: idSchema, organizationId: idSchema });
+const invitationPreviewSchema = z.object({
+  state: z
+    .enum(["open", "expired", "accepted", "revoked"])
+    .describe("Whether the invitation can be accepted, or why not."),
+  email: z.string().describe("The invited e-mail address."),
+  expiresAt: z.iso.datetime().describe("When the invitation expires."),
+  organizationName: z.string().describe("The organization the invitation is for."),
+  invitedByName: z
+    .string()
+    .nullable()
+    .describe("The person who sent the invitation, when the account still exists."),
+});
 const secondFactorResetSchema = z
   .object({
     reason: z
@@ -141,6 +153,24 @@ export class AccountsController {
     @Req() request: FastifyRequest,
   ) {
     await this.#services.homeOrganizations.change(actorOf(request), accountId, body.organizationId);
+  }
+
+  @Post("invitations/preview")
+  @PublicRoute()
+  @ApiRoute({
+    summary: "Look up an invitation",
+    tags: ["Accounts"],
+    status: 200,
+    body: z.object({ token: linkTokenSchema }).strict(),
+    response: {
+      description: "What the invitation is for and whether it can still be accepted.",
+      schema: invitationPreviewSchema,
+    },
+    errors: ["invalidToken", "rateLimited"],
+  })
+  async previewInvitation(@Body() body: { token: string }, @Req() request: FastifyRequest) {
+    const preview = await this.#services.invitations.preview(body.token, request.ip);
+    return { ...preview, expiresAt: preview.expiresAt.toISOString() };
   }
 
   @Post("invitations/accept")

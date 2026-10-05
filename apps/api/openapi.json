@@ -2263,13 +2263,31 @@
                     },
                     "secondFactorRequired": {
                       "type": "boolean"
+                    },
+                    "secondFactorRequiredBy": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "instanceOwner",
+                            "reset",
+                            "instance",
+                            "organization"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Why the account must keep a second factor: it owns the instance, an administrator reset its second factor, or the instance or organization requires one. Null when nothing requires it."
                     }
                   },
                   "required": [
                     "totp",
                     "passkeys",
                     "recoveryCodes",
-                    "secondFactorRequired"
+                    "secondFactorRequired",
+                    "secondFactorRequiredBy"
                   ],
                   "additionalProperties": false
                 }
@@ -15773,6 +15791,345 @@
         }
       }
     },
+    "/api/v1/instance/address": {
+      "get": {
+        "operationId": "instance.address",
+        "summary": "Get the address of the instance",
+        "tags": [
+          "Instance"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.settings.view",
+          "resource": "instance"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The address and where it comes from.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "description": "The address people open Pagehall at, or null while it is not set.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "source": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "environment",
+                            "setting"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Where the address comes from: `environment` when PAGEHALL_INSTANCE_URL is set on the server, then it cannot be changed here; `setting` when it was set here."
+                    }
+                  },
+                  "required": [
+                    "url",
+                    "source"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The address of the instance."
+                },
+                "example": {
+                  "url": "https://wiki.example.org",
+                  "source": "setting"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "instance.changeAddress",
+        "summary": "Move the instance to a new address",
+        "description": "Changes the address people open Pagehall at. Every session ends, passkeys registered under the old address stop working, and the redirect and reply URLs at every identity provider must be updated.\n\nRequires the permission `instance.settings.manage` on the instance. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Instance"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.settings.manage",
+          "resource": "instance"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "maxLength": 2048,
+                    "description": "The new address, with https:// in production."
+                  }
+                },
+                "required": [
+                  "url"
+                ],
+                "additionalProperties": false,
+                "description": "A new address for the instance."
+              },
+              "example": {
+                "url": "https://wiki.example.org"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The new address.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "description": "The new address."
+                    },
+                    "endedSessions": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of sessions that ended, including the caller's own."
+                    }
+                  },
+                  "required": [
+                    "url",
+                    "endedSessions"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The result of moving the instance to a new address."
+                },
+                "example": {
+                  "url": "https://wiki.example.org",
+                  "endedSessions": 12
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "reauthenticationRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:reauthenticationRequired",
+                      "title": "Confirm your identity first",
+                      "status": 403,
+                      "code": "reauthenticationRequired"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`instanceUrlFromEnvironment`: The address of the instance is set in the server environment.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "instanceUrlFromEnvironment": {
+                    "value": {
+                      "type": "urn:pagehall:problem:instanceUrlFromEnvironment",
+                      "title": "The address of the instance is set in the server environment",
+                      "status": 409,
+                      "code": "instanceUrlFromEnvironment"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/instance/audit-events": {
       "get": {
         "operationId": "audit.listInstance",
@@ -17166,6 +17523,2007 @@
                       "title": "This endpoint needs a signed-in session",
                       "status": 403,
                       "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/identity-provider-connection-checks": {
+      "post": {
+        "operationId": "identityProviders.checkConnection",
+        "summary": "Check connection settings before saving them",
+        "description": "Reads the OIDC discovery document, loads the SAML metadata or connects to the directory with the given settings. Saves nothing.\n\nRequires the permission `instance.signIn.manage` on the instance. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Identity providers"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.signIn.manage",
+          "resource": "instance"
+        },
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "oidc",
+                        "description": "OpenID Connect: reads the discovery document of the issuer."
+                      },
+                      "config": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "preset": {
+                                "type": "string",
+                                "const": "entraId"
+                              },
+                              "clientId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 500
+                              },
+                              "domains": {
+                                "default": [],
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 253,
+                                  "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                }
+                              },
+                              "idTokenAlgorithm": {
+                                "default": "RS256",
+                                "type": "string",
+                                "enum": [
+                                  "RS256",
+                                  "RS384",
+                                  "RS512",
+                                  "PS256",
+                                  "PS384",
+                                  "PS512",
+                                  "ES256",
+                                  "ES384",
+                                  "ES512"
+                                ]
+                              },
+                              "accountCreation": {
+                                "default": {
+                                  "enabled": false,
+                                  "requiredGroups": []
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "enabled": {
+                                    "default": false,
+                                    "type": "boolean"
+                                  },
+                                  "requiredGroups": {
+                                    "default": [],
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "sync": {
+                                "default": {
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20,
+                                  "deactivationLimitAccounts": 5
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "intervalMinutes": {
+                                    "default": 60,
+                                    "type": "integer",
+                                    "minimum": 15,
+                                    "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
+                                  },
+                                  "deactivationLimitAccounts": {
+                                    "default": 5,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 100000
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "secondFactor": {
+                                "default": {
+                                  "mode": "provider",
+                                  "proofValues": [
+                                    "mfa"
+                                  ]
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "default": "provider",
+                                    "type": "string",
+                                    "enum": [
+                                      "provider",
+                                      "providerProof",
+                                      "pagehall"
+                                    ]
+                                  },
+                                  "proofValues": {
+                                    "default": [
+                                      "mfa"
+                                    ],
+                                    "minItems": 1,
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 50
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "tenantId": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                              },
+                              "authority": {
+                                "type": "string",
+                                "maxLength": 2048,
+                                "format": "uri"
+                              },
+                              "graphUrl": {
+                                "type": "string",
+                                "maxLength": 2048,
+                                "format": "uri"
+                              },
+                              "emailSource": {
+                                "default": "email",
+                                "type": "string",
+                                "enum": [
+                                  "email",
+                                  "userPrincipalName",
+                                  "graphMail"
+                                ]
+                              },
+                              "signInNameSource": {
+                                "default": "userPrincipalName",
+                                "type": "string",
+                                "enum": [
+                                  "preferredUsername",
+                                  "userPrincipalName",
+                                  "email"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "preset",
+                              "clientId",
+                              "tenantId"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "preset": {
+                                "type": "string",
+                                "const": "google"
+                              },
+                              "clientId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 500
+                              },
+                              "domains": {
+                                "minItems": 1,
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 253,
+                                  "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                }
+                              },
+                              "idTokenAlgorithm": {
+                                "default": "RS256",
+                                "type": "string",
+                                "enum": [
+                                  "RS256",
+                                  "RS384",
+                                  "RS512",
+                                  "PS256",
+                                  "PS384",
+                                  "PS512",
+                                  "ES256",
+                                  "ES384",
+                                  "ES512"
+                                ]
+                              },
+                              "accountCreation": {
+                                "default": {
+                                  "enabled": false,
+                                  "requiredGroups": []
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "enabled": {
+                                    "default": false,
+                                    "type": "boolean"
+                                  },
+                                  "requiredGroups": {
+                                    "default": [],
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "sync": {
+                                "default": {
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20,
+                                  "deactivationLimitAccounts": 5
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "intervalMinutes": {
+                                    "default": 60,
+                                    "type": "integer",
+                                    "minimum": 15,
+                                    "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
+                                  },
+                                  "deactivationLimitAccounts": {
+                                    "default": 5,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 100000
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "secondFactor": {
+                                "default": {
+                                  "mode": "provider",
+                                  "proofValues": [
+                                    "mfa"
+                                  ]
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "default": "provider",
+                                    "type": "string",
+                                    "enum": [
+                                      "provider",
+                                      "providerProof",
+                                      "pagehall"
+                                    ]
+                                  },
+                                  "proofValues": {
+                                    "default": [
+                                      "mfa"
+                                    ],
+                                    "minItems": 1,
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 50
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "issuer": {
+                                "default": "https://accounts.google.com",
+                                "type": "string",
+                                "maxLength": 2048,
+                                "format": "uri"
+                              },
+                              "directory": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "method": {
+                                        "default": "adminRole",
+                                        "type": "string",
+                                        "enum": [
+                                          "adminRole",
+                                          "delegation"
+                                        ]
+                                      },
+                                      "adminEmail": {
+                                        "default": null,
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 254,
+                                            "format": "email"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "readUsers": {
+                                        "default": false,
+                                        "type": "boolean"
+                                      },
+                                      "url": {
+                                        "type": "string",
+                                        "maxLength": 2048,
+                                        "format": "uri"
+                                      },
+                                      "tokenUrl": {
+                                        "type": "string",
+                                        "maxLength": 2048,
+                                        "format": "uri"
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "preset",
+                              "clientId",
+                              "domains"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "preset": {
+                                "type": "string",
+                                "const": "generic"
+                              },
+                              "clientId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 500
+                              },
+                              "domains": {
+                                "default": [],
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 253,
+                                  "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                }
+                              },
+                              "idTokenAlgorithm": {
+                                "default": "RS256",
+                                "type": "string",
+                                "enum": [
+                                  "RS256",
+                                  "RS384",
+                                  "RS512",
+                                  "PS256",
+                                  "PS384",
+                                  "PS512",
+                                  "ES256",
+                                  "ES384",
+                                  "ES512"
+                                ]
+                              },
+                              "accountCreation": {
+                                "default": {
+                                  "enabled": false,
+                                  "requiredGroups": []
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "enabled": {
+                                    "default": false,
+                                    "type": "boolean"
+                                  },
+                                  "requiredGroups": {
+                                    "default": [],
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "sync": {
+                                "default": {
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20,
+                                  "deactivationLimitAccounts": 5
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "intervalMinutes": {
+                                    "default": 60,
+                                    "type": "integer",
+                                    "minimum": 15,
+                                    "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
+                                  },
+                                  "deactivationLimitAccounts": {
+                                    "default": 5,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 100000
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "secondFactor": {
+                                "default": {
+                                  "mode": "provider",
+                                  "proofValues": [
+                                    "mfa"
+                                  ]
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "default": "provider",
+                                    "type": "string",
+                                    "enum": [
+                                      "provider",
+                                      "providerProof",
+                                      "pagehall"
+                                    ]
+                                  },
+                                  "proofValues": {
+                                    "default": [
+                                      "mfa"
+                                    ],
+                                    "minItems": 1,
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 50
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "issuer": {
+                                "type": "string",
+                                "maxLength": 2048,
+                                "format": "uri"
+                              },
+                              "scopes": {
+                                "default": [
+                                  "openid",
+                                  "profile",
+                                  "email"
+                                ],
+                                "maxItems": 20,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100
+                                }
+                              },
+                              "claims": {
+                                "default": {
+                                  "email": "email",
+                                  "signInName": "preferred_username",
+                                  "displayName": "name",
+                                  "groups": null,
+                                  "groupNames": null
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "email": {
+                                    "default": "email",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^[A-Za-z0-9_:./-]+$"
+                                  },
+                                  "signInName": {
+                                    "default": "preferred_username",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^[A-Za-z0-9_:./-]+$"
+                                  },
+                                  "displayName": {
+                                    "default": "name",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^[A-Za-z0-9_:./-]+$"
+                                  },
+                                  "groups": {
+                                    "default": null,
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 100,
+                                        "pattern": "^[A-Za-z0-9_:./-]+$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "groupNames": {
+                                    "default": null,
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 100,
+                                        "pattern": "^[A-Za-z0-9_:./-]+$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "preset",
+                              "clientId",
+                              "issuer"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ],
+                        "description": "Configuration to check."
+                      },
+                      "providerId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "ID of the provider whose stored password and CA certificate the check uses when none is sent."
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "config"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "saml",
+                        "description": "SAML 2.0: loads and reads the metadata address."
+                      },
+                      "config": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "preset": {
+                                "type": "string",
+                                "const": "entraId"
+                              },
+                              "domains": {
+                                "default": [],
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 253,
+                                  "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                }
+                              },
+                              "metadata": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "source": {
+                                        "type": "string",
+                                        "const": "url"
+                                      },
+                                      "url": {
+                                        "type": "string",
+                                        "maxLength": 2048,
+                                        "format": "uri"
+                                      }
+                                    },
+                                    "required": [
+                                      "source",
+                                      "url"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "source": {
+                                        "type": "string",
+                                        "const": "file"
+                                      }
+                                    },
+                                    "required": [
+                                      "source"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "idpInitiated": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "requireSignedResponse": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "encryptedAssertions": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "accountCreation": {
+                                "default": {
+                                  "enabled": false,
+                                  "requiredGroups": []
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "enabled": {
+                                    "default": false,
+                                    "type": "boolean"
+                                  },
+                                  "requiredGroups": {
+                                    "default": [],
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "sync": {
+                                "default": {
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20,
+                                  "deactivationLimitAccounts": 5
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "intervalMinutes": {
+                                    "default": 60,
+                                    "type": "integer",
+                                    "minimum": 15,
+                                    "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
+                                  },
+                                  "deactivationLimitAccounts": {
+                                    "default": 5,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 100000
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "secondFactor": {
+                                "default": {
+                                  "mode": "provider",
+                                  "proofValues": [
+                                    "mfa"
+                                  ]
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "default": "provider",
+                                    "type": "string",
+                                    "enum": [
+                                      "provider",
+                                      "providerProof",
+                                      "pagehall"
+                                    ]
+                                  },
+                                  "proofValues": {
+                                    "default": [
+                                      "mfa"
+                                    ],
+                                    "minItems": 1,
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 50
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "tenantId": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                              },
+                              "authority": {
+                                "type": "string",
+                                "maxLength": 2048,
+                                "format": "uri"
+                              },
+                              "graphUrl": {
+                                "type": "string",
+                                "maxLength": 2048,
+                                "format": "uri"
+                              },
+                              "graphClientId": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 500
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "emailSource": {
+                                "default": "email",
+                                "type": "string",
+                                "enum": [
+                                  "email",
+                                  "userPrincipalName"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "preset",
+                              "metadata",
+                              "tenantId"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "preset": {
+                                "type": "string",
+                                "const": "adfs"
+                              },
+                              "domains": {
+                                "default": [],
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 253,
+                                  "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                }
+                              },
+                              "metadata": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "source": {
+                                        "type": "string",
+                                        "const": "url"
+                                      },
+                                      "url": {
+                                        "type": "string",
+                                        "maxLength": 2048,
+                                        "format": "uri"
+                                      }
+                                    },
+                                    "required": [
+                                      "source",
+                                      "url"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "source": {
+                                        "type": "string",
+                                        "const": "file"
+                                      }
+                                    },
+                                    "required": [
+                                      "source"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "idpInitiated": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "requireSignedResponse": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "encryptedAssertions": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "accountCreation": {
+                                "default": {
+                                  "enabled": false,
+                                  "requiredGroups": []
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "enabled": {
+                                    "default": false,
+                                    "type": "boolean"
+                                  },
+                                  "requiredGroups": {
+                                    "default": [],
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "sync": {
+                                "default": {
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20,
+                                  "deactivationLimitAccounts": 5
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "intervalMinutes": {
+                                    "default": 60,
+                                    "type": "integer",
+                                    "minimum": 15,
+                                    "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
+                                  },
+                                  "deactivationLimitAccounts": {
+                                    "default": 5,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 100000
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "secondFactor": {
+                                "default": {
+                                  "mode": "provider",
+                                  "proofValues": [
+                                    "mfa"
+                                  ]
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "default": "provider",
+                                    "type": "string",
+                                    "enum": [
+                                      "provider",
+                                      "providerProof",
+                                      "pagehall"
+                                    ]
+                                  },
+                                  "proofValues": {
+                                    "default": [
+                                      "mfa"
+                                    ],
+                                    "minItems": 1,
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 50
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "identifierAttribute": {
+                                "default": "objectGUID",
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 256,
+                                "pattern": "^[A-Za-z0-9_:./#-]+$"
+                              },
+                              "attributes": {
+                                "default": {
+                                  "email": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+                                  "signInName": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn",
+                                  "displayName": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name",
+                                  "groups": "http://schemas.microsoft.com/ws/2008/06/identity/claims/groupsid"
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "email": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256,
+                                    "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                  },
+                                  "signInName": {
+                                    "default": null,
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "displayName": {
+                                    "default": null,
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "groups": {
+                                    "default": null,
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "email"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "groupValues": {
+                                "default": "identifiers",
+                                "type": "string",
+                                "enum": [
+                                  "identifiers",
+                                  "names"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "preset",
+                              "metadata"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "preset": {
+                                "type": "string",
+                                "const": "generic"
+                              },
+                              "domains": {
+                                "default": [],
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 253,
+                                  "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                }
+                              },
+                              "metadata": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "source": {
+                                        "type": "string",
+                                        "const": "url"
+                                      },
+                                      "url": {
+                                        "type": "string",
+                                        "maxLength": 2048,
+                                        "format": "uri"
+                                      }
+                                    },
+                                    "required": [
+                                      "source",
+                                      "url"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "source": {
+                                        "type": "string",
+                                        "const": "file"
+                                      }
+                                    },
+                                    "required": [
+                                      "source"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "idpInitiated": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "requireSignedResponse": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "encryptedAssertions": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "accountCreation": {
+                                "default": {
+                                  "enabled": false,
+                                  "requiredGroups": []
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "enabled": {
+                                    "default": false,
+                                    "type": "boolean"
+                                  },
+                                  "requiredGroups": {
+                                    "default": [],
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "sync": {
+                                "default": {
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20,
+                                  "deactivationLimitAccounts": 5
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "intervalMinutes": {
+                                    "default": 60,
+                                    "type": "integer",
+                                    "minimum": 15,
+                                    "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
+                                  },
+                                  "deactivationLimitAccounts": {
+                                    "default": 5,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 100000
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "secondFactor": {
+                                "default": {
+                                  "mode": "provider",
+                                  "proofValues": [
+                                    "mfa"
+                                  ]
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "default": "provider",
+                                    "type": "string",
+                                    "enum": [
+                                      "provider",
+                                      "providerProof",
+                                      "pagehall"
+                                    ]
+                                  },
+                                  "proofValues": {
+                                    "default": [
+                                      "mfa"
+                                    ],
+                                    "minItems": 1,
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 50
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "identifierAttribute": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256,
+                                    "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "attributes": {
+                                "default": {
+                                  "email": "email",
+                                  "signInName": null,
+                                  "displayName": null,
+                                  "groups": null
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "email": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256,
+                                    "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                  },
+                                  "signInName": {
+                                    "default": null,
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "displayName": {
+                                    "default": null,
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "groups": {
+                                    "default": null,
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[A-Za-z0-9_:./#-]+$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "email"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "groupValues": {
+                                "default": "names",
+                                "type": "string",
+                                "enum": [
+                                  "identifiers",
+                                  "names"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "preset",
+                              "metadata"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ],
+                        "description": "Configuration to check."
+                      },
+                      "providerId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "ID of the provider whose stored password and CA certificate the check uses when none is sent."
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "config"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "ldap",
+                        "description": "LDAP: connects, checks the certificate, binds and searches once."
+                      },
+                      "config": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "preset": {
+                                "type": "string",
+                                "const": "activeDirectory"
+                              },
+                              "url": {
+                                "type": "string",
+                                "maxLength": 2048
+                              },
+                              "startTls": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "bindDn": {
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 1000
+                              },
+                              "userBaseDn": {
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 1000,
+                                "pattern": "="
+                              },
+                              "groupBaseDn": {
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 1000,
+                                "pattern": "="
+                              },
+                              "domains": {
+                                "default": [],
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 253,
+                                  "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                }
+                              },
+                              "accountCreation": {
+                                "default": {
+                                  "enabled": false,
+                                  "requiredGroups": []
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "enabled": {
+                                    "default": false,
+                                    "type": "boolean"
+                                  },
+                                  "requiredGroups": {
+                                    "default": [],
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "sync": {
+                                "default": {
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20,
+                                  "deactivationLimitAccounts": 5
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "intervalMinutes": {
+                                    "default": 60,
+                                    "type": "integer",
+                                    "minimum": 15,
+                                    "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
+                                  },
+                                  "deactivationLimitAccounts": {
+                                    "default": 5,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 100000
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "secondFactor": {
+                                "default": {
+                                  "mode": "pagehall"
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "default": "pagehall",
+                                    "type": "string",
+                                    "enum": [
+                                      "pagehall",
+                                      "provider"
+                                    ]
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "userFilter": {
+                                "default": "(&(objectCategory=person)(objectClass=user))",
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 1000
+                              },
+                              "groupFilter": {
+                                "default": "(objectClass=group)",
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 1000
+                              },
+                              "signInAttribute": {
+                                "default": "userPrincipalName",
+                                "type": "string",
+                                "enum": [
+                                  "userPrincipalName",
+                                  "sAMAccountName",
+                                  "mail"
+                                ]
+                              },
+                              "attributes": {
+                                "default": {
+                                  "email": "mail",
+                                  "displayName": "displayName"
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "email": {
+                                    "default": "mail",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                  },
+                                  "displayName": {
+                                    "default": "displayName",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                  }
+                                },
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "preset",
+                              "url",
+                              "bindDn",
+                              "userBaseDn",
+                              "groupBaseDn"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "preset": {
+                                "type": "string",
+                                "const": "generic"
+                              },
+                              "url": {
+                                "type": "string",
+                                "maxLength": 2048
+                              },
+                              "startTls": {
+                                "default": false,
+                                "type": "boolean"
+                              },
+                              "bindDn": {
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 1000,
+                                "pattern": "="
+                              },
+                              "userBaseDn": {
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 1000,
+                                "pattern": "="
+                              },
+                              "groupBaseDn": {
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 1000,
+                                "pattern": "="
+                              },
+                              "domains": {
+                                "default": [],
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 253,
+                                  "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+                                }
+                              },
+                              "accountCreation": {
+                                "default": {
+                                  "enabled": false,
+                                  "requiredGroups": []
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "enabled": {
+                                    "default": false,
+                                    "type": "boolean"
+                                  },
+                                  "requiredGroups": {
+                                    "default": [],
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "sync": {
+                                "default": {
+                                  "intervalMinutes": 60,
+                                  "deactivationLimitPercent": 20,
+                                  "deactivationLimitAccounts": 5
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "intervalMinutes": {
+                                    "default": 60,
+                                    "type": "integer",
+                                    "minimum": 15,
+                                    "maximum": 1440
+                                  },
+                                  "deactivationLimitPercent": {
+                                    "default": 20,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 100
+                                  },
+                                  "deactivationLimitAccounts": {
+                                    "default": 5,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 100000
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "secondFactor": {
+                                "default": {
+                                  "mode": "pagehall"
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "default": "pagehall",
+                                    "type": "string",
+                                    "enum": [
+                                      "pagehall",
+                                      "provider"
+                                    ]
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "userFilter": {
+                                "default": "(objectClass=inetOrgPerson)",
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 1000
+                              },
+                              "groupFilter": {
+                                "default": "(|(objectClass=groupOfNames)(objectClass=groupOfUniqueNames))",
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 1000
+                              },
+                              "signInAttribute": {
+                                "default": "mail",
+                                "type": "string",
+                                "enum": [
+                                  "mail",
+                                  "uid"
+                                ]
+                              },
+                              "attributes": {
+                                "default": {
+                                  "email": "mail",
+                                  "signInName": "uid",
+                                  "displayName": "cn",
+                                  "groupName": "cn"
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "email": {
+                                    "default": "mail",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                  },
+                                  "signInName": {
+                                    "default": "uid",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                  },
+                                  "displayName": {
+                                    "default": "cn",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                  },
+                                  "groupName": {
+                                    "default": "cn",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                    "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "groupMembership": {
+                                "default": "member",
+                                "type": "string",
+                                "enum": [
+                                  "member",
+                                  "memberOf"
+                                ]
+                              },
+                              "disabled": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "attribute": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 100,
+                                        "pattern": "^(?:[A-Za-z][A-Za-z0-9-]*|[0-9]+(?:\\.[0-9]+)+)$"
+                                      },
+                                      "values": {
+                                        "default": [],
+                                        "maxItems": 20,
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 256
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "attribute"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "preset",
+                              "url",
+                              "bindDn",
+                              "userBaseDn",
+                              "groupBaseDn"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ],
+                        "description": "Configuration to check."
+                      },
+                      "bindPassword": {
+                        "description": "Password of the service account. Without it, the stored password of the provider is used.",
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "caCertificate": {
+                        "description": "CA certificate to trust. Without it, the stored certificate of the provider is used.",
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100000
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "providerId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "ID of the provider whose stored password and CA certificate the check uses when none is sent."
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "config"
+                    ],
+                    "additionalProperties": false
+                  }
+                ],
+                "description": "Connection settings to check before they are saved."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The result of the check.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "description": "Whether Pagehall reached the provider with these settings."
+                    },
+                    "check": {
+                      "type": "string",
+                      "enum": [
+                        "discovery",
+                        "metadata",
+                        "directory"
+                      ],
+                      "description": "What was checked."
+                    },
+                    "url": {
+                      "description": "The address Pagehall contacted.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "status": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The HTTP status of the answer, when there was one."
+                    },
+                    "problem": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "unreachable",
+                            "status",
+                            "invalidDocument",
+                            "issuerMismatch",
+                            "connection",
+                            "certificate",
+                            "serviceAccount",
+                            "search"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "What went wrong, or null."
+                    },
+                    "detail": {
+                      "description": "The message of the provider or the network, for administrators.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "check",
+                    "url",
+                    "status",
+                    "problem",
+                    "detail"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid. `invalidProviderConfiguration`: The identity provider configuration is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidProviderConfiguration": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidProviderConfiguration",
+                      "title": "The identity provider configuration is not valid",
+                      "status": 400,
+                      "code": "invalidProviderConfiguration"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "reauthenticationRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:reauthenticationRequired",
+                      "title": "Confirm your identity first",
+                      "status": 403,
+                      "code": "reauthenticationRequired"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
                     }
                   }
                 }
@@ -50973,6 +53331,32 @@
                       ],
                       "description": "The person found, or null."
                     },
+                    "searched": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "attribute": {
+                              "type": "string",
+                              "description": "The attribute Pagehall searched."
+                            },
+                            "value": {
+                              "type": "string",
+                              "description": "The value it searched for."
+                            }
+                          },
+                          "required": [
+                            "attribute",
+                            "value"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "What Pagehall searched for when a sign-in name was given."
+                    },
                     "attributes": {
                       "type": "array",
                       "items": {
@@ -51002,6 +53386,7 @@
                   "required": [
                     "steps",
                     "sample",
+                    "searched",
                     "attributes"
                   ],
                   "additionalProperties": false,
@@ -65244,6 +67629,12 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "url": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "name": {
                       "type": "string"
                     },
@@ -65323,6 +67714,7 @@
                     }
                   },
                   "required": [
+                    "url",
                     "name",
                     "setupComplete",
                     "language",
@@ -71119,6 +73511,158 @@
         }
       }
     },
+    "/api/v1/invitations/preview": {
+      "post": {
+        "operationId": "accounts.previewInvitation",
+        "summary": "Look up an invitation",
+        "tags": [
+          "Accounts"
+        ],
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "token"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "What the invitation is for and whether it can still be accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "open",
+                        "expired",
+                        "accepted",
+                        "revoked"
+                      ],
+                      "description": "Whether the invitation can be accepted, or why not."
+                    },
+                    "email": {
+                      "type": "string",
+                      "description": "The invited e-mail address."
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the invitation expires."
+                    },
+                    "organizationName": {
+                      "type": "string",
+                      "description": "The organization the invitation is for."
+                    },
+                    "invitedByName": {
+                      "description": "The person who sent the invitation, when the account still exists.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "state",
+                    "email",
+                    "expiresAt",
+                    "organizationName",
+                    "invitedByName"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid. `invalidToken`: The link or code is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidToken",
+                      "title": "The link or code is not valid",
+                      "status": 400,
+                      "code": "invalidToken"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/notifications": {
       "get": {
         "operationId": "notifications.list",
@@ -71642,13 +74186,13 @@
         ],
         "responses": {
           "200": {
-            "description": "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log.",
+            "description": "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log. The event `changes` names the kind of object that changed in the instance or in an organization, as recorded in the audit log, sent only to callers who may view such objects there or the audit log of that level; reload lists that show such objects.",
             "content": {
               "text/event-stream": {
                 "schema": {
                   "type": "string"
                 },
-                "example": "event: notifications\ndata: {\"unreadCount\":2}\n\nevent: settings\ndata: {\"key\":\"branding.accentColor\",\"level\":\"instance\",\"organizationId\":null}\n\nevent: syncRuns\ndata: {\"providerId\":\"01929b1e-0000-7000-8000-000000000001\",\"runId\":\"01929b1e-0000-7000-8000-000000000002\"}\n\n"
+                "example": "event: notifications\ndata: {\"unreadCount\":2}\n\nevent: settings\ndata: {\"key\":\"branding.accentColor\",\"level\":\"instance\",\"organizationId\":null}\n\nevent: syncRuns\ndata: {\"providerId\":\"01929b1e-0000-7000-8000-000000000001\",\"runId\":\"01929b1e-0000-7000-8000-000000000002\"}\n\nevent: changes\ndata: {\"scope\":\"organization\",\"organizationId\":\"01929b1e-0000-7000-8000-000000000003\",\"target\":\"group\"}\n\n"
               }
             }
           },
@@ -85218,12 +87762,16 @@
                                       "string",
                                       "null"
                                     ]
+                                  },
+                                  "urlFromEnvironment": {
+                                    "type": "boolean"
                                   }
                                 },
                                 "required": [
                                   "url",
                                   "name",
-                                  "suggestedUrl"
+                                  "suggestedUrl",
+                                  "urlFromEnvironment"
                                 ],
                                 "additionalProperties": false
                               }
@@ -85770,6 +88318,10 @@
               "type": "string",
               "description": "A domain."
             }
+          },
+          "instanceUrl": {
+            "description": "The current address of the instance, for `instanceMoved`.",
+            "type": "string"
           }
         },
         "required": [

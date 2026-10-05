@@ -14,6 +14,8 @@ import {
 } from "@nestjs/common";
 import {
   accentColorSetting,
+  InstanceAddressConfiguredError,
+  InstanceAddressInvalidError,
   instanceNameSetting,
   languageSetting,
   organizationSettingsChain,
@@ -26,6 +28,7 @@ import {
   accountNameSchema,
   emailSchema,
   idSchema,
+  instanceUrlSchema,
   type MailMethod,
   mailMethods,
   smtpConfigurationSchema,
@@ -56,7 +59,7 @@ import {
   searchQuerySchema,
   toApiPage,
 } from "../http/pagination.js";
-import { notFound } from "../http/problems.js";
+import { notFound, ProblemException } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import {
   customRoleSchema,
@@ -73,7 +76,32 @@ import { definitionFor, listSettings, settingUpdateSchema, updateSetting } from 
 
 const TAG = "Instance";
 
+const addressSchema = z
+  .object({
+    url: z.string().nullable().describe("The address people open Pagehall at, or null while it is not set."),
+    source: z
+      .enum(["environment", "setting"])
+      .nullable()
+      .describe(
+        "Where the address comes from: `environment` when PAGEHALL_INSTANCE_URL is set on the server, then it cannot be changed here; `setting` when it was set here.",
+      ),
+  })
+  .describe("The address of the instance.");
+
+const addressChangeSchema = z
+  .object({ url: instanceUrlSchema.describe("The new address, with https:// in production.") })
+  .strict()
+  .describe("A new address for the instance.");
+
+const addressChangedSchema = z
+  .object({
+    url: z.string().describe("The new address."),
+    endedSessions: z.number().int().describe("Number of sessions that ended, including the caller's own."),
+  })
+  .describe("The result of moving the instance to a new address.");
+
 const instanceInfoSchema = z.object({
+  url: z.string().nullable(),
   name: z.string(),
   setupComplete: z.boolean(),
   language: z.enum(supportedLanguages),
@@ -376,6 +404,7 @@ export class InstanceController {
     const first = setupComplete ? await services.organizations.list({ limit: 2 }) : { items: [] };
     const only = first.items.length === 1 ? first.items[0] : undefined;
     return {
+      url: (await services.instanceAddress.get()).url,
       name: await settings.get(instanceNameSetting, {}),
       setupComplete,
       language: await settings.get(languageSetting, {}),
@@ -935,6 +964,55 @@ export class InstanceController {
   })
   async transferOwnership(@Body() body: z.output<typeof ownershipSchema>, @Req() request: FastifyRequest) {
     await this.#services.memberships.transferOwnership(actorOf(request), body.accountId);
+  }
+
+  @Get("address")
+  @Permission("instance.settings.view")
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Get the address of the instance",
+    tags: [TAG],
+    response: {
+      description: "The address and where it comes from.",
+      schema: addressSchema,
+      example: { url: "https://wiki.example.org", source: "setting" },
+    },
+  })
+  async address() {
+    return this.#services.instanceAddress.get();
+  }
+
+  @Put("address")
+  @Permission("instance.settings.manage", { type: "instance" }, { recentAuthentication: true })
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Move the instance to a new address",
+    description:
+      "Changes the address people open Pagehall at. Every session ends, passkeys registered under the old address stop working, and the redirect and reply URLs at every identity provider must be updated.",
+    tags: [TAG],
+    body: addressChangeSchema,
+    bodyExample: { url: "https://wiki.example.org" },
+    response: {
+      description: "The new address.",
+      schema: addressChangedSchema,
+      example: { url: "https://wiki.example.org", endedSessions: 12 },
+    },
+    errors: ["instanceUrlFromEnvironment", "reauthenticationRequired"],
+  })
+  async changeAddress(@Body() body: z.output<typeof addressChangeSchema>, @Req() request: FastifyRequest) {
+    try {
+      return await this.#services.instanceAddress.change(actorOf(request), body.url);
+    } catch (error) {
+      if (error instanceof InstanceAddressConfiguredError) {
+        throw new ProblemException(
+          "instanceUrlFromEnvironment",
+          "PAGEHALL_INSTANCE_URL sets the address. Change it in the server environment and restart Pagehall.",
+        );
+      }
+      if (error instanceof InstanceAddressInvalidError)
+        throw new ProblemException("invalidInput", error.message);
+      throw error;
+    }
   }
 
   @Get("settings")

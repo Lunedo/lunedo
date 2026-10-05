@@ -2,9 +2,12 @@ import {
   Badge,
   Button,
   ConfirmDialog,
+  DangerAction,
+  DangerZone,
   Dialog,
   Drawer,
   Field,
+  focusFirstInvalidSoon,
   IconButton,
   Notice,
   Section,
@@ -17,7 +20,7 @@ import {
 } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { House, Info, UserPlus, UserRound } from "lucide-react";
+import { Info, UserPlus, UserRound } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -34,6 +37,7 @@ import { useOrganizationState, useSession } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 import {
   AnonymizeDialog,
+  HomeMark,
   HomeOrganizationChange,
   MergePlaceholder,
   PlaceholderDialog,
@@ -192,7 +196,9 @@ export function InstanceAccountsScreen() {
               key: "twoFactor",
               header: t("instance.accounts.twoFactor"),
               cell: (account) =>
-                account.twoFactorActive ? (
+                !canHaveSecondFactor(account) ? (
+                  "—"
+                ) : account.twoFactorActive ? (
                   <Badge variant="success">{t("instance.accounts.twoFactorOn")}</Badge>
                 ) : (
                   <Badge variant="warning">{t("instance.accounts.twoFactorOff")}</Badge>
@@ -212,34 +218,25 @@ export function InstanceAccountsScreen() {
               header: t("instance.accounts.lastSignIn"),
               hideBelow: "md",
               cell: (account) =>
-                account.lastSignInAt ? format.dateTime(account.lastSignInAt) : t("instance.accounts.never"),
+                account.lastSignInAt ? (
+                  <Tooltip content={format.dateTime(account.lastSignInAt)}>
+                    <span className="whitespace-nowrap">{format.date(account.lastSignInAt)}</span>
+                  </Tooltip>
+                ) : (
+                  t("instance.accounts.never")
+                ),
             },
             {
               key: "created",
               header: t("instance.accounts.created"),
               hideBelow: "md",
-              cell: (account) => format.date(account.createdAt),
+              cell: (account) => <span className="whitespace-nowrap">{format.date(account.createdAt)}</span>,
             },
           ]}
         />
       )}
       {open ? <AccountPanel account={open} onClose={() => setOpen(null)} /> : null}
     </SettingsPage>
-  );
-}
-
-function HomeMark() {
-  const { t } = useTranslation();
-  return (
-    <Tooltip content={t("instance.accounts.homeHint")}>
-      <span
-        role="img"
-        aria-label={t("instance.accounts.homeHint")}
-        className="inline-flex shrink-0 text-text-muted"
-      >
-        <House aria-hidden className="size-4" />
-      </span>
-    </Tooltip>
   );
 }
 
@@ -314,17 +311,13 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
     }
   };
 
-  const ownReason = own ? t("instance.accounts.ownAccount") : undefined;
-  const actionButton = (kind: PanelAction, label: string, danger = false) => (
-    <Button
-      variant={danger ? "danger" : "secondary"}
-      size="sm"
-      disabled={own}
-      onClick={() => setAction(kind)}
-    >
+  const dangerButton = (kind: PanelAction, label: string) => (
+    <Button variant="danger" size="sm" onClick={() => setAction(kind)}>
       {label}
     </Button>
   );
+  const anonymizable =
+    current.state !== "anonymized" && (account.type === "standard" || account.type === "guest");
 
   return (
     <Drawer
@@ -333,7 +326,7 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
       title={accountName(t, account)}
       size="panel"
     >
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 p-4">
         <div className="flex flex-col gap-1 text-sm">
           <span>{account.email ?? "—"}</span>
           <span className="text-text-muted">
@@ -341,22 +334,14 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
           </span>
           {home ? <span>{t("instance.accounts.managedBy", { organization: home.name })}</span> : null}
         </div>
-        {manage ? (
-          <div className="flex flex-col gap-2">
-            {own ? <p className="text-sm text-text-muted">{ownReason}</p> : null}
-            <div className="flex flex-wrap gap-2">
-              {current.state === "active"
-                ? actionButton("deactivate", t("members.actions.deactivate"), true)
-                : current.state === "deactivated"
-                  ? actionButton("reactivate", t("instance.accounts.reactivate"))
-                  : null}
-              {current.state === "active"
-                ? actionButton("endSessions", t("instance.accounts.endSessions"))
-                : null}
-              {current.state === "active"
-                ? actionButton("reset", t("instance.accounts.resetSecondFactor"))
-                : null}
-            </div>
+        {manage && own ? (
+          <p className="text-sm text-text-muted">{t("instance.accounts.ownAccount")}</p>
+        ) : null}
+        {manage && !own && current.state === "deactivated" ? (
+          <div>
+            <Button size="sm" onClick={() => setAction("reactivate")}>
+              {t("instance.accounts.reactivate")}
+            </Button>
           </div>
         ) : null}
         {manage &&
@@ -398,20 +383,22 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
         ) : null}
         {detail.data ? (
           <>
-            <PanelSection title={t("instance.accounts.twoFactorStatus")}>
-              <ul className="flex flex-col gap-1 text-sm">
-                <li>
-                  {t("security.authenticatorApp")}:{" "}
-                  {detail.data.twoFactor.totp
-                    ? t("instance.accounts.twoFactorOn")
-                    : t("instance.accounts.twoFactorOff")}
-                </li>
-                <li>{t("instance.accounts.passkeyCount", { count: detail.data.twoFactor.passkeys })}</li>
-                <li>
-                  {t("instance.accounts.recoveryCodeCount", { count: detail.data.twoFactor.recoveryCodes })}
-                </li>
-              </ul>
-            </PanelSection>
+            {canHaveSecondFactor({ type: account.type, state: current.state }) ? (
+              <PanelSection title={t("instance.accounts.twoFactorStatus")}>
+                <ul className="flex flex-col gap-1 text-sm">
+                  <li>
+                    {t("security.authenticatorApp")}:{" "}
+                    {detail.data.twoFactor.totp
+                      ? t("instance.accounts.twoFactorOn")
+                      : t("instance.accounts.twoFactorOff")}
+                  </li>
+                  <li>{t("instance.accounts.passkeyCount", { count: detail.data.twoFactor.passkeys })}</li>
+                  <li>
+                    {t("instance.accounts.recoveryCodeCount", { count: detail.data.twoFactor.recoveryCodes })}
+                  </li>
+                </ul>
+              </PanelSection>
+            ) : null}
             <PanelSection title={t("identities.title")}>
               <AccountIdentities accountId={account.id} manage={manage} />
             </PanelSection>
@@ -487,19 +474,35 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
             </PanelSection>
           </>
         ) : null}
-        {manage &&
-        !own &&
-        current.state !== "anonymized" &&
-        (account.type === "standard" || account.type === "guest") ? (
-          <section className="flex flex-col gap-2 rounded-md border border-danger p-4">
-            <h3 className="font-semibold">{t("lifecycle.anonymize.title")}</h3>
-            <p className="text-sm text-text-muted">{t("lifecycle.anonymize.summary")}</p>
-            <div>
-              <Button variant="danger" size="sm" onClick={() => setAction("anonymize")}>
-                {t("lifecycle.anonymize.open")}
-              </Button>
-            </div>
-          </section>
+        {manage && !own && (current.state === "active" || anonymizable) ? (
+          <DangerZone title={t("common.dangerZone")}>
+            {current.state === "active" ? (
+              <>
+                <DangerAction
+                  title={t("instance.accounts.endSessions")}
+                  description={t("instance.accounts.endSessionsSummary", { name: account.name })}
+                  action={dangerButton("endSessions", t("instance.accounts.endSessions"))}
+                />
+                <DangerAction
+                  title={t("instance.accounts.resetSecondFactor")}
+                  description={t("instance.accounts.resetSummary", { name: account.name })}
+                  action={dangerButton("reset", t("instance.accounts.resetSecondFactor"))}
+                />
+                <DangerAction
+                  title={t("members.actions.deactivate")}
+                  description={t("instance.accounts.deactivateSummary")}
+                  action={dangerButton("deactivate", t("members.actions.deactivate"))}
+                />
+              </>
+            ) : null}
+            {anonymizable ? (
+              <DangerAction
+                title={t("lifecycle.anonymize.title")}
+                description={t("lifecycle.anonymize.summary")}
+                action={dangerButton("anonymize", t("lifecycle.anonymize.open"))}
+              />
+            ) : null}
+          </DangerZone>
         ) : null}
       </div>
       {action === "anonymize" ? (
@@ -623,6 +626,14 @@ function AssignOrganization({
   );
 }
 
+function canHaveSecondFactor(account: { type: string; state: string }): boolean {
+  return (
+    (account.type === "standard" || account.type === "guest") &&
+    account.state !== "placeholder" &&
+    account.state !== "anonymized"
+  );
+}
+
 function PanelSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Section title={title}>
@@ -650,6 +661,7 @@ export function ResetSecondFactorDialog({
   const submit = async () => {
     if (!reason.trim()) {
       setInvalid(true);
+      focusFirstInvalidSoon();
       return;
     }
     setBusy(true);

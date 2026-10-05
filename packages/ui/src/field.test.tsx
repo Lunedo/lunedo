@@ -19,6 +19,7 @@ describe("Field", () => {
     const described = (input.getAttribute("aria-describedby") ?? "").split(" ");
     const texts = described.map((id) => document.getElementById(id)?.textContent);
     expect(texts).toEqual(["Enter an e-mail address.", "We never share it."]);
+    expect(document.getElementById(described[0] ?? "")?.querySelector("svg")).not.toBeNull();
   });
 
   it("leaves a control without a field untouched", () => {
@@ -112,7 +113,7 @@ describe("Checkbox and Switch", () => {
     const toggle = screen.getByRole("switch", { name: "Locked" });
     expect(toggle.hasAttribute("disabled")).toBe(true);
     expect(toggle.className).toContain("border-control-border");
-    expect(toggle.className).toContain("data-disabled:opacity-50");
+    expect(toggle.className).toContain("data-disabled:bg-surface-sunken");
     expect(toggle.className).toContain("data-disabled:cursor-not-allowed");
   });
 });

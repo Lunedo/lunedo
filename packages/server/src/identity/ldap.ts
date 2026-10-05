@@ -565,6 +565,10 @@ export class LdapAdapter implements IdentityProviderAdapter {
     signInName: string | null,
   ): Promise<DirectoryTestResult> {
     const steps: DirectoryTestResult["steps"] = [];
+    const ldapProvider = expectType(provider, "ldap");
+    const searched = signInName
+      ? { attribute: ldapProvider.config.signInAttribute, value: signInName.trim() }
+      : null;
     try {
       return await this.#serviceSession(provider, credentials, async (session, ldap) => {
         steps.push({ step: "connection", ok: true, detail: null });
@@ -581,7 +585,7 @@ export class LdapAdapter implements IdentityProviderAdapter {
         const user = entry ? this.#user(ldap, entry) : null;
         if (!entry || !user) {
           steps.push({ step: "search", ok: false, detail: "No person matches the search" });
-          return { steps, sample: null, attributes: [] };
+          return { steps, sample: null, attributes: [], searched };
         }
         const groups = await this.#groupsOf(session, ldap, user);
         steps.push({ step: "search", ok: true, detail: null });
@@ -601,6 +605,7 @@ export class LdapAdapter implements IdentityProviderAdapter {
           steps,
           sample: { ...user.profile, groups },
           attributes: receivedClaims(received).filter((claim) => claim.values.length > 0),
+          searched,
         };
       });
     } catch (error) {
@@ -632,7 +637,7 @@ export class LdapAdapter implements IdentityProviderAdapter {
           failed("search");
           break;
       }
-      return { steps, sample: null, attributes: [] };
+      return { steps, sample: null, attributes: [], searched };
     }
   }
 }

@@ -4,9 +4,9 @@ import {
   Checkbox,
   Combobox,
   type ComboboxItem,
-  ConfirmDialog,
   Dialog,
   Field,
+  focusFirstInvalidSoon,
   IconButton,
   Menu,
   Notice,
@@ -15,6 +15,7 @@ import {
   type SelectOption,
   Table,
   TableToolbar,
+  useToast,
 } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
@@ -85,6 +86,26 @@ function roleInput(value: RoleValue): MappingRuleInput["role"] {
   return null;
 }
 
+export function ruleInputOf(rule: MappingRule): MappingRuleInput {
+  const group = { id: rule.group.id, name: rule.group.name };
+  const role = !rule.role
+    ? null
+    : "builtIn" in rule.role
+      ? { builtIn: rule.role.builtIn as "owner" | "administrator" | "securityAuditor" }
+      : { customRoleId: rule.role.customRoleId };
+  if (rule.target === "instance") {
+    return { target: "instance", group, role: role ?? { builtIn: "administrator" } };
+  }
+  return {
+    target: "organization",
+    group,
+    organizationId: rule.organization?.id ?? "",
+    role,
+    synchronizedGroup: rule.synchronizedGroup !== null,
+    homeOrganization: rule.homeOrganization,
+  };
+}
+
 export function MappingTab({ provider, canManage }: { provider: IdentityProvider; canManage: boolean }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -92,7 +113,7 @@ export function MappingTab({ provider, canManage }: { provider: IdentityProvider
   const rules = useQuery({ ...mappingRulesQuery(provider.id), throwOnError: false });
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<MappingRule | "new" | null>(null);
-  const [removing, setRemoving] = useState<MappingRule | null>(null);
+  const { toast } = useToast();
   const refresh = () => queryClient.invalidateQueries({ queryKey: mappingKeys.rules(provider.id) });
   const list = rules.data ?? [];
   const needle = search.trim().toLowerCase();
@@ -116,6 +137,37 @@ export function MappingTab({ provider, canManage }: { provider: IdentityProvider
     } catch (failure) {
       showFailure(t("failures.orderMappingRules"), failure);
     }
+  };
+
+  const remove = async (rule: MappingRule) => {
+    const order = list.map((entry) => entry.id);
+    try {
+      await removeMappingRule(provider.id, rule.id);
+      await refresh();
+    } catch (failure) {
+      showFailure(t("failures.removeMappingRule"), failure);
+      return;
+    }
+    const restore = async () => {
+      const created = await createMappingRule(provider.id, ruleInputOf(rule));
+      const current = (await queryClient.fetchQuery({ ...mappingRulesQuery(provider.id), staleTime: 0 })).map(
+        (entry) => entry.id,
+      );
+      const wanted = order
+        .map((id) => (id === rule.id ? created.id : id))
+        .filter((id) => current.includes(id));
+      const rest = current.filter((id) => !wanted.includes(id));
+      await orderMappingRules(provider.id, [...wanted, ...rest]);
+      await refresh();
+    };
+    toast({
+      title: t("identityProviders.mapping.removed", { name: rule.group.name ?? rule.group.id }),
+      undo: {
+        onUndo: () => {
+          restore().catch((failure: unknown) => showFailure(t("failures.saveMappingRule"), failure));
+        },
+      },
+    });
   };
 
   if (rules.isError) {
@@ -197,6 +249,7 @@ export function MappingTab({ provider, canManage }: { provider: IdentityProvider
           },
           {
             key: "actions",
+            sticky: true,
             header: <span className="sr-only">{t("settings.actions")}</span>,
             align: "end",
             cell: (rule) =>
@@ -230,10 +283,10 @@ export function MappingTab({ provider, canManage }: { provider: IdentityProvider
                     },
                     { type: "separator" },
                     {
-                      label: t("common.remove"),
+                      label: t("identityProviders.mapping.remove"),
                       icon: Trash2,
                       danger: true,
-                      onSelect: () => setRemoving(rule),
+                      onSelect: () => void remove(rule),
                     },
                   ]}
                 />
@@ -255,29 +308,6 @@ export function MappingTab({ provider, canManage }: { provider: IdentityProvider
           }}
         />
       ) : null}
-      <ConfirmDialog
-        open={removing !== null}
-        onOpenChange={(open) => {
-          if (!open) setRemoving(null);
-        }}
-        title={t("identityProviders.mapping.removeTitle")}
-        description={t("identityProviders.mapping.removeDescription", {
-          name: removing?.group.name ?? removing?.group.id ?? "",
-        })}
-        confirmLabel={t("common.remove")}
-        cancelLabel={t("common.cancel")}
-        destructive
-        onConfirm={async () => {
-          if (!removing) return;
-          try {
-            await removeMappingRule(provider.id, removing.id);
-            setRemoving(null);
-            await refresh();
-          } catch (failure) {
-            showFailure(t("failures.removeMappingRule"), failure);
-          }
-        }}
-      />
     </div>
   );
 }
@@ -351,13 +381,17 @@ function RuleDialog({
   ];
 
   const directory = provider.capabilities.directorySync;
-  const ready = group !== null && (target === "instance" || organization !== null);
+  const [missing, setMissing] = useState(false);
   const groupInput = group
     ? { id: group.value, name: group.label === group.value ? null : group.label }
     : null;
 
   const save = async () => {
-    if (!groupInput) return;
+    if (!groupInput || (target === "organization" && organization === null)) {
+      setMissing(true);
+      focusFirstInvalidSoon();
+      return;
+    }
     const body: MappingRuleInput =
       target === "instance"
         ? {
@@ -423,7 +457,7 @@ function RuleDialog({
           <Button variant="secondary" onClick={onClose}>
             {t("common.cancel")}
           </Button>
-          <Button variant="primary" loading={saving} disabled={!ready} onClick={() => void save()}>
+          <Button variant="primary" loading={saving} onClick={() => void save()}>
             {rule ? t("common.save") : t("identityProviders.mapping.add")}
           </Button>
         </>
@@ -443,6 +477,7 @@ function RuleDialog({
               ? t("identityProviders.mapping.groupHintDirectory", { provider: provider.name })
               : t("identityProviders.mapping.groupHint", { provider: provider.name })
           }
+          {...(missing && group === null ? { error: t("identityProviders.mapping.chooseGroup") } : {})}
         >
           <Combobox
             value={group?.value ?? null}
@@ -499,7 +534,12 @@ function RuleDialog({
         {target === "organization" ? (
           <>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label={t("identityProviders.mapping.organization")}>
+              <Field
+                label={t("identityProviders.mapping.organization")}
+                {...(missing && organization === null
+                  ? { error: t("identityProviders.mapping.chooseOrganization") }
+                  : {})}
+              >
                 <Combobox
                   value={organization?.value ?? null}
                   selectedItem={organization}
@@ -546,7 +586,7 @@ function RuleDialog({
             <p className="text-sm text-text-muted">{t("identityProviders.mapping.instanceRoleNote")}</p>
           </>
         )}
-        {group && ready ? (
+        {group && (target === "instance" || organization !== null) ? (
           preview.isError ? (
             <FailureNotice
               what={t("failures.loadGroupPreview")}

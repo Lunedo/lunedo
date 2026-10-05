@@ -194,6 +194,42 @@ describe("the sign-in page", () => {
     expect(await screen.findByText("Your address is not accepted by this provider")).toBeTruthy();
     expect(screen.getByText(/sign in with your work account instead/)).toBeTruthy();
     expect(screen.getByText("01JB7Q4K2M9X")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
+  it("offers a retry at the same provider when the refusal says to try again", async () => {
+    const { requests } = signedOutApi({});
+    await renderPath(`/sign-in/refused?reason=invalidResponse&reference=01JB7Q4K2M9X&provider=${PROVIDER}`);
+    await userEvent.click(await screen.findByRole("button", { name: "Try again" }));
+    await waitFor(() =>
+      expect(requests.some((request) => request.path === `/api/v1/auth/providers/${PROVIDER}/start`)).toBe(
+        true,
+      ),
+    );
+  });
+
+  it("says what to do after a wrong password", async () => {
+    signedOutApi(
+      {},
+      {
+        "POST /api/v1/auth/sign-in/discover": () => ({ body: { step: "password" } }),
+        "POST /api/v1/auth/sign-in": () => problem(401, "invalidCredentials"),
+      },
+    );
+    await renderPath("/sign-in");
+    await userEvent.type(
+      await screen.findByLabelText("Work e-mail address or sign-in name"),
+      "olivia@example.org",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await userEvent.type(await screen.findByLabelText("Password"), "wrong password");
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(
+      await screen.findByText(
+        'The password is not correct. Enter it again, or set a new one with "Forgot password?".',
+      ),
+    ).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Forgot password?" })).toBeTruthy();
   });
 });
 
@@ -372,6 +408,9 @@ function adminApi(overrides: Record<string, Handler> = {}) {
         nextCursor: null,
       },
     }),
+    "POST /api/v1/instance/identity-provider-connection-checks": () => ({
+      body: { ok: true, check: "discovery", url: null, status: 200, problem: null, detail: null },
+    }),
     ...overrides,
   });
 }
@@ -454,7 +493,9 @@ describe("setting up a provider as a draft", () => {
     );
     const clientId = screen.getByLabelText("Client ID");
     expect(redirect.compareDocumentPosition(clientId) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByText("Enter these values at Microsoft Entra ID")).toBeTruthy();
+    expect(screen.getByText("Enter these values in the Microsoft Entra admin center")).toBeTruthy();
+    expect(screen.queryByText(/After saving/)).toBeNull();
+    expect(screen.getByText("For example Microsoft or the name of your company.")).toBeTruthy();
     expect(requests.find((request) => request.method === "POST")?.body).toEqual({
       type: "oidc",
       preset: "entraId",
@@ -493,11 +534,11 @@ describe("setting up a provider as a draft", () => {
     expect(within(section).getByText("Old draft")).toBeTruthy();
     expect(within(section).getByText(/nobody signs in through it until the setup is finished/)).toBeTruthy();
     expect(screen.getByText("Setup not finished")).toBeTruthy();
-    const removeButtons = within(section).getAllByRole("button", { name: "Remove" });
+    const removeButtons = within(section).getAllByRole("button", { name: "Remove draft" });
     await userEvent.click(removeButtons[1] as HTMLElement);
     await userEvent.click(
       within(await screen.findByRole("dialog", { name: "Remove the draft Old draft?" })).getByRole("button", {
-        name: "Remove",
+        name: "Remove draft",
       }),
     );
     await waitFor(() =>
@@ -510,6 +551,37 @@ describe("setting up a provider as a draft", () => {
     );
     expect(await screen.findByDisplayValue("client-from-draft")).toBeTruthy();
     expect(screen.getByDisplayValue("tenant-from-draft")).toBeTruthy();
+  });
+
+  it("asks before finishing when the provider cannot be reached", async () => {
+    let complete = false;
+    const url = "https://id.example.org/realms/wrong/.well-known/openid-configuration";
+    const { requests } = adminApi({
+      [`GET /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({
+        body: provider({ setupComplete: complete }),
+      }),
+      "GET /api/v1/instance/identity-providers": () => ({ body: [provider({ setupComplete: complete })] }),
+      "POST /api/v1/instance/identity-provider-connection-checks": () => ({
+        body: { ok: false, check: "discovery", url, status: 404, problem: "status", detail: null },
+      }),
+      [`POST /api/v1/instance/identity-providers/${PROVIDER}/complete-setup`]: () => {
+        complete = true;
+        return { body: provider({ setupComplete: true }) };
+      },
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}`);
+    await userEvent.click(await screen.findByRole("button", { name: "Continue setup" }));
+    await userEvent.click(await screen.findByRole("button", { name: /Test$/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "Finish" }));
+    const dialog = await screen.findByRole("dialog", { name: "Finish although the check failed?" });
+    expect(
+      within(dialog).getByText(new RegExp(`the OpenID Connect discovery again and it failed: 404 at ${url}`)),
+    ).toBeTruthy();
+    expect(requests.some((request) => request.path.endsWith("/complete-setup"))).toBe(false);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Finish anyway" }));
+    await waitFor(() =>
+      expect(requests.some((request) => request.path.endsWith("/complete-setup"))).toBe(true),
+    );
   });
 
   it("finishes the setup at the last step", async () => {
@@ -617,6 +689,38 @@ describe("the sign-in settings of the instance", () => {
     ]);
   });
 
+  it("removes credentials only from the danger zone and says when sign-in would stop", async () => {
+    const only = "01929b1e-0000-7000-8000-0000000000b1";
+    const { requests } = adminApi({
+      [`GET /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({
+        body: provider({
+          credentials: [
+            {
+              id: only,
+              kind: "clientSecret",
+              keyId: null,
+              expiresAt: "2027-10-23T00:00:00.000Z",
+              createdAt: "2024-10-23T00:00:00.000Z",
+              inUse: true,
+              chosen: false,
+            },
+          ],
+        }),
+      }),
+      [`DELETE /api/v1/instance/identity-providers/${PROVIDER}/credentials/${only}`]: () => ({ status: 204 }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}`);
+    await screen.findByRole("heading", { name: "Microsoft Entra ID · Example", level: 1 });
+    const credentials = screen.getByRole("list", { name: "Credentials" });
+    expect(within(credentials).queryByRole("button", { name: /Remove/ })).toBeNull();
+    const zone = screen.getByRole("region", { name: "Danger zone" });
+    expect(within(zone).getByText(/Sign-in through Microsoft Entra ID · Example stops/)).toBeTruthy();
+    await userEvent.click(within(zone).getByRole("button", { name: "Remove credential" }));
+    const confirm = await screen.findByRole("dialog", { name: "Remove this credential?" });
+    await userEvent.click(within(confirm).getByRole("button", { name: "Remove credential" }));
+    await waitFor(() => expect(requests.some((request) => request.method === "DELETE")).toBe(true));
+  });
+
   it("explains a failed test sign-in and what to do in the assistant", async () => {
     const flow = "01929b1e-0000-7000-8000-0000000000f1";
     adminApi({
@@ -663,6 +767,22 @@ describe("the sign-in settings of the instance", () => {
     expect(screen.getByText(/Choose User principal name as the source of the e-mail address/)).toBeTruthy();
   });
 
+  it("says what failed when the test cannot reach the provider", async () => {
+    const url = "https://login.microsoftonline.com/tenant/v2.0/.well-known/openid-configuration";
+    adminApi({
+      [`GET /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({ body: provider() }),
+      [`POST /api/v1/instance/identity-providers/${PROVIDER}/test`]: () =>
+        problem(502, "providerUnavailable"),
+      "POST /api/v1/instance/identity-provider-connection-checks": () => ({
+        body: { ok: false, check: "discovery", url, status: 404, problem: "status", detail: null },
+      }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/new?providerId=${PROVIDER}&step=4`);
+    await userEvent.click(await screen.findByRole("button", { name: "Start test sign-in" }));
+    expect(await screen.findByText(new RegExp(`^404 at ${url}`))).toBeTruthy();
+    expect(screen.queryByText(/ask your administrator/)).toBeNull();
+  });
+
   it("does not keep the test button loading when the browser comes back to the page", async () => {
     adminApi({
       [`GET /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({ body: provider() }),
@@ -674,11 +794,11 @@ describe("the sign-in settings of the instance", () => {
     const start = await screen.findByRole("button", { name: "Start test sign-in" });
     await userEvent.click(start);
     await waitFor(() => expect(navigateTo).toHaveBeenCalledWith("https://login.example/authorize"));
-    expect(start.hasAttribute("disabled")).toBe(true);
+    expect(start.getAttribute("aria-busy")).toBe("true");
     const restored = new Event("pageshow");
     Object.defineProperty(restored, "persisted", { value: true });
     window.dispatchEvent(restored);
-    await waitFor(() => expect(start.hasAttribute("disabled")).toBe(false));
+    await waitFor(() => expect(start.hasAttribute("aria-busy")).toBe(false));
   });
 
   it("deactivates a provider instead of removing it and activates it again", async () => {
@@ -697,10 +817,12 @@ describe("the sign-in settings of the instance", () => {
       },
     });
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=settings`);
-    await userEvent.click(await screen.findByRole("button", { name: "Deactivate" }));
+    const zone = await screen.findByRole("region", { name: "Danger zone" });
+    await userEvent.click(within(zone).getByRole("button", { name: "Deactivate provider" }));
     const confirm = await screen.findByRole("dialog", { name: "Deactivate Microsoft Entra ID · Example" });
     expect(within(confirm).getByText(/sessions that came from it end now/)).toBeTruthy();
-    await userEvent.click(within(confirm).getByRole("button", { name: "Deactivate" }));
+    expect(within(confirm).getByText(/Ended sessions do not come back/)).toBeTruthy();
+    await userEvent.click(within(confirm).getByRole("button", { name: "Deactivate provider" }));
     expect(await screen.findByText("This provider is deactivated")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Activate" }));
     await waitFor(() => expect(screen.queryByText("This provider is deactivated")).toBeNull());
@@ -747,6 +869,13 @@ describe("the sign-in settings of the instance", () => {
     });
     await renderPath("/settings/instance/sign-in-providers");
     expect(await screen.findByText("No organization is assigned to you yet")).toBeTruthy();
+  });
+
+  it("offers one primary action to add the first provider", async () => {
+    adminApi({ "GET /api/v1/instance/identity-providers": () => ({ body: [] }) });
+    await renderPath("/settings/instance/sign-in-providers");
+    await screen.findByText("No identity providers yet");
+    expect(screen.getAllByRole("button", { name: "Add provider" })).toHaveLength(1);
   });
 
   it("warns sign-in administrators when identity providers are not checked strictly", async () => {
@@ -853,6 +982,12 @@ describe("the sign-in settings of the instance", () => {
       ),
     ).toBeTruthy();
     await userEvent.click(within(confirm).getByRole("button", { name: "Remove provider" }));
+    expect(requests.some((request) => request.method === "DELETE")).toBe(false);
+    await userEvent.type(
+      within(confirm).getByLabelText("Type Microsoft Entra ID · Example to confirm"),
+      "Microsoft Entra ID · Example",
+    );
+    await userEvent.click(within(confirm).getByRole("button", { name: "Remove provider" }));
     await waitFor(() => expect(requests.some((request) => request.method === "DELETE")).toBe(true));
   });
 });
@@ -877,7 +1012,13 @@ describe("linked identities", () => {
         ],
       }),
       "GET /api/v1/account/security": () => ({
-        body: { totp: true, passkeys: [], recoveryCodes: 8, secondFactorRequired: true },
+        body: {
+          totp: true,
+          passkeys: [],
+          recoveryCodes: 8,
+          secondFactorRequired: true,
+          secondFactorRequiredBy: "organization",
+        },
       }),
       "GET /api/v1/account/sessions": () => ({ body: { items: [], nextCursor: null } }),
       "GET /api/v1/account/tokens": () => ({ body: { items: [], nextCursor: null } }),

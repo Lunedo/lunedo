@@ -134,6 +134,63 @@ describe("the audit log", () => {
     expect(raw.open).toBe(false);
   });
 
+  it("labels the date filters and names targets and fields in words", async () => {
+    const rule = event({
+      id: "01929b1f-5fc2-7fa6-97c3-bea0a18bd2e5",
+      name: "mappingRule.removed",
+      targetType: "mappingRule",
+      targetId: "01929b1e-0000-7000-8000-0000000000aa",
+      labelKey: "audit.events.mappingRule.removed",
+      changeKind: "fields",
+      target: { type: "mappingRule", id: "01929b1e-0000-7000-8000-0000000000aa", name: null, former: false },
+      changes: [],
+    });
+    const signIn = event({
+      id: "01929b1f-5fc2-7fa6-97c3-bea0a18bd2e6",
+      name: "auth.signedIn",
+      targetType: "account",
+      targetId: OLIVIA,
+      labelKey: "audit.events.auth.signedIn",
+      changeKind: "fields",
+      target: { type: "account", id: OLIVIA, name: "Olivia Owner", former: false },
+      changes: [{ property: "method", old: null, new: "password" }],
+    });
+    mockApi({
+      "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
+      "GET /api/v1/instance/audit-events": () => ({ body: { items: [rule, signIn], nextCursor: null } }),
+    });
+    const table = await renderLog();
+    expect(screen.getByText("From", { selector: "label" })).toBeTruthy();
+    expect(screen.getByText("To", { selector: "label" })).toBeTruthy();
+    expect(await within(table).findByText("Mapping rule")).toBeTruthy();
+    expect(within(table).queryByText("mappingRule")).toBeNull();
+    await userEvent.click(within(table).getAllByText("Olivia Owner").at(-1) as HTMLElement);
+    const panel = await screen.findByRole("dialog");
+    expect(within(panel).getByText("Sign-in method")).toBeTruthy();
+    expect(within(panel).queryByText("Sending method")).toBeNull();
+  });
+
+  it("calls the method of the e-mail settings the sending method", async () => {
+    const changed = event({
+      id: "01929b1f-5fc2-7fa6-97c3-bea0a18bd2e7",
+      name: "mail.methodChanged",
+      targetType: "instance",
+      targetId: null,
+      labelKey: "audit.events.mail.methodChanged",
+      changeKind: "fields",
+      target: { type: "instance", id: null, name: null, former: false },
+      changes: [{ property: "method", old: "smtp", new: "graph" }],
+    });
+    mockApi({
+      "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
+      "GET /api/v1/instance/audit-events": () => ({ body: { items: [changed], nextCursor: null } }),
+    });
+    const table = await renderLog();
+    await userEvent.click((await within(table).findAllByText("Instance"))[0] as HTMLElement);
+    const panel = await screen.findByRole("dialog");
+    expect(within(panel).getByText("Sending method")).toBeTruthy();
+  });
+
   it("filters by action", async () => {
     await renderLog();
     await userEvent.click(screen.getByRole("combobox", { name: "Action" }));

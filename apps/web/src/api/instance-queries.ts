@@ -13,7 +13,13 @@ export const instanceKeys = {
   settings: ["instance", "settings"] as const,
   mail: ["instance", "mail"] as const,
   breakGlass: ["instance", "breakGlass"] as const,
+  address: ["instance", "address"] as const,
 };
+
+export const instanceAddressQuery = queryOptions({
+  queryKey: instanceKeys.address,
+  queryFn: () => request(() => api.GET("/api/v1/instance/address")),
+});
 
 export const instanceOrganizationsQuery = queryOptions({
   queryKey: instanceKeys.organizations,

@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Inject, Param, Post, Query, Req, Res } from "@nestjs/common";
 import {
+  type AuditChangeSignal,
   accountPrincipal,
   type NotificationCursor,
   type SettingChangeSignal,
@@ -17,6 +18,46 @@ import { notFound } from "../http/problems.js";
 import { sessionOf } from "../http/request.js";
 
 const TAG = "Notifications";
+
+const INSTANCE_VIEWERS: Partial<Record<AuditChangeSignal["target"], InstanceAction>> = {
+  account: "instance.accounts.view",
+  invitation: "instance.accounts.view",
+  organization: "instance.organizations.view",
+  role: "instance.roles.view",
+  roleAssignment: "instance.roles.view",
+  identityProvider: "instance.signIn.view",
+  mappingRule: "instance.signIn.view",
+};
+
+const INSTANCE_VIEWERS_OF_ORGANIZATION_OBJECTS: Partial<Record<AuditChangeSignal["target"], InstanceAction>> =
+  {
+    account: "instance.accounts.view",
+    organization: "instance.organizations.view",
+    identityProvider: "instance.signIn.view",
+    mappingRule: "instance.signIn.view",
+  };
+
+const ORGANIZATION_VIEWERS: Partial<Record<AuditChangeSignal["target"], OrganizationAction>> = {
+  account: "organization.members.view",
+  invitation: "organization.members.view",
+  group: "organization.groups.view",
+  role: "organization.roles.view",
+  roleAssignment: "organization.roles.view",
+  apiToken: "organization.integrations.view",
+};
+
+type InstanceAction =
+  | "instance.accounts.view"
+  | "instance.organizations.view"
+  | "instance.roles.view"
+  | "instance.signIn.view"
+  | "instance.audit.view";
+type OrganizationAction =
+  | "organization.members.view"
+  | "organization.groups.view"
+  | "organization.roles.view"
+  | "organization.integrations.view"
+  | "organization.audit.view";
 
 export const HEARTBEAT_MS = 25_000;
 
@@ -118,9 +159,9 @@ export class NotificationsController {
     raw: {
       contentTypes: ["text/event-stream"],
       description:
-        "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log.",
+        "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log. The event `changes` names the kind of object that changed in the instance or in an organization, as recorded in the audit log, sent only to callers who may view such objects there or the audit log of that level; reload lists that show such objects.",
       example:
-        'event: notifications\ndata: {"unreadCount":2}\n\nevent: settings\ndata: {"key":"branding.accentColor","level":"instance","organizationId":null}\n\nevent: syncRuns\ndata: {"providerId":"01929b1e-0000-7000-8000-000000000001","runId":"01929b1e-0000-7000-8000-000000000002"}\n\n',
+        'event: notifications\ndata: {"unreadCount":2}\n\nevent: settings\ndata: {"key":"branding.accentColor","level":"instance","organizationId":null}\n\nevent: syncRuns\ndata: {"providerId":"01929b1e-0000-7000-8000-000000000001","runId":"01929b1e-0000-7000-8000-000000000002"}\n\nevent: changes\ndata: {"scope":"organization","organizationId":"01929b1e-0000-7000-8000-000000000003","target":"group"}\n\n',
     },
   })
   async stream(@Req() request: FastifyRequest, @Res() reply: FastifyReply) {
@@ -171,9 +212,51 @@ data: ${JSON.stringify(signal)}
         })
         .catch((error: unknown) => logger.warn({ err: error }, "Sending a sync run event failed"));
     };
+    const pendingChanges = new Set<string>();
+    const mayFollow = async (signal: AuditChangeSignal): Promise<boolean> => {
+      const principal = accountPrincipal(session.accountId);
+      const allowed = async (
+        action: InstanceAction | OrganizationAction,
+        level: "instance" | "organization",
+      ) => {
+        const resource =
+          level === "organization" && signal.organizationId
+            ? { type: "organization", id: signal.organizationId }
+            : { type: "instance" };
+        return (await services.authorization.explain(principal, action, resource)).allowed;
+      };
+      if (signal.scope === "organization") {
+        if (!signal.organizationId) return false;
+        const viewer = ORGANIZATION_VIEWERS[signal.target];
+        const across = INSTANCE_VIEWERS_OF_ORGANIZATION_OBJECTS[signal.target];
+        return (
+          (viewer !== undefined && (await allowed(viewer, "organization"))) ||
+          (await allowed("organization.audit.view", "organization")) ||
+          (across !== undefined && (await allowed(across, "instance")))
+        );
+      }
+      const instanceViewer = INSTANCE_VIEWERS[signal.target];
+      return (
+        (instanceViewer !== undefined && (await allowed(instanceViewer, "instance"))) ||
+        (await allowed("instance.audit.view", "instance"))
+      );
+    };
+    const sendChange = (signal: AuditChangeSignal) => {
+      const data = JSON.stringify(signal);
+      if (pendingChanges.has(data)) return;
+      pendingChanges.add(data);
+      queue = queue
+        .then(async () => {
+          pendingChanges.delete(data);
+          if (closed || !(await mayFollow(signal)) || closed) return;
+          raw.write(`event: changes\ndata: ${data}\n\n`);
+        })
+        .catch((error: unknown) => logger.warn({ err: error }, "Sending a change event failed"));
+    };
     const unsubscribe = await hub.subscribe(session.accountId, send);
     const unsubscribeSettings = await hub.subscribeSettings(sendSetting);
     const unsubscribeSyncRuns = await hub.subscribeSyncRuns(sendSyncRun);
+    const unsubscribeChanges = await hub.subscribeChanges(sendChange);
     const heartbeat = setInterval(() => {
       services.sessions.isActive(session.id).then(
         (active) => {
@@ -192,6 +275,7 @@ data: ${JSON.stringify(signal)}
       unsubscribe();
       unsubscribeSettings();
       unsubscribeSyncRuns();
+      unsubscribeChanges();
       raw.end();
     };
     reply.hijack();

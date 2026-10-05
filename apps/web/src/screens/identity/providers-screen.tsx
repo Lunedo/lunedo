@@ -114,7 +114,7 @@ function UnfinishedSetups({ providers, canManage }: { providers: IdentityProvide
                 </Button>
                 {item.draft ? (
                   <Button size="sm" variant="danger" icon={Trash2} onClick={() => setRemoving(item.draft)}>
-                    {t("common.remove")}
+                    {t("common.removeDraft")}
                   </Button>
                 ) : null}
               </span>
@@ -127,7 +127,7 @@ function UnfinishedSetups({ providers, canManage }: { providers: IdentityProvide
         onOpenChange={(next) => (next ? undefined : setRemoving(null))}
         title={t("identityProviders.unfinished.removeTitle", { name: removing?.name ?? "" })}
         description={t("identityProviders.unfinished.removeDescription")}
-        confirmLabel={t("common.remove")}
+        confirmLabel={t("common.removeDraft")}
         cancelLabel={t("common.cancel")}
         destructive
         onConfirm={async () => {
@@ -367,6 +367,7 @@ export function ProvidersTable({
           },
           {
             key: "actions",
+            sticky: true,
             header: <span className="sr-only">{t("settings.actions")}</span>,
             align: "end",
             cell: (provider) => (
@@ -442,7 +443,7 @@ export function InstanceProvidersScreen() {
       description={t("identityProviders.description")}
       icon={KeyRound}
       actions={
-        canManage ? (
+        canManage && (providers.data?.length ?? 0) > 0 ? (
           <Button variant="primary" icon={Plus} onClick={() => void navigate(newProviderPath)}>
             {t("identityProviders.add")}
           </Button>

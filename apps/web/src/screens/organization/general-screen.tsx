@@ -17,6 +17,7 @@ import { AutoSaveTextField } from "../../components/auto-save.js";
 import { SettingsList } from "../../components/settings-list.js";
 import { useFailureToast } from "../../errors/failure.js";
 import { useOrganizationSettingMutation } from "../../settings/setting-mutations.js";
+import { LOCALE_DEFAULT_KEYS } from "../../settings/settings-index.js";
 import { organizationLogoUrl } from "../../shell/brand.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
@@ -75,14 +76,7 @@ export function OrganizationGeneralScreen() {
       <Section title={t("organization.general.localeDefaults")}>
         <SettingsList
           settings={settings.data}
-          keys={[
-            "locale.language",
-            "locale.timeZone",
-            "locale.dateFormat",
-            "locale.timeFormat",
-            "locale.numberFormat",
-            "locale.firstDayOfWeek",
-          ]}
+          keys={LOCALE_DEFAULT_KEYS}
           level="organization"
           {...(organization.data ? { organizationName: organization.data.name } : {})}
           canManage={() => canManageSettings}
@@ -222,7 +216,7 @@ function LogoRow({
               </Button>
               {organization.logoRef ? (
                 <Button variant="danger" icon={Trash2} onClick={() => setRemoving(true)}>
-                  {t("common.remove")}
+                  {t("common.removeLogo")}
                 </Button>
               ) : null}
             </>
@@ -232,7 +226,7 @@ function LogoRow({
             onOpenChange={setRemoving}
             title={t("organization.general.removeLogoTitle")}
             description={t("organization.general.removeLogoDescription")}
-            confirmLabel={t("common.remove")}
+            confirmLabel={t("common.removeLogo")}
             cancelLabel={t("common.cancel")}
             destructive
             onConfirm={async () => {

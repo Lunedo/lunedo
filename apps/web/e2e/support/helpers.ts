@@ -114,3 +114,19 @@ export async function signInWithPassword(page: Page, email: string, password: st
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
 }
+
+export function liveUpdatesConnected(page: Page): Promise<unknown> {
+  return page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/v1/notifications/stream" && response.ok(),
+  );
+}
+
+export async function callApi(page: Page, method: "POST" | "PUT" | "DELETE", path: string, data?: unknown) {
+  const response = await page.request.fetch(path, {
+    method,
+    ...(data === undefined ? {} : { data }),
+    headers: { "X-Pagehall-Request": "1", origin: new URL(page.url()).origin },
+  });
+  expect(response.status(), `${method} ${path}: ${await response.text()}`).toBeLessThan(300);
+  return response.status() === 204 ? null : ((await response.json()) as unknown);
+}

@@ -6,8 +6,14 @@ import { useTranslation } from "react-i18next";
 import { instanceSettingsQuery, mailQuery } from "../../api/instance-queries.js";
 import { SettingsList } from "../../components/settings-list.js";
 import { type SettingChange, useInstanceSettingMutation } from "../../settings/setting-mutations.js";
+import {
+  INSTANCE_ORGANIZATION_KEYS,
+  LOCALE_DEFAULT_KEYS,
+  RETENTION_KEYS,
+} from "../../settings/settings-index.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
+import { InstanceAddressRow } from "./instance-address.js";
 
 export function settingPermission(key: string): string {
   if (key.startsWith("auth.")) return "instance.signIn.manage";
@@ -59,47 +65,18 @@ export function InstanceGeneralScreen() {
     >
       <MailNotice />
       <Section title={t("instance.general.identity")}>
-        <SettingsList
-          {...editor}
-          keys={["instance.name", "instance.url", "branding.accentColor"]}
-          level="instance"
-        />
+        <SettingsList {...editor} keys={["instance.name"]} level="instance" />
+        <InstanceAddressRow canManage={editor.canManage("instance.url")} />
+        <SettingsList {...editor} keys={["branding.accentColor"]} level="instance" />
       </Section>
       <Section title={t("instance.general.localeDefaults")}>
-        <SettingsList
-          {...editor}
-          keys={[
-            "locale.language",
-            "locale.timeZone",
-            "locale.dateFormat",
-            "locale.timeFormat",
-            "locale.numberFormat",
-            "locale.firstDayOfWeek",
-          ]}
-          level="instance"
-        />
+        <SettingsList {...editor} keys={LOCALE_DEFAULT_KEYS} level="instance" />
       </Section>
       <Section title={t("instance.general.organizations")}>
-        <SettingsList
-          {...editor}
-          keys={[
-            "organizations.selfServiceCreation",
-            "organizations.membersCreateGroups",
-            "organizations.selfRegistration",
-            "organizations.guestExpiryReminderDays",
-            "organizations.guestInactivityDays",
-            "organizations.expiryReminderDays",
-            "organizations.breakGlassMinutes",
-          ]}
-          level="instance"
-        />
+        <SettingsList {...editor} keys={INSTANCE_ORGANIZATION_KEYS} level="instance" />
       </Section>
       <Section title={t("instance.general.retention")}>
-        <SettingsList
-          {...editor}
-          keys={["audit.retentionDays", "notifications.retentionDays", "apiTokens.publicDocumentation"]}
-          level="instance"
-        />
+        <SettingsList {...editor} keys={RETENTION_KEYS} level="instance" />
       </Section>
     </SettingsPage>
   );

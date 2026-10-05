@@ -91,6 +91,11 @@ export const problems = {
   endOwnSessions: { status: 409, title: "Own sessions are ended on the security page" },
   resetOwnSecondFactor: { status: 409, title: "An account cannot reset its own second factor this way" },
   instanceOwner: { status: 409, title: "The instance owner cannot be changed this way" },
+  instanceUrlFromEnvironment: {
+    status: 409,
+    title: "The address of the instance is set in the server environment",
+  },
+  instanceMoved: { status: 409, title: "The instance has moved to another address" },
   settingLocked: { status: 409, title: "A higher level locked the setting" },
   setupIncomplete: { status: 409, title: "The setup is not complete" },
   setupNotReady: { status: 409, title: "The setup step is not ready" },
@@ -98,6 +103,7 @@ export const problems = {
   keysAlreadyDownloaded: { status: 409, title: "The keys were already downloaded" },
   totpExists: { status: 409, title: "An authenticator app is already set up" },
   ownerMissing: { status: 409, title: "The owner account is missing" },
+  totpMissing: { status: 409, title: "The authenticator app is not confirmed yet" },
   lastSecondFactor: { status: 409, title: "The last second factor cannot be removed" },
   noSecondFactor: { status: 409, title: "No second factor is set up" },
   secondFactorExists: { status: 409, title: "The second factor already exists" },
@@ -153,6 +159,7 @@ export const problemSchema = z
       .array(z.string().describe("A domain."))
       .optional()
       .describe("Domains that belong to another identity provider, for `domainInUse`."),
+    instanceUrl: z.string().optional().describe("The current address of the instance, for `instanceMoved`."),
   })
   .describe("Error response following RFC 9457 Problem Details.");
 

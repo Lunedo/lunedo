@@ -94,6 +94,7 @@ export const auditEventNames = [
   "invitation.accepted",
   "invitation.revoked",
   "guest.responsibleChanged",
+  "instance.addressChanged",
   "instance.ownershipTransferred",
   "breakGlass.started",
   "breakGlass.actionAuthorized",

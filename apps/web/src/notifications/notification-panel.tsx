@@ -58,10 +58,10 @@ export function NotificationPanel({ onClose }: { onClose: () => void }) {
       ref={panel}
       tabIndex={-1}
       aria-labelledby="notifications-title"
-      className="fixed inset-y-0 left-rail z-30 flex w-panel max-w-full flex-col border-border border-r bg-surface shadow-popover outline-none md:static md:shadow-none"
+      className="fixed inset-y-0 left-rail z-30 flex w-panel max-w-full flex-col border-border border-r bg-surface shadow-popover outline-none max-sm:right-0 max-sm:w-auto md:static md:shadow-none"
     >
       <header className="flex items-center gap-2 border-border border-b px-4 py-3">
-        <h2 id="notifications-title" className="flex-1 font-semibold text-lg">
+        <h2 id="notifications-title" className="min-w-0 flex-1 font-semibold text-lg wrap-anywhere">
           {t("notifications.title")}
         </h2>
         <IconButton

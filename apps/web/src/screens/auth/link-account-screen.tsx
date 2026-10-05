@@ -1,15 +1,5 @@
 import { passwordSchema, recoveryCodeSchema, totpCodeSchema } from "@pagehall/shared";
-import {
-  Badge,
-  Button,
-  Dialog,
-  Field,
-  Input,
-  Notice,
-  PasswordInput,
-  SegmentedControl,
-  Skeleton,
-} from "@pagehall/ui";
+import { Badge, Button, Field, Input, Notice, PasswordInput, SegmentedControl, Skeleton } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { BadgeCheck, Fingerprint, KeyRound, LogIn } from "lucide-react";
@@ -19,6 +9,7 @@ import { z } from "zod";
 import { api } from "../../api/client.js";
 import { queryKeys } from "../../api/queries.js";
 import { ApiError, request } from "../../api/request.js";
+import { CodeInput } from "../../components/code-input.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
@@ -57,7 +48,7 @@ export function LinkAccountScreen() {
   );
   const [factor, setFactor] = useState<Factor | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [reference, setReference] = useState<string | null>(null);
+  const [declined, setDeclined] = useState<{ reference: string; provider: string } | null>(null);
   const [declining, setDeclining] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [expired, setExpired] = useState(false);
@@ -119,8 +110,13 @@ export function LinkAccountScreen() {
       await finish(result.sessionKind);
     } catch (failure) {
       if (isExpired(failure)) setExpired(true);
-      else setError(isPasskeyCancelled(failure) ? t("auth.passkeyCancelled") : problemMessage(t, failure));
-      form.resetField("password");
+      else if (failure instanceof ApiError && failure.code === "invalidCredentials" && !confirmed) {
+        form.setError("password", {
+          type: "server",
+          message: t("auth.link.wrongPassword", { name: pending.data?.accountName ?? "" }),
+        });
+      } else setError(isPasskeyCancelled(failure) ? t("auth.passkeyCancelled") : problemMessage(t, failure));
+      form.resetField("password", { keepError: true });
       form.resetField("code");
     }
   });
@@ -184,8 +180,8 @@ export function LinkAccountScreen() {
     setError(null);
     try {
       const result = await request(() => api.POST("/api/v1/auth/link/decline"), { sessionHandling: false });
+      setDeclined({ reference: result.reference, provider: pending.data?.providerName ?? "" });
       queryClient.removeQueries({ queryKey: linkQuery.queryKey });
-      setReference(result.reference);
     } catch (failure) {
       if (isExpired(failure)) setExpired(true);
       else setError(problemMessage(t, failure));
@@ -194,6 +190,19 @@ export function LinkAccountScreen() {
     }
   };
 
+  if (declined) {
+    return (
+      <AuthCard title={t("auth.link.notMineTitle")}>
+        <p>{t("auth.link.notMineDescription", { provider: declined.provider })}</p>
+        <p className="text-sm text-text-muted">
+          {t("auth.link.notMineReference")} <span className="font-mono text-text">{declined.reference}</span>
+        </p>
+        <Button variant="primary" block asChild>
+          <Link to="/sign-in">{t("auth.link.backToSignIn")}</Link>
+        </Button>
+      </AuthCard>
+    );
+  }
   if (pending.isPending) {
     return (
       <AuthCard title={t("auth.link.loading")}>
@@ -281,11 +290,11 @@ export function LinkAccountScreen() {
               label={active === "totp" ? t("auth.authenticatorCode") : t("auth.recoveryCode")}
               error={form.formState.errors.code?.message}
             >
-              <Input
-                autoComplete="one-time-code"
-                {...(active === "totp" ? { inputMode: "numeric" as const } : {})}
-                {...form.register("code")}
-              />
+              {active === "totp" ? (
+                <CodeInput control={form.control} name="code" />
+              ) : (
+                <Input autoComplete="one-time-code" {...form.register("code")} />
+              )}
             </Field>
           ) : null}
           {active === "passkey" ? <Notice variant="info">{t("auth.link.passkeyHint")}</Notice> : null}
@@ -372,26 +381,6 @@ export function LinkAccountScreen() {
           {t("auth.link.notMine")}
         </button>
       </p>
-      <Dialog
-        open={reference !== null}
-        onOpenChange={(open) => {
-          if (!open) void navigate({ to: "/sign-in" });
-        }}
-        title={t("auth.link.notMineTitle")}
-        size="sm"
-      >
-        <div className="flex flex-col gap-4">
-          <p>{t("auth.link.notMineDescription", { provider: data.providerName })}</p>
-          <p className="text-sm text-text-muted">
-            {t("auth.link.notMineReference")} <span className="font-mono text-text">{reference}</span>
-          </p>
-          <div className="flex justify-end">
-            <Button variant="primary" onClick={() => void navigate({ to: "/sign-in" })}>
-              {t("auth.link.backToSignIn")}
-            </Button>
-          </div>
-        </div>
-      </Dialog>
     </AuthCard>
   );
 }

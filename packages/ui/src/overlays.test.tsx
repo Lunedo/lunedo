@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MoreHorizontal, Trash } from "lucide-react";
 import { useState } from "react";
@@ -206,5 +206,78 @@ describe("Toast", () => {
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
     expect(await screen.findByText("Token created")).toBeDefined();
     expect(screen.getByRole("button", { name: "Dismiss" })).toBeDefined();
+  });
+});
+
+function UndoProbe({ onUndo }: { onUndo: () => void }) {
+  const { toast } = useToast();
+  return <Button onClick={() => toast({ title: "Rule removed", undo: { onUndo } })}>Remove</Button>;
+}
+
+describe("Undo toast", () => {
+  it("offers undo with a visible countdown that pauses while hovered", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const onUndo = vi.fn();
+      renderUi(<UndoProbe onUndo={onUndo} />);
+      await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+      expect(await screen.findByText("10 s")).toBeDefined();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+      expect(screen.getByText("7 s")).toBeDefined();
+      await userEvent.hover(screen.getByText("Rule removed"));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+      expect(screen.getByText("7 s")).toBeDefined();
+      await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+      expect(onUndo).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps errors until they are closed", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      renderUi(<FailureProbe retry={() => {}} />);
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      await screen.findByText("Pagehall cannot be reached.");
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000);
+      });
+      expect(screen.getByText("Pagehall cannot be reached.")).toBeDefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("SegmentedControl that does not fit", () => {
+  it("becomes a select with every option", async () => {
+    const scrollWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollWidth");
+    const clientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
+    Object.defineProperty(HTMLElement.prototype, "scrollWidth", {
+      configurable: true,
+      get(this: HTMLElement) {
+        return this.className.includes("w-max") ? 420 : 0;
+      },
+    });
+    Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+      configurable: true,
+      get(this: HTMLElement) {
+        return this.hasAttribute("data-segmented") ? 300 : 0;
+      },
+    });
+    try {
+      renderUi(<ChoiceProbe />);
+      expect(screen.queryByRole("radiogroup", { name: "Color mode" })).toBeNull();
+      const select = screen.getByRole("combobox", { name: "Color mode" });
+      expect(select.textContent).toContain("Automatic");
+    } finally {
+      if (scrollWidth) Object.defineProperty(HTMLElement.prototype, "scrollWidth", scrollWidth);
+      if (clientWidth) Object.defineProperty(HTMLElement.prototype, "clientWidth", clientWidth);
+    }
   });
 });

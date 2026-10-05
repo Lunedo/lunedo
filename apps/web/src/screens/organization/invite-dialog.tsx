@@ -12,7 +12,7 @@ import {
   useToast,
 } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { organizationKeys, rolesQuery } from "../../api/organization-queries.js";
@@ -63,6 +63,8 @@ export function InviteDialog({
     session.account ? { value: session.account.id, label: session.account.name } : null,
   );
   const [error, setError] = useState<string | null>(null);
+  const [emailProblem, setEmailProblem] = useState<"required" | "invalid" | null>(null);
+  const emailsRef = useRef<HTMLTextAreaElement>(null);
   const [busy, setBusy] = useState(false);
   const parsed = parseEmails(emails);
   const roleLabel =
@@ -75,13 +77,11 @@ export function InviteDialog({
   const submit = async () => {
     setError(null);
     if (parsed.valid.length === 0 || parsed.invalid.length > 0) {
-      setError(
-        parsed.invalid.length > 0
-          ? t("members.invalidEmails", { emails: parsed.invalid.join(", ") })
-          : t("validation.required"),
-      );
+      setEmailProblem(parsed.invalid.length > 0 ? "invalid" : "required");
+      emailsRef.current?.focus();
       return;
     }
+    setEmailProblem(null);
     setBusy(true);
     const failed: string[] = [];
     for (const email of parsed.valid) {
@@ -127,8 +127,25 @@ export function InviteDialog({
             {error}
           </Notice>
         ) : null}
-        <Field label={t("members.emails")} hint={t("members.emailsHint")}>
-          <Textarea value={emails} onChange={(event) => setEmails(event.target.value)} rows={3} autoFocus />
+        <Field
+          label={t("members.emails")}
+          hint={t("members.emailsHint")}
+          {...(emailProblem === "invalid"
+            ? { error: t("members.invalidEmails", { emails: parsed.invalid.join(", ") }) }
+            : emailProblem === "required" && parsed.valid.length === 0
+              ? { error: t("members.emailsRequired") }
+              : {})}
+        >
+          <Textarea
+            ref={emailsRef}
+            value={emails}
+            onChange={(event) => {
+              setEmails(event.target.value);
+              if (emailProblem && parseEmails(event.target.value).invalid.length === 0) setEmailProblem(null);
+            }}
+            rows={3}
+            autoFocus
+          />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t("members.kind")}>

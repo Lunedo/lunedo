@@ -5,6 +5,7 @@ import { setSignedOutHandler } from "./api/request.js";
 import { PreferencesProvider } from "./preferences/preferences-provider.js";
 import { ReauthenticationHost } from "./session/reauthentication.js";
 import { currentLocation } from "./session/redirect.js";
+import { InstanceMovedGuard } from "./shell/instance-moved.js";
 
 const PUBLIC_PATHS = [
   "/sign-in",
@@ -36,8 +37,10 @@ export function RootLayout() {
 
   return (
     <PreferencesProvider>
-      <Outlet />
-      <ReauthenticationHost />
+      <InstanceMovedGuard>
+        <Outlet />
+        <ReauthenticationHost />
+      </InstanceMovedGuard>
     </PreferencesProvider>
   );
 }

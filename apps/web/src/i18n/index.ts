@@ -14,6 +14,7 @@ export type Language = keyof typeof resources;
 export const supportedLanguages = Object.keys(resources) as Language[];
 
 const STORAGE_KEY = "pagehall.language";
+const CHOICE_KEY = "pagehall.chosenLanguage";
 
 export function isLanguage(value: unknown): value is Language {
   return typeof value === "string" && (supportedLanguages as string[]).includes(value);
@@ -42,6 +43,24 @@ export function rememberLanguage(language: Language): void {
     globalThis.localStorage?.setItem(STORAGE_KEY, language);
   } catch {
     return;
+  }
+}
+
+export function rememberChosenLanguage(language: Language): void {
+  try {
+    globalThis.localStorage?.setItem(CHOICE_KEY, language);
+  } catch {
+    return;
+  }
+}
+
+export function takeChosenLanguage(): Language | null {
+  try {
+    const value = globalThis.localStorage?.getItem(CHOICE_KEY);
+    globalThis.localStorage?.removeItem(CHOICE_KEY);
+    return isLanguage(value) ? value : null;
+  } catch {
+    return null;
   }
 }
 

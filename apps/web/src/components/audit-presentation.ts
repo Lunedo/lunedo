@@ -72,7 +72,8 @@ export function propertyLabel(t: TFunction, item: AuditItem, property: string): 
   if (item.changeKind === "setting") {
     return property === "locked" ? t("audit.properties.locked") : t("audit.properties.value");
   }
-  const key = `audit.properties.${property}`;
+  const name = item.name.startsWith("mail.") && property === "method" ? "mailMethod" : property;
+  const key = `audit.properties.${name}`;
   return has(t, key) ? translateKey(t, key) : property;
 }
 

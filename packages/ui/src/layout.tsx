@@ -92,15 +92,51 @@ export function Section({
   const id = useId();
   return (
     <section aria-labelledby={id} className="overflow-hidden rounded-md border border-border bg-surface">
-      <div className="flex items-center gap-2 border-b border-border bg-surface-sunken px-4 py-3">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-surface px-4 py-3">
         {icon && <Icon icon={icon} className="text-text-muted" />}
-        <h2 id={id} className="flex-1 font-semibold">
+        <h2 id={id} className="min-w-0 flex-1 font-semibold">
           {title}
         </h2>
         {actions}
       </div>
       <div className="divide-y divide-border">{children}</div>
     </section>
+  );
+}
+
+export function DangerZone({ title, children }: { title: ReactNode; children: ReactNode }) {
+  const id = useId();
+  return (
+    <section
+      aria-labelledby={id}
+      data-danger-zone=""
+      className="overflow-hidden rounded-md border border-danger bg-surface"
+    >
+      <h2 id={id} className="border-b border-danger px-4 py-3 font-semibold text-danger">
+        {title}
+      </h2>
+      <div className="divide-y divide-border">{children}</div>
+    </section>
+  );
+}
+
+export function DangerAction({
+  title,
+  description,
+  action,
+}: {
+  title: ReactNode;
+  description: ReactNode;
+  action: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+      <div className="flex min-w-0 flex-1 basis-field flex-col gap-1">
+        <span className="font-medium text-text">{title}</span>
+        <div className="text-sm text-text-muted">{description}</div>
+      </div>
+      <div className="flex shrink-0 flex-wrap gap-2">{action}</div>
+    </div>
   );
 }
 
@@ -129,14 +165,20 @@ export function SettingRow({ label, description, meta, control, menu, status }: 
           <div data-setting-control="" className="flex w-full min-w-0 justify-end sm:w-field">
             {control}
           </div>
-          <div data-setting-menu="" className="flex w-control-md shrink-0 justify-end">
+          <div
+            data-setting-menu=""
+            className={classNames("w-control-md shrink-0 justify-end", menu ? "flex" : "hidden sm:flex")}
+          >
             {menu}
           </div>
         </div>
         {status ? (
           <div className="flex justify-end gap-3">
             <div className="flex w-full min-w-0 justify-end sm:w-field">{status}</div>
-            <div aria-hidden="true" className="w-control-md shrink-0" />
+            <div
+              aria-hidden="true"
+              className={classNames("w-control-md shrink-0", menu ? "block" : "hidden sm:block")}
+            />
           </div>
         ) : null}
       </div>
@@ -181,11 +223,13 @@ export function ListRow({
   title,
   description,
   actions,
+  children,
 }: {
   icon?: LucideIcon | ReactNode;
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
+  children?: ReactNode;
 }) {
   const glyph = isLucideIcon(icon) ? <Icon icon={icon} /> : icon;
   return (
@@ -196,6 +240,7 @@ export function ListRow({
         {description && <div className="text-sm text-text-muted">{description}</div>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {children && <div className="min-w-0 basis-full">{children}</div>}
     </li>
   );
 }

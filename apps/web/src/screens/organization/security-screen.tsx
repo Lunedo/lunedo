@@ -6,21 +6,11 @@ import { useTranslation } from "react-i18next";
 import { organizationQuery, organizationSettingsQuery } from "../../api/organization-queries.js";
 import { SettingsList } from "../../components/settings-list.js";
 import { useOrganizationSettingMutation } from "../../settings/setting-mutations.js";
+import { ORGANIZATION_TOKEN_KEYS, SIGN_IN_KEYS } from "../../settings/settings-index.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 
 const route = getRouteApi("/app/settings/organizations/$organizationId/security");
-
-export const ORGANIZATION_SIGN_IN_KEYS = [
-  "auth.twoFactorRequired",
-  "auth.passwordMinLength",
-  "auth.reauthenticationMinutes",
-  "auth.sessionIdleTimeoutMinutes",
-  "auth.sessionLifetimeMinutes",
-  "auth.maxSessionsPerAccount",
-];
-
-export const ORGANIZATION_TOKEN_KEYS = ["apiTokens.maxLifetimeDays"];
 
 export function OrganizationSecurityScreen() {
   const { t } = useTranslation();
@@ -43,7 +33,7 @@ export function OrganizationSecurityScreen() {
       <Section title={t("organization.security.signIn")}>
         <SettingsList
           settings={settings.data}
-          keys={ORGANIZATION_SIGN_IN_KEYS}
+          keys={SIGN_IN_KEYS}
           level="organization"
           organizationName={name}
           canManage={() => state.can("organization.signIn.manage")}

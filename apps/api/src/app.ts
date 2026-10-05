@@ -6,7 +6,7 @@ import { type FastifyRequest, LogController } from "fastify";
 import { AppModule } from "./app.module.js";
 import type { ApiContext } from "./context.js";
 import { COOKIES, readCookie } from "./http/cookies.js";
-import { changesState, isCsrfSafe, ownOrigin } from "./http/csrf.js";
+import { CSRF_HEADER, changesState, isCsrfSafe, ownOrigin } from "./http/csrf.js";
 import { sendProblem } from "./http/error.filter.js";
 import { instanceUrlOf } from "./http/instance-url.js";
 import { bearerToken, carriesCookieCredentials } from "./http/request.js";
@@ -34,6 +34,13 @@ async function allowedOrigins(request: FastifyRequest, context: ApiContext): Pro
     if (origin) origins.push(origin);
   }
   return origins;
+}
+
+async function movedTo(request: FastifyRequest, context: ApiContext): Promise<string | null> {
+  if (request.headers[CSRF_HEADER] !== "1" || request.headers.origin !== ownOrigin(request)) return null;
+  const instanceUrl = await instanceUrlOf(context);
+  if (!instanceUrl || new URL(instanceUrl).origin === ownOrigin(request)) return null;
+  return instanceUrl;
 }
 
 const BACKCHANNEL_LOGOUT = /^\/api\/v1\/auth\/providers\/[0-9A-Fa-f-]{36}\/backchannel-logout$/;
@@ -76,6 +83,12 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
     if (isBackchannelLogout(request) && !carriesCookieCredentials(request)) return;
     if (isSamlResponse(request)) return;
     if (!changesState(request) || isCsrfSafe(request, await allowedOrigins(request, context))) return;
+    const moved = await movedTo(request, context);
+    if (moved) {
+      return sendProblem(reply, "instanceMoved", "Open Pagehall at its current address", {
+        instanceUrl: moved,
+      });
+    }
     return sendProblem(
       reply,
       "csrfRejected",

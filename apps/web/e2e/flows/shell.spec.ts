@@ -1,13 +1,20 @@
 import { expect, test } from "@playwright/test";
 import { OWNER, OWNER_STORAGE, readState } from "../support/environment.js";
-import { expectAccessible, freshTotp, setAppearance, signInWithPassword } from "../support/helpers.js";
+import {
+  callApi,
+  expectAccessible,
+  freshTotp,
+  setAppearance,
+  signInWithPassword,
+} from "../support/helpers.js";
 
 test.describe.configure({ mode: "serial" });
 test.use({ storageState: OWNER_STORAGE });
 
 test("delivers a notification live to an open page", async ({ page, browser }) => {
   await page.goto("/settings/preferences");
-  await expect(page.getByRole("button", { name: /^Notifications/ })).toBeVisible();
+  await callApi(page, "POST", "/api/v1/notifications/read-all", {});
+  await expect(page.getByRole("button", { name: "Notifications", exact: true })).toBeVisible();
   const before = await page.getByRole("button", { name: /^Notifications/ }).getAttribute("aria-label");
 
   const elsewhere = await browser.newContext({
@@ -184,7 +191,36 @@ for (const language of ["en", "de"] as const) {
       ).toBeVisible();
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(overflow, path).toBeLessThanOrEqual(0);
+      const outsideTheirCard = await page.evaluate(() =>
+        [...document.querySelectorAll("#main section [data-setting-control] > *")]
+          .filter((element) => {
+            const card = element.closest("section")?.getBoundingClientRect();
+            const box = element.getBoundingClientRect();
+            return card !== undefined && (box.right > card.right + 1 || box.left < card.left - 1);
+          })
+          .map((element) => element.textContent?.trim()),
+      );
+      expect(outsideTheirCard, path).toEqual([]);
     }
+    const width = 375;
+    const de = language === "de";
+    await page.goto(`/settings/organizations/${organizationId}/roles`);
+    await page.getByRole("button", { name: de ? "Rolle anlegen" : "Create role" }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    const dialogBox = await dialog.boundingBox();
+    expect(dialogBox && dialogBox.x + dialogBox.width).toBeLessThanOrEqual(width);
+    expect(await dialog.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(
+      0,
+    );
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: de ? /^Benachrichtigungen(,|$)/ : /^Notifications(,|$)/ }).click();
+    const close = page.getByRole("button", {
+      name: de ? "Benachrichtigungen schließen" : "Close notifications",
+    });
+    const closeBox = await close.boundingBox();
+    expect(closeBox && closeBox.x + closeBox.width).toBeLessThanOrEqual(width);
+    await close.click();
     await setAppearance(page, { language: "en", textSize: 1 });
   });
 }

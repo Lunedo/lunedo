@@ -12,6 +12,7 @@ vi.mock("../../../format/time-zones.js", async (original) => ({
 function renderStep() {
   return renderWithProviders(
     <OrganizationStep
+      completed={false}
       details={{ organization: null, formats: null }}
       back={null}
       onDone={async () => undefined}

@@ -124,8 +124,13 @@ export class AccountSecurityService {
       totp: factors.totp,
       passkeys: await this.#webauthn.list(accountId),
       recoveryCodes: factors.recoveryCodes,
-      secondFactorRequired: await this.#signIn.secondFactorRequired(accountId),
+      ...(await this.#requirement(accountId)),
     };
+  }
+
+  async #requirement(accountId: string) {
+    const requiredBy = await this.#signIn.secondFactorRequirement(accountId);
+    return { secondFactorRequired: requiredBy !== null, secondFactorRequiredBy: requiredBy };
   }
 
   async #factorAdded(tx: Transaction, session: Session): Promise<FactorAdded> {

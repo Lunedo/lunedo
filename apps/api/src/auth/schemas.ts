@@ -173,6 +173,12 @@ export const securityOverviewSchema = z.object({
   passkeys: z.array(passkeySchema),
   recoveryCodes: z.number().int(),
   secondFactorRequired: z.boolean(),
+  secondFactorRequiredBy: z
+    .enum(["instanceOwner", "reset", "instance", "organization"])
+    .nullable()
+    .describe(
+      "Why the account must keep a second factor: it owns the instance, an administrator reset its second factor, or the instance or organization requires one. Null when nothing requires it.",
+    ),
 });
 
 export const totpSetupSchema = z.object({ secret: z.string(), uri: z.string() });

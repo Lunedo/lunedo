@@ -7,6 +7,7 @@ import {
   ConfirmDialog,
   Dialog,
   Field,
+  focusFirstInvalidSoon,
   IconButton,
   Input,
   Menu,
@@ -32,6 +33,7 @@ import {
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
 import { memberLoader } from "../../components/pickers.js";
+import { useUnassignWithUndo } from "../../components/role-undo.js";
 import { usePaged, useSorted } from "../../components/table-state.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { translateKey } from "../../i18n/translate.js";
@@ -94,6 +96,11 @@ export function MembersScreen() {
         : member.name.toLowerCase(),
   );
   const paged = usePaged(sorted.rows, 25);
+  const queryClient = useQueryClient();
+  const unassign = useUnassignWithUndo({ organizationId }, async () => {
+    await queryClient.invalidateQueries({ queryKey: organizationKeys.members(organizationId) });
+    await queryClient.invalidateQueries({ queryKey: organizationKeys.assignments(organizationId) });
+  });
   const nameOf = useMemo(() => new Map(people.map((member) => [member.accountId, member.name])), [people]);
 
   const memberMenu = (member: Member) => [
@@ -106,8 +113,26 @@ export function MembersScreen() {
       label: t("members.actions.removeRole", {
         role: role.customRoleId ? role.role : translateKey(t, `roles.builtIn.${role.role}`),
       }),
-      onSelect: () =>
-        setAction({ kind: "unassign", member, assignmentId: role.assignmentId, role: role.role }),
+      onSelect: () => {
+        if (!role.customRoleId && role.role === "owner") {
+          setAction({ kind: "unassign", member, assignmentId: role.assignmentId, role: role.role });
+          return;
+        }
+        void unassign(
+          {
+            id: role.assignmentId,
+            builtInRole: role.customRoleId ? null : role.role,
+            customRoleId: role.customRoleId,
+            principalKind: "account",
+            principalId: member.accountId,
+            expiresAt: role.expiresAt,
+          },
+          t("roles.unassignedNamed", {
+            name: member.name,
+            role: role.customRoleId ? role.role : translateKey(t, `roles.builtIn.${role.role}`),
+          }),
+        );
+      },
     })),
     { type: "separator" as const },
     ...(member.kind !== "member"
@@ -253,6 +278,7 @@ export function MembersScreen() {
                 },
                 {
                   key: "actions",
+                  sticky: true,
                   header: t("settings.actions"),
                   align: "end",
                   cell: (member) =>
@@ -322,6 +348,7 @@ function MemberActionDialogs({
   const session = useSession();
   const queryClient = useQueryClient();
   const [expiry, setExpiry] = useState("");
+  const [expiryMissing, setExpiryMissing] = useState(false);
   const [responsible, setResponsible] = useState<ComboboxItem | null>(null);
   const responsibleLoader = useMemo(() => memberLoader(organizationId), [organizationId]);
   const refresh = () => queryClient.invalidateQueries({ queryKey: organizationKeys.members(organizationId) });
@@ -349,8 +376,9 @@ function MemberActionDialogs({
       <ConfirmDialog
         open
         onOpenChange={close}
-        title={t("roles.unassignTitle")}
-        confirmLabel={t("roles.unassign")}
+        title={t("roles.removeOwnerTitle", { name: member.name })}
+        description={t("roles.removeOwnerSummary", { name: member.name, organization: organizationName })}
+        confirmLabel={t("roles.removeOwner")}
         cancelLabel={t("common.cancel")}
         destructive
         onConfirm={() =>
@@ -436,7 +464,11 @@ function MemberActionDialogs({
     return (
       <Dialog open onOpenChange={close} title={t("members.expiryTitle", { name: member.name })} size="sm">
         <div className="flex flex-col gap-4">
-          <Field label={t("members.expires")} hint={t("members.expiryHint")}>
+          <Field
+            label={t("members.expires")}
+            hint={t("members.expiryHint")}
+            {...(expiryMissing && !expiry ? { error: t("members.chooseDate") } : {})}
+          >
             <Input type="date" value={expiry} onChange={(event) => setExpiry(event.target.value)} />
           </Field>
           {expiry ? (
@@ -466,8 +498,12 @@ function MemberActionDialogs({
             </Button>
             <Button
               variant="primary"
-              disabled={!expiry}
-              onClick={() =>
+              onClick={() => {
+                if (!expiry) {
+                  setExpiryMissing(true);
+                  focusFirstInvalidSoon();
+                  return;
+                }
                 void run(
                   () =>
                     request(() =>
@@ -477,8 +513,8 @@ function MemberActionDialogs({
                       }),
                     ),
                   t("common.saved"),
-                )
-              }
+                );
+              }}
             >
               {t("common.save")}
             </Button>
@@ -659,6 +695,7 @@ function InvitationsTable({ organizationId }: { organizationId: string }) {
           },
           {
             key: "actions",
+            sticky: true,
             header: t("settings.actions"),
             align: "end",
             cell: (invitation) => (

@@ -10,7 +10,9 @@ import {
   type AuditEventDefinition,
   type AuditEventFields,
   type AuditEventName,
+  type AuditTargetType,
   auditCatalog,
+  auditTargetTypes,
 } from "./catalog.js";
 import { type AuditLabels, resolveAuditLabels } from "./labels.js";
 import { AuditSealer, PersonalDataMissingKeyError, type SealedParts } from "./personal-data.js";
@@ -24,6 +26,34 @@ export interface AuditScope {
 export const INSTANCE_AUDIT_SCOPE: AuditScope = { type: "instance", id: INSTANCE_SCOPE_ID };
 
 export type AuditEvents = AuditEventInput<AuditEventName>[];
+
+export const AUDIT_CHANGES_CHANNEL = "pagehall_audit_changes";
+
+export interface AuditChangeSignal {
+  scope: "instance" | "organization";
+  organizationId: string | null;
+  target: AuditTargetType;
+}
+
+export function parseAuditChangeSignal(payload: string): AuditChangeSignal | null {
+  try {
+    const parsed = JSON.parse(payload) as Partial<AuditChangeSignal>;
+    if (!auditTargetTypes.includes(parsed.target as AuditTargetType)) return null;
+    if (parsed.scope === "instance" && parsed.organizationId === null) {
+      return { scope: "instance", organizationId: null, target: parsed.target as AuditTargetType };
+    }
+    if (parsed.scope === "organization" && typeof parsed.organizationId === "string") {
+      return {
+        scope: "organization",
+        organizationId: parsed.organizationId,
+        target: parsed.target as AuditTargetType,
+      };
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
 
 export interface AuditEventInput<TName extends AuditEventName> {
   name: TName;
@@ -201,6 +231,12 @@ export class AuditLog {
       .update(auditChains)
       .set({ lastSequence: content.sequence, lastHash: hash, updatedAt: new Date() })
       .where(chain);
+    const signal: AuditChangeSignal = {
+      scope: scope.type,
+      organizationId: scope.type === "organization" ? scope.id : null,
+      target: definition.target,
+    };
+    await tx.execute(sql`select pg_notify(${AUDIT_CHANGES_CHANNEL}, ${JSON.stringify(signal)})`);
   }
 
   #separate(

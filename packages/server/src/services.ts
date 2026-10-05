@@ -1,5 +1,6 @@
 import { AccountService } from "./accounts/accounts.js";
 import { AccountAdministrationService } from "./accounts/administration.js";
+import { InstanceAddressService } from "./accounts/instance-address.js";
 import { AccountLifecycleService } from "./accounts/lifecycle.js";
 import { AccountOverviewService } from "./accounts/overview.js";
 import { AuditLog } from "./audit/audit-log.js";
@@ -85,6 +86,7 @@ import { ServiceAccountService } from "./tokens/service-accounts.js";
 
 export interface AccountServices {
   audit: AuditLog;
+  instanceAddress: InstanceAddressService;
   accounts: AccountService;
   hasher: PasswordHasher;
   rateLimiter: RateLimiter;
@@ -152,6 +154,12 @@ export function createAccountServices(options: {
   const rateLimiter = new RateLimiter({ database });
   const throttle = new SignInThrottle({ database, settings, rateLimiter });
   const sessions = new SessionService({ database, settings, audit });
+  const instanceAddress = new InstanceAddressService({
+    database,
+    settings,
+    audit,
+    configuredUrl: options.configuredInstanceUrl,
+  });
   const challenges = new ChallengeStore({ database });
   const totp = new TotpService({ database, encryption });
   const recoveryCodes = new RecoveryCodeService();
@@ -365,6 +373,7 @@ export function createAccountServices(options: {
   );
   return {
     audit,
+    instanceAddress,
     accounts,
     hasher,
     rateLimiter,
