@@ -154,6 +154,52 @@
         "inReview": { "bg": "#2D2416", "text": "#E0A052" },
         "done": { "bg": "#1B2A22", "text": "#7CC79A" }
       }
+    },
+    "content": {
+      "light": {
+        "gray": { "text": "#4A4F55", "background": "#F0F1F2" },
+        "red": { "text": "#B3261E", "background": "#FBE9E7" },
+        "orange": { "text": "#A14600", "background": "#FDEEDF" },
+        "yellow": { "text": "#735400", "background": "#FBF3D0" },
+        "green": { "text": "#1D6B45", "background": "#E6F3EB" },
+        "teal": { "text": "#0B6A73", "background": "#E3F2F3" },
+        "blue": { "text": "#234A94", "background": "#E6EEFB" },
+        "purple": { "text": "#6B3FA0", "background": "#F1EAFB" },
+        "pink": { "text": "#A3245F", "background": "#FBE8F1" }
+      },
+      "dark": {
+        "gray": { "text": "#C4C8CE", "background": "#26282B" },
+        "red": { "text": "#F0948B", "background": "#3A1F1C" },
+        "orange": { "text": "#F0A766", "background": "#3A2615" },
+        "yellow": { "text": "#E8C95A", "background": "#353016" },
+        "green": { "text": "#7CC79A", "background": "#1B2A22" },
+        "teal": { "text": "#6CC3CB", "background": "#16302F" },
+        "blue": { "text": "#8AA8E6", "background": "#1B2333" },
+        "purple": { "text": "#C0A6EE", "background": "#2A2238" },
+        "pink": { "text": "#EE97C0", "background": "#3A1E2C" }
+      },
+      "highContrastLight": {
+        "gray": { "text": "#333333", "background": "#F2F2F2" },
+        "red": { "text": "#8A1F17", "background": "#FBE3E0" },
+        "orange": { "text": "#6E3000", "background": "#FCE9D6" },
+        "yellow": { "text": "#4D3800", "background": "#FAF0C8" },
+        "green": { "text": "#0B4D2C", "background": "#E1F1E7" },
+        "teal": { "text": "#00474D", "background": "#E0EEEF" },
+        "blue": { "text": "#102F6B", "background": "#E0E9FA" },
+        "purple": { "text": "#4A2378", "background": "#EDE4FA" },
+        "pink": { "text": "#7A1645", "background": "#FAE1EC" }
+      },
+      "highContrastDark": {
+        "gray": { "text": "#E0E0E0", "background": "#1F1F1F" },
+        "red": { "text": "#FFB3AB", "background": "#2E0F0C" },
+        "orange": { "text": "#FFC28A", "background": "#2E1A08" },
+        "yellow": { "text": "#FFE27A", "background": "#2A2408" },
+        "green": { "text": "#9EE6B8", "background": "#0D2116" },
+        "teal": { "text": "#8FE3EA", "background": "#0A2426" },
+        "blue": { "text": "#B3C9FF", "background": "#0F1A33" },
+        "purple": { "text": "#DCC8FF", "background": "#1E1430" },
+        "pink": { "text": "#FFB8D8", "background": "#2E0F1E" }
+      }
     }
   },
   "font": {
