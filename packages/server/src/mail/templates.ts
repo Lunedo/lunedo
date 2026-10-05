@@ -311,7 +311,7 @@ const catalogs: Record<Language, Catalog> = {
     secondFactorReset: ({ instanceName, reason }) => ({
       subject: `Ihr zweiter Faktor auf ${instanceName} wurde zurückgesetzt`,
       paragraphs: [
-        `Eine Administratorin oder ein Administrator hat den zweiten Faktor Ihres Kontos auf ${instanceName} zurückgesetzt und alle Ihre Sitzungen beendet. Grund: ${reason}`,
+        `Ein Administrator hat den zweiten Faktor Ihres Kontos auf ${instanceName} zurückgesetzt und alle Ihre Sitzungen beendet. Grund: ${reason}`,
         "Richten Sie bei der nächsten Anmeldung eine Authenticator-App oder einen Passkey ein, bevor Sie fortfahren.",
         "Wenn Sie das nicht veranlasst haben, wenden Sie sich sofort an Ihre Administration.",
       ],
@@ -416,7 +416,7 @@ const catalogs: Record<Language, Catalog> = {
         `${organizationName ? `Die Heimatorganisation von ${accountName} auf ${instanceName} ist jetzt ${organizationName}` : `${accountName} hat auf ${instanceName} keine Heimatorganisation mehr`}${previousOrganizationName ? `; vorher war es ${previousOrganizationName}` : ""}.`,
         reason === "providerRule"
           ? "Die Zuordnungsregel oder die Gruppe beim Identitätsanbieter, aus der diese Mitgliedschaft kam, gilt nicht mehr."
-          : "Eine Administratorin oder ein Administrator hat sie geändert.",
+          : "Ein Administrator hat sie geändert.",
         "Die Heimatorganisation bestimmt, wessen Administration das Konto verwaltet und wessen Standards für seine Einstellungen gelten.",
       ],
     }),

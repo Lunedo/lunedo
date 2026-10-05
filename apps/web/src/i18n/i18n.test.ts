@@ -15,6 +15,13 @@ describe("translations", () => {
     }
   });
 
+  it("use German terms without gendered forms", () => {
+    const gendered =
+      /\b[\wäöüß-]+(?:in|innen) oder (?:der|den|des|dem|ein|einen|eines|einem)\b|[\wäöüß][:*_/]innen\b|[\wäöüß]Innen\b/;
+    const texts = JSON.stringify(resources.de.translation).split('","');
+    expect(texts.filter((text) => gendered.test(text))).toEqual([]);
+  });
+
   it("contain no empty strings", () => {
     for (const resource of Object.values(resources)) {
       const values = JSON.stringify(resource.translation).match(/:""/g);

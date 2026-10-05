@@ -110,7 +110,7 @@
       "noWarnings": "Keine Warnungen",
       "heldTitle": "Deaktivierungen zurückgehalten",
       "heldDescription": "Der Lauf hätte {count, plural, one {# Konto} other {# Konten}} auf einmal deaktiviert und wurde angehalten, ohne jemanden zu deaktivieren. Eine falsche Suchbasis, eine verschobene Organisationseinheit oder fehlende Leserechte sehen genauso aus wie ausgeschiedene Personen. Prüfe zuerst den Anbieter; wenn die Personen wirklich ausgeschieden sind, bestätige den Lauf.",
-      "heldConfirmed": "Eine Administratorin oder ein Administrator hat am {time} die Deaktivierung von bis zu {count, plural, one {# Konto} other {# Konten}} bestätigt.",
+      "heldConfirmed": "Ein Administrator hat am {time} die Deaktivierung von bis zu {count, plural, one {# Konto} other {# Konten}} bestätigt.",
       "confirm": "Deaktivierungen bestätigen",
       "confirmTitle": "Diese Konten deaktivieren?",
       "confirmDescription": "Ein neuer Lauf startet und darf bis zu {count, plural, one {# Konto} other {# Konten}} deaktivieren. Ihre Sitzungen enden und ihre persönlichen API-Tokens werden widerrufen. Die Konten kommen zurück, sobald sie beim Anbieter wieder aktiv sind; widerrufene Tokens nicht.",
@@ -1264,9 +1264,9 @@
       "directoryPassword": "Passwort bei {provider}"
     },
     "emergency": {
-      "link": "Notfall-Anmeldung für die Instanz-Ownerin oder den Instanz-Owner",
+      "link": "Notfall-Anmeldung für den Instanz-Owner",
       "title": "Notfall-Anmeldung",
-      "description": "Nur für die Instanz-Ownerin oder den Instanz-Owner, wenn die Anmeldung über Anbieter nicht funktioniert. Jede Verwendung steht im Audit-Log, und alle Instanz-Administratoren werden sofort benachrichtigt.",
+      "description": "Nur für den Instanz-Owner, wenn die Anmeldung über Anbieter nicht funktioniert. Jede Verwendung steht im Audit-Log, und alle Instanz-Administratoren werden sofort benachrichtigt.",
       "submit": "Weiter"
     },
     "providers": {
@@ -1622,7 +1622,7 @@
     "keys": {
       "auth_passwordSignIn": {
         "label": "Anmeldung mit Passwort",
-        "description": "Wenn sie aus ist, melden sich Personen nur über einen Anbieter oder mit einem Passkey an. Die Notfall-Anmeldung der Instanz-Ownerin oder des Instanz-Owners funktioniert immer."
+        "description": "Wenn sie aus ist, melden sich Personen nur über einen Anbieter oder mit einem Passkey an. Die Notfall-Anmeldung des Instanz-Owners funktioniert immer."
       },
       "appearance_colorMode": { "label": "Farbmodus", "description": "Hell, dunkel oder wie das System." },
       "appearance_highContrast": { "label": "Hoher Kontrast", "description": "Kräftigere Rahmen und Texte." },
@@ -3144,7 +3144,7 @@
     "placeholder": {
       "add": "Platzhalter anlegen",
       "title": "Platzhalter anlegen",
-      "description": "Ein Platzhalter steht für eine Person, die noch kein Konto hat, zum Beispiel die Autorin oder den Autor importierter Inhalte. Er kann sich nicht anmelden.",
+      "description": "Ein Platzhalter steht für eine Person, die noch kein Konto hat, zum Beispiel den Autor importierter Inhalte. Er kann sich nicht anmelden.",
       "name": "Name",
       "email": "E-Mail-Adresse",
       "emailHint": "Meldet sich die Person mit dieser Adresse über einen Anbieter an und bestätigt der Anbieter sie, wird der Platzhalter zu ihrem Konto.",
