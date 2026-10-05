@@ -3,6 +3,7 @@ import {
   ConfirmDialog,
   Dialog,
   Field,
+  focusFirstInvalidSoon,
   Input,
   List,
   ListRow,
@@ -206,10 +207,12 @@ function LinkIdentityDialog({
   const save = async () => {
     if (!providerId) {
       setInvalid("provider");
+      focusFirstInvalidSoon();
       return;
     }
     if (!subject.trim()) {
       setInvalid("subject");
+      focusFirstInvalidSoon();
       return;
     }
     setInvalid(null);

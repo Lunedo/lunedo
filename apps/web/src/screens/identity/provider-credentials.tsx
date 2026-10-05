@@ -6,6 +6,7 @@ import {
   DangerAction,
   Dialog,
   Field,
+  focusFirstInvalidSoon,
   Input,
   List,
   ListRow,
@@ -482,6 +483,7 @@ function AddCredentialDialog({
     const input = credentialInput(draft);
     if (!input.ok) {
       setInvalid(input.field);
+      focusFirstInvalidSoon();
       return;
     }
     setInvalid(null);

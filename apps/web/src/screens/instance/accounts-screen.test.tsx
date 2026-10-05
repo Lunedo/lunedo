@@ -347,7 +347,11 @@ describe("the accounts page", () => {
     const change = (await within(panel).findByRole("button", {
       name: "Change home organization",
     })) as HTMLButtonElement;
-    expect(change.disabled).toBe(true);
+    await userEvent.click(change);
+    expect(
+      within(panel).getByText(/Choose an organization other than the current home organization/),
+    ).toBeTruthy();
+    expect(requests.some((request) => request.path.endsWith("/home-organization"))).toBe(false);
     await userEvent.click(within(panel).getByRole("combobox", { name: "New home organization" }));
     await userEvent.click(await screen.findByRole("option", { name: "Research" }));
     await userEvent.click(change);
@@ -396,7 +400,8 @@ describe("the accounts page", () => {
     expect(
       await within(panel).findByText("You cannot merge a placeholder into your own account."),
     ).toBeTruthy();
-    expect((within(panel).getByRole("button", { name: "Merge" }) as HTMLButtonElement).disabled).toBe(true);
+    await userEvent.click(within(panel).getByRole("button", { name: "Merge" }));
+    expect(requests.some((request) => request.path.endsWith("/merge"))).toBe(false);
     await userEvent.clear(field);
     await userEvent.type(field, "m");
     await userEvent.click(await screen.findByRole("option", { name: /Max Member/ }));

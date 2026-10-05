@@ -6,6 +6,8 @@ import {
   ConfirmDialog,
   Drawer,
   DurationSelect,
+  focusFirstInvalidSoon,
+  Icon,
   Input,
   Notice,
   Section,
@@ -21,7 +23,7 @@ import {
 } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { RefreshCw } from "lucide-react";
+import { CircleAlert, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -535,12 +537,19 @@ function GoogleDirectory({ provider, canManage }: { provider: IdentityProvider; 
   const queryClient = useQueryClient();
   const showFailure = useFailureToast();
   const [key, setKey] = useState("");
+  const [keyMissing, setKeyMissing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [chosenMethod, setChosenMethod] = useState<GoogleDirectorySettings["method"] | null>(null);
   const config = provider.config;
   if (config.preset !== "google") return null;
   const refresh = () => queryClient.invalidateQueries({ queryKey: identityKeys.provider(provider.id) });
   const saveKey = async () => {
+    if (key.trim() === "") {
+      setKeyMissing(true);
+      focusFirstInvalidSoon();
+      return;
+    }
+    setKeyMissing(false);
     setSaving(true);
     try {
       await setDirectoryKey(provider.id, key.trim());
@@ -642,20 +651,23 @@ function GoogleDirectory({ provider, canManage }: { provider: IdentityProvider; 
               rows={4}
               className="font-mono"
               placeholder={t("identityProviders.sync.keyPlaceholder")}
+              invalid={keyMissing && key.trim() === ""}
+              {...(keyMissing && key.trim() === "" ? { "aria-describedby": "directory-key-error" } : {})}
               onChange={(event) => setKey(event.target.value)}
             />
+            {keyMissing && key.trim() === "" ? (
+              <p id="directory-key-error" className="text-sm text-danger">
+                <Icon icon={CircleAlert} size="sm" className="mr-1 inline align-text-bottom" />
+                {t("identityProviders.sync.keyRequired")}
+              </p>
+            ) : null}
             <div className="flex flex-wrap justify-end gap-2">
               {provider.directoryKey ? (
                 <Button variant="danger" onClick={() => void removeKey()}>
                   {t("identityProviders.sync.removeKey")}
                 </Button>
               ) : null}
-              <Button
-                variant="outline"
-                loading={saving}
-                disabled={key.trim() === ""}
-                onClick={() => void saveKey()}
-              >
+              <Button variant="outline" loading={saving} onClick={() => void saveKey()}>
                 {t("identityProviders.sync.saveKey")}
               </Button>
             </div>

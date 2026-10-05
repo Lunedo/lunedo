@@ -5,7 +5,16 @@ import {
   identityProviderNameSchema,
   ldapServerAddress,
 } from "@pagehall/shared";
-import { Button, Field, Input, Notice, PasswordInput, SegmentedControl, Switch } from "@pagehall/ui";
+import {
+  Button,
+  Field,
+  focusFirstInvalidSoon,
+  Input,
+  Notice,
+  PasswordInput,
+  SegmentedControl,
+  Switch,
+} from "@pagehall/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { ArrowLeft, FileUp } from "lucide-react";
@@ -184,7 +193,10 @@ export function SamlConnectionStep({
     if (draft.source === "file" && !draft.file)
       found.file = t("identityProviders.wizard.metadataFileRequired");
     setErrors(found);
-    if (Object.keys(found).length > 0) return null;
+    if (Object.keys(found).length > 0) {
+      focusFirstInvalidSoon();
+      return null;
+    }
     const shared = {
       domains: common.domains,
       metadata:
@@ -369,7 +381,10 @@ export function LdapConnectionStep({
     }
     if (!directoryPasswordSchema.safeParse(draft.password).success) found.password = t("validation.required");
     setErrors(found);
-    if (Object.keys(found).length > 0) return null;
+    if (Object.keys(found).length > 0) {
+      focusFirstInvalidSoon();
+      return null;
+    }
     const shared = {
       url: ldapServerAddress(draft.url) ?? draft.url.trim(),
       startTls: plain && draft.startTls,

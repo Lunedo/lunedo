@@ -10,6 +10,7 @@ import {
   DangerZone,
   Dialog,
   Field,
+  focusFirstInvalidSoon,
   Input,
   List,
   ListRow,
@@ -394,6 +395,7 @@ function AddPersonDialog({
   const person = selected?.value ?? "";
   const [expiry, setExpiry] = useState("");
   const [busy, setBusy] = useState(false);
+  const [missing, setMissing] = useState(false);
   const name = selected?.label;
   return (
     <Dialog
@@ -405,9 +407,11 @@ function AddPersonDialog({
       size="sm"
     >
       <div className="flex flex-col gap-4">
-        <Field label={t("roles.person")}>
+        <Field
+          label={t("roles.person")}
+          {...(missing && !selected ? { error: t("roles.choosePeopleFirst") } : {})}
+        >
           <Combobox
-            aria-label={t("roles.person")}
             placeholder={t("roles.choosePeople")}
             value={selected?.value ?? null}
             selectedItem={selected}
@@ -438,9 +442,13 @@ function AddPersonDialog({
           </Button>
           <Button
             variant="primary"
-            disabled={!person}
             loading={busy}
             onClick={() => {
+              if (!person) {
+                setMissing(true);
+                focusFirstInvalidSoon();
+                return;
+              }
               setBusy(true);
               void onAdd(person, expiry).finally(() => setBusy(false));
             }}

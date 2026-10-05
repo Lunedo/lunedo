@@ -114,3 +114,26 @@ describe("RoleEditorDialog", () => {
     );
   });
 });
+
+describe("AssignRoleDialog without people", () => {
+  it("keeps Give role usable and marks the empty field instead", async () => {
+    const { requests } = api();
+    await renderWithProviders(
+      <AssignRoleDialog
+        open
+        onOpenChange={() => undefined}
+        organizationId={ORGANIZATION_ID}
+        organizationName="Platform Team"
+      />,
+    );
+    const dialog = screen.getByRole("dialog", { name: "Give a role" });
+    const give = within(dialog).getByRole("button", { name: "Give role" }) as HTMLButtonElement;
+    expect(give.disabled).toBe(false);
+    await userEvent.click(give);
+    const principals = within(dialog).getByRole("combobox", { name: "People and groups" });
+    await waitFor(() => expect(document.activeElement).toBe(principals));
+    expect(principals.getAttribute("aria-invalid")).toBe("true");
+    expect(within(dialog).queryByText("The role could not be given")).toBeNull();
+    expect(requests.some((request) => request.method === "POST")).toBe(false);
+  });
+});

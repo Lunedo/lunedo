@@ -1,4 +1,12 @@
-import { Button, Combobox, type ComboboxItem, Dialog, Field, Notice } from "@pagehall/ui";
+import {
+  Button,
+  Combobox,
+  type ComboboxItem,
+  Dialog,
+  Field,
+  focusFirstInvalidSoon,
+  Notice,
+} from "@pagehall/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -23,10 +31,15 @@ export function TransferOwnershipDialog({
   const [target, setTarget] = useState<ComboboxItem | null>(candidate ?? null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [missing, setMissing] = useState(false);
   const loader = useMemo(() => accountLoader({ exclude: [ownerId] }), [ownerId]);
 
   const submit = async () => {
-    if (!target) return;
+    if (!target) {
+      setMissing(true);
+      focusFirstInvalidSoon();
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -58,9 +71,11 @@ export function TransferOwnershipDialog({
             {error}
           </Notice>
         ) : null}
-        <Field label={t("instance.accounts.newOwner")}>
+        <Field
+          label={t("instance.accounts.newOwner")}
+          {...(missing && !target ? { error: t("instance.accounts.chooseNewOwner") } : {})}
+        >
           <Combobox
-            aria-label={t("instance.accounts.newOwner")}
             placeholder={t("roles.choosePeople")}
             value={target?.value ?? null}
             selectedItem={target}
@@ -75,7 +90,7 @@ export function TransferOwnershipDialog({
           <Button variant="secondary" onClick={onClose}>
             {t("common.cancel")}
           </Button>
-          <Button variant="primary" loading={busy} disabled={!target} onClick={() => void submit()}>
+          <Button variant="primary" loading={busy} onClick={() => void submit()}>
             {t("instance.accounts.transferOwnership")}
           </Button>
         </div>

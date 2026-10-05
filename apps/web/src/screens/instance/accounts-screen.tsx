@@ -7,6 +7,7 @@ import {
   Dialog,
   Drawer,
   Field,
+  focusFirstInvalidSoon,
   IconButton,
   Notice,
   Section,
@@ -662,6 +663,7 @@ export function ResetSecondFactorDialog({
   const submit = async () => {
     if (!reason.trim()) {
       setInvalid(true);
+      focusFirstInvalidSoon();
       return;
     }
     setBusy(true);

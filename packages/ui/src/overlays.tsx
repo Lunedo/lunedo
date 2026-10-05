@@ -104,7 +104,7 @@ export function Menu({ trigger, items, align = "end", side = "bottom" }: MenuPro
                 onSelect={item.onSelect}
                 {...(item.disabled !== undefined ? { disabled: item.disabled } : {})}
                 className={classNames(
-                  "flex h-row cursor-default items-center gap-2 rounded-sm px-2 outline-none select-none data-disabled:opacity-50 data-highlighted:bg-hover",
+                  "flex h-row cursor-default items-center gap-2 rounded-sm px-2 outline-none select-none data-disabled:cursor-not-allowed data-disabled:text-text-muted data-highlighted:bg-hover",
                   item.danger ? "text-danger" : "text-text",
                 )}
               >

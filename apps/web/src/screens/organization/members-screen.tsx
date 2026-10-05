@@ -7,6 +7,7 @@ import {
   ConfirmDialog,
   Dialog,
   Field,
+  focusFirstInvalidSoon,
   IconButton,
   Input,
   Menu,
@@ -347,6 +348,7 @@ function MemberActionDialogs({
   const session = useSession();
   const queryClient = useQueryClient();
   const [expiry, setExpiry] = useState("");
+  const [expiryMissing, setExpiryMissing] = useState(false);
   const [responsible, setResponsible] = useState<ComboboxItem | null>(null);
   const responsibleLoader = useMemo(() => memberLoader(organizationId), [organizationId]);
   const refresh = () => queryClient.invalidateQueries({ queryKey: organizationKeys.members(organizationId) });
@@ -462,7 +464,11 @@ function MemberActionDialogs({
     return (
       <Dialog open onOpenChange={close} title={t("members.expiryTitle", { name: member.name })} size="sm">
         <div className="flex flex-col gap-4">
-          <Field label={t("members.expires")} hint={t("members.expiryHint")}>
+          <Field
+            label={t("members.expires")}
+            hint={t("members.expiryHint")}
+            {...(expiryMissing && !expiry ? { error: t("members.chooseDate") } : {})}
+          >
             <Input type="date" value={expiry} onChange={(event) => setExpiry(event.target.value)} />
           </Field>
           {expiry ? (
@@ -492,8 +498,12 @@ function MemberActionDialogs({
             </Button>
             <Button
               variant="primary"
-              disabled={!expiry}
-              onClick={() =>
+              onClick={() => {
+                if (!expiry) {
+                  setExpiryMissing(true);
+                  focusFirstInvalidSoon();
+                  return;
+                }
                 void run(
                   () =>
                     request(() =>
@@ -503,8 +513,8 @@ function MemberActionDialogs({
                       }),
                     ),
                   t("common.saved"),
-                )
-              }
+                );
+              }}
             >
               {t("common.save")}
             </Button>

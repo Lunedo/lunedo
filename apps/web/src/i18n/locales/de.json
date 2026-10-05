@@ -52,7 +52,9 @@
       "byNameTitle": "Gruppen werden über ihre Namen erkannt",
       "byName": "{provider} sendet Gruppennamen statt Kennungen. Wird eine Gruppe in {provider} umbenannt, greift keine Regel für sie mehr, bis die Regel hier angepasst ist.",
       "remove": "Regel entfernen",
-      "removed": "Die Regel für {name} wurde entfernt."
+      "removed": "Die Regel für {name} wurde entfernt.",
+      "chooseGroup": "Wähle die Gruppe, für deren Mitglieder die Regel gilt.",
+      "chooseOrganization": "Wähle die Organisation, zu der die Regel Zugriff gibt."
     },
     "sync": {
       "now": "Jetzt synchronisieren",
@@ -168,7 +170,8 @@
       "noKey": "Nicht gesetzt",
       "keyPlaceholder": "JSON-Schlüssel des Dienstkontos einfügen",
       "saveKey": "Schlüssel speichern",
-      "removeKey": "Schlüssel entfernen"
+      "removeKey": "Schlüssel entfernen",
+      "keyRequired": "Füge den JSON-Schlüssel des Dienstkontos ein."
     },
     "title": "Anmeldemethoden",
     "description": "Wie sich Personen bei dieser Instanz anmelden. Die Organisationen ergeben sich nach der Anmeldung aus der Gruppenzuordnung.",
@@ -607,7 +610,9 @@
       "copyTitle": "Diese Werte bei {provider} eintragen",
       "copyHint": "Registriere Pagehall zuerst mit diesen Werten bei {provider}. Sie ändern sich nicht, du kannst sie also jetzt kopieren und die Felder unten danach ausfüllen.",
       "signingCertificate": "Signaturzertifikat von Pagehall",
-      "signingCertificateHint": "Lade es bei {provider} hoch, wenn dort signierte Anfragen geprüft werden. Es ist auch in den Metadaten von Pagehall enthalten."
+      "signingCertificateHint": "Lade es bei {provider} hoch, wenn dort signierte Anfragen geprüft werden. Es ist auch in den Metadaten von Pagehall enthalten.",
+      "typeFixed": "Nach dem Speichern nicht mehr änderbar",
+      "stepLater": "Öffnet sich, sobald der aktuelle Schritt gespeichert ist"
     },
     "types": {
       "oidc": "OIDC",
@@ -1494,7 +1499,9 @@
       "copied": "Die Schlüssel wurden kopiert.",
       "keys": "Master-Schlüssel und Backup-Schlüssel",
       "alreadyDownloaded": "Die Schlüssel wurden bereits heruntergeladen. Aus Sicherheitsgründen geht das nur einmal.",
-      "stored": "Ich habe beide Schlüssel an einem sicheren Ort außerhalb dieses Servers abgelegt, zum Beispiel in einem Passwortmanager."
+      "stored": "Ich habe beide Schlüssel an einem sicheren Ort außerhalb dieses Servers abgelegt, zum Beispiel in einem Passwortmanager.",
+      "downloadFirst": "Lade zuerst die Schlüssel herunter. Ohne sie lässt sich eine Sicherung nicht wiederherstellen.",
+      "confirmStored": "Bestätige, dass du die Schlüssel außerhalb dieses Servers aufbewahrst."
     },
     "organization": {
       "title": "Erste Organisation",
@@ -2205,7 +2212,9 @@
     "permissionsDescription": "Jede Aktion in der Organisation und warum sie erlaubt ist oder nicht.",
     "permission": "Berechtigung",
     "allowed": "Erlaubt",
-    "why": "Warum"
+    "why": "Warum",
+    "emailsRequired": "Gib mindestens eine E-Mail-Adresse ein.",
+    "chooseDate": "Wähle das Datum, an dem die Mitgliedschaft endet, oder wähle „kein Ablauf“."
   },
   "roles": {
     "transferOwnership": "Owner-Rolle übertragen",
@@ -2288,7 +2297,9 @@
     "removeOwner": "Owner entfernen",
     "removeOwnerTitle": "{name} als Owner entfernen?",
     "removeOwnerSummary": "{name} verliert die volle Kontrolle über {organization}. Nur ein anderer Owner kann die Rolle zurückgeben.",
-    "removeOwnerEntry": "{name} ist Owner"
+    "removeOwnerEntry": "{name} ist Owner",
+    "chooseRole": "Wähle die Rolle, die du vergeben möchtest.",
+    "choosePeopleFirst": "Wähle mindestens eine Person."
   },
   "areas": {
     "levels": {
@@ -2552,7 +2563,8 @@
       "transferImpact": "Sie werden Owner der Instanz und Notfallkonto.",
       "deactivateSummary": "Beendet jede Anmeldung und alle Sitzungen und widerruft die API-Tokens endgültig.",
       "endSessionsSummary": "Meldet {name} auf allen Geräten ab. {name} kann sich sofort wieder anmelden.",
-      "resetSummary": "Entfernt Authenticator-App, Passkeys und Wiederherstellungscodes und beendet alle Sitzungen. {name} richtet bei der nächsten Anmeldung einen neuen zweiten Faktor ein."
+      "resetSummary": "Entfernt Authenticator-App, Passkeys und Wiederherstellungscodes und beendet alle Sitzungen. {name} richtet bei der nächsten Anmeldung einen neuen zweiten Faktor ein.",
+      "chooseNewOwner": "Wähle, wer neuer Owner wird."
     },
     "roles": {
       "title": "Rollen",
@@ -3110,14 +3122,16 @@
       "noAccounts": "Kein aktives Konto passt",
       "notOwn": "Du kannst einen Platzhalter nicht mit deinem eigenen Konto zusammenführen.",
       "action": "Zusammenführen",
-      "done": "{placeholder} mit {account} zusammengeführt: {memberships, plural, one {# Mitgliedschaft} other {# Mitgliedschaften}}, {groups, plural, one {# Gruppe} other {# Gruppen}}, {roles, plural, one {# Rolle} other {# Rollen}}"
+      "done": "{placeholder} mit {account} zusammengeführt: {memberships, plural, one {# Mitgliedschaft} other {# Mitgliedschaften}}, {groups, plural, one {# Gruppe} other {# Gruppen}}, {roles, plural, one {# Rolle} other {# Rollen}}",
+      "chooseAccount": "Wähle das Konto, zu dem der Platzhalter gehört."
     },
     "home": {
       "title": "Heimatorganisation",
       "description": "Die Heimatorganisation bestimmt, wessen Administration das Konto verwaltet und wessen Standards für seine Einstellungen gelten. Die Person und die Administration beider Organisationen werden benachrichtigt.",
       "action": "Heimatorganisation ändern",
       "changed": "{organization} ist jetzt die Heimatorganisation",
-      "newHome": "Neue Heimatorganisation"
+      "newHome": "Neue Heimatorganisation",
+      "chooseOther": "Wähle eine andere Organisation als die aktuelle Heimatorganisation."
     },
     "anonymize": {
       "title": "Konto anonymisieren",

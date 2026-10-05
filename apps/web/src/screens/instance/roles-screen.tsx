@@ -6,6 +6,7 @@ import {
   ConfirmDialog,
   Dialog,
   Field,
+  focusFirstInvalidSoon,
   IconButton,
   Input,
   Menu,
@@ -283,12 +284,18 @@ function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; rol
   const [expiry, setExpiry] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [missing, setMissing] = useState({ role: false, people: false });
   const builtIn = role?.startsWith("builtIn:") ? role.slice(8) : null;
   const custom = roles.find((entry) => `custom:${entry.id}` === role);
   const areas = custom ? (custom.areas as Areas) : builtIn ? (BUILT_IN_AREAS[builtIn]?.instance ?? {}) : {};
   const label = custom ? custom.name : builtIn ? translateKey(t, `roles.builtIn.${builtIn}`) : "";
 
   const submit = async () => {
+    if (people.length === 0 || !role) {
+      setMissing({ role: !role, people: people.length === 0 });
+      focusFirstInvalidSoon();
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -327,9 +334,8 @@ function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; rol
             {error}
           </Notice>
         ) : null}
-        <Field label={t("roles.role")}>
+        <Field label={t("roles.role")} {...(missing.role && !role ? { error: t("roles.chooseRole") } : {})}>
           <Combobox
-            aria-label={t("roles.role")}
             value={role}
             onValueChange={setRole}
             items={[
@@ -351,10 +357,13 @@ function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; rol
             ]}
           />
         </Field>
-        <Field label={t("roles.peopleLabel")} hint={t("roles.instancePrincipalsHint")}>
+        <Field
+          label={t("roles.peopleLabel")}
+          hint={t("roles.instancePrincipalsHint")}
+          {...(missing.people && people.length === 0 ? { error: t("roles.choosePeopleFirst") } : {})}
+        >
           <Combobox
             multiple
-            aria-label={t("roles.peopleLabel")}
             placeholder={t("roles.choosePeople")}
             value={people.map((item) => item.value)}
             selectedItems={people}
@@ -374,12 +383,7 @@ function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; rol
           <Button variant="secondary" onClick={onClose}>
             {t("common.cancel")}
           </Button>
-          <Button
-            variant="primary"
-            loading={busy}
-            disabled={people.length === 0 || !role}
-            onClick={() => void submit()}
-          >
+          <Button variant="primary" loading={busy} onClick={() => void submit()}>
             {t("roles.assignAction")}
           </Button>
         </div>

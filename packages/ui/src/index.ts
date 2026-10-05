@@ -95,6 +95,7 @@ export {
   type TextareaProps,
   useFieldControl,
 } from "./field.js";
+export { focusFirstInvalid, focusFirstInvalidSoon } from "./focus-invalid.js";
 export { Icon, type IconSize } from "./icon.js";
 export { type UiLabels, UiProvider, useUiLabels } from "./labels.js";
 export {

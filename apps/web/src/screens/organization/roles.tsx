@@ -1,5 +1,15 @@
 import { type Areas, areasOf, type RoleScope } from "@pagehall/shared";
-import { Button, Combobox, type ComboboxItem, Dialog, Field, Input, Notice, useToast } from "@pagehall/ui";
+import {
+  Button,
+  Combobox,
+  type ComboboxItem,
+  Dialog,
+  Field,
+  focusFirstInvalidSoon,
+  Input,
+  Notice,
+  useToast,
+} from "@pagehall/ui";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { useMemo, useState } from "react";
@@ -95,6 +105,7 @@ export function AssignRoleDialog({
   );
   const [expiry, setExpiry] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [missing, setMissing] = useState({ role: false, principals: false });
   const [busy, setBusy] = useState(false);
   const loader = useMemo(() => principalLoader(organizationId, t), [organizationId, t]);
   const people = useGainingPeople(open ? principals : []);
@@ -109,7 +120,8 @@ export function AssignRoleDialog({
 
   const submit = async () => {
     if (principals.length === 0 || !role) {
-      setError(t("roles.choosePrincipal"));
+      setMissing({ role: !role, principals: principals.length === 0 });
+      focusFirstInvalidSoon();
       return;
     }
     setBusy(true);
@@ -151,19 +163,17 @@ export function AssignRoleDialog({
             {error}
           </Notice>
         ) : null}
-        <Field label={t("roles.role")}>
-          <Combobox
-            aria-label={t("roles.role")}
-            value={role}
-            onValueChange={setRole}
-            items={roleItems(t, roles.data ?? [])}
-          />
+        <Field label={t("roles.role")} {...(missing.role && !role ? { error: t("roles.chooseRole") } : {})}>
+          <Combobox value={role} onValueChange={setRole} items={roleItems(t, roles.data ?? [])} />
         </Field>
         {fixedPrincipal ? null : (
-          <Field label={t("roles.principalsLabel")} hint={t("roles.principalsHint")}>
+          <Field
+            label={t("roles.principalsLabel")}
+            hint={t("roles.principalsHint")}
+            {...(missing.principals && principals.length === 0 ? { error: t("roles.choosePrincipal") } : {})}
+          >
             <Combobox
               multiple
-              aria-label={t("roles.principalsLabel")}
               placeholder={t("roles.choosePrincipals")}
               value={principals.map((item) => item.value)}
               selectedItems={principals}
@@ -190,12 +200,7 @@ export function AssignRoleDialog({
           <Button variant="secondary" onClick={() => onOpenChange(false)}>
             {t("common.cancel")}
           </Button>
-          <Button
-            variant="primary"
-            loading={busy}
-            disabled={principals.length === 0 || !role}
-            onClick={() => void submit()}
-          >
+          <Button variant="primary" loading={busy} onClick={() => void submit()}>
             {t("roles.assignAction")}
           </Button>
         </div>

@@ -57,11 +57,13 @@ const labels: UiLabels = {
 export async function renderWithProviders(
   ui: ReactNode,
   language = "en",
+  seed?: (queryClient: QueryClient) => void,
 ): Promise<{ queryClient: QueryClient; i18n: i18n }> {
   const instance: i18n = await initI18n([language]);
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+  seed?.(queryClient);
   render(
     <I18nextProvider i18n={instance}>
       <QueryClientProvider client={queryClient}>

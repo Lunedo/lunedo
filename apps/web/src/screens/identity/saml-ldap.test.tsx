@@ -746,7 +746,9 @@ describe("SAML and LDAP providers in the list and the details", () => {
     expect(screen.getByText("Entra ID SAML cannot read groups through Microsoft Graph")).toBeTruthy();
     expect(screen.getByLabelText("Client ID for Microsoft Graph")).toBeTruthy();
     const steps = screen.getByRole("navigation", { name: "Steps" });
-    expect(within(steps).getAllByRole("button")).toHaveLength(6);
+    expect(within(steps).getAllByRole("listitem")).toHaveLength(6);
+    expect(within(steps).getAllByRole("button")).toHaveLength(5);
+    expect(within(steps).getByText("Fixed once the provider is saved")).toBeTruthy();
   });
 
   it("manages the CA certificate, the second factor and the service account password of a directory", async () => {

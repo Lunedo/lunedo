@@ -52,7 +52,9 @@
       "byNameTitle": "Groups are identified by their names",
       "byName": "{provider} sends group names, not identifiers. Renaming a group in {provider} breaks every rule for it until the rule is changed here.",
       "remove": "Remove rule",
-      "removed": "The rule for {name} was removed."
+      "removed": "The rule for {name} was removed.",
+      "chooseGroup": "Choose the group whose members the rule applies to.",
+      "chooseOrganization": "Choose the organization the rule gives access to."
     },
     "sync": {
       "now": "Sync now",
@@ -168,7 +170,8 @@
       "noKey": "Not set",
       "keyPlaceholder": "Paste the JSON key of the service account",
       "saveKey": "Save key",
-      "removeKey": "Remove key"
+      "removeKey": "Remove key",
+      "keyRequired": "Paste the JSON key of the service account."
     },
     "title": "Sign-in methods",
     "description": "How people sign in to this instance. Organizations follow from group mapping after sign-in.",
@@ -607,7 +610,9 @@
       "copyTitle": "Enter these values at {provider}",
       "copyHint": "Register Pagehall at {provider} with these values first. They do not change, so you can copy them now and fill in the fields below afterwards.",
       "signingCertificate": "Pagehall's signing certificate",
-      "signingCertificateHint": "Upload it at {provider} if it verifies signed requests. It is also part of Pagehall's metadata."
+      "signingCertificateHint": "Upload it at {provider} if it verifies signed requests. It is also part of Pagehall's metadata.",
+      "typeFixed": "Fixed once the provider is saved",
+      "stepLater": "Opens after the current step is saved"
     },
     "types": {
       "oidc": "OIDC",
@@ -1494,7 +1499,9 @@
       "copied": "The keys were copied.",
       "keys": "Master key and backup key",
       "alreadyDownloaded": "The keys were already downloaded. For security, they can be downloaded only once.",
-      "stored": "I stored both keys in a safe place outside this server, for example in a password manager."
+      "stored": "I stored both keys in a safe place outside this server, for example in a password manager.",
+      "downloadFirst": "Download the keys first. Without them, a backup cannot be restored.",
+      "confirmStored": "Confirm that you stored the keys outside this server."
     },
     "organization": {
       "title": "First organization",
@@ -2208,7 +2215,9 @@
     "permissionsDescription": "Every action in the organization and why it is allowed or not.",
     "permission": "Permission",
     "allowed": "Allowed",
-    "why": "Why"
+    "why": "Why",
+    "emailsRequired": "Enter at least one e-mail address.",
+    "chooseDate": "Choose the date the membership ends, or select “no expiry”."
   },
   "roles": {
     "transferOwnership": "Transfer ownership",
@@ -2291,7 +2300,9 @@
     "removeOwner": "Remove owner",
     "removeOwnerTitle": "Remove {name} as owner?",
     "removeOwnerSummary": "{name} loses full control of {organization}. Only another owner can give the role back.",
-    "removeOwnerEntry": "{name} is an owner"
+    "removeOwnerEntry": "{name} is an owner",
+    "chooseRole": "Choose the role to give.",
+    "choosePeopleFirst": "Choose at least one person."
   },
   "areas": {
     "levels": {
@@ -2555,7 +2566,8 @@
       "transferImpact": "They become the owner of the instance and the break-glass account.",
       "deactivateSummary": "Stops every sign-in, ends all sessions and revokes the API tokens for good.",
       "endSessionsSummary": "Signs {name} out on every device. {name} can sign in again right away.",
-      "resetSummary": "Removes the authenticator app, passkeys and recovery codes and ends every session. {name} sets up a new second factor at the next sign-in."
+      "resetSummary": "Removes the authenticator app, passkeys and recovery codes and ends every session. {name} sets up a new second factor at the next sign-in.",
+      "chooseNewOwner": "Choose who becomes the new owner."
     },
     "roles": {
       "title": "Roles",
@@ -3113,14 +3125,16 @@
       "noAccounts": "No active account matches",
       "notOwn": "You cannot merge a placeholder into your own account.",
       "action": "Merge",
-      "done": "{placeholder} merged into {account}: {memberships, plural, one {# membership} other {# memberships}}, {groups, plural, one {# group} other {# groups}}, {roles, plural, one {# role} other {# roles}}"
+      "done": "{placeholder} merged into {account}: {memberships, plural, one {# membership} other {# memberships}}, {groups, plural, one {# group} other {# groups}}, {roles, plural, one {# role} other {# roles}}",
+      "chooseAccount": "Choose the account the placeholder belongs to."
     },
     "home": {
       "title": "Home organization",
       "description": "The home organization decides whose administrators manage the account and whose defaults apply to its settings. The person and the administrators of both organizations are notified.",
       "action": "Change home organization",
       "changed": "{organization} is the home organization now",
-      "newHome": "New home organization"
+      "newHome": "New home organization",
+      "chooseOther": "Choose an organization other than the current home organization."
     },
     "anonymize": {
       "title": "Anonymize account",

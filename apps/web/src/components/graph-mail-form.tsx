@@ -5,6 +5,7 @@ import {
   Dialog,
   ErrorState,
   Field,
+  focusFirstInvalidSoon,
   Input,
   List,
   ListRow,
@@ -101,6 +102,7 @@ export function GraphMailForm({
       setErrors({});
       return parsed.data;
     }
+    focusFirstInvalidSoon();
     setErrors(
       Object.fromEntries(
         parsed.error.issues.map((issue) => [

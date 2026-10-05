@@ -1,4 +1,4 @@
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, CircleAlert } from "lucide-react";
 import {
   Checkbox as CheckboxPrimitive,
   RadioGroup as RadioGroupPrimitive,
@@ -139,6 +139,7 @@ export interface CheckboxProps {
   onCheckedChange: (checked: boolean) => void;
   label?: ReactNode;
   description?: ReactNode;
+  error?: ReactNode;
   disabled?: boolean;
   "aria-label"?: string;
 }
@@ -148,30 +149,34 @@ export function Checkbox({
   onCheckedChange,
   label,
   description,
+  error,
   disabled,
   ...props
 }: CheckboxProps) {
   const field = useFieldControl();
   const generated = useId();
   const id = field.id ?? `checkbox-${generated}`;
-  const descriptionId = description ? `${id}-description` : undefined;
+  const errorId = error ? `${id}-error` : undefined;
+  const descriptionId =
+    [errorId, description ? `${id}-description` : undefined].filter(Boolean).join(" ") || undefined;
   return (
     <div className="flex items-start gap-2">
       <CheckboxPrimitive.Root
         {...field}
+        {...(error ? { "aria-invalid": true } : {})}
         id={id}
         checked={checked}
         onCheckedChange={(state) => onCheckedChange(state === true)}
         {...(disabled !== undefined ? { disabled } : {})}
         {...(props["aria-label"] ? { "aria-label": props["aria-label"] } : {})}
         {...(descriptionId ? { "aria-describedby": descriptionId } : {})}
-        className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-sm border border-control-border bg-control text-on-accent focus-visible:focus-ring disabled:cursor-not-allowed disabled:border-dashed disabled:bg-surface-sunken aria-checked:border-accent aria-checked:bg-accent disabled:aria-checked:border-control-border disabled:aria-checked:bg-control-border"
+        className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-sm border border-control-border bg-control text-on-accent focus-visible:focus-ring aria-invalid:border-danger disabled:cursor-not-allowed disabled:border-dashed disabled:bg-surface-sunken aria-checked:border-accent aria-checked:bg-accent disabled:aria-checked:border-control-border disabled:aria-checked:bg-control-border"
       >
         <CheckboxPrimitive.Indicator>
           <Icon icon={Check} size="sm" />
         </CheckboxPrimitive.Indicator>
       </CheckboxPrimitive.Root>
-      {(label || description) && (
+      {(label || description || error) && (
         <div className="flex flex-col">
           {label && (
             <label htmlFor={id} className="text-text">
@@ -179,8 +184,14 @@ export function Checkbox({
             </label>
           )}
           {description && (
-            <span id={descriptionId} className="text-sm text-text-muted">
+            <span id={`${id}-description`} className="text-sm text-text-muted">
               {description}
+            </span>
+          )}
+          {error && (
+            <span id={errorId} className="text-sm text-danger">
+              <Icon icon={CircleAlert} size="sm" className="mr-1 inline align-text-bottom" />
+              {error}
             </span>
           )}
         </div>
@@ -365,7 +376,7 @@ export function useFits<T extends HTMLElement, M extends HTMLElement>(
 export function SegmentedControl({ value, onValueChange, options, label, disabled }: SegmentedControlProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
-  const fits = useFits(containerRef, measureRef, options.map((option) => option.label).join(" "));
+  const fits = useFits(containerRef, measureRef, options.map((option) => option.label).join("|"));
   const choose = (next: string) => {
     if (!next || options.find((option) => option.value === next)?.disabled) return;
     onValueChange(next);

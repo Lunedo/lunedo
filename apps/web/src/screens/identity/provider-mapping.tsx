@@ -6,6 +6,7 @@ import {
   type ComboboxItem,
   Dialog,
   Field,
+  focusFirstInvalidSoon,
   IconButton,
   Menu,
   Notice,
@@ -380,13 +381,17 @@ function RuleDialog({
   ];
 
   const directory = provider.capabilities.directorySync;
-  const ready = group !== null && (target === "instance" || organization !== null);
+  const [missing, setMissing] = useState(false);
   const groupInput = group
     ? { id: group.value, name: group.label === group.value ? null : group.label }
     : null;
 
   const save = async () => {
-    if (!groupInput) return;
+    if (!groupInput || (target === "organization" && organization === null)) {
+      setMissing(true);
+      focusFirstInvalidSoon();
+      return;
+    }
     const body: MappingRuleInput =
       target === "instance"
         ? {
@@ -452,7 +457,7 @@ function RuleDialog({
           <Button variant="secondary" onClick={onClose}>
             {t("common.cancel")}
           </Button>
-          <Button variant="primary" loading={saving} disabled={!ready} onClick={() => void save()}>
+          <Button variant="primary" loading={saving} onClick={() => void save()}>
             {rule ? t("common.save") : t("identityProviders.mapping.add")}
           </Button>
         </>
@@ -472,6 +477,7 @@ function RuleDialog({
               ? t("identityProviders.mapping.groupHintDirectory", { provider: provider.name })
               : t("identityProviders.mapping.groupHint", { provider: provider.name })
           }
+          {...(missing && group === null ? { error: t("identityProviders.mapping.chooseGroup") } : {})}
         >
           <Combobox
             value={group?.value ?? null}
@@ -528,7 +534,12 @@ function RuleDialog({
         {target === "organization" ? (
           <>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label={t("identityProviders.mapping.organization")}>
+              <Field
+                label={t("identityProviders.mapping.organization")}
+                {...(missing && organization === null
+                  ? { error: t("identityProviders.mapping.chooseOrganization") }
+                  : {})}
+              >
                 <Combobox
                   value={organization?.value ?? null}
                   selectedItem={organization}
@@ -575,7 +586,7 @@ function RuleDialog({
             <p className="text-sm text-text-muted">{t("identityProviders.mapping.instanceRoleNote")}</p>
           </>
         )}
-        {group && ready ? (
+        {group && (target === "instance" || organization !== null) ? (
           preview.isError ? (
             <FailureNotice
               what={t("failures.loadGroupPreview")}

@@ -5,6 +5,7 @@ import {
   type ComboboxItem,
   Dialog,
   Field,
+  focusFirstInvalidSoon,
   Input,
   Notice,
   Select,
@@ -37,7 +38,10 @@ export function PlaceholderDialog({
     if (!accountNameSchema.safeParse(name).success) found.name = t("validation.required");
     if (!emailSchema.safeParse(email.trim()).success) found.email = t("validation.email");
     setErrors(found);
-    if (found.name || found.email) return;
+    if (found.name || found.email) {
+      focusFirstInvalidSoon();
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -124,12 +128,17 @@ export function MergePlaceholder({
   const { t } = useTranslation();
   const { toast } = useToast();
   const [target, setTarget] = useState<ComboboxItem | null>(null);
+  const [missing, setMissing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const own = target !== null && target.value === ownAccountId;
 
   const merge = async () => {
-    if (!target || own) return;
+    if (!target || own) {
+      setMissing(!target);
+      focusFirstInvalidSoon();
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -159,7 +168,14 @@ export function MergePlaceholder({
           {error}
         </Notice>
       ) : null}
-      <Field label={t("lifecycle.merge.account")} {...(own ? { error: t("lifecycle.merge.notOwn") } : {})}>
+      <Field
+        label={t("lifecycle.merge.account")}
+        {...(own
+          ? { error: t("lifecycle.merge.notOwn") }
+          : missing && !target
+            ? { error: t("lifecycle.merge.chooseAccount") }
+            : {})}
+      >
         <Combobox
           value={target?.value ?? null}
           selectedItem={target}
@@ -173,13 +189,7 @@ export function MergePlaceholder({
         />
       </Field>
       <div>
-        <Button
-          variant="primary"
-          size="sm"
-          loading={busy}
-          disabled={!target || own}
-          onClick={() => void merge()}
-        >
+        <Button variant="primary" size="sm" loading={busy} onClick={() => void merge()}>
           {t("lifecycle.merge.action")}
         </Button>
       </div>
@@ -201,11 +211,18 @@ export function HomeOrganizationChange({
   const candidates = memberships.filter((membership) => membership.kind === "member");
   const current = candidates.find((membership) => membership.home)?.organizationId ?? "";
   const [organizationId, setOrganizationId] = useState(current);
+  const [unchanged, setUnchanged] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   if (candidates.length < 2) return null;
 
   const change = async () => {
+    if (organizationId === current) {
+      setUnchanged(true);
+      focusFirstInvalidSoon();
+      return;
+    }
+    setUnchanged(false);
     setBusy(true);
     setError(null);
     try {
@@ -233,7 +250,10 @@ export function HomeOrganizationChange({
           {error}
         </Notice>
       ) : null}
-      <Field label={t("lifecycle.home.newHome")}>
+      <Field
+        label={t("lifecycle.home.newHome")}
+        {...(unchanged && organizationId === current ? { error: t("lifecycle.home.chooseOther") } : {})}
+      >
         <Select
           aria-label={t("lifecycle.home.newHome")}
           value={organizationId}
@@ -245,13 +265,7 @@ export function HomeOrganizationChange({
         />
       </Field>
       <div>
-        <Button
-          variant="secondary"
-          size="sm"
-          loading={busy}
-          disabled={organizationId === current}
-          onClick={() => void change()}
-        >
+        <Button variant="secondary" size="sm" loading={busy} onClick={() => void change()}>
           {t("lifecycle.home.action")}
         </Button>
       </div>

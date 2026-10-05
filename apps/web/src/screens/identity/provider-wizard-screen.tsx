@@ -1,5 +1,15 @@
 import { identityProviderNameSchema } from "@pagehall/shared";
-import { Button, buttonClassName, classNames, Field, Input, Notice, Section, Skeleton } from "@pagehall/ui";
+import {
+  Button,
+  buttonClassName,
+  classNames,
+  Field,
+  focusFirstInvalidSoon,
+  Input,
+  Notice,
+  Section,
+  Skeleton,
+} from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { Check, Download, KeyRound } from "lucide-react";
@@ -340,27 +350,40 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
           <ol className="flex flex-col gap-1">
             {steps.map((name, position) => {
               const reachable = providerId ? position >= 1 : position === index;
+              const marker = (
+                <span className="flex size-icon-lg shrink-0 items-center justify-center rounded-full border border-control-border text-xs">
+                  {position < index ? <Check aria-hidden="true" className="size-icon-sm" /> : position + 1}
+                </span>
+              );
+              const stepName = t(`identityProviders.wizard.stepNames.${name}`);
               return (
                 <li key={name}>
-                  <button
-                    type="button"
-                    disabled={!reachable}
-                    aria-current={position === index ? "step" : undefined}
-                    onClick={() => goTo(position)}
-                    className={classNames(
-                      "flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left focus-visible:focus-ring disabled:cursor-not-allowed disabled:text-text-muted",
-                      position === index && "bg-selected font-semibold text-selected-text",
-                    )}
-                  >
-                    <span className="flex size-icon-lg shrink-0 items-center justify-center rounded-full border border-control-border text-xs">
-                      {position < index ? (
-                        <Check aria-hidden="true" className="size-icon-sm" />
-                      ) : (
-                        position + 1
+                  {reachable ? (
+                    <button
+                      type="button"
+                      aria-current={position === index ? "step" : undefined}
+                      onClick={() => goTo(position)}
+                      className={classNames(
+                        "flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left focus-visible:focus-ring",
+                        position === index && "bg-selected font-semibold text-selected-text",
                       )}
-                    </span>
-                    {t(`identityProviders.wizard.stepNames.${name}`)}
-                  </button>
+                    >
+                      {marker}
+                      {stepName}
+                    </button>
+                  ) : (
+                    <div className="flex items-start gap-2 px-2 py-1 text-text-muted">
+                      {marker}
+                      <span className="flex flex-col">
+                        <span>{stepName}</span>
+                        <span className="text-xs">
+                          {providerId && position === 0
+                            ? t("identityProviders.wizard.typeFixed")
+                            : t("identityProviders.wizard.stepLater")}
+                        </span>
+                      </span>
+                    </div>
+                  )}
                 </li>
               );
             })}
@@ -632,7 +655,10 @@ function OidcConnectionStep({
     const credential = credentialInput(draft.credential);
     if (!credential.ok) found[credential.field] = t("validation.required");
     setErrors(found);
-    if (Object.keys(found).length > 0) return null;
+    if (Object.keys(found).length > 0) {
+      focusFirstInvalidSoon();
+      return null;
+    }
     const config = { clientId: draft.clientId.trim(), domains: common.domains };
     if (preset === "entraId") return { preset: "entraId", ...config, tenantId: draft.tenantId.trim() };
     if (preset === "google") return { preset: "google", ...config };
