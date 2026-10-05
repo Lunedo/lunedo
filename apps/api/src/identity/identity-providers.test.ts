@@ -329,6 +329,9 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     const browser = new TestClient(test.app);
     const response = await signInThroughProvider(browser, { sub: "existing-subject", email: existing.email });
     expect(response.headers.location).toBe("/sign-in/link");
+    expect([response.headers["set-cookie"]].flat()).toContainEqual(
+      expect.stringMatching(/^__Host-pagehall-link=[\w-]+; Path=\/; Max-Age=900; /),
+    );
     expect((await browser.get("/api/v1/auth/link")).json()).toMatchObject({
       providerName: "Company login",
       email: existing.email,
@@ -357,6 +360,16 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     ]);
     const identities = await owner.get(`/api/v1/accounts/${existing.id}/identities`);
     expect(identities.json()).toHaveLength(1);
+  });
+
+  it("lets a person decline a link after a wrong password", async () => {
+    const existing = await createAccount(test, "declining.person@pagehall.test");
+    const browser = new TestClient(test.app);
+    await signInThroughProvider(browser, { sub: "declining-subject", email: existing.email });
+    expect((await browser.post("/api/v1/auth/link", { password: "wrong password" })).statusCode).toBe(401);
+    const declined = await browser.post("/api/v1/auth/link/decline");
+    expect(declined.statusCode).toBe(200);
+    expect(declined.json().reference).toMatch(/^[0-9A-Z]{4}-[0-9A-Z]{4}$/);
   });
 
   it("answers the same for known and unknown addresses and limits the questions per client", async () => {

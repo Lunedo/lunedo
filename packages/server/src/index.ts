@@ -55,6 +55,7 @@ export { type AuditChange, type AuditPresentation, presentAuditEntry } from "./a
 export type { AuditCursor, AuditEntry, AuditFilter } from "./audit/reader.js";
 export { auditRetentionSetting } from "./audit/retention.js";
 export type { FactorAdded } from "./auth/account-security.js";
+export { IDENTITY_LINK_LIFETIME_MS } from "./auth/challenges.js";
 export { BusyError } from "./auth/concurrency.js";
 export type { EmergencyRecipients } from "./auth/emergency-recipients.js";
 export {

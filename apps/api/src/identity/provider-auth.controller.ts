@@ -4,6 +4,7 @@ import {
   type AuthenticationResponseJSON,
   type CallbackResult,
   generateToken,
+  IDENTITY_LINK_LIFETIME_MS,
   OrganizationError,
   ProviderResponseError,
   RateLimitedError,
@@ -55,7 +56,7 @@ import {
 } from "./schemas.js";
 
 const TAG = "Identity providers";
-const LINK_MAX_AGE_SECONDS = 5 * 60;
+const LINK_MAX_AGE_SECONDS = IDENTITY_LINK_LIFETIME_MS / 1000;
 const accountIdParams = z.object({ accountId: identityParams.shape.accountId }).strict();
 const ownIdentityParams = z.object({ identityId: identityParams.shape.identityId }).strict();
 const account = { type: "account", param: "accountId" } as const;

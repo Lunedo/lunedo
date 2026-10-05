@@ -1241,6 +1241,7 @@
       "signedInAs": "Angemeldet als {email}",
       "verified": "Bestätigt",
       "password": "Passwort von {name}",
+      "wrongPassword": "Das ist nicht das Pagehall-Passwort von {name}. Gib es erneut ein oder setze es mit „Passwort vergessen?“ auf der Anmeldeseite zurück.",
       "secondFactor": "Zweiter Faktor",
       "factors": {
         "totp": "Authenticator-App",
