@@ -440,6 +440,33 @@ describe("adding an LDAP directory", () => {
     expect(screen.queryByRole("switch", { name: "Use StartTLS" })).toBeNull();
   });
 
+  it("says which attribute and value found nobody and suggests the sign-in name", async () => {
+    adminApi({
+      [`GET ${BASE}/${LDAP}`]: () => ({ body: ldapProvider() }),
+      [`POST ${BASE}/${LDAP}/directory-test`]: () => ({
+        body: {
+          steps: [
+            { step: "connection", ok: true, detail: null },
+            { step: "certificate", ok: true, detail: null },
+            { step: "serviceAccount", ok: true, detail: null },
+            { step: "search", ok: false, detail: "No person matches the search" },
+          ],
+          sample: null,
+          attributes: [],
+          searched: { attribute: "userPrincipalName", value: "lena" },
+        },
+      }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/new?providerId=${LDAP}&step=2`);
+    await userEvent.type(await screen.findByLabelText("Test person"), "lena");
+    await userEvent.click(screen.getByRole("button", { name: "Read attributes" }));
+    expect(await screen.findByText("No person has userPrincipalName = lena.")).toBeTruthy();
+    expect(
+      screen.getByText(/Enter the full address, or choose another attribute under Sign-in name/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/check the base DNs/)).toBeNull();
+  });
+
   it("goes back to the connection after saving and links a missing CA certificate to it as a warning", async () => {
     adminApi({
       [`GET ${BASE}/${LDAP}`]: () => ({ body: ldapProvider() }),
@@ -978,6 +1005,7 @@ describe("SAML and LDAP providers in the list and the details", () => {
             { name: "objectGUID", values: ["972e766c-c3f5-49d6-96f6-d904e89e292c"] },
             { name: "userPrincipalName", values: ["alice@pagehall.lab"] },
           ],
+          searched: { attribute: "userPrincipalName", value: "alice@pagehall.lab" },
         },
       }),
     });
@@ -987,7 +1015,7 @@ describe("SAML and LDAP providers in the list and the details", () => {
     ).toBeGreaterThan(0);
     await userEvent.type(screen.getByLabelText("Test person"), "alice@pagehall.lab");
     await userEvent.click(screen.getByRole("button", { name: "Read attributes" }));
-    expect(await screen.findByText("The directory returned 3 attributes for this person.")).toBeTruthy();
+    expect(await screen.findByText("The directory returned 3 attributes for Alice Admin.")).toBeTruthy();
     expect(
       screen.getAllByText(/The directory returned no value of this attribute for the test person/),
     ).toHaveLength(2);

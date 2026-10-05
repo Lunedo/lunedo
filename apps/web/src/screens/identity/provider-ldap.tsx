@@ -546,15 +546,30 @@ function TestPersonLookup({
     action: string;
     certificate: boolean;
   } | null>(null);
-  const [count, setCount] = useState<number | null>(null);
+  const [found, setFound] = useState<string | null>(null);
   const run = async () => {
     setBusy(true);
     setProblem(null);
-    setCount(null);
+    setFound(null);
     try {
       const result = await testDirectory(provider.id, signInName.trim() === "" ? null : signInName.trim());
       const failed = result.steps.find((step) => !step.ok);
+      if (failed?.step === "search" && result.searched) {
+        const { attribute, value } = result.searched;
+        onFound([]);
+        setProblem({
+          title: t("identityProviders.ldap.noMatchTitle"),
+          detail: t("identityProviders.ldap.noMatch", { attribute, value }),
+          action:
+            (attribute === "mail" || attribute === "userPrincipalName") && !value.includes("@")
+              ? t("identityProviders.ldap.noMatchAddress", { attribute })
+              : t("identityProviders.ldap.noMatchOther"),
+          certificate: false,
+        });
+        return;
+      }
       if (failed) {
+        onFound([]);
         setProblem({
           title: t("identityProviders.directoryTest.failed", {
             step: t(`identityProviders.directoryTest.steps.${failed.step}`),
@@ -569,7 +584,13 @@ function TestPersonLookup({
         name: attribute.name,
         example: attribute.values[0] ?? null,
       }));
-      setCount(attributes.length);
+      const sample = result.sample;
+      const person = sample?.displayName ?? sample?.signInName ?? sample?.email ?? sample?.subject ?? "";
+      setFound(
+        result.searched
+          ? t("identityProviders.ldap.attributesRead", { count: attributes.length, person })
+          : t("identityProviders.ldap.attributesReadFirst", { count: attributes.length, person }),
+      );
       onFound(attributes);
     } catch (failure) {
       setProblem({
@@ -614,9 +635,7 @@ function TestPersonLookup({
           </div>
         </Notice>
       ) : null}
-      {count !== null ? (
-        <Notice variant="success">{t("identityProviders.ldap.attributesRead", { count })}</Notice>
-      ) : null}
+      {found ? <Notice variant="success">{found}</Notice> : null}
     </div>
   );
 }

@@ -383,6 +383,13 @@ export const directoryTestResultSchema = z
       })
       .nullable()
       .describe("The person found, or null."),
+    searched: z
+      .object({
+        attribute: z.string().describe("The attribute Pagehall searched."),
+        value: z.string().describe("The value it searched for."),
+      })
+      .nullable()
+      .describe("What Pagehall searched for when a sign-in name was given."),
     attributes: receivedClaimsSchema,
   })
   .describe("Result of the directory test.");

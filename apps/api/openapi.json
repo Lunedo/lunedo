@@ -53331,6 +53331,32 @@
                       ],
                       "description": "The person found, or null."
                     },
+                    "searched": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "attribute": {
+                              "type": "string",
+                              "description": "The attribute Pagehall searched."
+                            },
+                            "value": {
+                              "type": "string",
+                              "description": "The value it searched for."
+                            }
+                          },
+                          "required": [
+                            "attribute",
+                            "value"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "What Pagehall searched for when a sign-in name was given."
+                    },
                     "attributes": {
                       "type": "array",
                       "items": {
@@ -53360,6 +53386,7 @@
                   "required": [
                     "steps",
                     "sample",
+                    "searched",
                     "attributes"
                   ],
                   "additionalProperties": false,

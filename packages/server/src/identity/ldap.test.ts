@@ -424,6 +424,10 @@ describe("LDAP and Active Directory", () => {
     expect(result.attributes.find((attribute) => attribute.name === "objectGUID")?.values).toEqual([
       result.sample?.subject,
     ]);
+    expect(result.searched).toEqual({ attribute: "userPrincipalName", value: "alice@corp.example" });
+    const missing = await adapter.testDirectory(adProvider(), credentials, "alice");
+    expect(missing.steps.at(-1)).toMatchObject({ step: "search", ok: false });
+    expect(missing.searched).toEqual({ attribute: "userPrincipalName", value: "alice" });
   });
 
   it("reads the e-mail address and the display name of Active Directory from the chosen attributes", async () => {
