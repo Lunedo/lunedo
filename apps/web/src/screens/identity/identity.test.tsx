@@ -493,11 +493,11 @@ describe("setting up a provider as a draft", () => {
     expect(within(section).getByText("Old draft")).toBeTruthy();
     expect(within(section).getByText(/nobody signs in through it until the setup is finished/)).toBeTruthy();
     expect(screen.getByText("Setup not finished")).toBeTruthy();
-    const removeButtons = within(section).getAllByRole("button", { name: "Remove" });
+    const removeButtons = within(section).getAllByRole("button", { name: "Remove draft" });
     await userEvent.click(removeButtons[1] as HTMLElement);
     await userEvent.click(
       within(await screen.findByRole("dialog", { name: "Remove the draft Old draft?" })).getByRole("button", {
-        name: "Remove",
+        name: "Remove draft",
       }),
     );
     await waitFor(() =>

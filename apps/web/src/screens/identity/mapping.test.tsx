@@ -403,9 +403,9 @@ describe("group mapping", () => {
     expect(within(renewed).getByText(/keeps working for seven days/)).toBeTruthy();
     await userEvent.click(within(renewed).getByRole("button", { name: "Done" }));
     const old = (await screen.findByText("phscim_AbCdEf…")).closest("li") as HTMLElement;
-    await userEvent.click(within(old).getByRole("button", { name: "Remove" }));
+    await userEvent.click(within(old).getByRole("button", { name: "Remove token" }));
     const confirm = await screen.findByRole("dialog", { name: "Remove this token?" });
-    await userEvent.click(within(confirm).getByRole("button", { name: "Remove" }));
+    await userEvent.click(within(confirm).getByRole("button", { name: "Remove token" }));
     await waitFor(() => expect(requests.some((request) => request.method === "DELETE")).toBe(true));
     expect(await screen.findByText("Token removed")).toBeTruthy();
   });

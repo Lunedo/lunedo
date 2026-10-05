@@ -787,7 +787,7 @@ describe("SAML and LDAP providers in the list and the details", () => {
     expect(screen.getByRole("switch", { name: "Use StartTLS" }).getAttribute("aria-disabled")).toBe("true");
     await userEvent.click(screen.getByRole("button", { name: "Remove CA certificate" }));
     const confirm = await screen.findByRole("dialog", { name: "Remove the CA certificate?" });
-    await userEvent.click(within(confirm).getByRole("button", { name: "Remove" }));
+    await userEvent.click(within(confirm).getByRole("button", { name: "Remove certificate" }));
     expect(await screen.findByText("No CA certificate uploaded")).toBeTruthy();
 
     expect(screen.getByText(/A directory password proves no second factor/)).toBeTruthy();

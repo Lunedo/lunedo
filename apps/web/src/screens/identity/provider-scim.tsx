@@ -175,7 +175,7 @@ export function ScimTab({ provider, canManage }: { provider: IdentityProvider; c
                             icon={Trash2}
                             onClick={() => setRemoving(token)}
                           >
-                            {t("common.remove")}
+                            {t("common.removeToken")}
                           </Button>
                         </div>
                       ) : undefined
@@ -263,7 +263,7 @@ export function ScimTab({ provider, canManage }: { provider: IdentityProvider; c
             ? "identityProviders.scim.removeLast"
             : "identityProviders.scim.removeDescription",
         )}
-        confirmLabel={t("common.remove")}
+        confirmLabel={t("common.removeToken")}
         cancelLabel={t("common.cancel")}
         destructive
         onConfirm={async () => {

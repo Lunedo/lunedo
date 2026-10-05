@@ -874,7 +874,14 @@
     "yes": "Ja",
     "dangerZone": "Gefahrenbereich",
     "typeToConfirm": "Gib {name} zur Bestätigung ein",
-    "nameMismatch": "Der Name stimmt nicht überein. Gib ihn genau so ein, wie er angezeigt wird, auch mit Groß- und Kleinschreibung."
+    "nameMismatch": "Der Name stimmt nicht überein. Gib ihn genau so ein, wie er angezeigt wird, auch mit Groß- und Kleinschreibung.",
+    "removeLogo": "Logo entfernen",
+    "removeToken": "Token entfernen",
+    "removeDraft": "Entwurf entfernen",
+    "removeCertificate": "Zertifikat entfernen",
+    "removeDomain": "Domain entfernen",
+    "deleteRole": "Rolle löschen",
+    "removeCredential": "Zugang entfernen"
   },
   "ui": {
     "clear": "Leeren",

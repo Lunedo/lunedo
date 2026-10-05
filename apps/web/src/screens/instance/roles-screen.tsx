@@ -141,7 +141,7 @@ export function InstanceRolesScreen() {
                     }
                     items={[
                       { label: t("common.edit"), onSelect: () => setEditing(role) },
-                      { label: t("common.delete"), danger: true, onSelect: () => setDeleting(role) },
+                      { label: t("common.deleteRole"), danger: true, onSelect: () => setDeleting(role) },
                     ]}
                   />
                 ) : null,
@@ -246,7 +246,7 @@ export function InstanceRolesScreen() {
         }}
         title={t("roles.deleteTitle", { name: deleting?.name ?? "" })}
         description={t("roles.deleteDescription")}
-        confirmLabel={t("common.delete")}
+        confirmLabel={t("common.deleteRole")}
         cancelLabel={t("common.cancel")}
         destructive
         onConfirm={async () => {

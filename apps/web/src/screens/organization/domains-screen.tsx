@@ -85,7 +85,7 @@ export function DomainsScreen() {
               actions={
                 manageDomains ? (
                   <Button variant="danger" size="sm" onClick={() => setRemoving(entry.domain)}>
-                    {t("common.remove")}
+                    {t("common.removeDomain")}
                   </Button>
                 ) : null
               }
@@ -145,7 +145,7 @@ export function DomainsScreen() {
         }}
         title={t("organization.domains.removeTitle", { domain: removing ?? "" })}
         description={t("organization.domains.removeDescription")}
-        confirmLabel={t("common.remove")}
+        confirmLabel={t("common.removeDomain")}
         cancelLabel={t("common.cancel")}
         destructive
         onConfirm={async () => {

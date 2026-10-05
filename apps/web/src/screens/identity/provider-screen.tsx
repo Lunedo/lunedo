@@ -456,7 +456,7 @@ function LogoRow({ provider, canManage }: { provider: IdentityProvider; canManag
               </Button>
               {logo ? (
                 <Button variant="danger" icon={Trash2} onClick={() => setRemoving(true)}>
-                  {t("common.remove")}
+                  {t("common.removeLogo")}
                 </Button>
               ) : null}
             </>
@@ -466,7 +466,7 @@ function LogoRow({ provider, canManage }: { provider: IdentityProvider; canManag
             onOpenChange={setRemoving}
             title={t("identityProviders.logo.removeTitle")}
             description={t("identityProviders.logo.removeDescription")}
-            confirmLabel={t("common.remove")}
+            confirmLabel={t("common.removeLogo")}
             cancelLabel={t("common.cancel")}
             destructive
             onConfirm={async () => {

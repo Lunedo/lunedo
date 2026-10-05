@@ -222,7 +222,7 @@ function LogoRow({
               </Button>
               {organization.logoRef ? (
                 <Button variant="danger" icon={Trash2} onClick={() => setRemoving(true)}>
-                  {t("common.remove")}
+                  {t("common.removeLogo")}
                 </Button>
               ) : null}
             </>
@@ -232,7 +232,7 @@ function LogoRow({
             onOpenChange={setRemoving}
             title={t("organization.general.removeLogoTitle")}
             description={t("organization.general.removeLogoDescription")}
-            confirmLabel={t("common.remove")}
+            confirmLabel={t("common.removeLogo")}
             cancelLabel={t("common.cancel")}
             destructive
             onConfirm={async () => {

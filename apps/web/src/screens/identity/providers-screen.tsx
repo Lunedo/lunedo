@@ -114,7 +114,7 @@ function UnfinishedSetups({ providers, canManage }: { providers: IdentityProvide
                 </Button>
                 {item.draft ? (
                   <Button size="sm" variant="danger" icon={Trash2} onClick={() => setRemoving(item.draft)}>
-                    {t("common.remove")}
+                    {t("common.removeDraft")}
                   </Button>
                 ) : null}
               </span>
@@ -127,7 +127,7 @@ function UnfinishedSetups({ providers, canManage }: { providers: IdentityProvide
         onOpenChange={(next) => (next ? undefined : setRemoving(null))}
         title={t("identityProviders.unfinished.removeTitle", { name: removing?.name ?? "" })}
         description={t("identityProviders.unfinished.removeDescription")}
-        confirmLabel={t("common.remove")}
+        confirmLabel={t("common.removeDraft")}
         cancelLabel={t("common.cancel")}
         destructive
         onConfirm={async () => {

@@ -874,7 +874,14 @@
     "yes": "Yes",
     "dangerZone": "Danger zone",
     "typeToConfirm": "Type {name} to confirm",
-    "nameMismatch": "The name does not match. Type it exactly as shown, including capitals."
+    "nameMismatch": "The name does not match. Type it exactly as shown, including capitals.",
+    "removeLogo": "Remove logo",
+    "removeToken": "Remove token",
+    "removeDraft": "Remove draft",
+    "removeCertificate": "Remove certificate",
+    "removeDomain": "Remove domain",
+    "deleteRole": "Delete role",
+    "removeCredential": "Remove credential"
   },
   "ui": {
     "clear": "Clear",

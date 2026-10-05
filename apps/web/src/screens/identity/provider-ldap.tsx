@@ -310,7 +310,7 @@ export function CaCertificateSection({
         onOpenChange={setRemoving}
         title={t("identityProviders.ldap.caRemoveTitle")}
         description={t("identityProviders.ldap.caRemoveDescription")}
-        confirmLabel={t("common.remove")}
+        confirmLabel={t("common.removeCertificate")}
         cancelLabel={t("common.cancel")}
         destructive
         onConfirm={async () => {

@@ -253,7 +253,7 @@ export function GraphMailForm({
                       icon={Trash2}
                       onClick={() => setRemoving(credential)}
                     >
-                      {t("common.remove")}
+                      {t("common.removeCredential")}
                     </Button>
                   </div>
                 }
@@ -320,7 +320,7 @@ export function GraphMailForm({
         }}
         title={t("mail.graph.removeTitle")}
         description={t("mail.graph.removeDescription")}
-        confirmLabel={t("common.remove")}
+        confirmLabel={t("common.removeCredential")}
         cancelLabel={t("common.cancel")}
         destructive
         onConfirm={async () => {
