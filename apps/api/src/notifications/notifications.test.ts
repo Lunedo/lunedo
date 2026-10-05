@@ -314,6 +314,31 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
       expect(colleague.changes).not.toContainEqual(accountChange);
       expect(colleague.changes).not.toContainEqual(tokenChange);
       expect(stranger.changes).toEqual([]);
+
+      const role = await owner.post("/api/v1/instance/roles", {
+        name: "Account readers",
+        areas: { accounts: "view" },
+      });
+      expect(role.statusCode).toBe(201);
+      const given = await owner.post("/api/v1/instance/role-assignments", {
+        role: { customRoleId: role.json().id },
+        principal: { kind: "account", id: member.id },
+      });
+      expect(given.statusCode).toBe(201);
+      const assignment = {
+        scope: "organization",
+        organizationId: elsewhere.json().id,
+        target: "roleAssignment",
+      };
+      await test.runtime.audit.recordAlone({
+        name: "role.unassigned",
+        targetId: randomUUID(),
+        scope: { type: "organization", id: elsewhere.json().id },
+        fields: { role: "administrator", principalKind: "account", principalId: ownerId, reason: "removed" },
+      });
+      await expect.poll(() => administrator.changes, { timeout: 5000 }).toContainEqual(assignment);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(colleague.changes).not.toContainEqual(assignment);
     } finally {
       for (const response of responses) response.destroy();
       await second?.close();

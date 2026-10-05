@@ -29,6 +29,14 @@ const INSTANCE_VIEWERS: Partial<Record<AuditChangeSignal["target"], InstanceActi
   mappingRule: "instance.signIn.view",
 };
 
+const INSTANCE_VIEWERS_OF_ORGANIZATION_OBJECTS: Partial<Record<AuditChangeSignal["target"], InstanceAction>> =
+  {
+    account: "instance.accounts.view",
+    organization: "instance.organizations.view",
+    identityProvider: "instance.signIn.view",
+    mappingRule: "instance.signIn.view",
+  };
+
 const ORGANIZATION_VIEWERS: Partial<Record<AuditChangeSignal["target"], OrganizationAction>> = {
   account: "organization.members.view",
   invitation: "organization.members.view",
@@ -217,16 +225,17 @@ data: ${JSON.stringify(signal)}
             : { type: "instance" };
         return (await services.authorization.explain(principal, action, resource)).allowed;
       };
-      const instanceViewer = INSTANCE_VIEWERS[signal.target];
       if (signal.scope === "organization") {
         if (!signal.organizationId) return false;
         const viewer = ORGANIZATION_VIEWERS[signal.target];
+        const across = INSTANCE_VIEWERS_OF_ORGANIZATION_OBJECTS[signal.target];
         return (
           (viewer !== undefined && (await allowed(viewer, "organization"))) ||
           (await allowed("organization.audit.view", "organization")) ||
-          (instanceViewer !== undefined && (await allowed(instanceViewer, "instance")))
+          (across !== undefined && (await allowed(across, "instance")))
         );
       }
+      const instanceViewer = INSTANCE_VIEWERS[signal.target];
       return (
         (instanceViewer !== undefined && (await allowed(instanceViewer, "instance"))) ||
         (await allowed("instance.audit.view", "instance"))
