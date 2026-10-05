@@ -102,7 +102,6 @@ export function LdapConnectionFields({
   canManage: boolean;
 }) {
   const { t } = useTranslation();
-  const update = useLdapUpdate(provider);
   const checked = useCheckedUpdate(provider, () => ldapConfigInput(provider.config));
   const tracker = useSaveStates();
   const config = provider.config;
