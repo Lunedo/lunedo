@@ -31,6 +31,7 @@ export interface AccessImpact {
   raised: number;
   lowered: number;
   changes: RoleChange[];
+  unlisted: number;
   truncated: boolean;
 }
 
@@ -143,6 +144,7 @@ export async function accessImpact(
   executor: Executor,
   before: SpaceAccessState,
   after: SpaceAccessState,
+  listable: (account: SQL) => SQL = () => sql`true`,
 ): Promise<AccessImpact> {
   const memberOf = (organizationId: string | null) =>
     organizationId === null ? sql`false` : activeMembership(sql`${organizationId}::uuid`, sql`a.id`);
@@ -155,31 +157,38 @@ export async function accessImpact(
     losing: string;
     raised: string;
     lowered: string;
+    unlisted: string;
+    listable: boolean;
   }>(sql`
     with cand as (
       select a.id, a.name, a.type, ${memberOf(before.organizationId)} as member_before,
-        ${memberOf(after.organizationId)} as member_after
+        ${memberOf(after.organizationId)} as member_after, ${listable(sql`a.id`)} as listable
       from accounts a
       where a.state = 'active' and a.id in (${candidates(before, after)})
     ), ranks as (
-      select c.id, c.name, ${rankOf(before, sql`c.member_before`)} as before_rank,
+      select c.id, c.name, c.listable, ${rankOf(before, sql`c.member_before`)} as before_rank,
         ${rankOf(after, sql`c.member_after`)} as after_rank
       from cand c
-    ), changed as (select * from ranks where before_rank <> after_rank)
-    select id, name, before_rank, after_rank,
-      count(*) filter (where before_rank = 0) over () as gaining,
-      count(*) filter (where after_rank = 0) over () as losing,
-      count(*) filter (where before_rank > 0 and after_rank > before_rank) over () as raised,
-      count(*) filter (where after_rank > 0 and after_rank < before_rank) over () as lowered
-    from changed order by lower(name), id limit ${IMPACT_LIST_LIMIT + 1}`);
-  const rows = result.rows;
-  const first = rows[0];
+    ), changed as (select * from ranks where before_rank <> after_rank),
+    counted as (
+      select id, name, listable, before_rank, after_rank,
+        count(*) filter (where before_rank = 0) over () as gaining,
+        count(*) filter (where after_rank = 0) over () as losing,
+        count(*) filter (where before_rank > 0 and after_rank > before_rank) over () as raised,
+        count(*) filter (where after_rank > 0 and after_rank < before_rank) over () as lowered,
+        count(*) filter (where not listable) over () as unlisted
+      from changed
+    )
+    select * from counted order by listable desc, lower(name), id limit ${IMPACT_LIST_LIMIT + 1}`);
+  const first = result.rows[0];
+  const rows = result.rows.filter((row) => row.listable);
   const role = (rank: number): SpaceRole | null => (rank > 0 ? (spaceRoles[rank - 1] ?? null) : null);
   return {
     gaining: Number(first?.gaining ?? 0),
     losing: Number(first?.losing ?? 0),
     raised: Number(first?.raised ?? 0),
     lowered: Number(first?.lowered ?? 0),
+    unlisted: Number(first?.unlisted ?? 0),
     truncated: rows.length > IMPACT_LIST_LIMIT,
     changes: rows.slice(0, IMPACT_LIST_LIMIT).map((row) => ({
       accountId: row.id,

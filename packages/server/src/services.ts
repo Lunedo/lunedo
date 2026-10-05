@@ -375,6 +375,7 @@ export function createAccountServices(options: {
     audit,
     spaces,
     holders: new SpaceHolders(people),
+    people,
   });
   const personalSpaces = new PersonalSpaceService({ database, audit, authorization, spaces });
   const documents = new PageDocumentService({
@@ -383,7 +384,7 @@ export function createAccountServices(options: {
     people,
     origin: options.nodeId ?? uuidv7(),
   });
-  const tree = new TreeService({ database, authorization, documents });
+  const tree = new TreeService({ database, authorization, documents, people });
   setupRegistry.register(
     ...builtinSetupSteps({
       database,

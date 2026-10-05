@@ -24,7 +24,7 @@ import { insertPage } from "./items.js";
 import { isValidSpaceKey, normalizeSpaceKey, spaceKeyCandidates, suggestSpaceKey } from "./keys.js";
 import type { PeopleService } from "./people.js";
 import type { SpaceRole, SpaceVisibility } from "./schema.js";
-import { defaultSpacePermissionsSetting, type SpaceGrant } from "./settings.js";
+import { type DefaultSpacePermissions, defaultSpacePermissionsSetting, type SpaceGrant } from "./settings.js";
 import { signalSpaceChange } from "./signals.js";
 
 export const SPACE_NAME_MAX_LENGTH = 100;
@@ -240,6 +240,28 @@ export class SpaceService {
     return this.#settings.get(defaultSpacePermissionsSetting, { organization: organizationId });
   }
 
+  async setDefaultPermissions(
+    actor: Principal,
+    organizationId: string,
+    value: DefaultSpacePermissions,
+    holders: HolderValidation,
+  ): Promise<void> {
+    await this.#database.transaction(async (tx) => {
+      for (const grant of value.grants) {
+        await holders.validate(tx, { id: organizationId, organizationId, ownerId: null }, grant, actor);
+      }
+      await this.#settings.set(
+        defaultSpacePermissionsSetting,
+        { organization: organizationId },
+        "organization",
+        value,
+        {
+          tx,
+        },
+      );
+    });
+  }
+
   async create(
     actor: Principal,
     organizationId: string,
@@ -357,13 +379,18 @@ export class SpaceService {
     }
   }
 
-  async visibilityImpact(spaceId: string, visibility: SpaceVisibility): Promise<AccessImpact> {
+  async visibilityImpact(
+    viewer: Principal,
+    spaceId: string,
+    visibility: SpaceVisibility,
+  ): Promise<AccessImpact> {
     const space = await this.require(spaceId);
     const grants = await currentGrants(this.#database, spaceId);
     return accessImpact(
       this.#database,
       { organizationId: space.organizationId, visibility: space.visibility, grants },
       { organizationId: space.organizationId, visibility, grants },
+      (account) => this.#people.visibleCondition(viewer, account),
     );
   }
 

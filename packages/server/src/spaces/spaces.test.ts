@@ -317,13 +317,32 @@ describe.skipIf(!baseUrl)("spaces", () => {
       expect(await auditNames(created.id)).toContain("space.updated");
     });
 
+    it("counts but does not name people the caller may not see", async () => {
+      const org = await organization();
+      const creator = await member(org.id);
+      await account({ name: "Somebody elsewhere" });
+      const created = await space(org.id, creator);
+      const impact = await test.services.spaces.visibilityImpact(
+        accountPrincipal(creator),
+        created.id,
+        "instance",
+      );
+      expect(impact.changes.map((change) => change.name)).not.toContain("Somebody elsewhere");
+      expect(impact.unlisted).toBeGreaterThan(0);
+      expect(impact.gaining).toBe(impact.changes.length + impact.unlisted);
+    });
+
     it("shows who gains and loses read access when the visibility changes", async () => {
       const org = await organization();
       const creator = await member(org.id, "member", "Creator");
       const regular = await member(org.id, "member", "Regular member");
       await member(org.id, "guest");
       const created = await space(org.id, creator);
-      const impact = await test.services.spaces.visibilityImpact(created.id, "organization");
+      const impact = await test.services.spaces.visibilityImpact(
+        accountPrincipal(creator),
+        created.id,
+        "organization",
+      );
       const names = impact.changes.map((change) => change.name);
       expect(names).toContain("Regular member");
       expect(names).not.toContain("Creator");
@@ -332,7 +351,11 @@ describe.skipIf(!baseUrl)("spaces", () => {
       expect(impact.losing).toBe(0);
       await test.services.spaces.changeVisibility(accountPrincipal(creator), created.id, "organization");
       expect(await role(regular, created.id)).toBe("reader");
-      const back = await test.services.spaces.visibilityImpact(created.id, "private");
+      const back = await test.services.spaces.visibilityImpact(
+        accountPrincipal(creator),
+        created.id,
+        "private",
+      );
       expect(back.losing).toBe(impact.gaining);
     });
   });

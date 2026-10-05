@@ -7,6 +7,7 @@ import type { Database, Executor, Transaction } from "../database/database.js";
 import { actorIdOf, currentGrants, SpaceError } from "./common.js";
 import { insertInitialDocument, type PageDocumentService } from "./documents.js";
 import { positionBetween } from "./fractional-index.js";
+import type { PeopleService } from "./people.js";
 import type { PageWidth, TreeItemKind } from "./schema.js";
 import { signalSpaceChange } from "./signals.js";
 
@@ -183,15 +184,18 @@ export class TreeService {
   readonly #database: Database;
   readonly #authorization: AuthorizationService;
   readonly #documents: PageDocumentService;
+  readonly #people: PeopleService;
 
   constructor(options: {
     database: Database;
     authorization: AuthorizationService;
     documents: PageDocumentService;
+    people: PeopleService;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
     this.#documents = options.documents;
+    this.#people = options.people;
   }
 
   async followTitleLink(
@@ -471,7 +475,9 @@ export class TreeService {
         grants: await currentGrants(this.#database, spaceId),
       };
     };
-    return accessImpact(this.#database, await state(sourceSpaceId), await state(targetSpaceId));
+    return accessImpact(this.#database, await state(sourceSpaceId), await state(targetSpaceId), (account) =>
+      this.#people.visibleCondition(actor, account),
+    );
   }
 
   async move(

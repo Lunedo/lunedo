@@ -147,17 +147,20 @@ export class SpacePermissionService {
   readonly #audit: AuditLog;
   readonly #spaces: SpaceService;
   readonly #holders: HolderValidation;
+  readonly #people: PeopleService;
 
   constructor(options: {
     database: Database;
     audit: AuditLog;
     spaces: SpaceService;
     holders: HolderValidation;
+    people: PeopleService;
   }) {
     this.#database = options.database;
     this.#audit = options.audit;
     this.#spaces = options.spaces;
     this.#holders = options.holders;
+    this.#people = options.people;
   }
 
   get holders(): HolderValidation {
@@ -210,7 +213,7 @@ export class SpacePermissionService {
       const space = await this.#spaces.require(spaceId, tx);
       const { before, after } = await this.#states(space, change, tx);
       if (change.action === "grant") await this.#validateGrant(tx, space, change, actor);
-      return accessImpact(tx, before, after);
+      return accessImpact(tx, before, after, (account) => this.#people.visibleCondition(actor, account));
     });
   }
 
