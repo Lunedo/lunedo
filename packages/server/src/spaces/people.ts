@@ -1,0 +1,80 @@
+import { type SQL, sql } from "drizzle-orm";
+import type { Principal } from "../accounts/principal.js";
+import type { AuthorizationService } from "../authorization/service.js";
+import type { Database, Executor } from "../database/database.js";
+import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
+
+export interface Person {
+  id: string;
+  name: string;
+  email: string | null;
+  type: string;
+}
+
+export class PeopleService {
+  readonly #database: Database;
+  readonly #authorization: AuthorizationService;
+
+  constructor(options: { database: Database; authorization: AuthorizationService }) {
+    this.#database = options.database;
+    this.#authorization = options.authorization;
+  }
+
+  visibleCondition(viewer: Principal, account: SQL): SQL {
+    if (viewer.type === "system") return sql`true`;
+    if (viewer.type === "anonymous") return sql`false`;
+    const viewerId = sql`${viewer.id}::uuid`;
+    return sql`(${account} = ${viewerId}
+      or exists (select 1 from memberships mv join memberships ma on ma.organization_id = mv.organization_id
+        where mv.account_id = ${viewerId} and mv.kind = 'member'
+          and (mv.expires_at is null or mv.expires_at > now())
+          and ma.account_id = ${account} and (ma.expires_at is null or ma.expires_at > now()))
+      or exists (select 1 from service_accounts sa join memberships mv on mv.organization_id = sa.organization_id
+        where sa.account_id = ${account} and mv.account_id = ${viewerId} and mv.kind = 'member'
+          and (mv.expires_at is null or mv.expires_at > now()))
+      or exists (select 1 from space_permissions sp join spaces vs on vs.id = sp.space_id
+        where sp.principal_kind = 'account' and sp.principal_id = ${account}
+          and ${this.#authorization.spaceFilter(viewer, sql`vs`)}))`;
+  }
+
+  async canSee(viewer: Principal, accountId: string, executor: Executor = this.#database): Promise<boolean> {
+    const result = await executor.execute<{ visible: boolean }>(sql`
+      select ${this.visibleCondition(viewer, sql`a.id`)} as visible
+      from accounts a where a.id = ${accountId} and a.state in ('active', 'invited')`);
+    return result.rows[0]?.visible === true;
+  }
+
+  async search(viewer: Principal, page: PageRequest = FIRST_PAGE): Promise<Page<Person>> {
+    const term = page.search?.trim() ?? "";
+    const pattern = `%${term.replace(/[\\%_]/g, (character) => `\\${character}`)}%`;
+    const sortName = sql`lower(a.name)`;
+    const result = await this.#database.execute<{
+      id: string;
+      name: string;
+      email: string | null;
+      type: string;
+      sort_name: string;
+    }>(sql`
+      select a.id, a.name, a.email, a.type::text as type, ${sortName} as sort_name
+      from accounts a
+      where a.state = 'active' and ${this.visibleCondition(viewer, sql`a.id`)}
+        ${term ? sql`and (a.name ilike ${pattern} or a.email ilike ${pattern})` : sql``}
+        ${page.after ? sql`and ${afterKey([sortName, sql`a.id`], page.after)}` : sql``}
+      order by ${sortName}, a.id
+      limit ${pageLimit(page)}`);
+    return toPage(
+      result.rows,
+      page,
+      (row) => [row.sort_name, row.id],
+      (row) => ({ id: row.id, name: row.name, email: row.email, type: row.type }),
+    );
+  }
+
+  async names(ids: readonly string[], executor: Executor = this.#database): Promise<Map<string, string>> {
+    if (ids.length === 0) return new Map();
+    const result = await executor.execute<{ id: string; name: string }>(
+      sql`select id, name from accounts where id = any(${sql.param([...new Set(ids)])}::uuid[])`,
+    );
+    return new Map(result.rows.map((row) => [row.id, row.name]));
+  }
+}

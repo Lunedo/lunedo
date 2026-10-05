@@ -6,4 +6,5 @@ export { createFakeSamlIdp, type FakeSamlIdp } from "./fakes/saml-idp.js";
 export { CapturingTransport, deliverPendingMail, testJobContext } from "./jobs.js";
 export { type CaughtMail, Mailpit, testMailpitUrl } from "./mailpit.js";
 export { createTestServices, type TestServices } from "./services.js";
+export { spaceFixtures } from "./spaces.js";
 export { VirtualAuthenticator } from "./webauthn.js";

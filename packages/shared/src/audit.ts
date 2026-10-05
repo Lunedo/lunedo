@@ -110,6 +110,14 @@ export const auditEventNames = [
   "apiToken.expired",
   "apiToken.rejected",
   "audit.exported",
+  "space.created",
+  "space.updated",
+  "space.permissionGranted",
+  "space.permissionChanged",
+  "space.permissionRemoved",
+  "space.administratorAppointed",
+  "space.personalTransferred",
+  "page.updateRejected",
 ] as const;
 
 export type AuditEventName = (typeof auditEventNames)[number];

@@ -1,8 +1,10 @@
-import { sql } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 import type { Principal, TokenGrant } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Executor } from "../database/database.js";
 import type { BuiltInRoleKey, PrincipalKind, RoleScope } from "../organizations/access-schema.js";
+import { grantsSpaceRole } from "../spaces/roles.js";
+import type { SpaceRole } from "../spaces/schema.js";
 import {
   type Areas,
   builtInRoleAreas,
@@ -18,14 +20,19 @@ import {
   type OrganizationFacts,
   organizationFacts,
   type RoleReference,
+  type SpaceFacts,
+  type SpaceVia,
+  spaceFacts,
   type Via,
 } from "./facts.js";
 import type { AuthorizationRegistry, RegisteredAction, Resource } from "./registry.js";
+import { spaceRoleCondition, tokenSpaceCondition } from "./space-access.js";
 
 export type Grant =
   | { kind: "system" }
   | { kind: "role"; role: RoleReference; via: Via; expiresAt: Date | null }
   | { kind: "membership"; membershipKind: string }
+  | { kind: "spaceRole"; role: SpaceRole; via: SpaceVia }
   | { kind: "rule"; rule: string };
 
 export type Denial =
@@ -39,6 +46,7 @@ export type Denial =
   | "instanceRolesDoNotGrantOrganizationAccess"
   | "roleExceedsOwnPermissions"
   | "selfExtension"
+  | "noSpaceRole"
   | "tokenScope";
 
 export interface GrantCheck {
@@ -91,6 +99,11 @@ function tokenAreas(token: TokenGrant, scope: RoleScope, organizationId: string 
 }
 
 function tokenAllows(token: TokenGrant, action: RegisteredAction, organizationId: string | null): boolean {
+  if (action.scope === "space") {
+    if (token.organizationId && token.organizationId !== organizationId) return false;
+    const level = action.spaceRole === "editor" || action.spaceRole === "admin" ? "manage" : "view";
+    return grantsLevel(token.scopes.organization?.spaces, level);
+  }
   const areas = tokenAreas(token, action.scope, organizationId);
   if (action.area && action.level) return grantsLevel(areas[action.area], action.level);
   return action.name.endsWith(".view") && Object.keys(areas).length > 0;
@@ -156,6 +169,19 @@ export class AuthorizationService {
         if (allowed) grants.push({ kind: "rule", rule: action.rule });
       }
       return limitByToken(principal, action, null, decision(grants, denials));
+    }
+
+    if (action.scope === "space") {
+      const spaceId = await this.#spaceOf(action, resource, executor);
+      if (!spaceId) return decision([], ["resourceNotFound"]);
+      const facts = await spaceFacts(executor, accountId, spaceId, { fresh });
+      if (!facts.space) return decision([], ["resourceNotFound"]);
+      if (facts.account?.state !== "active") return decision([], ["accountInactive"]);
+      const grants = this.#spaceGrants(action, facts);
+      if (action.rule && (await this.#rule(action, accountId, resource, null, executor, fresh))) {
+        grants.push({ kind: "rule", rule: action.rule });
+      }
+      return limitByToken(principal, action, facts.space.organizationId, decision(grants, ["noSpaceRole"]));
     }
 
     const organizationId = await this.#organizationOf(action, resource, executor);
@@ -407,6 +433,36 @@ export class AuthorizationService {
     if (actor.type !== "account" || !actor.token) return roles;
     const limit = tokenAreas(actor.token, scope, organizationId);
     return roles.map((role) => ({ ...role, areas: intersectAreas(role.areas, limit) }));
+  }
+
+  #spaceGrants(action: RegisteredAction, facts: SpaceFacts): Grant[] {
+    const required = action.spaceRole;
+    if (!required) return [];
+    return facts.sources
+      .filter((source) => grantsSpaceRole(source.role, required))
+      .map((source) => ({ kind: "spaceRole", role: source.role, via: source.via }));
+  }
+
+  async spaceRole(
+    accountId: string,
+    spaceId: string,
+    options: { executor?: Executor; fresh?: boolean } = {},
+  ): Promise<SpaceFacts> {
+    return spaceFacts(options.executor ?? this.#database, accountId, spaceId, {
+      fresh: options.fresh ?? false,
+    });
+  }
+
+  spaceFilter(principal: Principal, space: SQL, minimum: SpaceRole = "reader"): SQL {
+    if (principal.type === "system") return sql`true`;
+    if (principal.type === "anonymous") return sql`false`;
+    return sql`(${spaceRoleCondition(principal.id, space, minimum)} and ${tokenSpaceCondition(principal, space, minimum)})`;
+  }
+
+  async #spaceOf(action: RegisteredAction, resource: Resource, executor: Executor): Promise<string | null> {
+    if (!resource.id || !UUID.test(resource.id)) return null;
+    if (action.resourceType.type === "space") return resource.id.toLowerCase();
+    return action.resourceType.spaceOf?.(executor, resource.id.toLowerCase()) ?? null;
   }
 
   #roleGrants(action: RegisteredAction, roles: HeldRole[]): Grant[] {

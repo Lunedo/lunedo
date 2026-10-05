@@ -35,6 +35,7 @@
   ],
   "dependencies": {
     "@node-saml/node-saml": "^5.1.0",
+    "@pagehall/editor-schema": "workspace:*",
     "@pagehall/shared": "workspace:*",
     "@pagehall/tokens": "workspace:*",
     "@peculiar/x509": "^2.1.0",
@@ -53,6 +54,7 @@
     "reflect-metadata": "^0.2.2",
     "tar-stream": "^3.2.1",
     "ua-parser-js": "^2.0.10",
+    "yjs": "^13.6.33",
     "zod": "^4.6.5"
   },
   "devDependencies": {

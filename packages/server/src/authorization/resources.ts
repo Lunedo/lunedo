@@ -5,6 +5,7 @@ import {
   selfServiceOrganizationsSetting,
 } from "../organizations/settings.js";
 import type { SettingsService } from "../settings/service.js";
+import { membersCreateSpacesSetting, personalSpacesSetting } from "../spaces/settings.js";
 import { grantsLevel } from "./areas.js";
 import type { ActionDefinition, ResourceType, RuleContext } from "./registry.js";
 
@@ -50,6 +51,9 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "instance.audit.view": instanceArea("auditLog", "view"),
       "instance.audit.manage": instanceArea("auditLog", "manage"),
       "instance.breakGlass.request": instanceArea("organizations", "manage"),
+      "instance.personalSpaces.view": instanceArea("accounts", "view"),
+      "instance.personalSpaces.manage": instanceArea("accounts", "manage"),
+      "instance.personalSpace.use": { scope: "instance", rule: "personalSpace" },
     },
     rules: {
       selfService: async (context) => {
@@ -58,6 +62,13 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
         );
         if (account.rows[0]?.type !== "standard") return false;
         return settings.get(selfServiceOrganizationsSetting, {});
+      },
+      personalSpace: async (context) => {
+        const account = await context.executor.execute<{ type: string }>(
+          sql`select type from accounts where id = ${context.accountId} and state = 'active'`,
+        );
+        if (account.rows[0]?.type !== "standard") return false;
+        return settings.get(personalSpacesSetting, {});
       },
     },
   };
@@ -81,6 +92,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       },
       "organization.spaces.view": organizationArea("spaces", "view"),
       "organization.spaces.manage": organizationArea("spaces", "manage"),
+      "organization.spaces.create": { ...organizationArea("spaces", "manage"), rule: "membersCreateSpaces" },
       "organization.signIn.view": organizationArea("signInAndSecurity", "view"),
       "organization.signIn.manage": organizationArea("signInAndSecurity", "manage"),
       "organization.integrations.view": organizationArea("integrationsAndApi", "view"),
@@ -93,6 +105,12 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
         const facts = await context.organizationFacts(context.organizationId);
         if (facts.membership?.kind !== "member") return false;
         return settings.get(membersCreateGroupsSetting, organizationSettingsChain(context.organizationId));
+      },
+      membersCreateSpaces: async (context) => {
+        if (!context.organizationId) return false;
+        const facts = await context.organizationFacts(context.organizationId);
+        if (facts.membership?.kind !== "member") return false;
+        return settings.get(membersCreateSpacesSetting, organizationSettingsChain(context.organizationId));
       },
     },
   };
@@ -181,5 +199,29 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     },
   };
 
-  return [instance, organization, group, account, serviceAccount];
+  const space: ResourceType = {
+    type: "space",
+    spaceOf: async (_executor, id) => id,
+    actions: {
+      "space.view": { scope: "space", spaceRole: "reader" },
+      "space.edit": { scope: "space", spaceRole: "editor" },
+      "space.manage": { scope: "space", spaceRole: "admin" },
+    },
+  };
+
+  const item: ResourceType = {
+    type: "item",
+    spaceOf: async (executor, id) => {
+      const result = await executor.execute<{ space_id: string }>(
+        sql`select space_id from tree_items where id = ${id}`,
+      );
+      return result.rows[0]?.space_id ?? null;
+    },
+    actions: {
+      "item.view": { scope: "space", spaceRole: "reader" },
+      "item.edit": { scope: "space", spaceRole: "editor" },
+    },
+  };
+
+  return [instance, organization, group, account, serviceAccount, space, item];
 }

@@ -1,3 +1,4 @@
+import { uuidv7 } from "@pagehall/shared";
 import { AccountService } from "./accounts/accounts.js";
 import { AccountAdministrationService } from "./accounts/administration.js";
 import { InstanceAddressService } from "./accounts/instance-address.js";
@@ -81,6 +82,12 @@ import type { SettingsService } from "./settings/service.js";
 import { SetupRegistry } from "./setup/framework.js";
 import { SetupService } from "./setup/setup-service.js";
 import { builtinSetupSteps } from "./setup/steps.js";
+import { PageDocumentService } from "./spaces/documents.js";
+import { TreeService } from "./spaces/items.js";
+import { PeopleService } from "./spaces/people.js";
+import { SpaceHolders, SpacePermissionService } from "./spaces/permissions.js";
+import { PersonalSpaceService } from "./spaces/personal.js";
+import { SpaceService } from "./spaces/spaces.js";
 import { API_TOKEN_EXPIRY_SCHEDULE, ApiTokenService, apiTokenExpiryJob } from "./tokens/api-tokens.js";
 import { ServiceAccountService } from "./tokens/service-accounts.js";
 
@@ -125,6 +132,12 @@ export interface AccountServices {
   providerSync: ProviderSyncService;
   scim: ScimService;
   scimTokens: ScimTokenService;
+  people: PeopleService;
+  spaces: SpaceService;
+  spacePermissions: SpacePermissionService;
+  personalSpaces: PersonalSpaceService;
+  tree: TreeService;
+  documents: PageDocumentService;
 }
 
 export function createAccountServices(options: {
@@ -144,6 +157,7 @@ export function createAccountServices(options: {
   directoryConnector?: DirectoryConnector;
   mailTransport?: (options: SmtpOptions) => MailTransport;
   mailFetch?: typeof fetch;
+  nodeId?: string;
 }): AccountServices {
   const { database, settings, audit, encryption, jobs, logger } = options;
   const hasher = new PasswordHasher({
@@ -354,6 +368,22 @@ export function createAccountServices(options: {
     rateLimiter,
     jobs,
   });
+  const people = new PeopleService({ database, authorization });
+  const spaces = new SpaceService({ database, audit, authorization, settings, people });
+  const spacePermissions = new SpacePermissionService({
+    database,
+    audit,
+    spaces,
+    holders: new SpaceHolders(people),
+  });
+  const personalSpaces = new PersonalSpaceService({ database, audit, authorization, spaces });
+  const documents = new PageDocumentService({
+    database,
+    authorization,
+    people,
+    origin: options.nodeId ?? uuidv7(),
+  });
+  const tree = new TreeService({ database, authorization, documents });
   setupRegistry.register(
     ...builtinSetupSteps({
       database,
@@ -412,6 +442,12 @@ export function createAccountServices(options: {
     providerSync,
     scim,
     scimTokens,
+    people,
+    spaces,
+    spacePermissions,
+    personalSpaces,
+    tree,
+    documents,
   };
 }
 

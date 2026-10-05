@@ -2873,6 +2873,18 @@
       "scim": {
         "userChanged": "Account changed through SCIM",
         "groupChanged": "Group changed through SCIM"
+      },
+      "space": {
+        "created": "Space created",
+        "updated": "Space settings changed",
+        "permissionGranted": "Space permission granted",
+        "permissionChanged": "Space permission changed",
+        "permissionRemoved": "Space permission removed",
+        "administratorAppointed": "Space admin appointed",
+        "personalTransferred": "Personal space transferred"
+      },
+      "page": {
+        "updateRejected": "Page change rejected"
       }
     },
     "action": "Action",
@@ -2911,7 +2923,9 @@
       "apiToken": "API token",
       "audit": "Audit log",
       "identityProvider": "Identity provider",
-      "mappingRule": "Mapping rule"
+      "mappingRule": "Mapping rule",
+      "space": "Space",
+      "page": "Page"
     },
     "properties": {
       "value": "Value",

@@ -118,13 +118,15 @@ function organizationAreasOf(held: Held): Areas {
 type Rule =
   | "selfService"
   | "membersCreateGroups"
+  | "membersCreateSpaces"
+  | "personalSpace"
   | "homeOrganizationAdministrator"
   | "manager"
   | "memberOrManager"
   | "self";
 
 interface Expectation {
-  scope: RoleScope;
+  scope: RoleScope | "space";
   area?: Area;
   level?: AccessLevel;
   ownerOnly?: true;
@@ -166,6 +168,9 @@ const EXPECTED: Record<string, Expectation> = {
   "instance.audit.view": instance("auditLog", "view"),
   "instance.audit.manage": instance("auditLog", "manage"),
   "instance.breakGlass.request": instance("organizations", "manage"),
+  "instance.personalSpaces.view": instance("accounts", "view"),
+  "instance.personalSpaces.manage": instance("accounts", "manage"),
+  "instance.personalSpace.use": { scope: "instance", rule: "personalSpace" },
   "organization.view": { scope: "organization", membership: ALL_MEMBERSHIPS, breakGlass: true },
   "organization.leave": { scope: "organization", membership: ALL_MEMBERSHIPS },
   "organization.update": organization("settings", "manage"),
@@ -179,6 +184,7 @@ const EXPECTED: Record<string, Expectation> = {
   "organization.groups.create": organization("membersAndGroups", "manage", "membersCreateGroups"),
   "organization.spaces.view": organization("spaces", "view"),
   "organization.spaces.manage": organization("spaces", "manage"),
+  "organization.spaces.create": organization("spaces", "manage", "membersCreateSpaces"),
   "organization.signIn.view": organization("signInAndSecurity", "view"),
   "organization.signIn.manage": organization("signInAndSecurity", "manage"),
   "organization.integrations.view": organization("integrationsAndApi", "view"),
@@ -197,6 +203,11 @@ const EXPECTED: Record<string, Expectation> = {
   "account.homeOrganization.change": instance("accounts", "manage", "homeOrganizationAdministrator"),
   "serviceAccount.view": organization("integrationsAndApi", "view"),
   "serviceAccount.manage": organization("integrationsAndApi", "manage"),
+  "space.view": { scope: "space" },
+  "space.edit": { scope: "space" },
+  "space.manage": { scope: "space" },
+  "item.view": { scope: "space" },
+  "item.edit": { scope: "space" },
 };
 
 function expectedAllowed(held: Held, actionName: string): boolean {
@@ -210,12 +221,15 @@ function expectedAllowed(held: Held, actionName: string): boolean {
   const rules: Record<Rule, () => boolean> = {
     selfService: () => false,
     membersCreateGroups: () => false,
+    membersCreateSpaces: () => facts.membership === "member",
+    personalSpace: () => facts.type === "standard",
     homeOrganizationAdministrator: () => grantsLevel(organizationAreas.membersAndGroups, "manage"),
     self: () => false,
     manager: () => false,
     memberOrManager: () => facts.membership !== null && held.via === "group",
   };
   if (expectation.rule && rules[expectation.rule]()) return true;
+  if (expectation.scope === "space") return false;
   if (expectation.ownerOnly) return expectation.scope === "instance" && instanceOwner;
   const areas = expectation.scope === "instance" ? instanceAreasOf(held) : organizationAreas;
   if (expectation.scope === "organization") {
@@ -233,6 +247,8 @@ interface Fixture {
   organizationId: string;
   groupId: string;
   targetId: string;
+  spaceId: string;
+  itemId: string;
 }
 
 describe.skipIf(!baseUrl)("permission matrix", () => {
@@ -277,7 +293,24 @@ describe.skipIf(!baseUrl)("permission matrix", () => {
     );
     const targetId = await account("standard", created.id);
     await membership(created.id, targetId, "member");
-    return { organizationId: created.id, groupId: group.rows[0]?.id ?? "", targetId };
+    const space = await test.services.spaces.create(
+      { type: "account", id: owner },
+      created.id,
+      {
+        name: "Matrix space",
+        key: `M${randomUUID().slice(0, 8).replace(/-/g, "").toUpperCase()}`,
+        visibility: "private",
+        grants: [],
+      },
+      test.services.spacePermissions.holders,
+    );
+    return {
+      organizationId: created.id,
+      groupId: group.rows[0]?.id ?? "",
+      targetId,
+      spaceId: space.id,
+      itemId: space.overviewItemId ?? "",
+    };
   }
 
   async function subjectAccount(subject: Subject, target: Fixture): Promise<string> {
@@ -318,6 +351,10 @@ describe.skipIf(!baseUrl)("permission matrix", () => {
         return { type: "account", id: target.targetId };
       case "serviceAccount":
         return { type: "serviceAccount", id: target.serviceAccountId };
+      case "space":
+        return { type: "space", id: target.spaceId };
+      case "item":
+        return { type: "item", id: target.itemId };
       default:
         throw new Error(`The matrix has no resource for ${action.resourceType.type}`);
     }

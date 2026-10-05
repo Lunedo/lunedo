@@ -2870,6 +2870,18 @@
       "scim": {
         "userChanged": "Konto über SCIM geändert",
         "groupChanged": "Gruppe über SCIM geändert"
+      },
+      "space": {
+        "created": "Space erstellt",
+        "updated": "Space-Einstellungen geändert",
+        "permissionGranted": "Space-Berechtigung vergeben",
+        "permissionChanged": "Space-Berechtigung geändert",
+        "permissionRemoved": "Space-Berechtigung entfernt",
+        "administratorAppointed": "Space-Admin ernannt",
+        "personalTransferred": "Persönlicher Space übertragen"
+      },
+      "page": {
+        "updateRejected": "Seitenänderung abgelehnt"
       }
     },
     "action": "Aktion",
@@ -2908,7 +2920,9 @@
       "apiToken": "API-Token",
       "audit": "Audit-Log",
       "identityProvider": "Identitätsanbieter",
-      "mappingRule": "Gruppenzuordnung"
+      "mappingRule": "Gruppenzuordnung",
+      "space": "Space",
+      "page": "Seite"
     },
     "properties": {
       "value": "Wert",

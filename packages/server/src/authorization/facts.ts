@@ -9,6 +9,8 @@ import type {
   PrincipalKind,
   RoleScope,
 } from "../organizations/access-schema.js";
+import { highestSpaceRole } from "../spaces/roles.js";
+import type { SpaceRole, SpaceVisibility } from "../spaces/schema.js";
 import { type Areas, builtInRoleAreas, grantsLevel } from "./areas.js";
 
 export type RoleReference = { builtIn: BuiltInRoleKey } | { customRoleId: string; name: string };
@@ -248,6 +250,120 @@ export async function organizationFacts(
         });
       }
       return { ...empty, membership, groups, managedGroups: managed.rows.map((row) => row.group_id), roles };
+    },
+    options.fresh ?? false,
+  );
+}
+
+export type SpaceVia =
+  | { type: "account" }
+  | { type: "group"; groupId: string; name: string }
+  | { type: "organizationMembers" }
+  | { type: "instanceUsers" }
+  | { type: "visibility"; visibility: Exclude<SpaceVisibility, "private"> };
+
+export interface SpaceRoleSource {
+  role: SpaceRole;
+  via: SpaceVia;
+  permissionId: string | null;
+}
+
+export interface SpaceFacts {
+  account: AccountFacts | null;
+  space: {
+    id: string;
+    organizationId: string | null;
+    visibility: SpaceVisibility;
+    personalOf: string | null;
+  } | null;
+  membership: MembershipKind | null;
+  sources: SpaceRoleSource[];
+  role: SpaceRole | null;
+}
+
+export async function spaceFacts(
+  executor: Executor,
+  accountId: string,
+  spaceId: string,
+  options: { fresh?: boolean } = {},
+): Promise<SpaceFacts> {
+  return cached(
+    `authorization:space:${accountId}:${spaceId}`,
+    async () => {
+      const account = await loadAccount(executor, accountId);
+      const spaceRows = await executor.execute<{
+        id: string;
+        organization_id: string | null;
+        visibility: SpaceVisibility;
+        personal_of: string | null;
+      }>(sql`select id, organization_id, visibility, personal_of from spaces where id = ${spaceId}`);
+      const row = spaceRows.rows[0];
+      const space = row
+        ? {
+            id: row.id,
+            organizationId: row.organization_id,
+            visibility: row.visibility,
+            personalOf: row.personal_of,
+          }
+        : null;
+      const empty: SpaceFacts = { account, space, membership: null, sources: [], role: null };
+      if (!account || !space || account.state !== "active") return empty;
+
+      let membership: MembershipKind | null = null;
+      if (space.organizationId) {
+        const memberships = await executor.execute<{ kind: MembershipKind }>(sql`
+          select kind from memberships
+          where organization_id = ${space.organizationId} and account_id = ${accountId}
+            and (expires_at is null or expires_at > now())`);
+        membership = memberships.rows[0]?.kind ?? null;
+      }
+      const member = membership === "member";
+      const internal = account.type === "standard";
+      const permissions = await executor.execute<{
+        id: string;
+        role: SpaceRole;
+        principal_kind: PrincipalKind;
+        principal_id: string | null;
+        group_name: string | null;
+      }>(sql`
+        select sp.id, sp.role, sp.principal_kind, sp.principal_id, g.name as group_name
+        from space_permissions sp
+        left join groups g on sp.principal_kind = 'group' and g.id = sp.principal_id
+        where sp.space_id = ${spaceId} and (
+          (sp.principal_kind = 'account' and sp.principal_id = ${accountId})
+          or (sp.principal_kind = 'group' and exists (
+            select 1 from group_members gm
+            where gm.group_id = sp.principal_id and gm.account_id = ${accountId}
+              and (gm.expires_at is null or gm.expires_at > now())))
+          or (sp.principal_kind = 'organizationMembers' and ${member})
+          or (sp.principal_kind = 'instanceUsers' and ${internal}))`);
+      const sources: SpaceRoleSource[] = permissions.rows.map((permission) => ({
+        role: permission.role,
+        permissionId: permission.id,
+        via:
+          permission.principal_kind === "group"
+            ? { type: "group", groupId: permission.principal_id ?? "", name: permission.group_name ?? "" }
+            : permission.principal_kind === "account"
+              ? { type: "account" }
+              : permission.principal_kind === "organizationMembers"
+                ? { type: "organizationMembers" }
+                : { type: "instanceUsers" },
+      }));
+      if (space.visibility === "organization" && member) {
+        sources.push({
+          role: "reader",
+          via: { type: "visibility", visibility: "organization" },
+          permissionId: null,
+        });
+      }
+      if (space.visibility === "instance" && internal) {
+        sources.push({
+          role: "reader",
+          via: { type: "visibility", visibility: "instance" },
+          permissionId: null,
+        });
+      }
+      return { ...empty, membership, sources, role: highestSpaceRole(sources.map((source) => source.role)) };
     },
     options.fresh ?? false,
   );

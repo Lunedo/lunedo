@@ -85,4 +85,18 @@ export {
 export { organizationDomains, organizationLogos, organizations } from "../organizations/schema.js";
 export { settingLevel, settingValues } from "../settings/schema.js";
 export { setupSessions, setupSteps } from "../setup/schema.js";
+export {
+  collaborationClients,
+  pageDocuments,
+  pageLabels,
+  pageLinks,
+  pageWidth,
+  spaceKeyAliases,
+  spacePermissions,
+  spaceRole,
+  spaces,
+  spaceVisibility,
+  treeItemKind,
+  treeItems,
+} from "../spaces/schema.js";
 export { apiTokens, serviceAccountResponsibles, serviceAccounts } from "../tokens/schema.js";

@@ -16,6 +16,8 @@ export const auditTargetTypes = [
   "audit",
   "identityProvider",
   "mappingRule",
+  "space",
+  "page",
 ] as const;
 export type AuditTargetType = (typeof auditTargetTypes)[number];
 
@@ -67,6 +69,14 @@ const mappingRuleFields = z.object({
   role: z.string().nullable(),
   synchronizedGroupId: z.uuid().nullable(),
   homeOrganization: z.boolean(),
+});
+
+const spaceRoleNames = ["reader", "commenter", "editor", "admin"] as const;
+const spacePermissionFields = z.object({
+  name: z.string(),
+  principalKind: z.enum(["account", "group", "organizationMembers", "instanceUsers"]),
+  principalId: z.uuid().nullable(),
+  role: z.enum(spaceRoleNames),
 });
 
 export const auditCatalog = {
@@ -908,6 +918,70 @@ export const auditCatalog = {
       targetType: z.string().nullable(),
       targetId: z.string().nullable(),
       name: z.string().nullable(),
+    }),
+    visibility: "organization",
+  }),
+  "space.created": event({
+    actor: ["account", "system"],
+    target: "space",
+    fields: z.object({
+      name: z.string(),
+      key: z.string(),
+      visibility: z.enum(["private", "organization", "instance"]),
+      personal: z.boolean(),
+      ownerId: z.uuid().nullable(),
+    }),
+    visibility: "organization",
+  }),
+  "space.updated": event({
+    actor: ["account", "system"],
+    target: "space",
+    fields: z.object({
+      name: z.string(),
+      setting: z.enum(["name", "description", "key", "visibility"]),
+      value: z.string(),
+      previousValue: z.string(),
+    }),
+    visibility: "organization",
+  }),
+  "space.permissionGranted": event({
+    actor: ["account", "system"],
+    target: "space",
+    fields: spacePermissionFields,
+    visibility: "organization",
+  }),
+  "space.permissionChanged": event({
+    actor: ["account", "system"],
+    target: "space",
+    fields: spacePermissionFields.extend({ previousRole: z.enum(spaceRoleNames) }),
+    visibility: "organization",
+  }),
+  "space.permissionRemoved": event({
+    actor: ["account", "system"],
+    target: "space",
+    fields: spacePermissionFields,
+    visibility: "organization",
+  }),
+  "space.administratorAppointed": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({ name: z.string(), accountId: z.uuid() }),
+    visibility: "organization",
+  }),
+  "space.personalTransferred": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({ previousOwnerId: z.uuid().nullable(), ownerId: z.uuid() }),
+    visibility: "instance",
+  }),
+  "page.updateRejected": event({
+    actor: ["account"],
+    target: "page",
+    fields: z.object({
+      spaceId: z.uuid(),
+      reason: z.enum(["invalidDocument", "tooLarge", "foreignClient", "malformed"]),
+      problems: z.array(z.string()).max(20),
+      bytes: z.number().int().nonnegative(),
     }),
     visibility: "organization",
   }),

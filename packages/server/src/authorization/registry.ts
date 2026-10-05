@@ -1,5 +1,6 @@
 import type { Executor } from "../database/database.js";
 import type { MembershipKind } from "../organizations/access-schema.js";
+import type { SpaceRole } from "../spaces/schema.js";
 import type { AccessLevel, Area } from "./areas.js";
 import type { OrganizationFacts } from "./facts.js";
 
@@ -9,7 +10,8 @@ export interface Resource {
 }
 
 export interface ActionDefinition {
-  scope: "instance" | "organization";
+  scope: "instance" | "organization" | "space";
+  spaceRole?: SpaceRole;
   area?: Area;
   level?: AccessLevel;
   membership?: readonly MembershipKind[];
@@ -32,6 +34,7 @@ export interface ResourceType {
   type: string;
   actions: Record<string, ActionDefinition>;
   organizationOf?: (executor: Executor, id: string) => Promise<string | null>;
+  spaceOf?: (executor: Executor, id: string) => Promise<string | null>;
   rules?: Record<string, Rule>;
 }
 
@@ -54,7 +57,13 @@ export class AuthorizationRegistry {
       ) {
         throw new Error(`Resource type ${type.type} has organization actions but no organization`);
       }
+      if (Object.values(type.actions).some((action) => action.scope === "space") && !type.spaceOf) {
+        throw new Error(`Resource type ${type.type} has space actions but no space`);
+      }
       for (const [name, action] of Object.entries(type.actions)) {
+        if ((action.scope === "space") !== (action.spaceRole !== undefined)) {
+          throw new Error(`Action ${name} needs a space role exactly when it is a space action`);
+        }
         if (!name.startsWith(`${type.type}.`))
           throw new Error(`Action ${name} must start with ${type.type}.`);
         if (this.#actions.has(name)) throw new Error(`Action ${name} is registered twice`);
