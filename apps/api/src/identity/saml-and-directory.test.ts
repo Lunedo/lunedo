@@ -181,6 +181,32 @@ describe.skipIf(!databaseBaseUrl)("SAML and directory providers through the API"
     expect(response.json().steps[0]).toMatchObject({ step: "connection", ok: false });
   });
 
+  it("checks directory settings with the stored password only for the same server", async () => {
+    const config = {
+      preset: "activeDirectory",
+      url: "ldaps://127.0.0.1:1",
+      bindDn: "CN=pagehall,OU=Service,DC=corp,DC=example",
+      userBaseDn: "OU=People,DC=corp,DC=example",
+      groupBaseDn: "OU=Groups,DC=corp,DC=example",
+      domains: [],
+    };
+    const check = (body: Record<string, unknown>) =>
+      owner.post("/api/v1/instance/identity-provider-connection-checks", { type: "ldap", ...body });
+    const same = await check({ config, providerId: ldapId });
+    expect(same.statusCode).toBe(200);
+    expect(same.json()).toMatchObject({ ok: false, check: "directory", problem: "connection" });
+    const elsewhere = await check({ config: { ...config, url: "ldaps://127.0.0.1:2" }, providerId: ldapId });
+    expect(elsewhere.statusCode).toBe(400);
+    expect(elsewhere.json()).toMatchObject({ code: "invalidInput" });
+    const withPassword = await check({
+      config: { ...config, url: "ldaps://127.0.0.1:2" },
+      bindPassword: "another password",
+      providerId: ldapId,
+    });
+    expect(withPassword.statusCode).toBe(200);
+    expect(withPassword.body).not.toContain("another password");
+  });
+
   it("refuses a server certificate as uploaded certificate authority", async () => {
     const response = await owner.put(`/api/v1/instance/identity-providers/${ldapId}/ca-certificate`, {
       certificate: "-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----",

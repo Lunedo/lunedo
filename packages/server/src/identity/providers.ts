@@ -701,8 +701,8 @@ export class IdentityProviderService {
         headers: { accept: "application/json" },
         signal: AbortSignal.timeout(DISCOVERY_TIMEOUT_MS),
       });
-    } catch (error) {
-      return result("unreachable", null, plainText((error as Error).message));
+    } catch {
+      return result("unreachable", null, null);
     }
     if (!response.ok) return result("status", response.status, null);
     let document: unknown;
@@ -739,8 +739,8 @@ export class IdentityProviderService {
       return result(null, 200, null);
     } catch (error) {
       if (error instanceof SamlMetadataError) {
-        const problem = error.reason === "invalid" ? "invalidDocument" : error.reason;
-        return result(problem, error.status, error.message);
+        if (error.reason !== "invalid") return result(error.reason, error.status, null);
+        return result("invalidDocument", error.status, error.message);
       }
       if (error instanceof OrganizationError) return result("invalidDocument", 200, error.message);
       throw error;
@@ -1418,7 +1418,7 @@ export class IdentityProviderService {
         throw new OrganizationError("invalidInput", "A certificate is valid for 30 days to 3 years");
       }
       const generated = await generateCertificate({
-        commonName: `Pagehall $provider.name`,
+        commonName: `Pagehall ${provider.name}`,
         validDays: input.validDays,
         now,
       });
@@ -1668,12 +1668,12 @@ export class IdentityProviderService {
           eq(identityProviderCredentials.providerId, id),
           or(
             isNull(identityProviderCredentials.expiresAt),
-            sql`$identityProviderCredentials.expiresAt> $now`,
+            sql`${identityProviderCredentials.expiresAt} > ${now}`,
           ),
         ),
       )
       .orderBy(
-        sql`$identityProviderCredentials.chosenAtdesc nulls last`,
+        sql`${identityProviderCredentials.chosenAt} desc nulls last`,
         desc(identityProviderCredentials.createdAt),
         desc(identityProviderCredentials.id),
       );
@@ -1780,7 +1780,7 @@ export class IdentityProviderService {
         .where(
           and(
             isNotNull(identityProviderCredentials.expiresAt),
-            sql`$identityProviderCredentials.expiresAt> $now`,
+            sql`${identityProviderCredentials.expiresAt} > ${now}`,
             lte(identityProviderCredentials.expiresAt, new Date(now.getTime() + threshold.days * DAY_MS)),
             isNull(column),
           ),
@@ -1799,7 +1799,7 @@ export class IdentityProviderService {
           if (!marked?.expiresAt) return null;
           const newer = await tx.execute(sql`
             select 1 from identity_provider_credentials
-            where provider_id = $marked.providerIdand id <> $id
+            where provider_id = ${marked.providerId} and id <> ${id}
               and (expires_at is null or expires_at > ${marked.expiresAt})`);
           if (newer.rows.length > 0) return null;
           const [provider] = await tx

@@ -37,7 +37,10 @@ const invitationPreviewSchema = z.object({
   email: z.string().describe("The invited e-mail address."),
   expiresAt: z.iso.datetime().describe("When the invitation expires."),
   organizationName: z.string().describe("The organization the invitation is for."),
-  invitedByName: z.string().nullable().describe("The person who sent the invitation, when the account still exists."),
+  invitedByName: z
+    .string()
+    .nullable()
+    .describe("The person who sent the invitation, when the account still exists."),
 });
 const secondFactorResetSchema = z
   .object({
@@ -159,7 +162,10 @@ export class AccountsController {
     tags: ["Accounts"],
     status: 200,
     body: z.object({ token: linkTokenSchema }).strict(),
-    response: { description: "What the invitation is for and whether it can still be accepted.", schema: invitationPreviewSchema },
+    response: {
+      description: "What the invitation is for and whether it can still be accepted.",
+      schema: invitationPreviewSchema,
+    },
     errors: ["invalidToken", "rateLimited"],
   })
   async previewInvitation(@Body() body: { token: string }, @Req() request: FastifyRequest) {

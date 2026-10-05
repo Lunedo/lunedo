@@ -777,7 +777,7 @@ export class IdentityProvidersController {
   }
 
   @Post("instance/identity-provider-connection-checks")
-  @Permission("instance.signIn.manage")
+  @Permission("instance.signIn.manage", { type: "instance" }, { recentAuthentication: true })
   @ApiRoute({
     summary: "Check connection settings before saving them",
     description:
@@ -786,15 +786,25 @@ export class IdentityProvidersController {
     status: 200,
     body: connectionCheckSchema,
     response: { description: "The result of the check.", schema: connectionCheckResultSchema },
-    errors: ["invalidProviderConfiguration", "notFound", "invalidInput"],
+    errors: [
+      "invalidProviderConfiguration",
+      "notFound",
+      "invalidInput",
+      "rateLimited",
+      "reauthenticationRequired",
+    ],
   })
-  async checkConnection(@Body() body: z.output<typeof connectionCheckSchema>) {
+  async checkConnection(
+    @Body() body: z.output<typeof connectionCheckSchema>,
+    @Req() request: FastifyRequest,
+  ) {
     if (body.providerId) await this.#services.identityProviders.get(body.providerId);
     return this.#services.providerSignIn.checkConnection({
       type: body.type,
       config: body.config,
       bindPassword: body.type === "ldap" ? (body.bindPassword ?? null) : null,
       providerId: body.providerId ?? null,
+      clientIp: request.ip,
     });
   }
 

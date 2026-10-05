@@ -67,6 +67,7 @@ const AUTH_TIME_TOLERANCE_MS = 60 * 1000;
 const REFUSAL_RETENTION_DAYS = 90;
 const DISCOVERIES_PER_CLIENT = 30;
 const STARTS_PER_CLIENT = 20;
+const CONNECTION_CHECKS_PER_CLIENT = 20;
 const LOGOUTS_PER_CLIENT = 60;
 const REFERENCE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
@@ -1428,12 +1429,24 @@ export class ProviderSignInService {
     config: unknown;
     bindPassword: string | null;
     providerId: string | null;
+    clientIp?: string | undefined;
   }): Promise<ConnectionCheck> {
+    await this.#limit("connectionCheck", input.clientIp, CONNECTION_CHECKS_PER_CLIENT);
     const parsed = this.#providers.parseConnection(input.type, input.config);
     if (input.type === "oidc") return this.#providers.checkDiscovery(parsed as OidcConfig);
     if (input.type === "saml") return this.#providers.checkMetadata(parsed as SamlConfig);
     const config = parsed as LdapConfig;
     const stored = input.providerId ? await this.#load(input.providerId) : null;
+    const sameTarget =
+      stored?.provider.type === "ldap" &&
+      stored.provider.config.url === config.url &&
+      stored.provider.config.startTls === config.startTls;
+    if (input.bindPassword === null && !sameTarget) {
+      throw new OrganizationError(
+        "invalidInput",
+        "Enter the password of the service account to check another server",
+      );
+    }
     const credentials =
       input.bindPassword !== null
         ? [

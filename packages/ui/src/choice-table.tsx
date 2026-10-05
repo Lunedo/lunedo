@@ -46,7 +46,10 @@ export function ChoiceTable({ caption, labelHeader, choiceHeader, rows }: Choice
               data-choice-row=""
               className="border-b border-border last:border-b-0 max-sm:flex max-sm:flex-col max-sm:gap-2 max-sm:py-3"
             >
-              <th scope="row" className="px-4 py-2 text-left align-middle font-normal max-sm:block max-sm:py-0">
+              <th
+                scope="row"
+                className="px-4 py-2 text-left align-middle font-normal max-sm:block max-sm:py-0"
+              >
                 <span className="flex flex-col gap-1">
                   <span className="font-medium text-text">{row.label}</span>
                   {row.description ? (

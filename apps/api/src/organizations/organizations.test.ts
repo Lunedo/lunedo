@@ -148,9 +148,7 @@ describe.skipIf(!databaseBaseUrl)("organizations through the API", () => {
     expect(accepted.json()).toMatchObject({ organizationId, accountCreated: true });
     expect((await preview()).json()).toMatchObject({ state: "accepted" });
     expect(
-      (
-        await new TestClient(test.app).post("/api/v1/invitations/preview", { token: "x".repeat(43) })
-      ).json(),
+      (await new TestClient(test.app).post("/api/v1/invitations/preview", { token: "x".repeat(43) })).json(),
     ).toMatchObject({ code: "invalidToken" });
     memberId = accepted.json().accountId;
     memberClient = await signedInClient(test, "new.member@engineering.example", "a member passphrase");
