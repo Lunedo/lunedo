@@ -803,6 +803,7 @@ export class IdentityProvidersController {
       type: body.type,
       config: body.config,
       bindPassword: body.type === "ldap" ? (body.bindPassword ?? null) : null,
+      caCertificate: body.type === "ldap" ? (body.caCertificate ?? null) : null,
       providerId: body.providerId ?? null,
       clientIp: request.ip,
     });

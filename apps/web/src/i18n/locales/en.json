@@ -499,6 +499,7 @@
       "title": "Test the connection",
       "description": "Sign in once with a test account. Nothing is saved, and no account is created.",
       "start": "Start test sign-in",
+      "unreachable": "Pagehall could not reach {provider} to start the test. Check the connection settings of this provider, then test again.",
       "worked": "Sign-in worked",
       "summary": "Received {claims, plural, one {# claim} other {# claims}} and {groups, plural, one {# group} other {# groups}}.",
       "failed": "The test sign-in failed",
@@ -528,6 +529,40 @@
       "noEmailTitle": "The provider sent no e-mail address",
       "noEmailEntraId": "Without an address, Pagehall cannot create or link an account. Choose User principal name as the source of the e-mail address under User attributes, or set the e-mail address of the person in {provider}.",
       "noEmail": "Without an address, Pagehall cannot create or link an account. Set the e-mail address of the person in {provider}, or choose the claim or attribute that carries it under User attributes."
+    },
+    "check": {
+      "failedTitle": "Pagehall could not reach the provider with these settings",
+      "saveAnyway": "Save anyway",
+      "saveAnywayHint": "Correct the marked field, or save anyway and correct it later. The setup can then only be finished after you confirm the failed check.",
+      "names": {
+        "discovery": "the OpenID Connect discovery",
+        "metadata": "the SAML metadata",
+        "directory": "the directory connection"
+      },
+      "finishTitle": "Finish although the check failed?",
+      "finishDescription": "Pagehall checked {check} again and it failed: {message} People cannot sign in through this provider until this works.",
+      "finishAnyway": "Finish anyway",
+      "fixFirst": "Correct the settings",
+      "messages": {
+        "discovery": {
+          "status": "{status} at {url}. Check the issuer: Pagehall adds /.well-known/openid-configuration to it.",
+          "unreachable": "No answer from {url}. Check the issuer for typing errors and that this server can reach the provider.",
+          "invalidDocument": "{url} did not return an OpenID Connect discovery document. Check the issuer.",
+          "issuerMismatch": "The document at {url} names the issuer {detail}. Enter exactly this issuer."
+        },
+        "metadata": {
+          "status": "{status} at {url}. Check the metadata address.",
+          "unreachable": "No answer from {url}. Check the metadata address and that this server can reach it.",
+          "invalidDocument": "{url} did not return usable SAML metadata: {detail}"
+        },
+        "directory": {
+          "connection": "Pagehall could not connect to {url}: {detail} Check the server address and the port, and that this server can reach the directory.",
+          "certificate": "The certificate of {url} is not trusted: {detail} Choose the CA certificate of the directory, or check the server name.",
+          "serviceAccount": "The directory did not accept the service account: {detail} Check its name and password.",
+          "search": "Nobody was found under the base DN for people: {detail} Check the base DN.",
+          "unreachable": "Pagehall could not connect to {url}."
+        }
+      }
     },
     "wizard": {
       "title": "Add identity provider",

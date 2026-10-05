@@ -408,6 +408,9 @@ function adminApi(overrides: Record<string, Handler> = {}) {
         nextCursor: null,
       },
     }),
+    "POST /api/v1/instance/identity-provider-connection-checks": () => ({
+      body: { ok: true, check: "discovery", url: null, status: 200, problem: null, detail: null },
+    }),
     ...overrides,
   });
 }
@@ -548,6 +551,37 @@ describe("setting up a provider as a draft", () => {
     );
     expect(await screen.findByDisplayValue("client-from-draft")).toBeTruthy();
     expect(screen.getByDisplayValue("tenant-from-draft")).toBeTruthy();
+  });
+
+  it("asks before finishing when the provider cannot be reached", async () => {
+    let complete = false;
+    const url = "https://id.example.org/realms/wrong/.well-known/openid-configuration";
+    const { requests } = adminApi({
+      [`GET /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({
+        body: provider({ setupComplete: complete }),
+      }),
+      "GET /api/v1/instance/identity-providers": () => ({ body: [provider({ setupComplete: complete })] }),
+      "POST /api/v1/instance/identity-provider-connection-checks": () => ({
+        body: { ok: false, check: "discovery", url, status: 404, problem: "status", detail: null },
+      }),
+      [`POST /api/v1/instance/identity-providers/${PROVIDER}/complete-setup`]: () => {
+        complete = true;
+        return { body: provider({ setupComplete: true }) };
+      },
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}`);
+    await userEvent.click(await screen.findByRole("button", { name: "Continue setup" }));
+    await userEvent.click(await screen.findByRole("button", { name: /Test$/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "Finish" }));
+    const dialog = await screen.findByRole("dialog", { name: "Finish although the check failed?" });
+    expect(
+      within(dialog).getByText(new RegExp(`the OpenID Connect discovery again and it failed: 404 at ${url}`)),
+    ).toBeTruthy();
+    expect(requests.some((request) => request.path.endsWith("/complete-setup"))).toBe(false);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Finish anyway" }));
+    await waitFor(() =>
+      expect(requests.some((request) => request.path.endsWith("/complete-setup"))).toBe(true),
+    );
   });
 
   it("finishes the setup at the last step", async () => {
@@ -731,6 +765,22 @@ describe("the sign-in settings of the instance", () => {
     );
     expect(await screen.findByText("The provider sent no e-mail address")).toBeTruthy();
     expect(screen.getByText(/Choose User principal name as the source of the e-mail address/)).toBeTruthy();
+  });
+
+  it("says what failed when the test cannot reach the provider", async () => {
+    const url = "https://login.microsoftonline.com/tenant/v2.0/.well-known/openid-configuration";
+    adminApi({
+      [`GET /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({ body: provider() }),
+      [`POST /api/v1/instance/identity-providers/${PROVIDER}/test`]: () =>
+        problem(502, "providerUnavailable"),
+      "POST /api/v1/instance/identity-provider-connection-checks": () => ({
+        body: { ok: false, check: "discovery", url, status: 404, problem: "status", detail: null },
+      }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/new?providerId=${PROVIDER}&step=4`);
+    await userEvent.click(await screen.findByRole("button", { name: "Start test sign-in" }));
+    expect(await screen.findByText(new RegExp(`^404 at ${url}`))).toBeTruthy();
+    expect(screen.queryByText(/ask your administrator/)).toBeNull();
   });
 
   it("does not keep the test button loading when the browser comes back to the page", async () => {

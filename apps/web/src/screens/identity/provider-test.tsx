@@ -1,16 +1,34 @@
 import { Button, Notice, Section, Skeleton } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 import { Play } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  type ConnectionCheckBody,
+  checkConnection,
   type IdentityProvider,
   providerTestResultQuery,
   startProviderTest,
 } from "../../api/identity-queries.js";
+import { isApiError } from "../../api/request.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { navigateTo } from "../../session/provider-sign-in.js";
+import { connectionCheckMessage } from "./connection-check.js";
+import { toConfigInput } from "./provider-config.js";
+
+async function testStartFailure(t: TFunction, provider: IdentityProvider, failure: unknown): Promise<string> {
+  if (!isApiError(failure, "providerUnavailable")) return problemMessage(t, failure);
+  const check = await checkConnection({
+    type: provider.type,
+    config: toConfigInput(provider),
+    providerId: provider.id,
+  } as ConnectionCheckBody).catch(() => null);
+  return check && !check.ok
+    ? connectionCheckMessage(t, check)
+    : t("identityProviders.test.unreachable", { provider: provider.name });
+}
 
 export function StartTestButton({
   provider,
@@ -45,7 +63,7 @@ export function StartTestButton({
               const { url } = await startProviderTest(provider.id, returnTo());
               navigateTo(url);
             } catch (failure) {
-              setError(problemMessage(t, failure));
+              setError(await testStartFailure(t, provider, failure));
               setBusy(false);
             }
           })()

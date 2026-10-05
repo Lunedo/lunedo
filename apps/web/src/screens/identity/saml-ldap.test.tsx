@@ -70,6 +70,16 @@ function adminApi(overrides: Record<string, Handler> = {}) {
     "GET /api/v1/account/preferences": () => ({ body: [] }),
     "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
     "GET /api/v1/instance/settings": () => ({ body: { items: [], nextCursor: null } }),
+    "POST /api/v1/instance/identity-provider-connection-checks": (request) => ({
+      body: {
+        ok: true,
+        check: (request.body as { type: string }).type === "ldap" ? "directory" : "metadata",
+        url: null,
+        status: null,
+        problem: null,
+        detail: null,
+      },
+    }),
     ...overrides,
   });
 }
@@ -286,6 +296,29 @@ describe("adding a SAML provider", () => {
       config: { preset: "adfs", domains: ["verlag.example"], metadata: { source: "file" } },
       metadataXml: "<EntityDescriptor/>",
     });
+  });
+
+  it("shows a failed metadata check at the field and saves only when asked", async () => {
+    const url = "https://idp.example.org/saml/wrong";
+    const { requests } = adminApi({
+      [`POST ${BASE}`]: () => ({ status: 201, body: { provider: samlProvider(), credential: null } }),
+      [`GET ${BASE}/${SAML}`]: () => ({ body: samlProvider() }),
+      "POST /api/v1/instance/identity-provider-connection-checks": () => ({
+        body: { ok: false, check: "metadata", url, status: 404, problem: "status", detail: null },
+      }),
+      ...draftApi(SAML, "saml", "generic"),
+    });
+    await renderPath("/settings/instance/sign-in-providers/new");
+    await userEvent.click(await screen.findByRole("button", { name: /SAML 2.0/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await userEvent.type(await screen.findByLabelText("Metadata address"), url);
+    await userEvent.click(screen.getByRole("button", { name: "Save and continue" }));
+    expect(await screen.findByText(`404 at ${url}. Check the metadata address.`)).toBeTruthy();
+    expect(requests.some((request) => request.method === "POST" && request.path === BASE)).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: "Save anyway" }));
+    await waitFor(() =>
+      expect(requests.some((request) => request.method === "POST" && request.path === BASE)).toBe(true),
+    );
   });
 
   it("asks for the tenant and the metadata address of Entra ID", async () => {
@@ -749,6 +782,13 @@ describe("SAML and LDAP providers in the list and the details", () => {
     expect(within(steps).getAllByRole("listitem")).toHaveLength(6);
     expect(within(steps).getAllByRole("button")).toHaveLength(5);
     expect(within(steps).getByText("Fixed once the provider is saved")).toBeTruthy();
+  });
+
+  it("asks for the domains in the connection step only", async () => {
+    adminApi({ [`GET ${BASE}/${SAML}`]: () => ({ body: samlProvider() }) });
+    await renderPath(`/settings/instance/sign-in-providers/new?providerId=${SAML}&step=3`);
+    expect(await screen.findByLabelText("Create accounts at first sign-in")).toBeTruthy();
+    expect(screen.queryByLabelText("Domains")).toBeNull();
   });
 
   it("manages the CA certificate, the second factor and the service account password of a directory", async () => {

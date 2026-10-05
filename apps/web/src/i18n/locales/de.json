@@ -499,6 +499,7 @@
       "title": "Verbindung testen",
       "description": "Melde dich einmal mit einem Testkonto an. Es wird nichts gespeichert und kein Konto angelegt.",
       "start": "Testanmeldung starten",
+      "unreachable": "Pagehall hat {provider} nicht erreicht, um den Test zu starten. Prüfe die Verbindungseinstellungen dieses Anbieters und teste dann erneut.",
       "worked": "Die Anmeldung hat funktioniert",
       "summary": "{claims, plural, one {# Claim} other {# Claims}} und {groups, plural, one {# Gruppe} other {# Gruppen}} empfangen.",
       "failed": "Die Testanmeldung ist fehlgeschlagen",
@@ -528,6 +529,40 @@
       "noEmailTitle": "Der Anbieter hat keine E-Mail-Adresse gesendet",
       "noEmailEntraId": "Ohne Adresse kann Pagehall kein Konto anlegen oder verknüpfen. Wähle unter Benutzerattribute den Benutzerprinzipalnamen als Quelle der E-Mail-Adresse oder hinterlege die E-Mail-Adresse der Person in {provider}.",
       "noEmail": "Ohne Adresse kann Pagehall kein Konto anlegen oder verknüpfen. Hinterlege die E-Mail-Adresse der Person in {provider} oder wähle unter Benutzerattribute den Claim oder das Attribut, das sie enthält."
+    },
+    "check": {
+      "failedTitle": "Pagehall hat den Anbieter mit diesen Einstellungen nicht erreicht",
+      "saveAnyway": "Trotzdem speichern",
+      "saveAnywayHint": "Korrigiere das markierte Feld, oder speichere trotzdem und korrigiere es später. Die Einrichtung lässt sich dann erst abschließen, wenn du die fehlgeschlagene Prüfung bestätigst.",
+      "names": {
+        "discovery": "die OpenID-Connect-Discovery",
+        "metadata": "die SAML-Metadaten",
+        "directory": "die Verbindung zum Verzeichnis"
+      },
+      "finishTitle": "Trotz fehlgeschlagener Prüfung abschließen?",
+      "finishDescription": "Pagehall hat {check} erneut geprüft, und die Prüfung ist fehlgeschlagen: {message} Personen können sich über diesen Anbieter erst anmelden, wenn das funktioniert.",
+      "finishAnyway": "Trotzdem abschließen",
+      "fixFirst": "Einstellungen korrigieren",
+      "messages": {
+        "discovery": {
+          "status": "{status} bei {url}. Prüfe den Aussteller: Pagehall hängt /.well-known/openid-configuration daran an.",
+          "unreachable": "Keine Antwort von {url}. Prüfe den Aussteller auf Tippfehler und ob dieser Server den Anbieter erreicht.",
+          "invalidDocument": "{url} hat kein OpenID-Connect-Discovery-Dokument geliefert. Prüfe den Aussteller.",
+          "issuerMismatch": "Das Dokument bei {url} nennt den Aussteller {detail}. Trage genau diesen Aussteller ein."
+        },
+        "metadata": {
+          "status": "{status} bei {url}. Prüfe die Metadatenadresse.",
+          "unreachable": "Keine Antwort von {url}. Prüfe die Metadatenadresse und ob dieser Server sie erreicht.",
+          "invalidDocument": "{url} hat keine verwendbaren SAML-Metadaten geliefert: {detail}"
+        },
+        "directory": {
+          "connection": "Pagehall konnte keine Verbindung zu {url} aufbauen: {detail} Prüfe Serveradresse und Port und ob dieser Server das Verzeichnis erreicht.",
+          "certificate": "Dem Zertifikat von {url} wird nicht vertraut: {detail} Wähle das CA-Zertifikat des Verzeichnisses, oder prüfe den Servernamen.",
+          "serviceAccount": "Das Verzeichnis hat das Dienstkonto nicht akzeptiert: {detail} Prüfe Name und Passwort.",
+          "search": "Unter der Basis-DN für Personen wurde niemand gefunden: {detail} Prüfe die Basis-DN.",
+          "unreachable": "Pagehall konnte keine Verbindung zu {url} aufbauen."
+        }
+      }
     },
     "wizard": {
       "title": "Identitätsanbieter hinzufügen",

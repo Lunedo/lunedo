@@ -369,7 +369,15 @@ export function AttributeFields({ provider, canManage }: { provider: OidcProvide
   );
 }
 
-export function AccountFields({ provider, canManage }: { provider: IdentityProvider; canManage: boolean }) {
+export function AccountFields({
+  provider,
+  canManage,
+  showDomains = true,
+}: {
+  provider: IdentityProvider;
+  canManage: boolean;
+  showDomains?: boolean;
+}) {
   const { t } = useTranslation();
   const update = useProviderUpdate(provider);
   const tracker = useSaveStates();
@@ -401,17 +409,19 @@ export function AccountFields({ provider, canManage }: { provider: IdentityProvi
         }
         status={<SaveIndicator tracker={tracker("create")} />}
       />
-      <div className="px-4 py-3">
-        <AutoSaveTextField
-          label={t("identityProviders.accounts.domains")}
-          hint={t(domainsHintKey(provider.type, config.preset))}
-          value={config.domains.join(", ")}
-          schema={domainList}
-          invalidMessage={t("identityProviders.accounts.domainsInvalid")}
-          disabled={!canManage}
-          onSave={(value) => update.config((current) => ({ ...current, domains: parseList(value) }))}
-        />
-      </div>
+      {showDomains ? (
+        <div className="px-4 py-3">
+          <AutoSaveTextField
+            label={t("identityProviders.accounts.domains")}
+            hint={t(domainsHintKey(provider.type, config.preset))}
+            value={config.domains.join(", ")}
+            schema={domainList}
+            invalidMessage={t("identityProviders.accounts.domainsInvalid")}
+            disabled={!canManage}
+            onSave={(value) => update.config((current) => ({ ...current, domains: parseList(value) }))}
+          />
+        </div>
+      ) : null}
       <SettingRow
         label={t("identityProviders.accounts.requireGroup")}
         description={t("identityProviders.accounts.requireGroupHint")}

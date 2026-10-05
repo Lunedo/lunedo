@@ -175,6 +175,14 @@ export function accountIdentitiesQuery(accountId: string) {
   });
 }
 
+export type ConnectionCheckBody =
+  paths["/api/v1/instance/identity-provider-connection-checks"]["post"]["requestBody"]["content"]["application/json"];
+export type ConnectionCheckResult = Awaited<ReturnType<typeof checkConnection>>;
+
+export function checkConnection(body: ConnectionCheckBody) {
+  return request(() => api.POST("/api/v1/instance/identity-provider-connection-checks", { body }));
+}
+
 export function createProvider(body: CreateProviderBody) {
   return request(() => api.POST("/api/v1/instance/identity-providers", { body }));
 }

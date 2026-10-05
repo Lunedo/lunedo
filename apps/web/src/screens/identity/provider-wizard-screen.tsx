@@ -2,6 +2,7 @@ import { identityProviderNameSchema } from "@pagehall/shared";
 import {
   Button,
   buttonClassName,
+  ConfirmDialog,
   classNames,
   Field,
   focusFirstInvalidSoon,
@@ -17,7 +18,10 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import {
+  type ConnectionCheckBody,
+  type ConnectionCheckResult,
   certificateUrl,
+  checkConnection,
   completeSetup,
   createDraft,
   createProvider,
@@ -36,6 +40,7 @@ import { problemMessage } from "../../errors/problem-message.js";
 import { translateKey } from "../../i18n/translate.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
+import { connectionCheckField, connectionCheckMessage, FailedCheckNotice } from "./connection-check.js";
 import {
   AccountFields,
   AttributeFields,
@@ -44,6 +49,7 @@ import {
   LinkFields,
   RedirectUriField,
   SecondFactorFields,
+  toConfigInput,
 } from "./provider-config.js";
 import {
   CertificateCreated,
@@ -237,6 +243,7 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
   const [startError, setStartError] = useState<string | null>(null);
   const [draftSaveFailed, setDraftSaveFailed] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
+  const [finishCheck, setFinishCheck] = useState<ConnectionCheckResult | null>(null);
   const lastSaved = useRef<string | null>(null);
 
   useEffect(() => {
@@ -311,9 +318,20 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
       setStarting(false);
     }
   };
-  const finish = async (id: string) => {
+  const finish = async (id: string, despiteCheck = false) => {
     setFinishError(null);
     try {
+      if (!despiteCheck && provider.data) {
+        const check = await checkConnection({
+          type: provider.data.type,
+          config: toConfigInput(provider.data),
+          providerId: id,
+        } as ConnectionCheckBody);
+        if (!check.ok) {
+          setFinishCheck(check);
+          return;
+        }
+      }
       await completeSetup(id);
       await queryClient.invalidateQueries({ queryKey: identityKeys.providers });
       void navigate(providerPath(id));
@@ -466,6 +484,24 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
                     {finishError}
                   </Notice>
                 ) : null}
+                <ConfirmDialog
+                  open={finishCheck !== null}
+                  onOpenChange={(open) => {
+                    if (!open) setFinishCheck(null);
+                  }}
+                  title={t("identityProviders.check.finishTitle")}
+                  description={
+                    finishCheck
+                      ? t("identityProviders.check.finishDescription", {
+                          check: t(`identityProviders.check.names.${finishCheck.check}`),
+                          message: connectionCheckMessage(t, finishCheck),
+                        })
+                      : ""
+                  }
+                  confirmLabel={t("identityProviders.check.finishAnyway")}
+                  cancelLabel={t("identityProviders.check.fixFirst")}
+                  onConfirm={() => finish(provider.data.id, true)}
+                />
                 <SavedProviderStep
                   provider={provider.data}
                   step={step}
@@ -651,6 +687,7 @@ function OidcConnectionStep({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [certificate, setCertificate] = useState<{ pem: string; provider: IdentityProvider } | null>(null);
+  const [checkFailed, setCheckFailed] = useState(false);
   const preset = OIDC_PRESETS[choice];
   const set = (patch: Partial<OidcDraft>) => onChange({ ...draft, ...patch });
 
@@ -680,13 +717,24 @@ function OidcConnectionStep({
     return { preset: "generic", ...config, issuer: draft.issuer.trim() };
   };
 
-  const create = async () => {
+  const create = async (despiteCheck = false) => {
     const config = validate();
     const credential = credentialInput(draft.credential);
     if (!config || !credential.ok) return;
     setBusy(true);
     setError(null);
     try {
+      if (!despiteCheck) {
+        const check = await checkConnection({ type: "oidc", config });
+        if (!check.ok) {
+          const field = connectionCheckField(check, preset === "entraId" ? "tenantId" : "issuer");
+          setErrors((current) => ({ ...current, [field]: connectionCheckMessage(t, check) }));
+          setCheckFailed(true);
+          focusFirstInvalidSoon();
+          return;
+        }
+      }
+      setCheckFailed(false);
       const result = await createProvider({
         type: "oidc",
         name: name.trim(),
@@ -734,7 +782,12 @@ function OidcConnectionStep({
           {error}
         </Notice>
       ) : null}
-      <NameField kind={choice} value={name} error={errors.name} onChange={(next) => onCommonChange({ name: next })} />
+      <NameField
+        kind={choice}
+        value={name}
+        error={errors.name}
+        onChange={(next) => onCommonChange({ name: next })}
+      />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {preset === "entraId" ? (
           <Field
@@ -791,6 +844,7 @@ function OidcConnectionStep({
           />
         </div>
       </Section>
+      {checkFailed ? <FailedCheckNotice busy={busy} onSaveAnyway={() => void create(true)} /> : null}
       <WizardFooter
         next={
           <Button variant="primary" loading={busy} disabled={!canManage} onClick={() => void create()}>
@@ -898,7 +952,11 @@ function SavedProviderStep({
         <>
           <h2 className="font-semibold text-lg">{t("identityProviders.wizard.stepNames.accounts")}</h2>
           <Section title={t("identityProviders.accounts.newPeople")}>
-            <AccountFields provider={provider} canManage={canManage} />
+            <AccountFields
+              provider={provider}
+              canManage={canManage}
+              showDomains={provider.type === "oidc" && provider.config.preset !== "google"}
+            />
           </Section>
           <Section title={t("identityProviders.accounts.existing")}>
             <LinkFields />

@@ -19277,6 +19277,19 @@
                           }
                         ]
                       },
+                      "caCertificate": {
+                        "description": "CA certificate to trust. Without it, the stored certificate of the provider is used.",
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100000
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "providerId": {
                         "anyOf": [
                           {

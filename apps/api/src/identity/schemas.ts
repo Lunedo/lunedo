@@ -303,6 +303,10 @@ export const connectionCheckSchema = z
           .describe(
             "Password of the service account. Without it, the stored password of the provider is used.",
           ),
+        caCertificate: caCertificateSchema
+          .nullable()
+          .optional()
+          .describe("CA certificate to trust. Without it, the stored certificate of the provider is used."),
         providerId: checkedProvider,
       })
       .strict(),

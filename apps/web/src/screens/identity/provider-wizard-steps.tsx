@@ -22,6 +22,7 @@ import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import {
+  checkConnection,
   createProvider,
   type IdentityProvider,
   identityKeys,
@@ -30,6 +31,7 @@ import {
   setCaCertificate,
 } from "../../api/identity-queries.js";
 import { problemMessage } from "../../errors/problem-message.js";
+import { connectionCheckField, connectionCheckMessage, FailedCheckNotice } from "./connection-check.js";
 import { FileButton, readFileText } from "./file-button.js";
 import { domainsHintKey, parseList } from "./provider-config.js";
 import { presetLabel } from "./provider-labels.js";
@@ -181,6 +183,7 @@ export function SamlConnectionStep({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [checkFailed, setCheckFailed] = useState(false);
   const set = (patch: Partial<SamlDraft>) => onChange({ ...draft, ...patch });
 
   const validate = (): SamlConfigInput | null => {
@@ -211,12 +214,22 @@ export function SamlConnectionStep({
     return { preset: "generic", ...shared };
   };
 
-  const create = async () => {
+  const create = async (despiteCheck = false) => {
     const config = validate();
     if (!config) return;
     setBusy(true);
     setError(null);
     try {
+      if (!despiteCheck && config.metadata.source === "url") {
+        const check = await checkConnection({ type: "saml", config });
+        if (!check.ok) {
+          setErrors((current) => ({ ...current, url: connectionCheckMessage(t, check) }));
+          setCheckFailed(true);
+          focusFirstInvalidSoon();
+          return;
+        }
+      }
+      setCheckFailed(false);
       const result = await createProvider({
         type: "saml",
         name: name.trim(),
@@ -256,7 +269,12 @@ export function SamlConnectionStep({
           {error}
         </Notice>
       ) : null}
-      <NameField kind="saml" value={name} error={errors.name} onChange={(next) => onCommonChange({ name: next })} />
+      <NameField
+        kind="saml"
+        value={name}
+        error={errors.name}
+        onChange={(next) => onCommonChange({ name: next })}
+      />
       {draft.preset === "entraId" ? (
         <Field
           label={t("identityProviders.fields.tenantId")}
@@ -310,6 +328,7 @@ export function SamlConnectionStep({
         hint={t(domainsHintKey("saml", draft.preset))}
         onChange={(next) => onCommonChange({ domains: next })}
       />
+      {checkFailed ? <FailedCheckNotice busy={busy} onSaveAnyway={() => void create(true)} /> : null}
       <WizardFooter
         next={
           <Button variant="primary" loading={busy} disabled={!canManage} onClick={() => void create()}>
@@ -364,6 +383,7 @@ export function LdapConnectionStep({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [checkFailed, setCheckFailed] = useState(false);
   const [caFailure, setCaFailure] = useState<{ provider: IdentityProvider; message: string } | null>(null);
   const set = (patch: Partial<DirectoryDraft>) => onChange({ ...draft, ...patch });
   const plain = isPlainLdap(draft.url);
@@ -399,12 +419,30 @@ export function LdapConnectionStep({
       : { preset: "generic", ...shared };
   };
 
-  const create = async () => {
+  const create = async (despiteCheck = false) => {
     const config = validate();
     if (!config) return;
     setBusy(true);
     setError(null);
     try {
+      if (!despiteCheck) {
+        const check = await checkConnection({
+          type: "ldap",
+          config,
+          bindPassword: draft.password,
+          ...(draft.ca ? { caCertificate: draft.ca.pem } : {}),
+        });
+        if (!check.ok) {
+          setErrors((current) => ({
+            ...current,
+            [connectionCheckField(check, "url")]: connectionCheckMessage(t, check),
+          }));
+          setCheckFailed(true);
+          focusFirstInvalidSoon();
+          return;
+        }
+      }
+      setCheckFailed(false);
       const result = await createProvider({
         type: "ldap",
         name: name.trim(),
@@ -473,7 +511,12 @@ export function LdapConnectionStep({
           {error}
         </Notice>
       ) : null}
-      <NameField kind="ldap" value={name} error={errors.name} onChange={(next) => onCommonChange({ name: next })} />
+      <NameField
+        kind="ldap"
+        value={name}
+        error={errors.name}
+        onChange={(next) => onCommonChange({ name: next })}
+      />
       <Field
         label={t("identityProviders.ldap.url")}
         hint={t("identityProviders.ldap.urlHint")}
@@ -567,6 +610,7 @@ export function LdapConnectionStep({
           onFile={(file) => void chooseCa(file)}
         />
       </div>
+      {checkFailed ? <FailedCheckNotice busy={busy} onSaveAnyway={() => void create(true)} /> : null}
       <WizardFooter
         next={
           <Button variant="primary" loading={busy} disabled={!canManage} onClick={() => void create()}>

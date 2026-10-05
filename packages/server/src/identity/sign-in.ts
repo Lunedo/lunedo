@@ -1428,6 +1428,7 @@ export class ProviderSignInService {
     type: "oidc" | "saml" | "ldap";
     config: unknown;
     bindPassword: string | null;
+    caCertificate?: string | null;
     providerId: string | null;
     clientIp?: string | undefined;
   }): Promise<ConnectionCheck> {
@@ -1440,7 +1441,8 @@ export class ProviderSignInService {
     const sameTarget =
       stored?.provider.type === "ldap" &&
       stored.provider.config.url === config.url &&
-      stored.provider.config.startTls === config.startTls;
+      stored.provider.config.startTls === config.startTls &&
+      (input.caCertificate == null || input.caCertificate === stored.provider.caCertificates);
     if (input.bindPassword === null && !sameTarget) {
       throw new OrganizationError(
         "invalidInput",
@@ -1468,7 +1470,8 @@ export class ProviderSignInService {
         directoryKey: null,
         type: "ldap",
         config,
-        caCertificates: stored?.provider.type === "ldap" ? stored.provider.caCertificates : null,
+        caCertificates:
+          input.caCertificate ?? (stored?.provider.type === "ldap" ? stored.provider.caCertificates : null),
       },
       credentials,
       null,
