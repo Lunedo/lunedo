@@ -1,13 +1,20 @@
 import { expect, test } from "@playwright/test";
 import { OWNER, OWNER_STORAGE, readState } from "../support/environment.js";
-import { expectAccessible, freshTotp, setAppearance, signInWithPassword } from "../support/helpers.js";
+import {
+  callApi,
+  expectAccessible,
+  freshTotp,
+  setAppearance,
+  signInWithPassword,
+} from "../support/helpers.js";
 
 test.describe.configure({ mode: "serial" });
 test.use({ storageState: OWNER_STORAGE });
 
 test("delivers a notification live to an open page", async ({ page, browser }) => {
   await page.goto("/settings/preferences");
-  await expect(page.getByRole("button", { name: /^Notifications/ })).toBeVisible();
+  await callApi(page, "POST", "/api/v1/notifications/read-all", {});
+  await expect(page.getByRole("button", { name: "Notifications", exact: true })).toBeVisible();
   const before = await page.getByRole("button", { name: /^Notifications/ }).getAttribute("aria-label");
 
   const elsewhere = await browser.newContext({

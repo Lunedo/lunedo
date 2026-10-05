@@ -59,6 +59,7 @@ test("shows mapping rules added and removed in another session without a reload"
       issuer: "https://login.live-rules.test",
       clientId: "pagehall",
       domains: [`live-${Date.now()}.test`],
+      claims: { groups: "groups" },
       accountCreation: { enabled: false, requiredGroups: [] },
     },
     credential: { kind: "clientSecret", secret: "a client secret for the live test", expiresAt: null },

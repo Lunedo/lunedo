@@ -207,22 +207,30 @@ data: ${JSON.stringify(signal)}
     const pendingChanges = new Set<string>();
     const mayFollow = async (signal: AuditChangeSignal): Promise<boolean> => {
       const principal = accountPrincipal(session.accountId);
-      const allowed = async (action: InstanceAction | OrganizationAction) => {
+      const allowed = async (
+        action: InstanceAction | OrganizationAction,
+        level: "instance" | "organization",
+      ) => {
         const resource =
-          signal.scope === "organization" && signal.organizationId
+          level === "organization" && signal.organizationId
             ? { type: "organization", id: signal.organizationId }
             : { type: "instance" };
         return (await services.authorization.explain(principal, action, resource)).allowed;
       };
+      const instanceViewer = INSTANCE_VIEWERS[signal.target];
       if (signal.scope === "organization") {
         if (!signal.organizationId) return false;
         const viewer = ORGANIZATION_VIEWERS[signal.target];
         return (
-          (viewer !== undefined && (await allowed(viewer))) || (await allowed("organization.audit.view"))
+          (viewer !== undefined && (await allowed(viewer, "organization"))) ||
+          (await allowed("organization.audit.view", "organization")) ||
+          (instanceViewer !== undefined && (await allowed(instanceViewer, "instance")))
         );
       }
-      const viewer = INSTANCE_VIEWERS[signal.target];
-      return (viewer !== undefined && (await allowed(viewer))) || (await allowed("instance.audit.view"));
+      return (
+        (instanceViewer !== undefined && (await allowed(instanceViewer, "instance"))) ||
+        (await allowed("instance.audit.view", "instance"))
+      );
     };
     const sendChange = (signal: AuditChangeSignal) => {
       const data = JSON.stringify(signal);

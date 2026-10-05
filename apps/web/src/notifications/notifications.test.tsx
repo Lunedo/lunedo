@@ -307,6 +307,10 @@ describe("objectsChanged", () => {
     queryClient.setQueryData(accounts, {});
     objectsChanged(queryClient, [{ scope: "instance", organizationId: null, target: "mappingRule" }]);
     expect(queryClient.getQueryState(rules)?.isInvalidated).toBe(true);
+    const later = createQueryClient();
+    later.setQueryData(rules, {});
+    objectsChanged(later, [{ scope: "organization", organizationId: organization, target: "mappingRule" }]);
+    expect(later.getQueryState(rules)?.isInvalidated).toBe(true);
     expect(queryClient.getQueryState(accounts)?.isInvalidated).toBe(false);
   });
 

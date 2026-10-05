@@ -122,6 +122,8 @@ const INSTANCE_TARGET_KEYS: Record<string, QueryKey[]> = {
   apiToken: [["organization"], ["serviceAccount"]],
 };
 
+const PROVIDER_TARGETS = new Set(["identityProvider", "mappingRule"]);
+
 const ORGANIZATION_WIDE_TARGETS = new Set(["account", "invitation", "organization", "roleAssignment"]);
 
 export function changeKeys(event: ChangeEvent): QueryKey[] {
@@ -129,6 +131,7 @@ export function changeKeys(event: ChangeEvent): QueryKey[] {
   if (event.scope === "instance") return [...keys, ...(INSTANCE_TARGET_KEYS[event.target] ?? [])];
   if (!event.organizationId) return keys;
   keys.push(organizationKeys.organization(event.organizationId), ["group"], ["serviceAccount"]);
+  if (PROVIDER_TARGETS.has(event.target)) keys.push(...(INSTANCE_TARGET_KEYS[event.target] ?? []));
   if (ORGANIZATION_WIDE_TARGETS.has(event.target)) {
     keys.push(instanceKeys.accounts, instanceKeys.organizations, queryKeys.organizations);
   }
