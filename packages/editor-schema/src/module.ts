@@ -68,6 +68,7 @@ interface BaseRenderer {
 }
 
 export interface HtmlRenderer extends BaseRenderer {
+  spendRenderBudget(cost: number): boolean;
   children(node: ValidNode): string;
   render(node: ValidNode): string;
   escape(text: string): string;

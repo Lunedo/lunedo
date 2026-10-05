@@ -4,6 +4,7 @@ import {
   type DocumentJson,
   editorSchemaVersion,
   InvalidDocumentError,
+  MAX_EXPENSIVE_RENDER_COST,
   modules,
   type NodeJson,
   type RenderContext,
@@ -59,6 +60,7 @@ function markdownText(markdown: string): string {
   };
   let text = markdown
     .replace(/^(`{3,})[^\n]*\n([\s\S]*?)\n\1$/gm, (_match, _fence, code: string) => protect(code))
+    .replace(/\$(`+) ?(.*?) ?\1\$/g, (_match, _ticks, latex: string) => protect(latex))
     .replace(/(`+) ?([^`]+?) ?\1/g, (_match, _ticks, code: string) => protect(code))
     .replace(/\\([\\`*_[\]<>|~$&#\-+=.)])/g, (_match, character: string) => protect(character))
     .replace(/\$\$\n([\s\S]*?)\n\$\$/g, (_match, latex: string) => protect(latex))
@@ -226,6 +228,15 @@ describe("renderHtml", () => {
     );
   });
 
+  it("renders formulas only up to a budget per document and shows the rest as code", () => {
+    const latex = `${"x^2+".repeat(1999)}x`;
+    const blocks = Array.from({ length: 20 }, () => ({ type: "blockMath", attrs: { latex } }));
+    const html = renderHtml(doc(...blocks));
+    const rendered = html.match(/class="katex-display"/g) ?? [];
+    expect(rendered.length).toBe(Math.floor(MAX_EXPENSIVE_RENDER_COST / latex.length));
+    expect(html).toContain(`<code>${latex}</code>`);
+  });
+
   it("highlights code and renders math", () => {
     const html = renderHtml(
       doc(
@@ -320,12 +331,23 @@ describe("renderMarkdown", () => {
         "> [!TIP]",
         "> Hint",
         "",
-        "$$",
+        "```math",
         "x",
-        "$$",
+        "```",
         "",
       ].join("\n"),
     );
+  });
+
+  it("keeps formulas inside code so they cannot break out into Markdown or HTML", () => {
+    const inline = renderMarkdown(
+      doc(paragraph({ type: "inlineMath", attrs: { latex: "x$ <img src=x onerror=alert(1)> $`y\nz" } })),
+    );
+    expect(inline).toBe("$``x$ <img src=x onerror=alert(1)> $`y z``$\n");
+    const block = renderMarkdown(
+      doc({ type: "blockMath", attrs: { latex: "a\n$$\n<script>alert(1)</script>\n```\nb" } }),
+    );
+    expect(block).toBe("````math\na\n$$\n<script>alert(1)</script>\n```\nb\n````\n");
   });
 
   it("escapes Markdown syntax in text", () => {

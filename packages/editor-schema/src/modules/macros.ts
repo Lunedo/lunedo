@@ -1,8 +1,8 @@
 import katex from "katex";
 import { z } from "zod";
-import type { Heading } from "../module.js";
+import type { Heading, HtmlRenderer } from "../module.js";
 import { attrOf, defineModule, optional, required } from "../module.js";
-import { element, escapeHtml, markdownUrl, prefixLines } from "../text.js";
+import { element, escapeHtml, fenceFor, inlineCode, markdownUrl, prefixLines } from "../text.js";
 import { calloutVariants, colorValue } from "../values.js";
 
 const ALERTS: Record<string, string> = {
@@ -18,8 +18,18 @@ export const MAX_LATEX_LENGTH = 10_000;
 
 const encoder = new TextEncoder();
 
-function renderMath(latex: string, displayMode: boolean): string {
-  const rendered = katex.renderToString(latex, { throwOnError: false, output: "htmlAndMathml", displayMode });
+function renderMath(latex: string, displayMode: boolean, renderer: HtmlRenderer): string {
+  const rendered = renderer.spendRenderBudget(latex.length)
+    ? katex.renderToString(latex, {
+        throwOnError: false,
+        output: "htmlAndMathml",
+        displayMode,
+        trust: false,
+        strict: "ignore",
+        maxExpand: 1000,
+        maxSize: 20,
+      })
+    : element("code", {}, escapeHtml(latex));
   return element(
     displayMode ? "div" : "span",
     { class: displayMode ? "ph-math ph-math-block" : "ph-math", "data-latex": latex },
@@ -201,16 +211,20 @@ export const mathModule = defineModule({
       name: "inlineMath",
       spec: { inline: true, group: "inline", atom: true },
       attrs: { latex: required(latexValue) },
-      html: (node) => renderMath(attrOf<string>(node, "latex"), false),
-      markdown: (node) => `$${attrOf<string>(node, "latex")}$`,
+      html: (node, renderer) => renderMath(attrOf<string>(node, "latex"), false, renderer),
+      markdown: (node) => `$${inlineCode(attrOf<string>(node, "latex").replace(/\s*\n\s*/g, " "))}$`,
       text: (node) => attrOf<string>(node, "latex"),
     },
     {
       name: "blockMath",
       spec: { group: "block", atom: true },
       attrs: { latex: required(latexValue) },
-      html: (node) => renderMath(attrOf<string>(node, "latex"), true),
-      markdown: (node) => `$$\n${attrOf<string>(node, "latex")}\n$$`,
+      html: (node, renderer) => renderMath(attrOf<string>(node, "latex"), true, renderer),
+      markdown: (node) => {
+        const latex = attrOf<string>(node, "latex");
+        const fence = fenceFor(latex);
+        return `${fence}math\n${latex}\n${fence}`;
+      },
       text: (node) => attrOf<string>(node, "latex"),
     },
   ],

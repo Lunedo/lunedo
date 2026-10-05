@@ -34,7 +34,7 @@ export {
 } from "./module.js";
 export { createDefaultRegistry, defaultModules } from "./modules/index.js";
 export { MAX_LATEX_LENGTH, MAX_MACRO_DATA_BYTES } from "./modules/macros.js";
-export { defaultLabels } from "./render.js";
+export { defaultLabels, MAX_EXPENSIVE_RENDER_COST } from "./render.js";
 export { escapeHtml, slugify } from "./text.js";
 export {
   InvalidDocumentError,

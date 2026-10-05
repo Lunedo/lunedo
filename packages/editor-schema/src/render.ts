@@ -28,8 +28,11 @@ function markKey(mark: ValidMark): string {
   return `${mark.type}:${JSON.stringify(mark.attrs)}`;
 }
 
+export const MAX_EXPENSIVE_RENDER_COST = 100_000;
+
 class RenderState {
   index = 0;
+  spent = 0;
 
   constructor(readonly headings: readonly Heading[]) {}
 
@@ -69,6 +72,12 @@ abstract class Renderer {
 
   nextHeadingId(): string {
     return this.state.next();
+  }
+
+  spendRenderBudget(cost: number): boolean {
+    if (this.state.spent + cost > MAX_EXPENSIVE_RENDER_COST) return false;
+    this.state.spent += cost;
+    return true;
   }
 
   formatDate(iso: string): string {
