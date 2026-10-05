@@ -1,3 +1,4 @@
+import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -7,7 +8,12 @@ import { initI18n } from "../i18n/index.js";
 import { mockApi, problem } from "../testing/render.js";
 import { notificationText } from "./notification-entry.js";
 import { groupByDay } from "./notification-panel.js";
-import { type NotificationItem, syncRunChanged } from "./notifications-api.js";
+import {
+  type NotificationItem,
+  objectsChanged,
+  syncRunChanged,
+  useNotificationStream,
+} from "./notifications-api.js";
 
 const ACCOUNT = {
   id: "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
@@ -266,5 +272,72 @@ describe("syncRunChanged", () => {
     syncRunChanged(queryClient, provider);
     for (const key of keys) expect(queryClient.getQueryState(key)?.isInvalidated).toBe(true);
     expect(queryClient.getQueryState(untouched)?.isInvalidated).toBe(false);
+  });
+});
+
+describe("objectsChanged", () => {
+  const organization = "01929b1e-0000-7000-8000-0000000000c1";
+
+  it("reloads accounts, groups, invitations and the audit log after a change in an organization", () => {
+    const queryClient = createQueryClient();
+    const keys = [
+      ["organization", organization, "groups"],
+      ["organization", organization, "invitations"],
+      ["organization", organization, "serviceAccounts"],
+      ["group", "01929b1e-0000-7000-8000-0000000000d1", "members"],
+      ["audit", "organization", organization, {}, null],
+      ["audit", "instance", null, {}, null],
+      ["instance", "accounts", "all", "page", "", null],
+    ];
+    const untouched = ["organization", "01929b1e-0000-7000-8000-0000000000c2", "groups"];
+    for (const key of [...keys, untouched]) queryClient.setQueryData(key, {});
+    objectsChanged(queryClient, [
+      { scope: "organization", organizationId: organization, target: "invitation" },
+    ]);
+    for (const key of keys)
+      expect(queryClient.getQueryState(key)?.isInvalidated, JSON.stringify(key)).toBe(true);
+    expect(queryClient.getQueryState(untouched)?.isInvalidated).toBe(false);
+  });
+
+  it("reloads mapping rules after a rule changed and leaves unrelated lists alone", () => {
+    const queryClient = createQueryClient();
+    const rules = ["identityProviders", "01929b1e-0000-7000-8000-0000000000a1", "rules"];
+    const accounts = ["instance", "accounts", "all", "page", "", null];
+    queryClient.setQueryData(rules, {});
+    queryClient.setQueryData(accounts, {});
+    objectsChanged(queryClient, [{ scope: "instance", organizationId: null, target: "mappingRule" }]);
+    expect(queryClient.getQueryState(rules)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(accounts)?.isInvalidated).toBe(false);
+  });
+
+  it("follows change events from the stream in one batch", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const queryClient = createQueryClient();
+      const accounts = ["instance", "accounts", "all", "page", "", null];
+      queryClient.setQueryData(accounts, {});
+      const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+      function Probe() {
+        useNotificationStream(true);
+        return null;
+      }
+      render(
+        <QueryClientProvider client={queryClient}>
+          <Probe />
+        </QueryClientProvider>,
+      );
+      for (let index = 0; index < 5; index += 1) {
+        FakeEventSource.last?.emit("changes", { scope: "instance", organizationId: null, target: "account" });
+      }
+      FakeEventSource.last?.emit("changes", { scope: "instance", target: 3 });
+      await vi.advanceTimersByTimeAsync(200);
+      expect(queryClient.getQueryState(accounts)?.isInvalidated).toBe(true);
+      const accountReloads = invalidate.mock.calls.filter(
+        ([filters]) => JSON.stringify(filters?.queryKey) === JSON.stringify(["instance", "accounts"]),
+      );
+      expect(accountReloads).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

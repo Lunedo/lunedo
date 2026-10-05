@@ -102,6 +102,63 @@ export function syncRunChanged(queryClient: QueryClient, providerId: string): vo
   void queryClient.invalidateQueries({ queryKey: ["group"] });
 }
 
+export interface ChangeEvent {
+  scope: "instance" | "organization";
+  organizationId: string | null;
+  target: string;
+}
+
+type QueryKey = readonly unknown[];
+
+const INSTANCE_TARGET_KEYS: Record<string, QueryKey[]> = {
+  account: [instanceKeys.accounts, ["organization"], ["group"], ["serviceAccount"]],
+  invitation: [instanceKeys.accounts, ["organization"]],
+  organization: [instanceKeys.organizations, queryKeys.organizations, instanceKeys.accounts],
+  role: [instanceKeys.roles, instanceKeys.assignments, instanceKeys.accounts],
+  roleAssignment: [instanceKeys.assignments, instanceKeys.accounts],
+  identityProvider: [identityKeys.providers, identityKeys.drafts],
+  mappingRule: [identityKeys.providers],
+  breakGlassAccess: [instanceKeys.breakGlass],
+  apiToken: [["organization"], ["serviceAccount"]],
+};
+
+const ORGANIZATION_WIDE_TARGETS = new Set(["account", "invitation", "organization", "roleAssignment"]);
+
+export function changeKeys(event: ChangeEvent): QueryKey[] {
+  const keys: QueryKey[] = [["audit"]];
+  if (event.scope === "instance") return [...keys, ...(INSTANCE_TARGET_KEYS[event.target] ?? [])];
+  if (!event.organizationId) return keys;
+  keys.push(organizationKeys.organization(event.organizationId), ["group"], ["serviceAccount"]);
+  if (ORGANIZATION_WIDE_TARGETS.has(event.target)) {
+    keys.push(instanceKeys.accounts, instanceKeys.organizations, queryKeys.organizations);
+  }
+  return keys;
+}
+
+export function objectsChanged(queryClient: QueryClient, events: ChangeEvent[]): void {
+  const seen = new Set<string>();
+  for (const event of events) {
+    for (const queryKey of changeKeys(event)) {
+      const id = JSON.stringify(queryKey);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      void queryClient.invalidateQueries({ queryKey });
+    }
+  }
+}
+
+const CHANGE_BATCH_MS = 150;
+
+function isChangeEvent(value: unknown): value is ChangeEvent {
+  if (typeof value !== "object" || value === null) return false;
+  const event = value as Partial<ChangeEvent>;
+  return (
+    (event.scope === "instance" || event.scope === "organization") &&
+    (event.organizationId === null || typeof event.organizationId === "string") &&
+    typeof event.target === "string"
+  );
+}
+
 export function useNotificationStream(enabled: boolean): void {
   const queryClient = useQueryClient();
   useEffect(() => {
@@ -133,13 +190,33 @@ export function useNotificationStream(enabled: boolean): void {
         return;
       }
     };
+    let pending: ChangeEvent[] = [];
+    let flush: ReturnType<typeof setTimeout> | undefined;
+    const onObjects = (event: MessageEvent<string>) => {
+      try {
+        const data: unknown = JSON.parse(event.data);
+        if (!isChangeEvent(data)) return;
+        pending.push(data);
+      } catch {
+        return;
+      }
+      flush ??= setTimeout(() => {
+        flush = undefined;
+        const events = pending;
+        pending = [];
+        objectsChanged(queryClient, events);
+      }, CHANGE_BATCH_MS);
+    };
     source.addEventListener("notifications", onChange);
+    source.addEventListener("changes", onObjects);
     source.addEventListener("settings", onSettings);
     source.addEventListener("syncRuns", onSyncRuns);
     return () => {
       source.removeEventListener("notifications", onChange);
       source.removeEventListener("settings", onSettings);
       source.removeEventListener("syncRuns", onSyncRuns);
+      source.removeEventListener("changes", onObjects);
+      if (flush) clearTimeout(flush);
       source.close();
     };
   }, [enabled, queryClient]);

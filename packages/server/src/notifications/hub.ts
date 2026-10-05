@@ -1,3 +1,4 @@
+import { AUDIT_CHANGES_CHANNEL, type AuditChangeSignal, parseAuditChangeSignal } from "../audit/audit-log.js";
 import type { NotificationListener } from "../database/notifications.js";
 import { parseSyncRunSignal, SYNC_RUNS_CHANNEL, type SyncRunSignal } from "../identity/sync-signals.js";
 import {
@@ -10,12 +11,14 @@ import { NOTIFICATIONS_CHANNEL } from "./service.js";
 type Handler = () => void;
 type SettingsHandler = (signal: SettingChangeSignal) => void;
 type SyncRunHandler = (signal: SyncRunSignal) => void;
+type ChangeHandler = (signal: AuditChangeSignal) => void;
 
 export class NotificationHub {
   readonly #listener: NotificationListener;
   readonly #handlers = new Map<string, Set<Handler>>();
   readonly #settingsHandlers = new Set<SettingsHandler>();
   readonly #syncRunHandlers = new Set<SyncRunHandler>();
+  readonly #changeHandlers = new Set<ChangeHandler>();
   #listening: Promise<void> | undefined;
 
   constructor(listener: NotificationListener) {
@@ -43,6 +46,14 @@ export class NotificationHub {
     this.#syncRunHandlers.add(handler);
     return () => {
       this.#syncRunHandlers.delete(handler);
+    };
+  }
+
+  async subscribeChanges(handler: ChangeHandler): Promise<() => void> {
+    await this.#ready();
+    this.#changeHandlers.add(handler);
+    return () => {
+      this.#changeHandlers.delete(handler);
     };
   }
 
@@ -80,6 +91,11 @@ export class NotificationHub {
       const signal = parseSyncRunSignal(payload);
       if (!signal) return;
       for (const handler of this.#syncRunHandlers) handler(signal);
+    });
+    await this.#listener.listen(AUDIT_CHANGES_CHANNEL, (payload) => {
+      const signal = parseAuditChangeSignal(payload);
+      if (!signal) return;
+      for (const handler of this.#changeHandlers) handler(signal);
     });
     this.#listener.onReconnect(() => {
       for (const handlers of this.#handlers.values()) for (const handler of handlers) handler();

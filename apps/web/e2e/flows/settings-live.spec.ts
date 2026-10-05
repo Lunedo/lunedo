@@ -1,6 +1,6 @@
 import { type Browser, type BrowserContext, expect, type Page, test } from "@playwright/test";
 import { OWNER_STORAGE, readState } from "../support/environment.js";
-import { signInWithPassword } from "../support/helpers.js";
+import { liveUpdatesConnected, signInWithPassword } from "../support/helpers.js";
 
 test.describe.configure({ mode: "serial" });
 
@@ -36,8 +36,10 @@ async function setting(page: Page, level: "organization", key: string): Promise<
 async function ownerPage(browser: Browser): Promise<{ context: BrowserContext; page: Page }> {
   const context = await browser.newContext({ storageState: OWNER_STORAGE });
   const page = await context.newPage();
+  const connected = liveUpdatesConnected(page);
   await page.goto("/settings/preferences");
   await expect(page.getByRole("heading", { name: "Preferences", level: 1 })).toBeVisible();
+  await connected;
   return { context, page };
 }
 
@@ -46,8 +48,10 @@ async function memberPage(browser: Browser): Promise<{ context: BrowserContext; 
   const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
   const page = await context.newPage();
   await page.goto("/sign-in");
+  const connected = liveUpdatesConnected(page);
   await signInWithPassword(page, memberEmail ?? "", memberPassword ?? "");
   await expect(page.getByRole("heading", { name: "Preferences", level: 1 })).toBeVisible();
+  await connected;
   return { context, page };
 }
 

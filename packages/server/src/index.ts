@@ -31,7 +31,12 @@ export {
   type TokenScopes,
 } from "./accounts/principal.js";
 export { accountScopeChain } from "./accounts/scope.js";
-export { AuditLog, type AuditScope, type AuditVerification } from "./audit/audit-log.js";
+export {
+  type AuditChangeSignal,
+  AuditLog,
+  type AuditScope,
+  type AuditVerification,
+} from "./audit/audit-log.js";
 export {
   type AuditChangeKind,
   type AuditEventName,
