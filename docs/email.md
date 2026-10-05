@@ -8,7 +8,7 @@ Pagehall sends either through SMTP or through Microsoft Graph (`mail.method`, in
 
 ## SMTP
 
-SMTP is an instance setting, configured in the setup assistant, in the instance administration or through configuration. The password is stored with envelope encryption and never returned; changing the configuration needs a recent sign-in. A test mail can be sent with a configuration before it is saved; without a new password it uses the stored one.
+SMTP is an instance setting, configured in the setup assistant, in the instance administration or through configuration. The password is stored with envelope encryption and never returned; changing the configuration needs a recent sign-in. A test mail can be sent with a configuration before it is saved; without a new password it uses the stored one. A successful test means that the server accepted the mail; many servers reject it later and send a non-delivery report to the sender address, which Pagehall cannot see.
 
 | Security | Behavior |
 |---|---|
@@ -46,6 +46,8 @@ The authority and the Graph endpoint default to the global Microsoft cloud; othe
 | `graphUnreachable`, `graphRefused` | Graph could not be reached, was busy or refused the mail. |
 
 Delivery through Graph is retried like delivery through SMTP.
+
+Graph accepts a mail with `202 Accepted` and delivers it later, so a successful test only means that Microsoft 365 accepted it. A delivery failure arrives as a non-delivery report in the sender mailbox, for example `550 5.7.233` when a new or trial tenant may not send to external recipients yet. Pagehall sends with `saveToSentItems: false`, so the sent mail itself does not appear in Sent Items; the message trace in the Exchange admin center shows what happened to it.
 
 ## Delivery
 

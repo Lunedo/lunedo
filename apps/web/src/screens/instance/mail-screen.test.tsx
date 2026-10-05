@@ -138,6 +138,34 @@ describe("the e-mail settings", () => {
     expect(graphTest?.body).toMatchObject({ to: OLIVIA.email });
     expect(within(document.body).queryByText("Pagehall sends through Microsoft Graph.")).toBeNull();
   });
+
+  it("says that Microsoft 365 only accepted the test mail and where a failed delivery shows", async () => {
+    api({
+      "POST /api/v1/instance/mail/graph/test": () => ({ body: { delivered: true, error: null } }),
+    });
+    await renderMail();
+    await userEvent.click(await screen.findByRole("radio", { name: "Microsoft Graph" }));
+    await userEvent.type(screen.getByLabelText("Directory (tenant) ID"), TENANT);
+    await userEvent.type(screen.getByLabelText("Client ID"), "client-id");
+    await userEvent.type(screen.getByLabelText("Sender mailbox"), "wiki@example.org");
+    await userEvent.click(screen.getByRole("button", { name: "Send test mail" }));
+    const accepted = await screen.findByText("Microsoft 365 accepted the test mail.");
+    const result = accepted.closest("[role=status]")?.textContent;
+    expect(result).toContain("non-delivery report in the sender mailbox");
+    expect(result).toContain("550 5.7.233");
+  });
+
+  it("says that the mail server only accepted the test mail and where a later bounce shows", async () => {
+    api({ "POST /api/v1/instance/mail/test": () => ({ body: { delivered: true, error: null } }) });
+    await renderMail();
+    await userEvent.type(await screen.findByLabelText("Server"), "smtp.example.org");
+    await userEvent.type(screen.getByLabelText("Sender address"), "wiki@example.org");
+    await userEvent.click(screen.getByRole("button", { name: "Send test mail" }));
+    const result = await screen.findByText("The mail server accepted the test mail.");
+    expect(result.closest("[role=status]")?.textContent).toContain(
+      "look for a non-delivery report in the mailbox of the sender address",
+    );
+  });
 });
 
 describe("the instance overview", () => {

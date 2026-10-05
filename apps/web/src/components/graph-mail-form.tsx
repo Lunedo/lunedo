@@ -278,12 +278,13 @@ export function GraphMailForm({
           <Button variant="outline" icon={Send} loading={testing} onClick={() => void test()}>
             {t("mail.sendTest")}
           </Button>
-          {testResult?.delivered ? (
-            <span role="status" className="text-success">
-              {t("mail.testDelivered")}
-            </span>
-          ) : null}
         </div>
+        {testResult?.delivered ? (
+          <div role="status" className="flex flex-col gap-1">
+            <span className="text-success">{t("mail.testDeliveredGraph")}</span>
+            <span className="text-sm text-text-muted">{t("mail.testDeliveryFollowsGraph")}</span>
+          </div>
+        ) : null}
         {failure ? (
           <ErrorState
             title={t("mail.testFailed")}
