@@ -3,6 +3,7 @@ import {
   caCertificateSchema,
   distinguishedNameSchema,
   ldapSecondFactorModes,
+  ldapServerAddress,
 } from "@pagehall/shared";
 import {
   Badge,
@@ -44,13 +45,7 @@ import { Entry, ReceivedClaims } from "./provider-test.js";
 
 export const CERTIFICATE_TYPES = ".pem,.crt,.cer,application/x-pem-file,application/x-x509-ca-cert";
 
-export const ldapUrlSchema = z
-  .url({ protocol: /^ldaps?$/ })
-  .max(2048)
-  .refine((value) => {
-    const url = new URL(value);
-    return (url.pathname === "" || url.pathname === "/") && url.search === "" && url.hash === "";
-  });
+export const ldapUrlSchema = z.string().refine((value) => ldapServerAddress(value) !== null);
 
 export const ldapFilterSchema = z
   .string()
@@ -90,7 +85,7 @@ export function serviceAccountField(preset: LdapConfigInput["preset"]) {
 }
 
 export function isPlainLdap(url: string): boolean {
-  return url.trim().toLowerCase().startsWith("ldap://");
+  return ldapServerAddress(url)?.startsWith("ldap://") ?? false;
 }
 
 export const SIGN_IN_ATTRIBUTES = {
@@ -126,7 +121,7 @@ export function LdapConnectionFields({
           }
           disabled={!canManage}
           className="font-mono"
-          onSave={(url) => update((current) => ({ ...current, url }))}
+          onSave={(url) => update((current) => ({ ...current, url: ldapServerAddress(url) ?? url }))}
         />
       </div>
       <SettingRow

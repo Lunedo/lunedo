@@ -335,13 +335,31 @@ export type SamlConfigInput = z.input<typeof samlConfigSchema>;
 
 export const ldapSecondFactorModes = ["pagehall", "provider"] as const;
 
+export function ldapServerAddress(input: string): string | null {
+  const value = input.trim();
+  if (value.length === 0 || value.length > 2048 || /\s/.test(value)) return null;
+  const schemeless = !value.includes("://");
+  let url: URL;
+  try {
+    url = new URL(schemeless ? `ldaps://${value}` : value);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "ldap:" && url.protocol !== "ldaps:") return null;
+  if (url.hostname === "" || url.username !== "" || url.password !== "") return null;
+  if ((url.pathname !== "" && url.pathname !== "/") || url.search !== "" || url.hash !== "") return null;
+  const port = url.port || (schemeless ? "636" : "");
+  return `${url.protocol}//${url.hostname}${port ? `:${port}` : ""}`;
+}
+
 const ldapUrl = z
-  .url({ protocol: /^ldaps?$/ })
+  .string()
   .max(2048)
-  .refine((value) => {
-    const url = new URL(value);
-    return (url.pathname === "" || url.pathname === "/") && url.search === "" && url.hash === "";
-  }, "must be the address of a directory server without a path");
+  .refine(
+    (value) => ldapServerAddress(value) !== null,
+    "must be the address of a directory server without a path, such as ldaps://dc01.example.org",
+  )
+  .overwrite((value) => ldapServerAddress(value) ?? value);
 
 const ldapCommonShape = {
   url: ldapUrl,

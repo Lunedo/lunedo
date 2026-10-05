@@ -659,7 +659,7 @@
     },
     "ldap": {
       "url": "Serveradresse",
-      "urlHint": "Zum Beispiel ldaps://dc01.example.org. Verwende ldaps:// oder ldap:// mit StartTLS, damit Passwörter nie unverschlüsselt übertragen werden.",
+      "urlHint": "Zum Beispiel ldaps://dc01.example.org. Ein Hostname allein, etwa dc01.example.org, bedeutet ldaps:// auf Port 636. Verwende ldaps:// oder ldap:// mit StartTLS, damit Passwörter nie unverschlüsselt übertragen werden.",
       "urlInvalid": "Gib eine Adresse wie ldaps://dc01.example.org ohne Pfad ein.",
       "urlInvalidStartTls": "Gib eine ldap://-Adresse ein, solange StartTLS eingeschaltet ist. Für ldaps:// schalte zuerst StartTLS aus.",
       "startTls": "StartTLS verwenden",

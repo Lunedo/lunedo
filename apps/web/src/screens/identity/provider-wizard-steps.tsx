@@ -3,6 +3,7 @@ import {
   distinguishedNameSchema,
   domainSchema,
   identityProviderNameSchema,
+  ldapServerAddress,
 } from "@pagehall/shared";
 import { Button, Field, Input, Notice, PasswordInput, SegmentedControl, Switch } from "@pagehall/ui";
 import { useQueryClient } from "@tanstack/react-query";
@@ -370,7 +371,7 @@ export function LdapConnectionStep({
     setErrors(found);
     if (Object.keys(found).length > 0) return null;
     const shared = {
-      url: draft.url.trim(),
+      url: ldapServerAddress(draft.url) ?? draft.url.trim(),
       startTls: plain && draft.startTls,
       bindDn: draft.bindDn.trim(),
       userBaseDn: draft.userBaseDn.trim(),
@@ -463,10 +464,15 @@ export function LdapConnectionStep({
         {...(errors.url ? { error: errors.url } : {})}
       >
         <Input
-          type="url"
+          type="text"
+          inputMode="url"
           className="font-mono"
           value={draft.url}
           onChange={(event) => set({ url: event.target.value })}
+          onBlur={() => {
+            const address = ldapServerAddress(draft.url);
+            if (address && address !== draft.url) set({ url: address });
+          }}
         />
       </Field>
       {plain ? (

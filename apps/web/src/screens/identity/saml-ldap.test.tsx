@@ -389,6 +389,24 @@ describe("adding an LDAP directory", () => {
     expect(bodyOf(requests, "PUT", `${BASE}/${LDAP}/ca-certificate`)).toEqual({ certificate: PEM });
   });
 
+  it("shows an invalid server address at the field and understands a host name as ldaps:// on port 636", async () => {
+    adminApi({ ...draftApi(LDAP, "ldap", "activeDirectory") });
+    await renderPath("/settings/instance/sign-in-providers/new");
+    await userEvent.click(await screen.findByRole("button", { name: /LDAP or Active Directory/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    const field = await screen.findByLabelText("Server address");
+    await userEvent.type(field, "dc01 .verlag.example");
+    await userEvent.click(screen.getByRole("button", { name: "Save and continue" }));
+    expect(
+      await screen.findByText("Enter an address such as ldaps://dc01.example.org, without a path."),
+    ).toBeTruthy();
+    await userEvent.clear(field);
+    await userEvent.type(field, "dc01.verlag.example");
+    await userEvent.tab();
+    expect(await screen.findByDisplayValue("ldaps://dc01.verlag.example:636")).toBeTruthy();
+    expect(screen.queryByRole("switch", { name: "Use StartTLS" })).toBeNull();
+  });
+
   it("explains a failed directory test, takes the CA certificate right there and tests again", async () => {
     let trusted = false;
     const { requests } = adminApi({
@@ -860,5 +878,36 @@ describe("SAML and LDAP providers in the list and the details", () => {
     await userEvent.tab();
     expect(await screen.findByText(/Enter an ldap:\/\/ address while StartTLS is on/)).toBeTruthy();
     expect(requests.some((request) => request.method === "PATCH")).toBe(false);
+  });
+
+  it("saves a host name of a directory as the ldaps:// address it was understood as", async () => {
+    let provider = ldapProvider();
+    const { requests } = adminApi({
+      [`GET ${BASE}/${LDAP}`]: () => ({ body: provider }),
+      [`GET ${BASE}`]: () => ({ body: [provider] }),
+      [`PATCH ${BASE}/${LDAP}`]: (request) => {
+        const body = request.body as { config: Record<string, unknown> };
+        provider = ldapProvider({}, body.config);
+        return { body: provider };
+      },
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${LDAP}?tab=settings`);
+    const field = await screen.findByLabelText("Server address");
+    await userEvent.clear(field);
+    await userEvent.type(field, "dc01 .verlag.example");
+    await userEvent.tab();
+    expect(
+      await screen.findByText("Enter an address such as ldaps://dc01.example.org, without a path."),
+    ).toBeTruthy();
+    expect(requests.some((request) => request.method === "PATCH")).toBe(false);
+    await userEvent.clear(field);
+    await userEvent.type(field, "dc01.verlag.example");
+    await userEvent.tab();
+    await waitFor(() =>
+      expect(
+        (bodyOf(requests, "PATCH", `${BASE}/${LDAP}`) as { config: { url: string } } | undefined)?.config.url,
+      ).toBe("ldaps://dc01.verlag.example:636"),
+    );
+    expect(await screen.findByDisplayValue("ldaps://dc01.verlag.example:636")).toBeTruthy();
   });
 });
