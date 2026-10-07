@@ -8,7 +8,7 @@ import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.
 import { usePreferences } from "../preferences/preferences-provider.js";
 import { useSession } from "../shell/shell-context.js";
 import { type EditorActions, registerEditorActions } from "./actions.js";
-import { PageCollaboration } from "./collaboration.js";
+import { closeCollaboration, openCollaboration, type PageCollaboration } from "./collaboration.js";
 import { PageContextValue } from "./context.js";
 import { EmojiPicker } from "./emoji-picker.js";
 import { createEditorExtensions } from "./extensions/index.js";
@@ -40,9 +40,9 @@ const READ_ONLY_PROBLEMS = new Set(["permissionRevoked", "noEditPermission", "pa
 export function PageEditor(props: PageEditorProps) {
   const [collaboration, setCollaboration] = useState<PageCollaboration | null>(null);
   useEffect(() => {
-    const created = new PageCollaboration(props.pageId);
-    setCollaboration(created);
-    return () => created.destroy();
+    const opened = openCollaboration(props.pageId);
+    setCollaboration(opened);
+    return () => closeCollaboration(opened);
   }, [props.pageId]);
   if (!collaboration) return null;
   return <CollaborativeEditor key={props.pageId} {...props} collaboration={collaboration} />;
