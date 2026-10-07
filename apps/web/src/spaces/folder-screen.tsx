@@ -1,6 +1,6 @@
 import { Button, EmptyState, IconButton, Menu, PageHeader, SegmentedControl, Skeleton } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getRouteApi, Link, Navigate } from "@tanstack/react-router";
+import { getRouteApi, Link } from "@tanstack/react-router";
 import {
   ArrowRightLeft,
   FilePlus,
@@ -21,6 +21,7 @@ import { usePreferences } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { InlineTitle } from "./inline-title.js";
 import { itemHref, itemSlug } from "./item-paths.js";
+import { Redirect } from "./redirect.js";
 import { spaceDisplayName } from "./space-badge.js";
 import { useSpace } from "./space-context.js";
 import { itemQuery, spaceKeys, type TreeItem } from "./space-queries.js";
@@ -52,7 +53,7 @@ export function FolderScreen() {
   const folder = item.data;
   if (folder.kind !== "folder" || folder.spaceKey !== space.key || slug !== itemSlug(folder.title)) {
     const href = itemHref(folder, folder.spaceKey);
-    if (href) return <Navigate to={href} replace />;
+    if (href) return <Redirect to={href} />;
   }
   const save = async (changes: { title?: string; description?: string }) => {
     await request(() => api.PATCH("/api/v1/items/{itemId}", { params: { path: { itemId } }, body: changes }));

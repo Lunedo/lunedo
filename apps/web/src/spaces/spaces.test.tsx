@@ -261,6 +261,23 @@ describe("spaces", () => {
     await renderAt(`/spaces/OLDKEY/folders/${RUNBOOKS}/runbooks`);
     await waitFor(() => expect(window.location.pathname).toBe(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`));
   });
+
+  it("leads an outdated title in the address to the current one and keeps the edit mode", async () => {
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes("reader"),
+      [`GET /api/v1/pages/${OVERVIEW}/content`]: () => problem(404, "notFound"),
+      [`GET /api/v1/pages/${OVERVIEW}/labels`]: () => ({ body: [] }),
+      [`GET /api/v1/pages/${OVERVIEW}/backlinks`]: () => ({ body: [] }),
+    });
+    await renderAt(`/spaces/ITOPS/pages/${OVERVIEW}/untitled-page?edit=true`);
+    await waitFor(() =>
+      expect(`${window.location.pathname}${window.location.search}`).toBe(
+        `/spaces/ITOPS/pages/${OVERVIEW}/it-operations?edit=true`,
+      ),
+    );
+    expect(await screen.findByRole("heading", { name: "IT Operations", level: 1 })).toBeTruthy();
+  });
 });
 
 describe("page tree", () => {

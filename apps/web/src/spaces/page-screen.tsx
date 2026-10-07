@@ -1,6 +1,6 @@
 import { Button, IconButton, Menu, PageHeader, SegmentedControl, Skeleton } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getRouteApi, Link, Navigate, useNavigate } from "@tanstack/react-router";
+import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRightLeft, Check, FilePlus, FileText, MoreHorizontal, Move, Pencil } from "lucide-react";
 import { lazy, Suspense, useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,6 +13,7 @@ import { EDIT_PAGE_EVENT } from "../shell/builtin.js";
 import { InlineTitle } from "./inline-title.js";
 import { itemHref, itemSlug } from "./item-paths.js";
 import { PageLabels } from "./page-labels.js";
+import { Redirect } from "./redirect.js";
 import { spaceDisplayName } from "./space-badge.js";
 import { useSpace } from "./space-context.js";
 import {
@@ -34,6 +35,7 @@ const PageEditor = lazy(() =>
 export function PageScreen() {
   const { t } = useTranslation();
   const { itemId, slug } = route.useParams();
+  const search = route.useSearch();
   const { space } = useSpace();
   const item = useQuery(itemQuery(itemId));
   useDocumentTitle(item.data?.title ?? "");
@@ -55,7 +57,7 @@ export function PageScreen() {
   const page = item.data;
   if (page.kind !== "page" || page.spaceKey !== space.key || slug !== itemSlug(page.title)) {
     const href = itemHref(page, page.spaceKey);
-    if (href) return <Navigate to={href} replace />;
+    if (href) return <Redirect to={href} search={search} />;
   }
   return <PageView key={page.id} page={page} />;
 }

@@ -1,14 +1,6 @@
 import { Button, Drawer, IconButton, Menu, Notice, Skeleton } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
-import {
-  getRouteApi,
-  Link,
-  Navigate,
-  Outlet,
-  useLocation,
-  useNavigate,
-  useParams,
-} from "@tanstack/react-router";
+import { getRouteApi, Link, Outlet, useLocation, useNavigate, useParams } from "@tanstack/react-router";
 import {
   FilePlus,
   Folder,
@@ -28,6 +20,7 @@ import { isApiError } from "../api/request.js";
 import { LoadError } from "../errors/failure.js";
 import { useShell } from "../shell/shell.js";
 import { itemHref } from "./item-paths.js";
+import { Redirect } from "./redirect.js";
 import { SpaceBadge, spaceDisplayName } from "./space-badge.js";
 import { SpaceContext, type SpaceContextValue } from "./space-context.js";
 import { itemQuery, type SpaceWithRole, spaceByKeyQuery } from "./space-queries.js";
@@ -77,7 +70,7 @@ export function SpaceLayout() {
   const [, , currentKey = "", ...rest] = location.pathname.split("/");
   if (currentKey !== space.key) {
     const target: string = ["", "spaces", space.key, ...rest].join("/");
-    return <Navigate to={target} replace />;
+    return <Redirect to={target} search={location.search} />;
   }
   return <SpaceFrame space={space} />;
 }
@@ -288,7 +281,7 @@ export function SpaceOverviewRedirect() {
       { id: space.overviewItemId, kind: "page", title: space.name || t("spaces.overview"), link: null },
       space.key,
     );
-    if (href) return <Navigate to={href} replace />;
+    if (href) return <Redirect to={href} />;
   }
   return (
     <div className="p-6">
