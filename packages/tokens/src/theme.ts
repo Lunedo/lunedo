@@ -24,6 +24,10 @@ function colorDeclarations(tokens: DesignTokens, set: ColorSet, mode: ColorMode)
     declarations.push([`--${PREFIX}-status-${kebab(key)}-bg`, value.bg]);
     declarations.push([`--${PREFIX}-status-${kebab(key)}-text`, value.text]);
   }
+  for (const [key, value] of Object.entries(tokens.color.content[set])) {
+    declarations.push([`--${PREFIX}-content-${kebab(key)}-text`, value.text]);
+    declarations.push([`--${PREFIX}-content-${kebab(key)}-background`, value.background]);
+  }
   return declarations;
 }
 

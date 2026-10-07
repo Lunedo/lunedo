@@ -81,6 +81,9 @@ describe("design tokens", () => {
     }
     expect(Object.keys(tokens.color.palette.dark)).toEqual(Object.keys(tokens.color.palette.light));
     expect(Object.keys(tokens.color.status.dark)).toEqual(Object.keys(tokens.color.status.light));
+    for (const set of colorSets) {
+      expect(Object.keys(tokens.color.content[set]), set).toEqual(Object.keys(tokens.color.content.light));
+    }
     expect(Object.keys(tokens.layout.controlCompact)).toEqual(Object.keys(tokens.layout.control));
   });
 
@@ -183,6 +186,16 @@ describe("design tokens", () => {
       }
     }
   });
+  it("keep content colors readable as text and behind text in every set", () => {
+    for (const set of colorSets) {
+      const colors = tokens.color[set];
+      for (const [name, color] of Object.entries(tokens.color.content[set])) {
+        expect(contrast(color.text, colors.bg), `${set} ${name} on page`).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(color.text, color.background), `${set} ${name} on own`).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(colors.text, color.background), `${set} text on ${name}`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
 });
 
 describe("generateThemeCss", () => {
@@ -208,6 +221,8 @@ describe("generateThemeCss", () => {
     }
     expect(theme).toContain("--color-palette-petrol: var(--ph-palette-petrol);");
     expect(theme).toContain("--color-status-in-progress-bg: var(--ph-status-in-progress-bg);");
+    expect(theme).toContain("--color-content-red-text: var(--ph-content-red-text);");
+    expect(theme).toContain("--color-content-yellow-background: var(--ph-content-yellow-background);");
   });
 
   it("resets the default Tailwind scales so that only token values exist", () => {

@@ -9,6 +9,11 @@
       "@pagehall/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./yjs": {
+      "@pagehall/source": "./src/yjs.ts",
+      "types": "./dist/yjs.d.ts",
+      "default": "./dist/yjs.js"
     }
   },
   "scripts": {
@@ -25,5 +30,18 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "dependencies": {
+    "@tiptap/y-tiptap": "^3.0.9",
+    "hast-util-to-html": "^9.0.5",
+    "katex": "^0.19.0",
+    "lowlight": "^3.3.0",
+    "prosemirror-model": "^1.25.12",
+    "prosemirror-state": "^1.4.4",
+    "prosemirror-view": "^1.42.6",
+    "y-protocols": "^1.0.7",
+    "yjs": "^13.6.33",
+    "zod": "^4.6.5"
+  },
+  "sideEffects": false
 }

@@ -34,6 +34,20 @@ export const problems = {
   notMember: { status: 400, title: "The account is not a member" },
   confirmationMismatch: { status: 400, title: "The confirmation does not match" },
   anonymizeSelf: { status: 400, title: "An account cannot anonymize itself" },
+  invalidSpaceKey: { status: 400, title: "The space key is not valid" },
+  invalidSpaceName: { status: 400, title: "The space name is not valid" },
+  invalidSpaceDescription: { status: 400, title: "The space description is too long" },
+  invalidHolder: { status: 400, title: "The holder cannot get a role in this space" },
+  personalSpaceVisibility: { status: 400, title: "Personal spaces are always private" },
+  invalidTitle: { status: 400, title: "The title is not valid" },
+  invalidDescription: { status: 400, title: "The description is too long" },
+  invalidLinkUrl: { status: 400, title: "The link address is not valid" },
+  invalidLinkTarget: { status: 400, title: "The link target is not valid" },
+  invalidPlacement: { status: 400, title: "The place in the page tree is not valid" },
+  invalidConversion: { status: 400, title: "The item cannot be converted" },
+  invalidDocument: { status: 400, title: "The document does not match the editor schema" },
+  invalidLabel: { status: 400, title: "The label is not valid" },
+  selfAppointment: { status: 400, title: "Nobody can give themselves access this way" },
   invalidCredentials: { status: 401, title: "The credentials are not valid" },
   invalidSecondFactor: { status: 401, title: "The second factor is not valid" },
   challengeExpired: { status: 401, title: "The sign-in step expired" },
@@ -55,6 +69,17 @@ export const problems = {
   unknownSetupAction: { status: 404, title: "The setup action does not exist" },
   emailInUse: { status: 409, title: "The e-mail address is in use" },
   slugTaken: { status: 409, title: "The slug is taken" },
+  keyTaken: { status: 409, title: "The space key is taken" },
+  alreadyGranted: { status: 409, title: "The holder already has a role in the space" },
+  permissionNotFound: { status: 404, title: "The permission does not exist" },
+  lastSpaceAdmin: { status: 409, title: "A space needs at least one space admin" },
+  selfExtension: { status: 403, title: "Nobody can extend their own permissions" },
+  spaceHasAdministrator: { status: 409, title: "The space has a space admin" },
+  notUnderReview: { status: 409, title: "The personal space is not under review" },
+  moveIntoDescendant: { status: 409, title: "An item cannot be moved below itself" },
+  itemMoved: { status: 409, title: "The item was moved at the same moment" },
+  overviewPage: { status: 409, title: "The overview page of a space stays a page in its space" },
+  tooManyLabels: { status: 409, title: "The page has too many labels" },
   domainTaken: { status: 409, title: "The domain belongs to another organization" },
   roleNameTaken: { status: 409, title: "The role name is taken" },
   groupNameTaken: { status: 409, title: "The group name is taken" },
@@ -160,6 +185,18 @@ export const problemSchema = z
       .optional()
       .describe("Domains that belong to another identity provider, for `domainInUse`."),
     instanceUrl: z.string().optional().describe("The current address of the instance, for `instanceMoved`."),
+    problems: z
+      .array(
+        z
+          .object({
+            path: z.string().describe("Position in the document, such as `content.2.content.0`."),
+            code: z.string().describe("Kind of problem, such as `unknownNode` or `invalidAttribute`."),
+            message: z.string().describe("Explanation for people."),
+          })
+          .describe("A problem in the document."),
+      )
+      .optional()
+      .describe("What is wrong with the document, for `invalidDocument`."),
   })
   .describe("Error response following RFC 9457 Problem Details.");
 

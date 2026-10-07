@@ -1,0 +1,308 @@
+import { uuidv7 } from "@pagehall/shared";
+import { sql } from "drizzle-orm";
+import { accountPrincipal, type Principal } from "../accounts/principal.js";
+import type { AuditLog } from "../audit/audit-log.js";
+import {
+  type AccessImpact,
+  accessImpact,
+  accountRoleUnder,
+  activeAdministratorCondition,
+  proposedGrants,
+  type SpaceAccessState,
+  type SpaceGrantRow,
+} from "../authorization/space-access.js";
+import type { Database, Transaction } from "../database/database.js";
+import type { PrincipalKind } from "../organizations/access-schema.js";
+import { actorIdOf, auditScopeOf, SpaceError } from "./common.js";
+import type { PeopleService } from "./people.js";
+import { spaceRoleRank } from "./roles.js";
+import type { SpaceRole } from "./schema.js";
+import type { SpaceGrant } from "./settings.js";
+import { signalSpaceChange } from "./signals.js";
+import type { HolderValidation, Space, SpaceService, SpaceTarget } from "./spaces.js";
+
+export interface SpacePermissionEntry {
+  id: string;
+  principalKind: PrincipalKind;
+  principalId: string | null;
+  name: string | null;
+  email: string | null;
+  organizationName: string | null;
+  role: SpaceRole;
+}
+
+export type PermissionChange =
+  | { action: "grant"; principalKind: PrincipalKind; principalId: string | null; role: SpaceRole }
+  | { action: "change"; permissionId: string; role: SpaceRole }
+  | { action: "remove"; permissionId: string };
+
+interface StoredPermission extends SpaceGrantRow {
+  id: string;
+}
+
+async function storedPermissions(
+  executor: Pick<Database, "execute">,
+  spaceId: string,
+): Promise<StoredPermission[]> {
+  const result = await executor.execute<{
+    id: string;
+    principal_kind: PrincipalKind;
+    principal_id: string | null;
+    role: SpaceRole;
+  }>(sql`select id, principal_kind, principal_id, role from space_permissions where space_id = ${spaceId}`);
+  return result.rows.map((row) => ({
+    id: row.id,
+    principalKind: row.principal_kind,
+    principalId: row.principal_id,
+    role: row.role,
+  }));
+}
+
+function apply(current: StoredPermission[], change: PermissionChange): StoredPermission[] {
+  switch (change.action) {
+    case "grant": {
+      const existing = current.find(
+        (permission) =>
+          permission.principalKind === change.principalKind && permission.principalId === change.principalId,
+      );
+      if (existing) {
+        throw new SpaceError(
+          "alreadyGranted",
+          "This holder already has a role in the space; change that role",
+        );
+      }
+      return [
+        ...current,
+        { id: "", principalKind: change.principalKind, principalId: change.principalId, role: change.role },
+      ];
+    }
+    case "change":
+    case "remove": {
+      if (!current.some((permission) => permission.id === change.permissionId)) {
+        throw new SpaceError("permissionNotFound", "The permission does not exist anymore");
+      }
+      return change.action === "remove"
+        ? current.filter((permission) => permission.id !== change.permissionId)
+        : current.map((permission) =>
+            permission.id === change.permissionId ? { ...permission, role: change.role } : permission,
+          );
+    }
+  }
+}
+
+export class SpaceHolders implements HolderValidation {
+  readonly #people: PeopleService;
+
+  constructor(people: PeopleService) {
+    this.#people = people;
+  }
+
+  async validate(tx: Transaction, space: SpaceTarget, grant: SpaceGrant, _actor: Principal): Promise<void> {
+    const invalid = (message: string): never => {
+      throw new SpaceError("invalidHolder", message);
+    };
+    if (space.organizationId === null) {
+      if (grant.principalKind === "account" && grant.principalId) {
+        if (grant.principalId === space.ownerId) return;
+        const owner = space.ownerId ? accountPrincipal(space.ownerId) : null;
+        if (!owner || !(await this.#people.canSee(owner, grant.principalId, tx))) {
+          invalid("Personal spaces can be shared with people the owner can see");
+        }
+        return;
+      }
+      if (grant.principalKind === "group" && grant.principalId) {
+        const group = await tx.execute<{ id: string }>(sql`
+          select g.id from groups g join memberships m on m.organization_id = g.organization_id
+          where g.id = ${grant.principalId} and m.account_id = ${space.ownerId} and m.kind = 'member'
+            and (m.expires_at is null or m.expires_at > now())`);
+        if (!group.rows[0]) invalid("Personal spaces can be shared with groups of the owner's organizations");
+        return;
+      }
+      invalid("Personal spaces can be shared with people and groups only");
+    }
+    if (grant.principalKind === "account" && grant.principalId) {
+      const account = await tx.execute<{ id: string }>(sql`
+        select a.id from accounts a
+        where a.id = ${grant.principalId} and a.state in ('active', 'invited')
+          and (exists (select 1 from memberships m where m.account_id = a.id
+                and m.organization_id = ${space.organizationId} and (m.expires_at is null or m.expires_at > now()))
+            or exists (select 1 from service_accounts sa where sa.account_id = a.id
+                and sa.organization_id = ${space.organizationId}))`);
+      if (!account.rows[0]) invalid("Only people and service accounts of the organization can get a role");
+      return;
+    }
+    if (grant.principalKind === "group" && grant.principalId) {
+      const group = await tx.execute<{ id: string }>(
+        sql`select id from groups where id = ${grant.principalId} and organization_id = ${space.organizationId}`,
+      );
+      if (!group.rows[0]) invalid("Only groups of the organization can get a role");
+      return;
+    }
+    if (grant.principalId !== null) invalid("This holder has no ID");
+  }
+}
+
+export class SpacePermissionService {
+  readonly #database: Database;
+  readonly #audit: AuditLog;
+  readonly #spaces: SpaceService;
+  readonly #holders: HolderValidation;
+  readonly #people: PeopleService;
+
+  constructor(options: {
+    database: Database;
+    audit: AuditLog;
+    spaces: SpaceService;
+    holders: HolderValidation;
+    people: PeopleService;
+  }) {
+    this.#database = options.database;
+    this.#audit = options.audit;
+    this.#spaces = options.spaces;
+    this.#holders = options.holders;
+    this.#people = options.people;
+  }
+
+  get holders(): HolderValidation {
+    return this.#holders;
+  }
+
+  async list(spaceId: string): Promise<SpacePermissionEntry[]> {
+    const result = await this.#database.execute<{
+      id: string;
+      principal_kind: PrincipalKind;
+      principal_id: string | null;
+      role: SpaceRole;
+      name: string | null;
+      email: string | null;
+      organization_name: string | null;
+    }>(sql`
+      select sp.id, sp.principal_kind, sp.principal_id, sp.role,
+        coalesce(a.name, g.name) as name, a.email, go.name as organization_name
+      from space_permissions sp
+      left join accounts a on sp.principal_kind = 'account' and a.id = sp.principal_id
+      left join groups g on sp.principal_kind = 'group' and g.id = sp.principal_id
+      left join organizations go on go.id = g.organization_id
+      where sp.space_id = ${spaceId}
+      order by case sp.principal_kind when 'instanceUsers' then 0 when 'organizationMembers' then 1
+        when 'group' then 2 else 3 end, lower(coalesce(a.name, g.name, '')), sp.id`);
+    return result.rows.map((row) => ({
+      id: row.id,
+      principalKind: row.principal_kind,
+      principalId: row.principal_id,
+      name: row.name,
+      email: row.email,
+      organizationName: row.organization_name,
+      role: row.role,
+    }));
+  }
+
+  async #states(space: Space, change: PermissionChange, executor: Pick<Database, "execute">) {
+    const current = await storedPermissions(executor, space.id);
+    const next = apply(current, change);
+    const state = (grants: StoredPermission[]): SpaceAccessState => ({
+      organizationId: space.organizationId,
+      visibility: space.visibility,
+      grants,
+    });
+    return { current, next, before: state(current), after: state(next) };
+  }
+
+  async preview(actor: Principal, spaceId: string, change: PermissionChange): Promise<AccessImpact> {
+    return this.#database.transaction(async (tx) => {
+      const space = await this.#spaces.require(spaceId, tx);
+      const { before, after } = await this.#states(space, change, tx);
+      if (change.action === "grant") await this.#validateGrant(tx, space, change, actor);
+      return accessImpact(tx, before, after, (account) => this.#people.visibleCondition(actor, account));
+    });
+  }
+
+  async #validateGrant(
+    tx: Transaction,
+    space: Space,
+    change: Extract<PermissionChange, { action: "grant" }>,
+    actor: Principal,
+  ): Promise<void> {
+    await this.#holders.validate(
+      tx,
+      { id: space.id, organizationId: space.organizationId, ownerId: space.ownerId },
+      { principalKind: change.principalKind, principalId: change.principalId, role: change.role },
+      actor,
+    );
+  }
+
+  async apply(actor: Principal, spaceId: string, change: PermissionChange): Promise<SpacePermissionEntry[]> {
+    await this.#database.transaction(async (tx) => {
+      const space = await this.#spaces.lock(tx, spaceId);
+      const { current, before, after } = await this.#states(space, change, tx);
+      if (change.action === "grant") await this.#validateGrant(tx, space, change, actor);
+      const administrator = await tx.execute<{ present: boolean }>(sql`
+        select ${activeAdministratorCondition(proposedGrants(after.grants), sql`${space.organizationId}::uuid`)} as present`);
+      if (!administrator.rows[0]?.present) {
+        throw new SpaceError(
+          "lastSpaceAdmin",
+          "A space needs at least one space admin. Appoint another space admin before this change.",
+        );
+      }
+      if (actor.type === "account") {
+        const held = await accountRoleUnder(tx, actor.id, before);
+        const next = await accountRoleUnder(tx, actor.id, after);
+        if (spaceRoleRank(next) > spaceRoleRank(held)) {
+          throw new SpaceError("selfExtension", "Nobody can extend their own permissions");
+        }
+      }
+      const fields = (grant: SpaceGrantRow) => ({
+        name: space.name,
+        principalKind: grant.principalKind,
+        principalId: grant.principalId,
+        role: grant.role,
+      });
+      const scope = auditScopeOf(space);
+      if (change.action === "grant") {
+        const grant = {
+          principalKind: change.principalKind,
+          principalId: change.principalId,
+          role: change.role,
+        };
+        await tx.execute(sql`
+          insert into space_permissions (id, space_id, principal_kind, principal_id, role, created_by)
+          values (${uuidv7()}, ${spaceId}, ${grant.principalKind}, ${grant.principalId}, ${grant.role},
+            ${actorIdOf(actor)})`);
+        await this.#audit.record(tx, {
+          name: "space.permissionGranted",
+          actor,
+          targetId: spaceId,
+          fields: fields(grant),
+          scope,
+        });
+      } else {
+        const existing = current.find(
+          (permission) => permission.id === change.permissionId,
+        ) as StoredPermission;
+        if (change.action === "remove") {
+          await tx.execute(sql`delete from space_permissions where id = ${change.permissionId}`);
+          await this.#audit.record(tx, {
+            name: "space.permissionRemoved",
+            actor,
+            targetId: spaceId,
+            fields: fields(existing),
+            scope,
+          });
+        } else if (existing.role !== change.role) {
+          await tx.execute(
+            sql`update space_permissions set role = ${change.role}, updated_at = now() where id = ${change.permissionId}`,
+          );
+          await this.#audit.record(tx, {
+            name: "space.permissionChanged",
+            actor,
+            targetId: spaceId,
+            fields: { ...fields({ ...existing, role: change.role }), previousRole: existing.role },
+            scope,
+          });
+        }
+      }
+      await signalSpaceChange(tx, { spaceId, kind: "access", itemId: null });
+    });
+    return this.list(spaceId);
+  }
+}

@@ -1,7 +1,8 @@
+import { SESSION_COOKIE } from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
 export const COOKIES = {
-  session: "__Host-pagehall-session",
+  session: SESSION_COOKIE,
   pending: "__Host-pagehall-pending",
   device: "__Host-pagehall-device",
   setup: "__Host-pagehall-setup",

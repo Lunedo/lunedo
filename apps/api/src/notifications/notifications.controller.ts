@@ -4,6 +4,7 @@ import {
   accountPrincipal,
   type NotificationCursor,
   type SettingChangeSignal,
+  type SpaceChangeSignal,
   type SyncRunSignal,
 } from "@pagehall/server";
 import { idSchema } from "@pagehall/shared";
@@ -60,6 +61,7 @@ type OrganizationAction =
   | "organization.audit.view";
 
 export const HEARTBEAT_MS = 25_000;
+export const SPACE_DECISION_MS = 10_000;
 
 const cursorSchema = z.tuple([
   z
@@ -159,7 +161,7 @@ export class NotificationsController {
     raw: {
       contentTypes: ["text/event-stream"],
       description:
-        "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log. The event `changes` names the kind of object that changed in the instance or in an organization, as recorded in the audit log, sent only to callers who may view such objects there or the audit log of that level; reload lists that show such objects.",
+        "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log. The event `changes` names the kind of object that changed in the instance or in an organization, as recorded in the audit log, sent only to callers who may view such objects there or the audit log of that level; reload lists that show such objects. The event `spaces` names a space whose settings, access, page tree or page content changed, with the kind of change and the affected item, sent only to callers who can read the space; reload what shows it.",
       example:
         'event: notifications\ndata: {"unreadCount":2}\n\nevent: settings\ndata: {"key":"branding.accentColor","level":"instance","organizationId":null}\n\nevent: syncRuns\ndata: {"providerId":"01929b1e-0000-7000-8000-000000000001","runId":"01929b1e-0000-7000-8000-000000000002"}\n\nevent: changes\ndata: {"scope":"organization","organizationId":"01929b1e-0000-7000-8000-000000000003","target":"group"}\n\n',
     },
@@ -241,7 +243,9 @@ data: ${JSON.stringify(signal)}
         (await allowed("instance.audit.view", "instance"))
       );
     };
+    const spaceDecisions = new Map<string, { allowed: boolean; at: number }>();
     const sendChange = (signal: AuditChangeSignal) => {
+      spaceDecisions.clear();
       const data = JSON.stringify(signal);
       if (pendingChanges.has(data)) return;
       pendingChanges.add(data);
@@ -253,10 +257,38 @@ data: ${JSON.stringify(signal)}
         })
         .catch((error: unknown) => logger.warn({ err: error }, "Sending a change event failed"));
     };
+    const pendingSpaces = new Set<string>();
+    const sendSpace = (signal: SpaceChangeSignal) => {
+      const data = JSON.stringify(signal);
+      if (pendingSpaces.has(data)) return;
+      pendingSpaces.add(data);
+      queue = queue
+        .then(async () => {
+          pendingSpaces.delete(data);
+          if (closed) return;
+          const cached = spaceDecisions.get(signal.spaceId);
+          let allowed =
+            cached && signal.kind !== "access" && Date.now() - cached.at < SPACE_DECISION_MS
+              ? cached.allowed
+              : null;
+          if (allowed === null) {
+            allowed = (
+              await services.authorization.explain(accountPrincipal(session.accountId), "space.view", {
+                type: "space",
+                id: signal.spaceId,
+              })
+            ).allowed;
+            spaceDecisions.set(signal.spaceId, { allowed, at: Date.now() });
+          }
+          if (allowed && !closed) raw.write(`event: spaces\ndata: ${data}\n\n`);
+        })
+        .catch((error: unknown) => logger.warn({ err: error }, "Sending a space event failed"));
+    };
     const unsubscribe = await hub.subscribe(session.accountId, send);
     const unsubscribeSettings = await hub.subscribeSettings(sendSetting);
     const unsubscribeSyncRuns = await hub.subscribeSyncRuns(sendSyncRun);
     const unsubscribeChanges = await hub.subscribeChanges(sendChange);
+    const unsubscribeSpaces = await hub.subscribeSpaces(sendSpace);
     const heartbeat = setInterval(() => {
       services.sessions.isActive(session.id).then(
         (active) => {
@@ -276,6 +308,7 @@ data: ${JSON.stringify(signal)}
       unsubscribeSettings();
       unsubscribeSyncRuns();
       unsubscribeChanges();
+      unsubscribeSpaces();
       raw.end();
     };
     reply.hijack();

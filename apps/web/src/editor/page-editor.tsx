@@ -1,0 +1,235 @@
+import { IconButton, SkeletonText, useToast } from "@pagehall/ui";
+import { DragHandle } from "@tiptap/extension-drag-handle-react";
+import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
+import { GripVertical, PanelTopClose, PanelTopOpen } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useTranslation } from "react-i18next";
+import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.js";
+import { usePreferences } from "../preferences/preferences-provider.js";
+import { useSession } from "../shell/shell-context.js";
+import { type EditorActions, registerEditorActions } from "./actions.js";
+import { PageCollaboration } from "./collaboration.js";
+import { PageContextValue } from "./context.js";
+import { EmojiPicker } from "./emoji-picker.js";
+import { createEditorExtensions } from "./extensions/index.js";
+import { FindBar } from "./find-bar.js";
+import { LinkDialog } from "./link-dialog.js";
+import { SelectionMenu, TableMenu } from "./menus.js";
+import { AvatarStack, presenceColor, RemoteCarets, usePresence } from "./presence.js";
+import {
+  CollaborationProblemNotice,
+  SaveStateIndicator,
+  useUnsavedChangesWarning,
+} from "./save-indicator.js";
+import type { SaveState } from "./save-state.js";
+import { EditorToolbar, type ToolbarHandle } from "./toolbar.js";
+import { toolbarItems } from "./toolbar-items.js";
+import "./editor.css";
+
+export interface PageEditorProps {
+  pageId: string;
+  spaceId: string;
+  spaceKey: string;
+  showStatus?: boolean;
+  onSaveStateChange?: (state: SaveState) => void;
+}
+
+const READ_ONLY_PROBLEMS = new Set(["permissionRevoked", "noEditPermission", "pageNotFound"]);
+
+export function PageEditor(props: PageEditorProps) {
+  const [collaboration, setCollaboration] = useState<PageCollaboration | null>(null);
+  useEffect(() => {
+    const created = new PageCollaboration(props.pageId);
+    setCollaboration(created);
+    return () => created.destroy();
+  }, [props.pageId]);
+  if (!collaboration) return null;
+  return <CollaborativeEditor key={props.pageId} {...props} collaboration={collaboration} />;
+}
+
+function CollaborativeEditor({
+  pageId,
+  spaceId,
+  spaceKey,
+  showStatus = true,
+  onSaveStateChange,
+  collaboration,
+}: PageEditorProps & { collaboration: PageCollaboration }) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const session = useSession();
+  const preferences = usePreferences();
+  const updatePreference = useUpdatePreference();
+  const snapshot = useSyncExternalStore(collaboration.subscribe, collaboration.getSnapshot);
+  const toolbar = useRef<ToolbarHandle>(null);
+  const surface = useRef<HTMLDivElement>(null);
+  const [findOpen, setFindOpen] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [everSynced, setEverSynced] = useState(false);
+  const account = session.account;
+  const self = useMemo(
+    () => (account ? { id: account.id, name: account.name, color: presenceColor(account.id) } : null),
+    [account],
+  );
+
+  const actions = useMemo<EditorActions>(
+    () => ({
+      openEmojiPicker: () => setEmojiOpen(true),
+      openLinkDialog: () => setLinkOpen(true),
+      openFind: () => setFindOpen(true),
+      focusToolbar: () => toolbar.current?.focus(),
+    }),
+    [],
+  );
+
+  const editor = useEditor(
+    {
+      extensions: createEditorExtensions({
+        t,
+        spaceId,
+        collaboration: self ? { doc: collaboration.doc, provider: collaboration.provider, user: self } : null,
+        onOpenFind: actions.openFind,
+        onFocusToolbar: actions.focusToolbar,
+        onOpenLinkDialog: actions.openLinkDialog,
+      }),
+      editorProps: {
+        attributes: {
+          class: "ph-content ph-editor-content",
+          "aria-label": t("editor.contentLabel"),
+          "aria-multiline": "true",
+          role: "textbox",
+        },
+      },
+      immediatelyRender: true,
+      shouldRerenderOnTransaction: false,
+    },
+    [collaboration, self?.id],
+  );
+
+  useEffect(() => (editor ? registerEditorActions(editor, actions) : undefined), [editor, actions]);
+
+  useEffect(() => {
+    if (snapshot.synced) setEverSynced(true);
+  }, [snapshot.synced]);
+
+  useEffect(() => {
+    onSaveStateChange?.(snapshot.saveState);
+  }, [snapshot.saveState, onSaveStateChange]);
+
+  useEffect(() => {
+    if (!editor) return;
+    editor.setEditable(!(snapshot.problem && READ_ONLY_PROBLEMS.has(snapshot.problem)));
+  }, [editor, snapshot.problem]);
+
+  useEffect(() => {
+    if (!editor) return;
+    const onTransaction = ({ transaction }: { transaction: { getMeta(key: string): unknown } }) => {
+      if (transaction.getMeta("uiEvent") !== "drop") return;
+      toast({
+        title: t("editor.drag.moved"),
+        undo: { onUndo: () => editor.chain().focus().undo().run(), seconds: 5 },
+      });
+    };
+    editor.on("transaction", onTransaction);
+    return () => {
+      editor.off("transaction", onTransaction);
+    };
+  }, [editor, toast, t]);
+
+  const hasUnsavedChanges = useCallback(() => collaboration.hasUnsavedChanges, [collaboration]);
+  useUnsavedChangesWarning(hasUnsavedChanges);
+
+  const others = usePresence(collaboration.provider, self);
+  const items = useEditorState({
+    editor,
+    selector: ({ editor: current }) => (current ? toolbarItems(current, t, actions) : []),
+    equalityFn: (left, right) =>
+      right !== null &&
+      left.length === right.length &&
+      left.every(
+        (item, index) =>
+          item.id === right[index]?.id &&
+          item.active === right[index]?.active &&
+          item.text === right[index]?.text &&
+          item.icon === right[index]?.icon,
+      ),
+  });
+
+  const editable = useEditorState({
+    editor,
+    selector: ({ editor: current }) => current?.isEditable ?? false,
+  });
+  const pageContext = useMemo(() => ({ pageId, spaceId, spaceKey }), [pageId, spaceId, spaceKey]);
+  const blocked = snapshot.problem !== null && !everSynced;
+
+  return (
+    <PageContextValue value={pageContext}>
+      <div className="ph-page-editor flex flex-col gap-3">
+        {snapshot.problem ? <CollaborationProblemNotice problem={snapshot.problem} /> : null}
+        {blocked || !editor ? null : (
+          <>
+            <div className="ph-editor-bar sticky top-0 z-10 flex flex-col gap-1 rounded-md border border-border bg-surface p-1 shadow-card">
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  {preferences.editorToolbar && editable ? (
+                    <EditorToolbar ref={toolbar} editor={editor} items={items ?? []} />
+                  ) : null}
+                </div>
+                {editable ? (
+                  <IconButton
+                    size="sm"
+                    label={t(preferences.editorToolbar ? "editor.toolbar.hide" : "editor.toolbar.show")}
+                    icon={preferences.editorToolbar ? PanelTopClose : PanelTopOpen}
+                    onClick={() =>
+                      updatePreference.mutate({
+                        key: preferenceKeys.editorToolbar,
+                        value: !preferences.editorToolbar,
+                      })
+                    }
+                  />
+                ) : null}
+                {showStatus ? (
+                  <div className="flex shrink-0 items-center gap-2 px-1">
+                    <SaveStateIndicator state={snapshot.saveState} />
+                    <AvatarStack self={self} others={others} />
+                  </div>
+                ) : null}
+              </div>
+              {editable ? <TableMenu editor={editor} /> : null}
+              {findOpen ? <FindBar editor={editor} onClose={() => setFindOpen(false)} /> : null}
+            </div>
+            <div ref={surface} className="ph-editor-surface relative">
+              {everSynced ? null : (
+                <div className="py-2">
+                  <SkeletonText lines={4} />
+                </div>
+              )}
+              <EditorContent editor={editor} />
+              <RemoteCarets editor={editor} provider={collaboration.provider} container={surface} />
+            </div>
+            {editable ? (
+              <>
+                <SelectionMenu editor={editor} actions={actions} />
+                <DragHandle editor={editor} className="ph-drag-handle">
+                  <span className="flex size-control-sm items-center justify-center rounded-sm text-text-muted hover:bg-hover">
+                    <GripVertical aria-hidden="true" className="size-icon-md" />
+                    <span className="sr-only">{t("editor.drag.handle")}</span>
+                  </span>
+                </DragHandle>
+              </>
+            ) : null}
+            <LinkDialog editor={editor} open={linkOpen} onOpenChange={setLinkOpen} />
+            <EmojiPicker
+              open={emojiOpen}
+              onOpenChange={setEmojiOpen}
+              onSelect={(emoji) =>
+                editor.chain().focus().insertContent({ type: "emoji", attrs: { emoji } }).run()
+              }
+            />
+          </>
+        )}
+      </div>
+    </PageContextValue>
+  );
+}

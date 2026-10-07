@@ -15,6 +15,10 @@ import { GroupsController } from "../organizations/groups.controller.js";
 import { InstanceController } from "../organizations/instance.controller.js";
 import { OrganizationsController } from "../organizations/organizations.controller.js";
 import { SetupController } from "../setup/setup.controller.js";
+import { ItemsController } from "../spaces/items.controller.js";
+import { OrganizationSpacesController } from "../spaces/organization-spaces.controller.js";
+import { PersonalSpacesController } from "../spaces/personal-spaces.controller.js";
+import { SpacesController } from "../spaces/spaces.controller.js";
 import { ServiceAccountsController } from "../tokens/service-accounts.controller.js";
 import { TokensController } from "../tokens/tokens.controller.js";
 
@@ -34,6 +38,10 @@ export const apiControllers = (): Type[] => [
   ProviderAuthController,
   ProviderGroupsController,
   DocsController,
+  SpacesController,
+  OrganizationSpacesController,
+  ItemsController,
+  PersonalSpacesController,
 ];
 
 export interface ApiRouteInfo {

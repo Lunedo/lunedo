@@ -12,6 +12,7 @@ import { instanceKeys } from "../api/instance-queries.js";
 import { organizationKeys } from "../api/organization-queries.js";
 import { queryKeys } from "../api/queries.js";
 import { request } from "../api/request.js";
+import { isSpaceChangeEvent, type SpaceChangeEvent, spacesChanged } from "../spaces/space-queries.js";
 
 export const notificationKeys = {
   all: ["notifications"] as const,
@@ -210,7 +211,25 @@ export function useNotificationStream(enabled: boolean): void {
         objectsChanged(queryClient, events);
       }, CHANGE_BATCH_MS);
     };
+    let pendingSpaces: SpaceChangeEvent[] = [];
+    let flushSpaces: ReturnType<typeof setTimeout> | undefined;
+    const onSpaces = (event: MessageEvent<string>) => {
+      try {
+        const data: unknown = JSON.parse(event.data);
+        if (!isSpaceChangeEvent(data)) return;
+        pendingSpaces.push(data);
+      } catch {
+        return;
+      }
+      flushSpaces ??= setTimeout(() => {
+        flushSpaces = undefined;
+        const events = pendingSpaces;
+        pendingSpaces = [];
+        spacesChanged(queryClient, events);
+      }, CHANGE_BATCH_MS);
+    };
     source.addEventListener("notifications", onChange);
+    source.addEventListener("spaces", onSpaces);
     source.addEventListener("changes", onObjects);
     source.addEventListener("settings", onSettings);
     source.addEventListener("syncRuns", onSyncRuns);
@@ -219,7 +238,9 @@ export function useNotificationStream(enabled: boolean): void {
       source.removeEventListener("settings", onSettings);
       source.removeEventListener("syncRuns", onSyncRuns);
       source.removeEventListener("changes", onObjects);
+      source.removeEventListener("spaces", onSpaces);
       if (flush) clearTimeout(flush);
+      if (flushSpaces) clearTimeout(flushSpaces);
       source.close();
     };
   }, [enabled, queryClient]);

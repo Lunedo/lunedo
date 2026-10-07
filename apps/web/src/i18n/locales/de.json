@@ -1026,7 +1026,8 @@
     "notificationsUnread": "Benachrichtigungen, {count, plural, one {# ungelesen} other {# ungelesen}}",
     "help": "Hilfe",
     "settings": "Einstellungen",
-    "account": "Konto"
+    "account": "Konto",
+    "spaces": "Spaces"
   },
   "help": {
     "shortcuts": "Tastenkürzel",
@@ -1057,7 +1058,9 @@
     "organizations": "Organisationen",
     "accounts": "Konten",
     "mail": "E-Mail",
-    "breakGlass": "Notfallzugriff"
+    "breakGlass": "Notfallzugriff",
+    "spaces": "Spaces",
+    "personalSpaces": "Persönliche Spaces"
   },
   "commands": {
     "label": "Befehlspalette",
@@ -1069,14 +1072,17 @@
     "openNotifications": "Benachrichtigungen öffnen",
     "toggleSidebar": "Seitenleiste ein- oder ausblenden",
     "changeLanguage": "Sprache ändern",
-    "signOut": "Abmelden"
+    "signOut": "Abmelden",
+    "goSpaces": "Zu den Spaces",
+    "openPersonalSpace": "Meinen persönlichen Space öffnen"
   },
   "shortcuts": {
     "title": "Tastenkürzel",
     "then": "dann",
     "groups": {
       "general": "Allgemein",
-      "navigation": "Navigation"
+      "navigation": "Navigation",
+      "editor": "Editor"
     },
     "commandPalette": "Befehlspalette öffnen",
     "search": "Suchen",
@@ -1086,7 +1092,8 @@
     "goPreferences": "Zu Darstellung und Sprache",
     "goSecurity": "Zur Sicherheit",
     "goMembers": "Zu den Mitgliedern",
-    "goAuditLog": "Zum Audit-Log"
+    "goAuditLog": "Zum Audit-Log",
+    "editPage": "Seite bearbeiten"
   },
   "errors": {
     "notFoundTitle": "Seite nicht gefunden",
@@ -1223,7 +1230,32 @@
     "invalidMailConfiguration": "Die E-Mail-Einstellungen sind ungültig. Prüfe die markierten Felder und speichere erneut.",
     "mailNotReady": "Diese Versandart ist noch nicht eingerichtet. Speichere ihre Einstellungen und füge für Microsoft Graph zuerst Zugangsdaten hinzu.",
     "instanceUrlFromEnvironment": "Die Serverumgebung legt die Adresse mit PAGEHALL_INSTANCE_URL fest. Ändere die Variable und starte Pagehall neu.",
-    "instanceMoved": "Pagehall ist an eine andere Adresse umgezogen. Öffne es unter der neuen Adresse."
+    "instanceMoved": "Pagehall ist an eine andere Adresse umgezogen. Öffne es unter der neuen Adresse.",
+    "keyTaken": "Ein anderer Space verwendet diesen Schlüssel bereits. Wähle einen anderen Schlüssel.",
+    "invalidSpaceKey": "Der Schlüssel braucht 2 bis 10 Buchstaben oder Ziffern. Entferne Leerzeichen und andere Zeichen.",
+    "invalidSpaceName": "Der Name braucht 1 bis 100 Zeichen.",
+    "invalidSpaceDescription": "Die Beschreibung darf bis zu 1000 Zeichen haben. Kürze sie und speichere erneut.",
+    "invalidHolder": "Diese Person oder Gruppe kann hier keine Rolle bekommen. Wähle jemanden aus der Organisation oder bei einem persönlichen Space jemanden, mit dem du zusammenarbeitest.",
+    "alreadyGranted": "Diese Person oder Gruppe hat bereits eine Rolle im Space. Ändere stattdessen diese Rolle.",
+    "permissionNotFound": "Jemand hat die Berechtigungen gleichzeitig geändert. Lade die Seite neu und versuch es erneut.",
+    "lastSpaceAdmin": "Ein Space braucht mindestens einen Space-Admin. Gib zuerst jemand anderem die Rolle Space-Admin.",
+    "selfExtension": "Niemand kann die eigenen Rechte erweitern. Frag einen anderen Space-Admin.",
+    "selfAppointment": "So kannst du dir selbst keinen Zugriff geben. Wähle eine andere Person.",
+    "spaceHasAdministrator": "Der Space hat wieder einen Space-Admin. Bitte diesen, die Berechtigungen zu ändern.",
+    "personalSpaceVisibility": "Persönliche Spaces sind immer privat. Teile sie stattdessen über die Berechtigungen.",
+    "notUnderReview": "Der Inhaber dieses persönlichen Space ist wieder aktiv, daher kann er nicht übertragen werden.",
+    "invalidTitle": "Der Titel braucht 1 bis 255 Zeichen.",
+    "invalidDescription": "Die Beschreibung darf bis zu 1000 Zeichen haben. Kürze sie und speichere erneut.",
+    "invalidLinkUrl": "Gib eine vollständige Adresse ein, die mit http:// oder https:// beginnt.",
+    "invalidLinkTarget": "Das Linkziel gibt es nicht, oder du kannst es nicht lesen. Wähle eine andere Seite oder einen anderen Ordner.",
+    "invalidPlacement": "Diese Stelle im Seitenbaum gibt es nicht mehr. Lade den Seitenbaum neu und versuch es erneut.",
+    "invalidConversion": "Links können nicht umgewandelt werden. Erstelle stattdessen eine Seite oder einen Ordner.",
+    "moveIntoDescendant": "Ein Eintrag kann nicht unter sich selbst oder eines seiner Kinder verschoben werden. Wähle eine andere Stelle.",
+    "itemMoved": "Jemand hat den Eintrag gleichzeitig verschoben. Lade den Seitenbaum neu und versuch es erneut.",
+    "overviewPage": "Die Übersichtsseite eines Space bleibt eine Seite in ihrem Space. Verschiebe stattdessen ihre Kinder.",
+    "invalidDocument": "Der Inhalt passt nicht zu dem, was Pagehall speichern kann. Nimm die letzte Änderung zurück und versuch es erneut.",
+    "invalidLabel": "Ein Label braucht 1 bis 100 Buchstaben, Ziffern, Punkte, Bindestriche oder Unterstriche.",
+    "tooManyLabels": "Eine Seite kann bis zu 100 Labels haben. Entferne ein Label, bevor du ein weiteres hinzufügst."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -1841,6 +1873,18 @@
       "apiTokens_unusedNoticeDays": {
         "label": "Ungenutzte API-Tokens",
         "description": "Benachrichtige die Person, der ein Token gehört, wenn es so lange nicht verwendet wurde. Das Token funktioniert weiter."
+      },
+      "spaces_membersCreateSpaces": {
+        "label": "Mitglieder erstellen Spaces",
+        "description": "Mitglieder dürfen Spaces erstellen. Administratoren dürfen es immer, Gäste und Mitwirkende nie."
+      },
+      "spaces_personalSpaces": {
+        "label": "Persönliche Spaces",
+        "description": "Jede Person mit Standardkonto bekommt einen persönlichen Space, sobald sie ihn das erste Mal öffnet."
+      },
+      "appearance_folderView": {
+        "label": "Ordneransicht",
+        "description": "Zeigt den Inhalt von Ordnern als Liste oder als Kacheln."
       }
     },
     "disabled": {
@@ -2870,6 +2914,18 @@
       "scim": {
         "userChanged": "Konto über SCIM geändert",
         "groupChanged": "Gruppe über SCIM geändert"
+      },
+      "space": {
+        "created": "Space erstellt",
+        "updated": "Space-Einstellungen geändert",
+        "permissionGranted": "Space-Berechtigung vergeben",
+        "permissionChanged": "Space-Berechtigung geändert",
+        "permissionRemoved": "Space-Berechtigung entfernt",
+        "administratorAppointed": "Space-Admin ernannt",
+        "personalTransferred": "Persönlicher Space übertragen"
+      },
+      "page": {
+        "updateRejected": "Seitenänderung abgelehnt"
       }
     },
     "action": "Aktion",
@@ -2908,7 +2964,9 @@
       "apiToken": "API-Token",
       "audit": "Audit-Log",
       "identityProvider": "Identitätsanbieter",
-      "mappingRule": "Gruppenzuordnung"
+      "mappingRule": "Gruppenzuordnung",
+      "space": "Space",
+      "page": "Seite"
     },
     "properties": {
       "value": "Wert",
@@ -3079,7 +3137,8 @@
     "instanceRolesDoNotGrantOrganizationAccess": "Instanzrollen geben keinen Zugriff auf Organisationen",
     "roleExceedsOwnPermissions": "Die Rolle geht über die eigenen Berechtigungen hinaus",
     "selfExtension": "Niemand kann die eigenen Berechtigungen erweitern",
-    "tokenScope": "Für dieses Token nicht erlaubt"
+    "tokenScope": "Für dieses Token nicht erlaubt",
+    "noSpaceRole": "Keine Rolle im Space erlaubt das"
   },
   "grants": {
     "system": "System",
@@ -3276,5 +3335,686 @@
       "done": "Das Konto wurde anonymisiert",
       "reasonRequired": "Gib an, warum das Konto anonymisiert wird, zum Beispiel das Datum des Löschantrags."
     }
+  },
+  "editor": {
+    "contentLabel": "Seiteninhalt",
+    "placeholder": "/ für Blöcke, @ um jemanden zu erwähnen, [[ um eine Seite zu verlinken",
+    "suggestions": {
+      "blocks": "Blöcke",
+      "people": "Personen",
+      "pages": "Seiten",
+      "empty": "Nichts gefunden. Versuche ein anderes Wort.",
+      "newPage": "Link auf neue Seite „{title}“",
+      "newPageDescription": "Die Seite wird in diesem Space angelegt, wenn jemand den Link öffnet"
+    },
+    "slashGroups": {
+      "text": "Text",
+      "lists": "Listen",
+      "blocks": "Blöcke",
+      "inline": "Im Text"
+    },
+    "blocks": {
+      "paragraph": "Absatz",
+      "paragraphDescription": "Normaler Text",
+      "heading1": "Überschrift 1",
+      "heading2": "Überschrift 2",
+      "heading3": "Überschrift 3",
+      "heading4": "Überschrift 4",
+      "heading5": "Überschrift 5",
+      "heading6": "Überschrift 6",
+      "headingDescription": "Abschnittstitel",
+      "bulletList": "Aufzählung",
+      "bulletListDescription": "Liste mit Punkten",
+      "orderedList": "Nummerierte Liste",
+      "orderedListDescription": "Liste mit Zahlen",
+      "taskList": "Aufgabenliste",
+      "taskListDescription": "Checkliste mit Aufgaben",
+      "blockquote": "Zitat",
+      "blockquoteDescription": "Zitierter Text",
+      "codeBlock": "Codeblock",
+      "codeBlockDescription": "Code mit Syntaxhervorhebung",
+      "callout": {
+        "info": "Info-Box",
+        "tip": "Tipp-Box",
+        "note": "Notiz-Box",
+        "warning": "Warnungs-Box",
+        "error": "Fehler-Box"
+      },
+      "calloutDescription": "Hervorgehobene Box für wichtige Informationen",
+      "expand": "Aufklappbereich",
+      "expandDescription": "Inhalt, den Lesende bei Bedarf öffnen",
+      "columns2": "Zwei Spalten",
+      "columns3": "Drei Spalten",
+      "columns4": "Vier Spalten",
+      "columnsDescription": "Inhalte nebeneinander",
+      "horizontalRule": "Trennlinie",
+      "horizontalRuleDescription": "Linie zwischen Abschnitten",
+      "table": "Tabelle",
+      "tableDescription": "Zeilen und Spalten, Zellen lassen sich verbinden",
+      "tableOfContents": "Inhaltsverzeichnis",
+      "tableOfContentsDescription": "Links zu den Überschriften dieser Seite",
+      "blockMath": "Formel",
+      "blockMathDescription": "Formel in eigener Zeile, in LaTeX",
+      "inlineMath": "Formel im Text",
+      "inlineMathDescription": "Formel innerhalb eines Satzes, in LaTeX",
+      "status": "Status",
+      "statusDescription": "Farbiges Label wie „In Arbeit“",
+      "date": "Datum",
+      "dateDescription": "Heutiges Datum, änderbar",
+      "mention": "Erwähnung",
+      "mentionDescription": "Eine Person nennen",
+      "pageLink": "Link auf eine Seite",
+      "pageLinkDescription": "Link auf eine Seite in einem Space, den du lesen kannst",
+      "emoji": "Emoji",
+      "emojiDescription": "Ein Emoji auswählen"
+    },
+    "mention": {
+      "unknown": "Unbekannte Person"
+    },
+    "pageLink": {
+      "noAccess": "Kein Zugriff",
+      "loading": "Seite wird geladen …",
+      "missingHint": "Diese Seite gibt es noch nicht. Das Öffnen des Links legt sie an.",
+      "followFailed": "Die Seite konnte nicht geöffnet werden",
+      "followFailedDescription": "Vielleicht wurde sie verschoben, oder du darfst in diesem Space keine Seiten anlegen. Versuche es erneut oder frage einen Space-Admin."
+    },
+    "status": {
+      "edit": "Status {text}, ändern",
+      "title": "Status ändern",
+      "text": "Text",
+      "textInvalid": "Gib 1 bis 40 Zeichen ein.",
+      "color": "Farbe",
+      "apply": "Übernehmen",
+      "default": "Offen"
+    },
+    "date": {
+      "edit": "Datum {date}, ändern",
+      "title": "Datum ändern",
+      "label": "Datum"
+    },
+    "colors": {
+      "default": "Standardfarbe",
+      "none": "Keine Farbe",
+      "gray": "Grau",
+      "red": "Rot",
+      "orange": "Orange",
+      "yellow": "Gelb",
+      "green": "Grün",
+      "teal": "Türkis",
+      "blue": "Blau",
+      "purple": "Lila",
+      "pink": "Pink"
+    },
+    "math": {
+      "edit": "Formel {latex}, bearbeiten",
+      "empty": "Leere Formel",
+      "title": "Formel bearbeiten",
+      "formula": "Formel in LaTeX",
+      "hintBlock": "Zum Beispiel \\sum_{i=1}^{n} i. Mit Strg+Eingabe übernehmen.",
+      "hintInline": "Zum Beispiel E = mc^2. Mit Eingabe übernehmen.",
+      "preview": "Vorschau",
+      "invalid": "Die Formel enthält einen Fehler. Prüfe Klammern und Befehle.",
+      "apply": "Übernehmen"
+    },
+    "toc": {
+      "title": "Inhaltsverzeichnis",
+      "levels": "Bis Ebene {level}",
+      "empty": "Füge Überschriften hinzu, um das Inhaltsverzeichnis zu füllen.",
+      "untitled": "Überschrift ohne Text"
+    },
+    "callout": {
+      "change": "Art der Box ändern",
+      "info": "Info",
+      "tip": "Tipp",
+      "note": "Notiz",
+      "warning": "Warnung",
+      "error": "Fehler"
+    },
+    "expand": {
+      "open": "Öffnen",
+      "collapse": "Schließen",
+      "titleLabel": "Titel des Aufklappbereichs",
+      "titlePlaceholder": "Titel"
+    },
+    "columns": {
+      "layout": "Spaltenbreiten ändern"
+    },
+    "code": {
+      "plain": "Reiner Text",
+      "language": "Sprache",
+      "searchLanguage": "Sprache suchen"
+    },
+    "unsupportedMacro": "Nicht unterstütztes Makro: {name}",
+    "attachment": {
+      "image": "Bild {name}",
+      "file": "Datei {name}"
+    },
+    "presence": {
+      "label": "{count, plural, one {# Person} other {# Personen}} auf dieser Seite",
+      "you": "{name} (du)",
+      "more": "{count} weitere"
+    },
+    "save": {
+      "editing": "Bearbeitung",
+      "saving": "Wird gespeichert …",
+      "saved": "Gespeichert",
+      "offline": "Offline, Änderungen bleiben in diesem Tab erhalten",
+      "error": "Nicht gespeichert"
+    },
+    "toolbar": {
+      "label": "Formatierung",
+      "more": "Weitere Formatierung",
+      "hide": "Werkzeugleiste ausblenden",
+      "show": "Werkzeugleiste einblenden",
+      "undo": "Rückgängig",
+      "redo": "Wiederholen",
+      "blockType": "Textstil",
+      "bold": "Fett",
+      "italic": "Kursiv",
+      "underline": "Unterstrichen",
+      "strike": "Durchgestrichen",
+      "code": "Code im Text",
+      "subscript": "Tiefgestellt",
+      "superscript": "Hochgestellt",
+      "textColor": "Textfarbe",
+      "highlight": "Hervorheben",
+      "clearFormatting": "Formatierung entfernen",
+      "bulletList": "Aufzählung",
+      "orderedList": "Nummerierte Liste",
+      "taskList": "Aufgabenliste",
+      "align": "Ausrichtung",
+      "alignLeft": "Linksbündig",
+      "alignCenter": "Zentriert",
+      "alignRight": "Rechtsbündig",
+      "alignJustify": "Blocksatz",
+      "indent": "Einzug vergrößern",
+      "outdent": "Einzug verkleinern",
+      "link": "Link",
+      "table": "Tabelle einfügen",
+      "mention": "Jemanden erwähnen",
+      "emoji": "Emoji",
+      "date": "Heutiges Datum einfügen",
+      "insert": "Einfügen",
+      "find": "Suchen und ersetzen"
+    },
+    "selectionMenu": {
+      "label": "Auswahl formatieren",
+      "turnIntoTask": "In Aufgabe umwandeln"
+    },
+    "link": {
+      "title": "Link",
+      "address": "Webadresse",
+      "addressHint": "Eine Adresse mit https://, eine E-Mail-Adresse oder ein Pfad wie /spaces/IT.",
+      "addressPlaceholder": "https://example.org",
+      "addressInvalid": "Gib eine Webadresse, eine E-Mail-Adresse oder einen Pfad ein, der mit / beginnt.",
+      "apply": "Link übernehmen",
+      "remove": "Link entfernen",
+      "page": "Oder eine Seite verlinken",
+      "pageHint": "Durchsucht die Titel der Seiten, die du lesen kannst.",
+      "pagePlaceholder": "Seiten suchen"
+    },
+    "table": {
+      "label": "Tabelle",
+      "rows": "Zeilen",
+      "columns": "Spalten",
+      "addRowBefore": "Zeile oberhalb einfügen",
+      "addRowAfter": "Zeile unterhalb einfügen",
+      "deleteRow": "Zeile löschen",
+      "addColumnBefore": "Spalte links einfügen",
+      "addColumnAfter": "Spalte rechts einfügen",
+      "deleteColumn": "Spalte löschen",
+      "mergeCells": "Zellen verbinden",
+      "splitCell": "Zelle teilen",
+      "headerRow": "Kopfzeile ein oder aus",
+      "headerColumn": "Kopfspalte ein oder aus",
+      "background": "Zellenhintergrund",
+      "deleteTable": "Tabelle löschen"
+    },
+    "find": {
+      "label": "Suchen und ersetzen",
+      "query": "Suchen",
+      "queryPlaceholder": "Auf der Seite suchen",
+      "replacement": "Ersetzen durch",
+      "replacementPlaceholder": "Ersetzen durch",
+      "next": "Nächster Treffer",
+      "previous": "Vorheriger Treffer",
+      "replace": "Ersetzen",
+      "replaceAll": "Alle ersetzen",
+      "caseSensitive": "Groß- und Kleinschreibung beachten",
+      "close": "Suche schließen",
+      "count": "{current} von {total}",
+      "none": "Keine Treffer"
+    },
+    "emoji": {
+      "title": "Emoji einfügen",
+      "search": "Emoji suchen",
+      "searchPlaceholder": "Zum Beispiel lächeln oder Herz",
+      "empty": "Kein Emoji gefunden. Versuche ein anderes Wort.",
+      "loading": "Emoji werden geladen",
+      "failed": "Die Emoji konnten nicht geladen werden. Prüfe die Verbindung und öffne die Auswahl erneut.",
+      "results": "{count, plural, one {# Emoji} other {# Emoji}}"
+    },
+    "drag": {
+      "handle": "Ziehen, um den Block zu verschieben",
+      "moved": "Block verschoben"
+    },
+    "readView": {
+      "untitledPage": "Seite ohne Titel",
+      "unsupportedMacro": "Nicht unterstütztes Makro: {name}",
+      "file": "Datei",
+      "image": "Bild",
+      "invalid": "Diese Seite kann nicht angezeigt werden, weil ihr gespeicherter Inhalt beschädigt ist. Bitte einen Space-Admin, eine frühere Version wiederherzustellen."
+    },
+    "shortcuts": {
+      "slash": "Block einfügen",
+      "mention": "Jemanden erwähnen",
+      "pageLink": "Seite verlinken",
+      "toolbar": "Fokus in die Werkzeugleiste"
+    },
+    "problems": {
+      "reload": "Seite neu laden",
+      "signIn": "Erneut anmelden",
+      "originNotAllowed": {
+        "title": "Bearbeiten ist unter dieser Adresse nicht möglich",
+        "description": "Pagehall erlaubt das Bearbeiten nur unter seiner eingestellten Adresse. Öffne die Seite über die Adresse der Instanz und versuche es erneut."
+      },
+      "tokenNotAllowed": {
+        "title": "Zum Bearbeiten ist eine Anmeldung nötig",
+        "description": "API-Tokens können Seiten nicht gemeinsam mit anderen bearbeiten. Melde dich im Browser an, um zu bearbeiten."
+      },
+      "notSignedIn": {
+        "title": "Du bist abgemeldet",
+        "description": "Deine Sitzung ist beendet. Melde dich erneut an, um weiter zu bearbeiten."
+      },
+      "pageNotFound": {
+        "title": "Die Seite kann nicht bearbeitet werden",
+        "description": "Vielleicht wurde sie verschoben oder du hast keinen Zugriff mehr. Lade neu, um zu sehen, wo sie jetzt ist."
+      },
+      "noEditPermission": {
+        "title": "Du kannst diese Seite lesen, aber nicht bearbeiten",
+        "description": "Bitte einen Space-Admin um die Rolle Bearbeiter, wenn du sie ändern musst."
+      },
+      "tooManyConnections": {
+        "title": "Zu viele offene Editoren",
+        "description": "Du hast diese Seite in vielen Tabs geöffnet. Schließe einige davon und lade neu."
+      },
+      "updateRejected": {
+        "title": "Deine letzte Änderung konnte nicht gespeichert werden",
+        "description": "Sie entsprach nicht dem erlaubten Seiteninhalt. Lade die Seite neu; zuvor gespeicherte Änderungen bleiben erhalten."
+      },
+      "permissionRevoked": {
+        "title": "Du kannst diese Seite nicht mehr bearbeiten",
+        "description": "Dein Bearbeitungsrecht wurde entfernt, während die Seite offen war. Die Seite ist jetzt schreibgeschützt; deine bisherigen Änderungen wurden gespeichert."
+      },
+      "sessionEnded": {
+        "title": "Deine Sitzung ist beendet",
+        "description": "Bisherige Änderungen sind gespeichert. Melde dich erneut an, um weiter zu bearbeiten."
+      },
+      "tooManyMessages": {
+        "title": "Bearbeitung pausiert",
+        "description": "In kurzer Zeit kamen zu viele Änderungen an. Warte einen Moment und lade dann neu, um weiterzumachen."
+      },
+      "unknown": {
+        "title": "Bearbeitung beendet",
+        "description": "Die Verbindung zum Server wurde geschlossen. Lade neu, um weiter zu bearbeiten."
+      }
+    }
+  },
+  "spaces": {
+    "navigation": "Navigation von {space}",
+    "inOrganization": "{organization} · Space",
+    "options": "Space-Optionen",
+    "overview": "Übersicht",
+    "pagesButton": "Seiten",
+    "loadFailed": "Der Space konnte nicht geladen werden",
+    "notFound": {
+      "title": "Space nicht gefunden",
+      "description": "Es gibt keinen Space mit dem Schlüssel {key}, oder du hast keinen Zugriff darauf. Prüfe die Adresse oder bitte einen Space-Admin um Zugriff.",
+      "back": "Zu allen Spaces"
+    },
+    "noOverview": {
+      "title": "Dieser Space hat keine Übersichtsseite",
+      "description": "Öffne eine Seite aus dem Seitenbaum oder bitte einen Space-Admin, eine anzulegen."
+    },
+    "roles": {
+      "reader": "Leser",
+      "commenter": "Kommentator",
+      "editor": "Bearbeiter",
+      "admin": "Space-Admin"
+    },
+    "roleDescriptions": {
+      "reader": "Liest und exportiert Seiten.",
+      "commenter": "Kommentiert zusätzlich Seiten.",
+      "editor": "Erstellt, bearbeitet und verschiebt zusätzlich Seiten, Ordner und Links.",
+      "admin": "Verwaltet zusätzlich die Einstellungen und Berechtigungen des Space."
+    },
+    "visibility": {
+      "private": {
+        "label": "Privat",
+        "short": "Privat",
+        "description": "Nur die Personen und Gruppen aus den Berechtigungen können ihn öffnen.",
+        "summary": "Nur Personen und Gruppen mit einer Rolle können den Space lesen."
+      },
+      "organization": {
+        "label": "Organisation",
+        "short": "Organisation",
+        "description": "Alle Mitglieder von {organization} können ihn lesen. Gäste und Mitwirkende brauchen eine Rolle.",
+        "summary": "Alle Mitglieder von {organization} können den Space lesen."
+      },
+      "instance": {
+        "label": "Ganze Instanz",
+        "short": "Instanz",
+        "description": "Alle internen Benutzer dieser Pagehall-Instanz können ihn lesen, in allen Organisationen.",
+        "summary": "Alle internen Benutzer der Instanz können den Space lesen."
+      }
+    },
+    "holders": {
+      "organizationMembers": "Alle Mitglieder der Organisation",
+      "organizationMembersOf": "Alle Mitglieder von {organization}",
+      "instanceUsers": "Alle internen Benutzer der Instanz",
+      "group": "Gruppe {name}",
+      "unknownGroup": "Gelöschte Gruppe",
+      "unknownPerson": "Ehemalige Person",
+      "everyoneGroup": "Alle",
+      "groupsGroup": "Gruppen",
+      "peopleGroup": "Personen",
+      "groupDescription": "Gruppe",
+      "searchPlaceholder": "Personen und Gruppen suchen",
+      "noMatch": "Keine Person und keine Gruppe passt. Prüfe die Schreibweise oder frag die Administration, ob die Person Mitglied ist."
+    },
+    "list": {
+      "title": "Spaces",
+      "description": "Spaces, die du lesen kannst, mit ihren Seiten und Ordnern.",
+      "search": "Spaces filtern",
+      "searchPlaceholder": "Name, Schlüssel oder Beschreibung",
+      "organizationFilter": "Organisation",
+      "allOrganizations": "Alle Organisationen",
+      "inOrganization": "{organization}",
+      "loadFailed": "Die Spaces konnten nicht geladen werden",
+      "none": "Noch keine Spaces",
+      "noneDescription": "Spaces enthalten Seiten, Ordner und Links für ein Team oder ein Thema. Erstelle den ersten, um loszuschreiben.",
+      "noMatch": "Kein Space passt zum Filter",
+      "noMatchDescription": "Versuch einen anderen Namen oder Schlüssel oder zeig die Spaces aller Organisationen.",
+      "clearFilters": "Filter zurücksetzen",
+      "more": "Weitere Spaces zeigen"
+    },
+    "create": {
+      "action": "Space erstellen",
+      "title": "Space erstellen",
+      "organization": "Organisation",
+      "name": "Name",
+      "namePlaceholder": "Zum Beispiel IT-Betrieb",
+      "nameRequired": "Gib einen Namen für den Space ein.",
+      "key": "Schlüssel",
+      "keyHint": "2 bis 10 Buchstaben oder Ziffern. Er steht in Adressen, zum Beispiel /spaces/ITOPS.",
+      "keyInvalid": "Verwende 2 bis 10 Buchstaben oder Ziffern, ohne Leerzeichen und andere Zeichen.",
+      "keyTaken": "Ein anderer Space verwendet bereits {key}. Wähle einen anderen Schlüssel.",
+      "description": "Beschreibung",
+      "descriptionHint": "Optional. Ein oder zwei Sätze dazu, wofür der Space da ist.",
+      "visibility": "Wer den Space lesen kann",
+      "permissions": "Berechtigungen",
+      "permissionsHint": "Deine Organisation schlägt diese Rollen für neue Spaces vor. Ändere sie bei Bedarf.",
+      "you": "Du",
+      "roleOf": "Rolle von {holder}",
+      "removeHolder": "{holder} entfernen",
+      "addHolder": "Personen oder Gruppen hinzufügen",
+      "newRole": "Rolle",
+      "add": "Hinzufügen",
+      "chooseHolderFirst": "Wähle zuerst eine Person oder Gruppe.",
+      "whoGetsAccess": "Wer Zugriff bekommt",
+      "accessYou": "Du wirst Space-Admin.",
+      "accessHolder": "{holder}: {role}",
+      "submit": "Space erstellen",
+      "created": "Space {name} erstellt",
+      "failed": "Der Space konnte nicht erstellt werden"
+    },
+    "personal": {
+      "label": "Persönlicher Space",
+      "nameOf": "Persönlicher Space von {name}",
+      "open": "Mein persönlicher Space",
+      "opening": "Dein persönlicher Space wird geöffnet",
+      "overviewTitle": "Mein persönlicher Space",
+      "unavailableTitle": "Persönliche Spaces sind nicht verfügbar",
+      "unavailable": "Diese Instanz bietet keine persönlichen Spaces an, oder dein Konto kann keinen haben. Frag die Administration der Instanz, wenn du einen brauchst.",
+      "failed": "Dein persönlicher Space konnte nicht geöffnet werden"
+    },
+    "impact": {
+      "noChangeTitle": "Niemandes Zugriff ändert sich",
+      "noChange": "Die Änderung lässt den Zugriff aller unverändert.",
+      "gaining": "{count, plural, one {# Person bekommt Zugriff} other {# Personen bekommen Zugriff}}",
+      "losing": "{count, plural, one {# Person verliert den Zugriff} other {# Personen verlieren den Zugriff}}",
+      "changing": "{count, plural, one {# Person bekommt eine andere Rolle} other {# Personen bekommen eine andere Rolle}}",
+      "roleChange": "{name}: {before} → {after}",
+      "andMore": "und {count} weitere",
+      "unlisted": "{count, plural, one {Eine davon ist eine Person, die du nicht sehen kannst; sie ist mitgezählt, aber nicht genannt.} other {# davon sind Personen, die du nicht sehen kannst; sie sind mitgezählt, aber nicht genannt.}}",
+      "loadFailed": "Die Änderung des Zugriffs konnte nicht berechnet werden"
+    },
+    "settings": {
+      "title": "Space-Einstellungen",
+      "general": "Allgemein",
+      "generalDescription": "Name, Schlüssel, Beschreibung und wer den Space lesen kann.",
+      "permissions": "Berechtigungen",
+      "permissionsDescription": "Wer welche Rolle im Space hat.",
+      "about": "Über den Space",
+      "name": "Name",
+      "personalNameHint": "Lass ihn leer, um deinen Namen zu zeigen.",
+      "description": "Beschreibung",
+      "key": "Schlüssel",
+      "keyDescription": "Der Schlüssel steht in den Adressen des Space und seiner Seiten.",
+      "keyRedirectTitle": "Alte Links funktionieren weiter",
+      "keyRedirect": "Adressen mit {old} führen zum neuen Schlüssel, bis ein anderer Space {old} übernimmt. Links auf Seiten funktionieren immer weiter.",
+      "saveKey": "Schlüssel ändern",
+      "keyChanged": "Der Schlüssel ist jetzt {key}",
+      "visibility": "Wer den Space lesen kann",
+      "visibilityDescription": "Zusätzlich zu den Personen und Gruppen in den Berechtigungen.",
+      "visibilityConfirmTitle": "Ändern, wer den Space lesen kann?",
+      "visibilityConfirm": "Von {from} zu {to}.",
+      "changeVisibility": "Sichtbarkeit ändern",
+      "visibilityChanged": "Sichtbarkeit geändert",
+      "visibilityFailed": "Die Sichtbarkeit konnte nicht geändert werden",
+      "personalPrivate": "Persönliche Spaces sind immer privat. Teile sie in den Berechtigungen mit Personen und Gruppen.",
+      "adminsOnlyTitle": "Nur Space-Admins verwalten Berechtigungen",
+      "adminsOnly": "Deine Rolle in diesem Space ist {role}. Frag einen Space-Admin, wenn jemand eine andere Rolle braucht."
+    },
+    "permissions": {
+      "visibilityTitle": "Leser über die Sichtbarkeit",
+      "visibilityPrivate": "Der Space ist privat: Nur die Inhaber unten haben Zugriff.",
+      "holders": "Personen und Gruppen",
+      "holdersDescription": "Jede Änderung zeigt vorher, wer Zugriff bekommt oder verliert.",
+      "loadFailed": "Die Berechtigungen konnten nicht geladen werden",
+      "you": "{name} (du)",
+      "remove": "Rolle von {holder} entfernen",
+      "add": "Rolle vergeben",
+      "rolesTitle": "Was die Rollen erlauben",
+      "grantTitle": "{holder} die Rolle {role} geben?",
+      "changeTitle": "Rolle von {holder} zu {role} ändern?",
+      "removeTitle": "Rolle von {holder} entfernen?",
+      "confirmDescription": "Prüfe vor dem Bestätigen, wer Zugriff bekommt oder verliert.",
+      "confirmGrant": "Rolle vergeben",
+      "confirmChange": "Rolle ändern",
+      "confirmRemove": "Rolle entfernen",
+      "grantDone": "{holder} hat die neue Rolle",
+      "changeDone": "Die Rolle von {holder} wurde geändert",
+      "removeDone": "Die Rolle von {holder} wurde entfernt",
+      "failed": "Die Berechtigungen konnten nicht geändert werden",
+      "dangerZone": "Gefahrenbereich",
+      "stepDownTitle": "Als Space-Admin zurücktreten",
+      "stepDownDescription": "Du verlierst deine Rolle in diesem Space. Ein anderer Space-Admin muss bleiben; ernenne zuerst einen, wenn du der letzte bist.",
+      "stepDown": "Als Space-Admin zurücktreten"
+    },
+    "organization": {
+      "title": "Spaces",
+      "description": "Wer Spaces erstellen darf, welche Berechtigungen neue Spaces bekommen und Spaces ohne Space-Admin.",
+      "creating": "Spaces erstellen",
+      "defaults": "Standardrechte für neue Spaces",
+      "defaultsDescription": "Wer einen Space erstellt, sieht diese Einstellungen zuerst und kann sie ändern. Bestehende Spaces ändern sich nicht.",
+      "defaultsFailed": "Die Standardrechte konnten nicht geladen werden",
+      "creatorAdmin": "Wer den Space erstellt, wird immer Space-Admin.",
+      "noDefaultHolders": "Neue Spaces bekommen standardmäßig keine weiteren Inhaber.",
+      "withoutAdmin": "Spaces ohne Space-Admin",
+      "withoutAdminDescription": "Spaces, in denen keine aktive Person die Rolle Space-Admin hat, zum Beispiel nachdem der letzte Space-Admin deaktiviert wurde.",
+      "withoutAdminFailed": "Die Spaces ohne Space-Admin konnten nicht geladen werden",
+      "allHaveAdmins": "Jeder Space hat einen Space-Admin",
+      "allHaveAdminsDescription": "Spaces erscheinen hier, wenn ihr letzter Space-Admin deaktiviert wird.",
+      "appoint": "Space-Admin ernennen",
+      "appointTitle": "Space-Admin für {space} ernennen",
+      "person": "Person",
+      "personHint": "Ein Mitglied der Organisation. Du kannst dich nicht selbst ernennen.",
+      "choosePerson": "Wähle zuerst eine Person.",
+      "appointEffectTitle": "Das gibt Zugriff auf alle Inhalte des Space",
+      "appointEffect": "Die Person kann alles in {space} lesen und bearbeiten und seine Berechtigungen verwalten. Die Ernennung wird im Audit-Log festgehalten.",
+      "appointSubmit": "Space-Admin ernennen",
+      "appointed": "{person} ist jetzt Space-Admin von {space}",
+      "appointFailed": "Der Space-Admin konnte nicht ernannt werden"
+    },
+    "instance": {
+      "title": "Persönliche Spaces",
+      "description": "Ob Personen persönliche Spaces bekommen, und persönliche Spaces deaktivierter Inhaber.",
+      "availability": "Verfügbarkeit",
+      "review": "Zu prüfende persönliche Spaces",
+      "reviewDescription": "Persönliche Spaces, deren Inhaber deaktiviert ist. Titel und Inhalte bleiben verborgen; übertrage einen Space, um jemandem Zugriff zu geben.",
+      "reviewFailed": "Die persönlichen Spaces konnten nicht geladen werden",
+      "none": "Nichts zu prüfen",
+      "noneDescription": "Persönliche Spaces erscheinen hier, wenn ihr Inhaber deaktiviert wird.",
+      "owner": "Inhaber",
+      "ownerState": "Konto des Inhabers",
+      "states": {
+        "deactivated": "Deaktiviert",
+        "anonymized": "Anonymisiert"
+      },
+      "formerOwner": "Ehemalige Person",
+      "pages": "Seiten",
+      "lastChange": "Letzte Änderung",
+      "actions": "Aktionen",
+      "transfer": "Übertragen",
+      "transferTitle": "Persönlichen Space von {owner} übertragen",
+      "newOwner": "Neuer Inhaber",
+      "newOwnerHint": "Ein aktives Standardkonto. Du kannst ihn nicht dir selbst übertragen.",
+      "chooseAccount": "Wähle zuerst den neuen Inhaber.",
+      "transferEffectTitle": "Der neue Inhaber bekommt alle Inhalte",
+      "transferEffect": "Der neue Inhaber wird Space-Admin und kann alles lesen, was {owner} dort geschrieben hat. Die Übertragung wird im Audit-Log festgehalten.",
+      "transferSubmit": "Space übertragen",
+      "transferred": "Der persönliche Space von {owner} gehört jetzt {account}",
+      "transferFailed": "Der persönliche Space konnte nicht übertragen werden"
+    }
+  },
+  "tree": {
+    "title": "Seiten",
+    "label": "Seitenbaum",
+    "create": "In diesem Space erstellen",
+    "newPage": "Neue Seite",
+    "newFolder": "Neuer Ordner",
+    "newLink": "Neuer Link",
+    "newPageInside": "Neue Seite darin",
+    "newFolderInside": "Neuer Ordner darin",
+    "newLinkInside": "Neuer Link darin",
+    "untitledPage": "Seite ohne Titel",
+    "loading": "Seiten werden geladen",
+    "loadFailed": "Die Seiten konnten nicht geladen werden.",
+    "showMore": "Mehr zeigen",
+    "noAccess": "Kein Zugriff",
+    "actionsFor": "Aktionen für {title}",
+    "move": "Verschieben…",
+    "convertToFolder": "In Ordner umwandeln",
+    "convertToPage": "In Seite umwandeln",
+    "convertedToFolder": "{title} ist jetzt ein Ordner",
+    "convertedToPage": "{title} ist jetzt eine Seite",
+    "convertFailed": "Der Eintrag konnte nicht umgewandelt werden",
+    "copyLink": "Link kopieren",
+    "linkCopied": "Link kopiert",
+    "copyFailed": "Der Link konnte nicht kopiert werden. Kopiere ihn stattdessen aus der Adresszeile.",
+    "moved": "{title} verschoben",
+    "moveFailed": "Der Eintrag konnte nicht verschoben werden",
+    "undoFailed": "Das Verschieben konnte nicht rückgängig gemacht werden",
+    "createFailed": "Die Seite konnte nicht erstellt werden"
+  },
+  "move": {
+    "title": "{title} verschieben",
+    "description": "Wähle den Space und die Stelle im Seitenbaum. Untergeordnete Einträge wandern mit.",
+    "space": "Space",
+    "parent": "Einordnen unter",
+    "parentHint": "Suche Seiten und Ordner nach Titel oder behalte die oberste Ebene.",
+    "topLevel": "Oberste Ebene des Space",
+    "folder": "Ordner",
+    "page": "Seite",
+    "noMatch": "Keine Seite und kein Ordner passt zum Titel.",
+    "position": "Position",
+    "first": "Am Anfang",
+    "last": "Am Ende",
+    "accessChange": "Wie sich der Zugriff ändert",
+    "impactFailed": "Die Änderung des Zugriffs konnte nicht berechnet werden",
+    "submit": "Verschieben",
+    "submitToSpace": "Nach {space} verschieben",
+    "moved": "{title} verschoben",
+    "movedToSpace": "{title} nach {space} verschoben",
+    "failed": "Der Eintrag konnte nicht verschoben werden"
+  },
+  "createItem": {
+    "folderTitle": "Neuer Ordner",
+    "linkTitle": "Neuer Link",
+    "title": "Titel",
+    "titleRequired": "Gib einen Titel ein.",
+    "linkTitleHint": "Lass ihn leer, um den Titel oder die Adresse des Ziels zu verwenden.",
+    "description": "Beschreibung",
+    "descriptionHint": "Optional. Steht oben im Ordner.",
+    "target": "Link auf",
+    "targetItem": "Seite oder Ordner",
+    "targetUrl": "Webadresse",
+    "targetItemLabel": "Seite oder Ordner",
+    "targetRequired": "Wähle die Seite oder den Ordner, auf den der Link zeigt.",
+    "noMatch": "Keine lesbare Seite und kein lesbarer Ordner passt.",
+    "url": "Adresse",
+    "urlHint": "Eine vollständige Adresse, die mit http:// oder https:// beginnt.",
+    "urlPlaceholder": "https://",
+    "urlInvalid": "Gib eine vollständige Adresse ein, die mit http:// oder https:// beginnt.",
+    "createFolder": "Ordner erstellen",
+    "createLink": "Link erstellen",
+    "failed": "Der Eintrag konnte nicht erstellt werden"
+  },
+  "folder": {
+    "titleLabel": "Titel des Ordners",
+    "view": "Ansicht",
+    "list": "Liste",
+    "tiles": "Kacheln",
+    "newPage": "Neue Seite",
+    "more": "Weitere Aktionen",
+    "description": "Beschreibung",
+    "contents": "Inhalt",
+    "loadFailed": "Der Ordner konnte nicht geladen werden",
+    "contentsFailed": "Der Inhalt des Ordners konnte nicht geladen werden",
+    "empty": "Dieser Ordner ist leer",
+    "emptyDescription": "Seiten, Ordner und Links, die du hier erstellst, erscheinen in dieser Übersicht."
+  },
+  "labels": {
+    "title": "Labels",
+    "add": "Label hinzufügen",
+    "addPlaceholder": "Label eingeben",
+    "newLabelHint": "Gib ein neues Label ein und wähle es aus, um es hinzuzufügen.",
+    "create": "Neues Label {label} hinzufügen",
+    "remove": "Label {label} entfernen",
+    "removed": "Label {label} entfernt",
+    "addFailed": "Das Label konnte nicht hinzugefügt werden",
+    "removeFailed": "Das Label konnte nicht entfernt werden",
+    "pagesTitle": "Seiten mit dem Label {label}",
+    "pagesDescription": "In {space}.",
+    "pagesFailed": "Die Seiten konnten nicht geladen werden",
+    "noPages": "Keine Seiten mit diesem Label",
+    "noPagesDescription": "Füge einer Seite das Label {label} hinzu, damit sie hier erscheint."
+  },
+  "page": {
+    "loadFailed": "Die Seite konnte nicht geladen werden",
+    "contentFailed": "Der Inhalt der Seite konnte nicht geladen werden",
+    "titleLabel": "Seitentitel",
+    "edit": "Bearbeiten",
+    "done": "Fertig",
+    "more": "Weitere Aktionen",
+    "width": "Seitenbreite",
+    "widthFixed": "Fest",
+    "widthFull": "Voll",
+    "backlinks": "{count, plural, one {Verlinkt von # Seite} other {Verlinkt von # Seiten}}"
+  },
+  "pageTitle": {
+    "edit": "{title} umbenennen",
+    "saveFailed": "Der Titel konnte nicht gespeichert werden"
   }
 }

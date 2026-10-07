@@ -39,10 +39,12 @@ export {
 } from "./accounts/principal.js";
 export { accountScopeChain } from "./accounts/scope.js";
 export {
+  AUDIT_CHANGES_CHANNEL,
   type AuditChangeSignal,
   AuditLog,
   type AuditScope,
   type AuditVerification,
+  parseAuditChangeSignal,
 } from "./audit/audit-log.js";
 export {
   type AuditChangeKind,
@@ -72,6 +74,7 @@ export {
 export { ARGON2_PARAMETERS, PASSWORD_MAX_LENGTH, PasswordHasher } from "./auth/passwords.js";
 export {
   type ClientInfo,
+  SESSION_COOKIE,
   type Session,
   SessionGoneError,
   type SessionKind,
@@ -102,6 +105,7 @@ export {
 } from "./authorization/areas.js";
 export type { Resource } from "./authorization/registry.js";
 export { type Decision, ForbiddenError, type Grant } from "./authorization/service.js";
+export type { AccessImpact, RoleChange } from "./authorization/space-access.js";
 export {
   BACKUP_FORMAT_VERSION,
   BackupError,
@@ -113,6 +117,7 @@ export {
 export { BackupConfigurationError, type DatabaseArchiver, PostgresArchiver } from "./backup/postgres.js";
 export { checkRestoreComplete, IncompleteRestoreError } from "./backup/restore-marker.js";
 export { configurationForBackup } from "./config/backup-view.js";
+export { clientAddress, trustedProxyList } from "./config/client-address.js";
 export { configSettings, isAddressOrRange } from "./config/definitions.js";
 export type { ConfiguredSetup } from "./config/load.js";
 export { ConfigError, type Env, loadConfig, type ServerConfig } from "./config/load.js";
@@ -327,6 +332,68 @@ export {
 } from "./settings/service.js";
 export { applyConfiguredSetup } from "./setup/configured.js";
 export { SetupNotFoundError, type SetupStatus, SetupStepError } from "./setup/setup-service.js";
+export { auditScopeOf, SpaceError } from "./spaces/common.js";
+export {
+  API_ORIGIN,
+  type Backlink,
+  DocumentInvalidError,
+  encodeState,
+  LABEL_MAX_LENGTH,
+  MERGE_ORIGIN,
+  normalizeLabel,
+  type PageReferences,
+  type PageSnapshot,
+  pagePath,
+  recordClient,
+  renderPageMarkdown,
+} from "./spaces/documents.js";
+export {
+  cleanLinkUrl,
+  ITEM_DESCRIPTION_MAX_LENGTH,
+  ITEM_TITLE_MAX_LENGTH,
+  type ItemDetails,
+  type ItemLink,
+  MAX_TREE_PAGE,
+  type Placement,
+  type TreeItem,
+} from "./spaces/items.js";
+export { isValidSpaceKey, normalizeSpaceKey, SPACE_KEY_PATTERN, suggestSpaceKey } from "./spaces/keys.js";
+export type { Person } from "./spaces/people.js";
+export type { PermissionChange, SpacePermissionEntry } from "./spaces/permissions.js";
+export type { PersonalSpaceForReview } from "./spaces/personal.js";
+export {
+  type PageWidth,
+  pageWidths,
+  type SpaceRole,
+  type SpaceVisibility,
+  spaceRoles,
+  spaceVisibilities,
+  type TreeItemKind,
+  treeItemKinds,
+} from "./spaces/schema.js";
+export {
+  type DefaultSpacePermissions,
+  defaultSpacePermissionsSchema,
+  defaultSpacePermissionsSetting,
+  membersCreateSpacesSetting,
+  personalSpacesSetting,
+  type SpaceGrant,
+  spaceGrantSchema,
+} from "./spaces/settings.js";
+export {
+  DOCUMENT_CHANGES_CHANNEL,
+  type DocumentChangeSignal,
+  parseDocumentChangeSignal,
+  parseSpaceChangeSignal,
+  SPACE_CHANGES_CHANNEL,
+  type SpaceChangeSignal,
+} from "./spaces/signals.js";
+export {
+  SPACE_DESCRIPTION_MAX_LENGTH,
+  SPACE_NAME_MAX_LENGTH,
+  type Space,
+  type SpaceWithRole,
+} from "./spaces/spaces.js";
 export {
   type ApiToken,
   type AuthenticatedToken,

@@ -1,7 +1,16 @@
 import { tokens } from "@pagehall/tokens";
 import { Menu, RailButton } from "@pagehall/ui";
 import { Link, useLocation } from "@tanstack/react-router";
-import { Bell, BookOpen, CircleHelp, Keyboard, type LucideIcon, Search, Settings } from "lucide-react";
+import {
+  Bell,
+  BookOpen,
+  CircleHelp,
+  Keyboard,
+  Layers,
+  type LucideIcon,
+  Search,
+  Settings,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useUnreadCount } from "../notifications/notifications-api.js";
 import { useShell } from "./shell.js";
@@ -19,6 +28,21 @@ export function SearchRailItem() {
       icon={<RailIcon icon={Search} />}
       onClick={shell.openCommandPalette}
     />
+  );
+}
+
+export function SpacesRailItem() {
+  const { t } = useTranslation();
+  const location = useLocation();
+  return (
+    <RailButton
+      label={t("rail.spaces")}
+      icon={<RailIcon icon={Layers} />}
+      current={location.pathname.startsWith("/spaces") || location.pathname.startsWith("/personal-space")}
+      asChild
+    >
+      <Link to="/spaces" />
+    </RailButton>
   );
 }
 

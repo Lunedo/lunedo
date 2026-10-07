@@ -42,6 +42,7 @@ import { builtinSettings } from "../settings/builtin.js";
 import { type SettingDefinition, SettingsRegistry } from "../settings/definition.js";
 import { preferenceSettings } from "../settings/preferences.js";
 import { SettingsService } from "../settings/service.js";
+import { spaceSettings } from "../spaces/settings.js";
 import { tokenSettings } from "../tokens/settings.js";
 
 export type ProcessRole = "api" | "collab" | "worker";
@@ -60,6 +61,7 @@ export interface ServerRuntime {
   audit: AuditLog;
   services: AccountServices;
   notificationHub: NotificationHub;
+  listener: NotificationListener;
   /** Undefined for the collaboration server, which does not use jobs yet. */
   jobs: JobQueue | undefined;
   keyRotation: KeyRotation | undefined;
@@ -149,6 +151,7 @@ export async function createServerRuntime(options: {
         ...tokenSettings,
         ...preferenceSettings,
         ...notificationSettings,
+        ...spaceSettings,
         auditRetentionSetting,
         smtpSetting,
         mailMethodSetting,
@@ -230,6 +233,7 @@ export async function createServerRuntime(options: {
       audit,
       services,
       notificationHub: new NotificationHub(listener),
+      listener,
       jobs,
       keyRotation,
       metrics,

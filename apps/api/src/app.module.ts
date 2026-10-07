@@ -14,6 +14,7 @@ import { MetricsController } from "./metrics/metrics.controller.js";
 import { NotificationsModule } from "./notifications/notifications.module.js";
 import { OrganizationsModule } from "./organizations/organizations.module.js";
 import { SetupModule } from "./setup/setup.module.js";
+import { SpacesModule } from "./spaces/spaces.module.js";
 import { TokensModule } from "./tokens/tokens.module.js";
 
 @Global()
@@ -35,6 +36,7 @@ export class AppModule {
               NotificationsModule,
               DocsModule,
               IdentityModule,
+              SpacesModule,
             ]
           : []),
       ],

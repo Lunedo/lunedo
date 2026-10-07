@@ -78,6 +78,8 @@ const fields: SettingField[] = [
   { key: "organizations.selfServiceCreation", type: { kind: "boolean" } },
   { key: "organizations.membersCreateGroups", type: { kind: "boolean" } },
   { key: "organizations.selfRegistration", type: { kind: "boolean" } },
+  { key: "spaces.membersCreateSpaces", type: { kind: "boolean" } },
+  { key: "spaces.personalSpaces", type: { kind: "boolean" } },
   { key: "organizations.guestExpiryReminderDays", type: days(1, 90, [7, 14, 30]) },
   { key: "organizations.guestInactivityDays", type: days(1, 365, [30, 90, 180]) },
   { key: "organizations.expiryReminderDays", type: days(1, 90, [7, 14, 30]) },

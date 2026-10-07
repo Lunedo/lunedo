@@ -38,6 +38,8 @@ export interface PreferenceValues {
   density: Density;
   font: Font;
   sidebarCollapsed: boolean;
+  editorToolbar: boolean;
+  folderView: "list" | "tiles";
 }
 
 export const preferenceKeys: Record<keyof PreferenceValues, string> = {
@@ -53,6 +55,8 @@ export const preferenceKeys: Record<keyof PreferenceValues, string> = {
   density: "appearance.density",
   font: "appearance.font",
   sidebarCollapsed: "appearance.sidebarCollapsed",
+  editorToolbar: "appearance.editorToolbar",
+  folderView: "appearance.folderView",
 };
 
 const STORAGE_KEY = "pagehall.appearance";
@@ -72,6 +76,8 @@ export function defaultPreferences(language: Language): PreferenceValues {
     density: "default",
     font: "default",
     sidebarCollapsed: false,
+    editorToolbar: true,
+    folderView: "list",
   };
 }
 
@@ -96,6 +102,8 @@ export function toPreferenceValues(
     density: oneOf(densities, value("density"), fallback.density),
     font: oneOf(fonts, value("font"), fallback.font),
     sidebarCollapsed: value("sidebarCollapsed") === true,
+    editorToolbar: value("editorToolbar") !== false,
+    folderView: value("folderView") === "tiles" ? "tiles" : "list",
   };
 }
 

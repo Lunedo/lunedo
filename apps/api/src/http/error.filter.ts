@@ -2,6 +2,7 @@ import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException, Inject 
 import {
   AuthError,
   BusyError,
+  DocumentInvalidError,
   EmailInUseError,
   ForbiddenError,
   OrganizationError,
@@ -14,6 +15,7 @@ import {
   SetupNotFoundError,
   SetupStepError,
   SmtpConfigurationError,
+  SpaceError,
   TokenRejectedError,
 } from "@pagehall/server";
 import type { FastifyReply } from "fastify";
@@ -99,6 +101,17 @@ function map(error: unknown): Mapped | null {
     return { code: "forbidden", extensions: { denials: error.decision.denials } };
   if (error instanceof OrganizationError)
     return { code: codeOf(error.code, "invalidInput"), detail: error.message, extensions: error.details };
+  if (error instanceof SpaceError) {
+    const code = error.code === "spaceNotFound" || error.code === "itemNotFound" ? "notFound" : error.code;
+    return { code: codeOf(code, "invalidInput"), detail: error.message, extensions: error.details };
+  }
+  if (error instanceof DocumentInvalidError) {
+    return {
+      code: "invalidDocument",
+      detail: error.message,
+      extensions: { problems: error.problems.slice(0, 50) },
+    };
+  }
   if (error instanceof SettingLockedError) {
     return { code: "settingLocked", detail: error.message, extensions: { lockedBy: error.lockedBy.level } };
   }

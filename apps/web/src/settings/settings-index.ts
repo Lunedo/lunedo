@@ -145,6 +145,19 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
     section("organization.domains.guests", GUEST_KEYS.map(setting)),
   ],
   "organization.notifications": [section("notifications.eventTypes", notificationEvents())],
+  "organization.spaces": [
+    section("spaces.organization.creating", [setting("spaces.membersCreateSpaces")]),
+    section("spaces.organization.defaults", [
+      row("spaceDefaults", "spaces.organization.defaults", "spaces.organization.defaultsDescription"),
+    ]),
+    section("spaces.organization.withoutAdmin", [
+      row(
+        "withoutAdministrator",
+        "spaces.organization.withoutAdmin",
+        "spaces.organization.withoutAdminDescription",
+      ),
+    ]),
+  ],
   "instance.general": [
     section("instance.general.identity", [
       setting("instance.name"),
@@ -167,6 +180,12 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
     ]),
   ],
   "instance.notifications": [section("notifications.eventTypes", notificationEvents())],
+  "instance.personalSpaces": [
+    section("spaces.instance.availability", [setting("spaces.personalSpaces")]),
+    section("spaces.instance.review", [
+      row("personalSpaceReview", "spaces.instance.review", "spaces.instance.reviewDescription"),
+    ]),
+  ],
 };
 
 export function normalizeSearch(text: string): string {

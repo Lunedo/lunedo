@@ -174,7 +174,7 @@ describe.skipIf(!databaseBaseUrl)("own preferences and permissions", () => {
     const member = await createAccount(test, "plain.member@example.org");
     const client = await signedInClient(test, member.email, member.password);
     const limited = (await client.get(`/api/v1/account/permissions?organizationId=${organizationId}`)).json();
-    expect(limited.instance).toEqual([]);
+    expect(limited.instance).toEqual(["instance.personalSpace.use", "instance.content.view"]);
     expect(limited.organization).toContain("organization.view");
     expect(limited.organization).toContain("organization.members.view");
     expect(limited.organization).not.toContain("organization.members.manage");

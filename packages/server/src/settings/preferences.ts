@@ -106,6 +106,22 @@ export const sidebarCollapsedSetting = defineSetting({
   lockable: false,
 });
 
+export const editorToolbarSetting = defineSetting({
+  key: "appearance.editorToolbar",
+  schema: z.boolean(),
+  default: true,
+  levels: ["user"],
+  lockable: false,
+});
+
+export const folderViewSetting = defineSetting({
+  key: "appearance.folderView",
+  schema: z.enum(["list", "tiles"]),
+  default: "list",
+  levels: ["user"],
+  lockable: false,
+});
+
 export const accentColorSetting = defineSetting<AccentColor>({
   key: "branding.accentColor",
   schema: z.enum(accentColors),
@@ -145,5 +161,7 @@ export const preferenceSettings = [
   densitySetting,
   fontSetting,
   sidebarCollapsedSetting,
+  editorToolbarSetting,
+  folderViewSetting,
   accentColorSetting,
 ];

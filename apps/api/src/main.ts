@@ -10,6 +10,7 @@ import {
 } from "@pagehall/server";
 import { createApp } from "./app.js";
 import { apiContextOf } from "./context.js";
+import { attachCollabProxy } from "./http/collab-proxy.js";
 
 async function main() {
   let runtime: Awaited<ReturnType<typeof createServerRuntime>>;
@@ -39,6 +40,11 @@ async function main() {
 
   const { config, logger } = runtime;
   const app = await createApp(apiContextOf(runtime));
+  attachCollabProxy(app.getHttpServer(), {
+    upstream: config.collabUpstream,
+    trustedProxies: config.trustedProxies,
+    logger,
+  });
   await app.listen({ port: config.ports.api, host: config.host });
   logger.info({ port: config.ports.api }, "API listening");
   registerShutdown(

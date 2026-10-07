@@ -5,4 +5,8 @@ describe("the development server", () => {
   it("forwards API requests with the browser's host so the origin check matches", () => {
     expect(config.server?.proxy?.["/api"]).toMatchObject({ changeOrigin: false });
   });
+
+  it("forwards collaboration connections with the browser's origin", () => {
+    expect(config.server?.proxy?.["/collab"]).toMatchObject({ ws: true, changeOrigin: false });
+  });
 });

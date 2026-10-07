@@ -1,0 +1,114 @@
+import {
+  type MarkSpec,
+  type NodeSpec,
+  type AttributeSpec as ProseMirrorAttributeSpec,
+  Schema,
+} from "prosemirror-model";
+import { type DocumentJson, type NodeJson, toValidNode, type ValidNode } from "./json.js";
+import {
+  type AttributeSpec,
+  type Heading,
+  hasDefault,
+  type ModuleRegistry,
+  type RenderContext,
+} from "./module.js";
+import { createRenderState, HtmlRendererImpl, MarkdownRendererImpl } from "./render.js";
+import { slugify } from "./text.js";
+import { createValidator, InvalidDocumentError, type ValidationResult } from "./validate.js";
+
+export interface EditorKit {
+  registry: ModuleRegistry;
+  schema: Schema;
+  validate(json: unknown): ValidationResult;
+  isValid(json: unknown): boolean;
+  renderHtml(doc: unknown, context?: RenderContext): string;
+  renderMarkdown(doc: unknown, context?: RenderContext): string;
+  extractHeadings(doc: DocumentJson): Heading[];
+  plainText(doc: DocumentJson): string;
+}
+
+function proseMirrorAttributes(
+  attrs: Record<string, AttributeSpec> | undefined,
+): Record<string, ProseMirrorAttributeSpec> | undefined {
+  if (!attrs) return undefined;
+  return Object.fromEntries(
+    Object.entries(attrs).map(([name, spec]) => [name, hasDefault(spec) ? { default: spec.default } : {}]),
+  );
+}
+
+export function buildSchema(registry: ModuleRegistry): Schema {
+  const nodes: Record<string, NodeSpec> = {};
+  for (const definition of registry.nodes()) {
+    const attrs = proseMirrorAttributes(definition.attrs);
+    nodes[definition.name] = { ...definition.spec, ...(attrs ? { attrs } : {}) };
+  }
+  const marks: Record<string, MarkSpec> = {};
+  for (const definition of registry.marks()) {
+    const attrs = proseMirrorAttributes(definition.attrs);
+    marks[definition.name] = { ...definition.spec, ...(attrs ? { attrs } : {}) };
+  }
+  return new Schema({ nodes, marks, topNode: "doc" });
+}
+
+export function createEditorKit(registry: ModuleRegistry): EditorKit {
+  const schema = buildSchema(registry);
+  const validate = createValidator(registry, schema);
+
+  const isInline = (node: ValidNode) =>
+    node.type === "text" || registry.node(node.type)?.spec.inline === true;
+
+  const textOf = (node: ValidNode): string => {
+    const definition = registry.node(node.type);
+    if (definition?.text) return definition.text(node);
+    const separator = node.content.some(isInline) ? "" : "\n";
+    return node.content.map(textOf).join(separator);
+  };
+
+  const extractHeadings = (doc: DocumentJson): Heading[] => {
+    const headings: Heading[] = [];
+    const used = new Map<string, number>();
+    const visit = (node: ValidNode) => {
+      const definition = registry.node(node.type);
+      const heading = definition?.heading?.(node, node.content.map(textOf).join("").trim());
+      if (heading) {
+        const base = slugify(heading.text);
+        const count = used.get(base) ?? 0;
+        used.set(base, count + 1);
+        headings.push({
+          level: heading.level,
+          text: heading.text,
+          id: count === 0 ? base : `${base}-${count + 1}`,
+        });
+      }
+      for (const child of node.content) visit(child);
+    };
+    visit(toValidNode(doc));
+    return headings;
+  };
+
+  const validated = (doc: unknown): ValidNode => {
+    const result = validate(doc);
+    if (!result.ok) throw new InvalidDocumentError(result.problems);
+    return toValidNode(result.document);
+  };
+
+  return {
+    registry,
+    schema,
+    validate,
+    isValid: (json) => validate(json).ok,
+    renderHtml(doc, context = {}) {
+      const node = validated(doc);
+      const state = createRenderState(extractHeadings(node as DocumentJson));
+      return new HtmlRendererImpl(registry, context, state).render(node);
+    },
+    renderMarkdown(doc, context = {}) {
+      const node = validated(doc);
+      const state = createRenderState(extractHeadings(node as DocumentJson));
+      const markdown = new MarkdownRendererImpl(registry, context, state).render(node);
+      return markdown.length > 0 ? `${markdown}\n` : "";
+    },
+    extractHeadings,
+    plainText: (doc) => textOf(toValidNode(doc as NodeJson)).trim(),
+  };
+}

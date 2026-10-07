@@ -1,0 +1,120 @@
+import { z } from "zod";
+import type { ValidNode } from "../json.js";
+import { attrOf, defineModule, optional, type PageLinkTarget, required } from "../module.js";
+import { element, markdownUrl } from "../text.js";
+import { emojiValue, isoDateValue, uuidValue } from "../values.js";
+
+const inlineAtom = { inline: true, group: "inline", atom: true } as const;
+
+function linkTarget(node: ValidNode): PageLinkTarget {
+  return {
+    pageId: attrOf<string | null>(node, "pageId"),
+    spaceId: attrOf<string | null>(node, "spaceId"),
+    title: attrOf<string | null>(node, "title"),
+  };
+}
+
+export const mentionModule = defineModule({
+  name: "mention",
+  nodes: [
+    {
+      name: "mention",
+      spec: { ...inlineAtom, selectable: true },
+      attrs: { id: required(uuidValue) },
+      html: (node, renderer) =>
+        element(
+          "span",
+          { class: "ph-mention", "data-account-id": attrOf<string>(node, "id") },
+          renderer.escape(`@${renderer.mentionName(attrOf<string>(node, "id"))}`),
+        ),
+      markdown: (node, renderer) => renderer.escape(`@${renderer.mentionName(attrOf<string>(node, "id"))}`),
+      text: () => "",
+    },
+  ],
+});
+
+export const pageLinkModule = defineModule({
+  name: "pageLink",
+  nodes: [
+    {
+      name: "pageLink",
+      spec: inlineAtom,
+      attrs: {
+        pageId: optional(uuidValue.nullable(), null),
+        spaceId: optional(uuidValue.nullable(), null),
+        title: optional(z.string().max(255).nullable(), null),
+      },
+      validate: (node) => {
+        if (attrOf<string | null>(node, "pageId") !== null) return null;
+        const title = attrOf<string | null>(node, "title");
+        if (attrOf<string | null>(node, "spaceId") !== null && title !== null && title.trim().length > 0) {
+          return null;
+        }
+        return "A page link needs a page, or a space and a title for a page that does not exist yet";
+      },
+      html: (node, renderer) => {
+        const target = linkTarget(node);
+        const resolved = renderer.pageLink(target);
+        const missing = target.pageId === null ? "true" : null;
+        if (resolved && !resolved.accessible) {
+          return element(
+            "span",
+            { class: "ph-page-link", "data-access": "none" },
+            renderer.escape(renderer.label("noAccess")),
+          );
+        }
+        const title = resolved?.title || target.title || renderer.label("untitledPage");
+        const href = resolved ? renderer.safeHref(resolved.href) : null;
+        if (!href) {
+          return element("span", { class: "ph-page-link", "data-missing": missing }, renderer.escape(title));
+        }
+        return element("a", { class: "ph-page-link", href, "data-missing": missing }, renderer.escape(title));
+      },
+      markdown: (node, renderer) => {
+        const target = linkTarget(node);
+        const resolved = renderer.pageLink(target);
+        if (resolved && !resolved.accessible) return renderer.escape(renderer.label("noAccess"));
+        const title = renderer.escape(resolved?.title || target.title || renderer.label("untitledPage"));
+        const href = resolved ? renderer.safeHref(resolved.href) : null;
+        return href ? `[${title}](${markdownUrl(href)})` : title;
+      },
+      text: (node) => attrOf<string | null>(node, "title") ?? "",
+    },
+  ],
+});
+
+export const emojiModule = defineModule({
+  name: "emoji",
+  nodes: [
+    {
+      name: "emoji",
+      spec: inlineAtom,
+      attrs: { emoji: required(emojiValue) },
+      html: (node, renderer) =>
+        element("span", { class: "ph-emoji" }, renderer.escape(attrOf<string>(node, "emoji"))),
+      markdown: (node) => attrOf<string>(node, "emoji"),
+      text: (node) => attrOf<string>(node, "emoji"),
+    },
+  ],
+});
+
+export const dateModule = defineModule({
+  name: "date",
+  nodes: [
+    {
+      name: "date",
+      spec: inlineAtom,
+      attrs: { date: required(isoDateValue) },
+      html: (node, renderer) => {
+        const date = attrOf<string>(node, "date");
+        return element(
+          "time",
+          { class: "ph-date", datetime: date },
+          renderer.escape(renderer.formatDate(date)),
+        );
+      },
+      markdown: (node, renderer) => renderer.escape(renderer.formatDate(attrOf<string>(node, "date"))),
+      text: (node) => attrOf<string>(node, "date"),
+    },
+  ],
+});

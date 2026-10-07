@@ -15,10 +15,12 @@ export function ShortcutsDialog({
 }) {
   const { t } = useTranslation();
   const list = useRegistry(shortcuts);
-  const groups = (["general", "navigation"] as const).map((group) => ({
-    group,
-    items: list.filter((shortcut) => shortcut.group === group),
-  }));
+  const groups = (["general", "navigation", "editor"] as const)
+    .map((group) => ({
+      group,
+      items: list.filter((shortcut) => shortcut.group === group),
+    }))
+    .filter(({ items }) => items.length > 0);
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={t("shortcuts.title")} size="md">
       <div className="flex flex-col gap-5">

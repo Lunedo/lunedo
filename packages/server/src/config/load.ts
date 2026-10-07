@@ -25,6 +25,8 @@ export class ConfigError extends Error {
 export interface ServerConfig {
   host: string;
   ports: { api: number; collab: number; worker: number };
+  collabUpstream: string;
+  redisUrl: Secret | undefined;
   logLevel: LogLevel;
   database: { url: Secret; poolSize: number };
   paths: { files: string; secrets: string; webRoot: string | undefined };
@@ -175,6 +177,11 @@ export function loadConfig(env: Env): ServerConfig {
       collab: values.PAGEHALL_COLLAB_PORT as number,
       worker: values.PAGEHALL_WORKER_PORT as number,
     },
+    collabUpstream: (
+      (values.PAGEHALL_COLLAB_UPSTREAM as string | undefined) ??
+      `http://127.0.0.1:${values.PAGEHALL_COLLAB_PORT as number}`
+    ).replace(/\/$/, ""),
+    redisUrl: secret("PAGEHALL_REDIS_URL"),
     logLevel: values.PAGEHALL_LOG_LEVEL as LogLevel,
     database: {
       url: secret("PAGEHALL_DATABASE_URL") as Secret,

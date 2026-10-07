@@ -8,6 +8,7 @@ import {
   Globe,
   KeyRound,
   Languages,
+  Layers,
   LockKeyhole,
   Mail,
   Palette,
@@ -15,18 +16,29 @@ import {
   ShieldAlert,
   ShieldCheck,
   SlidersHorizontal,
+  User,
   UserRound,
   Users,
   UsersRound,
 } from "lucide-react";
+import "../editor/shortcuts.js";
 import { AccountRailItem } from "./account-menu.js";
 import { commands, navigationItems, railItems, shortcuts } from "./extensions.js";
-import { HelpRailItem, NotificationsRailItem, SearchRailItem, SettingsRailItem } from "./rail-items.js";
+import {
+  HelpRailItem,
+  NotificationsRailItem,
+  SearchRailItem,
+  SettingsRailItem,
+  SpacesRailItem,
+} from "./rail-items.js";
+
+export const EDIT_PAGE_EVENT = "pagehall:edit-page";
 
 const ORGANIZATION = "/settings/organizations/$organizationId";
 const INSTANCE = "/settings/instance";
 
 railItems.register(
+  { id: "spaces", order: 10, placement: "main", component: SpacesRailItem },
   { id: "search", order: 20, placement: "main", component: SearchRailItem },
   { id: "notifications", order: 70, placement: "main", component: NotificationsRailItem },
   { id: "help", order: 10, placement: "footer", component: HelpRailItem },
@@ -141,6 +153,15 @@ navigationItems.register(
     permission: "organization.settings.view",
   },
   {
+    id: "organization.spaces",
+    order: 95,
+    section: "organization",
+    icon: Layers,
+    labelKey: "navigation.spaces",
+    to: `${ORGANIZATION}/spaces`,
+    permission: "organization.settings.view",
+  },
+  {
     id: "organization.audit",
     order: 100,
     section: "organization",
@@ -231,6 +252,15 @@ navigationItems.register(
     permission: "instance.settings.view",
   },
   {
+    id: "instance.personalSpaces",
+    order: 85,
+    section: "instance",
+    icon: User,
+    labelKey: "navigation.personalSpaces",
+    to: `${INSTANCE}/personal-spaces`,
+    permission: "instance.personalSpaces.view",
+  },
+  {
     id: "instance.audit",
     order: 90,
     section: "instance",
@@ -242,6 +272,22 @@ navigationItems.register(
 );
 
 commands.register(
+  {
+    id: "commands.spaces",
+    group: "navigation",
+    labelKey: "commands.goSpaces",
+    icon: Layers,
+    keywords: ["spaces", "wiki"],
+    run: (context) => context.navigate("/spaces"),
+  },
+  {
+    id: "commands.personalSpace",
+    group: "navigation",
+    labelKey: "commands.openPersonalSpace",
+    icon: User,
+    keywords: ["personal", "persönlich"],
+    run: (context) => context.navigate("/personal-space"),
+  },
   {
     id: "commands.shortcuts",
     group: "actions",
@@ -284,6 +330,16 @@ commands.register(
 );
 
 shortcuts.register(
+  {
+    id: "shortcuts.editPage",
+    order: 45,
+    keys: ["e"],
+    group: "general",
+    labelKey: "shortcuts.editPage",
+    run: () => {
+      globalThis.dispatchEvent(new CustomEvent(EDIT_PAGE_EVENT));
+    },
+  },
   {
     id: "shortcuts.palette",
     order: 10,
