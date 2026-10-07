@@ -27,7 +27,7 @@ services:
       POSTGRES_PASSWORD: pagehall
       POSTGRES_DB: pagehall
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -39,7 +39,7 @@ services:
   valkey:
     image: valkey/valkey:8-alpine
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:${VALKEY_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "valkey-cli", "ping"]
       interval: 5s
@@ -51,8 +51,8 @@ services:
     environment:
       MP_DISABLE_VERSION_CHECK: "true"
     ports:
-      - "127.0.0.1:1025:1025"
-      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "127.0.0.1:${MAILPIT_PORT:-8025}:8025"
 
   app:
     build:
@@ -110,14 +110,15 @@ services:
     image: quay.io/keycloak/keycloak:26.8.0@sha256:b0f60d489d51c5d113390bdf5461d4c06e6051be026c05549f2e1e10ec352bcc
     command: ["start-dev", "--import-realm"]
     environment:
-      KC_HOSTNAME: http://keycloak.localhost:8080
+      KC_HOSTNAME: http://keycloak.localhost:${KEYCLOAK_PORT:-8080}
+      PAGEHALL_E2E_PORT: ${PAGEHALL_E2E_PORT:-4310}
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
       KC_HEALTH_ENABLED: "true"
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       PAGEHALL_KEYCLOAK_BACKCHANNEL_LOGOUT_URL: ${PAGEHALL_KEYCLOAK_BACKCHANNEL_LOGOUT_URL:-}
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${KEYCLOAK_PORT:-8080}:8080"
     volumes:
       - ./idp/keycloak:/opt/keycloak/data/import:ro
     extra_hosts:
@@ -138,7 +139,7 @@ services:
     profiles: [idp]
     build: ./idp/openldap
     ports:
-      - "127.0.0.1:3389:389"
+      - "127.0.0.1:${LDAP_PORT:-3389}:389"
 
   authentik-postgres:
     profiles: [idp]
@@ -172,7 +173,7 @@ services:
       AUTHENTIK_DISABLE_STARTUP_ANALYTICS: "true"
       PAGEHALL_AUTHENTIK_BACKCHANNEL_LOGOUT_URL: ${PAGEHALL_AUTHENTIK_BACKCHANNEL_LOGOUT_URL:-}
     ports:
-      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:${AUTHENTIK_PORT:-9000}:9000"
     volumes:
       - ./idp/authentik:/blueprints/custom:ro
     extra_hosts:
