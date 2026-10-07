@@ -341,14 +341,19 @@ jobs:
   result:
     name: CI result
     needs: [scope, checks, unit, backup, e2e, identity-providers, dependencies, dco]
-    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted'))
-    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
+    if: always()
+    runs-on: ${{ fromJSON((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && contains(vars.RUNNER_LABELS, 'self-hosted')) && '"ubuntu-24.04"' || vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 5
     steps:
       - name: Fail when a job failed or was cancelled
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
+          SCOPE: ${{ needs.scope.result }}
         run: |
+          if [ "$SCOPE" != "success" ]; then
+            echo "::error title=CI did not run::The scope job ended as '$SCOPE'. Pull requests from forks do not run on self-hosted runners; run the checks in a branch of this repository."
+            exit 1
+          fi
           echo "Job results: $RESULTS"
           for result in $RESULTS; do
             case "$result" in

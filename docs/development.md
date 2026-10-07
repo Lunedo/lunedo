@@ -179,6 +179,6 @@ Screens are built from the components in `packages/ui`; `/dev/components` shows 
 
 The job `Scope` decides the lane and the areas (`scripts/ci-scope.ts`) and lists them in its summary. The job `CI result` fails when any job failed or was cancelled and passes when the others passed or were skipped; it is the one check branch protection needs. The pnpm store, the Turborepo cache and Docker layers are cached between runs; on `main` the unit tests ignore cached results.
 
-Every job runs on the runners named in the repository variable `RUNNER_LABELS`, a JSON array such as `["self-hosted","linux","x64","pagehall"]`. Without the variable, jobs run on GitHub-hosted `ubuntu-24.04`, so no code changes when the repository goes public. When `RUNNER_LABELS` names a self-hosted runner, no job runs for pull requests from forks.
+Every job runs on the runners named in the repository variable `RUNNER_LABELS`, a JSON array such as `["self-hosted","linux","x64","pagehall"]`. Without the variable, jobs run on GitHub-hosted `ubuntu-24.04`, so no code changes when the repository goes public. When `RUNNER_LABELS` names a self-hosted runner, no job runs for pull requests from forks; `CI result` then runs on `ubuntu-24.04` and fails, so such a pull request cannot pass the required check.
 
 Dependabot opens one pull request per ecosystem every Monday (`.github/dependabot.yml`).
