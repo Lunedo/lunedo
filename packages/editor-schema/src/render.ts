@@ -28,7 +28,7 @@ function markKey(mark: ValidMark): string {
   return `${mark.type}:${JSON.stringify(mark.attrs)}`;
 }
 
-export const MAX_EXPENSIVE_RENDER_COST = 100_000;
+export const MAX_EXPENSIVE_RENDER_COST = 20_000;
 
 class RenderState {
   index = 0;

@@ -229,7 +229,7 @@ describe("renderHtml", () => {
   });
 
   it("renders formulas only up to a budget per document and shows the rest as code", () => {
-    const latex = `${"x^2+".repeat(1999)}x`;
+    const latex = `${"x^2+".repeat(499)}x`;
     const blocks = Array.from({ length: 20 }, () => ({ type: "blockMath", attrs: { latex } }));
     const html = renderHtml(doc(...blocks));
     const rendered = html.match(/class="katex-display"/g) ?? [];
