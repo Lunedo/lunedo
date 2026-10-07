@@ -21,7 +21,8 @@ env:
 jobs:
   scope:
     name: Scope
-    runs-on: ubuntu-24.04
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted'))
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 5
     outputs:
       lane: ${{ steps.scope.outputs.lane }}
@@ -44,7 +45,8 @@ jobs:
   checks:
     name: Lint, typecheck and checks
     needs: scope
-    runs-on: ubuntu-24.04
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted'))
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -71,7 +73,8 @@ jobs:
   unit:
     name: Unit tests (${{ matrix.shard }} of 3)
     needs: scope
-    runs-on: ubuntu-24.04
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted'))
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -85,7 +88,7 @@ jobs:
           POSTGRES_PASSWORD: pagehall
           POSTGRES_DB: pagehall
         ports:
-          - 5432:5432
+          - 5432
         options: >-
           --health-cmd "pg_isready -h 127.0.0.1 -U pagehall -d pagehall"
           --health-interval 5s
@@ -97,20 +100,17 @@ jobs:
           MP_DISABLE_VERSION_CHECK: "true"
         ports:
           - 1025:1025
-          - 8025:8025
+          - 8025
       valkey:
         image: valkey/valkey:8-alpine
         ports:
-          - 6379:6379
+          - 6379
         options: >-
           --health-cmd "valkey-cli ping"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
     env:
-      PAGEHALL_TEST_DATABASE_URL: postgres://pagehall:pagehall@localhost:5432/pagehall
-      PAGEHALL_TEST_MAILPIT_URL: http://localhost:8025
-      PAGEHALL_TEST_REDIS_URL: redis://localhost:6379
       LANE: ${{ needs.scope.outputs.lane }}
       FORCE: ${{ github.event_name == 'push' }}
       SHARD: ${{ matrix.shard }}
@@ -132,9 +132,13 @@ jobs:
           key: turbo-unit-${{ matrix.shard }}-${{ github.sha }}
           restore-keys: turbo-unit-${{ matrix.shard }}-
       - name: Install PostgreSQL client tools for the backup tests
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+        run: command -v pg_dump > /dev/null || (sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client)
       - run: pnpm install --frozen-lockfile
       - name: Run the tests of this shard
+        env:
+          PAGEHALL_TEST_DATABASE_URL: postgres://pagehall:pagehall@localhost:${{ job.services.postgres.ports['5432'] }}/pagehall
+          PAGEHALL_TEST_MAILPIT_URL: http://localhost:${{ job.services.mailpit.ports['8025'] }}
+          PAGEHALL_TEST_REDIS_URL: redis://localhost:${{ job.services.valkey.ports['6379'] }}
         run: |
           args=(run test)
           if [ "$LANE" = "fast" ]; then args+=(--affected); fi
@@ -144,8 +148,8 @@ jobs:
   backup:
     name: Backup round trip
     needs: scope
-    if: needs.scope.outputs.backup == 'true'
-    runs-on: ubuntu-24.04
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted')) && needs.scope.outputs.backup == 'true'
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -172,8 +176,8 @@ jobs:
   e2e:
     name: End-to-end, accessibility and visual tests
     needs: scope
-    if: needs.scope.outputs.end-to-end == 'true'
-    runs-on: ubuntu-24.04
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted')) && needs.scope.outputs.end-to-end == 'true'
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 40
     container:
       image: mcr.microsoft.com/playwright@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27 # v1.63.0-noble
@@ -234,12 +238,15 @@ jobs:
           name: playwright-report
           path: apps/web/playwright-report
           retention-days: 7
+      - name: Give the workspace back to the runner user
+        if: always()
+        run: chown -R "$(stat -c %u:%g "$GITHUB_WORKSPACE")" "$GITHUB_WORKSPACE"
 
   identity-providers:
     name: Sign-in through identity providers
     needs: scope
-    if: needs.scope.outputs.identity-providers == 'true'
-    runs-on: ubuntu-24.04
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted')) && needs.scope.outputs.identity-providers == 'true'
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 30
     env:
       PAGEHALL_E2E_IDP: "1"
@@ -252,7 +259,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Resolve the identity provider host names to this machine
-        run: echo "127.0.0.1 keycloak.localhost authentik.localhost" | sudo tee -a /etc/hosts
+        run: grep -q authentik.localhost /etc/hosts || echo "127.0.0.1 keycloak.localhost authentik.localhost" | sudo tee -a /etc/hosts
       - name: Start PostgreSQL, Mailpit, Keycloak, Authentik and OpenLDAP
         run: >-
           docker compose -f docker/compose.dev.yml --profile idp up --detach --wait
@@ -273,7 +280,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm --filter @pagehall/web build:e2e
-      - run: pnpm --filter @pagehall/web exec playwright install --with-deps chromium
+      - if: ${{ !contains(vars.RUNNER_LABELS, 'self-hosted') }}
+        run: pnpm --filter @pagehall/web exec playwright install --with-deps chromium
+      - if: ${{ contains(vars.RUNNER_LABELS, 'self-hosted') }}
+        run: pnpm --filter @pagehall/web exec playwright install chromium
       - run: pnpm --filter @pagehall/web exec playwright test --project=idp
       - if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -283,11 +293,15 @@ jobs:
           retention-days: 7
       - if: failure()
         run: docker compose -f docker/compose.dev.yml --profile idp logs keycloak authentik-server authentik-worker openldap
+      - name: Remove the containers and volumes
+        if: always()
+        run: docker compose -f docker/compose.dev.yml --profile idp down --volumes --remove-orphans
 
   dependencies:
     name: Licenses and audit
     needs: scope
-    runs-on: ubuntu-24.04
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted'))
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -307,8 +321,8 @@ jobs:
   dco:
     name: DCO sign-off
     # Dependabot commits carry no sign-off; the pull request author is verified by GitHub.
-    if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
-    runs-on: ubuntu-24.04
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted')) && github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -327,8 +341,8 @@ jobs:
   result:
     name: CI result
     needs: [scope, checks, unit, backup, e2e, identity-providers, dependencies, dco]
-    if: always()
-    runs-on: ubuntu-24.04
+    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted'))
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 5
     steps:
       - name: Fail when a job failed or was cancelled

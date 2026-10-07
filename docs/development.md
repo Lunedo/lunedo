@@ -162,7 +162,7 @@ Screens are built from the components in `packages/ui`; `/dev/components` shows 
 | Workflow | Trigger | Checks |
 |---|---|---|
 | `ci.yml` | pull requests, pushes to `main`, manual | see below |
-| `image.yml` | pushes to `main`, release tags `v*`, manual | image build for amd64 and arm64, not published |
+| `image.yml` | pushes to `main`, release tags `v*`, Mondays 03:00 UTC, manual | image build, not published; amd64 only on pushes to `main`, amd64 and arm64 otherwise |
 | `api.yml` | pull requests | compares the API description with the base branch |
 | `audit.yml` | Mondays 05:00 UTC, manual | `pnpm audit` on `main`; fails on any known vulnerability and lists the findings in the job summary |
 
@@ -179,4 +179,6 @@ Screens are built from the components in `packages/ui`; `/dev/components` shows 
 
 The job `Scope` decides the lane and the areas (`scripts/ci-scope.ts`) and lists them in its summary. The job `CI result` fails when any job failed or was cancelled and passes when the others passed or were skipped; it is the one check branch protection needs. The pnpm store, the Turborepo cache and Docker layers are cached between runs; on `main` the unit tests ignore cached results.
 
-Dependabot proposes dependency updates weekly (`.github/dependabot.yml`).
+Every job runs on the runners named in the repository variable `RUNNER_LABELS`, a JSON array such as `["self-hosted","linux","x64","pagehall"]`. Without the variable, jobs run on GitHub-hosted `ubuntu-24.04`, so no code changes when the repository goes public. When `RUNNER_LABELS` names a self-hosted runner, no job runs for pull requests from forks.
+
+Dependabot opens one pull request per ecosystem every Monday (`.github/dependabot.yml`).

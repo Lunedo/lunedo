@@ -12,8 +12,8 @@ updates:
       prefix: build
       include: scope
     groups:
-      minor-and-patch:
-        update-types: [minor, patch]
+      all-updates:
+        patterns: ["*"]
     ignore:
       # Node.js follows the active LTS line; major upgrades are a deliberate decision.
       - dependency-name: "@types/node"
@@ -27,8 +27,8 @@ updates:
     commit-message:
       prefix: ci
     groups:
-      minor-and-patch:
-        update-types: [minor, patch]
+      all-updates:
+        patterns: ["*"]
 
   - package-ecosystem: docker
     directory: /docker
@@ -39,8 +39,8 @@ updates:
       prefix: build
       include: scope
     groups:
-      minor-and-patch:
-        update-types: [minor, patch]
+      all-updates:
+        patterns: ["*"]
     ignore:
       - dependency-name: node
         update-types: [version-update:semver-major]
@@ -54,8 +54,8 @@ updates:
       prefix: build
       include: scope
     groups:
-      minor-and-patch:
-        update-types: [minor, patch]
+      all-updates:
+        patterns: ["*"]
     ignore:
       # PostgreSQL major upgrades go through the backup tool.
       - dependency-name: postgres
