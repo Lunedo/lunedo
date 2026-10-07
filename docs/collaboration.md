@@ -32,6 +32,8 @@ After storing, the server sends the stateless message `{"type":"saved","revision
 
 Changes written through the API reach open editors at once.
 
+When the browser loses its network connection, the editor shows "Offline" at once and keeps the changes in the tab. When the connection returns, it reconnects and the changes are merged with what others wrote meanwhile. Closing the tab with unsaved changes asks for confirmation.
+
 ## Permissions
 
 Permission changes take effect on open connections at once, also on other nodes. A person who loses edit permission is disconnected with the reason `permissionRevoked`; an ended session closes the connection with `sessionEnded`. Every 30 seconds the server checks all open connections again.
