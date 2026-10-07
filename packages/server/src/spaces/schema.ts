@@ -148,6 +148,7 @@ export const treeItems = pgTable(
     linkUrl: text(),
     mode: pageMode().notNull().default("live"),
     publishedVersionId: uuid().references((): AnyPgColumn => pageVersions.id, { onDelete: "set null" }),
+    readerVisible: boolean().notNull().default(true),
     trashEntryId: uuid().references((): AnyPgColumn => trashEntries.id),
     archivedRootId: uuid().references((): AnyPgColumn => treeItems.id),
     archivedAt: timestampColumn(),

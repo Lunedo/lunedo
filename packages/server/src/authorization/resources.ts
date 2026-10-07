@@ -295,7 +295,7 @@ async function itemState(
     select (t.trash_entry_id is not null or s.deleted_at is not null) as trashed,
       (t.archived_root_id is not null or s.archived_at is not null) as archived,
       s.archived_at is not null as space_archived,
-      (t.kind = 'page' and t.mode = 'publish' and t.published_version_id is null) as unpublished
+      not t.reader_visible as unpublished
     from tree_items t join spaces s on s.id = t.space_id where t.id = ${id}`);
   const row = result.rows[0];
   return row

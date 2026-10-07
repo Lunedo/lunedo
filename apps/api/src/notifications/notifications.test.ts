@@ -392,11 +392,23 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
         kind: "page",
         title: "New",
         parentId: null,
+        mode: "live",
       });
       expect(created.statusCode).toBe(201);
       await expect
         .poll(() => readerEvents.spaces, { timeout: 5000 })
         .toContainEqual({ spaceId, kind: "tree", itemId: created.json().id });
+      const unpublished = await owner.post(`/api/v1/spaces/${spaceId}/items`, {
+        kind: "page",
+        title: "Not yet published",
+        parentId: null,
+        mode: "publish",
+      });
+      expect(unpublished.statusCode).toBe(201);
+      await expect
+        .poll(() => readerEvents.spaces, { timeout: 5000 })
+        .toContainEqual({ spaceId, kind: "tree", itemId: null });
+      expect(JSON.stringify(readerEvents.spaces)).not.toContain(unpublished.json().id);
       await new Promise((resolve) => setTimeout(resolve, 300));
       expect(otherEvents.spaces).toEqual([]);
 
@@ -415,6 +427,7 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
         kind: "page",
         title: "Two",
         parentId: null,
+        mode: "live",
       });
       await expect
         .poll(() => otherEvents.spaces, { timeout: 5000 })
@@ -425,6 +438,7 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
         kind: "page",
         title: "Three",
         parentId: null,
+        mode: "live",
       });
       await expect
         .poll(() => readerEvents.spaces, { timeout: 5000 })

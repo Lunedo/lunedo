@@ -1,3 +1,4 @@
+import type { DocumentJson } from "@pagehall/editor-schema";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal } from "../accounts/principal.js";
@@ -190,25 +191,196 @@ describe.skipIf(!baseUrl)("publish and live modes with versions", () => {
       expect(JSON.stringify(version?.document)).not.toContain("Draft");
       expect(version?.contributors.map((person) => person.id)).toContain(context.editorId);
     });
+  });
 
-    it("hides unpublished ancestors from the breadcrumbs of readers", async () => {
-      const context = await setup();
+  describe("readers and unpublished ancestors", () => {
+    type Context = Awaited<ReturnType<typeof setup>>;
+
+    async function seen(context: Context, itemId: string) {
+      return (
+        await test.services.authorization.explain(context.reader, "item.view", { type: "item", id: itemId })
+      ).allowed;
+    }
+
+    async function hiddenBranch(context: Context) {
+      const target = await publishedPage(context, "Link target", "Target");
       const parent = await test.services.tree.create(context.editor, context.space.id, {
         kind: "page",
-        title: "Hidden parent",
+        title: "Unpublished parent",
         mode: "publish",
         placement: { parentId: null },
       });
       const child = await test.services.tree.create(context.editor, context.space.id, {
         kind: "page",
-        title: "Child",
-        mode: "live",
+        title: "Published child",
+        mode: "publish",
         placement: { parentId: parent.id },
       });
-      expect((await test.services.tree.details(context.reader, child.id))?.ancestors).toEqual([]);
+      await test.services.documents.replace(context.editor, child.id, documentWith(linkTo(target.id)));
+      await test.services.versions.publish(context.editor, child.id);
+      await test.services.documents.addLabel(context.editor, child.id, "hidden-branch");
+      const folder = await test.services.tree.create(context.editor, context.space.id, {
+        kind: "folder",
+        title: "Nested folder",
+        placement: { parentId: child.id },
+      });
+      const live = await test.services.tree.create(context.editor, context.space.id, {
+        kind: "page",
+        title: "Nested live page",
+        mode: "live",
+        placement: { parentId: folder.id },
+      });
+      return { target, parent, child, folder, live };
+    }
+
+    async function readerPaths(context: Context, branch: Awaited<ReturnType<typeof hiddenBranch>>) {
+      const reader = context.reader;
+      const spaceId = context.space.id;
+      const ids = [branch.child.id, branch.folder.id, branch.live.id];
+      const references = await test.services.documents.references(
+        reader,
+        documentWith(linkTo(branch.child.id)) as DocumentJson,
+      );
+      return {
+        view: await Promise.all(ids.map((id) => seen(context, id))),
+        root: (await test.services.tree.children(reader, spaceId, null)).items.map((item) => item.id),
+        children: (await test.services.tree.children(reader, spaceId, branch.child.id)).items.map(
+          (item) => item.id,
+        ),
+        search: (await test.services.tree.search(reader, { query: "Nested live page", spaceId })).map(
+          (item) => item.id,
+        ),
+        labels: (await test.services.documents.pagesWithLabel(reader, spaceId, "hidden-branch")).map(
+          (page) => page.itemId,
+        ),
+        suggestions: await test.services.documents.labelSuggestions(reader, spaceId, "hidden"),
+        backlinks: (await test.services.documents.backlinks(reader, branch.target.id)).map(
+          (link) => link.itemId,
+        ),
+        linkAccessible: references.pages[branch.child.id]?.accessible ?? false,
+      };
+    }
+
+    it("hides a published page and everything below it while an ancestor is unpublished", async () => {
+      const context = await setup();
+      const branch = await hiddenBranch(context);
+      const paths = await readerPaths(context, branch);
+      expect(paths).toMatchObject({
+        view: [false, false, false],
+        children: [],
+        search: [],
+        labels: [],
+        suggestions: [],
+        backlinks: [],
+        linkAccessible: false,
+      });
+      expect(paths.root).not.toContain(branch.parent.id);
+      expect(await seen(context, branch.target.id)).toBe(true);
       expect(
-        (await test.services.tree.details(context.editor, child.id))?.ancestors.map((a) => a.title),
-      ).toEqual(["Hidden parent"]);
+        (
+          await test.services.authorization.explain(context.editor, "item.view", {
+            type: "item",
+            id: branch.live.id,
+          })
+        ).allowed,
+      ).toBe(true);
+      expect((await test.services.tree.details(context.editor, branch.child.id))?.ancestors).toEqual([
+        { id: branch.parent.id, kind: "page", title: "Unpublished parent", published: false },
+      ]);
+    });
+
+    it("shows the branch with its own published versions once the ancestor is published", async () => {
+      const context = await setup();
+      const branch = await hiddenBranch(context);
+      await test.services.documents.replace(
+        context.editor,
+        branch.child.id,
+        documentWith(paragraph("Draft only")),
+      );
+      await test.services.versions.publish(context.editor, branch.parent.id);
+      const paths = await readerPaths(context, branch);
+      expect(paths).toMatchObject({
+        view: [true, true, true],
+        children: [branch.folder.id],
+        search: [branch.live.id],
+        labels: [branch.child.id],
+        suggestions: ["hidden-branch"],
+        backlinks: [branch.child.id],
+        linkAccessible: true,
+      });
+      expect(paths.root).toContain(branch.parent.id);
+      expect(
+        JSON.stringify((await test.services.documents.readable(branch.child.id))?.document),
+      ).not.toContain("Draft only");
+      expect((await test.services.tree.details(context.reader, branch.child.id))?.ancestors).toEqual([
+        { id: branch.parent.id, kind: "page", title: "Unpublished parent", published: true },
+      ]);
+    });
+
+    it("counts folders and pages in live mode as published ancestors", async () => {
+      const context = await setup();
+      const branch = await hiddenBranch(context);
+      await test.services.versions.changeMode(context.editor, branch.parent.id, "live", {
+        confirmDraft: true,
+      });
+      expect((await readerPaths(context, branch)).view).toEqual([true, true, true]);
+      await test.services.versions.changeMode(context.editor, branch.parent.id, "publish");
+      await test.services.tree.convert(context.editor, branch.parent.id, "folder");
+      expect((await readerPaths(context, branch)).view).toEqual([true, true, true]);
+    });
+
+    it("hides a published page moved below an unpublished page and shows it again when moved back", async () => {
+      const context = await setup();
+      const parent = await test.services.tree.create(context.editor, context.space.id, {
+        kind: "page",
+        title: "Not yet published",
+        mode: "publish",
+        placement: { parentId: null },
+      });
+      const page = await publishedPage(context, "Moving page", "Text");
+      const below = await test.services.tree.create(context.editor, context.space.id, {
+        kind: "page",
+        title: "Below the moving page",
+        mode: "live",
+        placement: { parentId: page.id },
+      });
+      expect([await seen(context, page.id), await seen(context, below.id)]).toEqual([true, true]);
+      await test.services.tree.move(context.editor, page.id, { parentId: parent.id });
+      expect([await seen(context, page.id), await seen(context, below.id)]).toEqual([false, false]);
+      await test.services.tree.move(context.editor, page.id, { parentId: null });
+      expect([await seen(context, page.id), await seen(context, below.id)]).toEqual([true, true]);
+    });
+
+    it("stays right when a page is moved below an ancestor that is published at the same moment", async () => {
+      const context = await setup();
+      for (let round = 0; round < 5; round++) {
+        const parent = await test.services.tree.create(context.editor, context.space.id, {
+          kind: "page",
+          title: `Parent ${round}`,
+          mode: "publish",
+          placement: { parentId: null },
+        });
+        const page = await publishedPage(context, `Moved ${round}`, "Text");
+        await Promise.all([
+          test.services.versions.publish(context.editor, parent.id),
+          test.services.tree.move(context.editor, page.id, { parentId: parent.id }),
+        ]);
+        expect(await seen(context, page.id)).toBe(true);
+      }
+    });
+
+    it("keeps deleted, restored and archived pages hidden while their ancestor is unpublished", async () => {
+      const context = await setup();
+      const branch = await hiddenBranch(context);
+      const entry = await test.services.trash.deleteItem(context.editor, branch.child.id);
+      await test.services.trash.restore(context.editor, entry.id);
+      expect((await readerPaths(context, branch)).view).toEqual([false, false, false]);
+      await test.services.archive.archive(context.editor, branch.child.id);
+      expect(await seen(context, branch.child.id)).toBe(false);
+      await test.services.versions.publish(context.editor, branch.parent.id);
+      expect(await seen(context, branch.child.id)).toBe(true);
+      await test.services.archive.unarchive(context.editor, branch.child.id);
+      expect((await readerPaths(context, branch)).view).toEqual([true, true, true]);
     });
   });
 

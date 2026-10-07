@@ -13,7 +13,7 @@ import type { PageMode, PageWidth, TreeItemKind } from "./schema.js";
 import { defaultPageModeSetting } from "./settings.js";
 import { signalSpaceChange } from "./signals.js";
 import { insertFirstVersion, type VersionService } from "./versions.js";
-import { publishedFor, visibleItem } from "./visibility.js";
+import { publishedFor, refreshReaderVisibility, visibleItem } from "./visibility.js";
 
 export const ITEM_TITLE_MAX_LENGTH = 255;
 export const ITEM_DESCRIPTION_MAX_LENGTH = 1000;
@@ -52,7 +52,7 @@ export interface TreeItem {
 export interface ItemDetails extends TreeItem {
   spaceKey: string;
   spaceName: string;
-  ancestors: { id: string; kind: TreeItemKind; title: string }[];
+  ancestors: { id: string; kind: TreeItemKind; title: string; published: boolean }[];
 }
 
 export interface Placement {
@@ -187,6 +187,7 @@ export async function insertPage(
       ${input.mode}, ${input.actorId}, ${input.actorId})`);
   await insertInitialDocument(tx, id, input.actorId);
   if (input.published) await insertFirstVersion(tx, id, input.actorId);
+  await refreshReaderVisibility(tx, [id]);
   return id;
 }
 
@@ -353,49 +354,44 @@ export class TreeService {
   async details(viewer: Principal, itemId: string): Promise<ItemDetails | null> {
     const item = await this.get(viewer, itemId);
     if (!item) return null;
-    const space = await this.#database.execute<{ key: string; name: string; editor: boolean }>(
-      sql`select s.key, s.name, ${this.#authorization.spaceFilter(viewer, sql`s`, "editor")} as editor
-        from spaces s where s.id = ${item.spaceId}`,
+    const space = await this.#database.execute<{ key: string; name: string }>(
+      sql`select s.key, s.name from spaces s where s.id = ${item.spaceId}`,
     );
-    const ancestors = await this.ancestors(itemId);
-    const hidden = space.rows[0]?.editor
-      ? new Set<string>()
-      : await this.#unpublished(ancestors.map((a) => a.id));
     return {
       ...item,
       spaceKey: space.rows[0]?.key ?? "",
       spaceName: space.rows[0]?.name ?? "",
-      ancestors: ancestors.filter((ancestor) => !hidden.has(ancestor.id)),
+      ancestors: await this.ancestors(itemId),
     };
-  }
-
-  async #unpublished(ids: string[]): Promise<Set<string>> {
-    if (ids.length === 0) return new Set();
-    const result = await this.#database.execute<{ id: string }>(sql`
-      select id from tree_items where id = any(${sql.param(ids)}::uuid[])
-        and kind = 'page' and mode = 'publish' and published_version_id is null`);
-    return new Set(result.rows.map((row) => row.id));
   }
 
   async ancestors(
     itemId: string,
     executor: Executor = this.#database,
-  ): Promise<{ id: string; kind: TreeItemKind; title: string }[]> {
+  ): Promise<{ id: string; kind: TreeItemKind; title: string; published: boolean }[]> {
     const result = await executor.execute<{
       id: string;
       kind: TreeItemKind;
       title: string;
+      published: boolean;
       depth: number;
     }>(sql`
       with recursive up as (
-        select p.id, p.kind, p.title, p.parent_id, 1 as depth
+        select p.id, p.kind, p.title, p.mode, p.published_version_id, p.parent_id, 1 as depth
         from tree_items t join tree_items p on p.id = t.parent_id where t.id = ${itemId}
         union all
-        select p.id, p.kind, p.title, p.parent_id, up.depth + 1
+        select p.id, p.kind, p.title, p.mode, p.published_version_id, p.parent_id, up.depth + 1
         from up join tree_items p on p.id = up.parent_id where up.depth < 1000
       )
-      select id, kind, title, depth from up order by depth desc`);
-    return result.rows.map((row) => ({ id: row.id, kind: row.kind, title: row.title }));
+      select id, kind, title, (kind <> 'page' or mode = 'live' or published_version_id is not null) as published,
+        depth
+      from up order by depth desc`);
+    return result.rows.map((row) => ({
+      id: row.id,
+      kind: row.kind,
+      title: row.title,
+      published: row.published,
+    }));
   }
 
   async #placementPosition(
@@ -499,6 +495,7 @@ export class TreeService {
         values (${itemId}, ${spaceId}, ${input.placement.parentId}, ${input.kind}, ${position}, ${title},
           ${description}, ${linkItemId}, ${linkUrl}, ${mode}, ${actorId}, ${actorId})`);
       if (input.kind === "page") await insertInitialDocument(tx, itemId, actorId, input.document);
+      await refreshReaderVisibility(tx, [itemId]);
       await signalSpaceChange(tx, { spaceId, kind: "tree", itemId });
       return itemId;
     });
@@ -629,6 +626,7 @@ export class TreeService {
           update tree_items set space_id = ${targetSpaceId}, updated_at = now() where id in (select id from down)`);
         await signalSpaceChange(tx, { spaceId: targetSpaceId, kind: "tree", itemId });
       }
+      await refreshReaderVisibility(tx, [itemId]);
       await signalSpaceChange(tx, { spaceId: sourceSpaceId, kind: "tree", itemId });
     });
     const moved = await this.get(actor, itemId);
@@ -642,12 +640,21 @@ export class TreeService {
   }
 
   async convert(actor: Principal, itemId: string, kind: "page" | "folder"): Promise<TreeItem> {
+    const located = await this.#database.execute<{ space_id: string }>(
+      sql`select space_id from tree_items where id = ${itemId}`,
+    );
+    const spaceId = located.rows[0]?.space_id;
+    if (!spaceId) throw new SpaceError("itemNotFound", "The item does not exist");
     await this.#database.transaction(async (tx) => {
+      await lockSpaces(tx, [spaceId]);
       const current = await tx.execute<{ space_id: string; kind: TreeItemKind }>(
         sql`select space_id, kind from tree_items where id = ${itemId} for update`,
       );
       const row = current.rows[0];
       if (!row) throw new SpaceError("itemNotFound", "The item does not exist");
+      if (row.space_id !== spaceId) {
+        throw new SpaceError("itemMoved", "Someone else moved the item at the same moment; try again");
+      }
       if (row.kind === "link") throw new SpaceError("invalidConversion", "Links cannot be converted");
       if (row.kind === kind) return;
       const overview = await tx.execute<{ id: string }>(
@@ -663,6 +670,7 @@ export class TreeService {
         );
         if (!document.rows[0]) await insertInitialDocument(tx, itemId, actorIdOf(actor));
       }
+      await refreshReaderVisibility(tx, [itemId]);
       await signalSpaceChange(tx, { spaceId: row.space_id, kind: "tree", itemId });
     });
     const item = await this.get(actor, itemId);

@@ -21,10 +21,12 @@ import {
   recomputeLinks,
   recordClient,
 } from "./documents.js";
+import { lockSpaces } from "./items.js";
 import type { PeopleService } from "./people.js";
 import type { DiscardReason, PageMode, VersionReason } from "./schema.js";
 import { liveVersionIdleMinutesSetting } from "./settings.js";
 import { signalSpaceChange } from "./signals.js";
+import { refreshReaderVisibility } from "./visibility.js";
 
 export const DISCARDED_DRAFT_DAYS = 30;
 export const VERSION_NOTE_MAX_LENGTH = 500;
@@ -293,6 +295,21 @@ export class VersionService {
     page.draftTitle = draftTitle;
   }
 
+  async #lockSpaceOf(tx: Transaction, itemId: string): Promise<void> {
+    const before = await tx.execute<{ space_id: string }>(
+      sql`select space_id from tree_items where id = ${itemId}`,
+    );
+    const spaceId = before.rows[0]?.space_id;
+    if (!spaceId) throw new SpaceError("itemNotFound", "The item does not exist");
+    await lockSpaces(tx, [spaceId]);
+    const after = await tx.execute<{ space_id: string }>(
+      sql`select space_id from tree_items where id = ${itemId}`,
+    );
+    if (after.rows[0]?.space_id !== spaceId) {
+      throw new SpaceError("itemMoved", "Someone else moved the item at the same moment; try again");
+    }
+  }
+
   async publish(
     actor: Principal,
     itemId: string,
@@ -300,6 +317,7 @@ export class VersionService {
   ): Promise<{ version: number; created: boolean }> {
     const note = cleanNote(input.note ?? "");
     return this.#database.transaction(async (tx) => {
+      await this.#lockSpaceOf(tx, itemId);
       const page = await this.#lock(tx, itemId);
       if (page.mode !== "publish") {
         throw new SpaceError("notPublishMode", "Pages in live mode show every change at once");
@@ -312,6 +330,7 @@ export class VersionService {
         note,
         actorId: actorIdOf(actor),
       });
+      await refreshReaderVisibility(tx, [itemId]);
       await this.#audit.record(tx, {
         name: "page.published",
         actor,
@@ -417,6 +436,7 @@ export class VersionService {
     options: { confirmDraft?: boolean | undefined } = {},
   ): Promise<void> {
     await this.#database.transaction(async (tx) => {
+      await this.#lockSpaceOf(tx, itemId);
       const page = await this.#lock(tx, itemId);
       if (page.mode === mode) return;
       const previousMode = page.mode;
@@ -436,6 +456,7 @@ export class VersionService {
           await this.#createVersion(tx, page, { reason: "modeChanged", actorId: actorIdOf(actor) });
       }
       await tx.execute(sql`update tree_items set mode = ${mode}, updated_at = now() where id = ${itemId}`);
+      await refreshReaderVisibility(tx, [itemId]);
       await signalSpaceChange(tx, { spaceId: page.spaceId, kind: "page", itemId });
       await signalSpaceChange(tx, { spaceId: page.spaceId, kind: "tree", itemId });
       await this.#audit.record(tx, {

@@ -8,7 +8,7 @@ import { lockSpaces } from "./items.js";
 import type { TreeItemKind } from "./schema.js";
 import { signalSpaceChange } from "./signals.js";
 import { placeBack } from "./trash.js";
-import { publishedFor } from "./visibility.js";
+import { publishedFor, refreshReaderVisibility } from "./visibility.js";
 
 export interface ArchivedItem {
   id: string;
@@ -97,6 +97,7 @@ export class ArchiveService {
         update tree_items set restore_parent_id = parent_id, restore_position = position, parent_id = null,
           archived_at = now(), archived_by = ${actorIdOf(actor)}
         where id = ${itemId}`);
+      await refreshReaderVisibility(tx, [itemId]);
       await this.#audit.record(tx, {
         name: "page.archived",
         actor,
@@ -137,6 +138,7 @@ export class ArchiveService {
       await tx.execute(
         sql`update tree_items set archived_at = null, archived_by = null where id = ${itemId}`,
       );
+      await refreshReaderVisibility(tx, [itemId]);
       await this.#audit.record(tx, {
         name: "page.unarchived",
         actor,

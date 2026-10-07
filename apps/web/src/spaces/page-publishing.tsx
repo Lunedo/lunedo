@@ -41,6 +41,7 @@ export function PublishButton({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const next = (draft?.basedOn ?? 0) + 1;
+  const hiddenBy = page.ancestors.filter((ancestor) => !ancestor.published);
 
   const publish = async () => {
     if (note.trim().length > NOTE_MAX) {
@@ -107,6 +108,16 @@ export function PublishButton({
             ? t("versions.publishHint", { version: next, current: draft.basedOn })
             : t("versions.publishFirstHint")}
         </p>
+        {hiddenBy.length > 0 ? (
+          <Notice variant="warning" title={t("versions.ancestorUnpublishedTitle")}>
+            {t("versions.ancestorUnpublished", {
+              count: hiddenBy.length,
+              names: hiddenBy
+                .map((ancestor) => t("versions.quotedTitle", { title: ancestor.title }))
+                .join(", "),
+            })}
+          </Notice>
+        ) : null}
         <Field label={t("versions.note")} hint={t("versions.noteHint")} error={error ?? undefined}>
           <Textarea
             value={note}

@@ -77986,12 +77986,17 @@
                           "title": {
                             "type": "string",
                             "description": "Title of the ancestor."
+                          },
+                          "published": {
+                            "type": "boolean",
+                            "description": "Whether the ancestor counts as published: a folder, a link, a page in live mode or a page with a published version. Readers see a page only when every ancestor is published."
                           }
                         },
                         "required": [
                           "id",
                           "kind",
-                          "title"
+                          "title",
+                          "published"
                         ],
                         "additionalProperties": false,
                         "description": "An ancestor."

@@ -20,7 +20,7 @@ import { actorIdOf, SpaceError } from "./common.js";
 import type { PeopleService } from "./people.js";
 import type { PageMode } from "./schema.js";
 import { signalDocumentChange, signalSpaceChange } from "./signals.js";
-import { visibleItem } from "./visibility.js";
+import { publishedFor, visibleItem } from "./visibility.js";
 
 export const LABEL_MAX_LENGTH = 100;
 export const MAX_LABELS_PER_PAGE = 100;
@@ -386,8 +386,7 @@ export class PageDocumentService {
               select t.id, t.title, t.kind::text as kind, s.key,
                 ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)} as accessible,
                 (t.trash_entry_id is not null and ${this.#authorization.spaceFilter(viewer, sql`s`)}
-                  and (t.kind <> 'page' or t.mode = 'live' or t.published_version_id is not null
-                    or ${this.#authorization.spaceFilter(viewer, sql`s`, "editor")})) as in_trash
+                  and ${publishedFor(this.#authorization, viewer, sql`t`, sql`s`)}) as in_trash
               from tree_items t join spaces s on s.id = t.space_id
               where t.id = any(${sql.param(pageIds)}::uuid[])`)
           ).rows;

@@ -11,6 +11,7 @@ import type { PeopleService } from "./people.js";
 import type { TrashEntryKind, TreeItemKind } from "./schema.js";
 import { trashFirstStageDaysSetting, trashSecondStageDaysSetting } from "./settings.js";
 import { signalSpaceChange } from "./signals.js";
+import { refreshReaderVisibility } from "./visibility.js";
 
 export const ERASURE_REASON_MAX_LENGTH = 500;
 const PURGE_BATCH = 500;
@@ -242,6 +243,7 @@ export class TrashService {
         },
         scope: auditScopeOf({ organizationId: row.organization_id }),
       });
+      await refreshReaderVisibility(tx, [itemId]);
       await signalSpaceChange(tx, { spaceId, kind: "tree", itemId });
       return id;
     });
@@ -302,6 +304,7 @@ export class TrashService {
         );
       }
       await tx.execute(sql`update tree_items set trash_entry_id = null where id = ${rootId}`);
+      await refreshReaderVisibility(tx, [rootId]);
       await tx.execute(sql`delete from trash_entries where id = ${entryId}`);
       await this.#audit.record(tx, {
         name: "trash.itemsRestored",

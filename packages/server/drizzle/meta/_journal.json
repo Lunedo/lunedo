@@ -239,6 +239,13 @@
       "when": 1791393036415,
       "tag": "0033_versions_trash_templates",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1791405959304,
+      "tag": "0034_reader_visibility",
+      "breakpoints": true
     }
   ]
 }

@@ -279,6 +279,11 @@ export const itemDetailsSchema = treeItemSchema
             id: uuid("ID of the ancestor."),
             kind: z.enum(treeItemKinds).describe("Kind of the ancestor."),
             title: z.string().describe("Title of the ancestor."),
+            published: z
+              .boolean()
+              .describe(
+                "Whether the ancestor counts as published: a folder, a link, a page in live mode or a page with a published version. Readers see a page only when every ancestor is published.",
+              ),
           })
           .describe("An ancestor."),
       )
