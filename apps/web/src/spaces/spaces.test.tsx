@@ -357,6 +357,32 @@ describe("page tree", () => {
     await userEvent.click(await screen.findByRole("menuitem", { name: "Move…" }));
     expect(await screen.findByRole("dialog", { name: "Move Network" })).toBeTruthy();
   });
+
+  it("starts the Move dialog at the current place of the item", async () => {
+    const { tree, requests } = await renderTree({
+      "GET /api/v1/spaces": () => ({ body: { items: [space()], nextCursor: null } }),
+      [`POST /api/v1/items/${VPN}/move`]: () => ({ body: item(VPN, "VPN access", "page", RUNBOOKS) }),
+    });
+    const runbooks = within(tree).getByRole("treeitem", { name: "Runbooks" });
+    runbooks.focus();
+    fireEvent.keyDown(runbooks, { key: "ArrowRight" });
+    const vpn = await within(tree).findByRole("treeitem", { name: "VPN access" });
+    await userEvent.click(within(vpn).getByRole("button", { name: "Actions for VPN access" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Move…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Move VPN access" });
+    await waitFor(() =>
+      expect(
+        (within(dialog).getByRole("combobox", { name: "Place below" }) as HTMLInputElement).value,
+      ).toContain("Runbooks"),
+    );
+    await userEvent.click(within(dialog).getByRole("radio", { name: "At the beginning" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: /^Move$/ }));
+    await waitFor(() =>
+      expect(requests.find((request) => request.path.endsWith(`/items/${VPN}/move`))?.body).toMatchObject({
+        parentId: RUNBOOKS,
+      }),
+    );
+  });
 });
 
 describe("space permissions", () => {

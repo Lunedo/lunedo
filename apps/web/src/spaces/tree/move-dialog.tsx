@@ -18,7 +18,7 @@ import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { ImpactSummary } from "../access/impact.js";
 import { spaceDisplayName } from "../space-badge.js";
-import { type SpaceWithRole, spaceKeys, type TreeItem } from "../space-queries.js";
+import { itemQuery, type SpaceWithRole, spaceKeys, type TreeItem } from "../space-queries.js";
 
 const ROOT = "root";
 
@@ -58,10 +58,13 @@ function MoveForm({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [targetSpaceId, setTargetSpaceId] = useState(space.id);
-  const [parent, setParent] = useState<{ value: string; label: string }>({
-    value: ROOT,
-    label: t("move.topLevel"),
-  });
+  const currentParent = useQuery({ ...itemQuery(item.parentId ?? ""), enabled: item.parentId !== null });
+  const [chosenParent, setParent] = useState<{ value: string; label: string } | null>(null);
+  const parent =
+    chosenParent ??
+    (item.parentId
+      ? { value: item.parentId, label: currentParent.data?.title ?? "" }
+      : { value: ROOT, label: t("move.topLevel") });
   const [position, setPosition] = useState<"first" | "last">("last");
   const [failure, setFailure] = useState<string | null>(null);
   const [moving, setMoving] = useState(false);
@@ -191,19 +194,22 @@ function MoveForm({
           }}
         />
       </Field>
-      <RadioGroup
-        label={t("move.position")}
-        value={position}
-        onValueChange={(value) => setPosition(value as "first" | "last")}
-        options={[
-          { value: "first", label: t("move.first") },
-          { value: "last", label: t("move.last") },
-        ]}
-      />
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 font-semibold">{t("move.position")}</legend>
+        <RadioGroup
+          label={t("move.position")}
+          value={position}
+          onValueChange={(value) => setPosition(value as "first" | "last")}
+          options={[
+            { value: "first", label: t("move.first") },
+            { value: "last", label: t("move.last") },
+          ]}
+        />
+      </fieldset>
       {crossSpace ? (
         <section aria-label={t("move.accessChange")} className="flex flex-col gap-2">
           <h3 className="font-semibold">{t("move.accessChange")}</h3>
-          {impact.isPending ? <Skeleton className="h-16 w-full" /> : null}
+          {impact.isPending ? <Skeleton className="h-12 w-full" /> : null}
           {impact.isError ? (
             <LoadError what={t("move.impactFailed")} error={impact.error} onRetry={() => impact.refetch()} />
           ) : null}
