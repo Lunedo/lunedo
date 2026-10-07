@@ -467,3 +467,25 @@ describe("template nodes", () => {
     expect(renderMarkdown(document)).toContain("{name}");
   });
 });
+
+describe("task items", () => {
+  it("name their checkbox so screen readers can tell done from open tasks", () => {
+    const html = renderHtml(
+      {
+        type: "doc",
+        content: [
+          {
+            type: "taskList",
+            content: [
+              { type: "taskItem", attrs: { checked: true }, content: [paragraph(text("Done"))] },
+              { type: "taskItem", attrs: { checked: false }, content: [paragraph(text("Open"))] },
+            ],
+          },
+        ],
+      },
+      { labels: { taskDone: "Erledigt", taskOpen: "Offen" } },
+    );
+    expect(html).toContain('<input type="checkbox" disabled aria-label="Erledigt" checked>');
+    expect(html).toContain('<input type="checkbox" disabled aria-label="Offen">');
+  });
+});

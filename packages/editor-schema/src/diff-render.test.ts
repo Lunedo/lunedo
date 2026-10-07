@@ -153,7 +153,7 @@ describe("renderDiffHtml", () => {
     });
     const html = renderDiffHtml(compare([tasks(false)], [tasks(true)]), "inline");
     expect(html).toContain(
-      '<li data-change="changed" class="ph-task-item" data-checked="true"><input type="checkbox" disabled checked><div><span class="ph-diff-note">Changed: checked</span><p>Ship</p></div></li>',
+      '<li data-change="changed" class="ph-task-item" data-checked="true"><input type="checkbox" disabled aria-label="Done" checked><div><span class="ph-diff-note">Changed: checked</span><p>Ship</p></div></li>',
     );
   });
 

@@ -60,7 +60,9 @@ export const pageLinkModule = defineModule({
           return element(
             "span",
             { class: "ph-page-link", "data-state": "trash" },
-            renderer.escape(`${resolved.title || renderer.label("untitledPage")} (${renderer.label("inTrash")})`),
+            renderer.escape(
+              `${resolved.title || renderer.label("untitledPage")} (${renderer.label("inTrash")})`,
+            ),
           );
         }
         if (resolved && !resolved.accessible) {

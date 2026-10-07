@@ -11,7 +11,9 @@
     },
     {
       "type": "paragraph",
-      "content": [{ "type": "placeholder", "attrs": { "text": "Describe the goal in one or two sentences." } }]
+      "content": [
+        { "type": "placeholder", "attrs": { "text": "Describe the goal in one or two sentences." } }
+      ]
     }
   ]
 }

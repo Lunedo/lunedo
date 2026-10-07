@@ -41,6 +41,8 @@ export interface ResolvedPageLink {
 export interface RenderLabels {
   noAccess: string;
   inTrash: string;
+  taskDone: string;
+  taskOpen: string;
   untitledPage: string;
   unknownPerson: string;
   unsupportedMacro: string;
