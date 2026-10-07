@@ -21,7 +21,8 @@ env:
 jobs:
   scope:
     name: Scope
-    runs-on: ubuntu-24.04
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted'))
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 5
     outputs:
       lane: ${{ steps.scope.outputs.lane }}
@@ -44,17 +45,25 @@ jobs:
   checks:
     name: Lint, typecheck and checks
     needs: scope
-    runs-on: ubuntu-24.04
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted'))
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - run: corepack enable
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+      - run: corepack enable
+      - name: Locate the pnpm store
+        id: pnpm
+        run: echo "store=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm.outputs.store }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .turbo/cache
@@ -71,7 +80,8 @@ jobs:
   unit:
     name: Unit tests (${{ matrix.shard }} of 3)
     needs: scope
-    runs-on: ubuntu-24.04
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted'))
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -85,7 +95,7 @@ jobs:
           POSTGRES_PASSWORD: pagehall
           POSTGRES_DB: pagehall
         ports:
-          - 5432:5432
+          - 5432
         options: >-
           --health-cmd "pg_isready -h 127.0.0.1 -U pagehall -d pagehall"
           --health-interval 5s
@@ -96,21 +106,18 @@ jobs:
         env:
           MP_DISABLE_VERSION_CHECK: "true"
         ports:
-          - 1025:1025
-          - 8025:8025
+          - 1025
+          - 8025
       valkey:
         image: valkey/valkey:8-alpine
         ports:
-          - 6379:6379
+          - 6379
         options: >-
           --health-cmd "valkey-cli ping"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
     env:
-      PAGEHALL_TEST_DATABASE_URL: postgres://pagehall:pagehall@localhost:5432/pagehall
-      PAGEHALL_TEST_MAILPIT_URL: http://localhost:8025
-      PAGEHALL_TEST_REDIS_URL: redis://localhost:6379
       LANE: ${{ needs.scope.outputs.lane }}
       FORCE: ${{ github.event_name == 'push' }}
       SHARD: ${{ matrix.shard }}
@@ -121,20 +128,32 @@ jobs:
         with:
           fetch-depth: ${{ needs.scope.outputs.lane == 'fast' && '0' || '1' }}
           persist-credentials: false
-      - run: corepack enable
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+      - run: corepack enable
+      - name: Locate the pnpm store
+        id: pnpm
+        run: echo "store=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm.outputs.store }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .turbo/cache
           key: turbo-unit-${{ matrix.shard }}-${{ github.sha }}
           restore-keys: turbo-unit-${{ matrix.shard }}-
       - name: Install PostgreSQL client tools for the backup tests
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+        run: command -v pg_dump > /dev/null || (sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client)
       - run: pnpm install --frozen-lockfile
       - name: Run the tests of this shard
+        env:
+          PAGEHALL_TEST_DATABASE_URL: postgres://pagehall:pagehall@localhost:${{ job.services.postgres.ports['5432'] }}/pagehall
+          PAGEHALL_TEST_MAILPIT_URL: http://localhost:${{ job.services.mailpit.ports['8025'] }}
+          PAGEHALL_TEST_MAILPIT_SMTP_PORT: ${{ job.services.mailpit.ports['1025'] }}
+          PAGEHALL_TEST_REDIS_URL: redis://localhost:${{ job.services.valkey.ports['6379'] }}
         run: |
           args=(run test)
           if [ "$LANE" = "fast" ]; then args+=(--affected); fi
@@ -144,8 +163,8 @@ jobs:
   backup:
     name: Backup round trip
     needs: scope
-    if: needs.scope.outputs.backup == 'true'
-    runs-on: ubuntu-24.04
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted')) && needs.scope.outputs.backup == 'true'
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -160,20 +179,23 @@ jobs:
           platforms: linux/amd64
           load: true
           push: false
-          tags: pagehall:ci
+          tags: pagehall:ci-${{ github.run_id }}-${{ github.run_attempt }}
           build-args: VERSION=ci
           cache-from: |
             type=gha,scope=amd64
             type=gha,scope=image
           cache-to: type=gha,mode=max,scope=amd64
       - name: Back up, restore and compare
-        run: scripts/backup-roundtrip.sh pagehall:ci
+        run: scripts/backup-roundtrip.sh pagehall:ci-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Remove the image of this job
+        if: always()
+        run: docker image rm --force pagehall:ci-${{ github.run_id }}-${{ github.run_attempt }}
 
   e2e:
     name: End-to-end, accessibility and visual tests
     needs: scope
-    if: needs.scope.outputs.end-to-end == 'true'
-    runs-on: ubuntu-24.04
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted')) && needs.scope.outputs.end-to-end == 'true'
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 40
     container:
       image: mcr.microsoft.com/playwright@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27 # v1.63.0-noble
@@ -234,46 +256,72 @@ jobs:
           name: playwright-report
           path: apps/web/playwright-report
           retention-days: 7
+      - name: Give the workspace back to the runner user
+        if: always()
+        run: chown -R "$(stat -c %u:%g "$GITHUB_WORKSPACE")" "$GITHUB_WORKSPACE"
 
   identity-providers:
     name: Sign-in through identity providers
     needs: scope
-    if: needs.scope.outputs.identity-providers == 'true'
-    runs-on: ubuntu-24.04
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted')) && needs.scope.outputs.identity-providers == 'true'
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 30
     env:
       PAGEHALL_E2E_IDP: "1"
       PAGEHALL_E2E_HOST: 0.0.0.0
-      PAGEHALL_E2E_KEYCLOAK_URL: http://keycloak.localhost:8080
-      PAGEHALL_E2E_AUTHENTIK_URL: http://authentik.localhost:9000
-      PAGEHALL_E2E_LDAP_URL: ldap://localhost:3389
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - name: Locate the pnpm store
+        id: pnpm
+        run: echo "store=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm.outputs.store }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+      - name: Choose free ports for this job
+        run: >-
+          node scripts/pick-free-ports.ts POSTGRES_PORT MAILPIT_SMTP_PORT MAILPIT_PORT
+          KEYCLOAK_PORT AUTHENTIK_PORT LDAP_PORT PAGEHALL_E2E_PORT:3
+      - name: Name the compose project and point the tests at the chosen ports
+        run: |
+          {
+            echo "COMPOSE_PROJECT_NAME=pagehall-idp-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+            echo "PAGEHALL_E2E_STATE_DIR=${RUNNER_TEMP}/pagehall-e2e-state"
+            echo "PAGEHALL_E2E_DATABASE_URL=postgres://pagehall:pagehall@localhost:${POSTGRES_PORT}/pagehall"
+            echo "PAGEHALL_E2E_MAILPIT_URL=http://localhost:${MAILPIT_PORT}"
+            echo "PAGEHALL_E2E_SMTP_PORT=${MAILPIT_SMTP_PORT}"
+            echo "PAGEHALL_E2E_KEYCLOAK_URL=http://keycloak.localhost:${KEYCLOAK_PORT}"
+            echo "PAGEHALL_E2E_AUTHENTIK_URL=http://authentik.localhost:${AUTHENTIK_PORT}"
+            echo "PAGEHALL_E2E_LDAP_URL=ldap://localhost:${LDAP_PORT}"
+          } >> "$GITHUB_ENV"
       - name: Resolve the identity provider host names to this machine
-        run: echo "127.0.0.1 keycloak.localhost authentik.localhost" | sudo tee -a /etc/hosts
+        run: grep -q authentik.localhost /etc/hosts || echo "127.0.0.1 keycloak.localhost authentik.localhost" | sudo tee -a /etc/hosts
       - name: Start PostgreSQL, Mailpit, Keycloak, Authentik and OpenLDAP
         run: >-
           docker compose -f docker/compose.dev.yml --profile idp up --detach --wait
           postgres mailpit keycloak authentik-postgres authentik-server authentik-worker openldap
       - name: Wait until Authentik has applied the test blueprint
         run: |
-          for attempt in $(seq 1 60); do
+          for _ in $(seq 1 60); do
             if curl -fsS "$PAGEHALL_E2E_AUTHENTIK_URL/application/o/pagehall/.well-known/openid-configuration" > /dev/null; then exit 0; fi
             sleep 5
           done
           docker compose -f docker/compose.dev.yml --profile idp logs authentik-worker
           exit 1
-      - run: corepack enable
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm --filter @pagehall/web build:e2e
-      - run: pnpm --filter @pagehall/web exec playwright install --with-deps chromium
+      - if: ${{ !contains(vars.RUNNER_LABELS, 'self-hosted') }}
+        run: pnpm --filter @pagehall/web exec playwright install --with-deps chromium
+      - if: ${{ contains(vars.RUNNER_LABELS, 'self-hosted') }}
+        run: pnpm --filter @pagehall/web exec playwright install chromium
       - run: pnpm --filter @pagehall/web exec playwright test --project=idp
       - if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -283,21 +331,32 @@ jobs:
           retention-days: 7
       - if: failure()
         run: docker compose -f docker/compose.dev.yml --profile idp logs keycloak authentik-server authentik-worker openldap
+      - name: Remove the containers, volumes and images of this job
+        if: always()
+        run: docker compose -f docker/compose.dev.yml --profile idp down --volumes --remove-orphans --rmi local
 
   dependencies:
     name: Licenses and audit
     needs: scope
-    runs-on: ubuntu-24.04
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted'))
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - run: corepack enable
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+      - run: corepack enable
+      - name: Locate the pnpm store
+        id: pnpm
+        run: echo "store=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm.outputs.store }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile
       - name: License check
         run: pnpm licenses:check
@@ -307,8 +366,8 @@ jobs:
   dco:
     name: DCO sign-off
     # Dependabot commits carry no sign-off; the pull request author is verified by GitHub.
-    if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
-    runs-on: ubuntu-24.04
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted')) && github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -328,13 +387,18 @@ jobs:
     name: CI result
     needs: [scope, checks, unit, backup, e2e, identity-providers, dependencies, dco]
     if: always()
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && contains(vars.RUNNER_LABELS, 'self-hosted')) && '"ubuntu-24.04"' || vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 5
     steps:
       - name: Fail when a job failed or was cancelled
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
+          SCOPE: ${{ needs.scope.result }}
         run: |
+          if [ "$SCOPE" != "success" ]; then
+            echo "::error title=CI did not run::The scope job ended as '$SCOPE'. Pull requests from forks do not run on self-hosted runners; run the checks in a branch of this repository."
+            exit 1
+          fi
           echo "Job results: $RESULTS"
           for result in $RESULTS; do
             case "$result" in

@@ -13,7 +13,12 @@
     },
     "test": {
       "dependsOn": ["^build"],
-      "env": ["PAGEHALL_TEST_DATABASE_URL", "PAGEHALL_TEST_MAILPIT_URL", "PAGEHALL_TEST_REDIS_URL"]
+      "env": [
+        "PAGEHALL_TEST_DATABASE_URL",
+        "PAGEHALL_TEST_MAILPIT_URL",
+        "PAGEHALL_TEST_MAILPIT_SMTP_PORT",
+        "PAGEHALL_TEST_REDIS_URL"
+      ]
     },
     "test:e2e": {
       "dependsOn": ["^build"],

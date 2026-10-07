@@ -4,6 +4,19 @@ export function testMailpitUrl(env: NodeJS.ProcessEnv = process.env): string | u
   return url || undefined;
 }
 
+export function testMailpitSmtpPort(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = env.PAGEHALL_TEST_MAILPIT_SMTP_PORT?.trim();
+  if (!raw) {
+    if (env.CI) throw new Error("PAGEHALL_TEST_MAILPIT_SMTP_PORT must be set in CI");
+    return 1025;
+  }
+  const port = Number(raw);
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) {
+    throw new Error("PAGEHALL_TEST_MAILPIT_SMTP_PORT must be a port number");
+  }
+  return port;
+}
+
 export interface CaughtMail {
   subject: string;
   text: string;
@@ -12,13 +25,14 @@ export interface CaughtMail {
 }
 
 export class Mailpit {
-  constructor(readonly url: string) {}
+  constructor(
+    readonly url: string,
+    readonly smtpPort: number = testMailpitSmtpPort(),
+  ) {}
 
   get smtpHost(): string {
     return new URL(this.url).hostname;
   }
-
-  readonly smtpPort = 1025;
 
   async waitFor(to: string, options: { timeoutMs?: number; after?: number } = {}): Promise<CaughtMail> {
     const deadline = Date.now() + (options.timeoutMs ?? 20_000);

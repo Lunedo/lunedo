@@ -1,8 +1,9 @@
 import { createHash, randomBytes } from "node:crypto";
 import { expect, test } from "@playwright/test";
+import { BASE_URL } from "../support/environment.js";
 import { identityProviders, TEST_USERS } from "../support/idp.js";
 
-const REDIRECT_URI = "http://localhost:4310/e2e/identity-provider-callback";
+const REDIRECT_URI = `${BASE_URL}/e2e/identity-provider-callback`;
 
 function base64url(bytes: Buffer): string {
   return bytes.toString("base64url");
