@@ -42,7 +42,7 @@ export function FolderScreen() {
   const view = preferences.folderView;
   useDocumentTitle(item.data?.title ?? "");
 
-  if (item.isPending) return <Skeleton className="m-6 h-40" />;
+  if (item.isPending) return <Skeleton className="m-6 h-field" />;
   if (item.isError) {
     return (
       <div className="p-6">
@@ -147,7 +147,7 @@ function FolderContents({ folderId, view }: { folderId: string; view: "list" | "
   const { space, canEdit, openCreate } = useSpace();
   const children = useChildren(space.id, folderId);
   const items = children.data?.pages.flatMap((page) => page.items) ?? [];
-  if (children.isPending) return <Skeleton className="h-24 w-full" />;
+  if (children.isPending) return <Skeleton className="h-12 w-full" />;
   if (children.isError) {
     return (
       <LoadError

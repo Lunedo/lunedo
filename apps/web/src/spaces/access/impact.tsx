@@ -105,7 +105,7 @@ export function ImpactConfirmDialog({
       onConfirm={onConfirm}
     >
       {children}
-      {impact.isPending ? <Skeleton className="h-16 w-full" /> : null}
+      {impact.isPending ? <Skeleton className="h-12 w-full" /> : null}
       {impact.error ? (
         <LoadError what={t("spaces.impact.loadFailed")} error={impact.error} onRetry={impact.refetch} />
       ) : null}

@@ -42,7 +42,7 @@ export function LabelScreen() {
           { label: display },
         ]}
       />
-      {pages.isPending ? <Skeleton className="h-24 w-full" /> : null}
+      {pages.isPending ? <Skeleton className="h-12 w-full" /> : null}
       {pages.isError ? (
         <LoadError what={t("labels.pagesFailed")} error={pages.error} onRetry={() => pages.refetch()} />
       ) : null}

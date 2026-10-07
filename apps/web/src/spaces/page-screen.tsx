@@ -43,7 +43,7 @@ export function PageScreen() {
     return (
       <div className="mx-auto flex w-full max-w-content flex-col gap-4 px-4 pt-6 md:px-8">
         <Skeleton className="h-8 w-2/3" />
-        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-field w-full" />
       </div>
     );
   }
@@ -184,7 +184,7 @@ function PageView({ page }: { page: ItemDetails }) {
         ) : null}
       </div>
       {editing ? (
-        <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+        <Suspense fallback={<Skeleton className="h-field w-full" />}>
           <PageEditor pageId={page.id} spaceId={space.id} spaceKey={space.key} width={width} />
         </Suspense>
       ) : (
@@ -198,7 +198,7 @@ function PageView({ page }: { page: ItemDetails }) {
 function PageContent({ pageId }: { pageId: string }) {
   const { t } = useTranslation();
   const content = useQuery(contentQuery(pageId));
-  if (content.isPending) return <Skeleton className="h-64 w-full" />;
+  if (content.isPending) return <Skeleton className="h-field w-full" />;
   if (content.isError) {
     return (
       <LoadError what={t("page.contentFailed")} error={content.error} onRetry={() => content.refetch()} />

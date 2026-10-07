@@ -94,15 +94,15 @@ export function SpacesScreen() {
                 setText(event.target.value);
                 setFilter({ q: event.target.value });
               }}
-              className="ps-9"
+              className="pl-10"
             />
             <Search
               aria-hidden="true"
-              className="pointer-events-none absolute start-3 top-1/2 size-icon -translate-y-1/2 text-text-muted"
+              className="pointer-events-none absolute left-2 top-1/2 size-icon -translate-y-1/2 text-text-muted"
             />
           </div>
           {state.multipleOrganizations ? (
-            <div className="sm:w-64">
+            <div className="sm:w-field">
               <Select
                 aria-label={t("spaces.list.organizationFilter")}
                 value={organizationFilter ?? "all"}
@@ -128,7 +128,7 @@ export function SpacesScreen() {
         {spaces.isPending ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {[0, 1, 2].map((index) => (
-              <Skeleton key={index} className="h-28 w-full" />
+              <Skeleton key={index} className="h-12 w-full" />
             ))}
           </div>
         ) : null}
@@ -193,7 +193,7 @@ function SpaceCard({ space, showOrganization }: { space: Space; showOrganization
   const { t } = useTranslation();
   const name = spaceDisplayName(t, space);
   return (
-    <li>
+    <li className="min-w-0">
       <Link
         to="/spaces/$spaceKey"
         params={{ spaceKey: space.key }}

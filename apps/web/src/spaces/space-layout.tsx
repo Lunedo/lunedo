@@ -39,8 +39,8 @@ export function SpaceLayout() {
   if (resolved.isPending) {
     return (
       <div className="flex flex-1 gap-4 p-6">
-        <Skeleton className="hidden h-64 w-sidebar md:block" />
-        <Skeleton className="h-64 flex-1" />
+        <Skeleton className="hidden h-field w-sidebar md:block" />
+        <Skeleton className="h-field flex-1" />
       </div>
     );
   }
@@ -275,7 +275,7 @@ export function SpaceOverviewRedirect() {
   const navigate = useNavigate();
   const resolved = useQuery(spaceByKeyQuery(spaceKey));
   const space = resolved.data?.space;
-  if (!space) return <Skeleton className="m-6 h-40" />;
+  if (!space) return <Skeleton className="m-6 h-field" />;
   if (space.overviewItemId) {
     const href = itemHref(
       { id: space.overviewItemId, kind: "page", title: space.name || t("spaces.overview"), link: null },

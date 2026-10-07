@@ -75,7 +75,7 @@ export function InstancePersonalSpacesScreen() {
             onRetry={() => review.refetch()}
           />
         ) : null}
-        {review.isPending ? <Skeleton className="h-24 w-full" /> : null}
+        {review.isPending ? <Skeleton className="h-12 w-full" /> : null}
         {review.data && review.data.items.length === 0 ? (
           <EmptyState
             icon={Users}

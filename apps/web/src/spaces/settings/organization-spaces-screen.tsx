@@ -114,7 +114,7 @@ function DefaultPermissions({
       queryClient.setQueryData(spaceKeys.defaults(organizationId), saved);
     });
 
-  if (defaults.isPending) return <Skeleton className="h-40 w-full" />;
+  if (defaults.isPending) return <Skeleton className="h-field w-full" />;
   if (defaults.isError) {
     return (
       <LoadError
@@ -131,17 +131,22 @@ function DefaultPermissions({
       description={t("spaces.organization.defaultsDescription")}
       actions={<SaveIndicator tracker={tracker} />}
     >
-      <RadioGroup
-        label={t("spaces.create.visibility")}
-        variant="card"
-        value={visibility}
-        onValueChange={(value) => editable && void save(value as SpaceVisibility, grants)}
-        options={VISIBILITIES.map((value) => ({
-          value,
-          label: t(`spaces.visibility.${value}.label`),
-          description: t(`spaces.visibility.${value}.description`, { organization: organizationName ?? "" }),
-        }))}
-      />
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 font-semibold">{t("spaces.create.visibility")}</legend>
+        <RadioGroup
+          label={t("spaces.create.visibility")}
+          variant="card"
+          value={visibility}
+          onValueChange={(value) => editable && void save(value as SpaceVisibility, grants)}
+          options={VISIBILITIES.map((value) => ({
+            value,
+            label: t(`spaces.visibility.${value}.label`),
+            description: t(`spaces.visibility.${value}.description`, {
+              organization: organizationName ?? "",
+            }),
+          }))}
+        />
+      </fieldset>
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 font-semibold">{t("spaces.create.permissions")}</legend>
         <p className="text-sm text-text-muted">{t("spaces.organization.creatorAdmin")}</p>
@@ -153,10 +158,10 @@ function DefaultPermissions({
             const text = holderLabel(t, grant, organizationName);
             return (
               <li key={holderValue(grant)} className="flex flex-wrap items-center gap-2">
-                <span className="min-w-0 flex-1 truncate" title={text}>
+                <span className="min-w-0 grow basis-field truncate" title={text}>
                   {text}
                 </span>
-                <div className="w-44">
+                <div className="w-unit-field">
                   <RoleSelect
                     label={t("spaces.create.roleOf", { holder: text })}
                     value={grant.role}
@@ -218,7 +223,7 @@ function DefaultPermissions({
                 />
               </Field>
             </div>
-            <div className="sm:w-44">
+            <div className="sm:w-unit-field">
               <RoleSelect
                 label={t("spaces.create.newRole")}
                 value={addingRole}
@@ -253,7 +258,7 @@ function WithoutAdministrator({ organizationId }: { organizationId: string }) {
       title={t("spaces.organization.withoutAdmin")}
       description={t("spaces.organization.withoutAdminDescription")}
     >
-      {spaces.isPending ? <Skeleton className="h-16 w-full" /> : null}
+      {spaces.isPending ? <Skeleton className="h-12 w-full" /> : null}
       {spaces.isError ? (
         <LoadError
           what={t("spaces.organization.withoutAdminFailed")}

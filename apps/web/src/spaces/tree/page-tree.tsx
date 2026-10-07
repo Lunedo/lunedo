@@ -415,13 +415,13 @@ function TreeNode({
         {target === "before" ? (
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-1 top-0 h-0.5 rounded-full bg-accent"
+            className="pointer-events-none absolute inset-x-1 top-0 border-t-2 border-accent"
           />
         ) : null}
         {target === "after" ? (
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-accent"
+            className="pointer-events-none absolute inset-x-1 bottom-0 border-b-2 border-accent"
           />
         ) : null}
         {expandable ? (

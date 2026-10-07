@@ -246,19 +246,22 @@ function CreateSpaceForm({
           onChange={(event) => setDescription(event.target.value)}
         />
       </Field>
-      <RadioGroup
-        label={t("spaces.create.visibility")}
-        variant="card"
-        value={visibility}
-        onValueChange={(value) => setVisibility(value as SpaceVisibility)}
-        options={VISIBILITIES.map((value) => ({
-          value,
-          label: t(`spaces.visibility.${value}.label`),
-          description: t(`spaces.visibility.${value}.description`, {
-            organization: organization?.name ?? "",
-          }),
-        }))}
-      />
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 font-semibold">{t("spaces.create.visibility")}</legend>
+        <RadioGroup
+          label={t("spaces.create.visibility")}
+          variant="card"
+          value={visibility}
+          onValueChange={(value) => setVisibility(value as SpaceVisibility)}
+          options={VISIBILITIES.map((value) => ({
+            value,
+            label: t(`spaces.visibility.${value}.label`),
+            description: t(`spaces.visibility.${value}.description`, {
+              organization: organization?.name ?? "",
+            }),
+          }))}
+        />
+      </fieldset>
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-1 font-semibold">{t("spaces.create.permissions")}</legend>
         <p className="text-sm text-text-muted">{t("spaces.create.permissionsHint")}</p>
@@ -273,10 +276,10 @@ function CreateSpaceForm({
               const label = holderLabel(t, grant, organization?.name);
               return (
                 <li key={holderValue(grant)} className="flex flex-wrap items-center gap-2">
-                  <span className="min-w-0 flex-1 truncate" title={label}>
+                  <span className="min-w-0 grow basis-field truncate" title={label}>
                     {label}
                   </span>
-                  <div className="w-44">
+                  <div className="w-unit-field">
                     <RoleSelect
                       label={t("spaces.create.roleOf", { holder: label })}
                       value={grant.role}
@@ -316,7 +319,7 @@ function CreateSpaceForm({
               />
             </Field>
           </div>
-          <div className="sm:w-44">
+          <div className="sm:w-unit-field">
             <RoleSelect label={t("spaces.create.newRole")} value={addingRole} onValueChange={setAddingRole} />
           </div>
           <Button variant="secondary" icon={Plus} onClick={addHolder}>
