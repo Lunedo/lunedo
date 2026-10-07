@@ -15,6 +15,7 @@ import { isAllowedHref } from "./values.js";
 
 export const defaultLabels: RenderLabels = {
   noAccess: "No access",
+  inTrash: "In trash",
   untitledPage: "Untitled page",
   unknownPerson: "Unknown person",
   unsupportedMacro: "Unsupported macro: {name}",

@@ -205,3 +205,32 @@ export function EmojiView({ node }: NodeViewProps) {
     </NodeViewWrapper>
   );
 }
+
+export function PlaceholderView({ node, selected }: NodeViewProps) {
+  const { t } = useTranslation();
+  return (
+    <NodeViewWrapper
+      as="span"
+      className={`ph-placeholder${selected ? " ph-node-selected" : ""}`}
+      contentEditable={false}
+      title={t("editor.placeholderNode.hint")}
+    >
+      {String(node.attrs.text)}
+    </NodeViewWrapper>
+  );
+}
+
+export function TemplateFieldView({ node, selected }: NodeViewProps) {
+  const { t } = useTranslation();
+  const field = String(node.attrs.field);
+  return (
+    <NodeViewWrapper
+      as="span"
+      className={`ph-template-field${selected ? " ph-node-selected" : ""}`}
+      contentEditable={false}
+      title={t("editor.templateField.hint", { field })}
+    >
+      {`{${field}}`}
+    </NodeViewWrapper>
+  );
+}

@@ -405,6 +405,18 @@ details.ph-expand > summary {
   @apply inline-flex rounded-sm bg-surface-sunken px-1 text-sm;
 }
 
+.ph-placeholder {
+  @apply text-text-muted italic;
+}
+
+.ph-template-field {
+  @apply inline-flex rounded-sm border border-dashed border-accent bg-accent-soft px-1 font-mono text-sm text-accent;
+}
+
+.ph-content .ph-page-link[data-state="trash"] {
+  @apply text-text-muted line-through;
+}
+
 .ph-mention {
   @apply rounded-sm bg-accent-soft px-1 text-accent;
 }

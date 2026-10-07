@@ -1,10 +1,12 @@
 import type { DocumentJson } from "./json.js";
 
-export const editorSchemaVersion = 1;
+export const editorSchemaVersion = 2;
 
 export type Migration = (doc: DocumentJson) => DocumentJson;
 
-export const migrations: Record<number, Migration> = {};
+export const migrations: Record<number, Migration> = {
+  1: (doc) => doc,
+};
 
 export class MigrationError extends Error {
   override name = "MigrationError";
