@@ -29,13 +29,42 @@ import { MoveDialog } from "./tree/move-dialog.js";
 import { PageTree } from "./tree/page-tree.js";
 
 const route = getRouteApi("/app/spaces/$spaceKey");
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isUuid(value: string | undefined): value is string {
+  return value !== undefined && UUID.test(value);
+}
 
 export function SpaceLayout() {
   const { t } = useTranslation();
   const { spaceKey } = route.useParams();
   const location = useLocation();
-  const resolved = useQuery({ ...spaceByKeyQuery(spaceKey), retry: false });
+  const [, , currentKey = "", ...rest] = location.pathname.split("/");
+  const urlItemId = (rest[0] === "pages" || rest[0] === "folders") && isUuid(rest[1]) ? rest[1] : null;
+  const addressed = useQuery({
+    ...itemQuery(urlItemId ?? ""),
+    enabled: urlItemId !== null,
+    retry: false,
+    throwOnError: false,
+  });
+  const redirectByItem =
+    urlItemId !== null &&
+    (addressed.isPending || (addressed.data !== undefined && addressed.data.spaceKey !== currentKey));
+  const resolved = useQuery({ ...spaceByKeyQuery(spaceKey), retry: false, enabled: !redirectByItem });
 
+  if (redirectByItem && addressed.data) {
+    return (
+      <Redirect to={["", "spaces", addressed.data.spaceKey, ...rest].join("/")} search={location.search} />
+    );
+  }
+  if (redirectByItem) {
+    return (
+      <div className="flex flex-1 gap-4 p-6">
+        <Skeleton className="hidden h-field w-sidebar md:block" />
+        <Skeleton className="h-field flex-1" />
+      </div>
+    );
+  }
   if (resolved.isPending) {
     return (
       <div className="flex flex-1 gap-4 p-6">
@@ -67,7 +96,6 @@ export function SpaceLayout() {
     );
   }
   const space = resolved.data.space;
-  const [, , currentKey = "", ...rest] = location.pathname.split("/");
   if (currentKey !== space.key) {
     const target: string = ["", "spaces", space.key, ...rest].join("/");
     return <Redirect to={target} search={location.search} />;

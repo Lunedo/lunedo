@@ -262,6 +262,58 @@ describe("spaces", () => {
     await waitFor(() => expect(window.location.pathname).toBe(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`));
   });
 
+  it("opens a page by its ID in its current space when the old key now belongs to another space", async () => {
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes(),
+      "GET /api/v1/space-keys/OLDKEY": () => ({
+        body: {
+          space: { ...space(), id: "01929b1e-0000-7000-8000-0000000000a2", key: "OLDKEY", name: "Other" },
+          redirected: false,
+        },
+      }),
+      [`GET /api/v1/pages/${OVERVIEW}/content`]: () => problem(404, "notFound"),
+      [`GET /api/v1/pages/${OVERVIEW}/labels`]: () => ({ body: [] }),
+      [`GET /api/v1/pages/${OVERVIEW}/backlinks`]: () => ({ body: [] }),
+    });
+    await renderAt(`/spaces/OLDKEY/pages/${OVERVIEW}/it-operations`);
+    await waitFor(() =>
+      expect(window.location.pathname).toBe(`/spaces/ITOPS/pages/${OVERVIEW}/it-operations`),
+    );
+    expect(await screen.findByRole("heading", { name: "IT Operations", level: 1 })).toBeTruthy();
+  });
+
+  it("opens a page by its ID when the person cannot see the space that took the old key", async () => {
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes(),
+      "GET /api/v1/space-keys/OLDKEY": () => problem(404, "notFound"),
+      [`GET /api/v1/pages/${OVERVIEW}/content`]: () => problem(404, "notFound"),
+      [`GET /api/v1/pages/${OVERVIEW}/labels`]: () => ({ body: [] }),
+      [`GET /api/v1/pages/${OVERVIEW}/backlinks`]: () => ({ body: [] }),
+    });
+    await renderAt(`/spaces/OLDKEY/pages/${OVERVIEW}/it-operations`);
+    await waitFor(() =>
+      expect(window.location.pathname).toBe(`/spaces/ITOPS/pages/${OVERVIEW}/it-operations`),
+    );
+    expect(screen.queryByText("Space not found")).toBeNull();
+  });
+
+  it("says that the old key keeps leading to the space until another space takes it", async () => {
+    mockApi({ ...baseRoutes(), ...spaceRoutes() });
+    await renderAt("/spaces/ITOPS/settings/general");
+    const input = (await screen.findAllByRole("textbox")).find(
+      (element) => (element as HTMLInputElement).value === "ITOPS",
+    ) as HTMLInputElement;
+    await userEvent.clear(input);
+    await userEvent.type(input, "OPS");
+    expect(
+      await screen.findByText(
+        "Addresses with ITOPS lead to the new key until another space takes ITOPS. Links to pages always keep working.",
+      ),
+    ).toBeTruthy();
+  });
+
   it("leads an outdated title in the address to the current one and keeps the edit mode", async () => {
     mockApi({
       ...baseRoutes(),
