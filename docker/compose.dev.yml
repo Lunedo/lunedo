@@ -37,7 +37,7 @@ services:
       retries: 10
 
   valkey:
-    image: valkey/valkey:8-alpine
+    image: valkey/valkey:9-alpine
     ports:
       - "127.0.0.1:${VALKEY_PORT:-6379}:6379"
     healthcheck:
@@ -47,7 +47,7 @@ services:
       retries: 10
 
   mailpit:
-    image: axllent/mailpit:v1.31.3
+    image: axllent/mailpit:v1.31.4
     environment:
       MP_DISABLE_VERSION_CHECK: "true"
     ports:
