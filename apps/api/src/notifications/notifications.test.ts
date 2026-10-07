@@ -408,6 +408,11 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
       await expect
         .poll(() => readerEvents.spaces, { timeout: 5000 })
         .toContainEqual({ spaceId, kind: "tree", itemId: null });
+      const archived = await owner.post(`/api/v1/items/${unpublished.json().id}/archive`, {});
+      expect(archived.statusCode, archived.body).toBeLessThan(300);
+      await expect
+        .poll(() => readerEvents.spaces, { timeout: 5000 })
+        .toContainEqual({ spaceId, kind: "access", itemId: null });
       expect(JSON.stringify(readerEvents.spaces)).not.toContain(unpublished.json().id);
       await new Promise((resolve) => setTimeout(resolve, 300));
       expect(otherEvents.spaces).toEqual([]);

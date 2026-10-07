@@ -284,7 +284,7 @@ data: ${JSON.stringify(signal)}
           };
           if (!(await mayInSpace(signal.kind === "draft" ? "space.edit" : "space.view"))) return;
           let forwarded = signal;
-          if ((signal.kind === "page" || signal.kind === "tree") && signal.itemId) {
+          if (signal.itemId) {
             const visible =
               (await mayInSpace("space.edit")) ||
               (
