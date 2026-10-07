@@ -181,4 +181,6 @@ The job `Scope` decides the lane and the areas (`scripts/ci-scope.ts`) and lists
 
 Every job runs on the runners named in the repository variable `RUNNER_LABELS`, a JSON array such as `["self-hosted","linux","x64","pagehall"]`. Without the variable, jobs run on GitHub-hosted `ubuntu-24.04`, so no code changes when the repository goes public. When `RUNNER_LABELS` names a self-hosted runner, no job runs for pull requests from forks; `CI result` then runs on `ubuntu-24.04` and fails, so such a pull request cannot pass the required check.
 
+Several runners can share one host. Jobs publish no fixed host ports: unit test services get random ports, and the identity provider job picks free ports with `scripts/pick-free-ports.ts`, names its compose project after the workflow run and removes only that project's containers, volumes and images. The compose file reads the ports from `POSTGRES_PORT`, `VALKEY_PORT`, `MAILPIT_SMTP_PORT`, `MAILPIT_PORT`, `KEYCLOAK_PORT`, `AUTHENTIK_PORT` and `LDAP_PORT`, defaulting to the usual ones for local development.
+
 Dependabot opens one pull request per ecosystem every Monday (`.github/dependabot.yml`).

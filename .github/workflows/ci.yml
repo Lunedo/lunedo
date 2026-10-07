@@ -106,7 +106,7 @@ jobs:
         env:
           MP_DISABLE_VERSION_CHECK: "true"
         ports:
-          - 1025:1025
+          - 1025
           - 8025
       valkey:
         image: valkey/valkey:8-alpine
@@ -152,6 +152,7 @@ jobs:
         env:
           PAGEHALL_TEST_DATABASE_URL: postgres://pagehall:pagehall@localhost:${{ job.services.postgres.ports['5432'] }}/pagehall
           PAGEHALL_TEST_MAILPIT_URL: http://localhost:${{ job.services.mailpit.ports['8025'] }}
+          PAGEHALL_TEST_MAILPIT_SMTP_PORT: ${{ job.services.mailpit.ports['1025'] }}
           PAGEHALL_TEST_REDIS_URL: redis://localhost:${{ job.services.valkey.ports['6379'] }}
         run: |
           args=(run test)
@@ -178,14 +179,17 @@ jobs:
           platforms: linux/amd64
           load: true
           push: false
-          tags: pagehall:ci
+          tags: pagehall:ci-${{ github.run_id }}-${{ github.run_attempt }}
           build-args: VERSION=ci
           cache-from: |
             type=gha,scope=amd64
             type=gha,scope=image
           cache-to: type=gha,mode=max,scope=amd64
       - name: Back up, restore and compare
-        run: scripts/backup-roundtrip.sh pagehall:ci
+        run: scripts/backup-roundtrip.sh pagehall:ci-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Remove the image of this job
+        if: always()
+        run: docker image rm --force pagehall:ci-${{ github.run_id }}-${{ github.run_attempt }}
 
   e2e:
     name: End-to-end, accessibility and visual tests
@@ -265,27 +269,10 @@ jobs:
     env:
       PAGEHALL_E2E_IDP: "1"
       PAGEHALL_E2E_HOST: 0.0.0.0
-      PAGEHALL_E2E_KEYCLOAK_URL: http://keycloak.localhost:8080
-      PAGEHALL_E2E_AUTHENTIK_URL: http://authentik.localhost:9000
-      PAGEHALL_E2E_LDAP_URL: ldap://localhost:3389
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Resolve the identity provider host names to this machine
-        run: grep -q authentik.localhost /etc/hosts || echo "127.0.0.1 keycloak.localhost authentik.localhost" | sudo tee -a /etc/hosts
-      - name: Start PostgreSQL, Mailpit, Keycloak, Authentik and OpenLDAP
-        run: >-
-          docker compose -f docker/compose.dev.yml --profile idp up --detach --wait
-          postgres mailpit keycloak authentik-postgres authentik-server authentik-worker openldap
-      - name: Wait until Authentik has applied the test blueprint
-        run: |
-          for attempt in $(seq 1 60); do
-            if curl -fsS "$PAGEHALL_E2E_AUTHENTIK_URL/application/o/pagehall/.well-known/openid-configuration" > /dev/null; then exit 0; fi
-            sleep 5
-          done
-          docker compose -f docker/compose.dev.yml --profile idp logs authentik-worker
-          exit 1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
@@ -298,6 +285,36 @@ jobs:
           path: ${{ steps.pnpm.outputs.store }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: pnpm-store-${{ runner.os }}-
+      - name: Choose free ports for this job
+        run: >-
+          node scripts/pick-free-ports.ts POSTGRES_PORT MAILPIT_SMTP_PORT MAILPIT_PORT
+          KEYCLOAK_PORT AUTHENTIK_PORT LDAP_PORT PAGEHALL_E2E_PORT:3
+      - name: Name the compose project and point the tests at the chosen ports
+        run: |
+          {
+            echo "COMPOSE_PROJECT_NAME=pagehall-idp-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+            echo "PAGEHALL_E2E_STATE_DIR=${RUNNER_TEMP}/pagehall-e2e-state"
+            echo "PAGEHALL_E2E_DATABASE_URL=postgres://pagehall:pagehall@localhost:${POSTGRES_PORT}/pagehall"
+            echo "PAGEHALL_E2E_MAILPIT_URL=http://localhost:${MAILPIT_PORT}"
+            echo "PAGEHALL_E2E_SMTP_PORT=${MAILPIT_SMTP_PORT}"
+            echo "PAGEHALL_E2E_KEYCLOAK_URL=http://keycloak.localhost:${KEYCLOAK_PORT}"
+            echo "PAGEHALL_E2E_AUTHENTIK_URL=http://authentik.localhost:${AUTHENTIK_PORT}"
+            echo "PAGEHALL_E2E_LDAP_URL=ldap://localhost:${LDAP_PORT}"
+          } >> "$GITHUB_ENV"
+      - name: Resolve the identity provider host names to this machine
+        run: grep -q authentik.localhost /etc/hosts || echo "127.0.0.1 keycloak.localhost authentik.localhost" | sudo tee -a /etc/hosts
+      - name: Start PostgreSQL, Mailpit, Keycloak, Authentik and OpenLDAP
+        run: >-
+          docker compose -f docker/compose.dev.yml --profile idp up --detach --wait
+          postgres mailpit keycloak authentik-postgres authentik-server authentik-worker openldap
+      - name: Wait until Authentik has applied the test blueprint
+        run: |
+          for _ in $(seq 1 60); do
+            if curl -fsS "$PAGEHALL_E2E_AUTHENTIK_URL/application/o/pagehall/.well-known/openid-configuration" > /dev/null; then exit 0; fi
+            sleep 5
+          done
+          docker compose -f docker/compose.dev.yml --profile idp logs authentik-worker
+          exit 1
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm --filter @pagehall/web build:e2e
@@ -314,9 +331,9 @@ jobs:
           retention-days: 7
       - if: failure()
         run: docker compose -f docker/compose.dev.yml --profile idp logs keycloak authentik-server authentik-worker openldap
-      - name: Remove the containers and volumes
+      - name: Remove the containers, volumes and images of this job
         if: always()
-        run: docker compose -f docker/compose.dev.yml --profile idp down --volumes --remove-orphans
+        run: docker compose -f docker/compose.dev.yml --profile idp down --volumes --remove-orphans --rmi local
 
   dependencies:
     name: Licenses and audit
