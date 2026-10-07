@@ -18,6 +18,8 @@ export const auditTargetTypes = [
   "mappingRule",
   "space",
   "page",
+  "trashEntry",
+  "template",
 ] as const;
 export type AuditTargetType = (typeof auditTargetTypes)[number];
 
@@ -72,6 +74,21 @@ const mappingRuleFields = z.object({
 });
 
 const spaceRoleNames = ["reader", "commenter", "editor", "admin"] as const;
+const pageModeNames = ["publish", "live"] as const;
+const itemKindNames = ["page", "folder", "link"] as const;
+const pageFields = z.object({ spaceId: z.uuid(), title: z.string() });
+const trashFields = z.object({
+  spaceId: z.uuid(),
+  title: z.string(),
+  kind: z.enum(["items", "space"]),
+  itemKind: z.enum(itemKindNames).nullable(),
+  descendants: z.number().int().nonnegative(),
+});
+const templateFields = z.object({
+  name: z.string(),
+  level: z.enum(["instance", "organization"]),
+  organizationId: z.uuid().nullable(),
+});
 const spacePermissionFields = z.object({
   name: z.string(),
   principalKind: z.enum(["account", "group", "organizationMembers", "instanceUsers"]),
@@ -973,6 +990,124 @@ export const auditCatalog = {
     target: "space",
     fields: z.object({ previousOwnerId: z.uuid().nullable(), ownerId: z.uuid() }),
     visibility: "instance",
+  }),
+  "page.published": event({
+    actor: ["account", "system"],
+    target: "page",
+    fields: pageFields.extend({ version: z.number().int().positive(), note: z.string() }),
+    visibility: "organization",
+  }),
+  "page.draftDiscarded": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({ discardedDraftId: z.uuid() }),
+    visibility: "organization",
+  }),
+  "page.versionRestored": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({
+      version: z.number().int().positive(),
+      mode: z.enum(pageModeNames),
+      newVersion: z.number().int().positive().nullable(),
+    }),
+    visibility: "organization",
+  }),
+  "page.modeChanged": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({ mode: z.enum(pageModeNames), previousMode: z.enum(pageModeNames) }),
+    visibility: "organization",
+  }),
+  "page.archived": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({ itemKind: z.enum(itemKindNames), descendants: z.number().int().nonnegative() }),
+    visibility: "organization",
+  }),
+  "page.unarchived": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({ itemKind: z.enum(itemKindNames), parentId: z.uuid().nullable() }),
+    visibility: "organization",
+  }),
+  "trash.itemsDeleted": event({
+    actor: ["account"],
+    target: "trashEntry",
+    fields: trashFields.extend({ itemId: z.uuid() }),
+    visibility: "organization",
+  }),
+  "trash.itemsRestored": event({
+    actor: ["account"],
+    target: "trashEntry",
+    fields: trashFields.extend({ stage: z.number().int(), parentId: z.uuid().nullable() }),
+    visibility: "organization",
+  }),
+  "trash.movedToStageTwo": event({
+    actor: ["account", "system"],
+    target: "trashEntry",
+    fields: trashFields.extend({ cause: z.enum(["expired", "emptied"]) }),
+    visibility: "organization",
+  }),
+  "trash.deletedPermanently": event({
+    actor: ["system"],
+    target: "trashEntry",
+    fields: trashFields,
+    visibility: "organization",
+  }),
+  "trash.deletedImmediately": event({
+    actor: ["account"],
+    target: "trashEntry",
+    fields: trashFields.extend({ reason: z.string().min(1).max(500) }),
+    visibility: "organization",
+  }),
+  "trash.emptied": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({ name: z.string(), entries: z.number().int().nonnegative() }),
+    visibility: "organization",
+  }),
+  "space.deleted": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({ name: z.string(), key: z.string(), personal: z.boolean() }),
+    visibility: "organization",
+  }),
+  "space.restored": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({ name: z.string(), key: z.string(), personal: z.boolean() }),
+    visibility: "organization",
+  }),
+  "space.archived": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({ name: z.string() }),
+    visibility: "organization",
+  }),
+  "space.unarchived": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({ name: z.string() }),
+    visibility: "organization",
+  }),
+  "template.created": event({
+    actor: ["account"],
+    target: "template",
+    fields: templateFields,
+    visibility: "organization",
+  }),
+  "template.updated": event({
+    actor: ["account"],
+    target: "template",
+    fields: templateFields.extend({ changes: z.array(z.string()).max(20) }),
+    visibility: "organization",
+  }),
+  "template.deleted": event({
+    actor: ["account"],
+    target: "template",
+    fields: templateFields,
+    visibility: "organization",
   }),
   "page.updateRejected": event({
     actor: ["account"],

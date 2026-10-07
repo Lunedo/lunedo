@@ -2,6 +2,7 @@ import {
   ITEM_DESCRIPTION_MAX_LENGTH,
   ITEM_TITLE_MAX_LENGTH,
   LABEL_MAX_LENGTH,
+  pageModes,
   pageWidths,
   SPACE_DESCRIPTION_MAX_LENGTH,
   SPACE_NAME_MAX_LENGTH,
@@ -46,6 +47,7 @@ export const spaceSchema = z
     ownerId: uuid("Owner of a personal space, or null.").nullable(),
     ownerName: z.string().nullable().describe("Name of the owner of a personal space, or null."),
     overviewItemId: uuid("The overview page of the space.").nullable(),
+    archived: z.boolean().describe("Whether the space is archived. Archived spaces are read-only."),
     createdAt: timestamp("When the space was created."),
     updatedAt: timestamp("When the settings of the space last changed."),
   })
@@ -67,6 +69,7 @@ export const exampleSpace = {
   ownerId: null,
   ownerName: null,
   overviewItemId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
+  archived: false,
   createdAt: "2026-10-05T08:00:00.000Z",
   updatedAt: "2026-10-05T08:00:00.000Z",
 };
@@ -196,6 +199,9 @@ export const linkSchema = z
     ).nullable(),
     url: z.string().nullable().describe("Linked `http` or `https` address, or null."),
     accessible: z.boolean().describe("Whether the caller can open the target. If not, the title is empty."),
+    inTrash: z
+      .boolean()
+      .describe("Whether the target is in the trash. Only true for callers who could read it before."),
     target: z
       .object({
         spaceId: uuid("Space of the target."),
@@ -208,6 +214,12 @@ export const linkSchema = z
   })
   .describe("Where a link in the page tree points.");
 
+export const modeSchema = z
+  .enum(pageModes)
+  .describe(
+    "Editing mode of a page: `publish` (readers see the last published version while editors work on a draft) or `live` (readers see every change at once). Folders and links are always `live`.",
+  );
+
 export const treeItemSchema = z
   .object({
     id: uuid("ID of the item."),
@@ -217,6 +229,13 @@ export const treeItemSchema = z
     title: z.string().describe("Title. Empty for a link to content the caller cannot read."),
     description: z.string().describe("Short description of a folder."),
     width: z.enum(pageWidths).describe("Page width: `fixed` or `full`."),
+    mode: modeSchema,
+    published: z
+      .boolean()
+      .describe(
+        "Whether readers can see the page. False for a page in publish mode that was never published; only editors see it.",
+      ),
+    archived: z.boolean().describe("Whether the item is archived. Archived items are read-only."),
     position: z.string().describe("Sort key among the siblings. Items sort by it in binary order."),
     hasChildren: z.boolean().describe("Whether the item has children."),
     link: linkSchema.nullable().describe("Target of a link, or null for pages and folders."),
@@ -236,6 +255,9 @@ export const exampleItem = {
   title: "VPN access for remote staff",
   description: "",
   width: "fixed",
+  mode: "publish",
+  published: true,
+  archived: false,
   position: "a1",
   hasChildren: false,
   link: null,
@@ -282,6 +304,20 @@ export const createItemSchema = z
       .optional()
       .describe("Short description of a folder, up to 1000 characters."),
     ...placementShape,
+    mode: modeSchema.optional().describe("Editing mode of a new page. Without it, the default of the space applies."),
+    template: z
+      .object({
+        id: z.string().max(100).describe("ID of the template, as listed by the template gallery of the space."),
+        values: z
+          .record(z.string().max(40), z.string().max(200))
+          .default({})
+          .describe(
+            "Values of the template's input fields by key. Dates as `YYYY-MM-DD` (default today), people as account IDs, choices as one of the options.",
+          ),
+      })
+      .strict()
+      .optional()
+      .describe("Create the page from a template. The title may be left empty to use the template's title."),
     link: z
       .object({
         itemId: uuid("Page or folder to link to, in any space the caller can read.").nullable().optional(),
@@ -329,6 +365,12 @@ export const exampleDocument = {
 export const pageContentSchema = z
   .object({
     itemId: uuid("ID of the page."),
+    title: z.string().describe("Title of the page as readers see it."),
+    version: z
+      .number()
+      .int()
+      .nullable()
+      .describe("Number of the version readers see, or null when the page has no version yet."),
     document: documentSchema,
     schemaVersion: z.number().int().describe("Version of the editor schema the document follows."),
     revision: z.number().int().describe("Number of the stored state; it rises with every save."),
@@ -348,6 +390,9 @@ export const pageContentSchema = z
                 spaceKey: z.string().describe("Key of the page's space, or empty without access."),
                 kind: z.string().describe("Kind of the item."),
                 accessible: z.boolean().describe("Whether the caller can open the page."),
+                inTrash: z
+                  .boolean()
+                  .describe("Whether the page is in the trash. Then only the title is given, as `In trash`."),
               })
               .describe("A linked page."),
           )
@@ -359,8 +404,10 @@ export const pageContentSchema = z
 
 export const examplePageContent = {
   itemId: exampleItem.id,
+  title: exampleItem.title,
+  version: 7,
   document: exampleDocument,
-  schemaVersion: 1,
+  schemaVersion: 2,
   revision: 4,
   updatedAt: "2026-10-05T08:10:00.000Z",
   updatedBy: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
@@ -380,3 +427,61 @@ export const backlinkSchema = z
     spaceName: z.string().describe("Name of that space."),
   })
   .describe("A page that links to this page.");
+
+const actorSchema = z
+  .object({
+    id: uuid("ID of the account."),
+    name: z.string().nullable().describe("Name of the person, or null when the account no longer exists."),
+  })
+  .describe("A person.");
+
+export const trashEntrySchema = z
+  .object({
+    id: uuid("ID of the trash entry."),
+    spaceId: uuid("Space of the entry."),
+    spaceKey: z.string().describe("Key of the space."),
+    spaceName: z.string().describe("Name of the space."),
+    kind: z.enum(["items", "space"]).describe("`items` for deleted pages, folders or links, `space` for a deleted space."),
+    itemId: uuid("The deleted item, or null for a space.").nullable(),
+    itemKind: z.enum(treeItemKinds).nullable().describe("Kind of the deleted item, or null for a space."),
+    title: z.string().describe("Title of the deleted item, or name of the space."),
+    descendants: z.number().int().describe("Number of descendants deleted with the item."),
+    stage: z
+      .union([z.literal(1), z.literal(2)])
+      .describe(
+        "1 while the entry is in the space trash, 2 after that period or after the trash was emptied; then only organization administrators can restore it.",
+      ),
+    deletedAt: timestamp("When it was deleted."),
+    deletedBy: actorSchema.nullable().describe("Who deleted it."),
+    stageTwoAt: timestamp("When the entry reached stage 2, or null.").nullable(),
+    removedAt: timestamp("When the entry will be deleted permanently, by the current retention settings."),
+  })
+  .describe("An entry of the trash.");
+
+export const exampleTrashEntry = {
+  id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+  spaceId: exampleSpace.id,
+  spaceKey: "ITOPS",
+  spaceName: "IT Operations",
+  kind: "items",
+  itemId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a41",
+  itemKind: "page",
+  title: "Old VPN (OpenVPN) setup",
+  descendants: 2,
+  stage: 1,
+  deletedAt: "2026-10-02T10:00:00.000Z",
+  deletedBy: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Lukas Hofer" },
+  stageTwoAt: null,
+  removedAt: "2027-02-14T10:00:00.000Z",
+};
+
+export const archivedItemSchema = z
+  .object({
+    id: uuid("ID of the archived item."),
+    kind: z.enum(treeItemKinds).describe("Kind of the item."),
+    title: z.string().describe("Title."),
+    hasChildren: z.boolean().describe("Whether it has archived descendants."),
+    archivedAt: timestamp("When it was archived.").nullable(),
+    archivedBy: actorSchema.nullable().describe("Who archived it."),
+  })
+  .describe("An archived page or folder.");

@@ -20,7 +20,7 @@ import {
   mergeGrants,
   SpaceError,
 } from "./common.js";
-import { insertPage } from "./items.js";
+import { defaultPageMode, insertPage } from "./items.js";
 import { isValidSpaceKey, normalizeSpaceKey, spaceKeyCandidates, suggestSpaceKey } from "./keys.js";
 import type { PeopleService } from "./people.js";
 import type { SpaceRole, SpaceVisibility } from "./schema.js";
@@ -42,6 +42,7 @@ export interface Space {
   ownerId: string | null;
   ownerName: string | null;
   overviewItemId: string | null;
+  archived: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -62,13 +63,14 @@ type SpaceRow = {
   owner_account_id: string | null;
   owner_name: string | null;
   overview_item_id: string | null;
+  archived: boolean;
   created_at: Date | string;
   updated_at: Date | string;
 };
 
 const SPACE_COLUMNS = sql`s.id, s.key, s.name, s.description, s.visibility, s.organization_id,
   o.name as organization_name, s.personal_of, s.owner_account_id, owner.name as owner_name,
-  s.overview_item_id, s.created_at, s.updated_at`;
+  s.overview_item_id, s.archived_at is not null as archived, s.created_at, s.updated_at`;
 
 const SPACE_FROM = sql`spaces s
   left join organizations o on o.id = s.organization_id
@@ -87,6 +89,7 @@ function toSpace(row: SpaceRow): Space {
     ownerId: row.owner_account_id,
     ownerName: row.owner_name,
     overviewItemId: row.overview_item_id,
+    archived: row.archived,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };
@@ -205,7 +208,7 @@ export class SpaceService {
 
   async list(
     viewer: Principal,
-    options: { organizationId?: string | undefined; page?: PageRequest } = {},
+    options: { organizationId?: string | undefined; page?: PageRequest; archived?: boolean | undefined } = {},
   ): Promise<Page<Space>> {
     const page = options.page ?? FIRST_PAGE;
     const term = page.search?.trim() ?? "";
@@ -215,6 +218,7 @@ export class SpaceService {
       select ${SPACE_COLUMNS}, ${sortName} as sort_name from ${SPACE_FROM}
       where ${this.#authorization.spaceFilter(viewer, sql`s`)}
         ${options.organizationId ? sql`and s.organization_id = ${options.organizationId}` : sql``}
+        and (s.archived_at is not null) = ${options.archived ?? false}
         ${term ? sql`and (s.name ilike ${pattern} or s.key ilike ${pattern} or s.description ilike ${pattern})` : sql``}
         ${page.after ? sql`and ${afterKey([sortName, sql`s.id`], page.after)}` : sql``}
       order by ${sortName}, s.id
@@ -297,11 +301,14 @@ export class SpaceService {
           scope,
         });
         await insertGrants(tx, this.#audit, actor, { ...target, name }, grants);
+        const mode = await defaultPageMode(this.#settings, { id: space.id, organizationId });
         const overview = await insertPage(tx, {
           spaceId: space.id,
           parentId: null,
           title: name,
           actorId: creatorId,
+          mode,
+          published: mode === "publish",
         });
         await tx.execute(sql`update spaces set overview_item_id = ${overview} where id = ${space.id}`);
         await signalSpaceChange(tx, { spaceId: space.id, kind: "space", itemId: null });

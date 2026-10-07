@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { defineSetting } from "../settings/definition.js";
-import { spaceRoles, spaceVisibilities } from "./schema.js";
+import { type PageMode, pageModes, spaceRoles, spaceVisibilities } from "./schema.js";
 
 export const spaceGrantSchema = z
   .object({
@@ -51,8 +51,66 @@ export const personalSpacesSetting = defineSetting({
   lockable: false,
 });
 
+export const defaultPageModeSetting = defineSetting<PageMode>({
+  key: "pages.defaultMode",
+  schema: z.enum(pageModes),
+  default: "publish",
+  levels: ["organization", "space"],
+  lockable: true,
+});
+
+export const liveVersionIdleMinutesSetting = defineSetting({
+  key: "pages.liveVersionIdleMinutes",
+  schema: z.number().int().min(1).max(1440),
+  default: 10,
+  levels: ["instance", "organization", "space"],
+  lockable: true,
+});
+
+const retentionDays = z.number().int().min(1).max(3650);
+
+export const trashFirstStageMinimumSetting = defineSetting({
+  key: "trash.firstStageMinimumDays",
+  schema: retentionDays,
+  default: 1,
+  levels: ["instance"],
+  lockable: false,
+});
+
+export const trashSecondStageMinimumSetting = defineSetting({
+  key: "trash.secondStageMinimumDays",
+  schema: retentionDays,
+  default: 1,
+  levels: ["instance"],
+  lockable: false,
+});
+
+export const trashFirstStageDaysSetting = defineSetting({
+  key: "trash.firstStageDays",
+  schema: retentionDays,
+  default: 90,
+  levels: ["instance", "organization", "space"],
+  lockable: true,
+  minimum: trashFirstStageMinimumSetting,
+});
+
+export const trashSecondStageDaysSetting = defineSetting({
+  key: "trash.secondStageDays",
+  schema: retentionDays,
+  default: 45,
+  levels: ["instance", "organization", "space"],
+  lockable: true,
+  minimum: trashSecondStageMinimumSetting,
+});
+
 export const spaceSettings = [
   membersCreateSpacesSetting,
   defaultSpacePermissionsSetting,
   personalSpacesSetting,
+  defaultPageModeSetting,
+  liveVersionIdleMinutesSetting,
+  trashFirstStageMinimumSetting,
+  trashSecondStageMinimumSetting,
+  trashFirstStageDaysSetting,
+  trashSecondStageDaysSetting,
 ];

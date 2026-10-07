@@ -25,7 +25,7 @@ import {
   spaceFacts,
   type Via,
 } from "./facts.js";
-import type { AuthorizationRegistry, RegisteredAction, Resource } from "./registry.js";
+import type { AuthorizationRegistry, RegisteredAction, Resource, RestrictionDenial } from "./registry.js";
 import { spaceRoleCondition, tokenSpaceCondition } from "./space-access.js";
 
 export type Grant =
@@ -47,7 +47,8 @@ export type Denial =
   | "roleExceedsOwnPermissions"
   | "selfExtension"
   | "noSpaceRole"
-  | "tokenScope";
+  | "tokenScope"
+  | RestrictionDenial;
 
 export interface GrantCheck {
   scope: RoleScope;
@@ -180,9 +181,22 @@ export class AuthorizationService {
       const facts = await spaceFacts(executor, accountId, spaceId, { fresh });
       if (!facts.space) return decision([], ["resourceNotFound"]);
       if (facts.account?.state !== "active") return decision([], ["accountInactive"]);
-      const grants = this.#spaceGrants(action, facts);
+      let grants = this.#spaceGrants(action, facts);
       if (action.rule && (await this.#rule(action, accountId, resource, null, executor, fresh))) {
         grants.push({ kind: "rule", rule: action.rule });
+      }
+      const restriction = action.restriction
+        ? await action.resourceType.restrictions?.[action.restriction]?.(
+            executor,
+            (resource.id ?? "").toLowerCase(),
+          )
+        : null;
+      if (restriction && grants.length > 0) {
+        const { unless } = restriction;
+        grants = unless
+          ? grants.filter((grant) => grant.kind === "spaceRole" && grantsSpaceRole(grant.role, unless))
+          : [];
+        if (grants.length === 0) return decision([], [restriction.denial]);
       }
       return limitByToken(principal, action, facts.space.organizationId, decision(grants, ["noSpaceRole"]));
     }
@@ -459,7 +473,7 @@ export class AuthorizationService {
   spaceFilter(principal: Principal, space: SQL, minimum: SpaceRole = "reader"): SQL {
     if (principal.type === "system") return sql`true`;
     if (principal.type === "anonymous") return sql`false`;
-    return sql`(${spaceRoleCondition(principal.id, space, minimum)} and ${tokenSpaceCondition(principal, space, minimum)})`;
+    return sql`(${space}.deleted_at is null and ${spaceRoleCondition(principal.id, space, minimum)} and ${tokenSpaceCondition(principal, space, minimum)})`;
   }
 
   async #spaceOf(action: RegisteredAction, resource: Resource, executor: Executor): Promise<string | null> {

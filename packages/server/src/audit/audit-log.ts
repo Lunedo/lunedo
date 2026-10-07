@@ -449,12 +449,20 @@ export function isPersonalPreference(level: string, key: string): boolean {
 export function auditSettingChanges(audit: AuditLog): SettingChangeHandler {
   return async (tx, change) => {
     if (isPersonalPreference(change.scope.level, change.key)) return;
+    const organizationId =
+      change.scope.level === "organization"
+        ? change.scope.id
+        : change.scope.level === "space"
+          ? ((
+              await tx.execute<{ organization_id: string | null }>(
+                sql`select organization_id from spaces where id = ${change.scope.id}`,
+              )
+            ).rows[0]?.organization_id ?? null)
+          : null;
     await audit.record(tx, {
       name: "settings.changed",
       targetId: change.key,
-      ...(change.scope.level === "organization"
-        ? { scope: { type: "organization" as const, id: change.scope.id } }
-        : {}),
+      ...(organizationId ? { scope: { type: "organization" as const, id: organizationId } } : {}),
       fields: {
         level: change.scope.level,
         scopeId: change.scope.id,

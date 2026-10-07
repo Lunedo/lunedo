@@ -232,6 +232,13 @@
       "when": 1791226485406,
       "tag": "0032_spaces_and_pages",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1791393036415,
+      "tag": "0033_versions_trash_templates",
+      "breakpoints": true
     }
   ]
 }

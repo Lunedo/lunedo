@@ -76,6 +76,8 @@ export class PersonalSpaceService {
             parentId: null,
             title: overviewTitle,
             actorId: actor.id,
+            mode: "publish",
+            published: true,
           });
           await tx.execute(sql`update spaces set overview_item_id = ${overview} where id = ${spaceId}`);
           const scope = auditScopeOf({ organizationId: null });

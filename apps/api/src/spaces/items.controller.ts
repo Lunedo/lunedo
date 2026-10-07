@@ -11,7 +11,10 @@ import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import { uuid } from "../http/schemas.js";
 import {
+  archivedItemSchema,
   backlinkSchema,
+  exampleTrashEntry,
+  trashEntrySchema,
   createItemSchema,
   documentSchema,
   exampleDocument,
@@ -184,21 +187,40 @@ export class ItemsController {
   @ApiRoute({
     summary: "Create a page, folder or link",
     description:
-      "Creates an item in the page tree, at the end of its parent unless a neighbor is given. Links point to a page or folder in any space the caller can read, or to an `http` or `https` address.",
+      "Creates an item in the page tree, at the end of its parent unless a neighbor is given. Links point to a page or folder in any space the caller can read, or to an `http` or `https` address. A page can start from a template; later changes to the template do not change the page. A new page in publish mode is visible only to editors until it is published.",
     tags: [TAG],
     params: spaceParams,
     body: createItemSchema,
     bodyExample: { kind: "page", title: "VPN access for remote staff", parentId: null },
     status: 201,
     response: { description: "The new item.", schema: treeItemSchema, example: exampleItem },
-    errors: ["invalidTitle", "invalidDescription", "invalidPlacement", "invalidLinkUrl", "invalidLinkTarget"],
+    errors: [
+      "invalidTitle",
+      "invalidDescription",
+      "invalidPlacement",
+      "invalidLinkUrl",
+      "invalidLinkTarget",
+      "templateNotFound",
+      "invalidTemplateValues",
+    ],
   })
   async create(
     @Param("spaceId") spaceId: string,
     @Body() body: z.output<typeof createItemSchema>,
     @Req() request: FastifyRequest,
   ) {
+    const placement = { parentId: body.parentId, beforeId: body.beforeId, afterId: body.afterId };
+    if (body.template && body.kind === "page") {
+      return this.#services.templates.instantiate(actorOf(request), spaceId, {
+        templateId: body.template.id,
+        values: body.template.values,
+        placement,
+        title: body.title,
+        mode: body.mode,
+      });
+    }
     return this.#services.tree.create(actorOf(request), spaceId, {
+      mode: body.mode,
       kind: body.kind,
       title: body.title,
       description: body.description,
@@ -341,17 +363,17 @@ export class ItemsController {
   @ApiRoute({
     summary: "Get the content of a page",
     description:
-      "Returns the stored content as ProseMirror JSON, with the names of mentioned people and the titles of linked pages the caller may see.",
+      "Returns the content readers see as ProseMirror JSON: the published version in publish mode, the current content in live mode. With it come the names of mentioned people and the titles of linked pages the caller may see. Editors get the draft from the draft endpoint.",
     tags: [TAG],
     params: pageParams,
     response: { description: "The content.", schema: pageContentSchema, example: examplePageContent },
   })
   async content(@Param("pageId") pageId: string, @Req() request: FastifyRequest) {
-    const snapshot = await this.#services.documents.snapshot(pageId);
-    if (!snapshot) throw notFound();
+    const readable = await this.#services.documents.readable(pageId);
+    if (!readable) throw notFound();
     return {
-      ...snapshot,
-      references: await this.#services.documents.references(actorOf(request), snapshot.document),
+      ...readable,
+      references: await this.#services.documents.references(actorOf(request), readable.document),
     };
   }
 
@@ -359,7 +381,7 @@ export class ItemsController {
   @Permission("item.view", page)
   @ApiRoute({
     summary: "Get the content of a page as Markdown",
-    description: "Returns the stored content as GitHub-flavored Markdown.",
+    description: "Returns the content readers see as GitHub-flavored Markdown.",
     tags: [TAG],
     params: pageParams,
     response: {
@@ -374,7 +396,7 @@ export class ItemsController {
     },
   })
   async markdown(@Param("pageId") pageId: string, @Req() request: FastifyRequest) {
-    const snapshot = await this.#services.documents.snapshot(pageId);
+    const snapshot = await this.#services.documents.readable(pageId);
     if (!snapshot) throw notFound();
     const references = await this.#services.documents.references(actorOf(request), snapshot.document);
     return {
@@ -390,7 +412,7 @@ export class ItemsController {
   @ApiRoute({
     summary: "Replace the content of a page",
     description:
-      "Stores new content. It must follow the editor schema. The change is merged into the collaborative document, so people editing the page see it at once.",
+      "Stores new content. It must follow the editor schema. The change is merged into the collaborative document, so people editing the page see it at once. In publish mode it changes the draft; publish it to show it to readers.",
     tags: [TAG],
     params: pageParams,
     body: replaceSchema,
@@ -405,7 +427,13 @@ export class ItemsController {
   ) {
     const actor = actorOf(request);
     const snapshot = await this.#services.documents.replace(actor, pageId, body.document);
-    return { ...snapshot, references: await this.#services.documents.references(actor, snapshot.document) };
+    const draft = await this.#services.versions.draft(pageId);
+    return {
+      ...snapshot,
+      title: draft.title,
+      version: draft.basedOn,
+      references: await this.#services.documents.references(actor, snapshot.document),
+    };
   }
 
   @Get("pages/:pageId/backlinks")
@@ -548,7 +576,90 @@ export class ItemsController {
       ],
     },
   })
-  async pagesWithLabel(@Param("spaceId") spaceId: string, @Param("label") label: string) {
-    return this.#services.documents.pagesWithLabel(spaceId, label);
+  async pagesWithLabel(
+    @Param("spaceId") spaceId: string,
+    @Param("label") label: string,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.documents.pagesWithLabel(actorOf(request), spaceId, label);
+  }
+
+  @Delete("items/:itemId")
+  @Permission("item.delete", item)
+  @ApiRoute({
+    summary: "Delete an item",
+    description:
+      "Moves a page, folder or link with all its descendants into the trash of the space as one entry. Restore it from the trash to undo. The overview page of a space cannot be deleted.",
+    tags: [TAG],
+    status: 200,
+    params: itemParams,
+    response: { description: "The trash entry.", schema: trashEntrySchema, example: exampleTrashEntry },
+    errors: ["overviewPage"],
+  })
+  async delete(@Param("itemId") itemId: string, @Req() request: FastifyRequest) {
+    return this.#services.trash.deleteItem(actorOf(request), itemId);
+  }
+
+  @Post("items/:itemId/archive")
+  @Permission("item.archive", item)
+  @ApiRoute({
+    summary: "Archive an item",
+    description:
+      "Archives a page or folder with its descendants. They become read-only, leave the page tree and appear in the archive of the space. Versions and links stay.",
+    tags: [TAG],
+    params: itemParams,
+    errors: ["overviewPage"],
+  })
+  async archive(@Param("itemId") itemId: string, @Req() request: FastifyRequest) {
+    await this.#services.archive.archive(actorOf(request), itemId);
+  }
+
+  @Post("items/:itemId/unarchive")
+  @Permission("item.archive", item)
+  @ApiRoute({
+    summary: "Bring back an archived item",
+    description:
+      "Returns an archived page or folder with its descendants to its old place in the page tree, or to the top level when that place no longer exists.",
+    tags: [TAG],
+    status: 200,
+    params: itemParams,
+    response: {
+      description: "Where the item went.",
+      schema: z
+        .object({ parentId: uuid("The new parent, or null for the top level.").nullable() })
+        .describe("The place of the item."),
+      example: { parentId: null },
+    },
+    errors: ["notArchived"],
+  })
+  async unarchive(@Param("itemId") itemId: string, @Req() request: FastifyRequest) {
+    return this.#services.archive.unarchive(actorOf(request), itemId);
+  }
+
+  @Get("spaces/:spaceId/archive")
+  @Permission("space.view", space)
+  @ApiRoute({
+    summary: "List the archive of a space",
+    description:
+      "Lists the archived pages and folders of a space by title. Their descendants load through the list of children.",
+    tags: [TAG],
+    params: spaceParams,
+    response: {
+      description: "Archived items.",
+      schema: z.array(archivedItemSchema).describe("Archived items, by title."),
+      example: [
+        {
+          id: exampleItem.id,
+          kind: "page",
+          title: "Printer list 2024",
+          hasChildren: false,
+          archivedAt: "2026-10-05T08:00:00.000Z",
+          archivedBy: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger" },
+        },
+      ],
+    },
+  })
+  async archived(@Param("spaceId") spaceId: string, @Req() request: FastifyRequest) {
+    return this.#services.archive.list(actorOf(request), spaceId);
   }
 }

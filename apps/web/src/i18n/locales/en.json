@@ -2925,10 +2925,33 @@
         "permissionChanged": "Space permission changed",
         "permissionRemoved": "Space permission removed",
         "administratorAppointed": "Space admin appointed",
-        "personalTransferred": "Personal space transferred"
+        "personalTransferred": "Personal space transferred",
+        "deleted": "Space deleted",
+        "restored": "Space restored",
+        "archived": "Space archived",
+        "unarchived": "Space brought back from the archive"
       },
       "page": {
-        "updateRejected": "Page change rejected"
+        "updateRejected": "Page change rejected",
+        "published": "Page published",
+        "draftDiscarded": "Draft discarded",
+        "versionRestored": "Version restored",
+        "modeChanged": "Editing mode changed",
+        "archived": "Page archived",
+        "unarchived": "Page brought back from the archive"
+      },
+      "trash": {
+        "itemsDeleted": "Moved to the trash",
+        "itemsRestored": "Restored from the trash",
+        "movedToStageTwo": "Moved to the second stage of the trash",
+        "deletedPermanently": "Deleted permanently",
+        "deletedImmediately": "Deleted permanently at once",
+        "emptied": "Trash emptied"
+      },
+      "template": {
+        "created": "Template created",
+        "updated": "Template changed",
+        "deleted": "Template deleted"
       }
     },
     "action": "Action",
@@ -2969,7 +2992,9 @@
       "identityProvider": "Identity provider",
       "mappingRule": "Mapping rule",
       "space": "Space",
-      "page": "Page"
+      "page": "Page",
+      "trashEntry": "Trash entry",
+      "template": "Template"
     },
     "properties": {
       "value": "Value",
@@ -3050,7 +3075,19 @@
       "sender": "Sender",
       "senderName": "Sender name",
       "url": "Address",
-      "previousUrl": "Previous address"
+      "previousUrl": "Previous address",
+      "title": "Title",
+      "version": "Version",
+      "newVersion": "New version",
+      "note": "Note",
+      "mode": "Mode",
+      "previousMode": "Previous mode",
+      "itemKind": "Kind of item",
+      "descendants": "Descendants",
+      "stage": "Trash stage",
+      "cause": "Cause",
+      "entries": "Entries",
+      "level": "Level"
     },
     "values": {
       "account": "Account",
@@ -3088,7 +3125,13 @@
       "smtp": "SMTP",
       "graph": "Microsoft Graph",
       "clientSecret": "Client secret",
-      "certificate": "Certificate"
+      "certificate": "Certificate",
+      "publish": "Publish",
+      "live": "Live",
+      "expired": "Period ended",
+      "emptied": "Trash emptied",
+      "items": "Pages",
+      "space": "Space"
     },
     "formerUser": "Former user {id}"
   },
@@ -3419,7 +3462,8 @@
       "loading": "Loading page…",
       "missingHint": "This page does not exist yet. Opening the link creates it.",
       "followFailed": "The page could not be opened",
-      "followFailedDescription": "It may have been moved, or you may not be allowed to create pages in that space. Try again, or ask a space admin."
+      "followFailedDescription": "It may have been moved, or you may not be allowed to create pages in that space. Try again, or ask a space admin.",
+      "inTrash": "In trash"
     },
     "status": {
       "edit": "Status {text}, change",
@@ -3661,6 +3705,12 @@
         "title": "Editing stopped",
         "description": "The connection to the server was closed. Reload to continue editing."
       }
+    },
+    "placeholderNode": {
+      "hint": "Instruction from the template. Start typing here to replace it."
+    },
+    "templateField": {
+      "hint": "Input field {field}: filled in when a page is created from the template."
     }
   },
   "spaces": {

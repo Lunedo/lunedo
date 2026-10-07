@@ -68,6 +68,7 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
     const item = await runtime.services.tree.create(accountPrincipal(admin), created.id, {
       kind: "page",
       title: `Page ${Math.random().toString(36).slice(2, 8)}`,
+      mode: "live",
       placement: { parentId: null },
     });
     return { org, admin, space: created, itemId: item.id };

@@ -88,6 +88,16 @@ import { PeopleService } from "./spaces/people.js";
 import { SpaceHolders, SpacePermissionService } from "./spaces/permissions.js";
 import { PersonalSpaceService } from "./spaces/personal.js";
 import { SpaceService } from "./spaces/spaces.js";
+import { VersionService } from "./spaces/versions.js";
+import { TrashService } from "./spaces/trash.js";
+import { ArchiveService } from "./spaces/archive.js";
+import { TemplateService } from "./templates/templates.js";
+import {
+  LIVE_VERSIONS_SCHEDULE,
+  liveVersionsJob,
+  TRASH_RETENTION_SCHEDULE,
+  trashRetentionJob,
+} from "./spaces/jobs.js";
 import { API_TOKEN_EXPIRY_SCHEDULE, ApiTokenService, apiTokenExpiryJob } from "./tokens/api-tokens.js";
 import { ServiceAccountService } from "./tokens/service-accounts.js";
 
@@ -138,6 +148,10 @@ export interface AccountServices {
   personalSpaces: PersonalSpaceService;
   tree: TreeService;
   documents: PageDocumentService;
+  versions: VersionService;
+  trash: TrashService;
+  archive: ArchiveService;
+  templates: TemplateService;
 }
 
 export function createAccountServices(options: {
@@ -384,7 +398,11 @@ export function createAccountServices(options: {
     people,
     origin: options.nodeId ?? uuidv7(),
   });
-  const tree = new TreeService({ database, authorization, documents, people });
+  const versions = new VersionService({ database, audit, documents, people, settings });
+  const trash = new TrashService({ database, audit, settings, people });
+  const archive = new ArchiveService({ database, audit, authorization });
+  const tree = new TreeService({ database, authorization, documents, people, versions, settings });
+  const templates = new TemplateService({ database, audit, settings, people, tree, documents });
   setupRegistry.register(
     ...builtinSetupSteps({
       database,
@@ -449,6 +467,10 @@ export function createAccountServices(options: {
     personalSpaces,
     tree,
     documents,
+    versions,
+    trash,
+    archive,
+    templates,
   };
 }
 
@@ -534,7 +556,20 @@ export async function workAccountJobs(
     const removed = await applyAuditRetention({ audit: services.audit, settings });
     if (removed > 0) job.logger.info({ removed }, "Old audit events removed");
   });
+  await jobs.work(trashRetentionJob, async (job) => {
+    const result = await services.trash.applyRetention({ signal: job.signal });
+    const drafts = await services.versions.removeExpiredDrafts();
+    if (result.moved + result.purged + drafts > 0) {
+      job.logger.info({ ...result, drafts }, "Trash retention applied");
+    }
+  });
+  await jobs.work(liveVersionsJob, async (job) => {
+    const created = await services.versions.versionIdlePages();
+    if (created > 0) job.logger.info({ created }, "Versions of live pages created");
+  });
   await jobs.schedule(dispatchPendingMailJob, DISPATCH_PENDING_MAIL_SCHEDULE, {}, { key: "minutely" });
+  await jobs.schedule(trashRetentionJob, TRASH_RETENTION_SCHEDULE, {}, { key: "hourly" });
+  await jobs.schedule(liveVersionsJob, LIVE_VERSIONS_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(authCleanupJob, AUTH_CLEANUP_SCHEDULE, {}, { key: "regular" });
   await jobs.schedule(auditRetentionJob, AUDIT_RETENTION_SCHEDULE, {}, { key: "daily" });
   await jobs.schedule(notificationRetentionJob, NOTIFICATION_RETENTION_SCHEDULE, {}, { key: "daily" });

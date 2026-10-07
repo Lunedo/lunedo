@@ -266,19 +266,22 @@ data: ${JSON.stringify(signal)}
         .then(async () => {
           pendingSpaces.delete(data);
           if (closed) return;
-          const cached = spaceDecisions.get(signal.spaceId);
+          if (signal.kind === "access") spaceDecisions.delete(`space.edit:${signal.spaceId}`);
+          const action = signal.kind === "draft" ? "space.edit" : "space.view";
+          const cacheKey = `${action}:${signal.spaceId}`;
+          const cached = spaceDecisions.get(cacheKey);
           let allowed =
             cached && signal.kind !== "access" && Date.now() - cached.at < SPACE_DECISION_MS
               ? cached.allowed
               : null;
           if (allowed === null) {
             allowed = (
-              await services.authorization.explain(accountPrincipal(session.accountId), "space.view", {
+              await services.authorization.explain(accountPrincipal(session.accountId), action, {
                 type: "space",
                 id: signal.spaceId,
               })
             ).allowed;
-            spaceDecisions.set(signal.spaceId, { allowed, at: Date.now() });
+            spaceDecisions.set(cacheKey, { allowed, at: Date.now() });
           }
           if (allowed && !closed) raw.write(`event: spaces\ndata: ${data}\n\n`);
         })

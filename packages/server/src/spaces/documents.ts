@@ -18,7 +18,9 @@ import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import { actorIdOf, SpaceError } from "./common.js";
 import type { PeopleService } from "./people.js";
+import type { PageMode } from "./schema.js";
 import { signalDocumentChange, signalSpaceChange } from "./signals.js";
+import { notTrashed, visibleItem } from "./visibility.js";
 
 export const LABEL_MAX_LENGTH = 100;
 export const MAX_LABELS_PER_PAGE = 100;
@@ -42,9 +44,23 @@ export interface PageSnapshot {
   updatedBy: string | null;
 }
 
+export interface ReadablePage {
+  itemId: string;
+  title: string;
+  document: DocumentJson;
+  schemaVersion: number;
+  revision: number;
+  updatedAt: Date;
+  updatedBy: string | null;
+  version: number | null;
+}
+
 export interface PageReferences {
   people: Record<string, string>;
-  pages: Record<string, { title: string; spaceKey: string; kind: string; accessible: boolean }>;
+  pages: Record<
+    string,
+    { title: string; spaceKey: string; kind: string; accessible: boolean; inTrash: boolean }
+  >;
 }
 
 export interface Backlink {
@@ -63,8 +79,14 @@ export async function insertInitialDocument(
   tx: Transaction,
   itemId: string,
   actorId: string | null,
+  content?: unknown,
 ): Promise<void> {
-  const document = emptyDocument();
+  let document: DocumentJson = emptyDocument();
+  if (content !== undefined) {
+    const validation = validateDocument(content);
+    if (!validation.ok) throw new DocumentInvalidError(validation.problems);
+    document = validation.document;
+  }
   const state = encodeState(yDocFromDocument(document));
   await tx.execute(sql`
     insert into page_documents (item_id, state, snapshot, schema_version, updated_by)
@@ -92,14 +114,38 @@ export function renderPageMarkdown(document: DocumentJson, references: PageRefer
       const name = references.people[id];
       return name ? { name } : null;
     },
-    pageLink: (link) => {
+      pageLink: (link) => {
       if (!link.pageId) return null;
       const page = references.pages[link.pageId];
+      if (page?.inTrash) return { href: "", title: page.title, accessible: false, inTrash: true };
       return page?.accessible
         ? { href: pagePath(page.spaceKey, link.pageId, page.title), title: page.title, accessible: true }
         : { href: "", title: "", accessible: false };
     },
   });
+}
+
+export function migrated(document: unknown, schemaVersion: number): DocumentJson {
+  return schemaVersion < editorSchemaVersion
+    ? migrateDocument(document as DocumentJson, schemaVersion)
+    : (document as DocumentJson);
+}
+
+export async function recomputeLinks(tx: Transaction, itemId: string, document: DocumentJson): Promise<void> {
+  const targets = [
+    ...new Set(
+      extractPageLinks(document)
+        .map((link) => link.pageId)
+        .filter((id): id is string => id !== null && id !== itemId),
+    ),
+  ];
+  await tx.execute(sql`delete from page_links where source_item_id = ${itemId}`);
+  if (targets.length > 0) {
+    await tx.execute(sql`
+      insert into page_links (source_item_id, target_item_id)
+      select ${itemId}, id from tree_items where id = any(${sql.param(targets)}::uuid[])
+      on conflict do nothing`);
+  }
 }
 
 export function normalizeLabel(label: string): string {
@@ -153,17 +199,64 @@ export class PageDocumentService {
       where d.item_id = ${itemId} and t.kind = 'page'`);
     const row = result.rows[0];
     if (!row) return null;
-    const document =
-      row.schema_version < editorSchemaVersion
-        ? migrateDocument(row.snapshot as DocumentJson, row.schema_version)
-        : (row.snapshot as DocumentJson);
     return {
       itemId,
-      document,
+      document: migrated(row.snapshot, row.schema_version),
       schemaVersion: editorSchemaVersion,
       revision: Number(row.revision),
       updatedAt: new Date(row.updated_at),
       updatedBy: row.updated_by,
+    };
+  }
+
+  async readable(itemId: string): Promise<ReadablePage | null> {
+    const result = await this.#database.execute<{
+      mode: PageMode;
+      title: string;
+      snapshot: unknown;
+      schema_version: number;
+      revision: number;
+      updated_at: Date | string;
+      updated_by: string | null;
+      version_number: number | null;
+      version_title: string | null;
+      version_document: unknown;
+      version_schema: number | null;
+      version_revision: number | null;
+      version_at: Date | string | null;
+      version_by: string | null;
+    }>(sql`
+      select t.mode, t.title, d.snapshot, d.schema_version, d.revision, d.updated_at, d.updated_by,
+        v.number as version_number, v.title as version_title, v.document as version_document,
+        v.schema_version as version_schema, v.revision as version_revision, v.created_at as version_at,
+        v.created_by as version_by
+      from tree_items t join page_documents d on d.item_id = t.id
+      left join page_versions v on v.id = t.published_version_id
+      where t.id = ${itemId} and t.kind = 'page'`);
+    const row = result.rows[0];
+    if (!row) return null;
+    if (row.mode === "publish") {
+      if (row.version_number === null || row.version_schema === null || row.version_at === null) return null;
+      return {
+        itemId,
+        title: row.version_title ?? row.title,
+        document: migrated(row.version_document, row.version_schema),
+        schemaVersion: editorSchemaVersion,
+        revision: Number(row.version_revision),
+        updatedAt: new Date(row.version_at),
+        updatedBy: row.version_by,
+        version: row.version_number,
+      };
+    }
+    return {
+      itemId,
+      title: row.title,
+      document: migrated(row.snapshot, row.schema_version),
+      schemaVersion: editorSchemaVersion,
+      revision: Number(row.revision),
+      updatedAt: new Date(row.updated_at),
+      updatedBy: row.updated_by,
+      version: row.version_number,
     };
   }
 
@@ -179,10 +272,15 @@ export class PageDocumentService {
     return this.#database.transaction((tx) => this.#store(tx, itemId, doc, options.actorId));
   }
 
+  async storeLocked(tx: Transaction, itemId: string, doc: Y.Doc, actorId: string | null): Promise<number> {
+    return this.#store(tx, itemId, doc, actorId);
+  }
+
   async #store(tx: Transaction, itemId: string, doc: Y.Doc, actorId: string | null): Promise<number> {
-    const locked = await tx.execute<{ state: Buffer; space_id: string }>(sql`
-      select d.state, t.space_id from page_documents d join tree_items t on t.id = d.item_id
-      where d.item_id = ${itemId} for update of d`);
+    await tx.execute(sql`select item_id from page_documents where item_id = ${itemId} for update`);
+    const locked = await tx.execute<{ state: Buffer; space_id: string; mode: PageMode }>(sql`
+      select d.state, t.space_id, t.mode from page_documents d join tree_items t on t.id = d.item_id
+      where d.item_id = ${itemId}`);
     const row = locked.rows[0];
     if (!row) throw new SpaceError("itemNotFound", "The page does not exist");
     Y.applyUpdate(doc, new Uint8Array(row.state), MERGE_ORIGIN);
@@ -191,26 +289,17 @@ export class PageDocumentService {
     const document = validation.document;
     const revision = await tx.execute<{ revision: number }>(sql`
       update page_documents set state = ${encodeState(doc)}, snapshot = ${JSON.stringify(document)}::jsonb,
-        schema_version = ${editorSchemaVersion}, revision = revision + 1, updated_by = ${actorId}, updated_at = now()
+        schema_version = ${editorSchemaVersion}, revision = revision + 1, updated_by = ${actorId}, updated_at = now(),
+        changed_at = now()
       where item_id = ${itemId}
       returning revision`);
-    await tx.execute(sql`update tree_items set content_updated_at = now() where id = ${itemId}`);
-    const targets = [
-      ...new Set(
-        extractPageLinks(document)
-          .map((link) => link.pageId)
-          .filter((id): id is string => id !== null && id !== itemId),
-      ),
-    ];
-    await tx.execute(sql`delete from page_links where source_item_id = ${itemId}`);
-    if (targets.length > 0) {
-      await tx.execute(sql`
-        insert into page_links (source_item_id, target_item_id)
-        select ${itemId}, id from tree_items where id = any(${sql.param(targets)}::uuid[])
-        on conflict do nothing`);
+    const live = row.mode === "live";
+    if (live) {
+      await tx.execute(sql`update tree_items set content_updated_at = now() where id = ${itemId}`);
+      await recomputeLinks(tx, itemId, document);
     }
     const stored = Number(revision.rows[0]?.revision ?? 0);
-    await signalSpaceChange(tx, { spaceId: row.space_id, kind: "page", itemId });
+    await signalSpaceChange(tx, { spaceId: row.space_id, kind: live ? "page" : "draft", itemId });
     await signalDocumentChange(tx, { itemId, revision: stored, origin: this.#origin });
     return stored;
   }
@@ -292,8 +381,13 @@ export class PageDocumentService {
               kind: string;
               key: string;
               accessible: boolean;
+              in_trash: boolean;
             }>(sql`
-              select t.id, t.title, t.kind::text as kind, s.key, ${this.#authorization.spaceFilter(viewer, sql`s`)} as accessible
+              select t.id, t.title, t.kind::text as kind, s.key,
+                ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)} as accessible,
+                (t.trash_entry_id is not null and ${this.#authorization.spaceFilter(viewer, sql`s`)}
+                  and (t.kind <> 'page' or t.mode = 'live' or t.published_version_id is not null
+                    or ${this.#authorization.spaceFilter(viewer, sql`s`, "editor")})) as in_trash
               from tree_items t join spaces s on s.id = t.space_id
               where t.id = any(${sql.param(pageIds)}::uuid[])`)
           ).rows;
@@ -301,12 +395,15 @@ export class PageDocumentService {
       people: Object.fromEntries(people.map((person) => [person.id, person.name])),
       pages: Object.fromEntries(
         pageIds.map((id) => {
-          const page = pages.find((candidate) => candidate.id === id && candidate.accessible);
+          const page = pages.find((candidate) => candidate.id === id);
+          if (page?.in_trash) {
+            return [id, { title: page.title, spaceKey: "", kind: page.kind, accessible: false, inTrash: true }];
+          }
           return [
             id,
-            page
-              ? { title: page.title, spaceKey: page.key, kind: page.kind, accessible: true }
-              : { title: "", spaceKey: "", kind: "page", accessible: false },
+            page?.accessible
+              ? { title: page.title, spaceKey: page.key, kind: page.kind, accessible: true, inTrash: false }
+              : { title: "", spaceKey: "", kind: "page", accessible: false, inTrash: false },
           ];
         }),
       ),
@@ -323,7 +420,7 @@ export class PageDocumentService {
     }>(sql`
       select t.id, t.title, t.space_id, s.key, s.name
       from page_links l join tree_items t on t.id = l.source_item_id join spaces s on s.id = t.space_id
-      where l.target_item_id = ${itemId} and ${this.#authorization.spaceFilter(viewer, sql`s`)}
+      where l.target_item_id = ${itemId} and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
       order by lower(t.title), t.id
       limit 500`);
     return result.rows.map((row) => ({
@@ -387,7 +484,7 @@ export class PageDocumentService {
       join tree_items t on t.id = l.item_id
       join spaces s on s.id = t.space_id
       where s.organization_id is not distinct from (select organization_id from spaces where id = ${spaceId})
-        and ${this.#authorization.spaceFilter(viewer, sql`s`)}
+        and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
         ${term ? sql`and l.label like ${pattern}` : sql``}
       group by l.label
       order by count(*) desc, l.label
@@ -396,6 +493,7 @@ export class PageDocumentService {
   }
 
   async pagesWithLabel(
+    viewer: Principal,
     spaceId: string,
     label: string,
   ): Promise<{ itemId: string; title: string; contentUpdatedAt: Date }[]> {
@@ -405,7 +503,9 @@ export class PageDocumentService {
       content_updated_at: Date | string;
     }>(sql`
       select t.id, t.title, t.content_updated_at from page_labels l join tree_items t on t.id = l.item_id
+      join spaces s on s.id = t.space_id
       where t.space_id = ${spaceId} and l.label = ${label.trim().toLowerCase()}
+        and t.archived_root_id is null and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
       order by lower(t.title), t.id limit 1000`);
     return result.rows.map((row) => ({
       itemId: row.id,

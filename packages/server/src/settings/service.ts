@@ -84,6 +84,17 @@ export class SettingLockedError extends SettingError {
   }
 }
 
+export class SettingBelowMinimumError extends SettingError {
+  override name = "SettingBelowMinimumError";
+
+  constructor(
+    key: string,
+    readonly minimum: number,
+  ) {
+    super(`Setting ${key} cannot be lower than the minimum of ${minimum} set for the instance`);
+  }
+}
+
 export interface SettingChange {
   key: string;
   scope: Scope;
@@ -212,6 +223,7 @@ export class SettingsService {
   ): Promise<SettingExplanation<T>> {
     const scopes = scopesOf(chain);
     const rows = await this.#rows(scopes, options.executor);
+    const floor = definition.minimum ? await this.get(definition.minimum, chain, options) : null;
     let value = definition.default;
     let source: Scope | "default" = "default";
     let lockedBy: Scope | null = null;
@@ -229,8 +241,8 @@ export class SettingsService {
       }
       const weaker =
         stored !== undefined &&
-        scope.level !== definition.levels[0] &&
-        !isAtLeastAsStrict(definition, stored, value);
+        ((scope.level !== definition.levels[0] && !isAtLeastAsStrict(definition, stored, value)) ||
+          (floor !== null && Number(stored) < floor));
       const effective = applies && lockedBy === null && !weaker;
       if (effective && stored !== undefined) {
         value = stored;
@@ -240,6 +252,7 @@ export class SettingsService {
       if (effective && locked) lockedBy = scope;
       levels.push({ scope, applies, value: stored, locked, effective });
     }
+    if (floor !== null && Number(value) < floor) value = floor as T;
     return { key: definition.key, value, source, lockedBy, levels };
   }
 
@@ -334,6 +347,12 @@ export class SettingsService {
         throw new SettingError(
           `Setting ${definition.key} can only be made stricter than the inherited value at the ${level} level`,
         );
+      }
+    }
+    if (definition.minimum) {
+      const floor = await this.get(definition.minimum, chain);
+      if (Number(parsed.data) < floor) {
+        throw new SettingBelowMinimumError(definition.key, floor);
       }
     }
     await this.#write(target, definition.key, { value: parsed.data }, "set", options);

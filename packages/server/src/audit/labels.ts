@@ -22,6 +22,8 @@ const TARGET_NAMES: Partial<Record<AuditTargetType, (id: string) => SQL>> = {
   invitation: (id) => sql`select email as name from invitations where id = ${id}`,
   identityProvider: (id) => sql`select name from identity_providers where id = ${id}`,
   space: (id) => sql`select name from spaces where id = ${id}`,
+  page: (id) => sql`select title as name from tree_items where id = ${id}`,
+  template: (id) => sql`select name from page_templates where id = ${id}`,
 };
 
 function referencedIds(fields: unknown): string[] {

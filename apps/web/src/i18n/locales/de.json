@@ -2922,10 +2922,33 @@
         "permissionChanged": "Space-Berechtigung geändert",
         "permissionRemoved": "Space-Berechtigung entfernt",
         "administratorAppointed": "Space-Admin ernannt",
-        "personalTransferred": "Persönlicher Space übertragen"
+        "personalTransferred": "Persönlicher Space übertragen",
+        "deleted": "Bereich gelöscht",
+        "restored": "Bereich wiederhergestellt",
+        "archived": "Bereich archiviert",
+        "unarchived": "Bereich aus dem Archiv geholt"
       },
       "page": {
-        "updateRejected": "Seitenänderung abgelehnt"
+        "updateRejected": "Seitenänderung abgelehnt",
+        "published": "Seite veröffentlicht",
+        "draftDiscarded": "Entwurf verworfen",
+        "versionRestored": "Version wiederhergestellt",
+        "modeChanged": "Bearbeitungsmodus geändert",
+        "archived": "Seite archiviert",
+        "unarchived": "Seite aus dem Archiv geholt"
+      },
+      "trash": {
+        "itemsDeleted": "In den Papierkorb verschoben",
+        "itemsRestored": "Aus dem Papierkorb wiederhergestellt",
+        "movedToStageTwo": "In die zweite Stufe des Papierkorbs verschoben",
+        "deletedPermanently": "Endgültig gelöscht",
+        "deletedImmediately": "Sofort endgültig gelöscht",
+        "emptied": "Papierkorb geleert"
+      },
+      "template": {
+        "created": "Vorlage erstellt",
+        "updated": "Vorlage geändert",
+        "deleted": "Vorlage gelöscht"
       }
     },
     "action": "Aktion",
@@ -2966,7 +2989,9 @@
       "identityProvider": "Identitätsanbieter",
       "mappingRule": "Gruppenzuordnung",
       "space": "Space",
-      "page": "Seite"
+      "page": "Seite",
+      "trashEntry": "Papierkorbeintrag",
+      "template": "Vorlage"
     },
     "properties": {
       "value": "Wert",
@@ -3047,7 +3072,19 @@
       "sender": "Absender",
       "senderName": "Absendername",
       "url": "Adresse",
-      "previousUrl": "Vorherige Adresse"
+      "previousUrl": "Vorherige Adresse",
+      "title": "Titel",
+      "version": "Version",
+      "newVersion": "Neue Version",
+      "note": "Notiz",
+      "mode": "Modus",
+      "previousMode": "Vorheriger Modus",
+      "itemKind": "Art des Eintrags",
+      "descendants": "Untergeordnete Einträge",
+      "stage": "Stufe im Papierkorb",
+      "cause": "Anlass",
+      "entries": "Einträge",
+      "level": "Ebene"
     },
     "values": {
       "account": "Konto",
@@ -3085,7 +3122,13 @@
       "smtp": "SMTP",
       "graph": "Microsoft Graph",
       "clientSecret": "Client-Secret",
-      "certificate": "Zertifikat"
+      "certificate": "Zertifikat",
+      "publish": "Veröffentlichen",
+      "live": "Live",
+      "expired": "Frist abgelaufen",
+      "emptied": "Papierkorb geleert",
+      "items": "Seiten",
+      "space": "Bereich"
     },
     "formerUser": "Ehemalige Person {id}"
   },
@@ -3416,7 +3459,8 @@
       "loading": "Seite wird geladen …",
       "missingHint": "Diese Seite gibt es noch nicht. Das Öffnen des Links legt sie an.",
       "followFailed": "Die Seite konnte nicht geöffnet werden",
-      "followFailedDescription": "Vielleicht wurde sie verschoben, oder du darfst in diesem Space keine Seiten anlegen. Versuche es erneut oder frage einen Space-Admin."
+      "followFailedDescription": "Vielleicht wurde sie verschoben, oder du darfst in diesem Space keine Seiten anlegen. Versuche es erneut oder frage einen Space-Admin.",
+      "inTrash": "Im Papierkorb"
     },
     "status": {
       "edit": "Status {text}, ändern",
@@ -3658,6 +3702,12 @@
         "title": "Bearbeitung beendet",
         "description": "Die Verbindung zum Server wurde geschlossen. Lade neu, um weiter zu bearbeiten."
       }
+    },
+    "placeholderNode": {
+      "hint": "Hinweis aus der Vorlage. Tippe hier, um ihn zu ersetzen."
+    },
+    "templateField": {
+      "hint": "Eingabefeld {field}: wird beim Anlegen einer Seite aus der Vorlage ausgefüllt."
     }
   },
   "spaces": {

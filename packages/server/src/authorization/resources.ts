@@ -7,6 +7,7 @@ import {
 import type { SettingsService } from "../settings/service.js";
 import { membersCreateSpacesSetting, personalSpacesSetting } from "../spaces/settings.js";
 import { grantsLevel } from "./areas.js";
+import type { Executor } from "../database/database.js";
 import type { ActionDefinition, ResourceType, RuleContext } from "./registry.js";
 
 const ALL_MEMBERSHIPS = ["member", "collaborator", "guest"] as const;
@@ -54,6 +55,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "instance.personalSpaces.view": instanceArea("accounts", "view"),
       "instance.personalSpaces.manage": instanceArea("accounts", "manage"),
       "instance.personalSpace.use": { scope: "instance", rule: "personalSpace" },
+      "instance.templates.manage": instanceArea("settings", "manage"),
       "instance.content.view": {
         scope: "instance",
         rule: "activeAccount",
@@ -104,6 +106,8 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "organization.spaces.view": organizationArea("spaces", "view"),
       "organization.spaces.manage": organizationArea("spaces", "manage"),
       "organization.spaces.create": { ...organizationArea("spaces", "manage"), rule: "membersCreateSpaces" },
+      "organization.trash.manage": organizationArea("spaces", "manage"),
+      "organization.templates.manage": organizationArea("settings", "manage"),
       "organization.signIn.view": organizationArea("signInAndSecurity", "view"),
       "organization.signIn.manage": organizationArea("signInAndSecurity", "manage"),
       "organization.integrations.view": organizationArea("integrationsAndApi", "view"),
@@ -214,9 +218,22 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     type: "space",
     spaceOf: async (_executor, id) => id,
     actions: {
-      "space.view": { scope: "space", spaceRole: "reader" },
-      "space.edit": { scope: "space", spaceRole: "editor" },
-      "space.manage": { scope: "space", spaceRole: "admin" },
+      "space.view": { scope: "space", spaceRole: "reader", restriction: "present" },
+      "space.edit": { scope: "space", spaceRole: "editor", restriction: "writable" },
+      "space.manage": { scope: "space", spaceRole: "admin", restriction: "present" },
+      "space.trash": { scope: "space", spaceRole: "editor", restriction: "present" },
+      "space.delete": { scope: "space", spaceRole: "admin", restriction: "present" },
+    },
+    restrictions: {
+      present: async (executor, id) => {
+        const state = await spaceState(executor, id);
+        return state?.deleted ? { denial: "inTrash" } : null;
+      },
+      writable: async (executor, id) => {
+        const state = await spaceState(executor, id);
+        if (state?.deleted) return { denial: "inTrash" };
+        return state?.archived ? { denial: "archived" } : null;
+      },
     },
   };
 
@@ -229,10 +246,64 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       return result.rows[0]?.space_id ?? null;
     },
     actions: {
-      "item.view": { scope: "space", spaceRole: "reader" },
-      "item.edit": { scope: "space", spaceRole: "editor" },
+      "item.view": { scope: "space", spaceRole: "reader", restriction: "readable" },
+      "item.edit": { scope: "space", spaceRole: "editor", restriction: "writable" },
+      "item.delete": { scope: "space", spaceRole: "editor", restriction: "present" },
+      "item.archive": { scope: "space", spaceRole: "editor", restriction: "present" },
+    },
+    restrictions: {
+      readable: async (executor, id) => {
+        const state = await itemState(executor, id);
+        if (!state || state.trashed) return { denial: "inTrash" };
+        return state.unpublished ? { denial: "unpublished", unless: "editor" } : null;
+      },
+      writable: async (executor, id) => {
+        const state = await itemState(executor, id);
+        if (!state || state.trashed) return { denial: "inTrash" };
+        return state.archived ? { denial: "archived" } : null;
+      },
+      present: async (executor, id) => {
+        const state = await itemState(executor, id);
+        if (!state || state.trashed) return { denial: "inTrash" };
+        return state.spaceArchived ? { denial: "archived" } : null;
+      },
     },
   };
 
   return [instance, organization, group, account, serviceAccount, space, item];
+}
+
+async function spaceState(
+  executor: Executor,
+  id: string,
+): Promise<{ deleted: boolean; archived: boolean } | null> {
+  const result = await executor.execute<{ deleted: boolean; archived: boolean }>(sql`
+    select deleted_at is not null as deleted, archived_at is not null as archived from spaces where id = ${id}`);
+  return result.rows[0] ?? null;
+}
+
+async function itemState(
+  executor: Executor,
+  id: string,
+): Promise<{ trashed: boolean; archived: boolean; spaceArchived: boolean; unpublished: boolean } | null> {
+  const result = await executor.execute<{
+    trashed: boolean;
+    archived: boolean;
+    space_archived: boolean;
+    unpublished: boolean;
+  }>(sql`
+    select (t.trash_entry_id is not null or s.deleted_at is not null) as trashed,
+      (t.archived_root_id is not null or s.archived_at is not null) as archived,
+      s.archived_at is not null as space_archived,
+      (t.kind = 'page' and t.mode = 'publish' and t.published_version_id is null) as unpublished
+    from tree_items t join spaces s on s.id = t.space_id where t.id = ${id}`);
+  const row = result.rows[0];
+  return row
+    ? {
+        trashed: row.trashed,
+        archived: row.archived,
+        spaceArchived: row.space_archived,
+        unpublished: row.unpublished,
+      }
+    : null;
 }

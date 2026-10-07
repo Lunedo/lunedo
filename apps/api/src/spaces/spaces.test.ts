@@ -78,7 +78,7 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
     title: string,
     parentId: string | null = null,
   ) {
-    const response = await client.post(`/api/v1/spaces/${spaceId}/items`, { kind: "page", title, parentId });
+    const response = await client.post(`/api/v1/spaces/${spaceId}/items`, { kind: "page", title, parentId, mode: "live" });
     expect(response.statusCode, response.body).toBe(201);
     return response.json() as { id: string; position: string };
   }

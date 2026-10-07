@@ -172,6 +172,7 @@ const EXPECTED: Record<string, Expectation> = {
   "instance.personalSpaces.view": instance("accounts", "view"),
   "instance.personalSpaces.manage": instance("accounts", "manage"),
   "instance.personalSpace.use": { scope: "instance", rule: "personalSpace" },
+  "instance.templates.manage": instance("settings", "manage"),
   "instance.content.view": { scope: "instance", rule: "activeAccount" },
   "organization.view": { scope: "organization", membership: ALL_MEMBERSHIPS, breakGlass: true },
   "organization.leave": { scope: "organization", membership: ALL_MEMBERSHIPS },
@@ -187,6 +188,8 @@ const EXPECTED: Record<string, Expectation> = {
   "organization.spaces.view": organization("spaces", "view"),
   "organization.spaces.manage": organization("spaces", "manage"),
   "organization.spaces.create": organization("spaces", "manage", "membersCreateSpaces"),
+  "organization.trash.manage": organization("spaces", "manage"),
+  "organization.templates.manage": organization("settings", "manage"),
   "organization.signIn.view": organization("signInAndSecurity", "view"),
   "organization.signIn.manage": organization("signInAndSecurity", "manage"),
   "organization.integrations.view": organization("integrationsAndApi", "view"),
@@ -208,8 +211,12 @@ const EXPECTED: Record<string, Expectation> = {
   "space.view": { scope: "space" },
   "space.edit": { scope: "space" },
   "space.manage": { scope: "space" },
+  "space.trash": { scope: "space" },
+  "space.delete": { scope: "space" },
   "item.view": { scope: "space" },
   "item.edit": { scope: "space" },
+  "item.delete": { scope: "space" },
+  "item.archive": { scope: "space" },
 };
 
 function expectedAllowed(held: Held, actionName: string): boolean {
