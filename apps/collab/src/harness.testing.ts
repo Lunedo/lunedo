@@ -35,6 +35,8 @@ export interface Cluster {
   close(): Promise<void>;
 }
 
+const CLOSE_WAIT_MS = 5000;
+
 export async function createCluster(baseUrl: string, runtimes = 2): Promise<Cluster> {
   const database = await createTemporaryDatabase(baseUrl, "pagehall_collab_test");
   const dataDir = mkdtempSync(path.join(tmpdir(), "pagehall-collab-"));
@@ -79,7 +81,11 @@ export async function createCluster(baseUrl: string, runtimes = 2): Promise<Clus
       return node;
     },
     async close() {
-      for (const node of nodes) await node.server.destroy();
+      await Promise.all(
+        nodes.map((node) =>
+          Promise.race([node.server.destroy(), new Promise((resolve) => setTimeout(resolve, CLOSE_WAIT_MS))]),
+        ),
+      );
       for (const runtime of started) await runtime.close();
       await database.drop();
       rmSync(dataDir, { recursive: true, force: true });
