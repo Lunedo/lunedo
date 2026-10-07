@@ -32,7 +32,7 @@ export function PageHeader({
   const labels = useUiLabels();
   return (
     <header className="flex flex-wrap items-end gap-4">
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
+      <div className="flex min-w-0 flex-1 basis-field flex-col gap-2">
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav aria-label={labels.breadcrumbs}>
             <ol className="flex flex-wrap items-center gap-1 text-sm text-text-muted">

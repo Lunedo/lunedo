@@ -85,6 +85,15 @@ const fields: SettingField[] = [
   { key: "organizations.expiryReminderDays", type: days(1, 90, [7, 14, 30]) },
   { key: "organizations.breakGlassMinutes", type: minutes(5, DAY, [30, HOUR, 4 * HOUR]) },
   { key: "audit.retentionDays", type: days(1, 36_500, [90, 365, 3650]) },
+  {
+    key: "pages.defaultMode",
+    type: { kind: "enum", values: ["publish", "live"], labelPrefix: "settings.values.pageMode" },
+  },
+  { key: "pages.liveVersionIdleMinutes", type: minutes(1, DAY, [5, 10, 30]) },
+  { key: "trash.firstStageDays", type: days(1, 3650, [30, 90, 180]) },
+  { key: "trash.secondStageDays", type: days(1, 3650, [30, 45, 90]) },
+  { key: "trash.firstStageMinimumDays", type: days(1, 3650, [1, 30, 90]) },
+  { key: "trash.secondStageMinimumDays", type: days(1, 3650, [1, 30, 45]) },
   { key: "notifications.retentionDays", type: days(1, 3650, [30, 90, 365]) },
   {
     key: "appearance.colorMode",

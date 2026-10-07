@@ -8,7 +8,6 @@ import {
   Notice,
   SegmentedControl,
   Textarea,
-  useToast,
 } from "@pagehall/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -21,28 +20,6 @@ import { itemHref } from "../item-paths.js";
 import type { SpaceWithRole } from "../space-queries.js";
 
 export type CreateKind = "page" | "folder" | "link";
-
-export function useCreatePage(space: SpaceWithRole) {
-  const { t } = useTranslation();
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  return async (parentId: string | null) => {
-    try {
-      const created = await request(() =>
-        api.POST("/api/v1/spaces/{spaceId}/items", {
-          params: { path: { spaceId: space.id } },
-          body: { kind: "page", title: t("tree.untitledPage"), parentId },
-        }),
-      );
-      await queryClient.invalidateQueries({ queryKey: ["spaces", space.id, "children"] });
-      const href = itemHref(created, space.key);
-      if (href) await navigate({ to: href, search: { edit: true } });
-    } catch (error) {
-      toast({ title: t("tree.createFailed"), description: problemMessage(t, error), variant: "error" });
-    }
-  };
-}
 
 export function CreateItemDialog({
   space,

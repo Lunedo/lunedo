@@ -34,11 +34,13 @@ export function PageLinkView({ node, selected }: NodeViewProps) {
   const accessible = missing || reference?.accessible !== false;
   const title = missing
     ? String(node.attrs.title ?? "")
-    : reference?.accessible
-      ? reference.title
-      : reference
-        ? t("editor.pageLink.noAccess")
-        : String(node.attrs.title ?? t("editor.pageLink.loading"));
+    : reference?.inTrash
+      ? `${reference.title} (${t("editor.pageLink.inTrash")})`
+      : reference?.accessible
+        ? reference.title
+        : reference
+          ? t("editor.pageLink.noAccess")
+          : String(node.attrs.title ?? t("editor.pageLink.loading"));
   const follow = async () => {
     if (!accessible) return;
     if (pageId && reference) {

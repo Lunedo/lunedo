@@ -8,7 +8,13 @@ const content = {
   type: "doc",
   content: [
     { type: "paragraph", content: [{ type: "placeholder", attrs: { text: "Describe the goal" } }] },
-    { type: "paragraph", content: [{ type: "text", text: "Keep " }, { type: "placeholder", attrs: { text: "Other" } }] },
+    {
+      type: "paragraph",
+      content: [
+        { type: "text", text: "Keep " },
+        { type: "placeholder", attrs: { text: "Other" } },
+      ],
+    },
   ],
 };
 
@@ -21,7 +27,9 @@ describe("template placeholders", () => {
     editor = new Editor({ extensions: [...schemaExtensions(), ...extensions], content });
     const view = editor.view;
     view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, position)));
-    const handled = view.someProp("handleTextInput", (handler) => handler(view, position, position, text, () => view.state.tr));
+    const handled = view.someProp("handleTextInput", (handler) =>
+      handler(view, position, position, text, () => view.state.tr),
+    );
     if (!handled) view.dispatch(view.state.tr.insertText(text, position, position));
     return editor.getJSON();
   }

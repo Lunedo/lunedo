@@ -79,6 +79,14 @@ async function waitSaved(page: Page) {
 
 test("creates a space and arranges pages, folders and links", async ({ page }) => {
   await page.goto("/spaces");
+  await callApi(
+    page,
+    "PUT",
+    `/api/v1/organizations/${await organizationId(page)}/settings/pages.defaultMode`,
+    {
+      value: "live",
+    },
+  );
   await expect(page.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
   await expectAccessible(page, "spaces list");
   await page.getByRole("button", { name: "Create space" }).first().click();
@@ -107,6 +115,9 @@ test("creates a space and arranges pages, folders and links", async ({ page }) =
 
   await page.getByRole("button", { name: "Create in this space" }).click();
   await page.getByRole("menuitem", { name: "New page" }).click();
+  const gallery = page.getByRole("dialog", { name: "Create in Team Handbook" });
+  await expectAccessible(page, "template gallery");
+  await gallery.getByRole("button", { name: "Create blank page" }).click();
   const title = page.getByRole("textbox", { name: "Page title" });
   await expect(title).toBeFocused();
   await title.fill("VPN access");

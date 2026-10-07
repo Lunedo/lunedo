@@ -1,0 +1,418 @@
+import { diffDocuments } from "@pagehall/editor-schema";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { App, createQueryClient } from "../app.js";
+import { initI18n } from "../i18n/index.js";
+import { mockApi, type RecordedRequest } from "../testing/render.js";
+
+const OLIVIA = {
+  id: "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
+  email: "olivia@example.org",
+  name: "Olivia Owner",
+};
+const ORGANIZATION = {
+  id: "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f",
+  name: "Platform Team",
+  slug: "platform-team",
+  logoRef: null,
+  language: "en",
+  timeZone: "Europe/Vienna",
+  accentColor: "petrol",
+  createdAt: "2026-10-01T08:00:00.000Z",
+  membershipKind: "member",
+};
+const SPACE_ID = "01929b1e-0000-7000-8000-0000000000a1";
+const OVERVIEW = "01929b1e-0000-7000-8000-0000000000b0";
+const VPN = "01929b1e-0000-7000-8000-0000000000b2";
+const ENTRY = "01929b1e-0000-7000-8000-0000000000e1";
+const DRAFT_ID = "01929b1e-0000-7000-8000-0000000000f1";
+
+type Role = "reader" | "editor" | "admin";
+
+const space = (role: Role) => ({
+  id: SPACE_ID,
+  key: "ITOPS",
+  name: "IT Operations",
+  description: "",
+  visibility: "private",
+  organizationId: ORGANIZATION.id,
+  organizationName: ORGANIZATION.name,
+  personal: false,
+  ownerId: null,
+  ownerName: null,
+  overviewItemId: OVERVIEW,
+  archived: false,
+  createdAt: "2026-10-05T08:00:00.000Z",
+  updatedAt: "2026-10-05T08:00:00.000Z",
+  role,
+});
+
+const page = (id: string, title: string, extra: Record<string, unknown> = {}) => ({
+  id,
+  spaceId: SPACE_ID,
+  parentId: null,
+  kind: "page",
+  title,
+  description: "",
+  width: "fixed",
+  mode: "publish",
+  published: true,
+  archived: false,
+  position: "a0",
+  hasChildren: false,
+  link: null,
+  creatorId: OLIVIA.id,
+  ownerId: OLIVIA.id,
+  createdAt: "2026-10-05T08:00:00.000Z",
+  updatedAt: "2026-10-05T08:00:00.000Z",
+  contentUpdatedAt: "2026-10-05T08:00:00.000Z",
+  ...extra,
+});
+
+function doc(...texts: string[]) {
+  return {
+    type: "doc" as const,
+    content: texts.map((text) => ({ type: "paragraph", content: [{ type: "text", text }] })),
+  };
+}
+
+beforeEach(() => {
+  vi.stubGlobal("matchMedia", () => ({
+    matches: false,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }));
+  vi.stubGlobal(
+    "EventSource",
+    class {
+      addEventListener() {}
+      removeEventListener() {}
+      close() {}
+    },
+  );
+});
+
+afterEach(() => {
+  window.history.replaceState(null, "", "/");
+});
+
+function routes(
+  role: Role,
+  extra: Record<string, (request: RecordedRequest) => { status?: number; body?: unknown }> = {},
+) {
+  return {
+    "GET /api/v1/instance/info": () => ({
+      body: {
+        name: "Example Wiki",
+        setupComplete: true,
+        language: "en",
+        accentColor: "petrol",
+        passwordMinLength: 12,
+        selfRegistration: false,
+        organization: null,
+      },
+    }),
+    "GET /api/v1/auth/session": () => ({
+      body: { sessionKind: "full", account: OLIVIA, methods: ["password"], recentlyAuthenticated: true },
+    }),
+    "GET /api/v1/organizations": () => ({ body: { items: [ORGANIZATION], nextCursor: null } }),
+    [`GET /api/v1/organizations/${ORGANIZATION.id}`]: () => ({ body: ORGANIZATION }),
+    "GET /api/v1/account/permissions": () => ({
+      body: {
+        instance: ["instance.content.view"],
+        organization: ["organization.view"],
+        grantableAreas: { instance: {}, organization: {} },
+      },
+    }),
+    "GET /api/v1/account/preferences": () => ({ body: [] }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/space-keys/ITOPS": () => ({ body: { space: space(role), redirected: false } }),
+    [`GET /api/v1/spaces/${SPACE_ID}/items`]: () => ({
+      body: { items: [page(OVERVIEW, "IT Operations"), page(VPN, "VPN access")], nextCursor: null },
+    }),
+    [`GET /api/v1/spaces/${SPACE_ID}/archive`]: () => ({ body: [] }),
+    [`GET /api/v1/items/${VPN}`]: () => ({
+      body: { ...page(VPN, "VPN access"), spaceKey: "ITOPS", spaceName: "IT Operations", ancestors: [] },
+    }),
+    [`GET /api/v1/items/${OVERVIEW}`]: () => ({
+      body: {
+        ...page(OVERVIEW, "IT Operations"),
+        spaceKey: "ITOPS",
+        spaceName: "IT Operations",
+        ancestors: [],
+      },
+    }),
+    [`GET /api/v1/pages/${VPN}/content`]: () => ({
+      body: {
+        itemId: VPN,
+        title: "VPN access",
+        version: 7,
+        document: doc("Published text"),
+        schemaVersion: 2,
+        revision: 4,
+        updatedAt: "2026-10-05T08:10:00.000Z",
+        updatedBy: OLIVIA.id,
+        references: { people: {}, pages: {} },
+      },
+    }),
+    [`GET /api/v1/pages/${OVERVIEW}/content`]: () => ({
+      body: {
+        itemId: OVERVIEW,
+        title: "IT Operations",
+        version: 1,
+        document: doc("Welcome"),
+        schemaVersion: 2,
+        revision: 1,
+        updatedAt: "2026-10-05T08:10:00.000Z",
+        updatedBy: OLIVIA.id,
+        references: { people: {}, pages: {} },
+      },
+    }),
+    [`GET /api/v1/pages/${VPN}/labels`]: () => ({ body: [] }),
+    [`GET /api/v1/pages/${VPN}/backlinks`]: () => ({ body: [] }),
+    [`GET /api/v1/pages/${OVERVIEW}/labels`]: () => ({ body: [] }),
+    [`GET /api/v1/pages/${OVERVIEW}/backlinks`]: () => ({ body: [] }),
+    [`GET /api/v1/pages/${VPN}/draft`]: () => ({
+      body: {
+        title: "VPN access",
+        document: doc("Draft text"),
+        revision: 9,
+        updatedAt: "2026-10-07T08:00:00.000Z",
+        hasChanges: true,
+        changes: 3,
+        basedOn: 7,
+        contributors: [{ id: OLIVIA.id, name: "Anna Berger" }],
+        references: { people: {}, pages: {} },
+      },
+    }),
+    ...extra,
+  };
+}
+
+async function renderAt(path: string) {
+  window.history.replaceState(null, "", path);
+  const i18n = await initI18n(["en"]);
+  render(<App i18n={i18n} queryClient={createQueryClient()} />);
+}
+
+describe("publish mode", () => {
+  it("shows readers the published version without any draft", async () => {
+    const { requests } = mockApi(routes("reader"));
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    expect(await screen.findByText("Published text")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+    expect(screen.queryByText(/unpublished change/)).toBeNull();
+    expect(requests.some((request) => request.path.includes("/draft"))).toBe(false);
+  });
+
+  it("tells editors about the draft and discards it with undo", async () => {
+    const { requests } = mockApi(
+      routes("editor", {
+        [`POST /api/v1/pages/${VPN}/draft/discard`]: () => ({ body: { discardedDraftId: DRAFT_ID } }),
+        [`POST /api/v1/pages/${VPN}/discarded-drafts/${DRAFT_ID}/restore`]: () => ({ status: 204 }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    expect(
+      await screen.findByText(
+        "Anna Berger worked on a draft with 3 unpublished changes. You see the published version.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Open draft" })).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Discard draft" }));
+    expect(await screen.findByText("Draft discarded")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: /Undo/ }));
+    await waitFor(() =>
+      expect(requests.some((request) => request.path.endsWith(`/discarded-drafts/${DRAFT_ID}/restore`))).toBe(
+        true,
+      ),
+    );
+  });
+
+  it("asks before an open draft becomes visible in live mode", async () => {
+    const { requests } = mockApi(
+      routes("editor", { [`PUT /api/v1/pages/${VPN}/mode`]: () => ({ status: 204 }) }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await screen.findByText(/unpublished changes/);
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Switch to live mode" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText("The draft with 3 unpublished changes becomes visible to readers at once."),
+    ).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Switch and show the draft" }));
+    await waitFor(() =>
+      expect(requests.find((request) => request.method === "PUT")?.body).toEqual({
+        mode: "live",
+        confirmDraft: true,
+      }),
+    );
+  });
+});
+
+describe("version history", () => {
+  it("compares versions inline and side by side and restores into the draft", async () => {
+    const diff = diffDocuments(
+      { title: "VPN access", document: doc("Install the client from the intranet.") },
+      { title: "VPN access", document: doc("Install the client from the company portal.") },
+    );
+    const { requests } = mockApi(
+      routes("editor", {
+        [`GET /api/v1/pages/${VPN}/versions`]: () => ({
+          body: [
+            {
+              number: 7,
+              title: "VPN access",
+              note: "Portal link",
+              reason: "published",
+              restoredFrom: null,
+              createdAt: "2026-10-03T14:20:00.000Z",
+              createdBy: { id: OLIVIA.id, name: "Anna Berger" },
+              contributors: [{ id: OLIVIA.id, name: "Anna Berger" }],
+            },
+            {
+              number: 6,
+              title: "VPN access",
+              note: "",
+              reason: "published",
+              restoredFrom: null,
+              createdAt: "2026-09-28T09:05:00.000Z",
+              createdBy: { id: OLIVIA.id, name: "Lukas Hofer" },
+              contributors: [{ id: OLIVIA.id, name: "Lukas Hofer" }],
+            },
+          ],
+        }),
+        [`GET /api/v1/pages/${VPN}/discarded-drafts`]: () => ({ body: [] }),
+        [`GET /api/v1/pages/${VPN}/compare`]: () => ({
+          body: { diff, before: doc("a"), after: doc("b"), references: { people: {}, pages: {} } },
+        }),
+        [`POST /api/v1/pages/${VPN}/versions/6/restore`]: () => ({
+          body: { mode: "publish", version: null },
+        }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/history?from=6&to=7`);
+    const changes = await screen.findByRole("region", { name: "Changes" });
+    expect(changes.querySelector("ins.ph-diff-added")?.textContent).toContain("company");
+    expect(changes.querySelector("del.ph-diff-removed")?.textContent).toContain("intranet");
+    await userEvent.click(screen.getByRole("radio", { name: "Side by side" }));
+    expect(await screen.findByRole("region", { name: "Version 6" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Version 7" })).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: /^Version 6/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "Restore version 6" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/The current draft with 3 changes is kept for 30 days/)).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Restore version 6" }));
+    await waitFor(() =>
+      expect(requests.some((request) => request.path.endsWith("/versions/6/restore"))).toBe(true),
+    );
+  });
+});
+
+describe("trash", () => {
+  const entry = {
+    id: ENTRY,
+    spaceId: SPACE_ID,
+    spaceKey: "ITOPS",
+    spaceName: "IT Operations",
+    kind: "items",
+    itemId: VPN,
+    itemKind: "page",
+    title: "Old VPN setup",
+    descendants: 2,
+    stage: 1,
+    deletedAt: "2026-10-02T10:00:00.000Z",
+    deletedBy: { id: OLIVIA.id, name: "Lukas Hofer" },
+    stageTwoAt: null,
+    removedAt: new Date(Date.now() + 28.5 * 24 * 3600 * 1000).toISOString(),
+  };
+
+  it("lists deleted items, restores them and lets space admins empty the trash", async () => {
+    const { requests } = mockApi(
+      routes("admin", {
+        [`GET /api/v1/spaces/${SPACE_ID}/trash`]: () => ({ body: [entry] }),
+        [`POST /api/v1/spaces/${SPACE_ID}/trash/${ENTRY}/restore`]: () => ({
+          body: { itemId: VPN, parentId: null },
+        }),
+        [`POST /api/v1/spaces/${SPACE_ID}/trash/empty`]: () => ({ body: { entries: 1 } }),
+      }),
+    );
+    await renderAt("/spaces/ITOPS/trash");
+    const row = (await screen.findByText("Old VPN setup")).closest("tr") as HTMLElement;
+    expect(within(row).getByText("Lukas Hofer")).toBeTruthy();
+    expect(within(row).getByText("With 2 items below it")).toBeTruthy();
+    expect(within(row).getByText("29 days")).toBeTruthy();
+    await userEvent.click(within(row).getByRole("button", { name: "Restore" }));
+    expect(await screen.findByText("“Old VPN setup” restored")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Empty trash with 1 entry" }));
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Empty trash with 1 entry" }));
+    await waitFor(() => expect(requests.some((request) => request.path.endsWith("/trash/empty"))).toBe(true));
+  });
+
+  it("is not shown to readers", async () => {
+    mockApi(routes("reader"));
+    await renderAt("/spaces/ITOPS/trash");
+    expect(await screen.findByText("Only editors and space admins can see the trash.")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Trash" })).toBeNull();
+  });
+});
+
+describe("template gallery", () => {
+  it("asks for the input values and creates the page from the template", async () => {
+    const template = {
+      id: "builtin:project-plan",
+      level: "builtIn",
+      organizationId: null,
+      spaceId: null,
+      name: "Project plan",
+      description: "Goals, scope, milestones and risks.",
+      category: "projects",
+      title: "Project {name}",
+      fields: [
+        { key: "name", label: "Project name", type: "text", required: true },
+        { key: "startDate", label: "Start date", type: "date", required: true },
+      ],
+      document: {
+        type: "doc",
+        content: [
+          { type: "paragraph", content: [{ type: "placeholder", attrs: { text: "Describe the goal." } }] },
+        ],
+      },
+      updatedAt: null,
+    };
+    const { requests } = mockApi(
+      routes("editor", {
+        [`GET /api/v1/spaces/${SPACE_ID}/template-gallery`]: () => ({ body: [template] }),
+        [`POST /api/v1/spaces/${SPACE_ID}/items`]: () => ({ status: 201, body: page(VPN, "Project Atlas") }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${OVERVIEW}/it-operations`);
+    await userEvent.click(await screen.findByRole("button", { name: "Create in this space" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "New page" }));
+    const dialog = await screen.findByRole("dialog", { name: "Create in IT Operations" });
+    expect(within(dialog).getByRole("button", { name: /Blank page/, pressed: true })).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: /Project plan/ }));
+    expect(within(dialog).getByText("Describe the goal.")).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create from Project plan" }));
+    expect(await within(dialog).findByText("Enter Project name.")).toBeTruthy();
+    await userEvent.type(within(dialog).getByRole("textbox", { name: /Project name/ }), "Atlas");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create from Project plan" }));
+    await waitFor(() => {
+      const created = requests.find(
+        (request) => request.method === "POST" && request.path.endsWith("/items"),
+      );
+      expect(created?.body).toMatchObject({
+        kind: "page",
+        template: { id: "builtin:project-plan", values: { name: "Atlas" } },
+      });
+      expect(
+        (created?.body as { template?: { values: Record<string, string> } } | undefined)?.template?.values
+          .startDate,
+      ).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+  });
+});

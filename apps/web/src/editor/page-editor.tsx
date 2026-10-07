@@ -31,6 +31,7 @@ export interface PageEditorProps {
   spaceId: string;
   spaceKey: string;
   showStatus?: boolean;
+  draft?: boolean;
   onSaveStateChange?: (state: SaveState) => void;
 }
 
@@ -52,6 +53,7 @@ function CollaborativeEditor({
   spaceId,
   spaceKey,
   showStatus = true,
+  draft = false,
   onSaveStateChange,
   collaboration,
 }: PageEditorProps & { collaboration: PageCollaboration }) {
@@ -191,7 +193,7 @@ function CollaborativeEditor({
                 ) : null}
                 {showStatus ? (
                   <div className="flex shrink-0 items-center gap-2 px-1">
-                    <SaveStateIndicator state={snapshot.saveState} />
+                    <SaveStateIndicator state={snapshot.saveState} draft={draft} />
                     <AvatarStack self={self} others={others} />
                   </div>
                 ) : null}

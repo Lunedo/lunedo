@@ -3,7 +3,7 @@ import { Link2, Lock, PenLine } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { SettingEntry } from "../api/organization-queries.js";
 
-export type SettingLevel = "instance" | "organization" | "user";
+export type SettingLevel = "instance" | "organization" | "space" | "user";
 
 export function inheritedValue(entry: SettingEntry, level: SettingLevel): unknown {
   const above = entry.levels.filter(
@@ -75,9 +75,11 @@ export function SettingSource({
         <PenLine aria-hidden="true" className={icon} />
         {level === "user"
           ? t("settings.source.setByYou")
-          : level === "organization"
-            ? t("settings.source.setForOrganization", { name: organizationName ?? "" })
-            : t("settings.source.setForInstance")}
+          : level === "space"
+            ? t("settings.source.setForSpace")
+            : level === "organization"
+              ? t("settings.source.setForOrganization", { name: organizationName ?? "" })
+              : t("settings.source.setForInstance")}
         {entry.locked ? ` · ${t("settings.source.lockedBelow")}` : ""}
       </span>
     );
@@ -88,7 +90,9 @@ export function SettingSource({
     <span className={className}>
       <Link2 aria-hidden="true" className={icon} />
       {from === "organization"
-        ? t("settings.source.fromOrganization", { name: organizationName ?? "", value })
+        ? organizationName
+          ? t("settings.source.fromOrganization", { name: organizationName, value })
+          : t("settings.source.fromOrganizationUnnamed", { value })
         : from === "instance"
           ? t("settings.source.fromInstance", { value })
           : t("settings.source.fromDefault", { value })}

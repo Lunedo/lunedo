@@ -182,6 +182,7 @@ const spacesRoute = createRoute({
   validateSearch: z.object({
     q: z.string().max(200).optional().catch(undefined),
     organization: idSchema.optional().catch(undefined),
+    archived: z.boolean().optional().catch(undefined),
   }),
   component: lazyRouteComponent(() => import("./spaces/spaces-screen.js"), "SpacesScreen"),
 });
@@ -212,6 +213,32 @@ const pageRoute = createRoute({
   params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
   validateSearch: itemSearch,
   component: lazyRouteComponent(() => import("./spaces/page-screen.js"), "PageScreen"),
+});
+
+const historyRoute = createRoute({
+  getParentRoute: () => spaceRoute,
+  path: "/pages/$itemId/history",
+  params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
+  validateSearch: z.object({
+    from: z
+      .union([z.string().max(20), z.number().int()])
+      .transform(String)
+      .optional()
+      .catch(undefined),
+    to: z
+      .union([z.string().max(20), z.number().int()])
+      .transform(String)
+      .optional()
+      .catch(undefined),
+    view: z.enum(["inline", "sideBySide"]).optional().catch(undefined),
+  }),
+  component: lazyRouteComponent(() => import("./spaces/versions/versions-screen.js"), "VersionsScreen"),
+});
+
+const trashRoute = createRoute({
+  getParentRoute: () => spaceRoute,
+  path: "/trash",
+  component: lazyRouteComponent(() => import("./spaces/trash/trash-screen.js"), "TrashScreen"),
 });
 
 const folderRoute = createRoute({
@@ -255,6 +282,24 @@ const spacePermissionsRoute = createRoute({
   component: lazyRouteComponent(
     () => import("./spaces/settings/space-permissions-screen.js"),
     "SpacePermissionsScreen",
+  ),
+});
+
+const spaceContentRoute = createRoute({
+  getParentRoute: () => spaceSettingsRoute,
+  path: "/content",
+  component: lazyRouteComponent(
+    () => import("./spaces/settings/space-content-screen.js"),
+    "SpaceContentScreen",
+  ),
+});
+
+const spaceTemplatesRoute = createRoute({
+  getParentRoute: () => spaceSettingsRoute,
+  path: "/templates",
+  component: lazyRouteComponent(
+    () => import("./spaces/templates/space-templates-screen.js"),
+    "SpaceTemplatesScreen",
   ),
 });
 
@@ -379,6 +424,16 @@ const organizationSpacesRoute = organizationScreen(
   () => import("./spaces/settings/organization-spaces-screen.js"),
   "OrganizationSpacesScreen",
 );
+const organizationContentRoute = organizationScreen(
+  "/content",
+  () => import("./spaces/settings/organization-content-screen.js"),
+  "OrganizationContentScreen",
+);
+const organizationTemplatesRoute = organizationScreen(
+  "/templates",
+  () => import("./spaces/templates/organization-templates-screen.js"),
+  "OrganizationTemplatesScreen",
+);
 const organizationAuditRoute = organizationScreen(
   "/audit-log",
   () => import("./screens/organization/audit-screen.js"),
@@ -477,6 +532,16 @@ const instancePersonalSpacesRoute = instanceScreen(
   () => import("./spaces/settings/instance-personal-spaces-screen.js"),
   "InstancePersonalSpacesScreen",
 );
+const instanceContentRoute = instanceScreen(
+  "/content",
+  () => import("./spaces/settings/instance-content-screen.js"),
+  "InstanceContentScreen",
+);
+const instanceTemplatesRoute = instanceScreen(
+  "/templates",
+  () => import("./spaces/templates/instance-templates-screen.js"),
+  "InstanceTemplatesScreen",
+);
 const instanceAuditRoute = instanceScreen(
   "/audit-log",
   () => import("./screens/instance/audit-screen.js"),
@@ -514,10 +579,18 @@ const routeTree = rootRoute.addChildren([
     personalSpaceRoute,
     spaceRoute.addChildren([
       spaceIndexRoute,
+      historyRoute,
       pageRoute,
       folderRoute,
       labelRoute,
-      spaceSettingsRoute.addChildren([spaceSettingsIndexRoute, spaceGeneralRoute, spacePermissionsRoute]),
+      trashRoute,
+      spaceSettingsRoute.addChildren([
+        spaceSettingsIndexRoute,
+        spaceGeneralRoute,
+        spacePermissionsRoute,
+        spaceContentRoute,
+        spaceTemplatesRoute,
+      ]),
     ]),
     settingsRoute.addChildren([
       settingsIndexRoute,
@@ -538,6 +611,8 @@ const routeTree = rootRoute.addChildren([
         domainsRoute,
         organizationNotificationsRoute,
         organizationSpacesRoute,
+        organizationContentRoute,
+        organizationTemplatesRoute,
         organizationAuditRoute,
       ]),
       instanceRoute.addChildren([
@@ -554,6 +629,8 @@ const routeTree = rootRoute.addChildren([
         breakGlassRoute,
         instanceNotificationsRoute,
         instancePersonalSpacesRoute,
+        instanceContentRoute,
+        instanceTemplatesRoute,
         instanceAuditRoute,
       ]),
     ]),

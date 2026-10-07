@@ -18,7 +18,8 @@ export const TemplatePlaceholders = Extension.create({
             const start = $from.start();
             const ranges: [number, number][] = [];
             parent.forEach((child, offset) => {
-              if (child.type.name === "placeholder") ranges.push([start + offset, start + offset + child.nodeSize]);
+              if (child.type.name === "placeholder")
+                ranges.push([start + offset, start + offset + child.nodeSize]);
             });
             if (ranges.length === 0) return false;
             const tr = state.tr;

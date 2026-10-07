@@ -1,4 +1,4 @@
-import { classNames, IconButton, Menu, Spinner, useToast } from "@pagehall/ui";
+import { Badge, classNames, IconButton, Menu, Spinner, useToast } from "@pagehall/ui";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -344,7 +344,7 @@ function TreeNode({
   const { t } = useTranslation();
   const tree = useTree();
   const navigate = useNavigate();
-  const actions = useItemActions(tree.space, item);
+  const actions = useItemActions(tree.space, item, tree.currentId);
   const expandable = item.hasChildren;
   const open = tree.expanded.has(item.id);
   const current = tree.currentId === item.id;
@@ -460,6 +460,9 @@ function TreeNode({
         )}
         {item.kind === "link" && !item.link?.accessible ? (
           <Lock aria-hidden="true" className="size-icon-sm shrink-0 text-text-muted" />
+        ) : null}
+        {item.kind === "page" && !item.published ? (
+          <Badge variant="warning">{t("versions.draftBadge")}</Badge>
         ) : null}
         {actions.length > 0 ? (
           <span

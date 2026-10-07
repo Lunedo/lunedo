@@ -25,9 +25,10 @@ export function SpacesScreen() {
   const [text, setText] = useState(search.q ?? "");
   const query = useDebounced(text.trim(), 250);
   const organizationFilter = search.organization ?? null;
+  const archived = search.archived === true;
   const [creating, setCreating] = useState(false);
   const spaces = useInfiniteQuery({
-    queryKey: spaceKeys.list({ search: query, organizationId: organizationFilter }),
+    queryKey: [...spaceKeys.list({ search: query, organizationId: organizationFilter }), archived],
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) =>
       request(() =>
@@ -37,6 +38,7 @@ export function SpacesScreen() {
               limit: 50,
               ...(query ? { q: query } : {}),
               ...(organizationFilter ? { organizationId: organizationFilter } : {}),
+              ...(archived ? { archived: "true" as const } : {}),
               ...(pageParam ? { cursor: pageParam } : {}),
             },
           },
@@ -45,15 +47,16 @@ export function SpacesScreen() {
     getNextPageParam: (page) => page.nextCursor ?? undefined,
   });
   const items = spaces.data?.pages.flatMap((page) => page.items) ?? [];
-  const filtered = query !== "" || organizationFilter !== null;
+  const filtered = query !== "" || organizationFilter !== null || archived;
   const canCreate = state.can("organization.spaces.create");
 
-  const setFilter = (next: { q?: string; organization?: string | null }) => {
+  const setFilter = (next: { q?: string; organization?: string | null; archived?: boolean }) => {
     void navigate({
       search: (previous) => ({
         ...previous,
         ...("q" in next ? { q: next.q || undefined } : {}),
         ...("organization" in next ? { organization: next.organization ?? undefined } : {}),
+        ...("archived" in next ? { archived: next.archived || undefined } : {}),
       }),
       replace: true,
     });
@@ -99,6 +102,17 @@ export function SpacesScreen() {
             <Search
               aria-hidden="true"
               className="pointer-events-none absolute left-2 top-1/2 size-icon -translate-y-1/2 text-text-muted"
+            />
+          </div>
+          <div className="sm:w-field">
+            <Select
+              aria-label={t("spaces.list.archiveFilter")}
+              value={archived ? "archived" : "active"}
+              onValueChange={(value) => setFilter({ archived: value === "archived" })}
+              options={[
+                { value: "active", label: t("spaces.list.activeSpaces") },
+                { value: "archived", label: t("spaces.list.archivedSpaces") },
+              ]}
             />
           </div>
           {state.multipleOrganizations ? (

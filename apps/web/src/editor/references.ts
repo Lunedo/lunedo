@@ -8,6 +8,7 @@ export interface PageReference {
   spaceKey: string;
   kind: string;
   accessible: boolean;
+  inTrash?: boolean;
 }
 
 export interface References {

@@ -14,7 +14,7 @@ const ICONS = {
   error: AlertTriangle,
 } as const;
 
-export function SaveStateIndicator({ state }: { state: SaveState }) {
+export function SaveStateIndicator({ state, draft = false }: { state: SaveState; draft?: boolean }) {
   const { t } = useTranslation();
   const Icon = ICONS[state];
   return (
@@ -30,7 +30,7 @@ export function SaveStateIndicator({ state }: { state: SaveState }) {
           state === "saving" ? "size-icon-sm animate-spin motion-reduce:animate-none" : "size-icon-sm"
         }
       />
-      {translateKey(t, `editor.save.${state}`)}
+      {translateKey(t, draft && state === "saved" ? "editor.save.savedDraft" : `editor.save.${state}`)}
     </span>
   );
 }
