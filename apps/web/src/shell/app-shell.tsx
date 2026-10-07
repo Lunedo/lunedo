@@ -12,6 +12,7 @@ import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.
 import { usePreferences } from "../preferences/preferences-provider.js";
 import "../notifications/builtin.js";
 import "./builtin.js";
+import { signedOut } from "../session/sign-out.js";
 import { CommandPaletteHost } from "./command-palette.js";
 import { railItems, type ShellContext, type Shortcut, shortcuts } from "./extensions.js";
 import { Heron } from "./heron.js";
@@ -53,6 +54,7 @@ function ShellFrame() {
     void request(() => api.POST("/api/v1/auth/sign-out"), { sessionHandling: false })
       .catch(() => undefined)
       .then(async () => {
+        signedOut();
         queryClient.clear();
         await router.navigate({ to: "/sign-in", search: { reason: "signedOut" } });
       });

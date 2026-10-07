@@ -1,5 +1,6 @@
 import { HocuspocusProvider, WebSocketStatus } from "@hocuspocus/provider";
 import * as Y from "yjs";
+import { onSignOut } from "../session/sign-out.js";
 import { decodeBase64, type SaveState, SaveTracker } from "./save-state.js";
 
 export const connectionRefusals = [
@@ -232,3 +233,14 @@ export function closeCollaboration(collaboration: PageCollaboration): void {
   globalThis.addEventListener("beforeunload", warnBeforeUnload);
   finish();
 }
+
+export function discardOpenCollaborations(): void {
+  for (const entry of openCollaborations.values()) {
+    entry.unsubscribe?.();
+    entry.collaboration.destroy();
+  }
+  openCollaborations.clear();
+  globalThis.removeEventListener("beforeunload", warnBeforeUnload);
+}
+
+onSignOut(discardOpenCollaborations);

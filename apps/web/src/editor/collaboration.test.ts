@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
+import { signedOut } from "../session/sign-out.js";
 import { closeCollaboration, openCollaboration, PageCollaboration } from "./collaboration.js";
 
 describe("page collaboration", () => {
@@ -106,5 +107,18 @@ describe("open page collaborations", () => {
     const destroy = vi.spyOn(collaboration, "destroy");
     closeCollaboration(collaboration);
     expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it("discards kept changes when the person signs out, so they never reach the next account", () => {
+    const kept = openCollaboration(pageId, { origin });
+    kept.doc.getText("probe").insert(0, "written before signing out");
+    const destroy = vi.spyOn(kept, "destroy");
+    closeCollaboration(kept);
+    signedOut();
+    expect(destroy).toHaveBeenCalledTimes(1);
+    const next = openCollaboration(pageId, { origin });
+    expect(next).not.toBe(kept);
+    expect(next.doc.getText("probe").toString()).toBe("");
+    closeCollaboration(next);
   });
 });

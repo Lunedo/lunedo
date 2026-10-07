@@ -5,6 +5,7 @@ import { setSignedOutHandler } from "./api/request.js";
 import { PreferencesProvider } from "./preferences/preferences-provider.js";
 import { ReauthenticationHost } from "./session/reauthentication.js";
 import { currentLocation } from "./session/redirect.js";
+import { signedOut } from "./session/sign-out.js";
 import { InstanceMovedGuard } from "./shell/instance-moved.js";
 
 const PUBLIC_PATHS = [
@@ -27,6 +28,7 @@ export function RootLayout() {
       const path = globalThis.location?.pathname ?? "/";
       if (PUBLIC_PATHS.some((prefix) => path.startsWith(prefix))) return;
       const redirect = currentLocation();
+      signedOut();
       queryClient.clear();
       void router.navigate({ to: "/sign-in", search: { redirect, reason: "sessionEnded" } });
     });
