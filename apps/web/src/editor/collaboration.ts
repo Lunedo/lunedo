@@ -98,7 +98,19 @@ export class PageCollaboration {
     this.doc.on("update", (_update: Uint8Array, origin: unknown) => {
       if (origin !== this.provider) this.tracker.localChange();
     });
+    globalThis.addEventListener("offline", this.#wentOffline);
+    globalThis.addEventListener("online", this.#cameOnline);
   }
+
+  #wentOffline = (): void => {
+    this.tracker.connection(false);
+    this.#set({ connected: false, synced: false });
+    this.provider.disconnect();
+  };
+
+  #cameOnline = (): void => {
+    if (!this.#destroyed) void this.provider.connect();
+  };
 
   #scheduleReattach(): void {
     if (this.#destroyed || this.#reattachTimer !== null) return;
@@ -154,6 +166,8 @@ export class PageCollaboration {
 
   destroy(): void {
     this.#destroyed = true;
+    globalThis.removeEventListener("offline", this.#wentOffline);
+    globalThis.removeEventListener("online", this.#cameOnline);
     if (this.#reattachTimer !== null) clearTimeout(this.#reattachTimer);
     this.tracker.destroy();
     this.provider.destroy();
