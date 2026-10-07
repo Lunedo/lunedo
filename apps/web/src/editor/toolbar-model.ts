@@ -1,15 +1,31 @@
-export function fitItems(widths: readonly number[], available: number, moreWidth: number, gap = 0): number {
+export interface FitOptions {
+  essential?: readonly boolean[];
+  alwaysMore?: boolean;
+}
+
+export function fitItems(
+  widths: readonly number[],
+  available: number,
+  moreWidth: number,
+  gap = 0,
+  options: FitOptions = {},
+): boolean[] {
   const total = widths.reduce((sum, width, index) => sum + width + (index > 0 ? gap : 0), 0);
-  if (total <= available) return widths.length;
+  if (total <= available && !options.alwaysMore) return widths.map(() => true);
+  const indices = widths.map((_, index) => index);
+  const ranked = [
+    ...indices.filter((index) => options.essential?.[index]),
+    ...indices.filter((index) => !options.essential?.[index]),
+  ];
+  const shown = widths.map(() => false);
   let used = moreWidth;
-  let count = 0;
-  for (const width of widths) {
-    const next = used + width + gap;
+  for (const index of ranked) {
+    const next = used + (widths[index] ?? 0) + gap;
     if (next > available) break;
     used = next;
-    count += 1;
+    shown[index] = true;
   }
-  return count;
+  return shown;
 }
 
 export function nextIndex(current: number, key: string, length: number): number | null {

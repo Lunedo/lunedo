@@ -51,7 +51,38 @@ export interface ToolbarItem extends ToolbarAction {
   group: string;
   text?: string;
   menu?: ToolbarAction[];
+  essential?: boolean;
+  overflowOnly?: boolean;
 }
+
+const layout: { id: string; group: string; essential?: boolean }[] = [
+  { id: "undo", group: "history", essential: true },
+  { id: "redo", group: "history" },
+  { id: "blockType", group: "block", essential: true },
+  { id: "bold", group: "marks", essential: true },
+  { id: "italic", group: "marks", essential: true },
+  { id: "underline", group: "marks" },
+  { id: "link", group: "link", essential: true },
+  { id: "bulletList", group: "lists" },
+  { id: "orderedList", group: "lists" },
+  { id: "taskList", group: "lists" },
+  { id: "table", group: "insert" },
+  { id: "insert", group: "insert", essential: true },
+  { id: "strike", group: "format" },
+  { id: "code", group: "format" },
+  { id: "textColor", group: "format" },
+  { id: "highlight", group: "format" },
+  { id: "clearFormatting", group: "format" },
+  { id: "align", group: "layout" },
+  { id: "outdent", group: "layout" },
+  { id: "indent", group: "layout" },
+  { id: "mention", group: "inline" },
+  { id: "emoji", group: "inline" },
+  { id: "date", group: "inline" },
+  { id: "find", group: "tools" },
+];
+
+const overflowOnly = ["subscript", "superscript"];
 
 function todayIso(): string {
   const now = new Date();
@@ -93,7 +124,7 @@ export function toolbarItems(editor: Editor, t: TFunction, actions: EditorAction
   const insertable = slashCommands.filter(
     (command) => command.group === "blocks" || command.group === "inline",
   );
-  return [
+  const items: ToolbarItem[] = [
     {
       id: "undo",
       group: "history",
@@ -313,4 +344,14 @@ export function toolbarItems(editor: Editor, t: TFunction, actions: EditorAction
       run: () => actions.openFind(),
     },
   ];
+  const byId = new Map(items.map((item) => [item.id, item]));
+  const arranged = layout.flatMap(({ id, group, essential }): ToolbarItem[] => {
+    const item = byId.get(id);
+    return item ? [{ ...item, group, ...(essential ? { essential } : {}) }] : [];
+  });
+  const pinned = overflowOnly.flatMap((id): ToolbarItem[] => {
+    const item = byId.get(id);
+    return item ? [{ ...item, overflowOnly: true }] : [];
+  });
+  return [...arranged, ...pinned];
 }

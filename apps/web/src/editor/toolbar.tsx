@@ -8,6 +8,7 @@ import {
   useCallback,
   useImperativeHandle,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -93,7 +94,9 @@ export const EditorToolbar = forwardRef<ToolbarHandle, { editor: Editor; items: 
     const { t } = useTranslation();
     const container = useRef<HTMLDivElement>(null);
     const measure = useRef<HTMLDivElement>(null);
-    const [visible, setVisible] = useState(items.length);
+    const main = useMemo(() => items.filter((item) => !item.overflowOnly), [items]);
+    const pinned = useMemo(() => items.filter((item) => item.overflowOnly), [items]);
+    const [fits, setFits] = useState<boolean[]>([]);
     const [focused, setFocused] = useState(0);
 
     useLayoutEffect(() => {
@@ -102,21 +105,30 @@ export const EditorToolbar = forwardRef<ToolbarHandle, { editor: Editor; items: 
       if (!element || !ruler) return;
       const update = () => {
         const buttons = Array.from(ruler.children) as HTMLElement[];
-        const widths = buttons.map((button, index) => {
-          const separator = index > 0 && items[index]?.group !== items[index - 1]?.group ? SEPARATOR_PX : 0;
+        const widths = buttons.slice(0, -1).map((button, index) => {
+          const separator = index > 0 && main[index]?.group !== main[index - 1]?.group ? SEPARATOR_PX : 0;
           return button.getBoundingClientRect().width + separator;
         });
-        const more = widths.length > 0 ? Math.max(...widths.slice(0, 1)) : 0;
-        setVisible(fitItems(widths, element.clientWidth, more, GAP_PX));
+        const more = buttons.at(-1)?.getBoundingClientRect().width ?? 0;
+        const next = fitItems(widths, element.clientWidth, more, GAP_PX, {
+          essential: main.map((item) => item.essential === true),
+          alwaysMore: pinned.length > 0,
+        });
+        setFits((current) =>
+          current.length === next.length && current.every((value, index) => value === next[index])
+            ? current
+            : next,
+        );
       };
       update();
       const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
       observer?.observe(element);
       return () => observer?.disconnect();
-    }, [items]);
+    }, [main, pinned]);
 
-    const shown = items.slice(0, visible);
-    const hidden = items.slice(visible);
+    const isShown = (index: number) => fits.length === 0 || fits[index] === true;
+    const shown = main.filter((_, index) => isShown(index));
+    const hidden = [...main.filter((_, index) => !isShown(index)), ...pinned];
     const count = shown.length + (hidden.length > 0 ? 1 : 0);
 
     const focusAt = useCallback((index: number) => {
@@ -190,7 +202,7 @@ export const EditorToolbar = forwardRef<ToolbarHandle, { editor: Editor; items: 
           aria-hidden="true"
           className={classNames("pointer-events-none invisible absolute top-0 left-0 flex gap-1")}
         >
-          {items.map((item) => {
+          {main.map((item) => {
             const Icon = item.icon;
             return (
               <span key={item.id} className={BUTTON}>
@@ -202,6 +214,9 @@ export const EditorToolbar = forwardRef<ToolbarHandle, { editor: Editor; items: 
               </span>
             );
           })}
+          <span className={BUTTON}>
+            <MoreHorizontal className="size-icon-md" />
+          </span>
         </div>
       </div>
     );
