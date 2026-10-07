@@ -84,7 +84,11 @@ describe.skipIf(!baseUrl)("page templates", () => {
     expect(page.title).toBe("Project Atlas on 2 Nov 2026");
     const content = (await test.services.documents.snapshot(page.id))?.document;
     const text = JSON.stringify(content);
-    expect(content?.content?.[0]?.content?.[1]).toEqual({ type: "text", text: "Atlas", marks: [{ type: "bold" }] });
+    expect(content?.content?.[0]?.content?.[1]).toEqual({
+      type: "text",
+      text: "Atlas",
+      marks: [{ type: "bold" }],
+    });
     expect(text).toContain(`{"type":"mention","attrs":{"id":"${context.editorId}"}}`);
     expect(text).toContain(", size Large, starts ");
     expect(text).toContain('{"type":"date","attrs":{"date":"2026-11-02"}}');

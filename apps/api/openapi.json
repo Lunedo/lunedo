@@ -58,15 +58,15 @@
     },
     {
       "name": "Templates",
-      "description": ""
+      "description": "Page templates of the instance, organizations and spaces, and the template gallery."
     },
     {
       "name": "Trash",
-      "description": ""
+      "description": "Deleting and restoring content in two trash stages, archiving spaces and deleting spaces."
     },
     {
       "name": "Versions",
-      "description": ""
+      "description": "Drafts, publishing, editing modes, versions, comparison and restoring of pages."
     }
   ],
   "paths": {
@@ -70394,6 +70394,14 @@
                             "format": "uuid",
                             "description": "ID of the personal space."
                           },
+                          "key": {
+                            "type": "string",
+                            "description": "Key of the personal space."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Name of the personal space; empty when it has no name of its own."
+                          },
                           "ownerId": {
                             "anyOf": [
                               {
@@ -70434,6 +70442,8 @@
                         },
                         "required": [
                           "spaceId",
+                          "key",
+                          "name",
                           "ownerId",
                           "ownerName",
                           "ownerState",
@@ -70464,6 +70474,8 @@
                   "items": [
                     {
                       "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                      "key": "P7K2M9QX",
+                      "name": "",
                       "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                       "ownerName": "Anna Berger",
                       "ownerState": "deactivated",
@@ -104730,7 +104742,7 @@
       "get": {
         "operationId": "spaces.list",
         "summary": "List spaces",
-        "description": "Lists the spaces the caller can read, ordered by name. API tokens see the spaces their scopes reach.\n\nRequires the permission `instance.content.view` on the instance.",
+        "description": "Lists the spaces the caller can read, ordered by name. Archived spaces are listed only when asked for. API tokens see the spaces their scopes reach.\n\nRequires the permission `instance.content.view` on the instance.",
         "tags": [
           "Spaces"
         ],
@@ -104777,6 +104789,19 @@
             "schema": {
               "type": "string",
               "maxLength": 200
+            }
+          },
+          {
+            "name": "archived",
+            "in": "query",
+            "required": false,
+            "description": "`true` lists only archived spaces. Without it, only spaces that are not archived are listed.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
             }
           },
           {

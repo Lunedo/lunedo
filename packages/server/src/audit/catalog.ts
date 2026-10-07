@@ -1022,7 +1022,10 @@ export const auditCatalog = {
   "page.archived": event({
     actor: ["account"],
     target: "page",
-    fields: pageFields.extend({ itemKind: z.enum(itemKindNames), descendants: z.number().int().nonnegative() }),
+    fields: pageFields.extend({
+      itemKind: z.enum(itemKindNames),
+      descendants: z.number().int().nonnegative(),
+    }),
     visibility: "organization",
   }),
   "page.unarchived": event({

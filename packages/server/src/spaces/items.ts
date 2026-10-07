@@ -243,7 +243,10 @@ export class TreeService {
     const space = await this.#database.execute<{ organization_id: string | null }>(
       sql`select organization_id from spaces where id = ${spaceId}`,
     );
-    return defaultPageMode(this.#settings, { id: spaceId, organizationId: space.rows[0]?.organization_id ?? null });
+    return defaultPageMode(this.#settings, {
+      id: spaceId,
+      organizationId: space.rows[0]?.organization_id ?? null,
+    });
   }
 
   async followTitleLink(
@@ -355,7 +358,9 @@ export class TreeService {
         from spaces s where s.id = ${item.spaceId}`,
     );
     const ancestors = await this.ancestors(itemId);
-    const hidden = space.rows[0]?.editor ? new Set<string>() : await this.#unpublished(ancestors.map((a) => a.id));
+    const hidden = space.rows[0]?.editor
+      ? new Set<string>()
+      : await this.#unpublished(ancestors.map((a) => a.id));
     return {
       ...item,
       spaceKey: space.rows[0]?.key ?? "",
@@ -581,7 +586,7 @@ export class TreeService {
           from tree_items where id = ${itemId} for update`,
       );
       const row = current.rows[0];
-      if (!row || !row.in_tree) throw new SpaceError("itemNotFound", "The item does not exist");
+      if (!row?.in_tree) throw new SpaceError("itemNotFound", "The item does not exist");
       if (row.space_id !== sourceSpaceId) {
         throw new SpaceError("itemMoved", "Someone else moved the item at the same moment; try again");
       }

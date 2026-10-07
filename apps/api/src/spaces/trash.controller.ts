@@ -302,7 +302,10 @@ export class TrashController {
     },
   })
   async restorePersonal(@Param("entryId") entryId: string, @Req() request: FastifyRequest) {
-    await this.#entryIn(entryId, (entry, _owner, personal) => personal && (entry.kind === "space" || entry.stage === 2));
+    await this.#entryIn(
+      entryId,
+      (entry, _owner, personal) => personal && (entry.kind === "space" || entry.stage === 2),
+    );
     return this.#services.trash.restore(actorOf(request), entryId);
   }
 
@@ -323,7 +326,10 @@ export class TrashController {
     @Body() body: z.output<typeof reasonSchema>,
     @Req() request: FastifyRequest,
   ) {
-    await this.#entryIn(entryId, (entry, _owner, personal) => personal && (entry.kind === "space" || entry.stage === 2));
+    await this.#entryIn(
+      entryId,
+      (entry, _owner, personal) => personal && (entry.kind === "space" || entry.stage === 2),
+    );
     await this.#services.trash.deleteImmediately(actorOf(request), entryId, body.reason);
   }
 }

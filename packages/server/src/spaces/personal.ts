@@ -13,6 +13,8 @@ import type { Space, SpaceService } from "./spaces.js";
 
 export interface PersonalSpaceForReview {
   spaceId: string;
+  key: string;
+  name: string;
   ownerId: string | null;
   ownerName: string | null;
   ownerState: string | null;
@@ -103,6 +105,8 @@ export class PersonalSpaceService {
   async forReview(page: PageRequest = FIRST_PAGE): Promise<Page<PersonalSpaceForReview>> {
     const result = await this.#database.execute<{
       space_id: string;
+      key: string;
+      name: string;
       owner_id: string | null;
       owner_name: string | null;
       owner_state: string | null;
@@ -110,13 +114,13 @@ export class PersonalSpaceService {
       last_changed_at: Date | string;
       sort_name: string;
     }>(sql`
-      select s.id as space_id, s.owner_account_id as owner_id, a.name as owner_name, a.state::text as owner_state,
+      select s.id as space_id, s.key, s.name, s.owner_account_id as owner_id, a.name as owner_name, a.state::text as owner_state,
         (select count(*) from tree_items t where t.space_id = s.id and t.kind = 'page') as pages,
         greatest(s.updated_at, coalesce((select max(t.content_updated_at) from tree_items t where t.space_id = s.id),
           s.updated_at)) as last_changed_at,
         lower(coalesce(a.name, '')) as sort_name
       from spaces s left join accounts a on a.id = s.owner_account_id
-      where s.personal_of is not null and (a.id is null or a.state <> 'active')
+      where s.personal_of is not null and s.deleted_at is null and (a.id is null or a.state <> 'active')
         ${page.after ? sql`and ${afterKey([sql`lower(coalesce(a.name, ''))`, sql`s.id`], page.after)}` : sql``}
       order by lower(coalesce(a.name, '')), s.id
       limit ${pageLimit(page)}`);
@@ -126,6 +130,8 @@ export class PersonalSpaceService {
       (row) => [row.sort_name, row.space_id],
       (row) => ({
         spaceId: row.space_id,
+        key: row.key,
+        name: row.name,
         ownerId: row.owner_id,
         ownerName: row.owner_name,
         ownerState: row.owner_state,

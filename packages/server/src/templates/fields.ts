@@ -16,9 +16,12 @@ export const templateFieldSchema = z
     options: z.array(z.string().trim().min(1).max(100)).max(MAX_CHOICE_OPTIONS).optional(),
   })
   .strict()
-  .refine((field) => (field.type === "choice") === (field.options !== undefined && field.options.length > 0), {
-    message: "Choice fields need options, other fields none",
-  });
+  .refine(
+    (field) => (field.type === "choice") === (field.options !== undefined && field.options.length > 0),
+    {
+      message: "Choice fields need options, other fields none",
+    },
+  );
 export type TemplateField = z.infer<typeof templateFieldSchema>;
 
 export const templateFieldsSchema = z

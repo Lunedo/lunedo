@@ -304,10 +304,15 @@ export const createItemSchema = z
       .optional()
       .describe("Short description of a folder, up to 1000 characters."),
     ...placementShape,
-    mode: modeSchema.optional().describe("Editing mode of a new page. Without it, the default of the space applies."),
+    mode: modeSchema
+      .optional()
+      .describe("Editing mode of a new page. Without it, the default of the space applies."),
     template: z
       .object({
-        id: z.string().max(100).describe("ID of the template, as listed by the template gallery of the space."),
+        id: z
+          .string()
+          .max(100)
+          .describe("ID of the template, as listed by the template gallery of the space."),
         values: z
           .record(z.string().max(40), z.string().max(200))
           .default({})
@@ -441,7 +446,9 @@ export const trashEntrySchema = z
     spaceId: uuid("Space of the entry."),
     spaceKey: z.string().describe("Key of the space."),
     spaceName: z.string().describe("Name of the space."),
-    kind: z.enum(["items", "space"]).describe("`items` for deleted pages, folders or links, `space` for a deleted space."),
+    kind: z
+      .enum(["items", "space"])
+      .describe("`items` for deleted pages, folders or links, `space` for a deleted space."),
     itemId: uuid("The deleted item, or null for a space.").nullable(),
     itemKind: z.enum(treeItemKinds).nullable().describe("Kind of the deleted item, or null for a space."),
     title: z.string().describe("Title of the deleted item, or name of the space."),

@@ -455,7 +455,7 @@ export class VersionService {
       from tree_items t join page_documents d on d.item_id = t.id
       where t.id = ${itemId} and t.kind = 'page'`);
     const row = result.rows[0];
-    if (!row || row.mode !== "publish" || !row.published) return false;
+    if (row?.mode !== "publish" || !row.published) return false;
     await tx.execute(sql`
       update page_documents set draft_title = ${title === row.title ? null : title}, changed_at = now()
       where item_id = ${itemId}`);
@@ -511,7 +511,10 @@ export class VersionService {
       from page_versions where item_id = ${itemId} and number = ${number}`);
     const row = versions.rows[0];
     if (!row) return null;
-    const names = await this.#people.names([...row.contributors, ...(row.created_by ? [row.created_by] : [])]);
+    const names = await this.#people.names([
+      ...row.contributors,
+      ...(row.created_by ? [row.created_by] : []),
+    ]);
     return {
       number: Number(row.number),
       title: row.title,
@@ -706,7 +709,11 @@ export class VersionService {
   }
 }
 
-export async function insertFirstVersion(tx: Transaction, itemId: string, actorId: string | null): Promise<void> {
+export async function insertFirstVersion(
+  tx: Transaction,
+  itemId: string,
+  actorId: string | null,
+): Promise<void> {
   const result = await tx.execute<{ title: string; state: Buffer; snapshot: unknown; revision: number }>(sql`
     select t.title, d.state, d.snapshot, d.revision from tree_items t join page_documents d on d.item_id = t.id
     where t.id = ${itemId}`);

@@ -46,7 +46,12 @@ describe.skipIf(!baseUrl)("page tree and page content", () => {
     title: string,
     parentId: string | null = null,
   ) {
-    return test.services.tree.create(actor, spaceId, { kind: "page", title, mode: "live", placement: { parentId } });
+    return test.services.tree.create(actor, spaceId, {
+      kind: "page",
+      title,
+      mode: "live",
+      placement: { parentId },
+    });
   }
 
   async function titles(spaceId: string, parentId: string | null) {
@@ -455,7 +460,9 @@ describe.skipIf(!baseUrl)("page tree and page content", () => {
         await test.services.documents.labelSuggestions(accountPrincipal(other), otherSpace.id, "rel"),
       ).toEqual([]);
       expect(
-        (await test.services.documents.pagesWithLabel(actor, created.id, "Release-Notes")).map((item) => item.title),
+        (await test.services.documents.pagesWithLabel(actor, created.id, "Release-Notes")).map(
+          (item) => item.title,
+        ),
       ).toEqual(["Labelled"]);
       expect(await test.services.documents.removeLabel(target.id, "release-notes")).toEqual([]);
       expect(editor).toBeTruthy();

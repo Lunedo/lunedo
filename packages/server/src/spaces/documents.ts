@@ -20,7 +20,7 @@ import { actorIdOf, SpaceError } from "./common.js";
 import type { PeopleService } from "./people.js";
 import type { PageMode } from "./schema.js";
 import { signalDocumentChange, signalSpaceChange } from "./signals.js";
-import { notTrashed, visibleItem } from "./visibility.js";
+import { visibleItem } from "./visibility.js";
 
 export const LABEL_MAX_LENGTH = 100;
 export const MAX_LABELS_PER_PAGE = 100;
@@ -114,7 +114,7 @@ export function renderPageMarkdown(document: DocumentJson, references: PageRefer
       const name = references.people[id];
       return name ? { name } : null;
     },
-      pageLink: (link) => {
+    pageLink: (link) => {
       if (!link.pageId) return null;
       const page = references.pages[link.pageId];
       if (page?.inTrash) return { href: "", title: page.title, accessible: false, inTrash: true };
@@ -397,7 +397,10 @@ export class PageDocumentService {
         pageIds.map((id) => {
           const page = pages.find((candidate) => candidate.id === id);
           if (page?.in_trash) {
-            return [id, { title: page.title, spaceKey: "", kind: page.kind, accessible: false, inTrash: true }];
+            return [
+              id,
+              { title: page.title, spaceKey: "", kind: page.kind, accessible: false, inTrash: true },
+            ];
           }
           return [
             id,

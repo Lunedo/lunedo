@@ -82,22 +82,22 @@ import type { SettingsService } from "./settings/service.js";
 import { SetupRegistry } from "./setup/framework.js";
 import { SetupService } from "./setup/setup-service.js";
 import { builtinSetupSteps } from "./setup/steps.js";
+import { ArchiveService } from "./spaces/archive.js";
 import { PageDocumentService } from "./spaces/documents.js";
 import { TreeService } from "./spaces/items.js";
-import { PeopleService } from "./spaces/people.js";
-import { SpaceHolders, SpacePermissionService } from "./spaces/permissions.js";
-import { PersonalSpaceService } from "./spaces/personal.js";
-import { SpaceService } from "./spaces/spaces.js";
-import { VersionService } from "./spaces/versions.js";
-import { TrashService } from "./spaces/trash.js";
-import { ArchiveService } from "./spaces/archive.js";
-import { TemplateService } from "./templates/templates.js";
 import {
   LIVE_VERSIONS_SCHEDULE,
   liveVersionsJob,
   TRASH_RETENTION_SCHEDULE,
   trashRetentionJob,
 } from "./spaces/jobs.js";
+import { PeopleService } from "./spaces/people.js";
+import { SpaceHolders, SpacePermissionService } from "./spaces/permissions.js";
+import { PersonalSpaceService } from "./spaces/personal.js";
+import { SpaceService } from "./spaces/spaces.js";
+import { TrashService } from "./spaces/trash.js";
+import { VersionService } from "./spaces/versions.js";
+import { TemplateService } from "./templates/templates.js";
 import { API_TOKEN_EXPIRY_SCHEDULE, ApiTokenService, apiTokenExpiryJob } from "./tokens/api-tokens.js";
 import { ServiceAccountService } from "./tokens/service-accounts.js";
 

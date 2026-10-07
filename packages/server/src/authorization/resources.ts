@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import type { Executor } from "../database/database.js";
 import {
   membersCreateGroupsSetting,
   organizationSettingsChain,
@@ -7,7 +8,6 @@ import {
 import type { SettingsService } from "../settings/service.js";
 import { membersCreateSpacesSetting, personalSpacesSetting } from "../spaces/settings.js";
 import { grantsLevel } from "./areas.js";
-import type { Executor } from "../database/database.js";
 import type { ActionDefinition, ResourceType, RuleContext } from "./registry.js";
 
 const ALL_MEMBERSHIPS = ["member", "collaborator", "guest"] as const;
