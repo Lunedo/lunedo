@@ -1,7 +1,9 @@
 import { Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { afterEach, describe, expect, it } from "vitest";
+import { initI18n } from "../../i18n/index.js";
 import { schemaExtensions } from "../schema/extensions.js";
+import { createEditorExtensions } from "./index.js";
 import { TemplatePlaceholders } from "./placeholders.js";
 
 const content = {
@@ -46,5 +48,14 @@ describe("template placeholders", () => {
 
   it("stay without the extension", () => {
     expect(JSON.stringify(type("Ship it", 1, []))).toContain("Describe the goal");
+  });
+});
+
+describe("editor extensions", () => {
+  it("do not reuse the name of the template placeholder node", async () => {
+    const i18n = await initI18n(["en"]);
+    const names = createEditorExtensions({ t: i18n.t, spaceId: null }).map((extension) => extension.name);
+    expect(names.filter((name) => name === "placeholder")).toHaveLength(1);
+    expect(new Set(names).size).toBe(names.length);
   });
 });

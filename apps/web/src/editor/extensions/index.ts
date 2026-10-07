@@ -158,7 +158,7 @@ export function createEditorExtensions(options: EditorExtensionOptions): AnyExte
     Dropcursor.configure({ color: "var(--ph-color-accent)", width: 2, class: "ph-drop-cursor" }),
     Gapcursor,
     TrailingNode,
-    Placeholder.configure({ placeholder: t("editor.placeholder") }),
+    Placeholder.extend({ name: "emptyHint" }).configure({ placeholder: t("editor.placeholder") }),
     SlashCommand.configure({
       items: (query) => slashSuggestionItems(query, t),
       labels: labels("editor.suggestions.blocks"),
