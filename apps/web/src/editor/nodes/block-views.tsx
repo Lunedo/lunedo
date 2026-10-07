@@ -90,12 +90,16 @@ export function CalloutView({ node, editor, updateAttributes }: NodeViewProps) {
   const variant = String(node.attrs.variant);
   return (
     <NodeViewWrapper as="aside" className="ph-callout" data-variant={variant} role="note">
-      {editor.isEditable ? (
-        <div contentEditable={false} className="ph-callout-control">
+      <div contentEditable={false} className="ph-callout-control">
+        {editor.isEditable ? (
           <Menu
             align="start"
             trigger={
-              <button type="button" className="ph-inline-button" aria-label={t("editor.callout.change")}>
+              <button
+                type="button"
+                className="ph-callout-label ph-inline-button"
+                aria-label={t("editor.callout.change")}
+              >
                 <Info aria-hidden="true" className="size-icon-sm" />
                 {translateKey(t, `editor.callout.${variant}`)}
               </button>
@@ -105,8 +109,13 @@ export function CalloutView({ node, editor, updateAttributes }: NodeViewProps) {
               onSelect: () => updateAttributes({ variant: candidate }),
             }))}
           />
-        </div>
-      ) : null}
+        ) : (
+          <span className="ph-callout-label">
+            <Info aria-hidden="true" className="size-icon-sm" />
+            {translateKey(t, `editor.callout.${variant}`)}
+          </span>
+        )}
+      </div>
       <NodeViewContent className="ph-callout-content" />
     </NodeViewWrapper>
   );

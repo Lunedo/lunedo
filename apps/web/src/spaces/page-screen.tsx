@@ -185,7 +185,7 @@ function PageView({ page }: { page: ItemDetails }) {
       </div>
       {editing ? (
         <Suspense fallback={<Skeleton className="h-field w-full" />}>
-          <PageEditor pageId={page.id} spaceId={space.id} spaceKey={space.key} width={width} />
+          <PageEditor pageId={page.id} spaceId={space.id} spaceKey={space.key} />
         </Suspense>
       ) : (
         <PageContent pageId={page.id} />

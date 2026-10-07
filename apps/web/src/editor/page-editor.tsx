@@ -26,13 +26,10 @@ import { EditorToolbar, type ToolbarHandle } from "./toolbar.js";
 import { toolbarItems } from "./toolbar-items.js";
 import "./editor.css";
 
-export type PageWidth = "fixed" | "full";
-
 export interface PageEditorProps {
   pageId: string;
   spaceId: string;
   spaceKey: string;
-  width: PageWidth;
   showStatus?: boolean;
   onSaveStateChange?: (state: SaveState) => void;
 }
@@ -54,7 +51,6 @@ function CollaborativeEditor({
   pageId,
   spaceId,
   spaceKey,
-  width,
   showStatus = true,
   onSaveStateChange,
   collaboration,
@@ -169,7 +165,7 @@ function CollaborativeEditor({
 
   return (
     <PageContextValue value={pageContext}>
-      <div className="ph-page-editor flex flex-col gap-3" data-width={width}>
+      <div className="ph-page-editor flex flex-col gap-3">
         {snapshot.problem ? <CollaborationProblemNotice problem={snapshot.problem} /> : null}
         {blocked || !editor ? null : (
           <>

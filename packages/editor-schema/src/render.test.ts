@@ -49,7 +49,9 @@ function htmlText(html: string): string {
     math.lastIndex = index;
   }
   output += html.slice(index);
-  return decode(output.replace(/<[^>]*>/g, "")).replace(/\s+/g, "");
+  return decode(
+    output.replace(/<div class="ph-callout-control">[\s\S]*?<\/div>/g, "").replace(/<[^>]*>/g, ""),
+  ).replace(/\s+/g, "");
 }
 
 function markdownText(markdown: string): string {
@@ -114,6 +116,23 @@ const context: RenderContext = {
   attachment: (id) => ({ href: `/api/v1/attachments/${id}` }),
   formatDate: (iso) => `on ${iso}`,
 };
+
+describe("callout", () => {
+  it("shows its type as a label with an icon before the content", () => {
+    const html = renderHtml(
+      {
+        type: "doc",
+        content: [
+          { type: "callout", attrs: { variant: "warning" }, content: [paragraph(text("Mind the gap"))] },
+        ],
+      },
+      { labels: { callout: { warning: "Warnung" } as never } },
+    );
+    expect(html).toContain('<div class="ph-callout-control"><span class="ph-callout-label"><svg');
+    expect(html).toContain("</svg>Warnung</span></div>");
+    expect(html.indexOf("Warnung")).toBeLessThan(html.indexOf("Mind the gap"));
+  });
+});
 
 describe("renderers", () => {
   const types = [...modules.nodes().map((node) => node.name), ...modules.marks().map((mark) => mark.name)];

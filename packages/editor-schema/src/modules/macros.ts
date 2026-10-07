@@ -18,6 +18,9 @@ export const MAX_LATEX_LENGTH = 10_000;
 
 const encoder = new TextEncoder();
 
+const CALLOUT_ICON =
+  '<svg class="ph-callout-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>';
+
 function renderMath(latex: string, displayMode: boolean, renderer: HtmlRenderer): string {
   const rendered = renderer.spendRenderBudget(latex.length)
     ? katex.renderToString(latex, {
@@ -54,7 +57,7 @@ export const calloutModule = defineModule({
             role: "note",
             "aria-label": renderer.calloutLabel(variant),
           },
-          renderer.children(node),
+          `${element("div", { class: "ph-callout-control" }, element("span", { class: "ph-callout-label" }, `${CALLOUT_ICON}${renderer.escape(renderer.calloutLabel(variant))}`))}${element("div", { class: "ph-callout-content" }, renderer.children(node))}`,
         );
       },
       markdown: (node, renderer) => {

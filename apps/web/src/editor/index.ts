@@ -1,5 +1,5 @@
 export { type CollaborationProblem, PageCollaboration } from "./collaboration.js";
-export { PageEditor, type PageEditorProps, type PageWidth } from "./page-editor.js";
+export { PageEditor, type PageEditorProps } from "./page-editor.js";
 export { AvatarStack, type PresenceUser, presenceColor } from "./presence.js";
 export { FOLLOW_PATH, PageReadView } from "./read-view.js";
 export { type PageReference, pagePath, type References, rememberReferences } from "./references.js";

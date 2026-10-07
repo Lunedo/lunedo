@@ -1,15 +1,6 @@
 @import "katex/dist/katex.min.css";
 @reference "../styles.css";
 
-.ph-editor-surface {
-  @apply pl-8;
-}
-
-.ph-page-editor[data-width="fixed"] .ph-editor-surface,
-.ph-read-view[data-width="fixed"] {
-  @apply mx-auto max-w-content;
-}
-
 .ph-content {
   @apply text-content leading-content text-text;
   overflow-wrap: anywhere;
@@ -275,6 +266,14 @@ details.ph-expand > div {
 .ph-callout-control,
 .ph-columns-control {
   @apply mb-1;
+}
+
+.ph-callout-label {
+  @apply inline-flex h-control-sm items-center gap-1 px-2 text-sm text-text-muted;
+}
+
+.ph-callout-icon {
+  @apply size-icon-sm;
 }
 
 .ph-inline-button {
