@@ -536,6 +536,23 @@ describe.skipIf(!baseUrl)("sharing", () => {
       expect(csv).not.toContain("Launch plan");
     });
 
+    it("refuse to explain the access of people the caller cannot see", async () => {
+      const context = await setup();
+      const stranger = await account();
+      await expect(
+        test.services.accessExplanations.explainAccess(
+          context.editor,
+          { type: "item", id: context.shared.id },
+          stranger,
+        ),
+      ).rejects.toMatchObject({ code: "personNotFound" });
+      await expect(
+        test.services.accessExplanations.personAccess(context.editor, stranger, {
+          organizationId: context.org.id,
+        }),
+      ).rejects.toMatchObject({ code: "personNotFound" });
+    });
+
     it("previews giving access with the number of pages and the restricted pages left out", async () => {
       const context = await setup();
       await test.services.pageAccess.change(context.editor, context.sibling.id, [

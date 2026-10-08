@@ -145,7 +145,10 @@ export class AccessExplanationService {
       select a.id, ${this.#people.visibleName(viewer, sql`a`)} as name, a.state::text as state
       from accounts a where a.id = ${accountId}`);
     const person = account.rows[0];
-    if (!person) throw new SpaceError("personNotFound", "The person does not exist");
+    const own = viewer.type === "account" && viewer.id === accountId;
+    if (!person || (!own && !(await this.#people.canSee(viewer, accountId)))) {
+      throw new SpaceError("personNotFound", "The person does not exist");
+    }
     const decisions = await this.#roleDecisions(accountId, resource);
     const [top, middle, base] = decisions;
     const role: SpaceRole | null =
@@ -276,7 +279,9 @@ export class AccessExplanationService {
         case when ${this.#people.colleagueCondition(viewer, sql`a.id`)} then a.email end as email
       from accounts a where a.id = ${accountId}`);
     const person = account.rows[0];
-    if (!person) throw new SpaceError("personNotFound", "The person does not exist");
+    if (!person || !(await this.#people.canSee(viewer, accountId))) {
+      throw new SpaceError("personNotFound", "The person does not exist");
+    }
     const limit = options.spaceIds ? sql`s.id = any(${sql.param(options.spaceIds)}::uuid[])` : sql`true`;
     const scope = sql`${this.#spaceScope(options.organizationId)} and ${limit} and s.deleted_at is null and s.personal_of is null`;
     const spaces = await this.#database.execute<{ id: string; name: string; key: string }>(sql`

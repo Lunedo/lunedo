@@ -56,6 +56,12 @@ function isSamlResponse(request: FastifyRequest): boolean {
   return request.method === "POST" && SAML_RESPONSE.test(request.url.split("?")[0] ?? "");
 }
 
+const TOKEN_SEGMENTS = /^(\/api\/v1\/share-links\/|\/api\/v1\/files\/|\/s\/)[^/]+/;
+
+export function withoutTokens(path: string): string {
+  return path.replace(TOKEN_SEGMENTS, "$1:token");
+}
+
 export async function configureApp(app: NestFastifyApplication, context: ApiContext): Promise<void> {
   const fastify = app.getHttpAdapter().getInstance();
   fastify.addContentTypeParser(
@@ -103,7 +109,7 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
     context.metrics.observeHttpRequest(request.method, route, reply.statusCode, reply.elapsedTime / 1000);
     const entry = {
       method: request.method,
-      path,
+      path: withoutTokens(path),
       statusCode: reply.statusCode,
       durationMs: Math.round(reply.elapsedTime),
     };
