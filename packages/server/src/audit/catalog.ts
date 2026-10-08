@@ -121,6 +121,12 @@ export const auditCatalog = {
     fields: z.object({ endedSessions: z.number().int().nonnegative() }),
     visibility: "organization",
   }),
+  "auth.groupsClaimMissing": event({
+    actor: ["system"],
+    target: "identityProvider",
+    fields: z.object({}),
+    visibility: "organization",
+  }),
   "identity.linked": event({
     actor: ["account", "system"],
     target: "account",

@@ -13,10 +13,10 @@ import {
   deleteKeycloakUser,
   type IdentityProviderFixture,
   identityProviders,
+  type NewTestUser,
+  newTestUser,
   signInAtKeycloak,
   TEST_DOMAIN,
-  TEST_USERS,
-  type TestUserName,
 } from "../support/idp.js";
 
 const HOST_FROM_PROVIDER = BASE_URL.replace("localhost", "host.docker.internal");
@@ -95,49 +95,55 @@ async function setPasswordSignIn(request: APIRequestContext, value: boolean | un
   expect(response.status()).toBeLessThan(300);
 }
 
-async function signInThroughProvider(
-  page: Page,
-  provider: IdentityProviderFixture,
-  user: keyof typeof TEST_USERS,
-) {
+async function signInThroughProvider(page: Page, provider: IdentityProviderFixture, user: NewTestUser) {
   await page.goto("/sign-in");
-  await page.getByLabel("Work e-mail address or sign-in name").fill(TEST_USERS[user].email);
+  await page.getByLabel("Work e-mail address or sign-in name").fill(user.email);
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByText(`${TEST_DOMAIN} signs in with E2E ${provider.name}`)).toBeVisible();
   await page.getByRole("button", { name: `Continue with E2E ${provider.name}` }).click();
-  await provider.signIn(page, user);
+  await provider.signIn(page, user.username);
+}
+
+async function freshContext(browser: Browser): Promise<{ context: BrowserContext; page: Page }> {
+  const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  return { context, page: await context.newPage() };
 }
 
 for (const provider of identityProviders) {
   test.describe(`sign-in through ${provider.name}`, () => {
-    test.describe.configure({ mode: "serial" });
     let providerId = "";
-    const user: TestUserName = provider.name === "keycloak" ? "alice" : "carol";
+    let user: NewTestUser = newTestUser("person");
+    const created: string[] = [];
 
-    test.beforeAll(async ({ browser }) => {
+    async function createUser(person: NewTestUser): Promise<NewTestUser> {
+      created.push(person.username);
+      await provider.createUser(person);
+      return person;
+    }
+
+    test.beforeEach(async ({ browser }) => {
+      user = await createUser(newTestUser("person"));
       const owner = await ownerApi(browser);
       providerId = await createProvider(owner.request, provider, true);
       await owner.close();
     });
 
-    test.afterAll(async ({ browser }) => {
+    test.afterEach(async ({ browser }) => {
       const owner = await ownerApi(browser);
       await setPasswordSignIn(owner.request, undefined);
       if (providerId)
         await owner.request.delete(`/api/v1/instance/identity-providers/${providerId}`, { headers });
+      providerId = "";
       await owner.close();
-      await provider.reset();
+      for (const username of created.splice(0)) await provider.deleteUser(username);
     });
 
     test("chooses the provider by domain and creates the account at first sign-in", async ({ browser }) => {
-      const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-      const page = await context.newPage();
+      const { context, page } = await freshContext(browser);
       await signInThroughProvider(page, provider, user);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       const session = await context.request.get("/api/v1/auth/session");
-      expect(((await session.json()) as { account: { email: string } }).account.email).toBe(
-        TEST_USERS[user].email,
-      );
+      expect(((await session.json()) as { account: { email: string } }).account.email).toBe(user.email);
       await context.clearCookies({ name: "__Host-pagehall-session" });
       await page.goto("/sign-in");
       await expect(page.getByRole("button", { name: `E2E ${provider.name}` })).toBeVisible();
@@ -145,24 +151,23 @@ for (const provider of identityProviders) {
     });
 
     test("refuses an address outside the provider's domains with a reference", async ({ browser }) => {
-      const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-      const page = await context.newPage();
+      const outsider = await createUser(newTestUser("outsider", "example.net"));
+      const { context, page } = await freshContext(browser);
       await page.goto("/sign-in");
-      await page.getByLabel("Work e-mail address or sign-in name").fill(TEST_USERS.alice.email);
+      await page.getByLabel("Work e-mail address or sign-in name").fill(user.email);
       await page.getByRole("button", { name: "Continue" }).click();
       await page.getByRole("button", { name: `Continue with E2E ${provider.name}` }).click();
-      await provider.signIn(page, "erin");
+      await provider.signIn(page, outsider.username);
       await expect(page).toHaveURL(/\/sign-in\/refused/);
       await expect(page.getByText("Reference for your administrator:")).toBeVisible();
       await context.close();
     });
 
     test("ends the Pagehall session when the provider signs the person out", async ({ browser }) => {
-      const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-      const page = await context.newPage();
+      const { context, page } = await freshContext(browser);
       await signInThroughProvider(page, provider, user);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-      await provider.endSessions(user);
+      await provider.endSessions(user.username);
       await expect
         .poll(async () => (await context.request.get("/api/v1/auth/session")).status(), { timeout: 20_000 })
         .toBe(401);
@@ -173,10 +178,15 @@ for (const provider of identityProviders) {
       browser,
     }) => {
       const synchronize = provider.name === "keycloak";
+      const first = await freshContext(browser);
+      await signInThroughProvider(first.page, provider, user);
+      await expect(first.page.getByRole("heading", { level: 1 })).toBeVisible();
+      await first.context.close();
+
       const owner = await ownerApi(browser);
       const homeId = await firstOrganization(owner.request);
       const accounts = await owner.request.get(
-        `/api/v1/instance/accounts?q=${encodeURIComponent(TEST_USERS[user].email)}`,
+        `/api/v1/instance/accounts?q=${encodeURIComponent(user.email)}`,
       );
       const [account] = (
         (await accounts.json()) as { items: { id: string; homeOrganizationId: string | null }[] }
@@ -196,7 +206,7 @@ for (const provider of identityProviders) {
       expect(organization.status(), await organization.text()).toBe(201);
       const organizationId = ((await organization.json()) as { id: string }).id;
       const groupId = await provider.groupId("engineering");
-      const created = await owner.request.post(
+      const rule = await owner.request.post(
         `/api/v1/instance/identity-providers/${providerId}/mapping-rules`,
         {
           headers,
@@ -210,12 +220,11 @@ for (const provider of identityProviders) {
           },
         },
       );
-      expect(created.status(), await created.text()).toBe(201);
+      expect(rule.status(), await rule.text()).toBe(201);
       await owner.close();
-      await provider.addToGroup(user, "engineering");
+      await provider.addToGroup(user.username, "engineering");
 
-      const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-      const page = await context.newPage();
+      const { context, page } = await freshContext(browser);
       await signInThroughProvider(page, provider, user);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       expect(await organizationIds(context)).toContain(organizationId);
@@ -230,14 +239,13 @@ for (const provider of identityProviders) {
       }
       await context.close();
 
-      await provider.removeFromGroup(user, "engineering");
-      const again = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-      const second = await again.newPage();
-      await signInThroughProvider(second, provider, user);
-      await expect(second.getByRole("heading", { level: 1 })).toBeVisible();
-      expect(await organizationIds(again)).not.toContain(organizationId);
-      expect(await organizationIds(again)).toContain(homeId);
-      await again.close();
+      await provider.removeFromGroup(user.username, "engineering");
+      const again = await freshContext(browser);
+      await signInThroughProvider(again.page, provider, user);
+      await expect(again.page.getByRole("heading", { level: 1 })).toBeVisible();
+      expect(await organizationIds(again.context)).not.toContain(organizationId);
+      expect(await organizationIds(again.context)).toContain(homeId);
+      await again.context.close();
     });
 
     test("shows the only provider directly when password sign-in is off, and keeps the emergency sign-in", async ({
@@ -246,8 +254,7 @@ for (const provider of identityProviders) {
       const owner = await ownerApi(browser);
       await setPasswordSignIn(owner.request, false);
       await owner.close();
-      const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-      const page = await context.newPage();
+      const { context, page } = await freshContext(browser);
       await page.goto("/sign-in");
       await expect(page.getByRole("button", { name: `Continue with E2E ${provider.name}` })).toBeVisible();
       await expect(page.getByLabel("Work e-mail address or sign-in name")).toHaveCount(0);

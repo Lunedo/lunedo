@@ -77,7 +77,8 @@ export type ProviderWarning =
   | "credentialExpired"
   | "metadataRefreshFailed"
   | "caCertificateExpiring"
-  | "noGraphCredential";
+  | "noGraphCredential"
+  | "groupsClaimMissing";
 
 export type ConnectionProblem =
   | "unreachable"
@@ -141,6 +142,7 @@ interface ProviderSummaryBase {
   scim: boolean;
   deactivatedAt: Date | null;
   setupComplete: boolean;
+  groupsClaimMissingSince: Date | null;
   warnings: ProviderWarning[];
   createdAt: Date;
   updatedAt: Date;
@@ -305,6 +307,10 @@ export function parseCaCertificates(pem: string): { pem: string; info: Certifica
   if (!first) throw new OrganizationError("invalidCertificate", "The file contains no certificate");
   const expiresAt = new Date(Math.min(...infos.map((info) => info.expiresAt.getTime())));
   return { pem: `${blocks.join("\n")}\n`, info: { ...first, expiresAt } };
+}
+
+function groupsClaimNameOf(config: OidcConfig | SamlConfig | LdapConfig): string | null {
+  return "claims" in config ? config.claims.groups : null;
 }
 
 function warningsOf(credentials: CredentialSummary[], now: Date): ProviderWarning[] {
@@ -566,6 +572,7 @@ export class IdentityProviderService {
         scim: scim.has(row.id),
         deactivatedAt: row.deactivatedAt,
         setupComplete: row.setupCompletedAt !== null,
+        groupsClaimMissingSince: row.groupsClaimMissingSince,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       };
@@ -634,7 +641,10 @@ export class IdentityProviderService {
         config,
         issuer: oidcIssuer(config),
         capabilities: oidcCapabilities(config, directoryKey),
-        warnings: warningsOf(own, now),
+        warnings: [
+          ...warningsOf(own, now),
+          ...(row.groupsClaimMissingSince ? (["groupsClaimMissing"] as const) : []),
+        ],
       };
     });
   }
@@ -1097,7 +1107,15 @@ export class IdentityProviderService {
       if (config.preset !== current.preset) {
         throw invalidConfiguration("The preset of a provider cannot change", ["config.preset"]);
       }
-      await tx.update(identityProviders).set({ name, config }).where(eq(identityProviders.id, id));
+      const claimChanged = groupsClaimNameOf(config) !== groupsClaimNameOf(previousConfig);
+      await tx
+        .update(identityProviders)
+        .set({
+          name,
+          config,
+          ...(claimChanged ? { groupsClaimSeenAt: null, groupsClaimMissingSince: null } : {}),
+        })
+        .where(eq(identityProviders.id, id));
       await this.#syncDomains(tx, id, config.domains);
       await this.#audit.record(tx, {
         name: "identityProvider.updated",

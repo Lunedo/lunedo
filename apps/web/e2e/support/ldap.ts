@@ -9,10 +9,9 @@ export const LDAP_SERVICE = {
 };
 export const LDAP_BASE = { users: "ou=people,dc=example,dc=org", groups: "ou=groups,dc=example,dc=org" };
 
-export type LdapUser = "lena" | "max" | "nora" | "otto";
 export type LdapGroup = "staff" | "platform" | "engineering";
 
-export function userDn(user: LdapUser): string {
+export function userDn(user: string): string {
   return `uid=${user},${LDAP_BASE.users}`;
 }
 
@@ -64,7 +63,7 @@ export async function removeMember(group: LdapGroup, member: string): Promise<vo
   });
 }
 
-export async function setDisabled(user: LdapUser, disabled: boolean): Promise<void> {
+export async function setDisabled(user: string, disabled: boolean): Promise<void> {
   await modify(
     userDn(user),
     new Change({
@@ -72,4 +71,29 @@ export async function setDisabled(user: LdapUser, disabled: boolean): Promise<vo
       modification: new Attribute({ type: "employeeType", values: disabled ? ["disabled"] : [] }),
     }),
   );
+}
+
+export async function createUser(
+  uid: string,
+  details: { groups: LdapGroup[]; disabled?: boolean },
+): Promise<void> {
+  await withAdmin((client) =>
+    client.add(userDn(uid), {
+      objectClass: ["inetOrgPerson"],
+      uid,
+      cn: `Person ${uid}`,
+      sn: "Directory",
+      mail: `${uid}@${LDAP_DOMAIN}`,
+      userPassword: LDAP_PASSWORD,
+      ...(details.disabled ? { employeeType: "disabled" } : {}),
+    }),
+  );
+  for (const group of details.groups) await addMember(group, userDn(uid));
+}
+
+export async function deleteUser(uid: string, groups: LdapGroup[]): Promise<void> {
+  for (const group of groups) await removeMember(group, userDn(uid));
+  await withAdmin((client) => client.del(userDn(uid))).catch((error: unknown) => {
+    if ((error as { code?: number }).code !== 32) throw error;
+  });
 }

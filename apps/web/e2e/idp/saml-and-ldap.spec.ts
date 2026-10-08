@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import {
   type APIRequestContext,
   type Browser,
@@ -10,19 +11,21 @@ import { BASE_URL, OWNER, OWNER_STORAGE } from "../support/environment.js";
 import {
   KEYCLOAK_SAML_METADATA_URL,
   keycloak,
+  newTestUser,
   registerKeycloakSamlClient,
   removeKeycloakClient,
   TEST_DOMAIN,
-  TEST_USERS,
 } from "../support/idp.js";
 import {
-  addMember,
+  createUser as createLdapUser,
+  deleteUser as deleteLdapUser,
   groupId,
   LDAP_BASE,
   LDAP_DOMAIN,
   LDAP_PASSWORD,
   LDAP_SERVICE,
   LDAP_URL,
+  type LdapGroup,
   removeMember,
   setDisabled,
   userDn,
@@ -157,13 +160,13 @@ async function freshPage(browser: Browser): Promise<{ context: BrowserContext; p
 }
 
 test.describe("sign-in through SAML (Keycloak)", () => {
-  test.describe.configure({ mode: "serial" });
   let providerId = "";
   let clientId = "";
-  const user = "dave";
+  let user = newTestUser("saml");
 
-  test.beforeAll(async ({ browser }) => {
-    await keycloak.reset();
+  test.beforeEach(async ({ browser }) => {
+    user = newTestUser("saml");
+    await keycloak.createUser(user);
     const owner = await ownerApi(browser);
     const response = await owner.request.post("/api/v1/instance/identity-providers", {
       headers,
@@ -187,18 +190,20 @@ test.describe("sign-in through SAML (Keycloak)", () => {
     clientId = await registerKeycloakSamlClient(await metadata.text());
   });
 
-  test.afterAll(async ({ browser }) => {
+  test.afterEach(async ({ browser }) => {
     await removeProvider(browser, providerId);
+    providerId = "";
     if (clientId) await removeKeycloakClient(clientId);
-    await keycloak.reset();
+    clientId = "";
+    await keycloak.deleteUser(user.username);
   });
 
   async function signIn(page: Page) {
     await page.goto("/sign-in");
-    await page.getByLabel("Work e-mail address or sign-in name").fill(TEST_USERS[user].email);
+    await page.getByLabel("Work e-mail address or sign-in name").fill(user.email);
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByRole("button", { name: "Continue with E2E SAML" }).click();
-    await keycloak.signIn(page, user);
+    await keycloak.signIn(page, user.username);
     await signedIn(page);
   }
 
@@ -206,18 +211,20 @@ test.describe("sign-in through SAML (Keycloak)", () => {
     const { context, page } = await freshPage(browser);
     await signIn(page);
     const session = await context.request.get("/api/v1/auth/session");
-    expect(((await session.json()) as { account: { email: string } }).account.email).toBe(
-      TEST_USERS[user].email,
-    );
+    expect(((await session.json()) as { account: { email: string } }).account.email).toBe(user.email);
     await context.close();
   });
 
   test("grants organization access through a SAML group and removes it when the person leaves the group", async ({
     browser,
   }) => {
+    const created = await freshPage(browser);
+    await signIn(created.page);
+    await created.context.close();
+
     const owner = await ownerApi(browser);
     const homeId = await firstOrganization(owner.request);
-    const person = await account(owner.request, TEST_USERS[user].email);
+    const person = await account(owner.request, user.email);
     if (person.homeOrganizationId === null) {
       const assigned = await owner.request.post(`/api/v1/instance/accounts/${person.id}/organization`, {
         headers,
@@ -234,14 +241,15 @@ test.describe("sign-in through SAML (Keycloak)", () => {
       false,
     );
     await owner.close();
-    await keycloak.addToGroup(user, "engineering");
+    await keycloak.addToGroup(user.username, "admins");
+    await keycloak.addToGroup(user.username, "engineering");
 
     const first = await freshPage(browser);
     await signIn(first.page);
     expect(await organizationIds(first.context)).toContain(organizationId);
     await first.context.close();
 
-    await keycloak.removeFromGroup(user, "engineering");
+    await keycloak.removeFromGroup(user.username, "engineering");
     const second = await freshPage(browser);
     await signIn(second.page);
     expect(await organizationIds(second.context)).not.toContain(organizationId);
@@ -251,12 +259,19 @@ test.describe("sign-in through SAML (Keycloak)", () => {
 });
 
 test.describe("sign-in through LDAP (OpenLDAP)", () => {
-  test.describe.configure({ mode: "serial" });
   let providerId = "";
   let homeId = "";
   let engineeringId = "";
+  const created: { uid: string; groups: LdapGroup[] }[] = [];
 
-  test.beforeAll(async ({ browser }) => {
+  async function directoryUser(prefix: string, groups: LdapGroup[], disabled = false): Promise<string> {
+    const uid = `${prefix}-${randomBytes(5).toString("hex")}`;
+    created.push({ uid, groups });
+    await createLdapUser(uid, { groups, disabled });
+    return uid;
+  }
+
+  test.beforeEach(async ({ browser }) => {
     const owner = await ownerApi(browser);
     const response = await owner.request.post("/api/v1/instance/identity-providers", {
       headers,
@@ -308,15 +323,15 @@ test.describe("sign-in through LDAP (OpenLDAP)", () => {
     await owner.close();
   });
 
-  test.afterAll(async ({ browser }) => {
+  test.afterEach(async ({ browser }) => {
     await removeProvider(browser, providerId);
-    await addMember("platform", userDn("lena"));
-    await setDisabled("nora", false);
+    providerId = "";
+    for (const entry of created.splice(0)) await deleteLdapUser(entry.uid, entry.groups);
   });
 
-  async function signIn(page: Page, name: "lena" | "nora" | "otto", password = LDAP_PASSWORD) {
+  async function signIn(page: Page, uid: string, password = LDAP_PASSWORD) {
     await page.goto("/sign-in");
-    await page.getByLabel("Work e-mail address or sign-in name").fill(`${name}@${LDAP_DOMAIN}`);
+    await page.getByLabel("Work e-mail address or sign-in name").fill(`${uid}@${LDAP_DOMAIN}`);
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -325,8 +340,9 @@ test.describe("sign-in through LDAP (OpenLDAP)", () => {
   test("signs in with the directory password and grants access through a nested group", async ({
     browser,
   }) => {
+    const uid = await directoryUser("member", ["staff", "platform"]);
     const { context, page } = await freshPage(browser);
-    await signIn(page, "lena");
+    await signIn(page, uid);
     await signedIn(page);
     const ids = await organizationIds(context);
     expect(ids).toContain(homeId);
@@ -335,10 +351,19 @@ test.describe("sign-in through LDAP (OpenLDAP)", () => {
   });
 
   test("removes the access at the next sync when the person leaves the nested group", async ({ browser }) => {
-    await removeMember("platform", userDn("lena"));
+    const uid = await directoryUser("member", ["staff", "platform"]);
+    const first = await freshPage(browser);
+    await signIn(first.page, uid);
+    await signedIn(first.page);
+    expect(await organizationIds(first.context)).toContain(engineeringId);
+    await first.context.close();
+
+    await removeMember("platform", userDn(uid));
     const owner = await ownerApi(browser);
     await synchronize(owner.request, providerId);
-    const ids = (await account(owner.request, `lena@${LDAP_DOMAIN}`)).organizations.map((entry) => entry.id);
+    const ids = (await account(owner.request, `${uid}@${LDAP_DOMAIN}`)).organizations.map(
+      (entry) => entry.id,
+    );
     expect(ids).not.toContain(engineeringId);
     expect(ids).toContain(homeId);
     await owner.close();
@@ -347,26 +372,29 @@ test.describe("sign-in through LDAP (OpenLDAP)", () => {
   test("deactivates a disabled person at the next sync and reactivates them when enabled again", async ({
     browser,
   }) => {
+    const uid = await directoryUser("member", ["staff"]);
     const first = await freshPage(browser);
-    await signIn(first.page, "nora");
+    await signIn(first.page, uid);
     await signedIn(first.page);
     await first.context.close();
 
     const owner = await ownerApi(browser);
-    await setDisabled("nora", true);
+    await setDisabled(uid, true);
     await synchronize(owner.request, providerId);
-    expect((await account(owner.request, `nora@${LDAP_DOMAIN}`)).state).toBe("deactivated");
-    await setDisabled("nora", false);
+    expect((await account(owner.request, `${uid}@${LDAP_DOMAIN}`)).state).toBe("deactivated");
+    await setDisabled(uid, false);
     await synchronize(owner.request, providerId);
-    expect((await account(owner.request, `nora@${LDAP_DOMAIN}`)).state).toBe("active");
+    expect((await account(owner.request, `${uid}@${LDAP_DOMAIN}`)).state).toBe("active");
     await owner.close();
   });
 
   test("explains a disabled directory account and a wrong password", async ({ browser }) => {
+    const disabled = await directoryUser("disabled", [], true);
+    const member = await directoryUser("member", ["staff"]);
     const { context, page } = await freshPage(browser);
-    await signIn(page, "otto");
+    await signIn(page, disabled);
     await expect(page.getByRole("alert")).toContainText("disabled");
-    await signIn(page, "lena", "not the password");
+    await signIn(page, member, "not the password");
     await expect(page.getByRole("alert")).toBeVisible();
     await expect(page).toHaveURL(/\/sign-in/);
     await context.close();

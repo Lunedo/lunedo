@@ -710,6 +710,110 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     );
   });
 
+  describe("a provider that omits the groups claim", () => {
+    async function mappedProvider() {
+      const org = await organization();
+      const id = await provider({ accountCreation: true });
+      const group = randomUUID();
+      await test.services.mappingRules.create(SYSTEM, id, {
+        target: "organization",
+        group: { id: group, name: "Staff" },
+        organizationId: org,
+        role: null,
+        synchronizedGroup: false,
+        homeOrganization: false,
+      });
+      return { id, org, group };
+    }
+
+    async function memberOf(org: string, result: CallbackResult): Promise<boolean> {
+      if (result.kind !== "signedIn") throw new Error(`Signed in expected, got ${result.kind}`);
+      const rows = await test.pool.query(
+        "select 1 from memberships where organization_id = $1 and account_id = $2",
+        [org, result.signedIn.session.accountId],
+      );
+      return rows.rowCount === 1;
+    }
+
+    async function missingEvents(id: string): Promise<number> {
+      const rows = await test.pool.query(
+        "select 1 from audit_events where name = 'auth.groupsClaimMissing' and target_id = $1",
+        [id],
+      );
+      return rows.rowCount ?? 0;
+    }
+
+    it("records the missing claim without the address or browser of the person", async () => {
+      const { id } = await mappedProvider();
+      await runWithRequestContext(
+        { requestId: randomUUID(), clientIp: "198.51.100.7", userAgent: "Test agent", actor: ANONYMOUS },
+        () => signIn(id, { sub: randomUUID(), email: `i.${randomUUID().slice(0, 8)}@example.org` }),
+      );
+      const rows = await test.pool.query<{ client_ip: string | null; user_agent: string | null }>(
+        "select client_ip, user_agent from audit_events where name = 'auth.groupsClaimMissing' and target_id = $1",
+        [id],
+      );
+      expect(rows.rows).toEqual([{ client_ip: null, user_agent: null }]);
+    });
+
+    it("treats the missing claim as no groups, records it and warns once the claim was seen before", async () => {
+      const { id, org, group } = await mappedProvider();
+      const subject = randomUUID();
+      const email = `m.${subject.slice(0, 8)}@example.org`;
+      expect(await memberOf(org, await signIn(id, { sub: subject, email, groups: [group] }))).toBe(true);
+      expect(await missingEvents(id)).toBe(0);
+      expect((await test.services.identityProviders.get(id)).warnings).not.toContain("groupsClaimMissing");
+
+      expect(await memberOf(org, await signIn(id, { sub: subject, email }))).toBe(false);
+      expect(await missingEvents(id)).toBe(1);
+      const warned = await test.services.identityProviders.get(id);
+      expect(warned.warnings).toContain("groupsClaimMissing");
+      expect(warned.groupsClaimMissingSince).toBeInstanceOf(Date);
+
+      await signIn(id, { sub: subject, email });
+      expect(await missingEvents(id)).toBe(2);
+
+      expect(await memberOf(org, await signIn(id, { sub: subject, email, groups: [group] }))).toBe(true);
+      const cleared = await test.services.identityProviders.get(id);
+      expect(cleared.warnings).not.toContain("groupsClaimMissing");
+      expect(cleared.groupsClaimMissingSince).toBeNull();
+    });
+
+    it("records the missing claim but shows no warning while the provider never sent one", async () => {
+      const { id } = await mappedProvider();
+      await signIn(id, { sub: randomUUID(), email: `n.${randomUUID().slice(0, 8)}@example.org` });
+      expect(await missingEvents(id)).toBe(1);
+      expect((await test.services.identityProviders.get(id)).warnings).not.toContain("groupsClaimMissing");
+    });
+
+    it("keeps the groups unknown when the groups are distributed claims", async () => {
+      const { id, org, group } = await mappedProvider();
+      const subject = randomUUID();
+      const email = `d.${subject.slice(0, 8)}@example.org`;
+      await signIn(id, { sub: subject, email, groups: [group] });
+      const result = await signIn(id, { sub: subject, email, _claim_names: { groups: "src1" } });
+      expect(await memberOf(org, result)).toBe(true);
+      expect(await missingEvents(id)).toBe(0);
+    });
+
+    it("forgets what it saw when the groups claim setting changes", async () => {
+      const { id, group } = await mappedProvider();
+      const subject = randomUUID();
+      const email = `c.${subject.slice(0, 8)}@example.org`;
+      await signIn(id, { sub: subject, email, groups: [group] });
+      await signIn(id, { sub: subject, email });
+      expect((await test.services.identityProviders.get(id)).warnings).toContain("groupsClaimMissing");
+      const current = (await test.services.identityProviders.get(id)).config;
+      if (!("claims" in current)) throw new Error("A provider with a claims setting is expected");
+      await test.services.identityProviders.update(SYSTEM, id, {
+        config: { ...current, claims: { ...current.claims, groups: "roles" } },
+      });
+      const updated = await test.services.identityProviders.get(id);
+      expect(updated.warnings).not.toContain("groupsClaimMissing");
+      expect(updated.groupsClaimMissingSince).toBeNull();
+    });
+  });
+
   it("suggests the groups seen at sign-in, with their names, but not values only typed into a rule", async () => {
     const id = await provider({ accountCreation: true });
     const staff = randomUUID();

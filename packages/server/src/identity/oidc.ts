@@ -89,6 +89,17 @@ function groupsClaim(
   });
 }
 
+function genericGroups(
+  claims: Record<string, unknown>,
+  names: { groups: string | null; groupNames: string | null },
+): Pick<ProviderProfile, "groups" | "groupsClaimMissing"> {
+  if (!names.groups) return { groups: null };
+  if (claims[names.groups] === undefined && claims._claim_names === undefined) {
+    return { groups: [], groupsClaimMissing: true };
+  }
+  return { groups: groupsClaim(claims, names.groups, names.groupNames), groupsClaimMissing: false };
+}
+
 function objectIdOf(subject: string): string {
   return subject.split(":")[1] ?? subject;
 }
@@ -447,9 +458,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
       email: stringClaim(claims, config.claims.email),
       signInName: stringClaim(claims, config.claims.signInName),
       displayName: stringClaim(claims, config.claims.displayName),
-      groups: config.claims.groups
-        ? groupsClaim(claims, config.claims.groups, config.claims.groupNames)
-        : null,
+      ...genericGroups(claims, config.claims),
     };
   }
 

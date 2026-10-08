@@ -57,6 +57,7 @@ export interface ProviderProfile {
   signInName: string | null;
   displayName: string | null;
   groups: ProviderGroup[] | null;
+  groupsClaimMissing?: boolean;
 }
 
 export interface AuthorizationRequest {

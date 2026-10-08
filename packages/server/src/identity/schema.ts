@@ -47,6 +47,8 @@ export const identityProviders = pgTable(
     draft: jsonb(),
     setupCompletedAt: timestampColumn(),
     deactivatedAt: timestampColumn(),
+    groupsClaimSeenAt: timestampColumn(),
+    groupsClaimMissingSince: timestampColumn(),
     ...timestamps(),
   },
   (table) => [
