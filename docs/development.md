@@ -163,12 +163,11 @@ Screens are built from the components in `packages/ui`; `/dev/components` shows 
 |---|---|---|
 | `ci.yml` | pull requests, pushes to `main`, manual | see below |
 | `image.yml` | pushes to `main`, release tags `v*`, Mondays 03:00 UTC, manual | image build, not published; amd64 only on pushes to `main`, amd64 and arm64 otherwise |
-| `api.yml` | pull requests | compares the API description with the base branch |
 | `audit.yml` | Mondays 05:00 UTC, manual | `pnpm audit` on `main`; fails on any known vulnerability and lists the findings in the job summary |
 
 `ci.yml` has two lanes. A newer push to the same pull request or branch cancels the running workflow.
 
-- Fast lane, for draft pull requests: lint, reference and translation checks, typecheck, script tests, unit tests of the packages affected since the base branch (Turborepo `--affected`, split into three shards against PostgreSQL), license check, dependency audit, DCO sign-off.
+- Fast lane, for draft pull requests: lint, reference and translation checks, typecheck, script tests, unit tests of the packages affected since the base branch (Turborepo `--affected`, split into three shards against PostgreSQL), the quick checks (DCO sign-off, API description against the base branch, license check, dependency audit).
 - Full lane, when a pull request is ready for review, on every push to it, on `main` and on manual runs: the fast lane with all unit tests, plus the expensive jobs below. On a pull request they run only when their area changed; changes to workflows or shared dependencies (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json`, `.nvmrc`, `packages/config/`) run all of them, and `main` always runs all of them.
 
 | Job | Runs on pull requests when these change |
@@ -186,5 +185,7 @@ Several runners can share one host. Jobs publish no fixed host ports: unit test 
 The repository variable `CI_PARALLELISM` limits how many processes one job starts. When it is set, it caps the Vitest workers, Turborepo's task concurrency (`TURBO_CONCURRENCY`) and the threads of the TypeScript compiler (`GOMAXPROCS`) and Biome (`RAYON_NUM_THREADS`); without it every tool sizes itself to the CPU count, as on GitHub-hosted runners. Set it to the number of CPUs divided by the number of runners on the host, for example `3` for three runners on 10 vCPUs.
 
 Runners on one host must not share caches. Give each runner its own directories in the runner's `.env`: `npm_config_store_dir` (pnpm store), `PLAYWRIGHT_BROWSERS_PATH`, `COREPACK_HOME` and `XDG_CACHE_HOME`. The pnpm store is therefore not restored through `actions/cache` on self-hosted runners; the end-to-end job runs in a fresh container and keeps its store cache.
+
+Adding or removing the label `breaking-api-change` runs CI again in its own concurrency group, because it changes the result of the API check; other labels do not start a run. On self-hosted runners the backup job builds the image with the Docker daemon of the host and its local layer cache instead of the GitHub Actions cache, and a build that takes longer than 15 minutes is stopped.
 
 Dependabot opens one pull request per ecosystem every Monday (`.github/dependabot.yml`).
