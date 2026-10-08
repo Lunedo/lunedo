@@ -1,6 +1,6 @@
 import { prosemirrorJSONToYDoc, updateYFragment, yXmlFragmentToProsemirrorJSON } from "@tiptap/y-tiptap";
 import type * as Y from "yjs";
-import { editorKit } from "./index.js";
+import { type DocumentJson, editorKit, editorSchemaVersion, migrateDocument } from "./index.js";
 import { InvalidDocumentError } from "./validate.js";
 
 export const Y_FRAGMENT = "default";
@@ -25,4 +25,11 @@ export function applyDocument(ydoc: Y.Doc, doc: unknown, origin?: unknown): void
   ydoc.transact(() => {
     updateYFragment(ydoc, fragment, node, { mapping: new Map(), isOMark: new Map() });
   }, origin);
+}
+
+export function migrateYDoc(ydoc: Y.Doc, fromVersion: number, origin?: unknown): boolean {
+  if (fromVersion >= editorSchemaVersion) return false;
+  const migrated = migrateDocument(documentFromYDoc(ydoc) as DocumentJson, fromVersion);
+  applyDocument(ydoc, migrated, origin);
+  return true;
 }

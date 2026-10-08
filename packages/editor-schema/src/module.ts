@@ -46,6 +46,7 @@ export interface RenderLabels {
   untitledPage: string;
   unknownPerson: string;
   unsupportedMacro: string;
+  taskReport: string;
   tableOfContents: string;
   file: string;
   image: string;
@@ -59,6 +60,7 @@ export interface RenderContext {
   formatDate?: (iso: string) => string;
   labels?: Partial<RenderLabels>;
   showPlaceholders?: boolean;
+  taskStatus?: (id: string) => boolean | null;
 }
 
 interface BaseRenderer {

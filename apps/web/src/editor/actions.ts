@@ -5,6 +5,7 @@ export interface EditorActions {
   openLinkDialog(): void;
   openFind(): void;
   focusToolbar(): void;
+  comment?(): void;
 }
 
 const registry = new WeakMap<Editor, EditorActions>();

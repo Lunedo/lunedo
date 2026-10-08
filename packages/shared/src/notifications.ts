@@ -89,3 +89,32 @@ export function notificationSettingKey(type: string): string {
   const [first = "", ...rest] = type.split(".");
   return `notifications.${first}${rest.map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("")}`;
 }
+
+const contentKind = z.enum(["page", "blogPost"]);
+
+export const contentNotificationParamSchemas = {
+  "content.mentioned": z.object({
+    itemTitle: z.string(),
+    itemKind: contentKind,
+    spaceKey: z.string(),
+    commentId: idSchema.nullable(),
+  }),
+  "task.assigned": z.object({
+    itemTitle: z.string(),
+    itemKind: contentKind,
+    spaceKey: z.string(),
+    taskId: idSchema,
+    taskText: z.string(),
+    dueDate: z.string().nullable(),
+  }),
+  "blogPost.scheduleHeld": z.object({
+    itemTitle: z.string(),
+    itemKind: contentKind,
+    spaceKey: z.string(),
+    reason: z.enum(["noEditAccess", "accountRemoved"]),
+    scheduledBy: idSchema.nullable(),
+    spaceId: idSchema,
+  }),
+} as const;
+
+export type ContentNotificationType = keyof typeof contentNotificationParamSchemas;

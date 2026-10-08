@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import type { TrashEntry } from "../content-queries.js";
+import { itemKindLabel } from "../item-kinds.js";
 
 export function daysUntil(date: string): number {
   return Math.max(0, Math.ceil((new Date(date).getTime() - Date.now()) / (24 * 60 * 60 * 1000)));
@@ -56,7 +57,7 @@ export function TrashTable({
                 ? t("trash.wholeSpace")
                 : entry.descendants > 0
                   ? t("trash.withDescendants", { count: entry.descendants })
-                  : t(`trash.kinds.${entry.itemKind ?? "page"}`)}
+                  : itemKindLabel(t, entry.itemKind)}
             </span>
           </span>
         </span>

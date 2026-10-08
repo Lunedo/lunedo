@@ -5,8 +5,10 @@ import {
   Bell,
   BookOpen,
   CircleHelp,
+  Home,
   Keyboard,
   Layers,
+  ListChecks,
   type LucideIcon,
   Search,
   Settings,
@@ -42,6 +44,36 @@ export function SpacesRailItem() {
       asChild
     >
       <Link to="/spaces" />
+    </RailButton>
+  );
+}
+
+export function HomeRailItem() {
+  const { t } = useTranslation();
+  const location = useLocation();
+  return (
+    <RailButton
+      label={t("rail.forYou")}
+      icon={<RailIcon icon={Home} />}
+      current={location.pathname === "/home" || location.pathname === "/blog"}
+      asChild
+    >
+      <Link to="/home" />
+    </RailButton>
+  );
+}
+
+export function TasksRailItem() {
+  const { t } = useTranslation();
+  const location = useLocation();
+  return (
+    <RailButton
+      label={t("rail.tasks")}
+      icon={<RailIcon icon={ListChecks} />}
+      current={location.pathname === "/tasks"}
+      asChild
+    >
+      <Link to="/tasks" />
     </RailButton>
   );
 }

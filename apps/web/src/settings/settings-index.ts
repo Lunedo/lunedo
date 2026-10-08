@@ -106,12 +106,15 @@ export const PAGE_MODE_KEYS = ["pages.defaultMode", "pages.liveVersionIdleMinute
 
 export const TRASH_KEYS = ["trash.firstStageDays", "trash.secondStageDays"] as const;
 
+export const COLLABORATION_KEYS = ["reactions.enabled"] as const;
+
 export const TRASH_MINIMUM_KEYS = ["trash.firstStageMinimumDays", "trash.secondStageMinimumDays"] as const;
 
 export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
   "organization.content": [
     section("content.pagesSection", PAGE_MODE_KEYS.map(setting)),
     section("content.trashSection", TRASH_KEYS.map(setting)),
+    section("content.collaborationSection", COLLABORATION_KEYS.map(setting)),
   ],
   "instance.content": [
     section("content.pagesSection", ["pages.liveVersionIdleMinutes"].map(setting)),

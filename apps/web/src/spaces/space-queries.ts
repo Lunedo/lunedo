@@ -118,9 +118,21 @@ export function spaceDefaultsQuery(organizationId: string) {
   });
 }
 
+const SPACE_CHANGE_KINDS = [
+  "space",
+  "tree",
+  "page",
+  "draft",
+  "access",
+  "comments",
+  "reactions",
+  "tasks",
+  "blog",
+] as const;
+
 export interface SpaceChangeEvent {
   spaceId: string;
-  kind: "space" | "tree" | "page" | "draft" | "access";
+  kind: (typeof SPACE_CHANGE_KINDS)[number];
   itemId: string | null;
 }
 
@@ -129,7 +141,7 @@ export function isSpaceChangeEvent(value: unknown): value is SpaceChangeEvent {
   const event = value as Partial<SpaceChangeEvent>;
   return (
     typeof event.spaceId === "string" &&
-    ["space", "tree", "page", "draft", "access"].includes(event.kind ?? "") &&
+    (SPACE_CHANGE_KINDS as readonly string[]).includes(event.kind ?? "") &&
     (event.itemId === null || typeof event.itemId === "string")
   );
 }
@@ -164,6 +176,28 @@ export function spacesChanged(queryClient: QueryClient, events: SpaceChangeEvent
       add(spaceKeys.labels(event.itemId));
       add(spaceKeys.backlinks(event.itemId));
       add(["spaces", event.spaceId, "labels"]);
+      add(["items", event.itemId, "comments"]);
+      add(["items", event.itemId, "tasks"]);
+      add(["tasks"]);
+      add(["home"]);
+      add(["blogPosts", event.itemId]);
+      add(["spaces", event.spaceId, "blog"]);
+      add(["blog"]);
+    }
+    if ((event.kind === "comments" || event.kind === "reactions") && event.itemId) {
+      add(["items", event.itemId, "comments"]);
+      add(["items", event.itemId, "reactions"]);
+    }
+    if (event.kind === "tasks" && event.itemId) {
+      add(["items", event.itemId, "tasks"]);
+      add(["tasks"]);
+      add(["home"]);
+    }
+    if (event.kind === "blog") {
+      add(["spaces", event.spaceId, "blog"]);
+      add(["blog"]);
+      add(["home"]);
+      if (event.itemId) add(["blogPosts", event.itemId]);
     }
     if (event.kind === "access") add(["items"]);
   }
@@ -172,6 +206,10 @@ export function spacesChanged(queryClient: QueryClient, events: SpaceChangeEvent
 
 export function pagePath(spaceKey: string, itemId: string, slug: string): string {
   return `/spaces/${encodeURIComponent(spaceKey)}/pages/${itemId}/${slug}`;
+}
+
+export function blogPostPath(spaceKey: string, itemId: string, slug: string): string {
+  return `/spaces/${encodeURIComponent(spaceKey)}/blog/${itemId}/${slug}`;
 }
 
 export function folderPath(spaceKey: string, itemId: string, slug: string): string {

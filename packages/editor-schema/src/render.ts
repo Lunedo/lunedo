@@ -21,6 +21,7 @@ export const defaultLabels: RenderLabels = {
   untitledPage: "Untitled page",
   unknownPerson: "Unknown person",
   unsupportedMacro: "Unsupported macro: {name}",
+  taskReport: "Task report",
   tableOfContents: "Table of contents",
   file: "File",
   image: "Image",

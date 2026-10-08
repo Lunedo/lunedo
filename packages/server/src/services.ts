@@ -20,6 +20,19 @@ import { WebAuthnService } from "./auth/webauthn.js";
 import { AuthorizationRegistry } from "./authorization/registry.js";
 import { resourceTypes } from "./authorization/resources.js";
 import { AuthorizationService } from "./authorization/service.js";
+import { BlogService } from "./collaboration/blog.js";
+import { CommentService } from "./collaboration/comments.js";
+import { ContentActivity } from "./collaboration/content.js";
+import { HomeService } from "./collaboration/home.js";
+import {
+  COLLABORATION_CLEANUP_SCHEDULE,
+  collaborationCleanupJob,
+  SCHEDULED_BLOG_POSTS_SCHEDULE,
+  scheduledBlogPostsJob,
+} from "./collaboration/jobs.js";
+import { collaborationNotificationTypes } from "./collaboration/notifications.js";
+import { ReactionService } from "./collaboration/reactions.js";
+import { TaskService } from "./collaboration/tasks.js";
 import type { Encryption } from "./crypto/envelope.js";
 import type { KeyRing } from "./crypto/key-ring.js";
 import type { KeyRingHolder } from "./crypto/key-ring-holder.js";
@@ -152,6 +165,12 @@ export interface AccountServices {
   trash: TrashService;
   archive: ArchiveService;
   templates: TemplateService;
+  activity: ContentActivity;
+  comments: CommentService;
+  reactions: ReactionService;
+  tasks: TaskService;
+  blog: BlogService;
+  home: HomeService;
 }
 
 export function createAccountServices(options: {
@@ -218,7 +237,10 @@ export function createAccountServices(options: {
     settings,
     mail,
     authorization,
-    registry: new NotificationRegistry().register(...builtinNotificationTypes),
+    registry: new NotificationRegistry().register(
+      ...builtinNotificationTypes,
+      ...collaborationNotificationTypes,
+    ),
   });
   mail.useNotifications(notifications);
   const homeOrganizations = new HomeOrganizationService({ database, audit, authorization, notifications });
@@ -392,17 +414,40 @@ export function createAccountServices(options: {
     people,
   });
   const personalSpaces = new PersonalSpaceService({ database, audit, authorization, spaces });
+  const activity = new ContentActivity({ database, notifications, authorization });
   const documents = new PageDocumentService({
     database,
     authorization,
     people,
+    activity,
     origin: options.nodeId ?? uuidv7(),
   });
-  const versions = new VersionService({ database, audit, documents, people, settings });
-  const trash = new TrashService({ database, audit, settings, people });
-  const archive = new ArchiveService({ database, audit, authorization });
-  const tree = new TreeService({ database, authorization, documents, people, versions, settings });
+  const versions = new VersionService({ database, audit, documents, people, settings, activity });
+  const trash = new TrashService({ database, audit, settings, people, activity });
+  const archive = new ArchiveService({ database, audit, authorization, activity });
+  const tree = new TreeService({
+    database,
+    authorization,
+    documents,
+    people,
+    versions,
+    settings,
+    activity,
+  });
   const templates = new TemplateService({ database, audit, settings, people, tree, documents });
+  const reactions = new ReactionService({ database, settings, people });
+  const comments = new CommentService({
+    database,
+    authorization,
+    documents,
+    people,
+    activity,
+    reactions,
+    audit,
+  });
+  const tasks = new TaskService({ database, authorization, settings, people });
+  const blog = new BlogService({ database, authorization, versions, audit, people, notifications });
+  const home = new HomeService({ database, authorization, settings, tasks, blog, people });
   setupRegistry.register(
     ...builtinSetupSteps({
       database,
@@ -471,6 +516,12 @@ export function createAccountServices(options: {
     trash,
     archive,
     templates,
+    activity,
+    comments,
+    reactions,
+    tasks,
+    blog,
+    home,
   };
 }
 
@@ -567,6 +618,19 @@ export async function workAccountJobs(
     const created = await services.versions.versionIdlePages();
     if (created > 0) job.logger.info({ created }, "Versions of live pages created");
   });
+  await jobs.work(scheduledBlogPostsJob, async (job) => {
+    const published = await services.blog.publishDue();
+    if (published > 0) job.logger.info({ published }, "Scheduled blog posts published");
+  });
+  await jobs.work(collaborationCleanupJob, async (job) => {
+    const removed = {
+      views: await services.home.removeOldViews(),
+      commentBodies: await services.comments.removeDeletedBodies(),
+    };
+    job.logger.debug(removed, "Collaboration data cleaned up");
+  });
+  await jobs.schedule(scheduledBlogPostsJob, SCHEDULED_BLOG_POSTS_SCHEDULE, {}, { key: "minutely" });
+  await jobs.schedule(collaborationCleanupJob, COLLABORATION_CLEANUP_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(dispatchPendingMailJob, DISPATCH_PENDING_MAIL_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(trashRetentionJob, TRASH_RETENTION_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(liveVersionsJob, LIVE_VERSIONS_SCHEDULE, {}, { key: "minutely" });

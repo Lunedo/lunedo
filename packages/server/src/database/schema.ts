@@ -26,6 +26,16 @@ export {
   totpCredentials,
   webauthnCredentials,
 } from "../auth/schema.js";
+export {
+  blogPosts,
+  comments,
+  contentMentions,
+  reactions,
+  recentViews,
+  stars,
+  taskStatusChanges,
+  tasks,
+} from "../collaboration/schema.js";
 export { keyRotationStatus, keyRotations } from "../crypto/schema.js";
 export {
   identities,

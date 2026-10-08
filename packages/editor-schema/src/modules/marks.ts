@@ -100,7 +100,7 @@ export const inlineCommentModule = defineModule({
   marks: [
     {
       name: "inlineComment",
-      spec: { inclusive: false },
+      spec: { inclusive: false, excludes: "" },
       attrs: { threadId: required(uuidValue) },
       html: (mark, content) =>
         element("span", { class: "ph-comment", "data-thread-id": attrOf<string>(mark, "threadId") }, content),

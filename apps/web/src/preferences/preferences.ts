@@ -40,6 +40,7 @@ export interface PreferenceValues {
   sidebarCollapsed: boolean;
   editorToolbar: boolean;
   folderView: "list" | "tiles";
+  startPage: "forYou" | "organizationHome";
 }
 
 export const preferenceKeys: Record<keyof PreferenceValues, string> = {
@@ -57,6 +58,7 @@ export const preferenceKeys: Record<keyof PreferenceValues, string> = {
   sidebarCollapsed: "appearance.sidebarCollapsed",
   editorToolbar: "appearance.editorToolbar",
   folderView: "appearance.folderView",
+  startPage: "appearance.startPage",
 };
 
 const STORAGE_KEY = "pagehall.appearance";
@@ -78,6 +80,7 @@ export function defaultPreferences(language: Language): PreferenceValues {
     sidebarCollapsed: false,
     editorToolbar: true,
     folderView: "list",
+    startPage: "forYou",
   };
 }
 
@@ -104,6 +107,7 @@ export function toPreferenceValues(
     sidebarCollapsed: value("sidebarCollapsed") === true,
     editorToolbar: value("editorToolbar") !== false,
     folderView: value("folderView") === "tiles" ? "tiles" : "list",
+    startPage: value("startPage") === "organizationHome" ? "organizationHome" : "forYou",
   };
 }
 

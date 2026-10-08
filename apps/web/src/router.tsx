@@ -171,9 +171,33 @@ const appRoute = createRoute({
 const homeRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/",
-  beforeLoad: () => {
-    throw redirect({ to: "/spaces" });
-  },
+  component: lazyRouteComponent(() => import("./collaboration/landing.js"), "Landing"),
+});
+
+const forYouRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/home",
+  component: lazyRouteComponent(() => import("./collaboration/home-screen.js"), "HomeScreen"),
+});
+
+const myTasksRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/tasks",
+  validateSearch: z.object({ filter: z.enum(["open", "overdue", "done"]).optional().catch(undefined) }),
+  component: lazyRouteComponent(() => import("./collaboration/my-tasks-screen.js"), "MyTasksScreen"),
+});
+
+const blogRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/blog",
+  validateSearch: z.object({
+    space: idSchema.optional().catch(undefined),
+    label: z.string().max(100).optional().catch(undefined),
+  }),
+  component: lazyRouteComponent(
+    () => import("./collaboration/blog/organization-blog-screen.js"),
+    "OrganizationBlogScreen",
+  ),
 });
 
 const spacesRoute = createRoute({
@@ -213,6 +237,20 @@ const pageRoute = createRoute({
   params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
   validateSearch: itemSearch,
   component: lazyRouteComponent(() => import("./spaces/page-screen.js"), "PageScreen"),
+});
+
+const spaceBlogRoute = createRoute({
+  getParentRoute: () => spaceRoute,
+  path: "/blog",
+  component: lazyRouteComponent(() => import("./collaboration/blog/space-blog-screen.js"), "SpaceBlogScreen"),
+});
+
+const blogPostRoute = createRoute({
+  getParentRoute: () => spaceRoute,
+  path: "/blog/$itemId/{-$slug}",
+  params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
+  validateSearch: itemSearch,
+  component: lazyRouteComponent(() => import("./collaboration/blog/blog-post-screen.js"), "BlogPostScreen"),
 });
 
 const historyRoute = createRoute({
@@ -575,10 +613,15 @@ const routeTree = rootRoute.addChildren([
   ]),
   appRoute.addChildren([
     homeRoute,
+    forYouRoute,
+    myTasksRoute,
+    blogRoute,
     spacesRoute,
     personalSpaceRoute,
     spaceRoute.addChildren([
       spaceIndexRoute,
+      spaceBlogRoute,
+      blogPostRoute,
       historyRoute,
       pageRoute,
       folderRoute,

@@ -75,7 +75,7 @@ const mappingRuleFields = z.object({
 
 const spaceRoleNames = ["reader", "commenter", "editor", "admin"] as const;
 const pageModeNames = ["publish", "live"] as const;
-const itemKindNames = ["page", "folder", "link"] as const;
+const itemKindNames = ["page", "folder", "link", "blogPost"] as const;
 const pageFields = z.object({ spaceId: z.uuid(), title: z.string() });
 const trashFields = z.object({
   spaceId: z.uuid(),
@@ -995,6 +995,48 @@ export const auditCatalog = {
     actor: ["account", "system"],
     target: "page",
     fields: pageFields.extend({ version: z.number().int().positive(), note: z.string() }),
+    visibility: "organization",
+  }),
+  "blogPost.publishedBySchedule": event({
+    actor: ["system"],
+    target: "page",
+    fields: pageFields.extend({ version: z.number().int().positive(), scheduledBy: z.uuid() }),
+    visibility: "organization",
+  }),
+  "blogPost.scheduleHeld": event({
+    actor: ["system"],
+    target: "page",
+    fields: pageFields.extend({ scheduledBy: z.uuid().nullable() }),
+    visibility: "organization",
+  }),
+  "blogPost.heldPublished": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({ version: z.number().int().positive(), scheduledBy: z.uuid().nullable() }),
+    visibility: "organization",
+  }),
+  "blogPost.heldCancelled": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({ scheduledBy: z.uuid().nullable() }),
+    visibility: "organization",
+  }),
+  "blogPost.pinned": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({ level: z.enum(["space", "organization"]) }),
+    visibility: "organization",
+  }),
+  "blogPost.unpinned": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({ level: z.enum(["space", "organization"]) }),
+    visibility: "organization",
+  }),
+  "comment.deletedByModerator": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({ commentId: z.uuid(), authorId: z.uuid().nullable() }),
     visibility: "organization",
   }),
   "page.draftDiscarded": event({

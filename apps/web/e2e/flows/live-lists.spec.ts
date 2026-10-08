@@ -22,7 +22,7 @@ async function secondSession(browser: Browser): Promise<Page> {
     .getByLabel("Code from your authenticator app")
     .fill(await freshTotp(readState().ownerSecret ?? ""));
   await page.getByRole("button", { name: "Verify" }).click();
-  await expect(page.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
   return page;
 }
 

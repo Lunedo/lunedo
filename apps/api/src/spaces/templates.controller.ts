@@ -40,6 +40,7 @@ const SPACE_SETTING_KEYS = new Set([
   "pages.liveVersionIdleMinutes",
   "trash.firstStageDays",
   "trash.secondStageDays",
+  "reactions.enabled",
 ]);
 
 const categorySchema = z

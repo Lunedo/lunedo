@@ -4,17 +4,19 @@ import {
   emptyDocument,
   extractMentions,
   extractPageLinks,
+  extractTasks,
   migrateDocument,
   renderMarkdown,
   slugify,
   type ValidationProblem,
   validateDocument,
 } from "@pagehall/editor-schema";
-import { applyDocument, documentFromYDoc, yDocFromDocument } from "@pagehall/editor-schema/yjs";
+import { applyDocument, documentFromYDoc, migrateYDoc, yDocFromDocument } from "@pagehall/editor-schema/yjs";
 import { sql } from "drizzle-orm";
 import * as Y from "yjs";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
+import { type ContentActivity, claimTaskIds, syncCommentAnchors } from "../collaboration/content.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import { actorIdOf, SpaceError } from "./common.js";
 import type { PeopleService } from "./people.js";
@@ -26,6 +28,7 @@ export const LABEL_MAX_LENGTH = 100;
 export const MAX_LABELS_PER_PAGE = 100;
 export const MERGE_ORIGIN = "pagehall:merge";
 export const API_ORIGIN = "pagehall:api";
+export const NORMALIZE_ORIGIN = "pagehall:normalize";
 
 export class DocumentInvalidError extends Error {
   override name = "DocumentInvalidError";
@@ -85,7 +88,7 @@ export async function insertInitialDocument(
   if (content !== undefined) {
     const validation = validateDocument(content);
     if (!validation.ok) throw new DocumentInvalidError(validation.problems);
-    document = validation.document;
+    document = (await claimTaskIds(tx, itemId, validation.document)) ?? validation.document;
   }
   const state = encodeState(yDocFromDocument(document));
   await tx.execute(sql`
@@ -168,17 +171,20 @@ export class PageDocumentService {
   readonly #database: Database;
   readonly #authorization: AuthorizationService;
   readonly #people: PeopleService;
+  readonly #activity: ContentActivity;
   readonly #origin: string;
 
   constructor(options: {
     database: Database;
     authorization: AuthorizationService;
     people: PeopleService;
+    activity: ContentActivity;
     origin: string;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
     this.#people = options.people;
+    this.#activity = options.activity;
     this.#origin = options.origin;
   }
 
@@ -196,7 +202,7 @@ export class PageDocumentService {
     }>(sql`
       select d.snapshot, d.schema_version, d.revision, d.updated_at, d.updated_by
       from page_documents d join tree_items t on t.id = d.item_id
-      where d.item_id = ${itemId} and t.kind = 'page'`);
+      where d.item_id = ${itemId} and t.kind in ('page', 'blogPost')`);
     const row = result.rows[0];
     if (!row) return null;
     return {
@@ -232,7 +238,7 @@ export class PageDocumentService {
         v.created_by as version_by
       from tree_items t join page_documents d on d.item_id = t.id
       left join page_versions v on v.id = t.published_version_id
-      where t.id = ${itemId} and t.kind = 'page'`);
+      where t.id = ${itemId} and t.kind in ('page', 'blogPost')`);
     const row = result.rows[0];
     if (!row) return null;
     if (row.mode === "publish") {
@@ -261,11 +267,33 @@ export class PageDocumentService {
   }
 
   async state(itemId: string, executor: Executor = this.#database): Promise<Uint8Array | null> {
-    const result = await executor.execute<{ state: Buffer }>(
-      sql`select state from page_documents where item_id = ${itemId}`,
+    return (await this.stored(itemId, executor))?.state ?? null;
+  }
+
+  async stored(
+    itemId: string,
+    executor: Executor = this.#database,
+  ): Promise<{ state: Uint8Array; schemaVersion: number } | null> {
+    const result = await executor.execute<{ state: Buffer; schema_version: number }>(
+      sql`select state, schema_version from page_documents where item_id = ${itemId}`,
     );
-    const state = result.rows[0]?.state;
-    return state ? new Uint8Array(state) : null;
+    const row = result.rows[0];
+    return row ? { state: new Uint8Array(row.state), schemaVersion: row.schema_version } : null;
+  }
+
+  async afterInsert(tx: Transaction, itemId: string, actorId: string | null): Promise<void> {
+    const result = await tx.execute<{ snapshot: unknown; schema_version: number }>(sql`
+      select d.snapshot, d.schema_version from page_documents d join tree_items t on t.id = d.item_id
+      where d.item_id = ${itemId} and t.mode = 'live'`);
+    const row = result.rows[0];
+    if (row) {
+      await this.#activity.readerContentChanged(
+        tx,
+        itemId,
+        migrated(row.snapshot, row.schema_version),
+        actorId,
+      );
+    }
   }
 
   async store(itemId: string, doc: Y.Doc, options: { actorId: string | null }): Promise<number> {
@@ -278,15 +306,26 @@ export class PageDocumentService {
 
   async #store(tx: Transaction, itemId: string, doc: Y.Doc, actorId: string | null): Promise<number> {
     await tx.execute(sql`select item_id from page_documents where item_id = ${itemId} for update`);
-    const locked = await tx.execute<{ state: Buffer; space_id: string; mode: PageMode }>(sql`
-      select d.state, t.space_id, t.mode from page_documents d join tree_items t on t.id = d.item_id
+    const locked = await tx.execute<{
+      state: Buffer;
+      space_id: string;
+      mode: PageMode;
+      schema_version: number;
+    }>(sql`
+      select d.state, t.space_id, t.mode, d.schema_version from page_documents d join tree_items t on t.id = d.item_id
       where d.item_id = ${itemId}`);
     const row = locked.rows[0];
     if (!row) throw new SpaceError("itemNotFound", "The page does not exist");
     Y.applyUpdate(doc, new Uint8Array(row.state), MERGE_ORIGIN);
+    migrateYDoc(doc, row.schema_version, NORMALIZE_ORIGIN);
     const validation = validateDocument(documentFromYDoc(doc));
     if (!validation.ok) throw new DocumentInvalidError(validation.problems);
-    const document = validation.document;
+    let document = validation.document;
+    const claimed = await claimTaskIds(tx, itemId, document);
+    if (claimed) {
+      applyDocument(doc, claimed, NORMALIZE_ORIGIN);
+      document = claimed;
+    }
     const revision = await tx.execute<{ revision: number }>(sql`
       update page_documents set state = ${encodeState(doc)}, snapshot = ${JSON.stringify(document)}::jsonb,
         schema_version = ${editorSchemaVersion}, revision = revision + 1, updated_by = ${actorId}, updated_at = now(),
@@ -298,6 +337,8 @@ export class PageDocumentService {
       await tx.execute(sql`update tree_items set content_updated_at = now() where id = ${itemId}`);
       await recomputeLinks(tx, itemId, document);
     }
+    await syncCommentAnchors(tx, itemId, document);
+    if (live) await this.#activity.readerContentChanged(tx, itemId, document, actorId);
     const stored = Number(revision.rows[0]?.revision ?? 0);
     await signalSpaceChange(tx, { spaceId: row.space_id, kind: live ? "page" : "draft", itemId });
     await signalDocumentChange(tx, { itemId, revision: stored, origin: this.#origin });
@@ -310,7 +351,7 @@ export class PageDocumentService {
     await this.#database.transaction(async (tx) => {
       const locked = await tx.execute<{ state: Buffer }>(sql`
         select d.state from page_documents d join tree_items t on t.id = d.item_id
-        where d.item_id = ${itemId} and t.kind = 'page' for update of d`);
+        where d.item_id = ${itemId} and t.kind in ('page', 'blogPost') for update of d`);
       const row = locked.rows[0];
       if (!row) throw new SpaceError("itemNotFound", "The page does not exist");
       const doc = new Y.Doc();
@@ -354,7 +395,12 @@ export class PageDocumentService {
   }
 
   async references(viewer: Principal, document: DocumentJson): Promise<PageReferences> {
-    const mentions = extractMentions(document);
+    const mentions = [
+      ...new Set([
+        ...extractMentions(document),
+        ...extractTasks(document).flatMap((task) => (task.assignee ? [task.assignee] : [])),
+      ]),
+    ];
     const pageIds = [
       ...new Set(
         extractPageLinks(document)

@@ -55,6 +55,29 @@ describe("the OpenAPI description", () => {
     );
   });
 
+  it("declares content kinds in responses as extensible, so new content types are not breaking", () => {
+    const closed: string[] = [];
+    const extensible: string[] = [];
+    const walk = (value: unknown, path: string) => {
+      if (Array.isArray(value)) {
+        for (const [index, entry] of value.entries()) walk(entry, `${path}/${index}`);
+        return;
+      }
+      if (value === null || typeof value !== "object") return;
+      const schema = value as Record<string, unknown>;
+      if (Array.isArray(schema.enum) && schema.enum.includes("blogPost")) closed.push(path);
+      if (Array.isArray(schema["x-extensible-enum"])) {
+        extensible.push(path);
+        expect(schema.enum, path).toBeUndefined();
+      }
+      for (const [key, entry] of Object.entries(schema)) walk(entry, `${path}/${key}`);
+    };
+    const full = generateOpenApi({ includeInternal: true });
+    walk(full.paths, "");
+    expect(closed.filter((path) => path.includes("/responses/"))).toEqual([]);
+    expect(extensible.some((path) => path.includes("/api/v1/items/{itemId}/get/responses/"))).toBe(true);
+  });
+
   it("describes every public route completely", () => {
     expect(completenessIssues(document)).toEqual([]);
   });

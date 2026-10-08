@@ -353,6 +353,29 @@ describe("trash", () => {
     await waitFor(() => expect(requests.some((request) => request.path.endsWith("/trash/empty"))).toBe(true));
   });
 
+  it("shows content kinds the client does not know yet without failing", async () => {
+    mockApi(
+      routes("admin", {
+        [`GET /api/v1/spaces/${SPACE_ID}/items`]: () => ({
+          body: {
+            items: [
+              page(VPN, "VPN access"),
+              { ...page("01929b1e-0000-7000-8000-0000000000f2", "Team board"), kind: "whiteboard" },
+            ],
+            nextCursor: null,
+          },
+        }),
+        [`GET /api/v1/spaces/${SPACE_ID}/trash`]: () => ({
+          body: [{ ...entry, itemKind: "whiteboard", title: "Old board", descendants: 0 }],
+        }),
+      }),
+    );
+    await renderAt("/spaces/ITOPS/trash");
+    const row = (await screen.findByText("Old board")).closest("tr") as HTMLElement;
+    expect(within(row).getByText("Item")).toBeTruthy();
+    expect(await screen.findByText("Team board")).toBeTruthy();
+  });
+
   it("is not shown to readers", async () => {
     mockApi(routes("reader"));
     await renderAt("/spaces/ITOPS/trash");

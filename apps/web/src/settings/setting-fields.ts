@@ -39,6 +39,7 @@ function days(min: number, max: number, quickChoices: readonly number[], nullabl
 
 const fields: SettingField[] = [
   { key: "instance.name", type: { kind: "text" } },
+  { key: "reactions.enabled", type: { kind: "boolean" } },
   { key: "instance.url", type: { kind: "text", inputType: "url" } },
   { key: "locale.language", type: { kind: "locale" } },
   { key: "locale.timeZone", type: { kind: "locale" } },

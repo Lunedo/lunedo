@@ -42,7 +42,7 @@ test("invites a member who accepts and signs in", async ({ page, browser }) => {
   await expect(invitee.getByText("Your account is ready. Sign in to start.")).toBeVisible();
   await invitee.getByRole("link", { name: "Sign in" }).click();
   await signInWithPassword(invitee, MEMBER.email, MEMBER.password);
-  await expect(invitee.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
+  await expect(invitee.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
   await expect(invitee.getByRole("link", { name: "Audit log" })).toHaveCount(0);
   await invited.close();
   writeState({ memberEmail: MEMBER.email, memberPassword: MEMBER.password });

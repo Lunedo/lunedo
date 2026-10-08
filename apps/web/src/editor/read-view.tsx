@@ -1,18 +1,29 @@
-import { isIsoDate, type RenderContext, renderHtml } from "@pagehall/editor-schema";
-import { useToast } from "@pagehall/ui";
+import { isIsoDate, type RenderContext, renderHtml, type TextAnchor } from "@pagehall/editor-schema";
+import { Button, useToast } from "@pagehall/ui";
 import type { TFunction } from "i18next";
-import { type MouseEvent, useLayoutEffect, useMemo, useRef } from "react";
+import { MessageSquarePlus } from "lucide-react";
+import { type MouseEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { CommentHighlights } from "../collaboration/comment-highlights.js";
+import { reportFilters, TaskReport } from "../collaboration/task-report.js";
 import type { Formatter } from "../format/format.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useOpenPath } from "./context.js";
+import { anchorFromSelection } from "./dom-anchor.js";
 import { followTitleLink, pagePath, type References, rememberReferences } from "./references.js";
 import "./editor.css";
 
 export const FOLLOW_PATH = "/follow-link";
 
-export function readViewContext(references: References, t: TFunction, format: Formatter): RenderContext {
+export function readViewContext(
+  references: References,
+  t: TFunction,
+  format: Formatter,
+  taskStatuses?: ReadonlyMap<string, boolean>,
+): RenderContext {
   return {
+    ...(taskStatuses ? { taskStatus: (id: string) => taskStatuses.get(id) ?? null } : {}),
     mention: (id) => {
       const name = references.people[id];
       return name ? { name } : null;
@@ -38,6 +49,7 @@ export function readViewContext(references: References, t: TFunction, format: Fo
       untitledPage: t("editor.readView.untitledPage"),
       unknownPerson: t("editor.mention.unknown"),
       unsupportedMacro: t("editor.readView.unsupportedMacro"),
+      taskReport: t("tasks.report.title"),
       tableOfContents: t("editor.toc.title"),
       file: t("editor.readView.file"),
       image: t("editor.readView.image"),
@@ -78,38 +90,91 @@ export function applyWidths(root: HTMLElement): void {
   }
 }
 
+export interface ReadViewCollaboration {
+  taskStatuses?: ReadonlyMap<string, boolean>;
+  canToggleTask?: (task: { id: string; assignee: string | null }) => boolean;
+  onToggleTask?: (taskId: string, done: boolean) => void;
+  openThreads?: readonly string[];
+  activeThread?: string | null;
+  onThreadClick?: (threadId: string) => void;
+  onCommentSelection?: (anchor: TextAnchor) => void;
+  spaceId?: string | null;
+}
+
+const NO_COLLABORATION: ReadViewCollaboration = {};
+
 export function PageReadView({
   document: content,
   references,
   pageId,
+  collaboration = NO_COLLABORATION,
 }: {
   document: unknown;
   references: References;
   pageId: string;
+  collaboration?: ReadViewCollaboration;
 }) {
   const { t } = useTranslation();
   const format = useFormat();
   const open = useOpenPath();
   const { toast } = useToast();
   const container = useRef<HTMLDivElement>(null);
+  const [reports, setReports] = useState<HTMLElement[]>([]);
+  const [selection, setSelection] = useState<{ anchor: TextAnchor; top: number; left: number } | null>(null);
+  const { taskStatuses, canToggleTask, onToggleTask, openThreads = [], activeThread = null } = collaboration;
   const html = useMemo(() => {
     try {
-      return renderHtml(content, readViewContext(references, t, format));
+      return renderHtml(content, readViewContext(references, t, format, taskStatuses));
     } catch {
       return null;
     }
-  }, [content, references, t, format]);
+  }, [content, references, t, format, taskStatuses]);
 
   useLayoutEffect(() => {
     rememberReferences(references);
   }, [references]);
 
   useLayoutEffect(() => {
-    if (container.current && html !== null) applyWidths(container.current);
+    const root = container.current;
+    if (!root || html === null) return;
+    applyWidths(root);
+    const found = Array.from(root.querySelectorAll<HTMLElement>(".ph-task-report"));
+    for (const element of found) element.replaceChildren();
+    setReports(found);
   }, [html]);
 
+  useLayoutEffect(() => {
+    const root = container.current;
+    if (!root || html === null) return;
+    for (const input of Array.from(
+      root.querySelectorAll<HTMLInputElement>(".ph-task-item[data-task-id] > input"),
+    )) {
+      const item = input.parentElement as HTMLElement;
+      const id = item.dataset.taskId ?? "";
+      const text = item.querySelector(":scope > div")?.textContent?.trim() ?? "";
+      const allowed =
+        onToggleTask !== undefined &&
+        (canToggleTask?.({ id, assignee: item.dataset.assignee ?? null }) ?? false);
+      input.disabled = !allowed;
+      if (allowed) {
+        input.setAttribute(
+          "aria-label",
+          input.checked ? t("tasks.markOpen", { task: text }) : t("tasks.markDone", { task: text }),
+        );
+      }
+    }
+  }, [html, canToggleTask, onToggleTask, t]);
+
   const onClick = async (event: MouseEvent<HTMLDivElement>) => {
-    const link = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
+    const target = event.target as HTMLElement;
+    if (target instanceof HTMLInputElement && target.type === "checkbox") {
+      const id = target.closest<HTMLElement>(".ph-task-item")?.dataset.taskId;
+      if (id) onToggleTask?.(id, target.checked);
+      return;
+    }
+    const thread = target.closest<HTMLElement>("[data-thread-id]")?.dataset.threadId;
+    const link = target.closest<HTMLAnchorElement>("a[href]");
+    if (thread && !link && openThreads.includes(thread)) collaboration.onThreadClick?.(thread);
     if (
       !link ||
       event.defaultPrevented ||
@@ -141,6 +206,27 @@ export function PageReadView({
     }
   };
 
+  const onCommentSelection = collaboration.onCommentSelection;
+  useEffect(() => {
+    if (!onCommentSelection) return;
+    const track = () => {
+      const root = container.current;
+      const found = root ? anchorFromSelection(root) : null;
+      if (!root || !found) {
+        setSelection(null);
+        return;
+      }
+      const bounds = root.getBoundingClientRect();
+      setSelection({
+        anchor: found.anchor,
+        top: found.rect.bottom - bounds.top,
+        left: Math.max(0, found.rect.left - bounds.left),
+      });
+    };
+    document.addEventListener("selectionchange", track);
+    return () => document.removeEventListener("selectionchange", track);
+  }, [onCommentSelection]);
+
   if (html === null) {
     return (
       <p role="alert" className="text-danger">
@@ -148,15 +234,45 @@ export function PageReadView({
       </p>
     );
   }
+  const scope = `read-${pageId}`;
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: clicks come from the links inside, which are keyboard operable
-    // biome-ignore lint/a11y/useKeyWithClickEvents: Enter on a link inside fires this click
-    <div
-      ref={container}
-      className="ph-content ph-read-view"
-      onClick={(event) => void onClick(event)}
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: the shared renderer escapes all content of the validated document
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div className="relative">
+      <CommentHighlights scope={`[data-comment-scope="${scope}"]`} open={openThreads} active={activeThread} />
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: clicks come from the links and checkboxes inside, which are keyboard operable */}
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: the links and checkboxes inside handle their own keyboard input */}
+      <div
+        ref={container}
+        className="ph-content ph-read-view"
+        data-comment-scope={scope}
+        onClick={(event) => void onClick(event)}
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: the shared renderer escapes all content of the validated document
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+      {selection && onCommentSelection ? (
+        <div className="absolute z-10" style={{ top: selection.top, left: selection.left }}>
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={MessageSquarePlus}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => {
+              onCommentSelection(selection.anchor);
+              setSelection(null);
+            }}
+          >
+            {t("comments.commentOnSelection")}
+          </Button>
+        </div>
+      ) : null}
+      {reports.map((element) =>
+        createPortal(
+          <TaskReport
+            filters={reportFilters(element.dataset)}
+            currentSpaceId={collaboration.spaceId ?? null}
+          />,
+          element,
+        ),
+      )}
+    </div>
   );
 }

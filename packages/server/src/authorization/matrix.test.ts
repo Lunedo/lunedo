@@ -190,6 +190,7 @@ const EXPECTED: Record<string, Expectation> = {
   "organization.spaces.create": organization("spaces", "manage", "membersCreateSpaces"),
   "organization.trash.manage": organization("spaces", "manage"),
   "organization.templates.manage": organization("settings", "manage"),
+  "organization.blog.pin": organization("spaces", "manage"),
   "organization.signIn.view": organization("signInAndSecurity", "view"),
   "organization.signIn.manage": organization("signInAndSecurity", "manage"),
   "organization.integrations.view": organization("integrationsAndApi", "view"),
@@ -217,6 +218,19 @@ const EXPECTED: Record<string, Expectation> = {
   "item.edit": { scope: "space" },
   "item.delete": { scope: "space" },
   "item.archive": { scope: "space" },
+  "item.comment": { scope: "space" },
+  "item.react": { scope: "space" },
+  "item.pin": { scope: "space" },
+  "item.approveSchedule": { scope: "space" },
+  "comment.view": { scope: "space" },
+  "comment.reply": { scope: "space" },
+  "comment.resolve": { scope: "space" },
+  "comment.react": { scope: "space" },
+  "comment.update": { scope: "space" },
+  "comment.delete": { scope: "space" },
+  "comment.restore": { scope: "space" },
+  "task.view": { scope: "space" },
+  "task.update": { scope: "space" },
 };
 
 function expectedAllowed(held: Held, actionName: string): boolean {
@@ -259,6 +273,8 @@ interface Fixture {
   targetId: string;
   spaceId: string;
   itemId: string;
+  commentId: string;
+  taskId: string;
 }
 
 describe.skipIf(!baseUrl)("permission matrix", () => {
@@ -314,12 +330,23 @@ describe.skipIf(!baseUrl)("permission matrix", () => {
       },
       test.services.spacePermissions.holders,
     );
+    const itemId = space.overviewItemId ?? "";
+    const comment = await test.pool.query<{ id: string }>(
+      "insert into comments (id, item_id, author_id, body) values ($1, $2, $3, $4) returning id",
+      [randomUUID(), itemId, owner, { type: "doc", content: [{ type: "paragraph" }] }],
+    );
+    const task = await test.pool.query<{ id: string }>(
+      "insert into tasks (id, item_id, published, assignee_id) values ($1, $2, true, $3) returning id",
+      [randomUUID(), itemId, owner],
+    );
     return {
       organizationId: created.id,
       groupId: group.rows[0]?.id ?? "",
       targetId,
       spaceId: space.id,
-      itemId: space.overviewItemId ?? "",
+      itemId,
+      commentId: comment.rows[0]?.id ?? "",
+      taskId: task.rows[0]?.id ?? "",
     };
   }
 
@@ -365,6 +392,10 @@ describe.skipIf(!baseUrl)("permission matrix", () => {
         return { type: "space", id: target.spaceId };
       case "item":
         return { type: "item", id: target.itemId };
+      case "comment":
+        return { type: "comment", id: target.commentId };
+      case "task":
+        return { type: "task", id: target.taskId };
       default:
         throw new Error(`The matrix has no resource for ${action.resourceType.type}`);
     }

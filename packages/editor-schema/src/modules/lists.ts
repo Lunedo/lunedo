@@ -1,12 +1,19 @@
 import { z } from "zod";
 import type { ValidNode } from "../json.js";
-import { attrOf, defineModule, type MarkdownRenderer, optional } from "../module.js";
+import {
+  attrOf,
+  defineModule,
+  type HtmlRenderer,
+  type MarkdownRenderer,
+  optional,
+  type RenderContext,
+} from "../module.js";
 import { element, prefixLines } from "../text.js";
 import { isoDateValue, uuidValue } from "../values.js";
 
 const LIST_TYPES = new Set(["bulletList", "orderedList", "taskList"]);
 
-function itemMarkdown(item: ValidNode, renderer: MarkdownRenderer, marker: string): string {
+function itemMarkdown(item: ValidNode, renderer: MarkdownRenderer, marker: string, suffix = ""): string {
   const parts: string[] = [];
   item.content.forEach((child, index) => {
     const rendered = renderer.render(child);
@@ -17,6 +24,7 @@ function itemMarkdown(item: ValidNode, renderer: MarkdownRenderer, marker: strin
     const separator = LIST_TYPES.has(child.type) ? "\n" : "\n\n";
     parts.push(separator, rendered);
   });
+  parts.push(suffix);
   return prefixLines(parts.join(""), marker);
 }
 
@@ -55,6 +63,44 @@ export const listsModule = defineModule({
   ],
 });
 
+function taskDone(node: ValidNode, renderer: { readonly context: RenderContext }): boolean {
+  const id = attrOf<string | null>(node, "id");
+  return id === null ? false : (renderer.context.taskStatus?.(id) ?? false);
+}
+
+function taskMarkdown(node: ValidNode, renderer: MarkdownRenderer): string {
+  const assignee = attrOf<string | null>(node, "assignee");
+  const dueDate = attrOf<string | null>(node, "dueDate");
+  const meta = [
+    ...(assignee ? [renderer.escape(`@${renderer.mentionName(assignee)}`)] : []),
+    ...(dueDate ? [renderer.escape(renderer.formatDate(dueDate))] : []),
+  ];
+  const suffix = meta.length > 0 ? ` ${meta.join(" ")}` : "";
+  return itemMarkdown(node, renderer, taskDone(node, renderer) ? "- [x] " : "- [ ] ", suffix);
+}
+
+function taskMeta(node: ValidNode, renderer: HtmlRenderer): string {
+  const assignee = attrOf<string | null>(node, "assignee");
+  const dueDate = attrOf<string | null>(node, "dueDate");
+  const parts = [
+    assignee
+      ? element(
+          "span",
+          { class: "ph-task-assignee", "data-account-id": assignee },
+          renderer.escape(`@${renderer.mentionName(assignee)}`),
+        )
+      : "",
+    dueDate
+      ? element(
+          "time",
+          { class: "ph-task-due", datetime: dueDate },
+          renderer.escape(renderer.formatDate(dueDate)),
+        )
+      : "",
+  ].join("");
+  return parts ? element("span", { class: "ph-task-meta" }, parts) : "";
+}
+
 export const tasksModule = defineModule({
   name: "tasks",
   nodes: [
@@ -62,34 +108,31 @@ export const tasksModule = defineModule({
       name: "taskList",
       spec: { content: "taskItem+", group: "block" },
       html: (node, renderer) => element("ul", { class: "ph-task-list" }, renderer.children(node)),
-      markdown: (node, renderer) =>
-        node.content
-          .map((item) => itemMarkdown(item, renderer, attrOf<boolean>(item, "checked") ? "- [x] " : "- [ ] "))
-          .join("\n"),
+      markdown: (node, renderer) => node.content.map((item) => taskMarkdown(item, renderer)).join("\n"),
     },
     {
       name: "taskItem",
       spec: { content: "paragraph block*", defining: true },
       attrs: {
-        checked: optional(z.boolean(), false),
+        id: optional(uuidValue.nullable(), null),
         assignee: optional(uuidValue.nullable(), null),
         dueDate: optional(isoDateValue.nullable(), null),
       },
       html: (node, renderer) => {
-        const checked = attrOf<boolean>(node, "checked");
+        const done = taskDone(node, renderer);
         return element(
           "li",
           {
             class: "ph-task-item",
-            "data-checked": checked ? "true" : "false",
+            "data-checked": done ? "true" : "false",
+            "data-task-id": attrOf<string | null>(node, "id"),
             "data-assignee": attrOf<string | null>(node, "assignee"),
             "data-due-date": attrOf<string | null>(node, "dueDate"),
           },
-          `<input type="checkbox" disabled aria-label="${renderer.escape(renderer.label(checked ? "taskDone" : "taskOpen"))}"${checked ? " checked" : ""}>${element("div", {}, renderer.children(node))}`,
+          `<input type="checkbox" disabled aria-label="${renderer.escape(renderer.label(done ? "taskDone" : "taskOpen"))}"${done ? " checked" : ""}>${element("div", {}, `${renderer.children(node)}${taskMeta(node, renderer)}`)}`,
         );
       },
-      markdown: (node, renderer) =>
-        itemMarkdown(node, renderer, attrOf<boolean>(node, "checked") ? "- [x] " : "- [ ] "),
+      markdown: (node, renderer) => taskMarkdown(node, renderer),
     },
   ],
 });

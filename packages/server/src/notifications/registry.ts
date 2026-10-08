@@ -28,9 +28,9 @@ export interface NotificationTypeDefinition<P = unknown> {
   type: string;
   targetType: string;
   params: z.ZodType<P>;
-  setting: SettingDefinition<NotificationPreference>;
+  setting?: SettingDefinition<NotificationPreference>;
   visible(context: VisibilityContext<P>): Promise<boolean>;
-  mail(params: P, locale: MailLocale): NotificationMail;
+  mail?(params: P, locale: MailLocale): NotificationMail;
 }
 
 export function defineNotificationType<P>(

@@ -116,6 +116,24 @@ export function PreferencesScreen() {
           }
         />
       </Section>
+      <Section title={t("preferences.navigation")}>
+        <SettingRow
+          label={t("preferences.startPage")}
+          description={t("preferences.startPageHint")}
+          status={<SaveIndicator tracker={saveState(preferenceKeys.startPage)} />}
+          control={
+            <SegmentedControl
+              label={t("preferences.startPage")}
+              value={preferences.startPage}
+              onValueChange={(value) => set(preferenceKeys.startPage, value)}
+              options={[
+                { value: "forYou", label: t("preferences.startPages.forYou") },
+                { value: "organizationHome", label: t("preferences.startPages.organizationHome") },
+              ]}
+            />
+          }
+        />
+      </Section>
       <Section title={t("preferences.languageAndRegion")}>
         {list.isPending ? <Skeleton className="h-12 w-full" /> : null}
         {localeOptionSets.map((set_) => {

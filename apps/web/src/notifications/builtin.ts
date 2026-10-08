@@ -1,7 +1,11 @@
+import { slugify } from "@pagehall/editor-schema";
 import {
+  AtSign,
   Bot,
   Building2,
+  CalendarClock,
   KeyRound,
+  ListChecks,
   Mail,
   ShieldAlert,
   ShieldCheck,
@@ -12,6 +16,15 @@ import { notificationTypes } from "./notification-types.js";
 import type { NotificationItem } from "./notifications-api.js";
 
 const ORGANIZATION = "/settings/organizations/$organizationId";
+
+function contentLink(item: NotificationItem) {
+  const params = item.params as { itemKind?: string; itemTitle?: string; spaceKey?: string };
+  if (!item.target.id || !params.spaceKey) return null;
+  const segment = params.itemKind === "blogPost" ? "blog" : "pages";
+  return {
+    to: `/spaces/${encodeURIComponent(params.spaceKey)}/${segment}/${item.target.id}/${slugify(params.itemTitle ?? "")}`,
+  };
+}
 
 function inOrganization(item: NotificationItem, path: string, params: Record<string, string> = {}) {
   return item.organizationId
@@ -81,4 +94,7 @@ notificationTypes.register(
       params: { providerId: (item.params as { providerId: string }).providerId },
     }),
   },
+  { id: "content.mentioned", icon: AtSign, link: contentLink },
+  { id: "task.assigned", icon: ListChecks, link: contentLink },
+  { id: "blogPost.scheduleHeld", icon: CalendarClock, link: contentLink },
 );

@@ -28,10 +28,12 @@ import { AccountRailItem } from "./account-menu.js";
 import { commands, navigationItems, railItems, shortcuts } from "./extensions.js";
 import {
   HelpRailItem,
+  HomeRailItem,
   NotificationsRailItem,
   SearchRailItem,
   SettingsRailItem,
   SpacesRailItem,
+  TasksRailItem,
 } from "./rail-items.js";
 
 export const EDIT_PAGE_EVENT = "pagehall:edit-page";
@@ -40,7 +42,9 @@ const ORGANIZATION = "/settings/organizations/$organizationId";
 const INSTANCE = "/settings/instance";
 
 railItems.register(
+  { id: "home", order: 5, placement: "main", component: HomeRailItem },
   { id: "spaces", order: 10, placement: "main", component: SpacesRailItem },
+  { id: "tasks", order: 15, placement: "main", component: TasksRailItem },
   { id: "search", order: 20, placement: "main", component: SearchRailItem },
   { id: "notifications", order: 70, placement: "main", component: NotificationsRailItem },
   { id: "help", order: 10, placement: "footer", component: HelpRailItem },

@@ -246,6 +246,20 @@
       "when": 1791405959304,
       "tag": "0034_reader_visibility",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1791458882399,
+      "tag": "0035_collaboration",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1791467030029,
+      "tag": "0036_blog_schedule_hold",
+      "breakpoints": true
     }
   ]
 }

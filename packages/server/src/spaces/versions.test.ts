@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import type { DocumentJson } from "@pagehall/editor-schema";
+import { type DocumentJson, editorSchemaVersion } from "@pagehall/editor-schema";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal } from "../accounts/principal.js";
@@ -625,7 +625,7 @@ describe.skipIf(!baseUrl)("publish and live modes with versions", () => {
     await test.database.execute(sql`update page_versions set schema_version = 1 where item_id = ${page.id}`);
     const version = await test.services.versions.get(page.id, 1);
     expect(JSON.stringify(version?.document)).toContain("Stored");
-    expect((await test.services.documents.readable(page.id))?.schemaVersion).toBe(2);
+    expect((await test.services.documents.readable(page.id))?.schemaVersion).toBe(editorSchemaVersion);
   });
 
   it("compares a version with the draft", async () => {

@@ -49,7 +49,7 @@ async function memberPage(browser: Browser): Promise<{ context: BrowserContext; 
   const page = await context.newPage();
   await page.goto("/sign-in");
   await signInWithPassword(page, memberEmail ?? "", memberPassword ?? "");
-  await expect(page.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
   const connected = liveUpdatesConnected(page);
   await page.goto("/settings/preferences");
   await expect(page.getByRole("heading", { name: "Preferences", level: 1 })).toBeVisible();

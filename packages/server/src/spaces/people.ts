@@ -77,6 +77,18 @@ export class PeopleService {
     );
   }
 
+  visibleName(viewer: Principal, account: SQL): SQL {
+    return sql`(case when ${this.visibleCondition(viewer, sql`${account}.id`)} then ${account}.name end)`;
+  }
+
+  async visibleNames(viewer: Principal, ids: readonly string[]): Promise<Map<string, string>> {
+    if (ids.length === 0) return new Map();
+    const result = await this.#database.execute<{ id: string; name: string }>(sql`
+      select a.id, a.name from accounts a
+      where a.id = any(${sql.param([...new Set(ids)])}::uuid[]) and ${this.visibleCondition(viewer, sql`a.id`)}`);
+    return new Map(result.rows.map((row) => [row.id, row.name]));
+  }
+
   async names(ids: readonly string[], executor: Executor = this.#database): Promise<Map<string, string>> {
     if (ids.length === 0) return new Map();
     const result = await executor.execute<{ id: string; name: string }>(

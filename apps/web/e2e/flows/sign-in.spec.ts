@@ -22,7 +22,7 @@ test("signs in with password and authenticator app", async ({ page }) => {
     .getByLabel("Code from your authenticator app")
     .fill(await freshTotp(readState().ownerSecret ?? ""));
   await page.getByRole("button", { name: "Verify" }).click();
-  await expect(page.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
 });
 
 test("signs in with password and a recovery code", async ({ page }) => {
@@ -31,7 +31,7 @@ test("signs in with password and a recovery code", async ({ page }) => {
   await page.getByRole("button", { name: "Use a recovery code" }).click();
   await page.getByLabel("Recovery code").fill(code ?? "");
   await page.getByRole("button", { name: "Verify" }).click();
-  await expect(page.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
   writeState({ ownerRecoveryCodes: rest });
 });
 
@@ -58,12 +58,12 @@ test("adds a passkey and uses it as second factor and for sign-in", async ({ bro
   await signInWithPassword(page, OWNER.email, OWNER.password);
   await page.getByRole("button", { name: "Use a passkey" }).click();
   await page.getByRole("button", { name: "Use passkey" }).click();
-  await expect(page.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
 
   await page.getByRole("button", { name: "Account" }).click();
   await page.getByRole("menuitem", { name: "Sign out" }).click();
   await page.getByRole("button", { name: "Sign in with a passkey" }).click();
-  await expect(page.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
   await context.storageState({ path: OWNER_STORAGE });
   await removeAuthenticator();
   await context.close();

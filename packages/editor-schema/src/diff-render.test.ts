@@ -147,13 +147,13 @@ describe("renderDiffHtml", () => {
   });
 
   it("puts notes of in-place blocks inside the element", () => {
-    const tasks = (checked: boolean): NodeJson => ({
+    const tasks = (dueDate: string | null): NodeJson => ({
       type: "taskList",
-      content: [{ type: "taskItem", attrs: { checked }, content: [p("Ship")] }],
+      content: [{ type: "taskItem", attrs: { dueDate }, content: [p("Ship")] }],
     });
-    const html = renderDiffHtml(compare([tasks(false)], [tasks(true)]), "inline");
+    const html = renderDiffHtml(compare([tasks(null)], [tasks("2026-10-12")]), "inline");
     expect(html).toContain(
-      '<li data-change="changed" class="ph-task-item" data-checked="true"><input type="checkbox" disabled aria-label="Done" checked><div><span class="ph-diff-note">Changed: checked</span><p>Ship</p></div></li>',
+      '<li data-change="changed" class="ph-task-item" data-checked="false" data-due-date="2026-10-12"><input type="checkbox" disabled aria-label="Open"><div><span class="ph-diff-note">Changed: dueDate</span><p>Ship</p><span class="ph-task-meta"><time class="ph-task-due" datetime="2026-10-12">2026-10-12</time></span></div></li>',
     );
   });
 

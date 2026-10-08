@@ -10,7 +10,7 @@ import { request } from "../../api/request.js";
 import { SettingsList } from "../../components/settings-list.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import type { SettingChange } from "../../settings/setting-mutations.js";
-import { PAGE_MODE_KEYS, TRASH_KEYS } from "../../settings/settings-index.js";
+import { COLLABORATION_KEYS, PAGE_MODE_KEYS, TRASH_KEYS } from "../../settings/settings-index.js";
 import { contentKeys } from "../content-queries.js";
 import { spaceDisplayName } from "../space-badge.js";
 import { useSpace } from "../space-context.js";
@@ -55,6 +55,16 @@ export function SpaceContentScreen() {
           <SettingsList
             settings={entries}
             keys={PAGE_MODE_KEYS}
+            level="space"
+            organizationName={space.organizationName ?? undefined}
+            canManage={() => space.role === "admin"}
+            onChange={onChange}
+          />
+        </Panel>
+        <Panel title={t("content.collaborationSection")}>
+          <SettingsList
+            settings={entries}
+            keys={COLLABORATION_KEYS}
             level="space"
             organizationName={space.organizationName ?? undefined}
             canManage={() => space.role === "admin"}

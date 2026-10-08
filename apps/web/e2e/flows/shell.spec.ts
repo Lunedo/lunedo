@@ -28,7 +28,7 @@ test("delivers a notification live to an open page", async ({ page, browser }) =
     .getByLabel("Code from your authenticator app")
     .fill(await freshTotp(readState().ownerSecret ?? ""));
   await other.getByRole("button", { name: "Verify" }).click();
-  await expect(other.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
+  await expect(other.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
   await elsewhere.close();
 
   await expect(page.getByRole("button", { name: /Notifications, \d+ unread/ })).toBeVisible({

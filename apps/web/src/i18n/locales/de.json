@@ -1027,7 +1027,9 @@
     "help": "Hilfe",
     "settings": "Einstellungen",
     "account": "Konto",
-    "spaces": "Spaces"
+    "spaces": "Spaces",
+    "forYou": "Für dich",
+    "tasks": "Meine Aufgaben"
   },
   "help": {
     "shortcuts": "Tastenkürzel",
@@ -1257,7 +1259,27 @@
     "overviewPage": "Die Übersichtsseite eines Space bleibt eine Seite in ihrem Space. Verschiebe stattdessen ihre Kinder.",
     "invalidDocument": "Der Inhalt passt nicht zu dem, was Pagehall speichern kann. Nimm die letzte Änderung zurück und versuch es erneut.",
     "invalidLabel": "Ein Label braucht 1 bis 100 Buchstaben, Ziffern, Punkte, Bindestriche oder Unterstriche.",
-    "tooManyLabels": "Eine Seite kann bis zu 100 Labels haben. Entferne ein Label, bevor du ein weiteres hinzufügst."
+    "tooManyLabels": "Eine Seite kann bis zu 100 Labels haben. Entferne ein Label, bevor du ein weiteres hinzufügst.",
+    "invalidComment": "Der Kommentar enthält etwas, das Kommentare nicht unterstützen. Entferne Tabellen, Bilder oder Überschriften und versuche es erneut.",
+    "invalidAnchor": "Markiere bis zu 1000 Zeichen innerhalb eines Absatzes, um sie zu kommentieren.",
+    "anchorNotFound": "Der markierte Text hat sich inzwischen geändert. Markiere ihn erneut und kommentiere.",
+    "tooManyComments": "Diese Seite hat die höchste Zahl an Kommentaren. Erledige oder lösche zuerst alte.",
+    "restoreExpired": "Der Kommentar kann nicht mehr wiederhergestellt werden; gelöschte Kommentare lassen sich eine Stunde lang wiederherstellen.",
+    "notInlineComment": "Nur Kommentare zu Text können als erledigt markiert werden.",
+    "invalidEmoji": "Eine Reaktion ist genau ein Emoji.",
+    "reactionsDisabled": "Reaktionen sind hier ausgeschaltet. Ein Space-Admin kann sie einschalten.",
+    "tooManyReactions": "Du hast hier die höchste Zahl an Reaktionen hinzugefügt. Entferne zuerst eine.",
+    "reactionsUnavailable": "Nur Personen können reagieren.",
+    "invalidExcerpt": "Die Kurzfassung darf bis zu 500 Zeichen haben.",
+    "invalidTimeZone": "Die Zeitzone ist unbekannt. Prüfe deine Einstellungen.",
+    "scheduleInPast": "Wähle ein Datum und eine Uhrzeit in der Zukunft.",
+    "scheduleTooLate": "Die Veröffentlichung kann höchstens ein Jahr im Voraus geplant werden.",
+    "notPublished": "Veröffentliche den Blogbeitrag, bevor du ihn anheftest.",
+    "notInOrganization": "Nur Blogbeiträge aus Spaces einer Organisation können dort angeheftet werden.",
+    "blogPostMode": "Blogbeiträge verwenden immer den Veröffentlichungsmodus.",
+    "tooManyStars": "Du hast die höchste Zahl an Favoriten erreicht. Entferne zuerst einen.",
+    "personalOnly": "Nur Personen haben Favoriten und eine Startseite.",
+    "invalidHomePage": "Wähle eine Seite aus einem Space dieser Organisation, die du lesen kannst."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -1638,7 +1660,10 @@
     "textSizeHint": "Skaliert Text, Abstände und Symbole gemeinsam.",
     "density": "Dichte",
     "densityHint": "Kompakt zeigt mehr Einträge auf dem Bildschirm.",
-    "fonts": { "default": "Standard", "readable": "Lesefreundlich" },
+    "fonts": {
+      "default": "Standard",
+      "readable": "Lesefreundlich"
+    },
     "densities": {
       "default": "Standard",
       "compact": "Kompakt"
@@ -1658,6 +1683,13 @@
       "monday": "Montag",
       "sunday": "Sonntag",
       "saturday": "Samstag"
+    },
+    "navigation": "Navigation",
+    "startPage": "Einstiegsseite",
+    "startPageHint": "Wo du nach der Anmeldung landest.",
+    "startPages": {
+      "forYou": "Für dich",
+      "organizationHome": "Startseite der Organisation"
     }
   },
   "settings": {
@@ -1726,10 +1758,22 @@
         "label": "Anmeldung mit Passwort",
         "description": "Wenn sie aus ist, melden sich Personen nur über einen Anbieter oder mit einem Passkey an. Die Notfall-Anmeldung des Instanz-Owners funktioniert immer."
       },
-      "appearance_colorMode": { "label": "Farbmodus", "description": "Hell, dunkel oder wie das System." },
-      "appearance_highContrast": { "label": "Hoher Kontrast", "description": "Kräftigere Rahmen und Texte." },
-      "appearance_textSize": { "label": "Textgröße", "description": "Größe von Text und Steuerelementen." },
-      "appearance_density": { "label": "Dichte", "description": "Abstände in Listen und Tabellen." },
+      "appearance_colorMode": {
+        "label": "Farbmodus",
+        "description": "Hell, dunkel oder wie das System."
+      },
+      "appearance_highContrast": {
+        "label": "Hoher Kontrast",
+        "description": "Kräftigere Rahmen und Texte."
+      },
+      "appearance_textSize": {
+        "label": "Textgröße",
+        "description": "Größe von Text und Steuerelementen."
+      },
+      "appearance_density": {
+        "label": "Dichte",
+        "description": "Abstände in Listen und Tabellen."
+      },
       "appearance_font": {
         "label": "Lesefreundliche Schrift",
         "description": "Eine Schrift, die leichter zu lesen ist."
@@ -1917,6 +1961,10 @@
       "trash_secondStageMinimumDays": {
         "label": "Kürzeste Zeit in der Admin-Wiederherstellung",
         "description": "Organisationen und Spaces können keine kürzere Zeit in der Admin-Wiederherstellung festlegen."
+      },
+      "reactions_enabled": {
+        "label": "Reaktionen",
+        "description": "Personen können mit Emojis auf Seiten, Blogbeiträge und Kommentare reagieren."
       }
     },
     "disabled": {
@@ -2134,6 +2182,15 @@
       },
       "mail": {
         "credentialExpiring": "Das Client-Secret oder Zertifikat für den E-Mail-Versand über Microsoft Graph läuft am {expiresAt} ab. Füge vorher in den E-Mail-Einstellungen neue Zugangsdaten hinzu."
+      },
+      "content": {
+        "mentioned": "{actor} hat dich in {itemTitle} erwähnt"
+      },
+      "task": {
+        "assigned": "Dir wurde in {itemTitle} eine Aufgabe zugewiesen: {taskText}"
+      },
+      "blogPost": {
+        "scheduleHeld": "{reason, select, accountRemoved {Der geplante Beitrag {itemTitle} wartet auf Freigabe, weil die Person, die ihn geplant hat, kein Konto mehr hat.} other {Der geplante Beitrag {itemTitle} wartet auf Freigabe, weil {actor} ihn nicht mehr bearbeiten kann.}}"
       }
     }
   },
@@ -2982,6 +3039,17 @@
         "created": "Vorlage erstellt",
         "updated": "Vorlage geändert",
         "deleted": "Vorlage gelöscht"
+      },
+      "blogPost": {
+        "publishedBySchedule": "Blogbeitrag planmäßig veröffentlicht",
+        "scheduleHeld": "Geplanter Blogbeitrag wartet auf Freigabe",
+        "heldPublished": "Wartender Blogbeitrag von einem Space-Admin veröffentlicht",
+        "heldCancelled": "Planung eines wartenden Blogbeitrags abgebrochen",
+        "pinned": "Blogbeitrag angeheftet",
+        "unpinned": "Blogbeitrag gelöst"
+      },
+      "comment": {
+        "deletedByModerator": "Kommentar von einem Space-Admin gelöscht"
       }
     },
     "action": "Aktion",
@@ -3482,7 +3550,9 @@
       "pageLink": "Link auf eine Seite",
       "pageLinkDescription": "Link auf eine Seite in einem Space, den du lesen kannst",
       "emoji": "Emoji",
-      "emojiDescription": "Ein Emoji auswählen"
+      "emojiDescription": "Ein Emoji auswählen",
+      "taskReport": "Aufgabenbericht",
+      "taskReportDescription": "Tabelle mit Aufgaben, Filtern und Zählern"
     },
     "mention": {
       "unknown": "Unbekannte Person"
@@ -4129,7 +4199,8 @@
     "typeName": "Gib {name} zur Bestätigung ein",
     "nameMismatch": "Der Name stimmt nicht überein. Gib ihn genau wie angezeigt ein.",
     "spaceDeleted": "{name} gelöscht",
-    "deleteFailed": "Der Space konnte nicht gelöscht werden"
+    "deleteFailed": "Der Space konnte nicht gelöscht werden",
+    "collaborationSection": "Zusammenarbeit"
   },
   "archive": {
     "archive": "Archivieren",
@@ -4180,7 +4251,9 @@
     "kinds": {
       "page": "Seite",
       "folder": "Ordner",
-      "link": "Link"
+      "link": "Link",
+      "blogPost": "Blogbeitrag",
+      "other": "Element"
     },
     "unknownPerson": "Unbekannte Person",
     "stageOne": "Papierkorb",
@@ -4436,5 +4509,260 @@
     "searchPerson": "Person suchen",
     "createFrom": "Mit {name} erstellen",
     "createBlank": "Leere Seite erstellen"
+  },
+  "home": {
+    "title": "Für dich",
+    "greeting": "Hallo {name}. Das hat sich für dich getan.",
+    "loadFailed": "Deine Startseite konnte nicht geladen werden",
+    "tasks": "Meine offenen Aufgaben, bald fällig",
+    "noTasks": "In den nächsten 7 Tagen ist keine offene Aufgabe fällig.",
+    "allTasks": "Alle meine Aufgaben",
+    "mentions": "Erwähnungen",
+    "noMentions": "Niemand hat dich in letzter Zeit erwähnt.",
+    "mentionedBy": "{name}, {when}",
+    "recent": "Zuletzt angesehen",
+    "noRecent": "Seiten, die du öffnest, erscheinen hier. Nur du siehst diese Liste.",
+    "starred": "Favoriten",
+    "noStarred": "Markiere Seiten, Blogbeiträge und Spaces als Favoriten, um sie hier schnell zu finden.",
+    "posts": "Neue Blogbeiträge",
+    "noPosts": "In deinen Spaces wurde in den letzten 30 Tagen kein Blogbeitrag veröffentlicht.",
+    "allPosts": "Alle Blogbeiträge",
+    "firstUseTitle": "Willkommen bei Pagehall",
+    "firstUseDescription": "Hier erscheinen deine Aufgaben, Erwähnungen, Favoriten und zuletzt angesehenen Seiten.",
+    "openSpaces": "Spaces öffnen",
+    "organizationPage": "Startseite der Organisation",
+    "organizationPageDescription": "Mitglieder, die die Startseite der Organisation als Einstiegsseite wählen, landen nach der Anmeldung hier.",
+    "organizationPageFailed": "Die Startseite der Organisation konnte nicht geladen werden",
+    "organizationPageCurrent": "Aktuelle Startseite:",
+    "organizationPageNone": "Keine Startseite festgelegt. Alle landen auf „Für dich“.",
+    "choosePage": "Startseite",
+    "searchPage": "Seite nach Titel suchen",
+    "removeOrganizationPage": "Startseite entfernen"
+  },
+  "starred": {
+    "star": "{title} zu Favoriten hinzufügen",
+    "unstar": "{title} aus Favoriten entfernen",
+    "added": "{title} zu Favoriten hinzugefügt",
+    "removed": "{title} aus Favoriten entfernt",
+    "addFailed": "Der Favorit konnte nicht hinzugefügt werden. Prüfe deine Verbindung und versuche es erneut.",
+    "removeFailed": "Der Favorit konnte nicht entfernt werden. Prüfe deine Verbindung und versuche es erneut."
+  },
+  "mentions": {
+    "noAccess": "{name} hat keinen Zugriff auf diese Seite",
+    "noAccessDescription": "Die Person wird nicht benachrichtigt. Gib ihr den Space oder die Seite frei, wenn sie mitlesen soll."
+  },
+  "reactions": {
+    "add": "Reaktion hinzufügen",
+    "allEmoji": "Alle Emojis",
+    "reactWith": "Mit {emoji} reagieren",
+    "reactionLabel": "{emoji} {count}: {names}",
+    "namesAndMore": "{names} und {count, plural, one {# weitere Person} other {# weitere Personen}}",
+    "pageLabel": "Reaktionen",
+    "commentLabel": "Reaktionen auf den Kommentar von {name}",
+    "failed": "Die Reaktion konnte nicht gespeichert werden. Versuche es erneut; sind Reaktionen hier ausgeschaltet, frag einen Space-Admin."
+  },
+  "comments": {
+    "title": "Kommentare",
+    "toggle": "Kommentare",
+    "toggleWithOpen": "Kommentare, {count, plural, one {# offen} other {# offen}}",
+    "openCount": "{count, plural, one {# offen} other {# offen}}",
+    "close": "Kommentare schließen",
+    "loadFailed": "Die Kommentare konnten nicht geladen werden",
+    "empty": "Noch keine Kommentare.",
+    "emptyCanComment": "Noch keine Kommentare. Markiere Text, um ihn zu kommentieren, oder schreibe unten einen Kommentar zur ganzen Seite.",
+    "openSection": "Offen",
+    "pageSection": "Zur Seite",
+    "resolvedSection": "Erledigt ({count})",
+    "pageThread": "Kommentar zur Seite",
+    "threadOn": "Kommentar zu „{quote}“",
+    "showInText": "Im Text zeigen",
+    "textGone": "Der kommentierte Text existiert nicht mehr.",
+    "placeholder": "Kommentar schreiben",
+    "newPageComment": "Neuer Kommentar zur Seite",
+    "newInline": "Kommentar zum markierten Text",
+    "replyLabel": "Antwort",
+    "editLabel": "Kommentar bearbeiten",
+    "comment": "Kommentieren",
+    "reply": "Antworten",
+    "save": "Kommentar speichern",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "delete": "Kommentar löschen",
+    "edited": "bearbeitet",
+    "actions": "Aktionen für den Kommentar von {name}",
+    "deleted": "Kommentar gelöscht",
+    "deletedPlaceholder": "Kommentar gelöscht",
+    "unreadable": "Dieser Kommentar kann nicht angezeigt werden.",
+    "resolve": "Als erledigt markieren",
+    "reopen": "Wieder öffnen",
+    "commentOnSelection": "Kommentieren",
+    "selectWithinParagraph": "Markiere Text innerhalb eines Absatzes, um ihn zu kommentieren.",
+    "emptyError": "Schreib zuerst einen Kommentar.",
+    "tooLong": "Der Kommentar ist zu lang. Kürze ihn und versuche es erneut.",
+    "createFailed": "Der Kommentar konnte nicht veröffentlicht werden",
+    "replyFailed": "Die Antwort konnte nicht veröffentlicht werden",
+    "editFailed": "Der Kommentar konnte nicht gespeichert werden",
+    "deleteFailed": "Der Kommentar konnte nicht gelöscht werden",
+    "restoreFailed": "Der Kommentar konnte nicht wiederhergestellt werden",
+    "resolveFailed": "Der Kommentar konnte nicht als erledigt markiert werden",
+    "reopenFailed": "Der Kommentar konnte nicht wieder geöffnet werden",
+    "hint": "Mit @ erwähnst du jemanden. Strg+Eingabe sendet den Kommentar."
+  },
+  "tasks": {
+    "myTitle": "Meine Aufgaben",
+    "myDescription": "Dir zugewiesene Aufgaben auf Seiten und in Blogbeiträgen, die du lesen kannst, über alle Spaces.",
+    "filter": "Anzeigen",
+    "filters": {
+      "open": "Offen",
+      "overdue": "Überfällig",
+      "done": "Erledigt"
+    },
+    "empty": {
+      "open": {
+        "title": "Keine offenen Aufgaben",
+        "description": "Aufgaben, die dir in veröffentlichten Inhalten zugewiesen werden, erscheinen hier."
+      },
+      "overdue": {
+        "title": "Nichts überfällig",
+        "description": "Keine deiner offenen Aufgaben hat ihr Fälligkeitsdatum überschritten."
+      },
+      "done": {
+        "title": "Noch keine erledigten Aufgaben",
+        "description": "Aufgaben, die du oder andere abhaken, erscheinen hier."
+      }
+    },
+    "listLabel": "Aufgaben",
+    "loadFailed": "Die Aufgaben konnten nicht geladen werden",
+    "moreNotShown": "Weitere Aufgaben passen. Grenze die Filter ein, um sie zu sehen.",
+    "untitled": "Aufgabe ohne Text",
+    "openCount": "{count, plural, one {# offen} other {# offen}}",
+    "doneCount": "{count, plural, one {# erledigt} other {# erledigt}}",
+    "overdueCount": "{count, plural, one {# überfällig} other {# überfällig}}",
+    "dueOn": "Fällig am {date}",
+    "overdueSince": "Überfällig seit {date}",
+    "noDueDate": "Kein Fälligkeitsdatum",
+    "markDone": "Als erledigt markieren: {task}",
+    "markOpen": "Als offen markieren: {task}",
+    "checkFailed": "Die Aufgabe konnte nicht abgehakt werden",
+    "uncheckFailed": "Die Aufgabe konnte nicht wieder geöffnet werden",
+    "notSavedYet": "Die Aufgabe ist noch nicht gespeichert",
+    "notSavedYetDescription": "Warte einen Moment, bis die Seite gespeichert ist, und hake sie dann ab.",
+    "assign": "Zuweisen",
+    "assignee": "Zuständig",
+    "searchPerson": "Person nach Namen suchen",
+    "removeAssignee": "Zuweisung entfernen",
+    "assigneeNoAccessDescription": "Die Person wird nicht benachrichtigt und sieht die Aufgabe erst, wenn sie die Seite lesen kann.",
+    "dueDate": "Fälligkeitsdatum",
+    "setDueDate": "Fälligkeitsdatum",
+    "removeDueDate": "Fälligkeitsdatum entfernen",
+    "due": {
+      "any": "Beliebiges Fälligkeitsdatum",
+      "overdue": "Überfällig",
+      "next7Days": "Fällig in den nächsten 7 Tagen",
+      "next30Days": "Fällig in den nächsten 30 Tagen",
+      "none": "Ohne Fälligkeitsdatum"
+    },
+    "status": {
+      "open": "Offen",
+      "done": "Erledigt",
+      "all": "Offen und erledigt"
+    },
+    "report": {
+      "title": "Aufgabenbericht",
+      "scope": "Spaces",
+      "thisSpace": "Dieser Space",
+      "allSpaces": "Alle Spaces, die ich lesen kann",
+      "assignee": "Zugewiesen an",
+      "anyone": "Alle",
+      "viewer": "Die lesende Person",
+      "person": "Eine bestimmte Person",
+      "due": "Fälligkeitsdatum",
+      "status": "Status",
+      "emptyTitle": "Keine passenden Aufgaben",
+      "emptyDescription": "Ändere die Filter oder füge veröffentlichten Seiten Aufgaben mit Zuständigen hinzu."
+    },
+    "checkOnPages": "Aufgaben werden auf den Seiten abgehakt, die aus dieser Vorlage entstehen."
+  },
+  "blog": {
+    "title": "Blog",
+    "spaceTitle": "Blog von {space}",
+    "spaceDescription": "Neuigkeiten und Ankündigungen von {space}.",
+    "organizationTitle": "Blogbeiträge",
+    "organizationDescription": "Blogbeiträge aller Spaces von {organization}, die du lesen kannst, die neuesten zuerst.",
+    "noOrganization": "Blogbeiträge der Spaces, die du lesen kannst.",
+    "write": "Beitrag schreiben",
+    "writeTitle": "Neuer Blogbeitrag in {space}",
+    "writeDescription": "Der Beitrag beginnt als Entwurf, den nur Bearbeiter sehen. Veröffentliche ihn oder plane die Veröffentlichung, wenn er fertig ist.",
+    "postTitle": "Titel",
+    "postTitleExample": "Zum Beispiel: Neuer VPN-Client ab Montag",
+    "excerpt": "Kurzfassung",
+    "excerptHint": "Eine kurze Zusammenfassung für Listen, bis zu {max} Zeichen.",
+    "excerptTooLong": "Die Kurzfassung darf bis zu {max} Zeichen haben.",
+    "titleRequired": "Gib einen Titel ein.",
+    "titleTooLong": "Der Titel darf bis zu {max} Zeichen haben.",
+    "createPost": "Beitrag erstellen",
+    "cancel": "Abbrechen",
+    "createFailed": "Der Blogbeitrag konnte nicht erstellt werden",
+    "loadFailed": "Die Blogbeiträge konnten nicht geladen werden",
+    "postLoadFailed": "Der Blogbeitrag konnte nicht geladen werden",
+    "loadMore": "Weitere Beiträge anzeigen",
+    "emptyTitle": "Noch keine Blogbeiträge",
+    "emptyEditor": "Schreib den ersten Beitrag, um Neuigkeiten mit allen zu teilen, die diesen Space lesen.",
+    "emptyReader": "Beiträge erscheinen hier, sobald Bearbeiter dieses Space sie veröffentlichen.",
+    "organizationEmptyTitle": "Noch keine Blogbeiträge",
+    "organizationEmptyDescription": "Veröffentlichte Beiträge aller Spaces, die du lesen kannst, erscheinen hier.",
+    "noMatchesTitle": "Keine passenden Beiträge",
+    "noMatchesDescription": "Kein veröffentlichter Beitrag passt zum gewählten Space und Label.",
+    "filterSpace": "Space",
+    "allSpaces": "Alle Spaces",
+    "filterLabel": "Label",
+    "filterLabelExample": "Zum Beispiel: sicherheit",
+    "applyFilter": "Filtern",
+    "clearFilters": "Filter zurücksetzen",
+    "byOn": "{author} · {date}",
+    "byScheduled": "{author} · erscheint am {date}",
+    "byDraft": "{author} · Entwurf",
+    "pinned": "Angeheftet",
+    "scheduled": "Geplant",
+    "draft": "Entwurf",
+    "pin": "{title} anheften",
+    "unpin": "{title} lösen",
+    "pinInSpace": "In diesem Space anheften",
+    "unpinInSpace": "In diesem Space lösen",
+    "pinnedToast": "{title} angeheftet",
+    "unpinnedToast": "{title} gelöst",
+    "pinFailed": "Der Beitrag konnte nicht angeheftet werden",
+    "unpinFailed": "Der Beitrag konnte nicht gelöst werden",
+    "schedule": "Veröffentlichung planen",
+    "changeSchedule": "Planung ändern",
+    "scheduleTitle": "Veröffentlichung planen",
+    "scheduleDescription": "Der Entwurf wird zu dieser Zeit in deiner Zeitzone ({timeZone}) veröffentlicht. Bis dahin kannst du die Planung ändern oder aufheben.",
+    "scheduleDate": "Datum",
+    "scheduleTime": "Uhrzeit",
+    "scheduleInvalid": "Gib ein Datum und eine Uhrzeit ein.",
+    "scheduleInPast": "Wähle ein Datum und eine Uhrzeit in der Zukunft.",
+    "schedulePublication": "Planen",
+    "scheduledToast": "Der Beitrag wird am {date} veröffentlicht",
+    "scheduleFailed": "Die Veröffentlichung konnte nicht geplant werden",
+    "scheduledNotice": "Erscheint am {date}",
+    "scheduledNoticeDescription": "Veröffentlicht wird der Entwurf zu diesem Zeitpunkt. Ab dann sehen ihn alle Leser.",
+    "cancelSchedule": "Planung aufheben",
+    "scheduleCancelled": "Planung aufgehoben. Der Beitrag bleibt ein Entwurf.",
+    "cancelScheduleFailed": "Die Planung konnte nicht aufgehoben werden",
+    "notPublishedTitle": "Noch nicht veröffentlicht",
+    "notPublishedDescription": "Bearbeite den Beitrag und veröffentliche ihn dann oder plane die Veröffentlichung.",
+    "held": "Wartet auf Freigabe",
+    "heldNotice": "Geplant für {date}, wartet auf Freigabe",
+    "heldReason": "{name} hat diesen Beitrag geplant, kann ihn aber nicht mehr bearbeiten. Deshalb wurde er nicht veröffentlicht.",
+    "heldReasonRemoved": "Die Person, die diesen Beitrag geplant hat, hat kein Konto mehr. Deshalb wurde er nicht veröffentlicht.",
+    "heldAdmin": "Veröffentliche ihn jetzt oder brich die Planung ab.",
+    "heldOthers": "Ein Space-Admin veröffentlicht ihn oder bricht die Planung ab. Wenn du die Planung änderst, bist du dafür verantwortlich.",
+    "publishNow": "Jetzt veröffentlichen",
+    "heldPublishedToast": "{title} ist veröffentlicht",
+    "publishHeldFailed": "Der Beitrag konnte nicht veröffentlicht werden",
+    "scheduledTitle": "Geplant",
+    "scheduledDescription": "Alle geplanten Beiträge dieses Space. Beiträge, die auf Freigabe warten, stehen oben. Nur Space-Admins sehen diese Liste.",
+    "scheduledEmpty": "Es sind keine Beiträge geplant.",
+    "scheduledLoadFailed": "Die geplanten Beiträge konnten nicht geladen werden"
   }
 }

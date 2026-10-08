@@ -4,6 +4,18 @@ import { z } from "zod";
 
 export const uuid = (description: string) => idSchema.describe(description);
 
+export const EXTENSIBLE_ENUM = "x-extensible-enum";
+
+export function extensibleEnum<const T extends readonly [string, ...string[]]>(
+  values: T,
+  description: string,
+) {
+  return z.enum(values).meta({
+    description: `${description} New values can be added in later versions; handle unknown values.`,
+    [EXTENSIBLE_ENUM]: [...values],
+  });
+}
+
 export const timestamp = (description: string) =>
   z.iso.datetime().describe(`${description} ISO 8601 timestamp in UTC.`);
 

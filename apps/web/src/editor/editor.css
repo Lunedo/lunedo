@@ -132,7 +132,7 @@ details.ph-expand > div {
   @apply min-w-0 flex-1;
 }
 
-.ph-content :is(li[data-type="taskItem"], .ph-task-item)[data-checked="true"] > div {
+.ph-content :is(li[data-type="taskItem"], .ph-task-item)[data-checked="true"] > div > :not(.ph-task-meta) {
   @apply text-text-muted line-through;
 }
 
@@ -731,4 +731,31 @@ details.ph-expand > summary {
 .ph-diff td[data-change="changed"],
 .ph-diff th[data-change="changed"] {
   @apply bg-info-soft;
+}
+
+.ph-content .ph-task-item-view > label {
+  @apply flex size-6 shrink-0 items-center justify-center;
+}
+
+.ph-content .ph-task-item-view > label > input[type="checkbox"],
+.ph-content .ph-task-item > input:not([disabled]) {
+  @apply size-6 cursor-pointer;
+  accent-color: var(--ph-color-accent);
+}
+
+.ph-content .ph-task-done > [data-node-view-content] {
+  @apply text-text-muted line-through;
+}
+
+.ph-content .ph-task-meta {
+  @apply mt-1 flex flex-wrap items-center gap-2 text-sm text-text-muted no-underline;
+}
+
+.ph-content .ph-task-hint {
+  @apply mt-1 text-sm text-text-muted;
+}
+
+.ph-content .ph-task-report-block,
+.ph-content .ph-task-report {
+  @apply my-4 rounded-md border border-border bg-surface p-4;
 }

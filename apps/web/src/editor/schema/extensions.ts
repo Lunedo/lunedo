@@ -1,4 +1,4 @@
-import { codeLanguages, isAllowedHref } from "@pagehall/editor-schema";
+import { codeLanguages, commentKit, isAllowedHref } from "@pagehall/editor-schema";
 import { type AnyExtension, Mark, mergeAttributes, Node, textblockTypeInputRule } from "@tiptap/core";
 import Blockquote from "@tiptap/extension-blockquote";
 import Bold from "@tiptap/extension-bold";
@@ -295,6 +295,19 @@ export const InlineComment = Mark.create({
   },
 });
 
+const COMMENT_CODE_EXCLUDES = "bold italic underline strike subscript superscript";
+
+export function commentSchemaExtensions(): AnyExtension[] {
+  const allowed = new Set([...Object.keys(commentKit.schema.nodes), ...Object.keys(commentKit.schema.marks)]);
+  return schemaExtensions()
+    .filter((extension) => allowed.has(extension.name))
+    .map((extension) =>
+      extension.name === "code"
+        ? Code.extend({ ...markFields("code"), excludes: COMMENT_CODE_EXCLUDES })
+        : extension,
+    );
+}
+
 export function schemaExtensions(): AnyExtension[] {
   return [
     Document.extend(nodeFields("doc")),
@@ -343,7 +356,7 @@ export function schemaExtensions(): AnyExtension[] {
       ...nodeFields("taskItem"),
       addAttributes() {
         return schemaAttributes("node", "taskItem", {
-          checked: dataAttribute("checked", "boolean"),
+          id: dataAttribute("taskId"),
           assignee: dataAttribute("assignee"),
           dueDate: dataAttribute("dueDate"),
         });
@@ -375,6 +388,7 @@ export function schemaExtensions(): AnyExtension[] {
     atomNode("blockMath", "div"),
     atomNode("tableOfContents", "div", { maxLevel: dataAttribute("maxLevel", "number") }),
     atomNode("unsupportedMacro", "div", { data: dataAttribute("data", "json") }),
+    atomNode("taskReport", "div", { assignedToViewer: dataAttribute("assignedToViewer", "boolean") }),
     atomNode("image", "div", { width: dataAttribute("width", "number") }),
     atomNode("file", "div"),
     containerNode("section"),

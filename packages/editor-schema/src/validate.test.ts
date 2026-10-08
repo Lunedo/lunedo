@@ -109,7 +109,7 @@ describe("validateDocument", () => {
   it("rejects wrong attribute types", () => {
     expect(codes(doc({ type: "heading", attrs: { level: "2" } }))).toEqual(["invalidAttribute"]);
     expect(
-      codes(doc({ type: "taskList", content: [{ type: "taskItem", attrs: { checked: "yes" } }] })),
+      codes(doc({ type: "taskList", content: [{ type: "taskItem", attrs: { dueDate: "yes" } }] })),
     ).toEqual(["invalidAttribute"]);
     expect(codes(doc({ type: "paragraph", attrs: [] }))).toEqual(["invalidAttribute"]);
   });

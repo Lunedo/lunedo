@@ -5,10 +5,11 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { organizationQuery, organizationSettingsQuery } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
+import { OrganizationHomePage } from "../../collaboration/organization-home-page.js";
 import { SettingsList } from "../../components/settings-list.js";
 import { SettingsPage } from "../../screens/settings/settings-page.js";
 import { useOrganizationSettingMutation } from "../../settings/setting-mutations.js";
-import { PAGE_MODE_KEYS, TRASH_KEYS } from "../../settings/settings-index.js";
+import { COLLABORATION_KEYS, PAGE_MODE_KEYS, TRASH_KEYS } from "../../settings/settings-index.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { contentKeys } from "../content-queries.js";
 import { DeletedContent } from "../trash/deleted-content.js";
@@ -56,6 +57,22 @@ export function OrganizationContentScreen() {
           {...(name ? { organizationName: name } : {})}
           canManage={() => state.can("organization.settings.manage")}
           onChange={change}
+        />
+      </Panel>
+      <Panel title={t("content.collaborationSection")}>
+        <SettingsList
+          settings={settings.data}
+          keys={COLLABORATION_KEYS}
+          level="organization"
+          {...(name ? { organizationName: name } : {})}
+          canManage={() => state.can("organization.settings.manage")}
+          onChange={change}
+        />
+      </Panel>
+      <Panel title={t("home.organizationPage")} description={t("home.organizationPageDescription")}>
+        <OrganizationHomePage
+          organizationId={organizationId}
+          canManage={state.can("organization.settings.manage")}
         />
       </Panel>
       <Panel title={t("content.trashSection")}>

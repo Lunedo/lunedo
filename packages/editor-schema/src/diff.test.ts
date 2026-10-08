@@ -32,10 +32,10 @@ function bulletList(...items: string[]): NodeJson {
   return { type: "bulletList", content: items.map((item) => ({ type: "listItem", content: [p(item)] })) };
 }
 
-function taskList(...items: [string, boolean][]): NodeJson {
+function taskList(...items: [string, string | null][]): NodeJson {
   return {
     type: "taskList",
-    content: items.map(([value, checked]) => ({ type: "taskItem", attrs: { checked }, content: [p(value)] })),
+    content: items.map(([value, dueDate]) => ({ type: "taskItem", attrs: { dueDate }, content: [p(value)] })),
   };
 }
 
@@ -250,15 +250,15 @@ describe("diffDocuments", () => {
     expect(diff.changes).toBe(1);
   });
 
-  it("reports a checked task item as an attribute change and text as inline change", () => {
+  it("reports a new due date as an attribute change and text as inline change", () => {
     const diff = compare(
-      [taskList(["Buy milk", false], ["Call", false])],
-      [taskList(["Buy milk", true], ["Call Anna", false])],
+      [taskList(["Buy milk", null], ["Call", null])],
+      [taskList(["Buy milk", "2026-10-12"], ["Call Anna", null])],
     );
     const list = only(diff, "changed");
     const first = child(list, 0);
     expect(first.change).toBe("changed");
-    expect(first.attributes).toEqual([{ name: "checked", before: false, after: true }]);
+    expect(first.attributes).toEqual([{ name: "dueDate", before: null, after: "2026-10-12" }]);
     expect(child(first, 0).change).toBe("unchanged");
     const second = child(list, 1);
     expect(second.attributes).toEqual([]);
