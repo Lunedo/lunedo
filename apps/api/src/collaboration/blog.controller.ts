@@ -138,7 +138,7 @@ export class BlogController {
   @ApiRoute({
     summary: "Schedule the publication of a blog post",
     description:
-      "Publishes the draft at the given time, exactly once, also with several nodes. A new schedule replaces the old one. If the person who scheduled it can no longer edit the post at that time, the schedule is dropped.",
+      "Publishes the draft at the given time, exactly once, also with several nodes. A new schedule replaces the old one. If the person who scheduled it can no longer edit the post at that time, the post is held: the space admins and that person are notified, and a space admin publishes it or cancels the schedule.",
     tags: [TAG],
     params: postParams,
     body: scheduleSchema,
@@ -173,6 +173,60 @@ export class BlogController {
   })
   async cancelSchedule(@Param("postId") postId: string, @Req() request: FastifyRequest) {
     return this.#services.blog.schedule(actorOf(request), postId, null);
+  }
+
+  @Get("spaces/:spaceId/blog/scheduled")
+  @Permission("space.manage", { type: "space", param: "spaceId" })
+  @ApiRoute({
+    summary: "List scheduled blog posts of a space",
+    description:
+      "Lists every scheduled post of the space for its space admins, the held ones first, then by scheduled time.",
+    tags: [TAG],
+    params: spaceParams,
+    response: {
+      description: "The scheduled posts.",
+      schema: z
+        .object({ items: z.array(blogPostSchema).describe("Scheduled posts.") })
+        .describe("Scheduled posts."),
+      example: { items: [{ ...exampleBlogPost, published: false, held: true }] },
+    },
+  })
+  async listScheduled(@Param("spaceId") spaceId: string, @Req() request: FastifyRequest) {
+    return { items: await this.#services.blog.listScheduled(actorOf(request), spaceId) };
+  }
+
+  @Post("blog-posts/:postId/held/publish")
+  @Permission("item.approveSchedule", post)
+  @ApiRoute({
+    summary: "Publish a held blog post",
+    description:
+      "Publishes a scheduled post that is waiting for approval because the person who scheduled it can no longer edit it. Recorded in the audit log.",
+    tags: [TAG],
+    params: postParams,
+    response: { description: "The published post.", schema: blogPostSchema, example: exampleBlogPost },
+    errors: ["notHeld"],
+  })
+  async publishHeld(@Param("postId") postId: string, @Req() request: FastifyRequest) {
+    return this.#services.blog.publishHeld(actorOf(request), postId);
+  }
+
+  @Delete("blog-posts/:postId/held")
+  @Permission("item.approveSchedule", post)
+  @ApiRoute({
+    summary: "Cancel the schedule of a held blog post",
+    description:
+      "Drops the schedule of a post that is waiting for approval. The post stays a draft. Recorded in the audit log.",
+    tags: [TAG],
+    params: postParams,
+    response: {
+      description: "The post without schedule.",
+      schema: blogPostSchema,
+      example: { ...exampleBlogPost, published: false },
+    },
+    errors: ["notHeld"],
+  })
+  async cancelHeld(@Param("postId") postId: string, @Req() request: FastifyRequest) {
+    return this.#services.blog.cancelHeld(actorOf(request), postId);
   }
 
   @Put("blog-posts/:postId/pinned")

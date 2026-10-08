@@ -375,6 +375,65 @@ describe("blog of a space", () => {
   });
 });
 
+describe("held blog posts", () => {
+  const held = {
+    id: POST,
+    spaceId: SPACE_ID,
+    spaceKey: "ITOPS",
+    spaceName: "IT Operations",
+    title: "Office move",
+    excerpt: "",
+    labels: [],
+    author: { id: LUKAS, name: "Lukas Hofer" },
+    published: false,
+    publishedAt: null,
+    scheduledAt: "2026-10-14T05:00:00.000Z",
+    scheduledTimeZone: "Europe/Vienna",
+    scheduledBy: { id: LUKAS, name: "Lukas Hofer" },
+    held: true,
+    pinnedInSpace: false,
+    pinnedInOrganization: false,
+    createdAt: "2026-10-07T08:00:00.000Z",
+  };
+
+  it("are listed for space admins with the reason, and a space admin publishes them", async () => {
+    const { requests } = mockApi(
+      routes("admin", {
+        [`GET /api/v1/spaces/${SPACE_ID}/blog`]: () => ({ body: { items: [held], nextCursor: null } }),
+        [`GET /api/v1/spaces/${SPACE_ID}/blog/scheduled`]: () => ({ body: { items: [held] } }),
+        [`POST /api/v1/blog-posts/${POST}/held/publish`]: () => ({
+          body: { ...held, held: false, published: true, scheduledAt: null },
+        }),
+      }),
+    );
+    await renderAt("/spaces/ITOPS/blog");
+    const section = await screen.findByRole("region", { name: "Scheduled" });
+    expect(await within(section).findByText("Waiting for approval")).toBeTruthy();
+    expect(
+      within(section).getByText(
+        "Lukas Hofer scheduled this post but can no longer edit it, so it was not published.",
+      ),
+    ).toBeTruthy();
+    await userEvent.click(within(section).getByRole("button", { name: "Publish now" }));
+    await waitFor(() =>
+      expect(requests.some((entry) => entry.method === "POST" && entry.path.endsWith("/held/publish"))).toBe(
+        true,
+      ),
+    );
+  });
+
+  it("show no scheduled list to editors", async () => {
+    mockApi(
+      routes("editor", {
+        [`GET /api/v1/spaces/${SPACE_ID}/blog`]: () => ({ body: { items: [held], nextCursor: null } }),
+      }),
+    );
+    await renderAt("/spaces/ITOPS/blog");
+    expect(await screen.findByText("Waiting for approval")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Scheduled" })).toBeNull();
+  });
+});
+
 describe("For you", () => {
   it("shows tasks, mentions, recent and starred items and new posts", async () => {
     const reference = {

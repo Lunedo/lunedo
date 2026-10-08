@@ -9,9 +9,9 @@ import {
   Textarea,
   useToast,
 } from "@pagehall/ui";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import { Newspaper, Plus } from "lucide-react";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { CalendarClock, Newspaper, Plus } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -22,7 +22,8 @@ import { useDocumentTitle } from "../../screens/settings/settings-page.js";
 import { spaceDisplayName } from "../../spaces/space-badge.js";
 import { useSpace } from "../../spaces/space-context.js";
 import { collaborationKeys } from "../queries.js";
-import { BlogList, postHref } from "./blog-list.js";
+import { BlogList, PostBadges, PostMeta, postHref } from "./blog-list.js";
+import { HeldActions, heldReason } from "./held-notice.js";
 
 const TITLE_MAX = 255;
 const EXCERPT_MAX = 500;
@@ -123,6 +124,63 @@ function CreatePostDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
   );
 }
 
+function ScheduledPosts({ spaceId }: { spaceId: string }) {
+  const { t } = useTranslation();
+  const scheduled = useQuery({
+    queryKey: collaborationKeys.scheduledPosts(spaceId),
+    throwOnError: false,
+    queryFn: () =>
+      request(() => api.GET("/api/v1/spaces/{spaceId}/blog/scheduled", { params: { path: { spaceId } } })),
+  });
+  return (
+    <section aria-labelledby="scheduled-posts" className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
+        <h2 id="scheduled-posts" className="flex items-center gap-2 text-lg font-semibold">
+          <CalendarClock aria-hidden className="size-icon text-text-muted" />
+          {t("blog.scheduledTitle")}
+        </h2>
+        <p className="text-sm text-text-muted">{t("blog.scheduledDescription")}</p>
+      </div>
+      {scheduled.isPending ? <Skeleton className="h-field w-full" /> : null}
+      {scheduled.isError ? (
+        <LoadError
+          what={t("blog.scheduledLoadFailed")}
+          error={scheduled.error}
+          onRetry={() => scheduled.refetch()}
+        />
+      ) : null}
+      {scheduled.data && scheduled.data.items.length === 0 ? (
+        <p className="text-sm text-text-muted">{t("blog.scheduledEmpty")}</p>
+      ) : null}
+      {scheduled.data && scheduled.data.items.length > 0 ? (
+        <ul className="flex flex-col divide-y divide-border rounded-md border border-border">
+          {scheduled.data.items.map((post) => (
+            <li key={post.id} className="flex flex-col gap-2 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  to={postHref(post)}
+                  className="min-w-0 font-semibold hover:underline focus-visible:focus-ring"
+                  title={post.title}
+                >
+                  {post.title}
+                </Link>
+                <PostBadges post={post} level="space" />
+              </div>
+              <PostMeta post={post} />
+              {post.held ? (
+                <>
+                  <p className="text-sm text-text">{heldReason(t, post)}</p>
+                  <HeldActions post={post} />
+                </>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
+  );
+}
+
 export function SpaceBlogScreen() {
   const { t } = useTranslation();
   const { space, canEdit } = useSpace();
@@ -205,6 +263,7 @@ export function SpaceBlogScreen() {
           onMore={() => void posts.fetchNextPage()}
         />
       ) : null}
+      {space.role === "admin" ? <ScheduledPosts spaceId={space.id} /> : null}
       <CreatePostDialog open={creating} onOpenChange={setCreating} />
     </div>
   );

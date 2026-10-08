@@ -1,8 +1,8 @@
-import type { ContentActivity } from "../collaboration/content.js";
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import { type Principal, SYSTEM } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
+import type { ContentActivity } from "../collaboration/content.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "./common.js";

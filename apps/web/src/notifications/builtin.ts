@@ -3,6 +3,7 @@ import {
   AtSign,
   Bot,
   Building2,
+  CalendarClock,
   KeyRound,
   ListChecks,
   Mail,
@@ -95,4 +96,5 @@ notificationTypes.register(
   },
   { id: "content.mentioned", icon: AtSign, link: contentLink },
   { id: "task.assigned", icon: ListChecks, link: contentLink },
+  { id: "blogPost.scheduleHeld", icon: CalendarClock, link: contentLink },
 );

@@ -37,6 +37,7 @@ export const collaborationKeys = {
   allTasks: ["tasks"] as const,
   blogPost: (postId: string) => ["blogPosts", postId] as const,
   spaceBlog: (spaceId: string) => ["spaces", spaceId, "blog"] as const,
+  scheduledPosts: (spaceId: string) => ["spaces", spaceId, "blog", "scheduled"] as const,
   organizationBlog: (organizationId: string, filters: { spaceId?: string; label?: string }) =>
     ["blog", organizationId, filters] as const,
   allBlogs: ["blog"] as const,

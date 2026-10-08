@@ -107,6 +107,13 @@ export const contentNotificationParamSchemas = {
     taskText: z.string(),
     dueDate: z.string().nullable(),
   }),
+  "blogPost.scheduleHeld": z.object({
+    itemTitle: z.string(),
+    itemKind: contentKind,
+    spaceKey: z.string(),
+    reason: z.enum(["noEditAccess", "accountRemoved"]),
+    scheduledBy: idSchema.nullable(),
+  }),
 } as const;
 
 export type ContentNotificationType = keyof typeof contentNotificationParamSchemas;

@@ -2188,6 +2188,9 @@
       },
       "task": {
         "assigned": "You were assigned a task in {itemTitle}: {taskText}"
+      },
+      "blogPost": {
+        "scheduleHeld": "{reason, select, accountRemoved {The scheduled post {itemTitle} is waiting for approval because the person who scheduled it no longer has an account.} other {The scheduled post {itemTitle} is waiting for approval because {actor} can no longer edit it.}}"
       }
     }
   },
@@ -3039,6 +3042,9 @@
       },
       "blogPost": {
         "publishedBySchedule": "Blog post published by schedule",
+        "scheduleHeld": "Scheduled blog post held for approval",
+        "heldPublished": "Held blog post published by a space admin",
+        "heldCancelled": "Schedule of a held blog post cancelled",
         "pinned": "Blog post pinned",
         "unpinned": "Blog post unpinned"
       },
@@ -4742,6 +4748,19 @@
     "scheduleCancelled": "Schedule cancelled. The post stays a draft.",
     "cancelScheduleFailed": "The schedule could not be cancelled",
     "notPublishedTitle": "Not published yet",
-    "notPublishedDescription": "Edit the post, then publish it or schedule the publication."
+    "notPublishedDescription": "Edit the post, then publish it or schedule the publication.",
+    "held": "Waiting for approval",
+    "heldNotice": "Scheduled for {date}, waiting for approval",
+    "heldReason": "{name} scheduled this post but can no longer edit it, so it was not published.",
+    "heldReasonRemoved": "The person who scheduled this post no longer has an account, so it was not published.",
+    "heldAdmin": "Publish it now or cancel the schedule.",
+    "heldOthers": "A space admin publishes it or cancels the schedule. Changing the schedule makes you responsible for it.",
+    "publishNow": "Publish now",
+    "heldPublishedToast": "{title} is published",
+    "publishHeldFailed": "The post could not be published",
+    "scheduledTitle": "Scheduled",
+    "scheduledDescription": "Every scheduled post of this space. Posts waiting for approval come first. Only space admins see this list.",
+    "scheduledEmpty": "No posts are scheduled.",
+    "scheduledLoadFailed": "The scheduled posts could not be loaded"
   }
 }

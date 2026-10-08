@@ -236,6 +236,57 @@ describe.skipIf(!databaseBaseUrl)("comments, tasks, blog and home pages through 
     return space.json().id as string;
   }
 
+  it("lets only space admins publish or cancel a scheduled post whose author lost edit access", async () => {
+    const admin = await person();
+    const author = await person();
+    const spaceId = await organizationSpace(admin.client);
+    const granted = await admin.client.post(`/api/v1/spaces/${spaceId}/permissions`, {
+      action: "grant",
+      principalKind: "account",
+      principalId: author.id,
+      role: "editor",
+    });
+    expect(granted.statusCode, granted.body).toBeLessThan(300);
+    const created = await author.client.post(`/api/v1/spaces/${spaceId}/blog`, { title: "Office move" });
+    const postId = created.json().id as string;
+    await author.client.put(`/api/v1/blog-posts/${postId}/schedule`, {
+      at: new Date(Date.now() + 3_600_000).toISOString(),
+      timeZone: "Europe/Vienna",
+    });
+    expect((await author.client.post(`/api/v1/blog-posts/${postId}/held/publish`)).statusCode).toBe(403);
+    expect((await admin.client.post(`/api/v1/blog-posts/${postId}/held/publish`)).json()).toMatchObject({
+      code: "notHeld",
+    });
+    const permissions = (await admin.client.get(`/api/v1/spaces/${spaceId}/permissions`)).json() as {
+      id: string;
+      principalId: string;
+    }[];
+    const permission = permissions.find((entry) => entry.principalId === author.id);
+    await admin.client.post(`/api/v1/spaces/${spaceId}/permissions`, {
+      action: "change",
+      permissionId: permission?.id,
+      role: "reader",
+    });
+    await test.runtime.pool.query(
+      "update blog_posts set scheduled_at = now() - interval '1 second' where item_id = $1",
+      [postId],
+    );
+    await test.runtime.services.blog.publishDue();
+
+    expect((await author.client.get(`/api/v1/spaces/${spaceId}/blog/scheduled`)).statusCode).toBe(403);
+    const scheduled = await admin.client.get(`/api/v1/spaces/${spaceId}/blog/scheduled`);
+    expect(scheduled.json().items).toEqual([
+      expect.objectContaining({
+        id: postId,
+        held: true,
+        scheduledBy: { id: author.id, name: expect.any(String) },
+      }),
+    ]);
+    expect((await author.client.delete(`/api/v1/blog-posts/${postId}/held`)).statusCode).toBe(404);
+    const published = await admin.client.post(`/api/v1/blog-posts/${postId}/held/publish`);
+    expect(published.json()).toMatchObject({ published: true, held: false });
+  });
+
   it("writes, schedules and pins blog posts", async () => {
     const editor = await person();
     const reader = await person();

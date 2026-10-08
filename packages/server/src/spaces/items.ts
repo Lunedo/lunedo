@@ -1,9 +1,9 @@
-import type { ContentActivity } from "../collaboration/content.js";
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
 import { type AccessImpact, accessImpact } from "../authorization/space-access.js";
+import type { ContentActivity } from "../collaboration/content.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, currentGrants, SpaceError } from "./common.js";

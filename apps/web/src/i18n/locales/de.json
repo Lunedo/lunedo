@@ -2188,6 +2188,9 @@
       },
       "task": {
         "assigned": "Dir wurde in {itemTitle} eine Aufgabe zugewiesen: {taskText}"
+      },
+      "blogPost": {
+        "scheduleHeld": "{reason, select, accountRemoved {Der geplante Beitrag {itemTitle} wartet auf Freigabe, weil die Person, die ihn geplant hat, kein Konto mehr hat.} other {Der geplante Beitrag {itemTitle} wartet auf Freigabe, weil {actor} ihn nicht mehr bearbeiten kann.}}"
       }
     }
   },
@@ -3039,6 +3042,9 @@
       },
       "blogPost": {
         "publishedBySchedule": "Blogbeitrag planmäßig veröffentlicht",
+        "scheduleHeld": "Geplanter Blogbeitrag wartet auf Freigabe",
+        "heldPublished": "Wartender Blogbeitrag von einem Space-Admin veröffentlicht",
+        "heldCancelled": "Planung eines wartenden Blogbeitrags abgebrochen",
         "pinned": "Blogbeitrag angeheftet",
         "unpinned": "Blogbeitrag gelöst"
       },
@@ -4742,6 +4748,19 @@
     "scheduleCancelled": "Planung aufgehoben. Der Beitrag bleibt ein Entwurf.",
     "cancelScheduleFailed": "Die Planung konnte nicht aufgehoben werden",
     "notPublishedTitle": "Noch nicht veröffentlicht",
-    "notPublishedDescription": "Bearbeite den Beitrag und veröffentliche ihn dann oder plane die Veröffentlichung."
+    "notPublishedDescription": "Bearbeite den Beitrag und veröffentliche ihn dann oder plane die Veröffentlichung.",
+    "held": "Wartet auf Freigabe",
+    "heldNotice": "Geplant für {date}, wartet auf Freigabe",
+    "heldReason": "{name} hat diesen Beitrag geplant, kann ihn aber nicht mehr bearbeiten. Deshalb wurde er nicht veröffentlicht.",
+    "heldReasonRemoved": "Die Person, die diesen Beitrag geplant hat, hat kein Konto mehr. Deshalb wurde er nicht veröffentlicht.",
+    "heldAdmin": "Veröffentliche ihn jetzt oder brich die Planung ab.",
+    "heldOthers": "Ein Space-Admin veröffentlicht ihn oder bricht die Planung ab. Wenn du die Planung änderst, bist du dafür verantwortlich.",
+    "publishNow": "Jetzt veröffentlichen",
+    "heldPublishedToast": "{title} ist veröffentlicht",
+    "publishHeldFailed": "Der Beitrag konnte nicht veröffentlicht werden",
+    "scheduledTitle": "Geplant",
+    "scheduledDescription": "Alle geplanten Beiträge dieses Space. Beiträge, die auf Freigabe warten, stehen oben. Nur Space-Admins sehen diese Liste.",
+    "scheduledEmpty": "Es sind keine Beiträge geplant.",
+    "scheduledLoadFailed": "Die geplanten Beiträge konnten nicht geladen werden"
   }
 }

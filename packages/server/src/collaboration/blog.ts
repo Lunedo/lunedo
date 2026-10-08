@@ -4,6 +4,7 @@ import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Transaction } from "../database/database.js";
+import type { NotificationService } from "../notifications/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "../spaces/common.js";
 import { insertInitialDocument, normalizeLabel } from "../spaces/documents.js";
 import { positionBetween } from "../spaces/fractional-index.js";
@@ -31,6 +32,8 @@ export interface BlogPost {
   publishedAt: Date | null;
   scheduledAt: Date | null;
   scheduledTimeZone: string | null;
+  scheduledBy: { id: string; name: string | null } | null;
+  held: boolean;
   pinnedInSpace: boolean;
   pinnedInOrganization: boolean;
   createdAt: Date;
@@ -51,6 +54,9 @@ type PostRow = {
   published_at: Date | string | null;
   scheduled_at: Date | string | null;
   scheduled_time_zone: string | null;
+  scheduled_by: string | null;
+  scheduler_name: string | null;
+  held_at: Date | string | null;
   space_pinned_at: Date | string | null;
   organization_pinned_at: Date | string | null;
   created_at: Date | string;
@@ -92,6 +98,8 @@ function toPost(row: PostRow): BlogPost {
     publishedAt: date(row.published_at),
     scheduledAt: date(row.scheduled_at),
     scheduledTimeZone: row.scheduled_time_zone,
+    scheduledBy: row.scheduled_by ? { id: row.scheduled_by, name: row.scheduler_name } : null,
+    held: row.held_at !== null,
     pinnedInSpace: row.space_pinned_at !== null,
     pinnedInOrganization: row.organization_pinned_at !== null,
     createdAt: new Date(row.created_at),
@@ -104,6 +112,7 @@ export class BlogService {
   readonly #versions: VersionService;
   readonly #audit: AuditLog;
   readonly #people: PeopleService;
+  readonly #notifications: NotificationService;
 
   constructor(options: {
     database: Database;
@@ -111,12 +120,14 @@ export class BlogService {
     versions: VersionService;
     audit: AuditLog;
     people: PeopleService;
+    notifications: NotificationService;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
     this.#versions = options.versions;
     this.#audit = options.audit;
     this.#people = options.people;
+    this.#notifications = options.notifications;
   }
 
   #select(viewer: Principal, pinned: SQL): SQL {
@@ -124,11 +135,12 @@ export class BlogService {
       select t.id, t.space_id, s.key, s.name as space_name, t.title, b.excerpt,
         (select array_agg(l.label order by l.label) from page_labels l where l.item_id = t.id) as labels,
         t.creator_id, ${this.#people.visibleName(viewer, sql`a`)} as creator_name, b.published_at, b.scheduled_at, b.scheduled_time_zone,
+        b.scheduled_by, ${this.#people.visibleName(viewer, sql`scheduler`)} as scheduler_name, b.held_at,
         b.space_pinned_at, b.organization_pinned_at, t.created_at,
         coalesce(${pinned}, '-infinity'::timestamptz)::text as sort_pinned,
         coalesce(b.published_at, b.scheduled_at, t.created_at)::text as sort_date
       from blog_posts b join tree_items t on t.id = b.item_id join spaces s on s.id = t.space_id
-      left join accounts a on a.id = t.creator_id`;
+      left join accounts a on a.id = t.creator_id left join accounts scheduler on scheduler.id = b.scheduled_by`;
   }
 
   #page(rows: PostRow[], limit: number): { posts: BlogPost[]; next: BlogCursor | null } {
@@ -184,8 +196,10 @@ export class BlogService {
       organization_id: string | null;
       title: string;
       published_at: Date | string | null;
+      held_at: Date | string | null;
+      scheduled_by: string | null;
     }>(sql`
-      select t.space_id, s.organization_id, t.title, b.published_at from blog_posts b
+      select t.space_id, s.organization_id, t.title, b.published_at, b.held_at, b.scheduled_by from blog_posts b
       join tree_items t on t.id = b.item_id join spaces s on s.id = t.space_id
       where b.item_id = ${itemId} for update of b`);
     const row = result.rows[0];
@@ -195,6 +209,8 @@ export class BlogService {
       organizationId: row.organization_id,
       title: row.title,
       published: row.published_at !== null,
+      held: row.held_at !== null,
+      scheduledBy: row.scheduled_by,
     };
   }
 
@@ -236,13 +252,114 @@ export class BlogService {
       const post = await this.#locked(tx, itemId);
       await tx.execute(sql`
         update blog_posts set scheduled_at = ${input?.at ?? null}, scheduled_by = ${input ? actorIdOf(actor) : null},
-          scheduled_time_zone = ${input?.timeZone ?? null}, updated_at = now()
+          scheduled_time_zone = ${input?.timeZone ?? null}, held_at = null, updated_at = now()
         where item_id = ${itemId}`);
+      if (post.held && !input) await this.#recordHeldCancelled(tx, actor, itemId, post);
       await signalSpaceChange(tx, { spaceId: post.spaceId, kind: "blog", itemId });
     });
     const post = await this.get(actor, itemId);
     if (!post) throw new SpaceError("itemNotFound", "The blog post does not exist");
     return post;
+  }
+
+  async #recordHeldCancelled(
+    tx: Transaction,
+    actor: Principal,
+    itemId: string,
+    post: { spaceId: string; organizationId: string | null; title: string; scheduledBy: string | null },
+  ) {
+    await this.#audit.record(tx, {
+      name: "blogPost.heldCancelled",
+      actor,
+      targetId: itemId,
+      fields: { spaceId: post.spaceId, title: post.title, scheduledBy: post.scheduledBy },
+      scope: auditScopeOf(post),
+    });
+  }
+
+  async publishHeld(actor: Principal, itemId: string): Promise<BlogPost> {
+    await this.#versions.publishHeld(actor, itemId);
+    const post = await this.get(actor, itemId);
+    if (!post) throw new SpaceError("itemNotFound", "The blog post does not exist");
+    return post;
+  }
+
+  async cancelHeld(actor: Principal, itemId: string): Promise<BlogPost> {
+    await this.#database.transaction(async (tx) => {
+      const post = await this.#locked(tx, itemId);
+      if (!post.held) throw new SpaceError("notHeld", "The blog post is not waiting for approval");
+      await tx.execute(sql`
+        update blog_posts set scheduled_at = null, scheduled_by = null, scheduled_time_zone = null, held_at = null,
+          updated_at = now()
+        where item_id = ${itemId}`);
+      await this.#recordHeldCancelled(tx, actor, itemId, post);
+      await signalSpaceChange(tx, { spaceId: post.spaceId, kind: "blog", itemId });
+    });
+    const post = await this.get(actor, itemId);
+    if (!post) throw new SpaceError("itemNotFound", "The blog post does not exist");
+    return post;
+  }
+
+  async listScheduled(viewer: Principal, spaceId: string): Promise<BlogPost[]> {
+    const result = await this.#database.execute<PostRow>(sql`
+      ${this.#select(viewer, sql`null::timestamptz`)}
+      where t.space_id = ${spaceId} and b.scheduled_at is not null and t.trash_entry_id is null
+        and t.archived_root_id is null
+      order by b.held_at is null, b.scheduled_at, t.id
+      limit ${MAX_BLOG_PAGE}`);
+    return result.rows.map(toPost);
+  }
+
+  async #hold(tx: Transaction, itemId: string, scheduledBy: string | null) {
+    const result = await tx.execute<{
+      space_id: string;
+      organization_id: string | null;
+      title: string;
+      key: string;
+    }>(sql`
+      select t.space_id, s.organization_id, t.title, s.key from tree_items t join spaces s on s.id = t.space_id
+      where t.id = ${itemId}`);
+    const row = result.rows[0];
+    if (!row) return;
+    await this.#audit.record(tx, {
+      name: "blogPost.scheduleHeld",
+      actor: { type: "system" },
+      targetId: itemId,
+      fields: { spaceId: row.space_id, title: row.title, scheduledBy },
+      scope: auditScopeOf({ organizationId: row.organization_id }),
+    });
+    const admins = await tx.execute<{ id: string }>(sql`
+      select distinct a.id from space_permissions p
+      left join group_members gm on p.principal_kind = 'group' and gm.group_id = p.principal_id
+        and (gm.expires_at is null or gm.expires_at > now())
+      join accounts a on a.id = case when p.principal_kind = 'account' then p.principal_id else gm.account_id end
+      where p.space_id = ${row.space_id} and p.role = 'admin' and a.state = 'active'`);
+    const approvers: string[] = [];
+    for (const admin of admins.rows) {
+      const decision = await this.#authorization.explain(
+        accountPrincipal(admin.id),
+        "item.approveSchedule",
+        { type: "item", id: itemId },
+        { executor: tx, fresh: true },
+      );
+      if (decision.allowed) approvers.push(admin.id);
+    }
+    const recipients = [...new Set([...(scheduledBy ? [scheduledBy] : []), ...approvers])];
+    if (recipients.length === 0) return;
+    await this.#notifications.notify(tx, {
+      type: "blogPost.scheduleHeld",
+      recipients,
+      organizationId: row.organization_id,
+      targetId: itemId,
+      actor: scheduledBy ? accountPrincipal(scheduledBy) : null,
+      params: {
+        itemTitle: row.title,
+        itemKind: "blogPost",
+        spaceKey: row.key,
+        reason: scheduledBy ? "noEditAccess" : "accountRemoved",
+        scheduledBy,
+      },
+    });
   }
 
   async pin(
@@ -343,17 +460,21 @@ export class BlogService {
 
   async publishDue(): Promise<number> {
     const due = await this.#database.execute<{ item_id: string }>(sql`
-      select item_id from blog_posts where scheduled_at <= now() order by scheduled_at limit ${SCHEDULE_BATCH}`);
+      select item_id from blog_posts where scheduled_at <= now() and held_at is null
+      order by scheduled_at limit ${SCHEDULE_BATCH}`);
     let published = 0;
     for (const row of due.rows) {
-      const result = await this.#versions.publishScheduled(row.item_id, async (tx, accountId) => {
-        const decision = await this.#authorization.explain(
-          accountPrincipal(accountId),
-          "item.edit",
-          { type: "item", id: row.item_id },
-          { executor: tx, fresh: true },
-        );
-        return decision.allowed;
+      const result = await this.#versions.publishScheduled(row.item_id, {
+        mayPublish: async (tx, accountId) => {
+          const decision = await this.#authorization.explain(
+            accountPrincipal(accountId),
+            "item.edit",
+            { type: "item", id: row.item_id },
+            { executor: tx, fresh: true },
+          );
+          return decision.allowed;
+        },
+        onHeld: (tx, held) => this.#hold(tx, row.item_id, held.scheduledBy),
       });
       if (result) published += 1;
     }

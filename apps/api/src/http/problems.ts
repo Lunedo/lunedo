@@ -106,6 +106,7 @@ export const problems = {
   reactionsDisabled: { status: 409, title: "Reactions are turned off" },
   tooManyReactions: { status: 409, title: "Too many reactions from one person" },
   notPublished: { status: 409, title: "The blog post is not published" },
+  notHeld: { status: 409, title: "The blog post is not waiting for approval" },
   blogPostMode: { status: 409, title: "Blog posts always use publish mode" },
   tooManyStars: { status: 409, title: "Too many starred items" },
   notPublishMode: { status: 409, title: "The page is not in publish mode" },

@@ -1,6 +1,6 @@
 import { Badge, Button, IconButton, useToast } from "@pagehall/ui";
 import { Link } from "@tanstack/react-router";
-import { Clock, FilePen, Pin, PinOff } from "lucide-react";
+import { CircleAlert, Clock, FilePen, Pin, PinOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { problemMessage } from "../../errors/problem-message.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
@@ -42,7 +42,12 @@ export function PostBadges({ post, level }: { post: BlogPost; level: "space" | "
           {t("blog.pinned")}
         </Badge>
       ) : null}
-      {!post.published && post.scheduledAt ? (
+      {!post.published && post.held ? (
+        <Badge variant="danger" icon={CircleAlert}>
+          {t("blog.held")}
+        </Badge>
+      ) : null}
+      {!post.published && post.scheduledAt && !post.held ? (
         <Badge variant="warning" icon={Clock}>
           {t("blog.scheduled")}
         </Badge>

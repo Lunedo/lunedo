@@ -1003,6 +1003,24 @@ export const auditCatalog = {
     fields: pageFields.extend({ version: z.number().int().positive(), scheduledBy: z.uuid() }),
     visibility: "organization",
   }),
+  "blogPost.scheduleHeld": event({
+    actor: ["system"],
+    target: "page",
+    fields: pageFields.extend({ scheduledBy: z.uuid().nullable() }),
+    visibility: "organization",
+  }),
+  "blogPost.heldPublished": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({ version: z.number().int().positive(), scheduledBy: z.uuid().nullable() }),
+    visibility: "organization",
+  }),
+  "blogPost.heldCancelled": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({ scheduledBy: z.uuid().nullable() }),
+    visibility: "organization",
+  }),
   "blogPost.pinned": event({
     actor: ["account"],
     target: "page",

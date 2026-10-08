@@ -1,8 +1,8 @@
-import type { ContentActivity } from "../collaboration/content.js";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { AuthorizationService } from "../authorization/service.js";
+import type { ContentActivity } from "../collaboration/content.js";
 import type { Database } from "../database/database.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "./common.js";
 import { lockSpaces } from "./items.js";

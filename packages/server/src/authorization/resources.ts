@@ -256,6 +256,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "item.comment": { scope: "space", spaceRole: "commenter", restriction: "interactive" },
       "item.react": { scope: "space", spaceRole: "reader", restriction: "interactive" },
       "item.pin": { scope: "space", spaceRole: "admin", restriction: "interactive" },
+      "item.approveSchedule": { scope: "space", spaceRole: "admin", restriction: "writable" },
     },
     restrictions: {
       readable: async (executor, id) => {

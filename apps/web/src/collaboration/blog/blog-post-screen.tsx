@@ -52,6 +52,7 @@ import { StarButton, useContentCollaboration } from "../content-collaboration.js
 import { type BlogPost, blogPostQuery, collaborationKeys } from "../queries.js";
 import { PageReactions } from "../reaction-bar.js";
 import { PostBadges, PostMeta } from "./blog-list.js";
+import { HeldNotice } from "./held-notice.js";
 import { instantToZoned, zonedToInstant } from "./schedule.js";
 
 const route = getRouteApi("/app/spaces/$spaceKey/blog/$itemId/{-$slug}");
@@ -415,7 +416,10 @@ function BlogPostView({ item, post }: { item: ItemDetails; post: BlogPost }) {
           <PostMeta post={post} />
           <PostBadges post={post} level="space" />
         </div>
-        {post.scheduledAt && !post.published ? (
+        {post.held && !post.published ? (
+          <HeldNotice post={post} canApprove={space.role === "admin" && !space.archived} />
+        ) : null}
+        {post.scheduledAt && !post.published && !post.held ? (
           <Notice
             variant="info"
             title={t("blog.scheduledNotice", { date: format.dateTime(post.scheduledAt) })}

@@ -227,7 +227,7 @@ export class VersionService {
       where id = ${page.itemId}`);
     await tx.execute(sql`
       update blog_posts set published_at = coalesce(published_at, now()), scheduled_at = null, scheduled_by = null,
-        scheduled_time_zone = null, updated_at = now()
+        scheduled_time_zone = null, held_at = null, updated_at = now()
       where item_id = ${page.itemId}`);
     await recomputeLinks(tx, page.itemId, document);
     await signalSpaceChange(tx, { spaceId: page.spaceId, kind: "page", itemId: page.itemId });
@@ -365,19 +365,23 @@ export class VersionService {
 
   async publishScheduled(
     itemId: string,
-    mayPublish: (tx: Transaction, accountId: string) => Promise<boolean>,
+    options: {
+      mayPublish: (tx: Transaction, accountId: string) => Promise<boolean>;
+      onHeld: (tx: Transaction, held: { scheduledBy: string | null }) => Promise<void>;
+    },
   ): Promise<{ version: number; scheduledBy: string } | null> {
     return this.#database.transaction(async (tx) => {
       const due = await tx.execute<{ scheduled_by: string | null }>(sql`
-        select scheduled_by from blog_posts where item_id = ${itemId} and scheduled_at <= now()
+        select scheduled_by from blog_posts where item_id = ${itemId} and scheduled_at <= now() and held_at is null
         for update skip locked`);
       const row = due.rows[0];
       if (!row) return null;
       const scheduledBy = row.scheduled_by;
-      if (!scheduledBy || !(await mayPublish(tx, scheduledBy))) {
-        await tx.execute(sql`
-          update blog_posts set scheduled_at = null, scheduled_by = null, scheduled_time_zone = null, updated_at = now()
-          where item_id = ${itemId}`);
+      if (!scheduledBy || !(await options.mayPublish(tx, scheduledBy))) {
+        await tx.execute(
+          sql`update blog_posts set held_at = now(), updated_at = now() where item_id = ${itemId}`,
+        );
+        await options.onHeld(tx, { scheduledBy });
         return null;
       }
       await this.#lockSpaceOf(tx, itemId);
@@ -398,6 +402,34 @@ export class VersionService {
         scope: auditScopeOf(page),
       });
       return { version, scheduledBy };
+    });
+  }
+
+  async publishHeld(actor: Principal, itemId: string): Promise<number> {
+    return this.#database.transaction(async (tx) => {
+      const held = await tx.execute<{ scheduled_by: string | null }>(sql`
+        select scheduled_by from blog_posts where item_id = ${itemId} and held_at is not null for update`);
+      const row = held.rows[0];
+      if (!row) throw new SpaceError("notHeld", "The blog post is not waiting for approval");
+      await this.#lockSpaceOf(tx, itemId);
+      const page = await this.#lock(tx, itemId);
+      const version =
+        hasDraftChanges(page) || page.publishedNumber === null
+          ? await this.#publishLocked(tx, page, actorIdOf(actor), "")
+          : (page.publishedNumber ?? 0);
+      await tx.execute(sql`
+        update blog_posts set published_at = coalesce(published_at, now()), scheduled_at = null, scheduled_by = null,
+          scheduled_time_zone = null, held_at = null, updated_at = now()
+        where item_id = ${itemId}`);
+      await this.#audit.record(tx, {
+        name: "blogPost.heldPublished",
+        actor,
+        targetId: itemId,
+        fields: { spaceId: page.spaceId, title: page.title, version, scheduledBy: row.scheduled_by },
+        scope: auditScopeOf(page),
+      });
+      await signalSpaceChange(tx, { spaceId: page.spaceId, kind: "blog", itemId });
+      return version;
     });
   }
 

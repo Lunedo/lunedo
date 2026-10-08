@@ -783,6 +783,116 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
       expect(events.rows).toHaveLength(1);
     });
 
+    async function duePost(
+      context: Context,
+      lose: (authorId: string, permissionId: string) => Promise<void>,
+    ) {
+      const authorId = await member(context.org.id, "member", "Author");
+      const [entry] = await test.services.spacePermissions
+        .apply(context.editor, context.space.id, {
+          action: "grant",
+          principalKind: "account",
+          principalId: authorId,
+          role: "editor",
+        })
+        .then((entries) => entries.filter((candidate) => candidate.principalId === authorId));
+      const author = accountPrincipal(authorId);
+      const post = await test.services.blog.create(author, context.space.id, { title: "Office move" });
+      await test.services.documents.replace(author, post.id, doc(paragraph("We move on Friday.")));
+      await test.services.blog.schedule(author, post.id, {
+        at: new Date(Date.now() + 3_600_000),
+        timeZone: "Europe/Vienna",
+      });
+      await lose(authorId, entry?.id ?? "");
+      await test.database.execute(
+        sql`update blog_posts set scheduled_at = now() - interval '1 second' where item_id = ${post.id}`,
+      );
+      return { post, authorId };
+    }
+
+    async function auditNames(itemId: string) {
+      const events = await test.database.execute<{ name: string }>(
+        sql`select name from audit_events where target_id = ${itemId} and name like 'blogPost.%' order by occurred_at`,
+      );
+      return events.rows.map((row) => row.name);
+    }
+
+    it("are held for approval when the author can no longer edit them, and a space admin publishes them", async () => {
+      const context = await setup();
+      const { post, authorId } = await duePost(context, async (_authorId, permissionId) => {
+        await test.services.spacePermissions.apply(context.editor, context.space.id, {
+          action: "change",
+          permissionId,
+          role: "reader",
+        });
+      });
+      expect(await test.services.blog.publishDue()).toBe(0);
+      expect(await test.services.blog.publishDue()).toBe(0);
+      const held = await test.services.blog.get(context.editor, post.id);
+      expect(held).toMatchObject({ published: false, held: true, scheduledBy: { id: authorId } });
+      expect(held?.scheduledAt).not.toBeNull();
+      expect(await test.services.blog.get(context.reader, post.id)).toBeNull();
+      expect((await notificationsOf(authorId)).map((entry) => [entry.type, entry.actor?.id])).toEqual([
+        ["blogPost.scheduleHeld", authorId],
+      ]);
+      expect((await notificationsOf(context.editorId)).map((entry) => entry.type)).toEqual([
+        "blogPost.scheduleHeld",
+      ]);
+      expect(await notificationsOf(context.readerId)).toEqual([]);
+      expect(
+        (await test.services.blog.listScheduled(context.editor, context.space.id)).map((entry) => [
+          entry.id,
+          entry.held,
+        ]),
+      ).toEqual([[post.id, true]]);
+      expect(
+        await can(accountPrincipal(authorId), "item.approveSchedule", { type: "item", id: post.id }),
+      ).toBe(false);
+      expect(await can(context.editor, "item.approveSchedule", { type: "item", id: post.id })).toBe(true);
+
+      const published = await test.services.blog.publishHeld(context.editor, post.id);
+      expect(published).toMatchObject({ published: true, held: false, scheduledAt: null });
+      expect(await test.services.blog.get(context.reader, post.id)).toMatchObject({ published: true });
+      await expect(test.services.blog.publishHeld(context.editor, post.id)).rejects.toMatchObject({
+        code: "notHeld",
+      });
+      expect(await auditNames(post.id)).toEqual(["blogPost.scheduleHeld", "blogPost.heldPublished"]);
+    });
+
+    it("are held when the author was deactivated, and a space admin cancels the schedule", async () => {
+      const context = await setup();
+      const { post, authorId } = await duePost(context, async (authorId) => {
+        await test.database.execute(sql`update accounts set state = 'deactivated' where id = ${authorId}`);
+      });
+      expect(await test.services.blog.publishDue()).toBe(0);
+      expect(await test.services.blog.get(context.editor, post.id)).toMatchObject({ held: true });
+      expect(await notificationsOf(authorId)).toEqual([]);
+      expect((await notificationsOf(context.editorId)).map((entry) => entry.type)).toEqual([
+        "blogPost.scheduleHeld",
+      ]);
+      const cancelled = await test.services.blog.cancelHeld(context.editor, post.id);
+      expect(cancelled).toMatchObject({
+        published: false,
+        held: false,
+        scheduledAt: null,
+        scheduledBy: null,
+      });
+      expect(await test.services.blog.listScheduled(context.editor, context.space.id)).toEqual([]);
+      expect(await auditNames(post.id)).toEqual(["blogPost.scheduleHeld", "blogPost.heldCancelled"]);
+    });
+
+    it("are published as planned when the author can still edit them", async () => {
+      const context = await setup();
+      const { post, authorId } = await duePost(context, async () => {});
+      expect(await test.services.blog.publishDue()).toBe(1);
+      expect(await test.services.blog.get(context.reader, post.id)).toMatchObject({
+        published: true,
+        held: false,
+      });
+      expect(await notificationsOf(authorId)).toEqual([]);
+      expect(await auditNames(post.id)).toEqual(["blogPost.publishedBySchedule"]);
+    });
+
     it("can be rescheduled and cancelled, and refuse a time in the past", async () => {
       const context = await setup();
       const post = await test.services.blog.create(context.editor, context.space.id, {

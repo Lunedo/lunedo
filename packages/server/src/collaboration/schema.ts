@@ -152,6 +152,7 @@ export const blogPosts = pgTable(
     scheduledAt: timestampColumn(),
     scheduledBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     scheduledTimeZone: text(),
+    heldAt: timestampColumn(),
     publishedAt: timestampColumn(),
     spacePinnedAt: timestampColumn(),
     spacePinnedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),

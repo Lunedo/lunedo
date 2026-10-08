@@ -446,7 +446,7 @@ export function createAccountServices(options: {
     audit,
   });
   const tasks = new TaskService({ database, authorization, settings, people });
-  const blog = new BlogService({ database, authorization, versions, audit, people });
+  const blog = new BlogService({ database, authorization, versions, audit, people, notifications });
   const home = new HomeService({ database, authorization, settings, tasks, blog, people });
   setupRegistry.register(
     ...builtinSetupSteps({

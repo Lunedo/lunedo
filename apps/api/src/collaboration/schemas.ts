@@ -288,6 +288,12 @@ export const blogPostSchema = z
     publishedAt: timestamp("When the post was first published, or null.").nullable(),
     scheduledAt: timestamp("When the post will be published, or null.").nullable(),
     scheduledTimeZone: z.string().nullable().describe("Time zone the author scheduled it in, or null."),
+    scheduledBy: person("Who scheduled the publication, or null.").nullable(),
+    held: z
+      .boolean()
+      .describe(
+        "Whether the scheduled publication is waiting for a space admin because the person who scheduled it can no longer edit the post.",
+      ),
     pinnedInSpace: z.boolean().describe("Whether the post is pinned at the top of its space's blog."),
     pinnedInOrganization: z
       .boolean()
@@ -309,6 +315,8 @@ export const exampleBlogPost = {
   publishedAt: "2026-10-06T07:00:00.000Z",
   scheduledAt: null,
   scheduledTimeZone: null,
+  scheduledBy: null,
+  held: false,
   pinnedInSpace: false,
   pinnedInOrganization: true,
   createdAt: "2026-10-05T15:00:00.000Z",

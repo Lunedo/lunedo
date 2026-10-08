@@ -12299,6 +12299,40 @@
                         "null"
                       ]
                     },
+                    "scheduledBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Account ID."
+                            },
+                            "name": {
+                              "description": "Name, or null when the caller may not see the person.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who scheduled the publication, or null."
+                    },
+                    "held": {
+                      "type": "boolean",
+                      "description": "Whether the scheduled publication is waiting for a space admin because the person who scheduled it can no longer edit the post."
+                    },
                     "pinnedInSpace": {
                       "type": "boolean",
                       "description": "Whether the post is pinned at the top of its space's blog."
@@ -12326,6 +12360,8 @@
                     "publishedAt",
                     "scheduledAt",
                     "scheduledTimeZone",
+                    "scheduledBy",
+                    "held",
                     "pinnedInSpace",
                     "pinnedInOrganization",
                     "createdAt"
@@ -12351,6 +12387,8 @@
                   "publishedAt": "2026-10-06T07:00:00.000Z",
                   "scheduledAt": null,
                   "scheduledTimeZone": null,
+                  "scheduledBy": null,
+                  "held": false,
                   "pinnedInSpace": false,
                   "pinnedInOrganization": true,
                   "createdAt": "2026-10-05T15:00:00.000Z"
@@ -12637,6 +12675,40 @@
                         "null"
                       ]
                     },
+                    "scheduledBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Account ID."
+                            },
+                            "name": {
+                              "description": "Name, or null when the caller may not see the person.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who scheduled the publication, or null."
+                    },
+                    "held": {
+                      "type": "boolean",
+                      "description": "Whether the scheduled publication is waiting for a space admin because the person who scheduled it can no longer edit the post."
+                    },
                     "pinnedInSpace": {
                       "type": "boolean",
                       "description": "Whether the post is pinned at the top of its space's blog."
@@ -12664,6 +12736,8 @@
                     "publishedAt",
                     "scheduledAt",
                     "scheduledTimeZone",
+                    "scheduledBy",
+                    "held",
                     "pinnedInSpace",
                     "pinnedInOrganization",
                     "createdAt"
@@ -12689,6 +12763,8 @@
                   "publishedAt": "2026-10-06T07:00:00.000Z",
                   "scheduledAt": null,
                   "scheduledTimeZone": null,
+                  "scheduledBy": null,
+                  "held": false,
                   "pinnedInSpace": false,
                   "pinnedInOrganization": true,
                   "createdAt": "2026-10-05T15:00:00.000Z"
@@ -12802,6 +12878,774 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/blog-posts/{postId}/held": {
+      "delete": {
+        "operationId": "blog.cancelHeld",
+        "summary": "Cancel the schedule of a held blog post",
+        "description": "Drops the schedule of a post that is waiting for approval. The post stays a draft. Recorded in the audit log.\n\nRequires the permission `item.approveSchedule` on the item in `postId`.",
+        "tags": [
+          "Blog"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.approveSchedule",
+          "resource": "item",
+          "parameter": "postId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the blog post.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The post without schedule.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the blog post."
+                    },
+                    "spaceId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Space of the post."
+                    },
+                    "spaceKey": {
+                      "type": "string",
+                      "description": "Key of that space."
+                    },
+                    "spaceName": {
+                      "type": "string",
+                      "description": "Name of that space."
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "Title as readers see it."
+                    },
+                    "excerpt": {
+                      "type": "string",
+                      "description": "Short summary shown in lists."
+                    },
+                    "labels": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "description": "A label."
+                      },
+                      "description": "Labels, sorted."
+                    },
+                    "author": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Account ID."
+                            },
+                            "name": {
+                              "description": "Name, or null when the caller may not see the person.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who wrote the post, or null."
+                    },
+                    "published": {
+                      "type": "boolean",
+                      "description": "Whether the post was published. Unpublished posts are visible only to editors."
+                    },
+                    "publishedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the post was first published, or null. ISO 8601 timestamp in UTC."
+                    },
+                    "scheduledAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the post will be published, or null. ISO 8601 timestamp in UTC."
+                    },
+                    "scheduledTimeZone": {
+                      "description": "Time zone the author scheduled it in, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "scheduledBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Account ID."
+                            },
+                            "name": {
+                              "description": "Name, or null when the caller may not see the person.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who scheduled the publication, or null."
+                    },
+                    "held": {
+                      "type": "boolean",
+                      "description": "Whether the scheduled publication is waiting for a space admin because the person who scheduled it can no longer edit the post."
+                    },
+                    "pinnedInSpace": {
+                      "type": "boolean",
+                      "description": "Whether the post is pinned at the top of its space's blog."
+                    },
+                    "pinnedInOrganization": {
+                      "type": "boolean",
+                      "description": "Whether the post is pinned in the organization's blog overview."
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the post was created. ISO 8601 timestamp in UTC."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "spaceId",
+                    "spaceKey",
+                    "spaceName",
+                    "title",
+                    "excerpt",
+                    "labels",
+                    "author",
+                    "published",
+                    "publishedAt",
+                    "scheduledAt",
+                    "scheduledTimeZone",
+                    "scheduledBy",
+                    "held",
+                    "pinnedInSpace",
+                    "pinnedInOrganization",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A blog post."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d01",
+                  "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                  "spaceKey": "ITOPS",
+                  "spaceName": "IT Operations",
+                  "title": "New VPN client from Monday",
+                  "excerpt": "The company portal ships WireGuard 0.6 on Monday.",
+                  "labels": [
+                    "vpn"
+                  ],
+                  "author": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                    "name": "Anna Berger"
+                  },
+                  "published": false,
+                  "publishedAt": "2026-10-06T07:00:00.000Z",
+                  "scheduledAt": null,
+                  "scheduledTimeZone": null,
+                  "scheduledBy": null,
+                  "held": false,
+                  "pinnedInSpace": false,
+                  "pinnedInOrganization": true,
+                  "createdAt": "2026-10-05T15:00:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`notHeld`: The blog post is not waiting for approval.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notHeld": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notHeld",
+                      "title": "The blog post is not waiting for approval",
+                      "status": 409,
+                      "code": "notHeld"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/blog-posts/{postId}/held/publish": {
+      "post": {
+        "operationId": "blog.publishHeld",
+        "summary": "Publish a held blog post",
+        "description": "Publishes a scheduled post that is waiting for approval because the person who scheduled it can no longer edit it. Recorded in the audit log.\n\nRequires the permission `item.approveSchedule` on the item in `postId`.",
+        "tags": [
+          "Blog"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.approveSchedule",
+          "resource": "item",
+          "parameter": "postId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the blog post.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The published post.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the blog post."
+                    },
+                    "spaceId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Space of the post."
+                    },
+                    "spaceKey": {
+                      "type": "string",
+                      "description": "Key of that space."
+                    },
+                    "spaceName": {
+                      "type": "string",
+                      "description": "Name of that space."
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "Title as readers see it."
+                    },
+                    "excerpt": {
+                      "type": "string",
+                      "description": "Short summary shown in lists."
+                    },
+                    "labels": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "description": "A label."
+                      },
+                      "description": "Labels, sorted."
+                    },
+                    "author": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Account ID."
+                            },
+                            "name": {
+                              "description": "Name, or null when the caller may not see the person.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who wrote the post, or null."
+                    },
+                    "published": {
+                      "type": "boolean",
+                      "description": "Whether the post was published. Unpublished posts are visible only to editors."
+                    },
+                    "publishedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the post was first published, or null. ISO 8601 timestamp in UTC."
+                    },
+                    "scheduledAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the post will be published, or null. ISO 8601 timestamp in UTC."
+                    },
+                    "scheduledTimeZone": {
+                      "description": "Time zone the author scheduled it in, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "scheduledBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Account ID."
+                            },
+                            "name": {
+                              "description": "Name, or null when the caller may not see the person.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who scheduled the publication, or null."
+                    },
+                    "held": {
+                      "type": "boolean",
+                      "description": "Whether the scheduled publication is waiting for a space admin because the person who scheduled it can no longer edit the post."
+                    },
+                    "pinnedInSpace": {
+                      "type": "boolean",
+                      "description": "Whether the post is pinned at the top of its space's blog."
+                    },
+                    "pinnedInOrganization": {
+                      "type": "boolean",
+                      "description": "Whether the post is pinned in the organization's blog overview."
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the post was created. ISO 8601 timestamp in UTC."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "spaceId",
+                    "spaceKey",
+                    "spaceName",
+                    "title",
+                    "excerpt",
+                    "labels",
+                    "author",
+                    "published",
+                    "publishedAt",
+                    "scheduledAt",
+                    "scheduledTimeZone",
+                    "scheduledBy",
+                    "held",
+                    "pinnedInSpace",
+                    "pinnedInOrganization",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A blog post."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d01",
+                  "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                  "spaceKey": "ITOPS",
+                  "spaceName": "IT Operations",
+                  "title": "New VPN client from Monday",
+                  "excerpt": "The company portal ships WireGuard 0.6 on Monday.",
+                  "labels": [
+                    "vpn"
+                  ],
+                  "author": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                    "name": "Anna Berger"
+                  },
+                  "published": true,
+                  "publishedAt": "2026-10-06T07:00:00.000Z",
+                  "scheduledAt": null,
+                  "scheduledTimeZone": null,
+                  "scheduledBy": null,
+                  "held": false,
+                  "pinnedInSpace": false,
+                  "pinnedInOrganization": true,
+                  "createdAt": "2026-10-05T15:00:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`notHeld`: The blog post is not waiting for approval.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notHeld": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notHeld",
+                      "title": "The blog post is not waiting for approval",
+                      "status": 409,
+                      "code": "notHeld"
                     }
                   }
                 }
@@ -12995,6 +13839,40 @@
                         "null"
                       ]
                     },
+                    "scheduledBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Account ID."
+                            },
+                            "name": {
+                              "description": "Name, or null when the caller may not see the person.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who scheduled the publication, or null."
+                    },
+                    "held": {
+                      "type": "boolean",
+                      "description": "Whether the scheduled publication is waiting for a space admin because the person who scheduled it can no longer edit the post."
+                    },
                     "pinnedInSpace": {
                       "type": "boolean",
                       "description": "Whether the post is pinned at the top of its space's blog."
@@ -13022,6 +13900,8 @@
                     "publishedAt",
                     "scheduledAt",
                     "scheduledTimeZone",
+                    "scheduledBy",
+                    "held",
                     "pinnedInSpace",
                     "pinnedInOrganization",
                     "createdAt"
@@ -13047,6 +13927,8 @@
                   "publishedAt": "2026-10-06T07:00:00.000Z",
                   "scheduledAt": null,
                   "scheduledTimeZone": null,
+                  "scheduledBy": null,
+                  "held": false,
                   "pinnedInSpace": true,
                   "pinnedInOrganization": true,
                   "createdAt": "2026-10-05T15:00:00.000Z"
@@ -13341,6 +14223,40 @@
                         "null"
                       ]
                     },
+                    "scheduledBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Account ID."
+                            },
+                            "name": {
+                              "description": "Name, or null when the caller may not see the person.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who scheduled the publication, or null."
+                    },
+                    "held": {
+                      "type": "boolean",
+                      "description": "Whether the scheduled publication is waiting for a space admin because the person who scheduled it can no longer edit the post."
+                    },
                     "pinnedInSpace": {
                       "type": "boolean",
                       "description": "Whether the post is pinned at the top of its space's blog."
@@ -13368,6 +14284,8 @@
                     "publishedAt",
                     "scheduledAt",
                     "scheduledTimeZone",
+                    "scheduledBy",
+                    "held",
                     "pinnedInSpace",
                     "pinnedInOrganization",
                     "createdAt"
@@ -13393,6 +14311,8 @@
                   "publishedAt": "2026-10-06T07:00:00.000Z",
                   "scheduledAt": null,
                   "scheduledTimeZone": null,
+                  "scheduledBy": null,
+                  "held": false,
                   "pinnedInSpace": false,
                   "pinnedInOrganization": true,
                   "createdAt": "2026-10-05T15:00:00.000Z"
@@ -13529,7 +14449,7 @@
       "put": {
         "operationId": "blog.schedule",
         "summary": "Schedule the publication of a blog post",
-        "description": "Publishes the draft at the given time, exactly once, also with several nodes. A new schedule replaces the old one. If the person who scheduled it can no longer edit the post at that time, the schedule is dropped.\n\nRequires the permission `item.edit` on the item in `postId`.",
+        "description": "Publishes the draft at the given time, exactly once, also with several nodes. A new schedule replaces the old one. If the person who scheduled it can no longer edit the post at that time, the post is held: the space admins and that person are notified, and a space admin publishes it or cancels the schedule.\n\nRequires the permission `item.edit` on the item in `postId`.",
         "tags": [
           "Blog"
         ],
@@ -13697,6 +14617,40 @@
                         "null"
                       ]
                     },
+                    "scheduledBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Account ID."
+                            },
+                            "name": {
+                              "description": "Name, or null when the caller may not see the person.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who scheduled the publication, or null."
+                    },
+                    "held": {
+                      "type": "boolean",
+                      "description": "Whether the scheduled publication is waiting for a space admin because the person who scheduled it can no longer edit the post."
+                    },
                     "pinnedInSpace": {
                       "type": "boolean",
                       "description": "Whether the post is pinned at the top of its space's blog."
@@ -13724,6 +14678,8 @@
                     "publishedAt",
                     "scheduledAt",
                     "scheduledTimeZone",
+                    "scheduledBy",
+                    "held",
                     "pinnedInSpace",
                     "pinnedInOrganization",
                     "createdAt"
@@ -13749,6 +14705,8 @@
                   "publishedAt": "2026-10-06T07:00:00.000Z",
                   "scheduledAt": "2026-10-14T05:00:00.000Z",
                   "scheduledTimeZone": "Europe/Vienna",
+                  "scheduledBy": null,
+                  "held": false,
                   "pinnedInSpace": false,
                   "pinnedInOrganization": true,
                   "createdAt": "2026-10-05T15:00:00.000Z"
@@ -17653,6 +18611,40 @@
                               "null"
                             ]
                           },
+                          "scheduledBy": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "Account ID."
+                                  },
+                                  "name": {
+                                    "description": "Name, or null when the caller may not see the person.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Who scheduled the publication, or null."
+                          },
+                          "held": {
+                            "type": "boolean",
+                            "description": "Whether the scheduled publication is waiting for a space admin because the person who scheduled it can no longer edit the post."
+                          },
                           "pinnedInSpace": {
                             "type": "boolean",
                             "description": "Whether the post is pinned at the top of its space's blog."
@@ -17680,6 +18672,8 @@
                           "publishedAt",
                           "scheduledAt",
                           "scheduledTimeZone",
+                          "scheduledBy",
+                          "held",
                           "pinnedInSpace",
                           "pinnedInOrganization",
                           "createdAt"
@@ -17785,6 +18779,8 @@
                       "publishedAt": "2026-10-06T07:00:00.000Z",
                       "scheduledAt": null,
                       "scheduledTimeZone": null,
+                      "scheduledBy": null,
+                      "held": false,
                       "pinnedInSpace": false,
                       "pinnedInOrganization": true,
                       "createdAt": "2026-10-05T15:00:00.000Z"
@@ -87973,6 +88969,40 @@
                               "null"
                             ]
                           },
+                          "scheduledBy": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "Account ID."
+                                  },
+                                  "name": {
+                                    "description": "Name, or null when the caller may not see the person.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Who scheduled the publication, or null."
+                          },
+                          "held": {
+                            "type": "boolean",
+                            "description": "Whether the scheduled publication is waiting for a space admin because the person who scheduled it can no longer edit the post."
+                          },
                           "pinnedInSpace": {
                             "type": "boolean",
                             "description": "Whether the post is pinned at the top of its space's blog."
@@ -88000,6 +89030,8 @@
                           "publishedAt",
                           "scheduledAt",
                           "scheduledTimeZone",
+                          "scheduledBy",
+                          "held",
                           "pinnedInSpace",
                           "pinnedInOrganization",
                           "createdAt"
@@ -88044,6 +89076,8 @@
                       "publishedAt": "2026-10-06T07:00:00.000Z",
                       "scheduledAt": null,
                       "scheduledTimeZone": null,
+                      "scheduledBy": null,
+                      "held": false,
                       "pinnedInSpace": false,
                       "pinnedInOrganization": true,
                       "createdAt": "2026-10-05T15:00:00.000Z"
@@ -88347,6 +89381,40 @@
                         "null"
                       ]
                     },
+                    "scheduledBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Account ID."
+                            },
+                            "name": {
+                              "description": "Name, or null when the caller may not see the person.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who scheduled the publication, or null."
+                    },
+                    "held": {
+                      "type": "boolean",
+                      "description": "Whether the scheduled publication is waiting for a space admin because the person who scheduled it can no longer edit the post."
+                    },
                     "pinnedInSpace": {
                       "type": "boolean",
                       "description": "Whether the post is pinned at the top of its space's blog."
@@ -88374,6 +89442,8 @@
                     "publishedAt",
                     "scheduledAt",
                     "scheduledTimeZone",
+                    "scheduledBy",
+                    "held",
                     "pinnedInSpace",
                     "pinnedInOrganization",
                     "createdAt"
@@ -88399,6 +89469,8 @@
                   "publishedAt": "2026-10-06T07:00:00.000Z",
                   "scheduledAt": null,
                   "scheduledTimeZone": null,
+                  "scheduledBy": null,
+                  "held": false,
                   "pinnedInSpace": false,
                   "pinnedInOrganization": true,
                   "createdAt": "2026-10-05T15:00:00.000Z"
@@ -114174,6 +115246,40 @@
                               "null"
                             ]
                           },
+                          "scheduledBy": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "Account ID."
+                                  },
+                                  "name": {
+                                    "description": "Name, or null when the caller may not see the person.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Who scheduled the publication, or null."
+                          },
+                          "held": {
+                            "type": "boolean",
+                            "description": "Whether the scheduled publication is waiting for a space admin because the person who scheduled it can no longer edit the post."
+                          },
                           "pinnedInSpace": {
                             "type": "boolean",
                             "description": "Whether the post is pinned at the top of its space's blog."
@@ -114201,6 +115307,8 @@
                           "publishedAt",
                           "scheduledAt",
                           "scheduledTimeZone",
+                          "scheduledBy",
+                          "held",
                           "pinnedInSpace",
                           "pinnedInOrganization",
                           "createdAt"
@@ -114245,6 +115353,8 @@
                       "publishedAt": "2026-10-06T07:00:00.000Z",
                       "scheduledAt": null,
                       "scheduledTimeZone": null,
+                      "scheduledBy": null,
+                      "held": false,
                       "pinnedInSpace": false,
                       "pinnedInOrganization": true,
                       "createdAt": "2026-10-05T15:00:00.000Z"
@@ -114543,6 +115653,40 @@
                         "null"
                       ]
                     },
+                    "scheduledBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Account ID."
+                            },
+                            "name": {
+                              "description": "Name, or null when the caller may not see the person.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who scheduled the publication, or null."
+                    },
+                    "held": {
+                      "type": "boolean",
+                      "description": "Whether the scheduled publication is waiting for a space admin because the person who scheduled it can no longer edit the post."
+                    },
                     "pinnedInSpace": {
                       "type": "boolean",
                       "description": "Whether the post is pinned at the top of its space's blog."
@@ -114570,6 +115714,8 @@
                     "publishedAt",
                     "scheduledAt",
                     "scheduledTimeZone",
+                    "scheduledBy",
+                    "held",
                     "pinnedInSpace",
                     "pinnedInOrganization",
                     "createdAt"
@@ -114595,6 +115741,8 @@
                   "publishedAt": "2026-10-06T07:00:00.000Z",
                   "scheduledAt": null,
                   "scheduledTimeZone": null,
+                  "scheduledBy": null,
+                  "held": false,
                   "pinnedInSpace": false,
                   "pinnedInOrganization": true,
                   "createdAt": "2026-10-05T15:00:00.000Z"
@@ -114690,6 +115838,380 @@
                       "code": "csrfRejected"
                     }
                   },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/blog/scheduled": {
+      "get": {
+        "operationId": "blog.listScheduled",
+        "summary": "List scheduled blog posts of a space",
+        "description": "Lists every scheduled post of the space for its space admins, the held ones first, then by scheduled time.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Blog"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The scheduled posts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the blog post."
+                          },
+                          "spaceId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "Space of the post."
+                          },
+                          "spaceKey": {
+                            "type": "string",
+                            "description": "Key of that space."
+                          },
+                          "spaceName": {
+                            "type": "string",
+                            "description": "Name of that space."
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "Title as readers see it."
+                          },
+                          "excerpt": {
+                            "type": "string",
+                            "description": "Short summary shown in lists."
+                          },
+                          "labels": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "description": "A label."
+                            },
+                            "description": "Labels, sorted."
+                          },
+                          "author": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "Account ID."
+                                  },
+                                  "name": {
+                                    "description": "Name, or null when the caller may not see the person.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Who wrote the post, or null."
+                          },
+                          "published": {
+                            "type": "boolean",
+                            "description": "Whether the post was published. Unpublished posts are visible only to editors."
+                          },
+                          "publishedAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When the post was first published, or null. ISO 8601 timestamp in UTC."
+                          },
+                          "scheduledAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When the post will be published, or null. ISO 8601 timestamp in UTC."
+                          },
+                          "scheduledTimeZone": {
+                            "description": "Time zone the author scheduled it in, or null.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "scheduledBy": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "Account ID."
+                                  },
+                                  "name": {
+                                    "description": "Name, or null when the caller may not see the person.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Who scheduled the publication, or null."
+                          },
+                          "held": {
+                            "type": "boolean",
+                            "description": "Whether the scheduled publication is waiting for a space admin because the person who scheduled it can no longer edit the post."
+                          },
+                          "pinnedInSpace": {
+                            "type": "boolean",
+                            "description": "Whether the post is pinned at the top of its space's blog."
+                          },
+                          "pinnedInOrganization": {
+                            "type": "boolean",
+                            "description": "Whether the post is pinned in the organization's blog overview."
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When the post was created. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "spaceId",
+                          "spaceKey",
+                          "spaceName",
+                          "title",
+                          "excerpt",
+                          "labels",
+                          "author",
+                          "published",
+                          "publishedAt",
+                          "scheduledAt",
+                          "scheduledTimeZone",
+                          "scheduledBy",
+                          "held",
+                          "pinnedInSpace",
+                          "pinnedInOrganization",
+                          "createdAt"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A blog post."
+                      },
+                      "description": "Scheduled posts."
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Scheduled posts."
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d01",
+                      "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                      "spaceKey": "ITOPS",
+                      "spaceName": "IT Operations",
+                      "title": "New VPN client from Monday",
+                      "excerpt": "The company portal ships WireGuard 0.6 on Monday.",
+                      "labels": [
+                        "vpn"
+                      ],
+                      "author": {
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                        "name": "Anna Berger"
+                      },
+                      "published": false,
+                      "publishedAt": "2026-10-06T07:00:00.000Z",
+                      "scheduledAt": null,
+                      "scheduledTimeZone": null,
+                      "scheduledBy": null,
+                      "held": true,
+                      "pinnedInSpace": false,
+                      "pinnedInOrganization": true,
+                      "createdAt": "2026-10-05T15:00:00.000Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
                   "forbidden": {
                     "value": {
                       "type": "urn:pagehall:problem:forbidden",
