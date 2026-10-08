@@ -35,7 +35,7 @@ describe("tuneForTests", () => {
     let shows = 0;
     const client: Queryable = {
       async query(sql) {
-        const name = /^SHOW (w+)$/.exec(sql)?.[1];
+        const name = /^SHOW (\w+)$/.exec(sql)?.[1];
         if (!name) return { rows: [] };
         shows++;
         return { rows: [{ [name]: shows > 4 ? "off" : "on" }] };
