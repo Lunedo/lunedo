@@ -105964,12 +105964,15 @@
       "get": {
         "operationId": "comments.mentionAccess",
         "summary": "Check whether mentioned people can read a page",
-        "description": "Tells the author while writing which mentioned people cannot read the page. They are not notified.\n\nRequires the permission `item.view` on the item in `pageId`.",
+        "description": "Tells the author of a comment or of the page while writing which mentioned people cannot read the page. They are not notified. People the caller cannot see are left out.\n\nRequires one of the permissions `item.comment`, `item.edit` on the item in `pageId`; the request decides which.",
         "tags": [
           "Comments"
         ],
         "x-pagehall-permission": {
-          "action": "item.view",
+          "action": "item.comment",
+          "alternatives": [
+            "item.edit"
+          ],
           "resource": "item",
           "parameter": "pageId"
         },

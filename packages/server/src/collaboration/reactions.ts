@@ -3,6 +3,7 @@ import type { Principal } from "../accounts/principal.js";
 import type { Database, Executor } from "../database/database.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, SpaceError } from "../spaces/common.js";
+import type { PeopleService } from "../spaces/people.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { reactionsEnabledSetting } from "./settings.js";
 
@@ -27,10 +28,12 @@ interface Target {
 export class ReactionService {
   readonly #database: Database;
   readonly #settings: SettingsService;
+  readonly #people: PeopleService;
 
-  constructor(options: { database: Database; settings: SettingsService }) {
+  constructor(options: { database: Database; settings: SettingsService; people: PeopleService }) {
     this.#database = options.database;
     this.#settings = options.settings;
+    this.#people = options.people;
   }
 
   async enabled(itemId: string, executor: Executor = this.#database): Promise<boolean> {
@@ -57,7 +60,8 @@ export class ReactionService {
     }>(sql`
       select r.comment_id, r.emoji, count(*) as count, bool_or(r.account_id = ${viewerId}) as reacted,
         min(r.created_at) as first,
-        (array_agg(json_build_object('id', a.id, 'name', a.name) order by r.created_at))[1:${REACTION_PEOPLE_SHOWN}]
+        (array_agg(json_build_object('id', a.id, 'name', ${this.#people.visibleName(viewer, sql`a`)})
+          order by r.created_at))[1:${REACTION_PEOPLE_SHOWN}]
           as people
       from reactions r join accounts a on a.id = r.account_id
       where r.item_id = ${itemId}

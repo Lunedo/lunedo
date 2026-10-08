@@ -8,6 +8,7 @@ import { actorIdOf, auditScopeOf, SpaceError } from "../spaces/common.js";
 import { insertInitialDocument, normalizeLabel } from "../spaces/documents.js";
 import { positionBetween } from "../spaces/fractional-index.js";
 import { ITEM_TITLE_MAX_LENGTH, lockSpaces } from "../spaces/items.js";
+import type { PeopleService } from "../spaces/people.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import type { VersionService } from "../spaces/versions.js";
 import { refreshReaderVisibility, visibleItem } from "../spaces/visibility.js";
@@ -102,24 +103,27 @@ export class BlogService {
   readonly #authorization: AuthorizationService;
   readonly #versions: VersionService;
   readonly #audit: AuditLog;
+  readonly #people: PeopleService;
 
   constructor(options: {
     database: Database;
     authorization: AuthorizationService;
     versions: VersionService;
     audit: AuditLog;
+    people: PeopleService;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
     this.#versions = options.versions;
     this.#audit = options.audit;
+    this.#people = options.people;
   }
 
-  #select(pinned: SQL): SQL {
+  #select(viewer: Principal, pinned: SQL): SQL {
     return sql`
       select t.id, t.space_id, s.key, s.name as space_name, t.title, b.excerpt,
         (select array_agg(l.label order by l.label) from page_labels l where l.item_id = t.id) as labels,
-        t.creator_id, a.name as creator_name, b.published_at, b.scheduled_at, b.scheduled_time_zone,
+        t.creator_id, ${this.#people.visibleName(viewer, sql`a`)} as creator_name, b.published_at, b.scheduled_at, b.scheduled_time_zone,
         b.space_pinned_at, b.organization_pinned_at, t.created_at,
         coalesce(${pinned}, '-infinity'::timestamptz)::text as sort_pinned,
         coalesce(b.published_at, b.scheduled_at, t.created_at)::text as sort_date
@@ -144,7 +148,7 @@ export class BlogService {
 
   async get(viewer: Principal, itemId: string): Promise<BlogPost | null> {
     const result = await this.#database.execute<PostRow>(sql`
-      ${this.#select(sql`b.space_pinned_at`)}
+      ${this.#select(viewer, sql`b.space_pinned_at`)}
       where t.id = ${itemId} and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}`);
     const row = result.rows[0];
     return row ? toPost(row) : null;
@@ -290,7 +294,7 @@ export class BlogService {
     const limit = Math.min(Math.max(options.limit ?? 30, 1), MAX_BLOG_PAGE);
     const pinned = sql`b.space_pinned_at`;
     const result = await this.#database.execute<PostRow>(sql`
-      ${this.#select(pinned)}
+      ${this.#select(viewer, pinned)}
       where t.space_id = ${spaceId} and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
         and t.archived_root_id is null
         ${this.#after(options.after, pinned)}
@@ -314,7 +318,7 @@ export class BlogService {
     const pinned = sql`b.organization_pinned_at`;
     const label = options.label ? normalizeLabel(options.label) : null;
     const result = await this.#database.execute<PostRow>(sql`
-      ${this.#select(pinned)}
+      ${this.#select(viewer, pinned)}
       where s.organization_id = ${organizationId} and b.published_at is not null and s.archived_at is null
         and t.archived_root_id is null and t.reader_visible
         and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
@@ -329,7 +333,7 @@ export class BlogService {
 
   async recent(viewer: Principal, limit: number): Promise<BlogPost[]> {
     const result = await this.#database.execute<PostRow>(sql`
-      ${this.#select(sql`null::timestamptz`)}
+      ${this.#select(viewer, sql`null::timestamptz`)}
       where b.published_at > now() - interval '30 days' and t.reader_visible and s.archived_at is null
         and t.archived_root_id is null and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
       order by b.published_at desc, t.id desc

@@ -1,6 +1,7 @@
 import {
   containsAnchor,
   type DocumentJson,
+  extractInlineCommentThreads,
   extractMentions,
   isValidAnchor,
   type TextAnchor,
@@ -72,6 +73,8 @@ type CommentRow = {
   author_id: string | null;
   body: unknown;
   quote: string | null;
+  quote_prefix: string | null;
+  quote_suffix: string | null;
   detached_at: Date | string | null;
   resolved_at: Date | string | null;
   resolved_by: string | null;
@@ -133,7 +136,8 @@ export class CommentService {
 
   async list(viewer: Principal, itemId: string): Promise<CommentList> {
     const result = await this.#database.execute<CommentRow>(sql`
-      select c.id, c.item_id, c.parent_id, c.author_id, c.body, c.quote, c.detached_at, c.resolved_at, c.resolved_by,
+      select c.id, c.item_id, c.parent_id, c.author_id, c.body, c.quote, c.quote_prefix, c.quote_suffix, c.detached_at,
+        c.resolved_at, c.resolved_by,
         c.edited_at, c.deleted_at, c.created_at
       from comments c join comments r on r.id = coalesce(c.parent_id, c.id)
       join tree_items t on t.id = c.item_id join spaces s on s.id = t.space_id
@@ -142,7 +146,9 @@ export class CommentService {
       order by c.created_at, c.id
       limit ${MAX_COMMENTS_PER_PAGE}`);
     const rows = result.rows;
-    const names = await this.#people.names(
+    const anchored = await this.#anchoredForViewer(viewer, itemId);
+    const names = await this.#people.visibleNames(
+      viewer,
       rows.flatMap((row) => [row.author_id, row.resolved_by].filter((id): id is string => id !== null)),
     );
     const person = (id: string | null): CommentPerson | null =>
@@ -173,7 +179,12 @@ export class CommentService {
       .map((row) => ({
         ...toComment(row),
         quote: row.quote,
-        anchor: row.quote === null ? "page" : row.detached_at ? "detached" : "inline",
+        anchor:
+          row.quote === null
+            ? "page"
+            : (anchored ? anchored(row) : row.detached_at === null)
+              ? "inline"
+              : "detached",
         resolvedAt: date(row.resolved_at),
         resolvedBy: person(row.resolved_by),
         replies: replies.get(row.id) ?? [],
@@ -194,6 +205,43 @@ export class CommentService {
               where a.id = any(${sql.param(mentioned)}::uuid[]) and ${this.#people.visibleCondition(viewer, sql`a.id`)}`)
           ).rows;
     return { threads, people: Object.fromEntries(people.map((person) => [person.id, person.name])) };
+  }
+
+  async #anchoredForViewer(
+    viewer: Principal,
+    itemId: string,
+  ): Promise<((row: CommentRow) => boolean) | null> {
+    const result = await this.#database.execute<{
+      editor: boolean;
+      mode: string;
+      version_document: unknown;
+      version_schema: number | null;
+      snapshot: unknown;
+      snapshot_schema: number;
+    }>(sql`
+      select ${this.#authorization.spaceFilter(viewer, sql`s`, "editor")} as editor, t.mode,
+        v.document as version_document, v.schema_version as version_schema, d.snapshot,
+        d.schema_version as snapshot_schema
+      from tree_items t join spaces s on s.id = t.space_id join page_documents d on d.item_id = t.id
+      left join page_versions v on v.id = t.published_version_id
+      where t.id = ${itemId}`);
+    const row = result.rows[0];
+    if (!row || row.editor) return null;
+    const readable =
+      row.mode === "live"
+        ? migrated(row.snapshot, row.snapshot_schema)
+        : row.version_schema === null
+          ? null
+          : migrated(row.version_document, row.version_schema);
+    if (!readable) return () => false;
+    const marked = new Set(extractInlineCommentThreads(readable).keys());
+    return (comment) =>
+      marked.has(comment.id) ||
+      containsAnchor(readable, {
+        exact: comment.quote ?? "",
+        prefix: comment.quote_prefix ?? "",
+        suffix: comment.quote_suffix ?? "",
+      });
   }
 
   async get(viewer: Principal, commentId: string): Promise<CommentThread | Comment | null> {
@@ -438,11 +486,13 @@ export class CommentService {
   }
 
   async mentionAccess(
+    viewer: Principal,
     itemId: string,
     accountIds: string[],
   ): Promise<{ accountId: string; hasAccess: boolean }[]> {
+    const visible = await this.#people.visibleNames(viewer, accountIds.slice(0, MAX_MENTION_CHECKS));
     const access: { accountId: string; hasAccess: boolean }[] = [];
-    for (const accountId of [...new Set(accountIds)].slice(0, MAX_MENTION_CHECKS)) {
+    for (const accountId of visible.keys()) {
       const decision = await this.#authorization.explain(accountPrincipal(accountId), "item.view", {
         type: "item",
         id: itemId,

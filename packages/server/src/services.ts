@@ -429,7 +429,7 @@ export function createAccountServices(options: {
   const archive = new ArchiveService({ database, audit, authorization });
   const tree = new TreeService({ database, authorization, documents, people, versions, settings });
   const templates = new TemplateService({ database, audit, settings, people, tree, documents });
-  const reactions = new ReactionService({ database, settings });
+  const reactions = new ReactionService({ database, settings, people });
   const comments = new CommentService({
     database,
     authorization,
@@ -439,9 +439,9 @@ export function createAccountServices(options: {
     reactions,
     audit,
   });
-  const tasks = new TaskService({ database, authorization, settings });
-  const blog = new BlogService({ database, authorization, versions, audit });
-  const home = new HomeService({ database, authorization, settings, tasks, blog });
+  const tasks = new TaskService({ database, authorization, settings, people });
+  const blog = new BlogService({ database, authorization, versions, audit, people });
+  const home = new HomeService({ database, authorization, settings, tasks, blog, people });
   setupRegistry.register(
     ...builtinSetupSteps({
       database,

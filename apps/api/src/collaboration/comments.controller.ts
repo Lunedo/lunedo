@@ -275,11 +275,11 @@ export class CommentsController {
   }
 
   @Get("pages/:pageId/mention-access")
-  @Permission("item.view", page)
+  @Permission(["item.comment", "item.edit"], page)
   @ApiRoute({
     summary: "Check whether mentioned people can read a page",
     description:
-      "Tells the author while writing which mentioned people cannot read the page. They are not notified.",
+      "Tells the author of a comment or of the page while writing which mentioned people cannot read the page. They are not notified. People the caller cannot see are left out.",
     tags: [TAG],
     params: pageParams,
     query: mentionQuery,
@@ -289,9 +289,13 @@ export class CommentsController {
       example: [{ accountId: exampleThread.author.id, hasAccess: false }],
     },
   })
-  async mentionAccess(@Param("pageId") pageId: string, @Query() query: z.output<typeof mentionQuery>) {
+  async mentionAccess(
+    @Param("pageId") pageId: string,
+    @Query() query: z.output<typeof mentionQuery>,
+    @Req() request: FastifyRequest,
+  ) {
     const exists = await this.#services.tree.spaceOf(pageId);
     if (!exists) throw notFound();
-    return this.#services.comments.mentionAccess(pageId, query.accountIds);
+    return this.#services.comments.mentionAccess(actorOf(request), pageId, query.accountIds);
   }
 }

@@ -5,6 +5,7 @@ import type { AuthorizationService } from "../authorization/service.js";
 import type { Database } from "../database/database.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, SpaceError } from "../spaces/common.js";
+import type { PeopleService } from "../spaces/people.js";
 import { visibleItem } from "../spaces/visibility.js";
 import type { BlogPost, BlogService } from "./blog.js";
 import { organizationHomePageSetting, RECENT_VIEW_DAYS } from "./settings.js";
@@ -75,6 +76,7 @@ export class HomeService {
   readonly #settings: SettingsService;
   readonly #tasks: TaskService;
   readonly #blog: BlogService;
+  readonly #people: PeopleService;
 
   constructor(options: {
     database: Database;
@@ -82,12 +84,14 @@ export class HomeService {
     settings: SettingsService;
     tasks: TaskService;
     blog: BlogService;
+    people: PeopleService;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
     this.#settings = options.settings;
     this.#tasks = options.tasks;
     this.#blog = options.blog;
+    this.#people = options.people;
   }
 
   #account(actor: Principal): string {
@@ -200,7 +204,7 @@ export class HomeService {
         notified_at: Date | string;
       }
     >(sql`
-      select m.id as mention_id, m.comment_id, m.actor_id, a.name as actor_name, m.notified_at,
+      select m.id as mention_id, m.comment_id, m.actor_id, ${this.#people.visibleName(viewer, sql`a`)} as actor_name, m.notified_at,
         t.id, t.kind, t.title, t.space_id, s.key, s.name as space_name
       from content_mentions m join tree_items t on t.id = m.item_id join spaces s on s.id = t.space_id
       left join accounts a on a.id = m.actor_id

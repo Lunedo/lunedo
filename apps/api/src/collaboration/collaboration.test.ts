@@ -195,10 +195,13 @@ describe.skipIf(!databaseBaseUrl)("comments, tasks, blog and home pages through 
     expect((await editor.client.delete(`/api/v1/comments/${id}`)).statusCode).toBe(204);
     expect((await editor.client.post(`/api/v1/comments/${id}/restore`)).statusCode).toBe(204);
     const access = await commenter.client.get(
-      `/api/v1/pages/${pageId}/mention-access?accountIds=${reader.id},${owner ? randomUUID() : ""}`,
+      `/api/v1/pages/${pageId}/mention-access?accountIds=${reader.id},${randomUUID()}`,
     );
-    expect(access.json()[0]).toEqual({ accountId: reader.id, hasAccess: true });
-    expect(access.json()[1]).toMatchObject({ hasAccess: false });
+    expect(access.json()).toEqual([{ accountId: reader.id, hasAccess: true }]);
+    expect(
+      (await reader.client.get(`/api/v1/pages/${pageId}/mention-access?accountIds=${commenter.id}`))
+        .statusCode,
+    ).toBe(403);
   });
 
   it("reacts to pages unless reactions are turned off for the space", async () => {

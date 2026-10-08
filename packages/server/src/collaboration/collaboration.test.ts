@@ -46,7 +46,7 @@ function daysFromToday(days: number): string {
 
 describe.skipIf(!baseUrl)("collaboration on pages", () => {
   let test: TestServices;
-  const { organization, member, space } = spaceFixtures(() => test);
+  const { organization, member, space, account } = spaceFixtures(() => test);
 
   beforeAll(async () => {
     test = await createTestServices(baseUrl ?? "");
@@ -338,6 +338,26 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
       ]);
     });
 
+    it("through the anchor state of inline comments whose text was changed only in the draft", async () => {
+      const context = await setup();
+      const created = await publishedPage(context, doc(paragraph("Keep the old VPN gateway.")));
+      const id = await test.services.comments.create(context.commenter, created.id, {
+        body: comment("Still needed?"),
+        anchor: { exact: "old VPN gateway", prefix: "Keep the ", suffix: "." },
+      });
+      await test.services.documents.replace(
+        context.editor,
+        created.id,
+        doc(paragraph("Rewritten in the draft.")),
+      );
+      expect((await threadsOf(context.editor, created.id))[0]).toMatchObject({ id, anchor: "detached" });
+      expect((await threadsOf(context.reader, created.id))[0]).toMatchObject({ id, anchor: "inline" });
+      expect((await threadsOf(context.commenter, created.id))[0]).toMatchObject({ id, anchor: "inline" });
+
+      await test.services.versions.publish(context.editor, created.id);
+      expect((await threadsOf(context.reader, created.id))[0]).toMatchObject({ id, anchor: "detached" });
+    });
+
     it("through comments on a page that was never published", async () => {
       const context = await setup();
       const created = await page(context, doc(paragraph("Draft page.")));
@@ -539,6 +559,23 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
         test.services.tasks.setStatus(context.editor, first, false),
       ]);
       expect((await test.services.tasks.history(first)).map((change) => change.done)).toEqual([false, true]);
+    });
+
+    it("show the names of assignees and of who reacted only to people who may see them", async () => {
+      const context = await setup();
+      const stranger = await account({ name: "Stranger" });
+      const taskId = randomUUID();
+      const created = await publishedPage(
+        context,
+        doc(task(taskId, "Hidden person", { assignee: stranger })),
+      );
+      const report = await test.services.tasks.list(context.reader, { spaceId: context.space.id });
+      expect(report.items.map((entry) => entry.assignee)).toEqual([null]);
+      await test.database.execute(
+        sql`insert into reactions (item_id, account_id, emoji) values (${created.id}, ${stranger}, '👍')`,
+      );
+      const summary = await test.services.reactions.forItem(context.reader, created.id);
+      expect(summary.reactions[0]?.people).toEqual([{ id: stranger, name: null }]);
     });
 
     it("get a new ID when the same ID already belongs to another page", async () => {

@@ -8,6 +8,7 @@ import type { Database } from "../database/database.js";
 import { timeZoneSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, SpaceError } from "../spaces/common.js";
+import type { PeopleService } from "../spaces/people.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { visibleItem } from "../spaces/visibility.js";
 
@@ -58,15 +59,18 @@ export class TaskService {
   readonly #database: Database;
   readonly #authorization: AuthorizationService;
   readonly #settings: SettingsService;
+  readonly #people: PeopleService;
 
   constructor(options: {
     database: Database;
     authorization: AuthorizationService;
     settings: SettingsService;
+    people: PeopleService;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
     this.#settings = options.settings;
+    this.#people = options.people;
   }
 
   async setStatus(actor: Principal, taskId: string, done: boolean): Promise<TaskStatus> {
@@ -86,12 +90,12 @@ export class TaskService {
       );
       await signalSpaceChange(tx, { spaceId: row.space_id, kind: "tasks", itemId: row.item_id });
     });
-    const status = (await this.#statuses(sql`k.id = ${taskId}`))[0];
+    const status = (await this.#statuses(actor, sql`k.id = ${taskId}`))[0];
     if (!status) throw new SpaceError("taskNotFound", "The task does not exist");
     return status;
   }
 
-  async #statuses(condition: SQL): Promise<TaskStatus[]> {
+  async #statuses(viewer: Principal, condition: SQL): Promise<TaskStatus[]> {
     const result = await this.#database.execute<{
       id: string;
       done: boolean;
@@ -99,7 +103,8 @@ export class TaskService {
       status_changed_by: string | null;
       name: string | null;
     }>(sql`
-      select k.id, k.done, k.status_changed_at, k.status_changed_by, a.name
+      select k.id, k.done, k.status_changed_at, k.status_changed_by,
+        ${this.#people.visibleName(viewer, sql`a`)} as name
       from tasks k left join accounts a on a.id = k.status_changed_by
       where ${condition} order by k.position, k.id`);
     return result.rows.map((row) => ({
@@ -113,7 +118,7 @@ export class TaskService {
   async statuses(viewer: Principal, itemId: string): Promise<TaskStatus[]> {
     const editor = (await this.#authorization.explain(viewer, "item.edit", { type: "item", id: itemId }))
       .allowed;
-    return this.#statuses(sql`k.item_id = ${itemId} ${editor ? sql`` : sql`and k.published`}`);
+    return this.#statuses(viewer, sql`k.item_id = ${itemId} ${editor ? sql`` : sql`and k.published`}`);
   }
 
   async history(
@@ -198,7 +203,7 @@ export class TaskService {
       space_name: string;
     }>(sql`
       select k.id, k.text, k.done, k.due_date::text as due_date, ${sortDate}::text as sort_date, k.assignee_id,
-        a.name as assignee_name, t.id as item_id, t.kind, t.title, t.space_id, s.key, s.name as space_name
+        ${this.#people.visibleName(viewer, sql`a`)} as assignee_name, t.id as item_id, t.kind, t.title, t.space_id, s.key, s.name as space_name
       ${base} ${statusCondition}
         ${filter.after ? sql`and (${sortDate}, k.id) > (${filter.after[0]}::date, ${filter.after[1]}::uuid)` : sql``}
       order by ${sortDate}, k.id
