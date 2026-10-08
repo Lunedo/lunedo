@@ -1,3 +1,4 @@
+import type { ContentActivity } from "../collaboration/content.js";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
@@ -23,11 +24,18 @@ export class ArchiveService {
   readonly #database: Database;
   readonly #audit: AuditLog;
   readonly #authorization: AuthorizationService;
+  readonly #activity: ContentActivity;
 
-  constructor(options: { database: Database; audit: AuditLog; authorization: AuthorizationService }) {
+  constructor(options: {
+    database: Database;
+    audit: AuditLog;
+    authorization: AuthorizationService;
+    activity: ContentActivity;
+  }) {
     this.#database = options.database;
     this.#audit = options.audit;
     this.#authorization = options.authorization;
+    this.#activity = options.activity;
   }
 
   async list(viewer: Principal, spaceId: string): Promise<ArchivedItem[]> {
@@ -138,7 +146,7 @@ export class ArchiveService {
       await tx.execute(
         sql`update tree_items set archived_at = null, archived_by = null where id = ${itemId}`,
       );
-      await refreshReaderVisibility(tx, [itemId]);
+      await this.#activity.revealed(tx, await refreshReaderVisibility(tx, [itemId]));
       await this.#audit.record(tx, {
         name: "page.unarchived",
         actor,

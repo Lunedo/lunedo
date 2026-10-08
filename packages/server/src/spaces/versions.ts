@@ -355,10 +355,11 @@ export class VersionService {
     note: string,
   ): Promise<number> {
     const version = await this.#createVersion(tx, page, { reason: "published", note, actorId });
-    await refreshReaderVisibility(tx, [page.itemId]);
+    const revealed = await refreshReaderVisibility(tx, [page.itemId]);
     const document = migrated(page.snapshot, page.schemaVersion);
     await syncCommentAnchors(tx, page.itemId, document);
     await this.#activity.readerContentChanged(tx, page.itemId, document, actorId);
+    await this.#activity.revealed(tx, revealed);
     return version;
   }
 
@@ -517,13 +518,14 @@ export class VersionService {
           await this.#createVersion(tx, page, { reason: "modeChanged", actorId: actorIdOf(actor) });
       }
       await tx.execute(sql`update tree_items set mode = ${mode}, updated_at = now() where id = ${itemId}`);
-      await refreshReaderVisibility(tx, [itemId]);
+      const revealed = await refreshReaderVisibility(tx, [itemId]);
       await this.#activity.readerContentChanged(
         tx,
         itemId,
         migrated(page.snapshot, page.schemaVersion),
         actorIdOf(actor),
       );
+      await this.#activity.revealed(tx, revealed);
       await signalSpaceChange(tx, { spaceId: page.spaceId, kind: "page", itemId });
       await signalSpaceChange(tx, { spaceId: page.spaceId, kind: "tree", itemId });
       await this.#audit.record(tx, {

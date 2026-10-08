@@ -24,9 +24,10 @@ export function publishedFor(
   return sql`(${item}.reader_visible or ${authorization.spaceFilter(viewer, space, "editor")})`;
 }
 
-export async function refreshReaderVisibility(executor: Executor, itemIds: string[]): Promise<void> {
+export async function refreshReaderVisibility(executor: Executor, itemIds: string[]): Promise<string[]> {
+  const revealed: string[] = [];
   for (const itemId of new Set(itemIds)) {
-    await executor.execute(sql`
+    const result = await executor.execute<{ id: string; visible: boolean }>(sql`
       with recursive walk(id, visible) as (
         select t.id, coalesce(p.reader_visible, true) and ${published(sql`t`)}
         from tree_items t left join tree_items p on p.id = coalesce(t.parent_id, t.restore_parent_id)
@@ -37,8 +38,11 @@ export async function refreshReaderVisibility(executor: Executor, itemIds: strin
           on c.parent_id = w.id or (c.parent_id is null and c.restore_parent_id = w.id)
       )
       update tree_items t set reader_visible = w.visible from walk w
-      where t.id = w.id and t.reader_visible <> w.visible`);
+      where t.id = w.id and t.reader_visible <> w.visible
+      returning t.id, t.reader_visible as visible`);
+    for (const row of result.rows) if (row.visible) revealed.push(row.id);
   }
+  return revealed;
 }
 
 export function visibleItem(

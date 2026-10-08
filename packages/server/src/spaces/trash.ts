@@ -1,3 +1,4 @@
+import type { ContentActivity } from "../collaboration/content.js";
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import { type Principal, SYSTEM } from "../accounts/principal.js";
@@ -82,17 +83,20 @@ export class TrashService {
   readonly #audit: AuditLog;
   readonly #settings: SettingsService;
   readonly #people: PeopleService;
+  readonly #activity: ContentActivity;
 
   constructor(options: {
     database: Database;
     audit: AuditLog;
     settings: SettingsService;
     people: PeopleService;
+    activity: ContentActivity;
   }) {
     this.#database = options.database;
     this.#audit = options.audit;
     this.#settings = options.settings;
     this.#people = options.people;
+    this.#activity = options.activity;
   }
 
   async #periods(row: { organization_id: string | null; space_id: string }) {
@@ -243,7 +247,7 @@ export class TrashService {
         },
         scope: auditScopeOf({ organizationId: row.organization_id }),
       });
-      await refreshReaderVisibility(tx, [itemId]);
+      await this.#activity.revealed(tx, await refreshReaderVisibility(tx, [itemId]));
       await signalSpaceChange(tx, { spaceId, kind: "tree", itemId });
       return id;
     });
@@ -304,7 +308,7 @@ export class TrashService {
         );
       }
       await tx.execute(sql`update tree_items set trash_entry_id = null where id = ${rootId}`);
-      await refreshReaderVisibility(tx, [rootId]);
+      await this.#activity.revealed(tx, await refreshReaderVisibility(tx, [rootId]));
       await tx.execute(sql`delete from trash_entries where id = ${entryId}`);
       await this.#audit.record(tx, {
         name: "trash.itemsRestored",

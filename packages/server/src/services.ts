@@ -27,8 +27,6 @@ import { HomeService } from "./collaboration/home.js";
 import {
   COLLABORATION_CLEANUP_SCHEDULE,
   collaborationCleanupJob,
-  PENDING_NOTIFICATIONS_SCHEDULE,
-  pendingNotificationsJob,
   SCHEDULED_BLOG_POSTS_SCHEDULE,
   scheduledBlogPostsJob,
 } from "./collaboration/jobs.js";
@@ -425,9 +423,17 @@ export function createAccountServices(options: {
     origin: options.nodeId ?? uuidv7(),
   });
   const versions = new VersionService({ database, audit, documents, people, settings, activity });
-  const trash = new TrashService({ database, audit, settings, people });
-  const archive = new ArchiveService({ database, audit, authorization });
-  const tree = new TreeService({ database, authorization, documents, people, versions, settings });
+  const trash = new TrashService({ database, audit, settings, people, activity });
+  const archive = new ArchiveService({ database, audit, authorization, activity });
+  const tree = new TreeService({
+    database,
+    authorization,
+    documents,
+    people,
+    versions,
+    settings,
+    activity,
+  });
   const templates = new TemplateService({ database, audit, settings, people, tree, documents });
   const reactions = new ReactionService({ database, settings, people });
   const comments = new CommentService({
@@ -616,20 +622,14 @@ export async function workAccountJobs(
     const published = await services.blog.publishDue();
     if (published > 0) job.logger.info({ published }, "Scheduled blog posts published");
   });
-  await jobs.work(pendingNotificationsJob, async (job) => {
-    const delivered = await services.activity.deliverPending();
-    if (delivered > 0) job.logger.info({ delivered }, "Pending mentions and assignments delivered");
-  });
   await jobs.work(collaborationCleanupJob, async (job) => {
     const removed = {
       views: await services.home.removeOldViews(),
-      mentions: await services.activity.removeStaleMentions(),
       commentBodies: await services.comments.removeDeletedBodies(),
     };
     job.logger.debug(removed, "Collaboration data cleaned up");
   });
   await jobs.schedule(scheduledBlogPostsJob, SCHEDULED_BLOG_POSTS_SCHEDULE, {}, { key: "minutely" });
-  await jobs.schedule(pendingNotificationsJob, PENDING_NOTIFICATIONS_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(collaborationCleanupJob, COLLABORATION_CLEANUP_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(dispatchPendingMailJob, DISPATCH_PENDING_MAIL_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(trashRetentionJob, TRASH_RETENTION_SCHEDULE, {}, { key: "hourly" });

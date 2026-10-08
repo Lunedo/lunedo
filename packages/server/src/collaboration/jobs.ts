@@ -10,15 +10,6 @@ export const scheduledBlogPostsJob = defineJob({
 
 export const SCHEDULED_BLOG_POSTS_SCHEDULE = "* * * * *";
 
-export const pendingNotificationsJob = defineJob({
-  name: "content.deliver-pending",
-  payload: z.object({}),
-  retryLimit: 1,
-  expireInSeconds: 10 * 60,
-});
-
-export const PENDING_NOTIFICATIONS_SCHEDULE = "* * * * *";
-
 export const collaborationCleanupJob = defineJob({
   name: "content.cleanup",
   payload: z.object({}),

@@ -380,7 +380,6 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
         doc(paragraph("Ask ", mention(context.readerId), " about it")),
       );
       expect(await notificationsOf(context.readerId)).toEqual([]);
-      await test.services.activity.deliverPending();
       expect(await notificationsOf(context.readerId)).toEqual([]);
 
       await test.services.versions.publish(context.editor, created.id);
@@ -462,7 +461,6 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
         doc(paragraph("Hi ", mention(context.readerId), " again")),
       );
       await test.services.versions.publish(context.editor, created.id);
-      await test.services.activity.deliverPending();
       expect(await notificationsOf(context.readerId)).toHaveLength(1);
     });
 
@@ -475,7 +473,6 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
       expect((await notificationsOf(context.readerId)).map((entry) => entry.params)).toEqual([
         expect.objectContaining({ commentId: id }),
       ]);
-      await test.services.activity.deliverPending();
       expect(await notificationsOf(context.outsiderId)).toEqual([]);
       await test.services.comments.update(context.commenter, id, {
         body: comment("Look ", mention(context.readerId), "!"),
@@ -488,15 +485,90 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
       const live = await page(context, doc(paragraph("Hi ", mention(context.readerId))), { mode: "live" });
       expect((await notificationsOf(context.readerId)).map((entry) => entry.target.id)).toEqual([live.id]);
       await page(context, doc(paragraph("Hi ", mention(context.commenterId))));
-      await test.services.activity.deliverPending();
       expect(await notificationsOf(context.commenterId)).toEqual([]);
     });
 
-    it("never reach people without read access", async () => {
+    it("never reach people without read access, also not after they gain it", async () => {
       const context = await setup();
-      await publishedPage(context, doc(paragraph("Hi ", mention(context.outsiderId))));
-      await test.services.activity.deliverPending();
+      const created = await publishedPage(
+        context,
+        doc(
+          paragraph("Hi ", mention(context.outsiderId)),
+          task(randomUUID(), "Review", { assignee: context.outsiderId }),
+        ),
+      );
       expect(await notificationsOf(context.outsiderId)).toEqual([]);
+      await test.services.spacePermissions.apply(context.editor, context.space.id, {
+        action: "grant",
+        principalKind: "account",
+        principalId: context.outsiderId,
+        role: "reader",
+      });
+      await test.services.documents.replace(
+        context.editor,
+        created.id,
+        doc(
+          paragraph("Hi ", mention(context.outsiderId), " again"),
+          task(randomUUID(), "Second review", { assignee: context.readerId }),
+        ),
+      );
+      await test.services.versions.publish(context.editor, created.id);
+      expect(await notificationsOf(context.outsiderId)).toEqual([]);
+      expect((await notificationsOf(context.readerId)).map((entry) => entry.type)).toEqual(["task.assigned"]);
+    });
+
+    it("in published pages notify when the last unpublished ancestor is published, however late", async () => {
+      const context = await setup();
+      const parent = await page(context, doc(paragraph("Parent")));
+      const child = await test.services.tree.create(context.editor, context.space.id, {
+        kind: "page",
+        title: "Child",
+        mode: "publish",
+        placement: { parentId: parent.id },
+      });
+      const grandchild = await test.services.tree.create(context.editor, context.space.id, {
+        kind: "page",
+        title: "Grandchild",
+        mode: "live",
+        placement: { parentId: child.id },
+      });
+      await test.services.documents.replace(
+        context.editor,
+        child.id,
+        doc(
+          paragraph("Hi ", mention(context.readerId)),
+          task(randomUUID(), "Check", { assignee: context.commenterId }),
+        ),
+      );
+      await test.services.versions.publish(context.editor, child.id);
+      await test.services.documents.replace(
+        context.editor,
+        grandchild.id,
+        doc(paragraph("Also ", mention(context.commenterId))),
+      );
+      expect(await notificationsOf(context.readerId)).toEqual([]);
+      expect(await notificationsOf(context.commenterId)).toEqual([]);
+      await test.database.execute(sql`
+        update content_mentions set created_at = now() - interval '400 days'
+        where item_id in (${child.id}, ${grandchild.id})`);
+      await test.database.execute(
+        sql`update tasks set updated_at = now() - interval '400 days' where item_id = ${child.id}`,
+      );
+
+      await test.services.versions.publish(context.editor, parent.id);
+      expect((await notificationsOf(context.readerId)).map((entry) => entry.target.id)).toEqual([child.id]);
+      expect(
+        (await notificationsOf(context.commenterId)).map((entry) => [entry.type, entry.target.id]).sort(),
+      ).toEqual(
+        [
+          ["content.mentioned", grandchild.id],
+          ["task.assigned", child.id],
+        ].sort(),
+      );
+      await test.services.versions.publish(context.editor, parent.id);
+      await test.services.versions.publish(context.editor, child.id);
+      expect(await notificationsOf(context.readerId)).toHaveLength(1);
+      expect(await notificationsOf(context.commenterId)).toHaveLength(2);
     });
   });
 

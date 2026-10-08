@@ -152,8 +152,6 @@ export {
 export {
   COLLABORATION_CLEANUP_SCHEDULE,
   collaborationCleanupJob,
-  PENDING_NOTIFICATIONS_SCHEDULE,
-  pendingNotificationsJob,
   SCHEDULED_BLOG_POSTS_SCHEDULE,
   scheduledBlogPostsJob,
 } from "./collaboration/jobs.js";

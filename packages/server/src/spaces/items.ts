@@ -1,3 +1,4 @@
+import type { ContentActivity } from "../collaboration/content.js";
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
@@ -222,6 +223,7 @@ export class TreeService {
   readonly #people: PeopleService;
   readonly #versions: VersionService;
   readonly #settings: SettingsService;
+  readonly #activity: ContentActivity;
 
   constructor(options: {
     database: Database;
@@ -230,6 +232,7 @@ export class TreeService {
     people: PeopleService;
     versions: VersionService;
     settings: SettingsService;
+    activity: ContentActivity;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
@@ -237,6 +240,7 @@ export class TreeService {
     this.#people = options.people;
     this.#versions = options.versions;
     this.#settings = options.settings;
+    this.#activity = options.activity;
   }
 
   async #modeFor(spaceId: string, requested: PageMode | undefined): Promise<PageMode> {
@@ -640,7 +644,7 @@ export class TreeService {
           update tree_items set space_id = ${targetSpaceId}, updated_at = now() where id in (select id from down)`);
         await signalSpaceChange(tx, { spaceId: targetSpaceId, kind: "tree", itemId });
       }
-      await refreshReaderVisibility(tx, [itemId]);
+      await this.#activity.revealed(tx, await refreshReaderVisibility(tx, [itemId]));
       await signalSpaceChange(tx, { spaceId: sourceSpaceId, kind: "tree", itemId });
     });
     const moved = await this.get(actor, itemId);
@@ -686,7 +690,7 @@ export class TreeService {
         );
         if (!document.rows[0]) await insertInitialDocument(tx, itemId, actorIdOf(actor));
       }
-      await refreshReaderVisibility(tx, [itemId]);
+      await this.#activity.revealed(tx, await refreshReaderVisibility(tx, [itemId]));
       await signalSpaceChange(tx, { spaceId: row.space_id, kind: "tree", itemId });
     });
     const item = await this.get(actor, itemId);

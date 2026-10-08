@@ -16,9 +16,6 @@ import type { Database, Executor, Transaction } from "../database/database.js";
 import type { NotificationService } from "../notifications/service.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 
-export const PENDING_MENTION_DAYS = 30;
-const DELIVERY_BATCH = 200;
-
 function taskIds(node: NodeJson, ids: Set<string> = new Set()): Set<string> {
   if (node.type === "taskItem" && typeof node.attrs?.id === "string") ids.add(node.attrs.id);
   for (const child of node.content ?? []) taskIds(child, ids);
@@ -129,8 +126,8 @@ export class ContentActivity {
     this.#authorization = options.authorization;
   }
 
-  async deliverPending(): Promise<number> {
-    return this.#database.transaction((tx) => this.deliver(tx, null));
+  async revealed(tx: Transaction, itemIds: readonly string[]): Promise<void> {
+    if (itemIds.length > 0) await this.deliver(tx, itemIds);
   }
 
   async readerContentChanged(
@@ -174,7 +171,7 @@ export class ContentActivity {
     await tx.execute(sql`
       delete from content_mentions where item_id = ${itemId} and comment_id is null and notified_at is null
         and not (account_id = any(${sql.param(mentioned)}::uuid[]))`);
-    await this.deliver(tx, itemId);
+    await this.deliver(tx, [itemId]);
   }
 
   async commentMentions(
@@ -196,7 +193,7 @@ export class ContentActivity {
     await tx.execute(sql`
       delete from content_mentions where comment_id = ${commentId} and notified_at is null
         and not (account_id = any(${sql.param(mentioned)}::uuid[]))`);
-    await this.deliver(tx, itemId);
+    await this.deliver(tx, [itemId]);
   }
 
   async #facts(executor: Executor, itemId: string): Promise<ItemFacts | null> {
@@ -228,7 +225,8 @@ export class ContentActivity {
     ).allowed;
   }
 
-  async deliver(tx: Transaction, itemId: string | null): Promise<number> {
+  async deliver(tx: Transaction, itemIds: readonly string[]): Promise<number> {
+    const items = sql`${sql.param([...itemIds])}::uuid[]`;
     const mentions = await tx.execute<{
       id: string;
       item_id: string;
@@ -240,9 +238,9 @@ export class ContentActivity {
       join tree_items t on t.id = m.item_id
       where m.notified_at is null and t.trash_entry_id is null
         and (m.comment_id is not null or t.reader_visible)
-        ${itemId ? sql`and m.item_id = ${itemId}` : sql``}
-      order by m.created_at limit ${DELIVERY_BATCH}
-      for update of m skip locked`);
+        and m.item_id = any(${items})
+      order by m.created_at
+      for update of m`);
     const assignments = await tx.execute<{
       id: string;
       item_id: string;
@@ -254,9 +252,9 @@ export class ContentActivity {
       join tree_items t on t.id = k.item_id
       where k.published and k.assignee_id is not null
         and k.notified_assignee_id is distinct from k.assignee_id and t.trash_entry_id is null and t.reader_visible
-        ${itemId ? sql`and k.item_id = ${itemId}` : sql``}
-      order by k.updated_at limit ${DELIVERY_BATCH}
-      for update of k skip locked`);
+        and k.item_id = any(${items})
+      order by k.updated_at
+      for update of k`);
     const facts = new Map<string, ItemFacts | null>();
     const factsOf = async (id: string) => {
       if (!facts.has(id)) facts.set(id, await this.#facts(tx, id));
@@ -264,6 +262,7 @@ export class ContentActivity {
     };
     let delivered = 0;
     for (const mention of mentions.rows) {
+      await tx.execute(sql`update content_mentions set notified_at = now() where id = ${mention.id}`);
       const item = await factsOf(mention.item_id);
       if (
         !item ||
@@ -293,10 +292,10 @@ export class ContentActivity {
           commentId: mention.comment_id,
         },
       });
-      await tx.execute(sql`update content_mentions set notified_at = now() where id = ${mention.id}`);
       delivered += 1;
     }
     for (const task of assignments.rows) {
+      await tx.execute(sql`update tasks set notified_assignee_id = assignee_id where id = ${task.id}`);
       const item = await factsOf(task.item_id);
       if (
         !item ||
@@ -318,16 +317,8 @@ export class ContentActivity {
           dueDate: task.due_date,
         },
       });
-      await tx.execute(sql`update tasks set notified_assignee_id = assignee_id where id = ${task.id}`);
       delivered += 1;
     }
     return delivered;
-  }
-
-  async removeStaleMentions(): Promise<number> {
-    const result = await this.#database.execute(sql`
-      delete from content_mentions
-      where notified_at is null and created_at < now() - make_interval(days => ${PENDING_MENTION_DAYS})`);
-    return result.rowCount ?? 0;
   }
 }
