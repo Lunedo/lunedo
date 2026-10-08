@@ -163,7 +163,7 @@ export function useContentCollaboration({
       />
     ),
     panel: open ? (
-      <div className="fixed inset-0 z-40 flex bg-surface md:sticky md:top-0 md:inset-auto md:z-auto md:max-h-dvh md:self-start">
+      <div className="fixed inset-0 z-40 flex bg-surface md:sticky md:top-0 md:inset-auto md:z-auto md:h-dvh md:self-start">
         <CommentsPanel
           itemId={itemId}
           permissions={{

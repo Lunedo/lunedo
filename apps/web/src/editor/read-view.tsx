@@ -2,7 +2,7 @@ import { isIsoDate, type RenderContext, renderHtml, type TextAnchor } from "@pag
 import { Button, useToast } from "@pagehall/ui";
 import type { TFunction } from "i18next";
 import { MessageSquarePlus } from "lucide-react";
-import { type MouseEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { type MouseEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { CommentHighlights } from "../collaboration/comment-highlights.js";
@@ -206,21 +206,26 @@ export function PageReadView({
     }
   };
 
-  const trackSelection = () => {
-    const root = container.current;
-    if (!root || !collaboration.onCommentSelection) return;
-    const found = anchorFromSelection(root);
-    if (!found) {
-      setSelection(null);
-      return;
-    }
-    const bounds = root.getBoundingClientRect();
-    setSelection({
-      anchor: found.anchor,
-      top: found.rect.bottom - bounds.top,
-      left: Math.max(0, found.rect.left - bounds.left),
-    });
-  };
+  const onCommentSelection = collaboration.onCommentSelection;
+  useEffect(() => {
+    if (!onCommentSelection) return;
+    const track = () => {
+      const root = container.current;
+      const found = root ? anchorFromSelection(root) : null;
+      if (!root || !found) {
+        setSelection(null);
+        return;
+      }
+      const bounds = root.getBoundingClientRect();
+      setSelection({
+        anchor: found.anchor,
+        top: found.rect.bottom - bounds.top,
+        left: Math.max(0, found.rect.left - bounds.left),
+      });
+    };
+    document.addEventListener("selectionchange", track);
+    return () => document.removeEventListener("selectionchange", track);
+  }, [onCommentSelection]);
 
   if (html === null) {
     return (
@@ -239,12 +244,10 @@ export function PageReadView({
         className="ph-content ph-read-view"
         data-comment-scope={scope}
         onClick={(event) => void onClick(event)}
-        onKeyUp={trackSelection}
-        onMouseUp={trackSelection}
         // biome-ignore lint/security/noDangerouslySetInnerHtml: the shared renderer escapes all content of the validated document
         dangerouslySetInnerHTML={{ __html: html }}
       />
-      {selection && collaboration.onCommentSelection ? (
+      {selection && onCommentSelection ? (
         <div className="absolute z-10" style={{ top: selection.top, left: selection.left }}>
           <Button
             size="sm"
@@ -252,7 +255,7 @@ export function PageReadView({
             icon={MessageSquarePlus}
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => {
-              collaboration.onCommentSelection?.(selection.anchor);
+              onCommentSelection(selection.anchor);
               setSelection(null);
             }}
           >

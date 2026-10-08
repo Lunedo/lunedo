@@ -132,7 +132,7 @@ details.ph-expand > div {
   @apply min-w-0 flex-1;
 }
 
-.ph-content :is(li[data-type="taskItem"], .ph-task-item)[data-checked="true"] > div {
+.ph-content :is(li[data-type="taskItem"], .ph-task-item)[data-checked="true"] > div > :not(.ph-task-meta) {
   @apply text-text-muted line-through;
 }
 
@@ -749,10 +749,6 @@ details.ph-expand > summary {
 
 .ph-content .ph-task-meta {
   @apply mt-1 flex flex-wrap items-center gap-2 text-sm text-text-muted no-underline;
-}
-
-.ph-content .ph-task-meta > * {
-  @apply no-underline;
 }
 
 .ph-content .ph-task-report-block,

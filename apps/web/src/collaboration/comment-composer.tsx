@@ -34,6 +34,8 @@ export function CommentComposer({
 }) {
   const { t } = useTranslation();
   const errorId = useId();
+  const labelId = useId();
+  const hintId = useId();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mentions, setMentions] = useState<string[]>([]);
@@ -67,7 +69,7 @@ export function CommentComposer({
             "ph-content ph-comment-editor min-h-control-lg rounded-md border border-control-border bg-surface px-3 py-2 focus-visible:focus-ring",
           role: "textbox",
           "aria-multiline": "true",
-          "aria-label": label,
+          "aria-labelledby": labelId,
         },
       },
       onUpdate: ({ editor: current }) => {
@@ -81,9 +83,8 @@ export function CommentComposer({
   useEffect(() => {
     if (!editor) return;
     editor.view.dom.setAttribute("aria-invalid", error ? "true" : "false");
-    if (error) editor.view.dom.setAttribute("aria-describedby", errorId);
-    else editor.view.dom.removeAttribute("aria-describedby");
-  }, [editor, error, errorId]);
+    editor.view.dom.setAttribute("aria-describedby", error ? `${errorId} ${hintId}` : hintId);
+  }, [editor, error, errorId, hintId]);
 
   useEffect(() => {
     if (mentions.length === 0) {
@@ -124,7 +125,13 @@ export function CommentComposer({
 
   return (
     <div className="flex flex-col gap-2">
+      <span id={labelId} className="text-sm font-medium">
+        {label}
+      </span>
       <EditorContent editor={editor} />
+      <p id={hintId} className="text-xs text-text-muted">
+        {t("comments.hint")}
+      </p>
       {error ? (
         <p id={errorId} className="text-sm text-danger" role="alert">
           {error}

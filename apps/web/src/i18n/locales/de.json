@@ -4570,7 +4570,7 @@
     "threadOn": "Kommentar zu „{quote}“",
     "showInText": "Im Text zeigen",
     "textGone": "Der kommentierte Text existiert nicht mehr.",
-    "placeholder": "Kommentar schreiben. Mit @ erwähnst du jemanden.",
+    "placeholder": "Kommentar schreiben",
     "newPageComment": "Neuer Kommentar zur Seite",
     "newInline": "Kommentar zum markierten Text",
     "replyLabel": "Antwort",
@@ -4598,7 +4598,8 @@
     "deleteFailed": "Der Kommentar konnte nicht gelöscht werden",
     "restoreFailed": "Der Kommentar konnte nicht wiederhergestellt werden",
     "resolveFailed": "Der Kommentar konnte nicht als erledigt markiert werden",
-    "reopenFailed": "Der Kommentar konnte nicht wieder geöffnet werden"
+    "reopenFailed": "Der Kommentar konnte nicht wieder geöffnet werden",
+    "hint": "Mit @ erwähnst du jemanden. Strg+Eingabe sendet den Kommentar."
   },
   "tasks": {
     "myTitle": "Meine Aufgaben",

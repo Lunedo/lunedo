@@ -267,7 +267,7 @@ describe("comments on a page", () => {
     document.getSelection()?.removeAllRanges();
     document.getSelection()?.addRange(range);
     Range.prototype.getBoundingClientRect = () => new DOMRect(10, 10, 40, 16);
-    fireEvent.mouseUp(text);
+    fireEvent(document, new Event("selectionchange"));
     await userEvent.click(await screen.findByRole("button", { name: "Comment" }));
     const pending = await screen.findByRole("region", { name: "Comment on the selected text" });
     expect(within(pending).getByText("“on p”")).toBeTruthy();

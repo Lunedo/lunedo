@@ -100,7 +100,7 @@ test("creates a page from a template and publishes it while readers keep the pub
     const other = await context.newPage();
     await other.goto("/sign-in");
     await signInWithPassword(other, reader.email, reader.password);
-    await expect(other.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
+    await expect(other.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
     await other.goto(pagePath);
     await expect(other.getByText("First published sentence.")).toBeVisible();
     await expect(other.getByText("Secret draft sentence.")).toHaveCount(0);

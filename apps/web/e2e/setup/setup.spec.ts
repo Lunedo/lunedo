@@ -88,7 +88,7 @@ test("sets up a fresh instance and signs in the owner with a second factor", asy
   await page.getByLabel("Code from your authenticator app").fill(await freshTotp(secret));
   await page.getByRole("button", { name: "Verify" }).click();
 
-  await expect(page.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
   await page.context().storageState({ path: OWNER_STORAGE });
 

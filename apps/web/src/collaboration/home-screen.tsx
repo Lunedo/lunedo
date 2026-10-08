@@ -32,7 +32,7 @@ function ReferenceLink({ item, meta }: { item: ContentReference; meta?: string }
 }
 
 function Empty({ text }: { text: string }) {
-  return <p className="px-2 text-sm text-text-muted">{text}</p>;
+  return <p className="px-2 py-2 text-sm text-text-muted">{text}</p>;
 }
 
 export function HomeScreen() {
@@ -94,7 +94,7 @@ export function HomeScreen() {
                 )}
                 <Link
                   to="/tasks"
-                  className="px-2 text-sm text-accent hover:underline focus-visible:focus-ring"
+                  className="inline-flex min-h-hit items-center self-start px-2 text-sm text-accent hover:underline focus-visible:focus-ring"
                 >
                   {t("home.allTasks")}
                 </Link>
@@ -188,7 +188,7 @@ export function HomeScreen() {
                   )}
                   <Link
                     to="/blog"
-                    className="px-2 text-sm text-accent hover:underline focus-visible:focus-ring"
+                    className="inline-flex min-h-hit items-center self-start px-2 text-sm text-accent hover:underline focus-visible:focus-ring"
                   >
                     {t("home.allPosts")}
                   </Link>

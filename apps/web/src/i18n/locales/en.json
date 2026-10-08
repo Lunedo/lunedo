@@ -4570,7 +4570,7 @@
     "threadOn": "Comment on “{quote}”",
     "showInText": "Show in the text",
     "textGone": "The commented text no longer exists.",
-    "placeholder": "Write a comment. Use @ to mention someone.",
+    "placeholder": "Write a comment",
     "newPageComment": "New comment on the page",
     "newInline": "Comment on the selected text",
     "replyLabel": "Reply",
@@ -4598,7 +4598,8 @@
     "deleteFailed": "The comment could not be deleted",
     "restoreFailed": "The comment could not be restored",
     "resolveFailed": "The comment could not be resolved",
-    "reopenFailed": "The comment could not be reopened"
+    "reopenFailed": "The comment could not be reopened",
+    "hint": "Mention someone with @. Ctrl+Enter sends the comment."
   },
   "tasks": {
     "myTitle": "My tasks",

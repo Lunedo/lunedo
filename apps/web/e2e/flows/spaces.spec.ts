@@ -51,7 +51,7 @@ async function signedIn(browser: Browser, person: Person): Promise<{ context: Br
   const page = await context.newPage();
   await page.goto("/sign-in");
   await signInWithPassword(page, person.email, person.password);
-  await expect(page.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
   return { context, page };
 }
 
