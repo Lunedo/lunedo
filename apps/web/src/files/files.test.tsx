@@ -246,7 +246,7 @@ describe("the attachments of a page", () => {
     await userEvent.click(await screen.findByRole("button", { name: /^Rack\.png/ }));
     const drawer = await screen.findByRole("dialog", { name: "Rack.png" });
     const image = await within(drawer).findByRole("img", { name: "Rack.png" });
-    expect(image.getAttribute("src")).toBe(`/api/v1/attachments/${PHOTO}/content`);
+    expect(image.getAttribute("src")).toBe(`/api/v1/attachments/${PHOTO}/content?version=1`);
     await userEvent.keyboard("{Escape}");
     await userEvent.click(await screen.findByRole("button", { name: /^Report\.pdf/ }));
     const report = await screen.findByRole("dialog", { name: "Report.pdf" });

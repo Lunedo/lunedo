@@ -59,15 +59,15 @@ function FramedPreview({
   attachment,
   source,
 }: {
-  attachment: Pick<Attachment, "name" | "preview" | "size">;
+  attachment: Pick<Attachment, "name" | "preview" | "size" | "version">;
   source: PreviewSource;
 }) {
   const { t } = useTranslation();
   const [failed, setFailed] = useState(false);
   const kind = attachment.preview as FramePreviewKind;
   const bytes = useQuery({
-    queryKey: ["preview", source.url()],
-    queryFn: ({ signal }) => fetchBytes(source.url(), signal),
+    queryKey: ["preview", source.url(attachment.version)],
+    queryFn: ({ signal }) => fetchBytes(source.url(attachment.version), signal),
     staleTime: 0,
     gcTime: 0,
   });
@@ -99,24 +99,33 @@ export function PreviewBody({
   attachment,
   source,
 }: {
-  attachment: Pick<Attachment, "name" | "preview" | "size" | "inline">;
+  attachment: Pick<Attachment, "name" | "preview" | "size" | "inline" | "version">;
   source: PreviewSource;
 }) {
   const { t } = useTranslation();
   switch (attachment.preview) {
     case "image":
       return (
-        <img src={source.url()} alt={attachment.name} className="mx-auto max-h-card max-w-full rounded-md" />
+        <img
+          src={source.url(attachment.version)}
+          alt={attachment.name}
+          className="mx-auto max-h-card max-w-full rounded-md"
+        />
       );
     case "video":
       return (
         // biome-ignore lint/a11y/useMediaCaption: uploaded videos come without caption tracks
-        <video src={source.url()} controls preload="metadata" className="w-full rounded-md" />
+        <video
+          src={source.url(attachment.version)}
+          controls
+          preload="metadata"
+          className="w-full rounded-md"
+        />
       );
     case "audio":
       return (
         // biome-ignore lint/a11y/useMediaCaption: uploaded audio comes without caption tracks
-        <audio src={source.url()} controls preload="metadata" className="w-full" />
+        <audio src={source.url(attachment.version)} controls preload="metadata" className="w-full" />
       );
     default:
       if (isFrameKind(attachment.preview)) return <FramedPreview attachment={attachment} source={source} />;
@@ -162,6 +171,7 @@ function Versions({ attachment, canEdit }: { attachment: Attachment; canEdit: bo
       );
       await queryClient.invalidateQueries({ queryKey: attachmentKeys.versions(attachment.id) });
       await queryClient.invalidateQueries({ queryKey: attachmentKeys.list(attachment.itemId) });
+      await queryClient.invalidateQueries({ queryKey: ["attachments", attachment.id] });
       toast({ title: t("files.versions.restored", { number }), variant: "success" });
     } catch (error) {
       toast({
