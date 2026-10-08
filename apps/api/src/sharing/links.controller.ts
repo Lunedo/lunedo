@@ -60,7 +60,7 @@ const createdLinkSchema = z
     token: z
       .string()
       .describe(
-        "Secret part of the link address, shown only now. The address is the instance URL followed by `/s/` and the token.",
+        "Secret part of the link address. The address is the instance URL followed by `/s/` and the token.",
       ),
   })
   .describe("The new link.");
