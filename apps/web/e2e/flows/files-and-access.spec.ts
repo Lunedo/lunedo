@@ -1,5 +1,6 @@
 import { type Browser, type BrowserContext, expect, type Page, test } from "@playwright/test";
 import { BASE_URL, OWNER_STORAGE, readState } from "../support/environment.js";
+import { docx, PNG, pdf, wav, xlsx } from "../support/files.js";
 import {
   callApi,
   expectAccessible,
@@ -221,6 +222,70 @@ test("uploads files by picker, drop and paste, previews them in a sandbox and re
     await page.goto(pagePath);
     await expect(page.getByRole("button", { name: /^notes.txt/ })).toBeVisible();
   });
+});
+
+test("previews every supported type without running scripts inside the files", async ({ page }) => {
+  let alerted = false;
+  page.on("dialog", (shown) => {
+    alerted = true;
+    void shown.dismiss();
+  });
+  await page.goto(pagePath);
+  const files = [
+    { name: "pixel.png", mimeType: "image/png", buffer: PNG },
+    { name: "report.pdf", mimeType: "application/pdf", buffer: pdf("Quarterly numbers") },
+    {
+      name: "runbook.md",
+      mimeType: "text/markdown",
+      buffer: Buffer.from(["# Restart the router", "", "Press **reset** and wait.", ""].join("\n")),
+    },
+    {
+      name: "logo.svg",
+      mimeType: "image/svg+xml",
+      buffer: Buffer.from(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" onload="alert(1)"><script>alert(2)</script><rect width="20" height="20" fill="teal"/></svg>',
+      ),
+    },
+    { name: "minutes.docx", mimeType: "application/octet-stream", buffer: docx("Minutes of the review") },
+    { name: "budget.xlsx", mimeType: "application/octet-stream", buffer: xlsx("Budget total") },
+    { name: "chime.wav", mimeType: "audio/wav", buffer: wav() },
+  ];
+  await attachments(page).locator('input[type="file"]').setInputFiles(files);
+  const row = (name: string) =>
+    attachments(page).getByRole("button", { name: new RegExp(`^${name.replace(/\./g, "\\.")}`) });
+  for (const file of files) await expect(row(file.name)).toBeVisible();
+  const open = async (name: string) => {
+    await row(name).click();
+    return page.getByRole("dialog", { name });
+  };
+  const close = async (drawer: ReturnType<Page["getByRole"]>) => {
+    await drawer.getByRole("button", { name: "Close" }).click();
+    await expect(drawer).toBeHidden();
+  };
+  const frame = (name: string) => page.frameLocator(`iframe[title="Preview of ${name}"]`);
+
+  let drawer = await open("pixel.png");
+  await expect(drawer.getByRole("img", { name: "pixel.png" })).toBeVisible();
+  await close(drawer);
+  drawer = await open("report.pdf");
+  await expect(frame("report.pdf").getByRole("img", { name: "Page 1" })).toBeVisible();
+  await close(drawer);
+  drawer = await open("runbook.md");
+  await expect(frame("runbook.md").getByRole("heading", { name: "Restart the router" })).toBeVisible();
+  await close(drawer);
+  drawer = await open("logo.svg");
+  await expect(frame("logo.svg").getByRole("img", { name: "logo.svg" })).toBeVisible();
+  await close(drawer);
+  drawer = await open("minutes.docx");
+  await expect(frame("minutes.docx").getByText("Minutes of the review")).toBeVisible();
+  await close(drawer);
+  drawer = await open("budget.xlsx");
+  await expect(frame("budget.xlsx").getByText("Budget total")).toBeVisible();
+  await close(drawer);
+  drawer = await open("chime.wav");
+  await expect(drawer.locator("audio")).toBeVisible();
+  await close(drawer);
+  expect(alerted).toBe(false);
 });
 
 async function attachmentId(page: Page, name: string): Promise<string> {
