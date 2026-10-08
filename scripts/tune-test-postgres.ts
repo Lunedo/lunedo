@@ -11,14 +11,25 @@ export interface Queryable {
   query(sql: string): Promise<{ rows: Record<string, string>[] }>;
 }
 
-export async function tuneForTests(client: Queryable): Promise<void> {
-  for (const [name, value] of durabilitySettings) await client.query(`ALTER SYSTEM SET ${name} = '${value}'`);
-  await client.query("SELECT pg_reload_conf()");
+async function applied(client: Queryable): Promise<string | null> {
   for (const [name, value] of durabilitySettings) {
     const result = await client.query(`SHOW ${name}`);
     const actual = result.rows[0]?.[name];
-    if (actual !== value) throw new Error(`${name} is '${actual}' after the reload, expected '${value}'.`);
+    if (actual !== value) return `${name} is '${actual}', expected '${value}'`;
   }
+  return null;
+}
+
+export async function tuneForTests(client: Queryable, attempts = 50, delayMs = 100): Promise<void> {
+  for (const [name, value] of durabilitySettings) await client.query(`ALTER SYSTEM SET ${name} = '${value}'`);
+  await client.query("SELECT pg_reload_conf()");
+  let problem = await applied(client);
+  for (let attempt = 1; problem !== null && attempt < attempts; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    problem = await applied(client);
+  }
+  if (problem !== null)
+    throw new Error(`The server did not apply the settings after the reload: ${problem}.`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {

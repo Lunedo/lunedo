@@ -28,6 +28,19 @@ describe("tuneForTests", () => {
 
   it("fails when the server did not apply a setting", async () => {
     const { client } = fake({ fsync: "off", synchronous_commit: "off" });
-    await assert.rejects(tuneForTests(client), /full_page_writes is 'on'/);
+    await assert.rejects(tuneForTests(client, 3, 1), /full_page_writes is 'on'/);
+  });
+
+  it("waits until the reload has taken effect", async () => {
+    let shows = 0;
+    const client: Queryable = {
+      async query(sql) {
+        const name = /^SHOW (w+)$/.exec(sql)?.[1];
+        if (!name) return { rows: [] };
+        shows++;
+        return { rows: [{ [name]: shows > 4 ? "off" : "on" }] };
+      },
+    };
+    await tuneForTests(client, 10, 1);
   });
 });
