@@ -207,6 +207,7 @@ describe.skipIf(!databaseBaseUrl)("attachments through the API", () => {
         })
       ).statusCode,
     ).toBe(403);
+    expect((await reader.client.delete(`/api/v1/attachments/${file.id}`)).statusCode).toBe(403);
     const restricted = await owner.post(`/api/v1/pages/${pageId}/access`, {
       changes: [
         { action: "share", holderKind: "account", holderId: reader.id, role: "reader" },
