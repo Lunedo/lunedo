@@ -3,6 +3,7 @@ export const auditEventNames = [
   "auth.emergencySignIn",
   "auth.signInRefused",
   "auth.providerSignedOut",
+  "auth.groupsClaimMissing",
   "identity.linked",
   "identity.unlinked",
   "account.createdAtSignIn",

@@ -1,6 +1,6 @@
 {
-  "id": "ec182c2f-fc5d-461b-84cd-b93193bc8704",
-  "prevId": "fcb763f7-d79b-4365-94c1-eed19d7ce3ea",
+  "id": "fcb763f7-d79b-4365-94c1-eed19d7ce3ea",
+  "prevId": "87ce02be-79fe-41fe-800d-bb1657930a70",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3937,6 +3937,18 @@
         },
         "deactivated_at": {
           "name": "deactivated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "groups_claim_seen_at": {
+          "name": "groups_claim_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "groups_claim_missing_since": {
+          "name": "groups_claim_missing_since",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
@@ -9101,12 +9113,6 @@
           "type": "bytea",
           "primaryKey": false,
           "notNull": true
-        },
-        "secret": {
-          "name": "secret",
-          "type": "bytea",
-          "primaryKey": false,
-          "notNull": false
         },
         "scope": {
           "name": "scope",

@@ -450,6 +450,7 @@ function provider(patch: Record<string, unknown> = {}) {
     directoryKey: false,
     capabilities: { groups: true, directorySync: true, disabledAccounts: true, groupsByName: false },
     deactivatedAt: null,
+    groupsClaimMissingSince: null,
     setupComplete: true,
     createdAt: "2026-09-01T08:00:00.000Z",
     updatedAt: "2026-09-01T08:00:00.000Z",
@@ -885,6 +886,22 @@ describe("the sign-in settings of the instance", () => {
     });
     await renderPath("/settings/instance/sign-in-providers");
     expect(await screen.findByText("Identity providers are not checked strictly")).toBeTruthy();
+  });
+
+  it("tells sign-in administrators which provider stopped sending groups, and since when", async () => {
+    adminApi({
+      "GET /api/v1/instance/identity-providers": () => ({
+        body: [
+          provider({
+            warnings: ["groupsClaimMissing"],
+            groupsClaimMissingSince: "2026-10-08T08:00:00.000Z",
+          }),
+        ],
+      }),
+    });
+    await renderPath("/settings/instance/sign-in-providers");
+    expect(await screen.findByText(/sends no groups since/)).toBeTruthy();
+    expect(screen.getByText(/Check the groups claim setting of the provider/)).toBeTruthy();
   });
 
   it("lets only the instance owner choose who is told about an emergency sign-in", async () => {

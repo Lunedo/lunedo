@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { BASE_URL } from "../support/environment.js";
-import { identityProviders, TEST_USERS } from "../support/idp.js";
+import { identityProviders, newTestUser, TEST_USERS } from "../support/idp.js";
 
 const REDIRECT_URI = `${BASE_URL}/e2e/identity-provider-callback`;
 
@@ -16,12 +16,6 @@ function claimsOf(token: string): Record<string, unknown> {
 
 for (const provider of identityProviders) {
   test.describe(provider.name, () => {
-    test.describe.configure({ mode: "serial" });
-
-    test.afterAll(async () => {
-      await provider.reset();
-    });
-
     test("publishes its discovery document under the issuer", async () => {
       const response = await fetch(`${provider.issuer.replace(/\/$/, "")}/.well-known/openid-configuration`);
       expect(response.ok).toBe(true);
@@ -79,21 +73,34 @@ for (const provider of identityProviders) {
     });
 
     test("changes users and groups through the admin interface", async () => {
-      const engineering = await provider.groupId("engineering");
-      const admins = await provider.groupId("admins");
-      await provider.setUserEnabled("dave", false);
-      expect(await provider.isUserEnabled("dave")).toBe(false);
-      await provider.removeFromGroup("bob", "engineering");
-      expect(await provider.userGroups("bob")).toEqual([]);
-      await provider.addToGroup("carol", "admins");
-      expect(await provider.userGroups("carol")).toEqual([admins]);
-      await provider.renameGroup("admins", "administrators");
-      expect(await provider.groupId("admins")).toBe(admins);
+      const person = newTestUser("admin-check");
+      await provider.createUser(person);
+      try {
+        const engineering = await provider.groupId("engineering");
+        const admins = await provider.groupId("admins");
+        await provider.addToGroup(person.username, "engineering");
+        expect(await provider.userGroups(person.username)).toEqual([engineering]);
+        await provider.setUserEnabled(person.username, false);
+        expect(await provider.isUserEnabled(person.username)).toBe(false);
+        await provider.removeFromGroup(person.username, "engineering");
+        expect(await provider.userGroups(person.username)).toEqual([]);
+        await provider.addToGroup(person.username, "admins");
+        expect(await provider.userGroups(person.username)).toEqual([admins]);
+        await provider.setUserEnabled(person.username, true);
+        expect(await provider.isUserEnabled(person.username)).toBe(true);
+      } finally {
+        await provider.deleteUser(person.username);
+      }
+    });
 
-      await provider.reset();
-      expect(await provider.isUserEnabled("dave")).toBe(true);
-      expect(await provider.userGroups("bob")).toEqual([engineering]);
-      expect(await provider.userGroups("carol")).toEqual([]);
+    test("renames a group without changing its ID", async () => {
+      const admins = await provider.groupId("admins");
+      try {
+        await provider.renameGroup("admins", "administrators");
+        expect(await provider.groupId("admins")).toBe(admins);
+      } finally {
+        await provider.renameGroup("admins", "admins");
+      }
     });
   });
 }

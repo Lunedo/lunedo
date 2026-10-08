@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import type { Page } from "@playwright/test";
 
 export type IdentityProviderName = "keycloak" | "authentik";
@@ -16,6 +17,19 @@ export const TEST_USERS: Record<TestUserName, { email: string; name: string; gro
 
 export const TEST_DOMAIN = "example.org";
 
+export interface NewTestUser {
+  readonly username: string;
+  readonly email: string;
+  readonly name: string;
+}
+
+export function newTestUser(prefix: string, domain = TEST_DOMAIN): NewTestUser {
+  const username = `${prefix}-${randomBytes(5).toString("hex")}`;
+  return { username, email: `${username}@${domain}`, name: `${prefix} ${username.slice(-10)}` };
+}
+
+export const AUTHENTIK_FLOW_TIMEOUT = 60_000;
+
 export interface IdentityProviderFixture {
   readonly name: IdentityProviderName;
   readonly issuer: string;
@@ -23,16 +37,17 @@ export interface IdentityProviderFixture {
   readonly clientSecret: string;
   readonly scopes: string;
   groupId(group: TestGroupName): Promise<string>;
-  setUserEnabled(user: TestUserName, enabled: boolean): Promise<void>;
-  isUserEnabled(user: TestUserName): Promise<boolean>;
-  userGroups(user: TestUserName): Promise<string[]>;
-  addToGroup(user: TestUserName, group: TestGroupName): Promise<void>;
-  removeFromGroup(user: TestUserName, group: TestGroupName): Promise<void>;
+  createUser(user: NewTestUser): Promise<void>;
+  deleteUser(username: string): Promise<void>;
+  setUserEnabled(user: string, enabled: boolean): Promise<void>;
+  isUserEnabled(user: string): Promise<boolean>;
+  userGroups(user: string): Promise<string[]>;
+  addToGroup(user: string, group: TestGroupName): Promise<void>;
+  removeFromGroup(user: string, group: TestGroupName): Promise<void>;
   renameGroup(group: TestGroupName, name: string): Promise<void>;
   setBackchannelLogoutUrl(url: string): Promise<void>;
-  reset(): Promise<void>;
-  signIn(page: Page, user: TestUserName, password?: string): Promise<void>;
-  endSessions(user: TestUserName): Promise<void>;
+  signIn(page: Page, user: string, password?: string): Promise<void>;
+  endSessions(user: string): Promise<void>;
 }
 
 const env = (name: string, fallback: string) => process.env[name] || fallback;
@@ -50,8 +65,6 @@ const KEYCLOAK_GROUP_IDS: Record<TestGroupName, string> = {
   engineering: "6f1c2b8e-3a4d-4c5e-9f60-7a8b9c0d1e2f",
   admins: "0b9a8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d",
 };
-
-const KEYCLOAK_GROUP_NAMES: Record<TestGroupName, string> = { engineering: "engineering", admins: "admins" };
 
 async function keycloakToken(): Promise<string> {
   const response = await fetch(`${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token`, {
@@ -78,7 +91,7 @@ async function keycloakAdmin<T>(method: string, path: string, body?: unknown): P
   return json<T>(response, `Keycloak ${method} ${path}`);
 }
 
-async function keycloakUserId(user: TestUserName): Promise<string> {
+async function keycloakUserId(user: string): Promise<string> {
   const users = await keycloakAdmin<{ id: string }[]>("GET", `/users?username=${user}&exact=true`);
   const found = users[0];
   if (!found) throw new Error(`Keycloak user ${user} does not exist`);
@@ -135,20 +148,16 @@ export const keycloak: IdentityProviderFixture = {
       attributes: { ...client.attributes, "backchannel.logout.url": url },
     });
   },
-  async reset() {
-    for (const group of Object.keys(KEYCLOAK_GROUP_IDS) as TestGroupName[]) {
-      await this.renameGroup(group, KEYCLOAK_GROUP_NAMES[group]);
-    }
-    for (const [user, details] of Object.entries(TEST_USERS) as [
-      TestUserName,
-      (typeof TEST_USERS)[TestUserName],
-    ][]) {
-      await this.setUserEnabled(user, true);
-      for (const group of Object.keys(KEYCLOAK_GROUP_IDS) as TestGroupName[]) {
-        if (details.groups.includes(group)) await this.addToGroup(user, group);
-        else await this.removeFromGroup(user, group);
-      }
-    }
+  async createUser(user) {
+    const [firstName = user.name, ...rest] = user.name.split(" ");
+    await createKeycloakUser(user.username, {
+      email: user.email,
+      firstName,
+      lastName: rest.join(" ") || firstName,
+    });
+  },
+  async deleteUser(username) {
+    await deleteKeycloakUser(username);
   },
   async signIn(page, user, password = TEST_PASSWORD) {
     await page.locator("#username").fill(user);
@@ -171,7 +180,7 @@ async function authentikApi<T>(method: string, path: string, body?: unknown): Pr
   return json<T>(response, `Authentik ${method} ${path}`);
 }
 
-async function authentikUserPk(user: TestUserName): Promise<number> {
+async function authentikUserPk(user: string): Promise<number> {
   const page = await authentikApi<{ results: { pk: number }[] }>("GET", `/core/users/?username=${user}`);
   const found = page.results[0];
   if (!found) throw new Error(`Authentik user ${user} does not exist`);
@@ -254,21 +263,33 @@ export const authentik: IdentityProviderFixture = {
       logout_method: "backchannel",
     });
   },
-  async reset() {
-    for (const group of ["engineering", "admins"] as TestGroupName[]) await this.renameGroup(group, group);
-    for (const [user, details] of Object.entries(TEST_USERS) as [
-      TestUserName,
-      (typeof TEST_USERS)[TestUserName],
-    ][]) {
-      await this.setUserEnabled(user, true);
-      for (const group of ["engineering", "admins"] as TestGroupName[]) {
-        if (details.groups.includes(group)) await this.addToGroup(user, group);
-        else await this.removeFromGroup(user, group);
-      }
-    }
+  async createUser(user) {
+    const created = await authentikApi<{ pk: number }>("POST", "/core/users/", {
+      username: user.username,
+      name: user.name,
+      email: user.email,
+      is_active: true,
+      path: "users",
+    });
+    await authentikApi("POST", `/core/users/${created.pk}/set_password/`, { password: TEST_PASSWORD });
+  },
+  async deleteUser(username) {
+    const found = await authentikApi<{ results: { pk: number }[] }>(
+      "GET",
+      `/core/users/?username=${encodeURIComponent(username)}`,
+    );
+    for (const entry of found.results) await authentikApi("DELETE", `/core/users/${entry.pk}/`);
   },
   async signIn(page, user, password = TEST_PASSWORD) {
     const identifier = page.locator('input[name="uidField"]');
+    await identifier
+      .waitFor({ state: "visible", timeout: AUTHENTIK_FLOW_TIMEOUT })
+      .catch((error: unknown) => {
+        throw new Error(
+          `Authentik did not show its sign-in form within ${AUTHENTIK_FLOW_TIMEOUT / 1000} s (page: ${page.url()}). Pagehall redirected correctly, so the provider is slow or unavailable.`,
+          { cause: error },
+        );
+      });
     await identifier.fill(user);
     await identifier.press("Enter");
     await identifier.waitFor({ state: "detached" });

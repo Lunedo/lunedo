@@ -4,12 +4,12 @@ import { getRouteApi, Link, Outlet, useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
-import { signInSecurityQuery } from "../api/identity-queries.js";
+import { providersQuery, signInSecurityQuery } from "../api/identity-queries.js";
 import { request } from "../api/request.js";
 import { NotificationPanel } from "../notifications/notification-panel.js";
 import { useNotificationStream } from "../notifications/notifications-api.js";
 import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.js";
-import { usePreferences } from "../preferences/preferences-provider.js";
+import { useFormat, usePreferences } from "../preferences/preferences-provider.js";
 import "../notifications/builtin.js";
 import "./builtin.js";
 import { signedOut } from "../session/sign-out.js";
@@ -116,6 +116,7 @@ function ShellFrame() {
         {notificationsOpen ? <NotificationPanel onClose={() => setNotificationsOpen(false)} /> : null}
         <div className="flex min-w-0 flex-1 flex-col">
           <InsecureProvidersBanner />
+          <MissingGroupsBanner />
           <WithoutOrganizationBanner />
           <WithheldRolesBanner />
           <div className="flex min-w-0 flex-1">
@@ -160,6 +161,35 @@ function WithheldRolesBanner() {
       <Notice variant="warning" title={t("shell.withheldRoles.title", { count: withheld.data?.length ?? 0 })}>
         {t("shell.withheldRoles.description", { provider: first.providerName })}
       </Notice>
+    </div>
+  );
+}
+
+function MissingGroupsBanner() {
+  const { t } = useTranslation();
+  const format = useFormat();
+  const state = useOrganizationState();
+  const allowed = state.can("instance.signIn.view");
+  const providers = useQuery({ ...providersQuery, enabled: allowed, throwOnError: false });
+  const affected = (providers.data ?? []).filter(
+    (provider) =>
+      provider.groupsClaimMissingSince !== null && provider.warnings.includes("groupsClaimMissing"),
+  );
+  if (!allowed || affected.length === 0) return null;
+  return (
+    <div className="px-4 pt-3">
+      {affected.map((provider) => (
+        <Notice
+          key={provider.id}
+          variant="warning"
+          title={t("shell.groupsClaimMissing.title", {
+            provider: provider.name,
+            since: format.dateTime(provider.groupsClaimMissingSince ?? ""),
+          })}
+        >
+          {t("shell.groupsClaimMissing.description")}
+        </Notice>
+      ))}
     </div>
   );
 }

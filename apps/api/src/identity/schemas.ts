@@ -546,6 +546,12 @@ const providerBase = {
     .describe(
       "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized.",
     ),
+  groupsClaimMissingSince: z.iso
+    .datetime()
+    .nullable()
+    .describe(
+      "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups.",
+    ),
   warnings: z
     .array(
       z.enum([
@@ -555,6 +561,7 @@ const providerBase = {
         "metadataRefreshFailed",
         "caCertificateExpiring",
         "noGraphCredential",
+        "groupsClaimMissing",
       ]),
     )
     .describe("Problems that need attention."),

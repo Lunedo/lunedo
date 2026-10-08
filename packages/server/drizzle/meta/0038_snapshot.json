@@ -1,6 +1,6 @@
 {
-  "id": "fcb763f7-d79b-4365-94c1-eed19d7ce3ea",
-  "prevId": "87ce02be-79fe-41fe-800d-bb1657930a70",
+  "id": "87ce02be-79fe-41fe-800d-bb1657930a70",
+  "prevId": "839985c4-749a-42df-977a-c87b4892e5c6",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -748,383 +748,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.attachment_versions": {
-      "name": "attachment_versions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "attachment_id": {
-          "name": "attachment_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "number": {
-          "name": "number",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "file_id": {
-          "name": "file_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "restored_from": {
-          "name": "restored_from",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "uploaded_by": {
-          "name": "uploaded_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "attachment_versions_number_unique": {
-          "name": "attachment_versions_number_unique",
-          "columns": [
-            {
-              "expression": "attachment_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "number",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "attachment_versions_file_id_index": {
-          "name": "attachment_versions_file_id_index",
-          "columns": [
-            {
-              "expression": "file_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "attachment_versions_uploaded_by_index": {
-          "name": "attachment_versions_uploaded_by_index",
-          "columns": [
-            {
-              "expression": "uploaded_by",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "attachment_versions_attachment_id_attachments_id_fk": {
-          "name": "attachment_versions_attachment_id_attachments_id_fk",
-          "tableFrom": "attachment_versions",
-          "tableTo": "attachments",
-          "columnsFrom": [
-            "attachment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "attachment_versions_file_id_stored_files_id_fk": {
-          "name": "attachment_versions_file_id_stored_files_id_fk",
-          "tableFrom": "attachment_versions",
-          "tableTo": "stored_files",
-          "columnsFrom": [
-            "file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "attachment_versions_uploaded_by_accounts_id_fk": {
-          "name": "attachment_versions_uploaded_by_accounts_id_fk",
-          "tableFrom": "attachment_versions",
-          "tableTo": "accounts",
-          "columnsFrom": [
-            "uploaded_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.attachments": {
-      "name": "attachments",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "item_id": {
-          "name": "item_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name_key": {
-          "name": "name_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "current_version_id": {
-          "name": "current_version_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "deleted_at": {
-          "name": "deleted_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "deleted_by": {
-          "name": "deleted_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "attachments_name_unique": {
-          "name": "attachments_name_unique",
-          "columns": [
-            {
-              "expression": "item_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "name_key",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"attachments\".\"deleted_at\" is null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "attachments_item_id_index": {
-          "name": "attachments_item_id_index",
-          "columns": [
-            {
-              "expression": "item_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "attachments_current_version_id_index": {
-          "name": "attachments_current_version_id_index",
-          "columns": [
-            {
-              "expression": "current_version_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "attachments_created_by_index": {
-          "name": "attachments_created_by_index",
-          "columns": [
-            {
-              "expression": "created_by",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "attachments_deleted_by_index": {
-          "name": "attachments_deleted_by_index",
-          "columns": [
-            {
-              "expression": "deleted_by",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "attachments_item_id_tree_items_id_fk": {
-          "name": "attachments_item_id_tree_items_id_fk",
-          "tableFrom": "attachments",
-          "tableTo": "tree_items",
-          "columnsFrom": [
-            "item_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "attachments_current_version_id_attachment_versions_id_fk": {
-          "name": "attachments_current_version_id_attachment_versions_id_fk",
-          "tableFrom": "attachments",
-          "tableTo": "attachment_versions",
-          "columnsFrom": [
-            "current_version_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "attachments_created_by_accounts_id_fk": {
-          "name": "attachments_created_by_accounts_id_fk",
-          "tableFrom": "attachments",
-          "tableTo": "accounts",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "attachments_deleted_by_accounts_id_fk": {
-          "name": "attachments_deleted_by_accounts_id_fk",
-          "tableFrom": "attachments",
-          "tableTo": "accounts",
-          "columnsFrom": [
-            "deleted_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "attachments_name_length": {
-          "name": "attachments_name_length",
-          "value": "length(\"attachments\".\"name\") between 1 and 255"
-        }
-      },
-      "isRLSEnabled": false
-    },
     "public.audit_chains": {
       "name": "audit_chains",
       "schema": "",
@@ -1674,26 +1297,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "cover_attachment_id": {
-          "name": "cover_attachment_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "cover_focus_x": {
-          "name": "cover_focus_x",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0.5
-        },
-        "cover_focus_y": {
-          "name": "cover_focus_y",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0.5
-        },
         "published_at": {
           "name": "published_at",
           "type": "timestamp with time zone",
@@ -1815,21 +1418,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "blog_posts_cover_attachment_id_index": {
-          "name": "blog_posts_cover_attachment_id_index",
-          "columns": [
-            {
-              "expression": "cover_attachment_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -1852,19 +1440,6 @@
           "tableTo": "accounts",
           "columnsFrom": [
             "scheduled_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "blog_posts_cover_attachment_id_attachments_id_fk": {
-          "name": "blog_posts_cover_attachment_id_attachments_id_fk",
-          "tableFrom": "blog_posts",
-          "tableTo": "attachments",
-          "columnsFrom": [
-            "cover_attachment_id"
           ],
           "columnsTo": [
             "id"
@@ -1903,10 +1478,6 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "blog_posts_cover_focus": {
-          "name": "blog_posts_cover_focus",
-          "value": "\"blog_posts\".\"cover_focus_x\" between 0 and 1 and \"blog_posts\".\"cover_focus_y\" between 0 and 1"
-        },
         "blog_posts_excerpt_length": {
           "name": "blog_posts_excerpt_length",
           "value": "length(\"blog_posts\".\"excerpt\") <= 500"
@@ -3937,6 +3508,18 @@
         },
         "deactivated_at": {
           "name": "deactivated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "groups_claim_seen_at": {
+          "name": "groups_claim_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "groups_claim_missing_since": {
+          "name": "groups_claim_missing_since",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
@@ -10171,131 +9754,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.stored_files": {
-      "name": "stored_files",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "storage_key": {
-          "name": "storage_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "size": {
-          "name": "size",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "sha256": {
-          "name": "sha256",
-          "type": "bytea",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "content_type": {
-          "name": "content_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'application/octet-stream'"
-        },
-        "master_key_version": {
-          "name": "master_key_version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "state": {
-          "name": "state",
-          "type": "stored_file_state",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "stored_files_storage_key_unique": {
-          "name": "stored_files_storage_key_unique",
-          "columns": [
-            {
-              "expression": "storage_key",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "stored_files_state_updated_at_index": {
-          "name": "stored_files_state_updated_at_index",
-          "columns": [
-            {
-              "expression": "state",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "updated_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "stored_files_master_key_version_index": {
-          "name": "stored_files_master_key_version_index",
-          "columns": [
-            {
-              "expression": "master_key_version",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.task_status_changes": {
       "name": "task_status_changes",
       "schema": "",
@@ -11797,15 +11255,6 @@
         "private",
         "organization",
         "instance"
-      ]
-    },
-    "public.stored_file_state": {
-      "name": "stored_file_state",
-      "schema": "public",
-      "values": [
-        "pending",
-        "ready",
-        "orphaned"
       ]
     },
     "public.provider_sync_status": {

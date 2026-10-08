@@ -1012,6 +1012,10 @@
       "title": "Dir ist noch keine Organisation zugewiesen",
       "description": "Dein Konto wurde angelegt, ist aber noch in keiner Organisation Mitglied. Die Administration dieser Instanz wurde informiert und weist dir eine zu. Deine Einstellungen und die Sicherheit kannst du schon jetzt ändern."
     },
+    "groupsClaimMissing": {
+      "title": "{provider} sendet seit {since} keine Gruppen",
+      "description": "Anmeldungen über diesen Anbieter enthalten keinen Gruppen-Claim. Pagehall behandelt deshalb alle als Personen ohne Gruppen und entzieht den Zugriff und die Rollen, die aus Gruppen stammen. Prüfe die Einstellung des Gruppen-Claims, in Pagehall und beim Anbieter. Der Hinweis verschwindet mit der nächsten Anmeldung, die den Claim enthält."
+    },
     "insecureProviders": {
       "title": "Identitätsanbieter werden nicht streng geprüft",
       "description": "PAGEHALL_INSECURE_IDENTITY_PROVIDERS ist gesetzt, deshalb dürfen Identitätsanbieter unverschlüsseltes HTTP und beliebige Hosts verwenden. Nutze das nur für lokale Tests und entferne die Variable aus der Serverkonfiguration, bevor sich Personen anmelden."
@@ -2930,6 +2934,7 @@
         "emergencySignIn": "Notfallanmeldung",
         "signInRefused": "Anmeldung über Anbieter abgelehnt",
         "providerSignedOut": "Vom Anbieter abgemeldet",
+        "groupsClaimMissing": "Anbieter sendete keinen Gruppen-Claim",
         "signedIn": "Angemeldet",
         "signInFailed": "Anmeldung fehlgeschlagen",
         "lockedOut": "Gesperrt",
