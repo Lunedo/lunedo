@@ -7,6 +7,7 @@ import {
   type onStoreDocumentPayload,
   Server,
 } from "@hocuspocus/server";
+import { migrateYDoc } from "@pagehall/editor-schema/yjs";
 import {
   AUDIT_CHANGES_CHANNEL,
   accountPrincipal,
@@ -253,7 +254,7 @@ export async function createCollabServer(options: {
           spaceId: row?.space_id ?? "",
           organizationId: row?.organization_id ?? null,
         };
-        if (row?.kind !== "page" || !(await may(context, "item.view"))) {
+        if ((row?.kind !== "page" && row?.kind !== "blogPost") || !(await may(context, "item.view"))) {
           throw new Refusal("pageNotFound");
         }
         if (!(await may(context, "item.edit"))) throw new Refusal("noEditPermission");
@@ -266,9 +267,10 @@ export async function createCollabServer(options: {
     },
     async onLoadDocument({ document, documentName }) {
       const itemId = itemIdOf(documentName);
-      const state = itemId ? await services.documents.state(itemId) : null;
-      if (!itemId || !state) throw { reason: "pageNotFound" };
-      Y.applyUpdate(document, state, STORE_ORIGIN);
+      const stored = itemId ? await services.documents.stored(itemId) : null;
+      if (!itemId || !stored) throw { reason: "pageNotFound" };
+      Y.applyUpdate(document, stored.state, STORE_ORIGIN);
+      migrateYDoc(document, stored.schemaVersion, STORE_ORIGIN);
       guards.get(documentName)?.destroy();
       guards.set(
         documentName,

@@ -47,11 +47,7 @@ export function status(text: string, color: ContentColor): NodeJson {
 }
 
 function listItems(type: "listItem" | "taskItem", items: readonly Cell[]): NodeJson[] {
-  return items.map((item) => ({
-    type,
-    ...(type === "taskItem" ? { attrs: { checked: false } } : {}),
-    content: [paragraph(...cellParts(item))],
-  }));
+  return items.map((item) => ({ type, content: [paragraph(...cellParts(item))] }));
 }
 
 export function bulletList(...items: Cell[]): NodeJson {

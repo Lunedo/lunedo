@@ -10,6 +10,7 @@ import { sql } from "drizzle-orm";
 import * as Y from "yjs";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
+import { type ContentActivity, syncCommentAnchors } from "../collaboration/content.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "./common.js";
@@ -78,6 +79,7 @@ export type VersionReference = number | "draft";
 
 interface LockedPage {
   itemId: string;
+  kind: "page" | "blogPost";
   spaceId: string;
   organizationId: string | null;
   mode: PageMode;
@@ -113,6 +115,7 @@ export class VersionService {
   readonly #documents: PageDocumentService;
   readonly #people: PeopleService;
   readonly #settings: SettingsService;
+  readonly #activity: ContentActivity;
 
   constructor(options: {
     database: Database;
@@ -120,12 +123,14 @@ export class VersionService {
     documents: PageDocumentService;
     people: PeopleService;
     settings: SettingsService;
+    activity: ContentActivity;
   }) {
     this.#database = options.database;
     this.#audit = options.audit;
     this.#documents = options.documents;
     this.#people = options.people;
     this.#settings = options.settings;
+    this.#activity = options.activity;
   }
 
   async #lock(tx: Transaction, itemId: string): Promise<LockedPage> {
@@ -133,6 +138,7 @@ export class VersionService {
     const result = await tx.execute<{
       space_id: string;
       organization_id: string | null;
+      kind: "page" | "blogPost";
       mode: PageMode;
       title: string;
       published_version_id: string | null;
@@ -145,16 +151,17 @@ export class VersionService {
       draft_title: string | null;
       latest: number | null;
     }>(sql`
-      select t.space_id, s.organization_id, t.mode, t.title, t.published_version_id,
+      select t.space_id, s.organization_id, t.kind, t.mode, t.title, t.published_version_id,
         (select number from page_versions where id = t.published_version_id) as published_number,
         d.state, d.snapshot, d.schema_version, d.revision, d.versioned_revision, d.draft_title,
         (select max(number) from page_versions where item_id = t.id) as latest
       from page_documents d join tree_items t on t.id = d.item_id join spaces s on s.id = t.space_id
-      where d.item_id = ${itemId} and t.kind = 'page'`);
+      where d.item_id = ${itemId} and t.kind in ('page', 'blogPost')`);
     const row = result.rows[0];
     if (!row) throw new SpaceError("itemNotFound", "The page does not exist");
     return {
       itemId,
+      kind: row.kind,
       spaceId: row.space_id,
       organizationId: row.organization_id,
       mode: row.mode,
@@ -218,6 +225,10 @@ export class VersionService {
       update tree_items set title = ${title}, published_version_id = ${id}, content_updated_at = now(),
         updated_at = now()
       where id = ${page.itemId}`);
+    await tx.execute(sql`
+      update blog_posts set published_at = coalesce(published_at, now()), scheduled_at = null, scheduled_by = null,
+        scheduled_time_zone = null, updated_at = now()
+      where item_id = ${page.itemId}`);
     await recomputeLinks(tx, page.itemId, document);
     await signalSpaceChange(tx, { spaceId: page.spaceId, kind: "page", itemId: page.itemId });
     await signalSpaceChange(tx, { spaceId: page.spaceId, kind: "tree", itemId: page.itemId });
@@ -325,12 +336,7 @@ export class VersionService {
       if (!hasDraftChanges(page) && page.publishedNumber !== null) {
         return { version: page.publishedNumber, created: false };
       }
-      const version = await this.#createVersion(tx, page, {
-        reason: "published",
-        note,
-        actorId: actorIdOf(actor),
-      });
-      await refreshReaderVisibility(tx, [itemId]);
+      const version = await this.#publishLocked(tx, page, actorIdOf(actor), note);
       await this.#audit.record(tx, {
         name: "page.published",
         actor,
@@ -339,6 +345,58 @@ export class VersionService {
         scope: auditScopeOf(page),
       });
       return { version, created: true };
+    });
+  }
+
+  async #publishLocked(
+    tx: Transaction,
+    page: LockedPage,
+    actorId: string | null,
+    note: string,
+  ): Promise<number> {
+    const version = await this.#createVersion(tx, page, { reason: "published", note, actorId });
+    await refreshReaderVisibility(tx, [page.itemId]);
+    const document = migrated(page.snapshot, page.schemaVersion);
+    await syncCommentAnchors(tx, page.itemId, document);
+    await this.#activity.readerContentChanged(tx, page.itemId, document, actorId);
+    return version;
+  }
+
+  async publishScheduled(
+    itemId: string,
+    mayPublish: (tx: Transaction, accountId: string) => Promise<boolean>,
+  ): Promise<{ version: number; scheduledBy: string } | null> {
+    return this.#database.transaction(async (tx) => {
+      const due = await tx.execute<{ scheduled_by: string | null }>(sql`
+        select scheduled_by from blog_posts where item_id = ${itemId} and scheduled_at <= now()
+        for update skip locked`);
+      const row = due.rows[0];
+      if (!row) return null;
+      const scheduledBy = row.scheduled_by;
+      if (!scheduledBy || !(await mayPublish(tx, scheduledBy))) {
+        await tx.execute(sql`
+          update blog_posts set scheduled_at = null, scheduled_by = null, scheduled_time_zone = null, updated_at = now()
+          where item_id = ${itemId}`);
+        return null;
+      }
+      await this.#lockSpaceOf(tx, itemId);
+      const page = await this.#lock(tx, itemId);
+      const version =
+        hasDraftChanges(page) || page.publishedNumber === null
+          ? await this.#publishLocked(tx, page, scheduledBy, "")
+          : (page.publishedNumber ?? 0);
+      await tx.execute(sql`
+        update blog_posts set published_at = coalesce(published_at, now()), scheduled_at = null, scheduled_by = null,
+          scheduled_time_zone = null, updated_at = now()
+        where item_id = ${itemId}`);
+      await this.#audit.record(tx, {
+        name: "blogPost.publishedBySchedule",
+        actor: { type: "system" },
+        targetId: itemId,
+        fields: { spaceId: page.spaceId, title: page.title, version, scheduledBy },
+        scope: auditScopeOf(page),
+      });
+      return { version, scheduledBy };
     });
   }
 
@@ -438,6 +496,9 @@ export class VersionService {
     await this.#database.transaction(async (tx) => {
       await this.#lockSpaceOf(tx, itemId);
       const page = await this.#lock(tx, itemId);
+      if (page.kind === "blogPost") {
+        throw new SpaceError("blogPostMode", "Blog posts are always published with versions");
+      }
       if (page.mode === mode) return;
       const previousMode = page.mode;
       if (mode === "publish") {
@@ -457,6 +518,12 @@ export class VersionService {
       }
       await tx.execute(sql`update tree_items set mode = ${mode}, updated_at = now() where id = ${itemId}`);
       await refreshReaderVisibility(tx, [itemId]);
+      await this.#activity.readerContentChanged(
+        tx,
+        itemId,
+        migrated(page.snapshot, page.schemaVersion),
+        actorIdOf(actor),
+      );
       await signalSpaceChange(tx, { spaceId: page.spaceId, kind: "page", itemId });
       await signalSpaceChange(tx, { spaceId: page.spaceId, kind: "tree", itemId });
       await this.#audit.record(tx, {
@@ -474,7 +541,7 @@ export class VersionService {
     const result = await tx.execute<{ mode: PageMode; title: string; published: boolean }>(sql`
       select t.mode, t.title, t.published_version_id is not null as published
       from tree_items t join page_documents d on d.item_id = t.id
-      where t.id = ${itemId} and t.kind = 'page'`);
+      where t.id = ${itemId} and t.kind in ('page', 'blogPost')`);
     const row = result.rows[0];
     if (row?.mode !== "publish" || !row.published) return false;
     await tx.execute(sql`
@@ -571,7 +638,7 @@ export class VersionService {
         v.document as published_document, v.schema_version as published_schema
       from tree_items t join page_documents d on d.item_id = t.id
       left join page_versions v on v.id = t.published_version_id
-      where t.id = ${itemId} and t.kind = 'page'`);
+      where t.id = ${itemId} and t.kind in ('page', 'blogPost')`);
     const row = result.rows[0];
     if (!row) throw new SpaceError("itemNotFound", "The page does not exist");
     const title = row.draft_title ?? row.title;

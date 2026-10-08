@@ -2,7 +2,7 @@ import type { Executor } from "../database/database.js";
 import type { MembershipKind } from "../organizations/access-schema.js";
 import type { SpaceRole } from "../spaces/schema.js";
 import type { AccessLevel, Area } from "./areas.js";
-import type { OrganizationFacts } from "./facts.js";
+import type { OrganizationFacts, SpaceFacts } from "./facts.js";
 
 export interface Resource {
   type: string;
@@ -19,6 +19,7 @@ export interface ActionDefinition {
   breakGlass?: boolean;
   ownerOnly?: boolean;
   rule?: string;
+  ruleRequired?: boolean;
   restriction?: string;
 }
 
@@ -28,6 +29,7 @@ export interface RuleContext {
   organizationId: string | null;
   executor: Executor;
   organizationFacts(organizationId: string): Promise<OrganizationFacts>;
+  spaceFacts(spaceId: string): Promise<SpaceFacts>;
 }
 
 export type Rule = (context: RuleContext) => Promise<boolean>;
@@ -83,6 +85,8 @@ export class AuthorizationRegistry {
           throw new Error(`Action ${name} uses the unknown rule ${action.rule}`);
         if (action.restriction && !type.restrictions?.[action.restriction])
           throw new Error(`Action ${name} uses the unknown restriction ${action.restriction}`);
+        if (action.ruleRequired && (!action.rule || action.scope !== "space"))
+          throw new Error(`Action ${name} can only require a rule as a space action with a rule`);
         if (action.restriction && action.scope !== "space")
           throw new Error(`Action ${name} can only have a restriction as a space action`);
         if ((action.area === undefined) !== (action.level === undefined)) {

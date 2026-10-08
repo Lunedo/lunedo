@@ -12,7 +12,7 @@ export function inTree(item: SQL): SQL {
 }
 
 function published(item: SQL): SQL {
-  return sql`(${item}.kind <> 'page' or ${item}.mode = 'live' or ${item}.published_version_id is not null)`;
+  return sql`(${item}.kind not in ('page', 'blogPost') or ${item}.mode = 'live' or ${item}.published_version_id is not null)`;
 }
 
 export function publishedFor(

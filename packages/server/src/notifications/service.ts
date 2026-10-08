@@ -149,12 +149,14 @@ export class NotificationService {
       const chain = input.organizationId
         ? { organization: input.organizationId, user: recipientId }
         : { ...(await accountScopeChain(tx, recipientId)), user: recipientId };
-      const preference = await this.#settings.get(definition.setting, chain, { executor: tx });
+      const preference = definition.setting
+        ? await this.#settings.get(definition.setting, chain, { executor: tx })
+        : { inApp: true, email: false };
       let combined = false;
       if (preference.inApp) {
         combined = await this.#store(tx, recipientId, groupKey, definition, input, actor, params);
       }
-      if (preference.email && !combined && account.email && smtp) {
+      if (preference.email && !combined && account.email && smtp && definition.mail) {
         const locale = {
           language: await this.#mail.languageOf(recipientId, tx),
           timeZone: await this.#mail.timeZoneOf(recipientId, tx),

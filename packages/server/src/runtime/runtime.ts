@@ -5,6 +5,7 @@ import { AuditLog, auditSettingChanges } from "../audit/audit-log.js";
 import { auditRetentionSetting } from "../audit/retention.js";
 import { authSettings } from "../auth/settings.js";
 import { checkRestoreComplete } from "../backup/restore-marker.js";
+import { collaborationSettings } from "../collaboration/settings.js";
 import { ensureSecretFile, generateToken } from "../config/generated-secrets.js";
 import { type Env, loadConfig, type ServerConfig } from "../config/load.js";
 import { Secret } from "../config/secret.js";
@@ -152,6 +153,7 @@ export async function createServerRuntime(options: {
         ...preferenceSettings,
         ...notificationSettings,
         ...spaceSettings,
+        ...collaborationSettings,
         auditRetentionSetting,
         smtpSetting,
         mailMethodSetting,

@@ -48,6 +48,7 @@ export type Denial =
   | "selfExtension"
   | "noSpaceRole"
   | "tokenScope"
+  | "ruleNotMet"
   | RestrictionDenial;
 
 export interface GrantCheck {
@@ -182,7 +183,11 @@ export class AuthorizationService {
       if (!facts.space) return decision([], ["resourceNotFound"]);
       if (facts.account?.state !== "active") return decision([], ["accountInactive"]);
       let grants = this.#spaceGrants(action, facts);
-      if (action.rule && (await this.#rule(action, accountId, resource, null, executor, fresh))) {
+      const ruleMet =
+        action.rule !== undefined && (await this.#rule(action, accountId, resource, null, executor, fresh));
+      if (action.ruleRequired) {
+        if (grants.length > 0 && !ruleMet) return decision([], ["ruleNotMet"]);
+      } else if (ruleMet && action.rule) {
         grants.push({ kind: "rule", rule: action.rule });
       }
       const restriction = action.restriction
@@ -518,6 +523,7 @@ export class AuthorizationService {
       organizationId,
       executor,
       organizationFacts: (id) => organizationFacts(executor, accountId, id, { fresh }),
+      spaceFacts: (id) => spaceFacts(executor, accountId, id, { fresh }),
     });
   }
 

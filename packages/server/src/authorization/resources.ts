@@ -6,9 +6,11 @@ import {
   selfServiceOrganizationsSetting,
 } from "../organizations/settings.js";
 import type { SettingsService } from "../settings/service.js";
+import { grantsSpaceRole } from "../spaces/roles.js";
+import type { SpaceRole } from "../spaces/schema.js";
 import { membersCreateSpacesSetting, personalSpacesSetting } from "../spaces/settings.js";
 import { grantsLevel } from "./areas.js";
-import type { ActionDefinition, ResourceType, RuleContext } from "./registry.js";
+import type { ActionDefinition, ResourceType, RestrictionResult, RuleContext } from "./registry.js";
 
 const ALL_MEMBERSHIPS = ["member", "collaborator", "guest"] as const;
 
@@ -108,6 +110,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "organization.spaces.create": { ...organizationArea("spaces", "manage"), rule: "membersCreateSpaces" },
       "organization.trash.manage": organizationArea("spaces", "manage"),
       "organization.templates.manage": organizationArea("settings", "manage"),
+      "organization.blog.pin": organizationArea("spaces", "manage"),
       "organization.signIn.view": organizationArea("signInAndSecurity", "view"),
       "organization.signIn.manage": organizationArea("signInAndSecurity", "manage"),
       "organization.integrations.view": organizationArea("integrationsAndApi", "view"),
@@ -250,6 +253,9 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "item.edit": { scope: "space", spaceRole: "editor", restriction: "writable" },
       "item.delete": { scope: "space", spaceRole: "editor", restriction: "present" },
       "item.archive": { scope: "space", spaceRole: "editor", restriction: "present" },
+      "item.comment": { scope: "space", spaceRole: "commenter", restriction: "interactive" },
+      "item.react": { scope: "space", spaceRole: "reader", restriction: "interactive" },
+      "item.pin": { scope: "space", spaceRole: "admin", restriction: "interactive" },
     },
     restrictions: {
       readable: async (executor, id) => {
@@ -267,10 +273,158 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
         if (!state || state.trashed) return { denial: "inTrash" };
         return state.spaceArchived ? { denial: "archived" } : null;
       },
+      interactive: async (executor, id) => interactiveItem(await itemState(executor, id)),
     },
   };
 
-  return [instance, organization, group, account, serviceAccount, space, item];
+  const hasRole = async (context: RuleContext, spaceId: string | null, role: SpaceRole) => {
+    if (!spaceId) return false;
+    const facts = await context.spaceFacts(spaceId);
+    return facts.sources.some((source) => grantsSpaceRole(source.role, role));
+  };
+
+  const comment: ResourceType = {
+    type: "comment",
+    spaceOf: commentSpace,
+    actions: {
+      "comment.view": { scope: "space", spaceRole: "reader", restriction: "visible" },
+      "comment.reply": { scope: "space", spaceRole: "commenter", restriction: "open" },
+      "comment.resolve": { scope: "space", spaceRole: "commenter", restriction: "open" },
+      "comment.react": { scope: "space", spaceRole: "reader", restriction: "open" },
+      "comment.update": {
+        scope: "space",
+        spaceRole: "commenter",
+        rule: "author",
+        ruleRequired: true,
+        restriction: "open",
+      },
+      "comment.delete": {
+        scope: "space",
+        spaceRole: "admin",
+        rule: "authorWhoComments",
+        restriction: "open",
+      },
+      "comment.restore": { scope: "space", spaceRole: "commenter", restriction: "restorable" },
+    },
+    rules: {
+      author: async (context) =>
+        (await commentAuthor(context.executor, context.resource.id)) === context.accountId,
+      authorWhoComments: async (context) => {
+        if ((await commentAuthor(context.executor, context.resource.id)) !== context.accountId) return false;
+        return hasRole(context, await commentSpace(context.executor, context.resource.id ?? ""), "commenter");
+      },
+    },
+    restrictions: {
+      visible: async (executor, id) => {
+        const state = await commentState(executor, id);
+        if (!state || state.trashed) return { denial: "inTrash" };
+        return state.unpublished || state.hidden ? { denial: "unpublished", unless: "editor" } : null;
+      },
+      restorable: async (executor, id) => {
+        const state = await commentState(executor, id);
+        if (!state || state.trashed) return { denial: "inTrash" };
+        if (state.archived) return { denial: "archived" };
+        return state.unpublished || state.hidden ? { denial: "unpublished", unless: "editor" } : null;
+      },
+      open: async (executor, id) => {
+        const state = await commentState(executor, id);
+        if (!state || state.trashed || state.deleted) return { denial: "inTrash" };
+        if (state.archived) return { denial: "archived" };
+        return state.unpublished || state.hidden ? { denial: "unpublished", unless: "editor" } : null;
+      },
+    },
+  };
+
+  const task: ResourceType = {
+    type: "task",
+    spaceOf: async (executor, id) => {
+      const result = await executor.execute<{ space_id: string }>(
+        sql`select t.space_id from tasks k join tree_items t on t.id = k.item_id where k.id = ${id}`,
+      );
+      return result.rows[0]?.space_id ?? null;
+    },
+    actions: {
+      "task.view": { scope: "space", spaceRole: "reader", restriction: "visible" },
+      "task.update": { scope: "space", spaceRole: "editor", rule: "assignee", restriction: "interactive" },
+    },
+    rules: {
+      assignee: async (context) => {
+        const result = await context.executor.execute<{ space_id: string }>(sql`
+          select t.space_id from tasks k join tree_items t on t.id = k.item_id
+          where k.id = ${context.resource.id ?? ""} and k.published and k.assignee_id = ${context.accountId}`);
+        return hasRole(context, result.rows[0]?.space_id ?? null, "reader");
+      },
+    },
+    restrictions: {
+      visible: async (executor, id) => {
+        const result = await executor.execute<{ item_id: string; published: boolean }>(
+          sql`select item_id, published from tasks where id = ${id}`,
+        );
+        const row = result.rows[0];
+        const state = row ? await itemState(executor, row.item_id) : null;
+        if (!state || state.trashed) return { denial: "inTrash" };
+        return state.unpublished || !row?.published ? { denial: "unpublished", unless: "editor" } : null;
+      },
+      interactive: async (executor, id) => {
+        const result = await executor.execute<{ item_id: string }>(
+          sql`select item_id from tasks where id = ${id}`,
+        );
+        const itemId = result.rows[0]?.item_id;
+        return interactiveItem(itemId ? await itemState(executor, itemId) : null);
+      },
+    },
+  };
+
+  return [instance, organization, group, account, serviceAccount, space, item, comment, task];
+}
+
+function interactiveItem(state: Awaited<ReturnType<typeof itemState>>): RestrictionResult | null {
+  if (!state || state.trashed) return { denial: "inTrash" };
+  if (state.archived) return { denial: "archived" };
+  return state.unpublished ? { denial: "unpublished", unless: "editor" } : null;
+}
+
+async function commentSpace(executor: Executor, id: string): Promise<string | null> {
+  const result = await executor.execute<{ space_id: string }>(
+    sql`select t.space_id from comments c join tree_items t on t.id = c.item_id where c.id = ${id}`,
+  );
+  return result.rows[0]?.space_id ?? null;
+}
+
+async function commentAuthor(executor: Executor, id: string | undefined): Promise<string | null> {
+  if (!id) return null;
+  const result = await executor.execute<{ author_id: string | null }>(
+    sql`select author_id from comments where id = ${id.toLowerCase()} and deleted_at is null`,
+  );
+  return result.rows[0]?.author_id ?? null;
+}
+
+async function commentState(
+  executor: Executor,
+  id: string,
+): Promise<{
+  trashed: boolean;
+  archived: boolean;
+  unpublished: boolean;
+  hidden: boolean;
+  deleted: boolean;
+} | null> {
+  const result = await executor.execute<{
+    trashed: boolean;
+    archived: boolean;
+    unpublished: boolean;
+    hidden: boolean;
+    deleted: boolean;
+  }>(sql`
+    select (t.trash_entry_id is not null or s.deleted_at is not null) as trashed,
+      (t.archived_root_id is not null or s.archived_at is not null) as archived,
+      not t.reader_visible as unpublished,
+      (r.quote is not null and not r.quote_public) as hidden,
+      c.deleted_at is not null as deleted
+    from comments c join comments r on r.id = coalesce(c.parent_id, c.id)
+    join tree_items t on t.id = c.item_id join spaces s on s.id = t.space_id
+    where c.id = ${id}`);
+  return result.rows[0] ?? null;
 }
 
 async function spaceState(
