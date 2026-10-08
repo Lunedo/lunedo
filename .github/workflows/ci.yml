@@ -378,6 +378,8 @@ jobs:
         run: pnpm --filter @pagehall/web exec playwright install --with-deps chromium
       - if: ${{ contains(vars.RUNNER_LABELS, 'self-hosted') }}
         run: pnpm --filter @pagehall/web exec playwright install chromium
+      - name: Wait until Authentik shows its sign-in form in a browser
+        run: pnpm --filter @pagehall/web exec node e2e/support/wait-for-authentik.ts
       - name: Collect the test reports of this job
         run: |
           echo "PAGEHALL_TEST_REPORT_DIR=$GITHUB_WORKSPACE/.test-reports" >> "$GITHUB_ENV"
@@ -399,6 +401,20 @@ jobs:
           retention-days: 7
       - if: failure()
         run: docker compose -f docker/compose.dev.yml -f docker/compose.ci.yml --profile idp logs keycloak authentik-server authentik-worker openldap
+      - name: Show the Authentik logs in the job summary
+        if: failure()
+        run: |
+          {
+            echo "### Authentik logs (last 200 lines each)"
+            for service in authentik-server authentik-worker; do
+              echo "<details><summary>$service</summary>"
+              echo
+              echo '```'
+              docker compose -f docker/compose.dev.yml -f docker/compose.ci.yml --profile idp logs --no-color --tail 200 "$service" 2>&1 | tail -c 20000
+              echo '```'
+              echo "</details>"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Remove the containers, volumes and images of this job
         if: always()
         run: docker compose -f docker/compose.dev.yml -f docker/compose.ci.yml --profile idp down --volumes --remove-orphans --rmi local
