@@ -179,6 +179,48 @@ describe("SettingsList", () => {
     );
   });
 
+  it("keeps the number of versions within the maximum of the instance", async () => {
+    const onChange = vi.fn(async () => undefined);
+    await renderList(
+      [
+        entry({
+          key: "files.keepVersions",
+          value: 50,
+          defaultValue: 50,
+          maximum: 500,
+        } as Partial<SettingEntry>),
+      ],
+      onChange,
+    );
+    expect(screen.queryByRole("checkbox", { name: "No limit" })).toBeNull();
+    const input = screen.getByRole("textbox", { name: "Versions of a file to keep" });
+    await userEvent.type(input, "600{Enter}");
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Enter a whole number from 1 to 500. The instance allows at most 500.",
+    );
+    expect(onChange).not.toHaveBeenCalled();
+    await userEvent.clear(input);
+    await userEvent.type(input, "120{Enter}");
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith("files.keepVersions", { value: 120 }));
+  });
+
+  it("offers no limit only when the instance allows it", async () => {
+    const onChange = vi.fn(async () => undefined);
+    await renderList(
+      [
+        entry({
+          key: "files.keepVersions",
+          value: 50,
+          defaultValue: 50,
+          maximum: "unlimited",
+        } as Partial<SettingEntry>),
+      ],
+      onChange,
+    );
+    await userEvent.click(screen.getByRole("checkbox", { name: "No limit" }));
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith("files.keepVersions", { value: "unlimited" }));
+  });
+
   it("names an unset maximum token lifetime", async () => {
     await renderList([entry({ key: "apiTokens.maxLifetimeDays", value: null, defaultValue: null })]);
     expect(screen.getByText("Default: No limit")).toBeTruthy();

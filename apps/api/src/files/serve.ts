@@ -29,7 +29,7 @@ export async function sendAttachment(
   content: AttachmentContent,
   options: { inline: boolean; crossOrigin: boolean },
 ) {
-  const etag = `"${content.sha256 || content.fileId}"`;
+  const etag = `"${content.digest || content.fileId}"`;
   reply.header("content-type", content.contentType);
   reply.header("x-content-type-options", "nosniff");
   reply.header("content-security-policy", FILE_CONTENT_SECURITY_POLICY);

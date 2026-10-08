@@ -395,15 +395,19 @@ export { type AccountServices, createAccountServices } from "./services.js";
 export { builtinSettings, languageSetting, supportedLanguages, timeZoneSetting } from "./settings/builtin.js";
 export {
   defineSetting,
+  type Limit,
+  limitOf,
   type SettingDefinition,
   type SettingLevel,
   SettingsRegistry,
+  UNLIMITED,
 } from "./settings/definition.js";
 export * from "./settings/preferences.js";
 export {
   INSTANCE_SCOPE_ID,
   type Scope,
   type ScopeChain,
+  SettingAboveMaximumError,
   SettingBelowMinimumError,
   type SettingChangeSignal,
   SettingError,
@@ -423,6 +427,11 @@ export {
   type PersonAccess,
   type PersonAccessEntry,
 } from "./sharing/explain.js";
+export {
+  type GiveAccessDraft,
+  GiveAccessDraftService,
+  giveAccessDraftSchema,
+} from "./sharing/give-access-drafts.js";
 export { GuestShareService } from "./sharing/guests.js";
 export {
   type OpenResult,

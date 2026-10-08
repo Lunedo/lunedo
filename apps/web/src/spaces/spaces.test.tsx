@@ -525,14 +525,24 @@ describe("space access", () => {
     },
   });
 
-  beforeEach(() => {
-    window.localStorage.clear();
+  const draftRoutes = (stored: { draft: unknown } = { draft: null }) => ({
+    [`GET /api/v1/spaces/${SPACE_ID}/give-access/draft`]: () => ({ body: { draft: stored.draft } }),
+    [`PUT /api/v1/spaces/${SPACE_ID}/give-access/draft`]: (request: { body?: unknown }) => {
+      stored.draft = request.body;
+      return { body: { draft: request.body } };
+    },
+    [`DELETE /api/v1/spaces/${SPACE_ID}/give-access/draft`]: () => {
+      stored.draft = null;
+      return { status: 204 };
+    },
   });
 
   it("gives access step by step and shows the effect before confirming", async () => {
+    const stored = { draft: null as unknown };
     const { requests } = mockApi({
       ...baseRoutes(),
       ...spaceRoutes("admin"),
+      ...draftRoutes(stored),
       [`GET /api/v1/spaces/${SPACE_ID}/access-requests`]: () => ({ body: [] }),
       [`GET /api/v1/spaces/${SPACE_ID}/restricted-pages`]: () => ({ body: [] }),
       "GET /api/v1/people": people,
@@ -575,12 +585,23 @@ describe("space access", () => {
         )?.body,
       ).toEqual({ action: "grant", principalKind: "account", principalId: ANNA, role: "editor" }),
     );
+    await waitFor(() =>
+      expect(
+        requests.some(
+          (request) =>
+            request.method === "DELETE" && request.path === `/api/v1/spaces/${SPACE_ID}/give-access/draft`,
+        ),
+      ).toBe(true),
+    );
+    expect(stored.draft).toBeNull();
   });
 
-  it("keeps an unfinished assistant as a draft", async () => {
+  it("keeps an unfinished assistant as a draft on the server", async () => {
+    const stored = { draft: null as unknown };
     mockApi({
       ...baseRoutes(),
       ...spaceRoutes("admin"),
+      ...draftRoutes(stored),
       [`GET /api/v1/spaces/${SPACE_ID}/access-requests`]: () => ({ body: [] }),
       [`GET /api/v1/spaces/${SPACE_ID}/restricted-pages`]: () => ({ body: [] }),
       "GET /api/v1/people": people,
@@ -595,8 +616,39 @@ describe("space access", () => {
     await userEvent.click(await screen.findByRole("option", { name: /Anna Berger/ }));
     await userEvent.click(within(dialog).getByRole("button", { name: "Next" }));
     await userEvent.keyboard("{Escape}");
+    await waitFor(() =>
+      expect(stored.draft).toMatchObject({ step: 1, holder: { kind: "account", id: ANNA } }),
+    );
+    expect(Object.keys(window.localStorage).filter((key) => key.includes("giveAccess"))).toEqual([]);
     await userEvent.click(await screen.findByRole("button", { name: "Continue giving access" }));
     expect(await screen.findByRole("radiogroup", { name: "What they may do" })).toBeTruthy();
+  });
+
+  it("continues a draft saved earlier and discards it on cancel", async () => {
+    const stored = {
+      draft: {
+        step: 2,
+        holder: { kind: "account", id: ANNA, name: "Anna Berger" },
+        level: "commenter",
+        where: "space",
+        page: null,
+      } as unknown,
+    };
+    const { requests } = mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes("admin"),
+      ...draftRoutes(stored),
+      [`GET /api/v1/spaces/${SPACE_ID}/access-requests`]: () => ({ body: [] }),
+      [`GET /api/v1/spaces/${SPACE_ID}/restricted-pages`]: () => ({ body: [] }),
+    });
+    await renderAt("/spaces/ITOPS/settings/access");
+    await userEvent.click(await screen.findByRole("button", { name: "Continue giving access" }));
+    const dialog = await screen.findByRole("dialog", { name: "Give access" });
+    expect(await within(dialog).findByRole("radiogroup", { name: "Where" })).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancel and discard" }));
+    await waitFor(() => expect(stored.draft).toBeNull());
+    expect(requests.filter((request) => request.method === "PUT")).toEqual([]);
+    expect(await screen.findByRole("button", { name: "Give access" })).toBeTruthy();
   });
 
   it("lets space admins make a private space findable and saves it at once", async () => {

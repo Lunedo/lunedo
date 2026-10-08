@@ -1319,7 +1319,10 @@
     "fileTooLargeLimit": "The file is larger than the limit of {size}. Choose a smaller file or ask an administrator to raise the limit.",
     "rangeNotSatisfiable": "The file changed while loading. Reload the page.",
     "tooManyRequests": "You sent many access requests today. Wait until tomorrow or contact an administrator of the space.",
-    "linkExpiryTooLate": "Links for anyone may last at most {days, plural, one {# day} other {# days}} in this organization. Choose an earlier date."
+    "linkExpiryTooLate": "Links for anyone may last at most {days, plural, one {# day} other {# days}} in this organization. Choose an earlier date.",
+    "versionNotFound": "This version was removed in the meantime. Reload the versions.",
+    "settingAboveMaximum": "The value is above the maximum the instance allows. Choose a lower value.",
+    "settingAboveMaximumValue": "The instance allows at most {maximum}. Choose a value up to {maximum}."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -2013,8 +2016,8 @@
         "description": "Uploads above this size are refused before anything is stored, with a message that names the limit. Organizations can only lower it."
       },
       "files_keepVersions": {
-        "label": "Earlier versions of a file to keep",
-        "description": "When a file with the same name is uploaded again, older versions beyond this number are removed. Not set means all versions are kept."
+        "label": "Versions of a file to keep",
+        "description": "When a new version is uploaded and there are more than this number, the oldest version not marked to keep is removed. Marked versions do not count."
       },
       "sharing_shareLinks": {
         "label": "Share links",
@@ -2031,6 +2034,10 @@
       "sharing_membersInviteGuests": {
         "label": "Members can invite guests to a page",
         "description": "When on, people who may share a page can invite someone by e-mail as a guest. Administrators of the organization can always do this."
+      },
+      "files_keepVersionsMaximum": {
+        "label": "Most versions organizations and spaces may keep",
+        "description": "Organizations and spaces can choose any number up to this maximum. Only here can it be set to no limit."
       }
     },
     "disabled": {
@@ -2049,7 +2056,8 @@
     "searchNone": "No setting matches “{query}”. Check the spelling or search for another word.",
     "searchClear": "Clear search",
     "searchWhere": "{page} › {section}",
-    "lockForSpaces": "Lock for spaces"
+    "lockForSpaces": "Lock for spaces",
+    "aboveMaximum": "Enter a whole number from {minimum} to {maximum}. The instance allows at most {maximum}."
   },
   "security": {
     "activity": {
@@ -3160,6 +3168,10 @@
       },
       "access": {
         "overviewExported": "Permission overview exported"
+      },
+      "attachment": {
+        "versionKept": "File version marked to keep",
+        "versionReleased": "File version no longer kept"
       }
     },
     "action": "Action",
@@ -4998,7 +5010,15 @@
       "restore": "Restore",
       "restored": "Version {number} is current again",
       "restoreFailed": "The version was not restored. Try again.",
-      "loadFailed": "the versions"
+      "loadFailed": "the versions",
+      "keepHint": "Versions marked to keep are never removed automatically and do not count towards the limit.",
+      "kept": "Kept",
+      "keep": "Keep",
+      "release": "Stop keeping",
+      "keptDone": "Version {number} is kept",
+      "releasedDone": "Version {number} can be removed again when newer versions arrive",
+      "keepFailed": "The version was not marked to keep. Try again.",
+      "releaseFailed": "The mark was not removed. Try again."
     },
     "storage": {
       "used": "{size} used by {count, plural, one {# stored file} other {# stored files}}, including earlier versions",
@@ -5295,7 +5315,11 @@
       "next": "Next",
       "confirm": "Give {name} \"{role}\"",
       "done": "Access given to {name}",
-      "failed": "The access was not given"
+      "failed": "The access was not given",
+      "cancel": "Cancel and discard",
+      "discardFailed": "The draft was not discarded. Try again.",
+      "saveFailedTitle": "Your progress is not saved yet",
+      "saveFailed": "{reason} You can continue; the assistant saves again with the next change."
     },
     "discoverable": {
       "title": "Spaces you can ask to join",

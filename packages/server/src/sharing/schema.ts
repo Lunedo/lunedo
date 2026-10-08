@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   index,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -183,4 +184,19 @@ export const invitationShares = pgTable(
     index().on(table.sharedBy),
     check("invitation_shares_role", sql`${table.role} <> 'admin'`),
   ],
+);
+
+export const giveAccessDrafts = pgTable(
+  "give_access_drafts",
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    spaceId: uuid()
+      .notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
+    draft: jsonb().notNull(),
+    ...timestamps(),
+  },
+  (table) => [primaryKey({ columns: [table.accountId, table.spaceId] }), index().on(table.spaceId)],
 );

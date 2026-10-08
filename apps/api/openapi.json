@@ -3327,6 +3327,10 @@
                         "type": "boolean",
                         "description": "Whether the setting can be changed through the settings endpoint."
                       },
+                      "maximum": {
+                        "description": "Highest value allowed, set for the instance, or null when the setting has no maximum. `unlimited` allows any value.",
+                        "$ref": "#/components/schemas/Schema682d67ac39ef"
+                      },
                       "levels": {
                         "type": "array",
                         "items": {
@@ -3338,7 +3342,7 @@
                             },
                             "value": {
                               "description": "Value stored at this level, or null.",
-                              "$ref": "#/components/schemas/Schema682d67ac39ef"
+                              "$ref": "#/components/schemas/Schema1a810d563c56"
                             },
                             "locked": {
                               "type": "boolean",
@@ -3371,6 +3375,7 @@
                       "lockable",
                       "levelsBelow",
                       "editable",
+                      "maximum",
                       "levels"
                     ],
                     "additionalProperties": false,
@@ -9251,7 +9256,7 @@
       "get": {
         "operationId": "attachments.versions",
         "summary": "List the versions of an attachment",
-        "description": "Lists the stored versions, newest first. Versions beyond the configured number are removed.\n\nRequires the permission `attachment.view` on the attachment in `attachmentId`.",
+        "description": "Lists the stored versions, newest first. When a new version is added and more versions than configured exist, the oldest version not marked to keep is removed.\n\nRequires the permission `attachment.view` on the attachment in `attachmentId`.",
         "tags": [
           "Attachments"
         ],
@@ -9328,6 +9333,10 @@
                         ],
                         "description": "Version this one restored, or null for an upload."
                       },
+                      "kept": {
+                        "type": "boolean",
+                        "description": "Whether the version is marked to keep. Marked versions are never removed automatically and do not count towards the number of versions kept."
+                      },
                       "uploadedBy": {
                         "anyOf": [
                           {
@@ -9372,6 +9381,7 @@
                       "size",
                       "contentType",
                       "restoredFrom",
+                      "kept",
                       "uploadedBy",
                       "uploadedAt"
                     ],
@@ -9388,6 +9398,7 @@
                     "size": 48213,
                     "contentType": "image/png",
                     "restoredFrom": null,
+                    "kept": false,
                     "uploadedBy": {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                       "name": "Anna Berger"
@@ -9488,6 +9499,327 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/attachments/{attachmentId}/versions/{number}/keep": {
+      "put": {
+        "operationId": "attachments.keepVersion",
+        "summary": "Keep a version",
+        "description": "Marks a version to keep or removes the mark. Marked versions are never removed automatically and do not count towards the number of versions kept. The change is recorded in the audit log.\n\nRequires the permission `attachment.edit` on the attachment in `attachmentId`.",
+        "tags": [
+          "Attachments"
+        ],
+        "x-pagehall-permission": {
+          "action": "attachment.edit",
+          "resource": "attachment",
+          "parameter": "attachmentId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "attachmentId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the attachment.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "number",
+            "in": "path",
+            "required": true,
+            "description": "Number of the version, starting at 1.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kept": {
+                    "type": "boolean",
+                    "description": "True to keep the version, false to let it be removed again."
+                  }
+                },
+                "required": [
+                  "kept"
+                ],
+                "additionalProperties": false,
+                "description": "Whether to keep a version."
+              },
+              "example": {
+                "kept": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The version.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the version."
+                    },
+                    "number": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the version, starting at 1."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "File name when this version was uploaded."
+                    },
+                    "size": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Size in bytes."
+                    },
+                    "contentType": {
+                      "type": "string",
+                      "description": "Media type, decided from the content."
+                    },
+                    "restoredFrom": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Version this one restored, or null for an upload."
+                    },
+                    "kept": {
+                      "type": "boolean",
+                      "description": "Whether the version is marked to keep. Marked versions are never removed automatically and do not count towards the number of versions kept."
+                    },
+                    "uploadedBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the account."
+                            },
+                            "name": {
+                              "description": "Name, or null when hidden.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A person."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who uploaded or restored it."
+                    },
+                    "uploadedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When it was stored. ISO 8601 timestamp in UTC."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "number",
+                    "name",
+                    "size",
+                    "contentType",
+                    "restoredFrom",
+                    "kept",
+                    "uploadedBy",
+                    "uploadedAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A version of an attachment."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a41",
+                  "number": 2,
+                  "name": "network-diagram.png",
+                  "size": 48213,
+                  "contentType": "image/png",
+                  "restoredFrom": null,
+                  "kept": true,
+                  "uploadedBy": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                    "name": "Anna Berger"
+                  },
+                  "uploadedAt": "2026-10-01T09:30:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found. `versionNotFound`: The version does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  },
+                  "versionNotFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:versionNotFound",
+                      "title": "The version does not exist",
+                      "status": 404,
+                      "code": "versionNotFound"
                     }
                   }
                 }
@@ -83334,6 +83666,10 @@
                             "type": "boolean",
                             "description": "Whether the setting can be changed through the settings endpoint."
                           },
+                          "maximum": {
+                            "description": "Highest value allowed, set for the instance, or null when the setting has no maximum. `unlimited` allows any value.",
+                            "$ref": "#/components/schemas/Schema682d67ac39ef"
+                          },
                           "levels": {
                             "type": "array",
                             "items": {
@@ -83345,7 +83681,7 @@
                                 },
                                 "value": {
                                   "description": "Value stored at this level, or null.",
-                                  "$ref": "#/components/schemas/Schema682d67ac39ef"
+                                  "$ref": "#/components/schemas/Schema1a810d563c56"
                                 },
                                 "locked": {
                                   "type": "boolean",
@@ -83378,6 +83714,7 @@
                           "lockable",
                           "levelsBelow",
                           "editable",
+                          "maximum",
                           "levels"
                         ],
                         "additionalProperties": false,
@@ -83414,6 +83751,7 @@
                         "organization"
                       ],
                       "editable": true,
+                      "maximum": null,
                       "levels": [
                         {
                           "level": "instance",
@@ -83607,7 +83945,7 @@
             "description": "Done. The response has no body."
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidSetting`: The setting value is not valid. `settingManagedElsewhere`: The setting is changed through another endpoint.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidSetting`: The setting value is not valid. `settingAboveMaximum`: The value is above the maximum set for the instance. `settingManagedElsewhere`: The setting is changed through another endpoint.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -83636,6 +83974,14 @@
                       "title": "The setting value is not valid",
                       "status": 400,
                       "code": "invalidSetting"
+                    }
+                  },
+                  "settingAboveMaximum": {
+                    "value": {
+                      "type": "urn:pagehall:problem:settingAboveMaximum",
+                      "title": "The value is above the maximum set for the instance",
+                      "status": 400,
+                      "code": "settingAboveMaximum"
                     }
                   },
                   "settingManagedElsewhere": {
@@ -102820,6 +103166,10 @@
                             "type": "boolean",
                             "description": "Whether the setting can be changed through the settings endpoint."
                           },
+                          "maximum": {
+                            "description": "Highest value allowed, set for the instance, or null when the setting has no maximum. `unlimited` allows any value.",
+                            "$ref": "#/components/schemas/Schema682d67ac39ef"
+                          },
                           "levels": {
                             "type": "array",
                             "items": {
@@ -102831,7 +103181,7 @@
                                 },
                                 "value": {
                                   "description": "Value stored at this level, or null.",
-                                  "$ref": "#/components/schemas/Schema682d67ac39ef"
+                                  "$ref": "#/components/schemas/Schema1a810d563c56"
                                 },
                                 "locked": {
                                   "type": "boolean",
@@ -102864,6 +103214,7 @@
                           "lockable",
                           "levelsBelow",
                           "editable",
+                          "maximum",
                           "levels"
                         ],
                         "additionalProperties": false,
@@ -102900,6 +103251,7 @@
                         "organization"
                       ],
                       "editable": true,
+                      "maximum": null,
                       "levels": [
                         {
                           "level": "instance",
@@ -103121,7 +103473,7 @@
             "description": "Done. The response has no body."
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidSetting`: The setting value is not valid. `settingManagedElsewhere`: The setting is changed through another endpoint.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidSetting`: The setting value is not valid. `settingAboveMaximum`: The value is above the maximum set for the instance. `settingManagedElsewhere`: The setting is changed through another endpoint.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -103150,6 +103502,14 @@
                       "title": "The setting value is not valid",
                       "status": 400,
                       "code": "invalidSetting"
+                    }
+                  },
+                  "settingAboveMaximum": {
+                    "value": {
+                      "type": "urn:pagehall:problem:settingAboveMaximum",
+                      "title": "The value is above the maximum set for the instance",
+                      "status": 400,
+                      "code": "settingAboveMaximum"
                     }
                   },
                   "settingManagedElsewhere": {
@@ -130956,6 +131316,887 @@
         }
       }
     },
+    "/api/v1/spaces/{spaceId}/give-access/draft": {
+      "delete": {
+        "operationId": "pageAccess.discardGiveAccessDraft",
+        "summary": "Discard your Give access draft",
+        "description": "Removes your unfinished Give access assistant in this space. It does nothing when there is none.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Page access"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "pageAccess.giveAccessDraft",
+        "summary": "Read your Give access draft",
+        "description": "Returns the Give access assistant you left unfinished in this space, so it can be continued. Each person has their own draft per space.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Page access"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The draft.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "draft": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "step": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 3,
+                              "description": "The step the assistant was left on, from 0 to 3."
+                            },
+                            "holder": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "account",
+                                        "group"
+                                      ],
+                                      "description": "Whether a person or a group gets access."
+                                    },
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "description": "ID of the account or group."
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 300,
+                                      "description": "Name shown in the assistant."
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "id",
+                                    "name"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The person or group chosen in the first step, or null."
+                            },
+                            "level": {
+                              "type": "string",
+                              "enum": [
+                                "reader",
+                                "commenter",
+                                "editor",
+                                "admin"
+                              ],
+                              "description": "What they may do."
+                            },
+                            "where": {
+                              "type": "string",
+                              "enum": [
+                                "space",
+                                "page",
+                                "pageAndChildren"
+                              ],
+                              "description": "Where they get access."
+                            },
+                            "page": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "description": "ID of the page."
+                                    },
+                                    "title": {
+                                      "type": "string",
+                                      "maxLength": 500,
+                                      "description": "Title shown in the assistant."
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "title"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The page chosen for page access, or null."
+                            }
+                          },
+                          "required": [
+                            "step",
+                            "holder",
+                            "level",
+                            "where",
+                            "page"
+                          ],
+                          "additionalProperties": false,
+                          "description": "An unfinished Give access assistant."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The unfinished assistant, or null."
+                    }
+                  },
+                  "required": [
+                    "draft"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Your unfinished Give access assistant for this space."
+                },
+                "example": {
+                  "draft": {
+                    "step": 1,
+                    "holder": {
+                      "kind": "account",
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                      "name": "Anna Berger"
+                    },
+                    "level": "editor",
+                    "where": "space",
+                    "page": null
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "pageAccess.saveGiveAccessDraft",
+        "summary": "Save your Give access draft",
+        "description": "Stores the state of the unfinished Give access assistant for you in this space, replacing the previous draft. Nothing changes who has access.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Page access"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "step": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 3,
+                    "description": "The step the assistant was left on, from 0 to 3."
+                  },
+                  "holder": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "account",
+                              "group"
+                            ],
+                            "description": "Whether a person or a group gets access."
+                          },
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the account or group."
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 300,
+                            "description": "Name shown in the assistant."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "id",
+                          "name"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The person or group chosen in the first step, or null."
+                  },
+                  "level": {
+                    "type": "string",
+                    "enum": [
+                      "reader",
+                      "commenter",
+                      "editor",
+                      "admin"
+                    ],
+                    "description": "What they may do."
+                  },
+                  "where": {
+                    "type": "string",
+                    "enum": [
+                      "space",
+                      "page",
+                      "pageAndChildren"
+                    ],
+                    "description": "Where they get access."
+                  },
+                  "page": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the page."
+                          },
+                          "title": {
+                            "type": "string",
+                            "maxLength": 500,
+                            "description": "Title shown in the assistant."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "title"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The page chosen for page access, or null."
+                  }
+                },
+                "required": [
+                  "step",
+                  "holder",
+                  "level",
+                  "where",
+                  "page"
+                ],
+                "additionalProperties": false,
+                "description": "An unfinished Give access assistant."
+              },
+              "example": {
+                "step": 1,
+                "holder": {
+                  "kind": "account",
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "name": "Anna Berger"
+                },
+                "level": "editor",
+                "where": "space",
+                "page": null
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The draft.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "draft": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "step": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 3,
+                              "description": "The step the assistant was left on, from 0 to 3."
+                            },
+                            "holder": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "account",
+                                        "group"
+                                      ],
+                                      "description": "Whether a person or a group gets access."
+                                    },
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "description": "ID of the account or group."
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 300,
+                                      "description": "Name shown in the assistant."
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "id",
+                                    "name"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The person or group chosen in the first step, or null."
+                            },
+                            "level": {
+                              "type": "string",
+                              "enum": [
+                                "reader",
+                                "commenter",
+                                "editor",
+                                "admin"
+                              ],
+                              "description": "What they may do."
+                            },
+                            "where": {
+                              "type": "string",
+                              "enum": [
+                                "space",
+                                "page",
+                                "pageAndChildren"
+                              ],
+                              "description": "Where they get access."
+                            },
+                            "page": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "description": "ID of the page."
+                                    },
+                                    "title": {
+                                      "type": "string",
+                                      "maxLength": 500,
+                                      "description": "Title shown in the assistant."
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "title"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The page chosen for page access, or null."
+                            }
+                          },
+                          "required": [
+                            "step",
+                            "holder",
+                            "level",
+                            "where",
+                            "page"
+                          ],
+                          "additionalProperties": false,
+                          "description": "An unfinished Give access assistant."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The unfinished assistant, or null."
+                    }
+                  },
+                  "required": [
+                    "draft"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Your unfinished Give access assistant for this space."
+                },
+                "example": {
+                  "draft": {
+                    "step": 1,
+                    "holder": {
+                      "kind": "account",
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                      "name": "Anna Berger"
+                    },
+                    "level": "editor",
+                    "where": "space",
+                    "page": null
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/spaces/{spaceId}/give-access/preview": {
       "post": {
         "operationId": "pageAccess.giveSpacePreview",
@@ -135786,7 +137027,7 @@
             "description": "Done. The response has no body."
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidSetting`: The setting value is not valid. `settingBelowMinimum`: The value is below the minimum set for the instance.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidSetting`: The setting value is not valid. `settingAboveMaximum`: The value is above the maximum set for the instance. `settingBelowMinimum`: The value is below the minimum set for the instance.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -135815,6 +137056,14 @@
                       "title": "The setting value is not valid",
                       "status": 400,
                       "code": "invalidSetting"
+                    }
+                  },
+                  "settingAboveMaximum": {
+                    "value": {
+                      "type": "urn:pagehall:problem:settingAboveMaximum",
+                      "title": "The value is above the maximum set for the instance",
+                      "status": 400,
+                      "code": "settingAboveMaximum"
                     }
                   },
                   "settingBelowMinimum": {
@@ -141607,6 +142856,22 @@
             "description": "Level that locked the setting, for `settingLocked`.",
             "type": "string"
           },
+          "minimum": {
+            "description": "Lowest allowed value, for `settingBelowMinimum`.",
+            "type": "number"
+          },
+          "maximum": {
+            "description": "Highest allowed value, for `settingAboveMaximum`.",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "const": "unlimited"
+              }
+            ]
+          },
           "maxLifetimeDays": {
             "description": "Maximum lifetime of API tokens in days, for `expiryRequired` and `expiryTooLate`.",
             "type": "integer",
@@ -141702,6 +142967,37 @@
             },
             "additionalProperties": {
               "$ref": "#/components/schemas/Schema113ae44d8375"
+            }
+          }
+        ]
+      },
+      "Schema1a810d563c56": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          },
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Schema1a810d563c56"
+            }
+          },
+          {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Schema1a810d563c56"
             }
           }
         ]

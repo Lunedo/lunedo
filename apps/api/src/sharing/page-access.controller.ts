@@ -1,5 +1,11 @@
-import { Body, Controller, Delete, Get, Inject, Param, Post, Query, Req } from "@nestjs/common";
-import { type AccessChange, type Principal, restrictionKinds } from "@pagehall/server";
+import { Body, Controller, Delete, Get, Inject, Param, Post, Put, Query, Req } from "@nestjs/common";
+import {
+  type AccessChange,
+  type GiveAccessDraft,
+  giveAccessDraftSchema,
+  type Principal,
+  restrictionKinds,
+} from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
@@ -58,6 +64,18 @@ const invitationResultSchema = z
     expiresAt: z.iso.datetime().describe("When the invitation expires. ISO 8601 timestamp in UTC."),
   })
   .describe("The invitation that was sent.");
+
+const draftResponseSchema = z
+  .object({ draft: giveAccessDraftSchema.nullable().describe("The unfinished assistant, or null.") })
+  .describe("Your unfinished Give access assistant for this space.");
+
+const exampleDraft: GiveAccessDraft = {
+  step: 1,
+  holder: { kind: "account", id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger" },
+  level: "editor",
+  where: "space",
+  page: null,
+};
 
 const exampleEffect = {
   pages: 34,
@@ -324,6 +342,54 @@ export class PageAccessController {
       body.level,
     );
     return { ...effect, impact };
+  }
+
+  @Get("spaces/:spaceId/give-access/draft")
+  @Permission("space.manage", space)
+  @ApiRoute({
+    summary: "Read your Give access draft",
+    description:
+      "Returns the Give access assistant you left unfinished in this space, so it can be continued. Each person has their own draft per space.",
+    tags: [TAG],
+    params: spaceParams,
+    response: { description: "The draft.", schema: draftResponseSchema, example: { draft: exampleDraft } },
+  })
+  async giveAccessDraft(@Param("spaceId") spaceId: string, @Req() request: FastifyRequest) {
+    return { draft: await this.#services.giveAccessDrafts.get(actorOf(request), spaceId) };
+  }
+
+  @Put("spaces/:spaceId/give-access/draft")
+  @Permission("space.manage", space)
+  @ApiRoute({
+    summary: "Save your Give access draft",
+    description:
+      "Stores the state of the unfinished Give access assistant for you in this space, replacing the previous draft. Nothing changes who has access.",
+    tags: [TAG],
+    status: 200,
+    params: spaceParams,
+    body: giveAccessDraftSchema,
+    bodyExample: exampleDraft,
+    response: { description: "The draft.", schema: draftResponseSchema, example: { draft: exampleDraft } },
+  })
+  async saveGiveAccessDraft(
+    @Param("spaceId") spaceId: string,
+    @Body() body: GiveAccessDraft,
+    @Req() request: FastifyRequest,
+  ) {
+    return { draft: await this.#services.giveAccessDrafts.save(actorOf(request), spaceId, body) };
+  }
+
+  @Delete("spaces/:spaceId/give-access/draft")
+  @Permission("space.manage", space)
+  @ApiRoute({
+    summary: "Discard your Give access draft",
+    description:
+      "Removes your unfinished Give access assistant in this space. It does nothing when there is none.",
+    tags: [TAG],
+    params: spaceParams,
+  })
+  async discardGiveAccessDraft(@Param("spaceId") spaceId: string, @Req() request: FastifyRequest) {
+    await this.#services.giveAccessDrafts.discard(actorOf(request), spaceId);
   }
 
   @Post("spaces/:spaceId/give-access/preview")

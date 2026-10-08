@@ -13,6 +13,7 @@ import { KeyRingHolder } from "../crypto/key-ring-holder.js";
 import { masterKeyVersionsInUse } from "../crypto/key-usage.js";
 import { masterStreamKeys, rewrapStreamHeader, STREAM_HEADER_LENGTH } from "../crypto/stream.js";
 import { createLogger } from "../logging/logger.js";
+import { ValueSigner } from "../sharing/signer.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { FileService, FileTooLargeError, fileStreamOwner } from "./files.js";
@@ -105,7 +106,8 @@ describe.skipIf(!baseUrl)("the encrypted file store", () => {
   });
 
   function service(store: FileStore) {
-    return new FileService({ database: test.database, store, keyRing, logger });
+    const signer = new ValueSigner({ database: test.database, encryption: test.encryption });
+    return new FileService({ database: test.database, store, keyRing, logger, signer });
   }
 
   async function roundTrips(files: FileService) {

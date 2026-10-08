@@ -7,7 +7,12 @@ import { request } from "../../api/request.js";
 import { SettingsList } from "../../components/settings-list.js";
 import { SettingsPage } from "../../screens/settings/settings-page.js";
 import { useInstanceSettingMutation } from "../../settings/setting-mutations.js";
-import { FILE_KEYS, SHARING_KEYS, TRASH_KEYS, TRASH_MINIMUM_KEYS } from "../../settings/settings-index.js";
+import {
+  INSTANCE_FILE_KEYS,
+  SHARING_KEYS,
+  TRASH_KEYS,
+  TRASH_MINIMUM_KEYS,
+} from "../../settings/settings-index.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { contentKeys } from "../content-queries.js";
 import { DeletedContent } from "../trash/deleted-content.js";
@@ -69,7 +74,7 @@ export function InstanceContentScreen() {
       <Panel title={t("content.filesSection")}>
         <SettingsList
           settings={settings.data}
-          keys={FILE_KEYS}
+          keys={INSTANCE_FILE_KEYS}
           level="instance"
           canManage={canManage}
           onChange={change}

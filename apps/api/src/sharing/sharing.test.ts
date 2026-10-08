@@ -257,4 +257,31 @@ describe.skipIf(!databaseBaseUrl)("page access through the API", () => {
       (await member.client.get(`/api/v1/organizations/${organizationId}/access-overview`)).statusCode,
     ).toBe(403);
   });
+
+  it("keep each person's Give access draft per space until it is discarded", async () => {
+    const admin = await person();
+    const reader = await person();
+    const created = await space([
+      { principalKind: "account", principalId: admin.id, role: "admin" },
+      { principalKind: "account", principalId: reader.id, role: "reader" },
+    ]);
+    const url = `/api/v1/spaces/${created.id}/give-access/draft`;
+    const draft = {
+      step: 2,
+      holder: { kind: "account", id: reader.id, name: "Reader" },
+      level: "editor",
+      where: "space",
+      page: null,
+    };
+    expect((await admin.client.get(url)).json()).toEqual({ draft: null });
+    const saved = await admin.client.put(url, draft);
+    expect(saved.statusCode, saved.body).toBe(200);
+    expect((await admin.client.get(url)).json()).toEqual({ draft });
+    expect((await owner.get(url)).json()).toEqual({ draft: null });
+    expect((await reader.client.get(url)).statusCode).toBe(403);
+    expect((await reader.client.put(url, draft)).statusCode).toBe(403);
+    expect((await admin.client.put(url, { ...draft, level: "owner" })).statusCode).toBe(400);
+    expect((await admin.client.delete(url)).statusCode).toBe(204);
+    expect((await admin.client.get(url)).json()).toEqual({ draft: null });
+  });
 });

@@ -1,7 +1,7 @@
-import { Button, Drawer, EmptyState, Notice, Skeleton, useToast } from "@pagehall/ui";
+import { Badge, Button, Drawer, EmptyState, Notice, Skeleton, useToast } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { Download, FileQuestion, History, RotateCcw } from "lucide-react";
+import { Download, FileQuestion, History, Pin, PinOff, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
@@ -151,6 +151,7 @@ function Versions({ attachment, canEdit }: { attachment: Attachment; canEdit: bo
   const queryClient = useQueryClient();
   const versions = useQuery(versionsQuery(attachment.id));
   const [restoring, setRestoring] = useState<number | null>(null);
+  const [keeping, setKeeping] = useState<number | null>(null);
   if (versions.isPending) return <Skeleton className="h-12 w-full" />;
   if (versions.isError) {
     return (
@@ -183,18 +184,50 @@ function Versions({ attachment, canEdit }: { attachment: Attachment; canEdit: bo
       setRestoring(null);
     }
   };
+  const keep = async (number: number, kept: boolean) => {
+    setKeeping(number);
+    try {
+      await request(() =>
+        api.PUT("/api/v1/attachments/{attachmentId}/versions/{number}/keep", {
+          params: { path: { attachmentId: attachment.id, number } },
+          body: { kept },
+        }),
+      );
+      await queryClient.invalidateQueries({ queryKey: attachmentKeys.versions(attachment.id) });
+      toast({
+        title: kept ? t("files.versions.keptDone", { number }) : t("files.versions.releasedDone", { number }),
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        title: kept ? t("files.versions.keepFailed") : t("files.versions.releaseFailed"),
+        description: problemMessage(t, error),
+        variant: "error",
+      });
+    } finally {
+      setKeeping(null);
+    }
+  };
   return (
     <section aria-labelledby="attachment-versions" className="flex flex-col gap-2">
       <h3 id="attachment-versions" className="font-semibold">
         {t("files.versions.title")}
       </h3>
+      {canEdit ? <p className="text-sm text-text-muted">{t("files.versions.keepHint")}</p> : null}
       <ul className="flex flex-col divide-y divide-border">
         {versions.data.map((version) => (
           <li key={version.id} className="flex flex-wrap items-center gap-2 py-2">
             <div className="min-w-0 flex-1">
-              <p className="font-medium">
-                {t("files.versions.number", { number: version.number })}
-                {version.number === attachment.version ? ` · ${t("files.versions.current")}` : ""}
+              <p className="flex flex-wrap items-center gap-2 font-medium">
+                <span>
+                  {t("files.versions.number", { number: version.number })}
+                  {version.number === attachment.version ? ` · ${t("files.versions.current")}` : ""}
+                </span>
+                {version.kept ? (
+                  <Badge variant="accent" icon={Pin}>
+                    {t("files.versions.kept")}
+                  </Badge>
+                ) : null}
               </p>
               <p className="text-sm text-text-muted">
                 {t("files.versions.meta", {
@@ -215,6 +248,17 @@ function Versions({ attachment, canEdit }: { attachment: Attachment; canEdit: bo
               <Download aria-hidden="true" className="size-icon" />
               {t("files.download")}
             </a>
+            {canEdit ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                icon={version.kept ? PinOff : Pin}
+                loading={keeping === version.number}
+                onClick={() => void keep(version.number, !version.kept)}
+              >
+                {version.kept ? t("files.versions.release") : t("files.versions.keep")}
+              </Button>
+            ) : null}
             {canEdit && version.number !== attachment.version ? (
               <Button
                 size="sm"

@@ -1,5 +1,5 @@
 import type { Readable } from "node:stream";
-import { Controller, Delete, Get, Inject, Param, Post, Query, Req, Res } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Inject, Param, Post, Put, Query, Req, Res } from "@nestjs/common";
 import { accountPrincipal, FILE_NAME_MAX_LENGTH } from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
@@ -17,6 +17,7 @@ import {
   exampleAttachment,
   exampleAttachmentVersion,
   fileLinkSchema,
+  keepVersionSchema,
 } from "./schemas.js";
 import { sendAttachment } from "./serve.js";
 
@@ -161,7 +162,7 @@ export class AttachmentsController {
   @ApiRoute({
     summary: "List the versions of an attachment",
     description:
-      "Lists the stored versions, newest first. Versions beyond the configured number are removed.",
+      "Lists the stored versions, newest first. When a new version is added and more versions than configured exist, the oldest version not marked to keep is removed.",
     tags: [TAG],
     params: attachmentParams,
     response: {
@@ -191,6 +192,33 @@ export class AttachmentsController {
     @Req() request: FastifyRequest,
   ) {
     return this.#services.attachments.restoreVersion(actorOf(request), attachmentId, number);
+  }
+
+  @Put("attachments/:attachmentId/versions/:number/keep")
+  @Permission("attachment.edit", attachment)
+  @ApiRoute({
+    summary: "Keep a version",
+    description:
+      "Marks a version to keep or removes the mark. Marked versions are never removed automatically and do not count towards the number of versions kept. The change is recorded in the audit log.",
+    tags: [TAG],
+    params: versionParams,
+    body: keepVersionSchema,
+    bodyExample: { kept: true },
+    status: 200,
+    response: {
+      description: "The version.",
+      schema: attachmentVersionSchema,
+      example: { ...exampleAttachmentVersion, kept: true },
+    },
+    errors: ["versionNotFound"],
+  })
+  async keepVersion(
+    @Param("attachmentId") attachmentId: string,
+    @Param("number") number: number,
+    @Body() body: z.output<typeof keepVersionSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.attachments.setKept(actorOf(request), attachmentId, number, body.kept);
   }
 
   @Delete("attachments/:attachmentId")

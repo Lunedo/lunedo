@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHmac, type Hmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { eq } from "drizzle-orm";
 import type { Encryption } from "../crypto/envelope.js";
 import type { Database } from "../database/database.js";
@@ -52,6 +52,10 @@ export class ValueSigner {
       });
     }
     return this.#key;
+  }
+
+  async mac(purpose: string): Promise<Hmac> {
+    return createHmac("sha256", await this.#keyOnce()).update(`${purpose}\n`, "utf8");
   }
 
   async sign(purpose: string, parts: readonly string[], expiresAt: Date): Promise<string> {

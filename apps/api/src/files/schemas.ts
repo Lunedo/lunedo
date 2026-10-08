@@ -50,10 +50,20 @@ export const attachmentVersionSchema = z
     size: z.number().int().describe("Size in bytes."),
     contentType: z.string().describe("Media type, decided from the content."),
     restoredFrom: z.number().int().nullable().describe("Version this one restored, or null for an upload."),
+    kept: z
+      .boolean()
+      .describe(
+        "Whether the version is marked to keep. Marked versions are never removed automatically and do not count towards the number of versions kept.",
+      ),
     uploadedBy: person.nullable().describe("Who uploaded or restored it."),
     uploadedAt: timestamp("When it was stored."),
   })
   .describe("A version of an attachment.");
+
+export const keepVersionSchema = z
+  .object({ kept: z.boolean().describe("True to keep the version, false to let it be removed again.") })
+  .strict()
+  .describe("Whether to keep a version.");
 
 export const fileLinkSchema = z
   .object({
@@ -84,6 +94,7 @@ export const exampleAttachmentVersion = {
   size: 48213,
   contentType: "image/png",
   restoredFrom: null,
+  kept: false,
   uploadedBy: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger" },
   uploadedAt: "2026-10-01T09:30:00.000Z",
 };

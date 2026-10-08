@@ -1319,7 +1319,10 @@
     "fileTooLargeLimit": "Die Datei ist größer als die Grenze von {size}. Wähle eine kleinere Datei oder bitte die Administration, die Grenze zu erhöhen.",
     "rangeNotSatisfiable": "Die Datei hat sich beim Laden geändert. Lade die Seite neu.",
     "tooManyRequests": "Du hast heute viele Zugriffsanfragen gesendet. Warte bis morgen oder wende dich an die Space-Admins.",
-    "linkExpiryTooLate": "Links für alle dürfen in dieser Organisation höchstens {days, plural, one {# Tag} other {# Tage}} gelten. Wähle ein früheres Datum."
+    "linkExpiryTooLate": "Links für alle dürfen in dieser Organisation höchstens {days, plural, one {# Tag} other {# Tage}} gelten. Wähle ein früheres Datum.",
+    "versionNotFound": "Diese Version wurde inzwischen entfernt. Lade die Versionen neu.",
+    "settingAboveMaximum": "Der Wert liegt über dem Höchstwert, den die Instanz erlaubt. Wähle einen niedrigeren Wert.",
+    "settingAboveMaximumValue": "Die Instanz erlaubt höchstens {maximum}. Wähle einen Wert bis {maximum}."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -2013,8 +2016,8 @@
         "description": "Größere Uploads werden abgelehnt, bevor etwas gespeichert wird, mit einer Meldung, die die Grenze nennt. Organisationen können sie nur senken."
       },
       "files_keepVersions": {
-        "label": "Zu behaltende frühere Versionen einer Datei",
-        "description": "Wird eine Datei mit gleichem Namen erneut hochgeladen, werden ältere Versionen über dieser Anzahl entfernt. Nicht gesetzt heißt: Alle Versionen bleiben erhalten."
+        "label": "Versionen einer Datei, die behalten werden",
+        "description": "Wird eine neue Version hochgeladen und gibt es mehr als diese Anzahl, wird die älteste nicht zum Behalten markierte Version entfernt. Markierte Versionen zählen nicht mit."
       },
       "sharing_shareLinks": {
         "label": "Freigabelinks",
@@ -2031,6 +2034,10 @@
       "sharing_membersInviteGuests": {
         "label": "Mitglieder können Gäste zu einer Seite einladen",
         "description": "Wenn eingeschaltet, kann jede Person, die eine Seite freigeben darf, jemanden per E-Mail als Gast einladen. Die Administration der Organisation kann das immer."
+      },
+      "files_keepVersionsMaximum": {
+        "label": "Höchstens behaltene Versionen für Organisationen und Spaces",
+        "description": "Organisationen und Spaces können jede Zahl bis zu diesem Höchstwert wählen. Nur hier lässt sich „Kein Limit“ einstellen."
       }
     },
     "disabled": {
@@ -2049,7 +2056,8 @@
     "searchNone": "Keine Einstellung passt zu „{query}“. Prüfe die Schreibweise oder suche nach einem anderen Wort.",
     "searchClear": "Suche leeren",
     "searchWhere": "{page} › {section}",
-    "lockForSpaces": "Für Spaces sperren"
+    "lockForSpaces": "Für Spaces sperren",
+    "aboveMaximum": "Gib eine ganze Zahl von {minimum} bis {maximum} ein. Die Instanz erlaubt höchstens {maximum}."
   },
   "security": {
     "activity": {
@@ -3160,6 +3168,10 @@
       },
       "access": {
         "overviewExported": "Rechteübersicht exportiert"
+      },
+      "attachment": {
+        "versionKept": "Dateiversion zum Behalten markiert",
+        "versionReleased": "Dateiversion wird nicht mehr behalten"
       }
     },
     "action": "Aktion",
@@ -4998,7 +5010,15 @@
       "restore": "Wiederherstellen",
       "restored": "Version {number} ist wieder aktuell",
       "restoreFailed": "Die Version wurde nicht wiederhergestellt. Versuche es erneut.",
-      "loadFailed": "die Versionen"
+      "loadFailed": "die Versionen",
+      "keepHint": "Zum Behalten markierte Versionen werden nie automatisch entfernt und zählen nicht zur Grenze.",
+      "kept": "Behalten",
+      "keep": "Behalten",
+      "release": "Nicht mehr behalten",
+      "keptDone": "Version {number} wird behalten",
+      "releasedDone": "Version {number} kann wieder entfernt werden, wenn neuere Versionen hinzukommen",
+      "keepFailed": "Die Version wurde nicht zum Behalten markiert. Versuche es noch einmal.",
+      "releaseFailed": "Die Markierung wurde nicht entfernt. Versuche es noch einmal."
     },
     "storage": {
       "used": "{size} belegt durch {count, plural, one {# gespeicherte Datei} other {# gespeicherte Dateien}}, einschließlich früherer Versionen",
@@ -5295,7 +5315,11 @@
       "next": "Weiter",
       "confirm": "{name} „{role}“ geben",
       "done": "Zugriff für {name} gegeben",
-      "failed": "Der Zugriff wurde nicht gegeben"
+      "failed": "Der Zugriff wurde nicht gegeben",
+      "cancel": "Abbrechen und verwerfen",
+      "discardFailed": "Der Entwurf wurde nicht verworfen. Versuche es noch einmal.",
+      "saveFailedTitle": "Dein Fortschritt ist noch nicht gespeichert",
+      "saveFailed": "{reason} Du kannst weitermachen; der Assistent speichert mit der nächsten Änderung erneut."
     },
     "discoverable": {
       "title": "Spaces, um deren Beitritt du bitten kannst",

@@ -12,6 +12,7 @@ export const problems = {
   invalidMailConfiguration: { status: 400, title: "The e-mail configuration is not valid" },
   invalidSetting: { status: 400, title: "The setting value is not valid" },
   settingBelowMinimum: { status: 400, title: "The value is below the minimum set for the instance" },
+  settingAboveMaximum: { status: 400, title: "The value is above the maximum set for the instance" },
   settingManagedElsewhere: { status: 400, title: "The setting is changed through another endpoint" },
   ambiguousCredentials: { status: 400, title: "The request carries both a session and an API token" },
   invalidPrincipal: { status: 400, title: "The role cannot go to this principal" },
@@ -248,6 +249,11 @@ export const problemSchema = z
     problem: z.string().optional().describe("Which password rule failed, for `passwordPolicy`."),
     minLength: z.number().int().optional().describe("Minimum password length, for `passwordPolicy`."),
     lockedBy: z.string().optional().describe("Level that locked the setting, for `settingLocked`."),
+    minimum: z.number().optional().describe("Lowest allowed value, for `settingBelowMinimum`."),
+    maximum: z
+      .union([z.number(), z.literal("unlimited")])
+      .optional()
+      .describe("Highest allowed value, for `settingAboveMaximum`."),
     maxLifetimeDays: z
       .number()
       .int()

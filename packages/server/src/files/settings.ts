@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { defineSetting } from "../settings/definition.js";
+import { defineSetting, type Limit, UNLIMITED } from "../settings/definition.js";
 
 export const MEGABYTE = 1024 * 1024;
 
@@ -12,12 +12,23 @@ export const maxFileSizeSetting = defineSetting({
   stricterOnly: "lower",
 });
 
-export const keepVersionsSetting = defineSetting<number | null>({
-  key: "files.keepVersions",
-  schema: z.number().int().min(1).max(1000).nullable(),
-  default: null,
-  levels: ["instance", "organization", "space"],
-  lockable: true,
+const versionLimit = z.union([z.number().int().min(1).max(1_000_000), z.literal(UNLIMITED)]);
+
+export const keepVersionsMaximumSetting = defineSetting<Limit>({
+  key: "files.keepVersionsMaximum",
+  schema: versionLimit,
+  default: 500,
+  levels: ["instance"],
+  lockable: false,
 });
 
-export const fileSettings = [maxFileSizeSetting, keepVersionsSetting];
+export const keepVersionsSetting = defineSetting<Limit>({
+  key: "files.keepVersions",
+  schema: versionLimit,
+  default: 50,
+  levels: ["instance", "organization", "space"],
+  lockable: true,
+  maximum: keepVersionsMaximumSetting,
+});
+
+export const fileSettings = [maxFileSizeSetting, keepVersionsMaximumSetting, keepVersionsSetting];

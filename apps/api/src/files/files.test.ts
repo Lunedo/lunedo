@@ -262,4 +262,33 @@ describe.skipIf(!databaseBaseUrl)("attachments through the API", () => {
     const back = await owner.post(`/api/v1/pages/${pageId}/attachments/${first.id}/restore`);
     expect(back.statusCode, back.body).toBe(200);
   });
+
+  it("mark a version to keep for editors only", async () => {
+    const reader = await person();
+    const { pageId } = await page([{ principalKind: "account", principalId: reader.id, role: "reader" }]);
+    const file = await uploaded(pageId, "contract.txt", randomBytes(32));
+    const url = `/api/v1/attachments/${file.id}/versions/1/keep`;
+    const denied = await reader.client.put(url, { kept: true });
+    expect(denied.statusCode, denied.body).toBe(403);
+    const kept = await owner.put(url, { kept: true });
+    expect(kept.statusCode, kept.body).toBe(200);
+    expect(kept.json()).toMatchObject({ number: 1, kept: true });
+    const versions = await owner.get(`/api/v1/attachments/${file.id}/versions`);
+    expect(versions.json()).toMatchObject([{ number: 1, kept: true }]);
+    const missing = await owner.put(`/api/v1/attachments/${file.id}/versions/9/keep`, { kept: true });
+    expect(missing.statusCode).toBe(404);
+  });
+
+  it("refuse more versions than the instance allows and show the maximum", async () => {
+    const url = `/api/v1/organizations/${organizationId}/settings/files.keepVersions`;
+    const refused = await owner.put(url, { value: 501 });
+    expect(refused.statusCode).toBe(400);
+    expect(refused.json()).toMatchObject({ code: "settingAboveMaximum", maximum: 500 });
+    expect((await owner.put(url, { value: "unlimited" })).statusCode).toBe(400);
+    const listed = await owner.get(`/api/v1/organizations/${organizationId}/settings`);
+    const entry = (
+      listed.json() as { items: { key: string; value: unknown; maximum: unknown }[] }
+    ).items.find((setting) => setting.key === "files.keepVersions");
+    expect(entry).toMatchObject({ value: 50, maximum: 500 });
+  });
 });

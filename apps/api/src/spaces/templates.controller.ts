@@ -496,7 +496,7 @@ export class TemplatesController {
     params: spaceSettingParams,
     body: settingUpdateSchema,
     bodyExample: { value: "live" },
-    errors: ["invalidSetting", "settingLocked", "settingBelowMinimum"],
+    errors: ["invalidSetting", "settingLocked", "settingBelowMinimum", "settingAboveMaximum"],
   })
   async updateSpaceSetting(
     @Param("spaceId") spaceId: string,

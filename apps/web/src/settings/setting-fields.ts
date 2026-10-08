@@ -7,6 +7,7 @@ export type SettingFieldType =
       min: number;
       max: number;
       unit: "characters" | "count" | "perMinute" | "megabytes" | "versions";
+      unlimited?: boolean;
     }
   | {
       kind: "duration";
@@ -41,7 +42,14 @@ const fields: SettingField[] = [
   { key: "instance.name", type: { kind: "text" } },
   { key: "reactions.enabled", type: { kind: "boolean" } },
   { key: "files.maxFileSizeMegabytes", type: { kind: "number", min: 1, max: 100_000, unit: "megabytes" } },
-  { key: "files.keepVersions", type: { kind: "number", min: 1, max: 1000, unit: "versions" } },
+  {
+    key: "files.keepVersionsMaximum",
+    type: { kind: "number", min: 1, max: 1_000_000, unit: "versions", unlimited: true },
+  },
+  {
+    key: "files.keepVersions",
+    type: { kind: "number", min: 1, max: 1_000_000, unit: "versions", unlimited: true },
+  },
   { key: "sharing.shareLinks", type: { kind: "boolean" } },
   { key: "sharing.anyoneLinks", type: { kind: "boolean" } },
   { key: "sharing.anyoneLinkMaxDays", type: days(1, 3650, [7, 30, 90]) },

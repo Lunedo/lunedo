@@ -79,6 +79,11 @@ const spaceRoleNames = ["reader", "commenter", "editor", "admin"] as const;
 const pageModeNames = ["publish", "live"] as const;
 const itemKindNames = ["page", "folder", "link", "blogPost"] as const;
 const pageFields = z.object({ spaceId: z.uuid(), title: z.string() });
+const attachmentVersionFields = pageFields.extend({
+  attachmentId: z.uuid(),
+  fileName: z.string(),
+  version: z.number().int().positive(),
+});
 const trashFields = z.object({
   spaceId: z.uuid(),
   title: z.string(),
@@ -1256,6 +1261,18 @@ export const auditCatalog = {
       decision: z.enum(["approved", "declined"]),
       role: z.enum(spaceRoleNames).nullable(),
     }),
+    visibility: "organization",
+  }),
+  "attachment.versionKept": event({
+    actor: ["account"],
+    target: "page",
+    fields: attachmentVersionFields,
+    visibility: "organization",
+  }),
+  "attachment.versionReleased": event({
+    actor: ["account"],
+    target: "page",
+    fields: attachmentVersionFields,
     visibility: "organization",
   }),
   "access.overviewExported": event({

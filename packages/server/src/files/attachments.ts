@@ -2,9 +2,11 @@ import type { Readable } from "node:stream";
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
+import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
+import { UNLIMITED } from "../settings/definition.js";
 import type { SettingsService } from "../settings/service.js";
-import { actorIdOf, SpaceError } from "../spaces/common.js";
+import { actorIdOf, auditScopeOf, SpaceError } from "../spaces/common.js";
 import type { PeopleService } from "../spaces/people.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { type FileService, FileTooLargeError } from "./files.js";
@@ -23,6 +25,7 @@ export interface AttachmentVersion {
   size: number;
   contentType: string;
   restoredFrom: number | null;
+  kept: boolean;
   uploadedBy: { id: string; name: string | null } | null;
   uploadedAt: Date;
 }
@@ -51,7 +54,7 @@ export interface AttachmentContent {
   preview: PreviewKind;
   inline: boolean;
   version: number;
-  sha256: string;
+  digest: string;
 }
 
 const INLINE_TYPES = new Set([
@@ -114,17 +117,20 @@ export class AttachmentService {
   readonly #files: FileService;
   readonly #settings: SettingsService;
   readonly #people: PeopleService;
+  readonly #audit: AuditLog;
 
   constructor(options: {
     database: Database;
     files: FileService;
     settings: SettingsService;
     people: PeopleService;
+    audit: AuditLog;
   }) {
     this.#database = options.database;
     this.#files = options.files;
     this.#settings = options.settings;
     this.#people = options.people;
+    this.#audit = options.audit;
   }
 
   get files(): FileService {
@@ -213,6 +219,7 @@ export class AttachmentService {
       throw new FileTooLargeError(limit);
     }
     const stored = await this.#files.write(input.body, { name, maxBytes: limit });
+    let fileId = stored.id;
     try {
       const attachmentId = await this.#database.transaction(async (tx) => {
         const location = await this.#location(tx, itemId);
@@ -227,11 +234,13 @@ export class AttachmentService {
             insert into attachments (id, item_id, name, name_key, created_by)
             values (${id}, ${itemId}, ${name}, ${key}, ${actorIdOf(actor)})`);
         }
-        await this.#addVersion(tx, actor, id, stored.id, name, null);
+        fileId = await this.#files.reuse(tx, stored);
+        await this.#addVersion(tx, actor, id, fileId, name, null);
         await this.#prune(tx, id, location);
         await signalSpaceChange(tx, { spaceId: location.space_id, kind: "page", itemId });
         return id;
       });
+      if (fileId !== stored.id) await this.#files.discard(stored.id);
       const attachment = await this.get(actor, attachmentId);
       if (!attachment) throw new Error("The attachment was not stored");
       return attachment;
@@ -277,13 +286,59 @@ export class AttachmentService {
       },
       { executor: tx },
     );
-    if (keep === null) return;
+    if (keep === UNLIMITED) return;
     await tx.execute(sql`
       delete from attachment_versions v
-      where v.attachment_id = ${attachmentId}
+      where v.attachment_id = ${attachmentId} and not v.kept
         and v.id <> (select current_version_id from attachments where id = ${attachmentId})
-        and v.number not in (select number from attachment_versions where attachment_id = ${attachmentId}
+        and v.number not in (select number from attachment_versions
+          where attachment_id = ${attachmentId} and not kept
           order by number desc limit ${keep})`);
+  }
+
+  async setKept(
+    actor: Principal,
+    attachmentId: string,
+    number: number,
+    kept: boolean,
+  ): Promise<AttachmentVersion> {
+    await this.#database.transaction(async (tx) => {
+      const attachment = await tx.execute<{ item_id: string; name: string }>(sql`
+        select item_id, name from attachments where id = ${attachmentId} and deleted_at is null for update`);
+      const row = attachment.rows[0];
+      if (!row) throw new AttachmentError("attachmentNotFound", "The file does not exist");
+      const version = await tx.execute<{ kept: boolean }>(sql`
+        select kept from attachment_versions where attachment_id = ${attachmentId} and number = ${number}`);
+      const current = version.rows[0];
+      if (!current) throw new AttachmentError("versionNotFound", "This version does not exist anymore");
+      if (current.kept === kept) return;
+      await tx.execute(sql`
+        update attachment_versions set kept = ${kept}, updated_at = now()
+        where attachment_id = ${attachmentId} and number = ${number}`);
+      const location = await this.#location(tx, row.item_id);
+      const page = await tx.execute<{ title: string }>(
+        sql`select title from tree_items where id = ${row.item_id}`,
+      );
+      await this.#audit.record(tx, {
+        name: kept ? "attachment.versionKept" : "attachment.versionReleased",
+        actor,
+        targetId: row.item_id,
+        fields: {
+          spaceId: location.space_id,
+          title: page.rows[0]?.title ?? "",
+          attachmentId,
+          fileName: row.name,
+          version: number,
+        },
+        scope: auditScopeOf({ organizationId: location.organization_id }),
+      });
+      await signalSpaceChange(tx, { spaceId: location.space_id, kind: "page", itemId: row.item_id });
+    });
+    const version = (await this.versions(actor, attachmentId)).find(
+      (candidate) => candidate.number === number,
+    );
+    if (!version) throw new AttachmentError("versionNotFound", "This version does not exist anymore");
+    return version;
   }
 
   async versions(viewer: Principal, attachmentId: string): Promise<AttachmentVersion[]> {
@@ -294,10 +349,12 @@ export class AttachmentService {
       size: string | number;
       content_type: string;
       restored_from: number | null;
+      kept: boolean;
       uploaded_by: string | null;
       created_at: Date | string;
     }>(sql`
-      select v.id, v.number, v.name, f.size, f.content_type, v.restored_from, v.uploaded_by, v.created_at
+      select v.id, v.number, v.name, f.size, f.content_type, v.restored_from, v.kept, v.uploaded_by,
+        v.created_at
       from attachment_versions v join stored_files f on f.id = v.file_id
       where v.attachment_id = ${attachmentId} order by v.number desc limit 500`);
     const names = await this.#people.visibleNames(
@@ -311,6 +368,7 @@ export class AttachmentService {
       size: Number(row.size),
       contentType: row.content_type,
       restoredFrom: row.restored_from,
+      kept: row.kept,
       uploadedBy: row.uploaded_by ? { id: row.uploaded_by, name: names.get(row.uploaded_by) ?? null } : null,
       uploadedAt: new Date(row.created_at),
     }));
@@ -394,12 +452,12 @@ export class AttachmentService {
       size: string | number;
       content_type: string;
       number: number;
-      sha256: Buffer | null;
+      content_digest: Buffer | null;
     }>(sql`
-      select a.id, v.file_id, v.name, f.size, f.content_type, v.number, f.sha256
+      select a.id, v.file_id, v.name, f.size, f.content_type, v.number, f.content_digest
       from attachments a join attachment_versions v
         on v.attachment_id = a.id and ${number === undefined ? sql`v.id = a.current_version_id` : sql`v.number = ${number}`}
-      join stored_files f on f.id = v.file_id and f.state = 'ready'
+      join stored_files f on f.id = v.file_id and f.state <> 'pending'
       where a.id = ${attachmentId} and a.deleted_at is null`);
     const row = result.rows[0];
     if (!row) return null;
@@ -411,7 +469,7 @@ export class AttachmentService {
       contentType: row.content_type,
       ...previewOf(row.content_type, row.name),
       version: row.number,
-      sha256: row.sha256?.toString("hex") ?? "",
+      digest: row.content_digest?.toString("hex") ?? "",
     };
   }
 

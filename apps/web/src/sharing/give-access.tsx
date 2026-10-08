@@ -9,9 +9,9 @@ import {
   Skeleton,
   useToast,
 } from "@pagehall/ui";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Check, UserPlus } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, ArrowRight, Check, UserPlus, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
@@ -39,26 +39,30 @@ interface Draft {
 const STEPS = ["who", "what", "where", "check"] as const;
 const EMPTY: Draft = { step: 0, holder: null, level: "reader", where: "space", page: null };
 
-function storageKey(spaceId: string): string {
-  return `pagehall.giveAccess.${spaceId}`;
+const SAVE_DELAY_MS = 500;
+
+function draftQuery(spaceId: string) {
+  return queryOptions({
+    queryKey: ["giveAccessDraft", spaceId],
+    queryFn: async () =>
+      (
+        await request(() =>
+          api.GET("/api/v1/spaces/{spaceId}/give-access/draft", { params: { path: { spaceId } } }),
+        )
+      ).draft,
+  });
 }
 
-function loadDraft(spaceId: string): Draft | null {
-  try {
-    const raw = globalThis.localStorage?.getItem(storageKey(spaceId));
-    return raw ? ({ ...EMPTY, ...(JSON.parse(raw) as Partial<Draft>) } as Draft) : null;
-  } catch {
-    return null;
-  }
+function saveDraft(spaceId: string, draft: Draft) {
+  return request(() =>
+    api.PUT("/api/v1/spaces/{spaceId}/give-access/draft", { params: { path: { spaceId } }, body: draft }),
+  );
 }
 
-function saveDraft(spaceId: string, draft: Draft | null) {
-  try {
-    if (draft) globalThis.localStorage?.setItem(storageKey(spaceId), JSON.stringify(draft));
-    else globalThis.localStorage?.removeItem(storageKey(spaceId));
-  } catch {
-    return;
-  }
+function discardDraft(spaceId: string) {
+  return request(() =>
+    api.DELETE("/api/v1/spaces/{spaceId}/give-access/draft", { params: { path: { spaceId } } }),
+  );
 }
 
 function isPageImpact(impact: GiveEffect["impact"]): impact is PageImpact {
@@ -167,18 +171,80 @@ function PagePicker({
   );
 }
 
-function Assistant({ onClose }: { onClose: () => void }) {
+function useDraftSaving(spaceId: string, draft: Draft) {
+  const queryClient = useQueryClient();
+  const [saveError, setSaveError] = useState<unknown>(null);
+  const saved = useRef(JSON.stringify(draft));
+  const latest = useRef(draft);
+  const stopped = useRef(false);
+  latest.current = draft;
+
+  const persist = useCallback(
+    (value: Draft) => {
+      const text = JSON.stringify(value);
+      if (stopped.current || text === saved.current) return;
+      saveDraft(spaceId, value)
+        .then(() => {
+          saved.current = text;
+          setSaveError(null);
+          if (!stopped.current) queryClient.setQueryData(draftQuery(spaceId).queryKey, value);
+        })
+        .catch(setSaveError);
+    },
+    [spaceId, queryClient],
+  );
+
+  useEffect(() => {
+    const timer = setTimeout(() => persist(draft), SAVE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [draft, persist]);
+
+  useEffect(() => () => persist(latest.current), [persist]);
+
+  return {
+    saveError,
+    retry: () => persist(latest.current),
+    stop: () => {
+      stopped.current = true;
+    },
+  };
+}
+
+function Assistant({ initial, onClose }: { initial: Draft; onClose: () => void }) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const { space } = useSpace();
   const queryClient = useQueryClient();
-  const [draft, setDraft] = useState<Draft>(() => loadDraft(space.id) ?? EMPTY);
+  const [draft, setDraft] = useState<Draft>(initial);
   const [error, setError] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [discarding, setDiscarding] = useState(false);
   const body = useRef<HTMLDivElement>(null);
-  useEffect(() => saveDraft(space.id, draft), [space.id, draft]);
+  const saving = useDraftSaving(space.id, draft);
   const update = (change: Partial<Draft>) => setDraft((current) => ({ ...current, ...change }));
+
+  const finish = async () => {
+    saving.stop();
+    await discardDraft(space.id);
+    queryClient.setQueryData(draftQuery(space.id).queryKey, null);
+  };
+
+  const cancel = async () => {
+    setDiscarding(true);
+    try {
+      await finish();
+      onClose();
+    } catch (problem) {
+      toast({
+        title: t("sharing.give.discardFailed"),
+        description: problemMessage(t, problem),
+        variant: "error",
+      });
+    } finally {
+      setDiscarding(false);
+    }
+  };
   const levels: Level[] =
     draft.where === "space" ? ["reader", "commenter", "editor", "admin"] : ["reader", "commenter", "editor"];
 
@@ -232,7 +298,7 @@ function Assistant({ onClose }: { onClose: () => void }) {
         await queryClient.invalidateQueries({ queryKey: sharingKeys.access(pageId) });
       }
       toast({ title: t("sharing.give.done", { name: holder.name }), variant: "success" });
-      saveDraft(space.id, null);
+      await finish().catch(() => undefined);
       onClose();
     } catch (problem) {
       setFailure(problemMessage(t, problem));
@@ -335,6 +401,16 @@ function Assistant({ onClose }: { onClose: () => void }) {
             ) : null}
           </>
         ) : null}
+        {saving.saveError ? (
+          <Notice variant="warning" title={t("sharing.give.saveFailedTitle")}>
+            <span className="flex flex-wrap items-center gap-2">
+              {t("sharing.give.saveFailed", { reason: problemMessage(t, saving.saveError) })}
+              <Button size="sm" variant="secondary" onClick={saving.retry}>
+                {t("errors.retry")}
+              </Button>
+            </span>
+          </Notice>
+        ) : null}
         {step === "check" ? (
           <>
             <Preview spaceId={space.id} draft={draft} />
@@ -347,13 +423,16 @@ function Assistant({ onClose }: { onClose: () => void }) {
         ) : null}
       </div>
       <div className="flex flex-wrap justify-between gap-2">
-        <Button
-          variant="secondary"
-          icon={ArrowLeft}
-          onClick={() => (draft.step === 0 ? onClose() : update({ step: draft.step - 1 }))}
-        >
-          {draft.step === 0 ? t("common.cancel") : t("sharing.give.back")}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" icon={X} loading={discarding} onClick={() => void cancel()}>
+            {t("sharing.give.cancel")}
+          </Button>
+          {draft.step > 0 ? (
+            <Button variant="secondary" icon={ArrowLeft} onClick={() => update({ step: draft.step - 1 })}>
+              {t("sharing.give.back")}
+            </Button>
+          ) : null}
+        </div>
         {step === "check" ? (
           <Button variant="primary" icon={Check} loading={busy} onClick={() => void confirm()}>
             {t("sharing.give.confirm", {
@@ -377,11 +456,12 @@ function Assistant({ onClose }: { onClose: () => void }) {
 export function GiveAccessButton({ spaceId }: { spaceId: string }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const draft = open ? null : loadDraft(spaceId);
+  const stored = useQuery({ ...draftQuery(spaceId), throwOnError: false });
+  const draft = stored.data ?? null;
   return (
     <>
       <Button variant="primary" icon={UserPlus} onClick={() => setOpen(true)}>
-        {draft?.holder ? t("sharing.give.continue") : t("sharing.give.open")}
+        {draft ? t("sharing.give.continue") : t("sharing.give.open")}
       </Button>
       <Dialog
         open={open}
@@ -390,7 +470,13 @@ export function GiveAccessButton({ spaceId }: { spaceId: string }) {
         title={t("sharing.give.title")}
         description={t("sharing.give.description")}
       >
-        {open ? <Assistant onClose={() => setOpen(false)} /> : null}
+        {open ? (
+          stored.isPending ? (
+            <Skeleton className="h-card w-full" />
+          ) : (
+            <Assistant initial={{ ...EMPTY, ...draft }} onClose={() => setOpen(false)} />
+          )
+        ) : null}
       </Dialog>
     </>
   );

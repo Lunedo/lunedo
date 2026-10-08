@@ -94,6 +94,7 @@ function routes(extra: Parameters<typeof mockApi>[0] = {}) {
           uploadedAt: "2026-10-05T08:00:00.000Z",
           uploadedBy: { id: "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c", name: "Olivia Owner" },
           restoredFrom: null,
+          kept: false,
         },
         {
           id: "01929b1e-0000-7000-8000-0000000000d1",
@@ -103,6 +104,7 @@ function routes(extra: Parameters<typeof mockApi>[0] = {}) {
           uploadedAt: "2026-10-04T08:00:00.000Z",
           uploadedBy: null,
           restoredFrom: null,
+          kept: true,
         },
       ],
     }),
@@ -260,6 +262,34 @@ describe("the attachments of a page", () => {
       expect(requests.some((r) => r.method === "POST" && r.path.endsWith("/versions/1/restore"))).toBe(true),
     );
     expect(await screen.findByText("Version 1 is current again")).toBeTruthy();
+  });
+
+  it("marks a version to keep and shows which versions are kept", async () => {
+    ({ requests } = routes({
+      [`PUT /api/v1/attachments/${REPORT}/versions/2/keep`]: () => ({ body: {} }),
+    }));
+    await renderSection(true);
+    await userEvent.click(await screen.findByRole("button", { name: /^Report\.pdf/ }));
+    const report = await screen.findByRole("dialog", { name: "Report.pdf" });
+    await userEvent.click(within(report).getByRole("button", { name: "Versions (2)" }));
+    expect(await within(report).findByText("Kept")).toBeTruthy();
+    expect(within(report).getByRole("button", { name: "Stop keeping" })).toBeTruthy();
+    await userEvent.click(within(report).getByRole("button", { name: "Keep" }));
+    await waitFor(() =>
+      expect(requests.find((r) => r.method === "PUT" && r.path.endsWith("/versions/2/keep"))?.body).toEqual({
+        kept: true,
+      }),
+    );
+    expect(await screen.findByText("Version 2 is kept")).toBeTruthy();
+  });
+
+  it("offers no keep marks to readers", async () => {
+    await renderSection(false);
+    await userEvent.click(await screen.findByRole("button", { name: /^Report\.pdf/ }));
+    const report = await screen.findByRole("dialog", { name: "Report.pdf" });
+    await userEvent.click(within(report).getByRole("button", { name: "Versions (2)" }));
+    expect(await within(report).findByText("Kept")).toBeTruthy();
+    expect(within(report).queryByRole("button", { name: "Keep" })).toBeNull();
   });
 
   it("explains a preview that could not be loaded and offers a retry", async () => {

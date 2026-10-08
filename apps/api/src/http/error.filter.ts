@@ -12,6 +12,7 @@ import {
   ProviderResponseError,
   RelyingPartyError,
   SessionGoneError,
+  SettingAboveMaximumError,
   SettingBelowMinimumError,
   SettingError,
   SettingLockedError,
@@ -141,6 +142,9 @@ function map(error: unknown): Mapped | null {
   }
   if (error instanceof SettingBelowMinimumError) {
     return { code: "settingBelowMinimum", detail: error.message, extensions: { minimum: error.minimum } };
+  }
+  if (error instanceof SettingAboveMaximumError) {
+    return { code: "settingAboveMaximum", detail: error.message, extensions: { maximum: error.maximum } };
   }
   if (error instanceof SettingLockedError) {
     return { code: "settingLocked", detail: error.message, extensions: { lockedBy: error.lockedBy.level } };

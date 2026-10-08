@@ -36,6 +36,8 @@ export function useSettingValueFormatter() {
   return (field: SettingField | undefined, value: unknown): string => {
     if (field?.type.kind === "duration" && field.type.nullable && value === null)
       return t("settings.noLimit");
+    if (field?.type.kind === "number" && field.type.unlimited && value === "unlimited")
+      return t("settings.noLimit");
     if (value === null || value === undefined || value === "") return t("settings.notSet");
     if (typeof value === "object" && "inApp" in value && "email" in value) {
       const channels = value as { inApp: unknown; email: unknown };
@@ -135,13 +137,14 @@ function SettingItem({
   const inherited = inheritedValue(entry, level);
   const control = field ? (
     <SettingControl
-      key={own ? "own" : "inherited"}
+      key={own ? (entry.value === "unlimited" ? "own-unlimited" : "own") : "inherited"}
       field={field}
       label={label}
       value={own ? entry.value : inherited}
       inheritedValue={inherited}
       inherited={!own}
       inheritedLabel={formatValue(inherited)}
+      maximum={entry.maximum}
       disabled={!writable}
       disabledReason={writable ? undefined : disabledReason(t, entry, level, editable, organizationName)}
       onSave={async (value) => {

@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import type { Hmac } from "node:crypto";
 import { pipeline as chain, type Readable, Transform, type TransformCallback } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { uuidv7 } from "@pagehall/shared";
@@ -18,6 +18,7 @@ import {
 } from "../crypto/stream.js";
 import type { Database, Executor } from "../database/database.js";
 import type { Logger } from "../logging/logger.js";
+import type { ValueSigner } from "../sharing/signer.js";
 import { type DetectedType, detectType, SNIFF_BYTES } from "./sniff.js";
 import type { ByteRange, FileStore } from "./store.js";
 
@@ -32,20 +33,27 @@ export class FileTooLargeError extends Error {
 export interface StoredFile {
   id: string;
   size: number;
-  sha256: string;
+  digest: string;
   type: DetectedType;
 }
 
+const CONTENT_DIGEST_PURPOSE = "file-content";
+
 class Inspector extends Transform {
   readonly #limit: number;
-  readonly hash = createHash("sha256");
+  readonly #mac: Hmac;
   head: Buffer[] = [];
   headLength = 0;
   size = 0;
 
-  constructor(limit: number) {
+  constructor(limit: number, mac: Hmac) {
     super();
     this.#limit = limit;
+    this.#mac = mac;
+  }
+
+  digest(): Buffer {
+    return this.#mac.digest();
   }
 
   override _transform(chunk: Buffer, _encoding: BufferEncoding, callback: TransformCallback): void {
@@ -59,7 +67,7 @@ class Inspector extends Transform {
       this.head.push(Buffer.from(part));
       this.headLength += part.length;
     }
-    this.hash.update(chunk);
+    this.#mac.update(chunk);
     callback(null, chunk);
   }
 }
@@ -78,12 +86,20 @@ export class FileService {
   readonly #store: FileStore;
   readonly #keyRing: KeyRingHolder;
   readonly #logger: Logger;
+  readonly #signer: ValueSigner;
 
-  constructor(options: { database: Database; store: FileStore; keyRing: KeyRingHolder; logger: Logger }) {
+  constructor(options: {
+    database: Database;
+    store: FileStore;
+    keyRing: KeyRingHolder;
+    logger: Logger;
+    signer: ValueSigner;
+  }) {
     this.#database = options.database;
     this.#store = options.store;
     this.#keyRing = options.keyRing;
     this.#logger = options.logger;
+    this.#signer = options.signer;
   }
 
   get store(): FileStore {
@@ -98,9 +114,10 @@ export class FileService {
     const id = uuidv7();
     const key = storageKey(id);
     const version = this.#keyRing.ring.currentVersion;
+    const mac = await this.#signer.mac(CONTENT_DIGEST_PURPOSE);
     await this.#database.execute(sql`
       insert into stored_files (id, storage_key, master_key_version, state) values (${id}, ${key}, ${version}, 'pending')`);
-    const inspector = new Inspector(options.maxBytes);
+    const inspector = new Inspector(options.maxBytes, mac);
     const encrypt = createEncryptStream(this.#keys(), {
       chunkSize: DEFAULT_CHUNK_SIZE,
       associatedData: associatedData(id),
@@ -120,12 +137,39 @@ export class FileService {
     }
     const head = Buffer.concat(inspector.head);
     const type = detectType(head, { name: options.name, truncated: inspector.size > head.length });
-    const sha256 = inspector.hash.digest();
+    const digest = inspector.digest();
     await this.#database.execute(sql`
-      update stored_files set size = ${inspector.size}, sha256 = ${sha256}, content_type = ${type.contentType},
-        state = 'ready', updated_at = now()
+      update stored_files set size = ${inspector.size}, content_digest = ${digest},
+        content_type = ${type.contentType}, state = 'ready', updated_at = now()
       where id = ${id}`);
-    return { id, size: inspector.size, sha256: sha256.toString("hex"), type };
+    return { id, size: inspector.size, digest: digest.toString("hex"), type };
+  }
+
+  async reuse(tx: Executor, file: StoredFile): Promise<string> {
+    const result = await tx.execute<{ id: string }>(sql`
+      select id from stored_files
+      where content_digest = ${Buffer.from(file.digest, "hex")} and size = ${file.size}
+        and content_type = ${file.type.contentType} and state = 'ready' and id <> ${file.id}
+      order by id limit 1
+      for update`);
+    return result.rows[0]?.id ?? file.id;
+  }
+
+  async discard(fileId: string): Promise<void> {
+    const claimed = await this.#database.execute<{ storage_key: string }>(sql`
+      update stored_files set state = 'orphaned', updated_at = now()
+      where id = ${fileId} and not exists (select 1 from attachment_versions v where v.file_id = ${fileId})
+      returning storage_key`);
+    const row = claimed.rows[0];
+    if (!row) return;
+    try {
+      await this.#store.delete(row.storage_key);
+      await this.#database.execute(sql`
+        delete from stored_files where id = ${fileId} and state = 'orphaned'
+          and not exists (select 1 from attachment_versions v where v.file_id = ${fileId})`);
+    } catch (error) {
+      this.#logger.warn({ err: error, fileId }, "Removing a duplicate upload failed");
+    }
   }
 
   async #discard(id: string, key: string): Promise<void> {
@@ -213,6 +257,9 @@ export class FileService {
       select id, storage_key from stored_files
       where state = 'orphaned' or (state = 'pending' and updated_at < now() - interval '1 day')
       order by updated_at limit ${limit}`);
+    await this.#database.execute(sql`
+      update stored_files f set state = 'ready', updated_at = now()
+      where f.state = 'orphaned' and exists (select 1 from attachment_versions v where v.file_id = f.id)`);
     let removed = 0;
     for (const row of result.rows) {
       const claimed = await this.#database.execute(sql`

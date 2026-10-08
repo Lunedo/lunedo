@@ -104,6 +104,7 @@ export { setupSessions, setupSteps } from "../setup/schema.js";
 export {
   accessRequestStatus,
   accessRequests,
+  giveAccessDrafts,
   invitationShares,
   pageRestrictions,
   pageShares,

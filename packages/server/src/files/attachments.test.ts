@@ -1,13 +1,14 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
 import { buffer } from "node:stream/consumers";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
+import { SettingAboveMaximumError, SettingLockedError } from "../settings/service.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
 import { FileTooLargeError } from "./files.js";
-import { keepVersionsSetting, maxFileSizeSetting } from "./settings.js";
+import { keepVersionsMaximumSetting, keepVersionsSetting, maxFileSizeSetting } from "./settings.js";
 
 const baseUrl = testDatabaseBaseUrl();
 const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), randomBytes(64)]);
@@ -111,16 +112,202 @@ describe.skipIf(!baseUrl)("attachments", () => {
     ]);
   });
 
+  async function versionNumbers(context: Context, attachmentId: string) {
+    return (await test.services.attachments.versions(context.editor, attachmentId)).map(
+      (version) => version.number,
+    );
+  }
+
+  async function withInstanceSettings(run: () => Promise<void>) {
+    try {
+      await run();
+    } finally {
+      await test.settings.clear(keepVersionsSetting, {}, "instance");
+      await test.settings.clear(keepVersionsMaximumSetting, {}, "instance");
+    }
+  }
+
+  it("keeps 50 versions by default, at most 500, and the instance alone can allow unlimited", async () => {
+    const context = await setup();
+    const chain = { organization: context.org.id, space: context.space.id };
+    expect(await test.settings.get(keepVersionsSetting, chain)).toBe(50);
+    expect(await test.settings.get(keepVersionsMaximumSetting, {})).toBe(500);
+    await expect(test.settings.set(keepVersionsSetting, chain, "organization", 501)).rejects.toBeInstanceOf(
+      SettingAboveMaximumError,
+    );
+    await expect(test.settings.set(keepVersionsSetting, chain, "space", "unlimited")).rejects.toBeInstanceOf(
+      SettingAboveMaximumError,
+    );
+    await expect(test.settings.set(keepVersionsSetting, {}, "instance", "unlimited")).rejects.toBeInstanceOf(
+      SettingAboveMaximumError,
+    );
+    await withInstanceSettings(async () => {
+      await test.settings.set(keepVersionsMaximumSetting, {}, "instance", "unlimited");
+      await test.settings.set(keepVersionsSetting, {}, "instance", "unlimited");
+      expect(await test.settings.get(keepVersionsSetting, chain)).toBe("unlimited");
+      const file = await upload(context, "all.txt", "1");
+      await upload(context, "all.txt", "2");
+      await upload(context, "all.txt", "3");
+      expect(await versionNumbers(context, file.id)).toEqual([3, 2, 1]);
+    });
+  });
+
+  it("lets organizations and spaces choose any number up to the maximum unless a level above locks it", async () => {
+    const context = await setup();
+    const chain = { organization: context.org.id, space: context.space.id };
+    await test.settings.set(keepVersionsSetting, chain, "organization", 3);
+    await test.settings.set(keepVersionsSetting, chain, "space", 400);
+    expect(await test.settings.get(keepVersionsSetting, chain)).toBe(400);
+    await test.settings.set(keepVersionsSetting, chain, "space", 2);
+    expect(await test.settings.get(keepVersionsSetting, chain)).toBe(2);
+    await test.settings.clear(keepVersionsSetting, chain, "space");
+    await test.settings.lock(keepVersionsSetting, chain, "organization");
+    await expect(test.settings.set(keepVersionsSetting, chain, "space", 10)).rejects.toBeInstanceOf(
+      SettingLockedError,
+    );
+    expect(await test.settings.get(keepVersionsSetting, chain)).toBe(3);
+  });
+
+  it("applies a lowered maximum to values set before", async () => {
+    const context = await setup();
+    const chain = { organization: context.org.id };
+    await test.settings.set(keepVersionsSetting, chain, "organization", 300);
+    await withInstanceSettings(async () => {
+      await test.settings.set(keepVersionsMaximumSetting, {}, "instance", 100);
+      expect(await test.settings.get(keepVersionsSetting, chain)).toBe(50);
+      await test.settings.set(keepVersionsSetting, {}, "instance", 100);
+      await test.settings.set(keepVersionsMaximumSetting, {}, "instance", 20);
+      expect(await test.settings.get(keepVersionsSetting, chain)).toBe(20);
+      await expect(test.settings.set(keepVersionsSetting, chain, "organization", 21)).rejects.toMatchObject({
+        maximum: 20,
+      });
+    });
+  });
+
+  it("removes the oldest unmarked version only when a new version is uploaded", async () => {
+    const context = await setup();
+    const chain = { organization: context.org.id, space: context.space.id };
+    const file = await upload(context, "log.txt", "1");
+    await upload(context, "log.txt", "2");
+    await upload(context, "log.txt", "3");
+    await test.settings.set(keepVersionsSetting, chain, "space", 2);
+    expect(await versionNumbers(context, file.id)).toEqual([3, 2, 1]);
+    await upload(context, "log.txt", "4");
+    expect(await versionNumbers(context, file.id)).toEqual([4, 3]);
+  });
+
+  it("never removes versions marked to keep and does not count them", async () => {
+    const context = await setup();
+    const chain = { organization: context.org.id, space: context.space.id };
+    await test.settings.set(keepVersionsSetting, chain, "space", 2);
+    const file = await upload(context, "contract.txt", "signed");
+    const marked = await test.services.attachments.setKept(context.editor, file.id, 1, true);
+    expect(marked).toMatchObject({ number: 1, kept: true });
+    await upload(context, "contract.txt", "draft 2");
+    await upload(context, "contract.txt", "draft 3");
+    await upload(context, "contract.txt", "draft 4");
+    expect(await versionNumbers(context, file.id)).toEqual([4, 3, 1]);
+    expect(await read(file.id, 1)).toBe("signed");
+    await test.services.attachments.setKept(context.editor, file.id, 1, false);
+    await upload(context, "contract.txt", "draft 5");
+    expect(await versionNumbers(context, file.id)).toEqual([5, 4]);
+    const audit = await test.pool.query<{ name: string; fields: Record<string, unknown> }>(
+      "select name, fields from audit_events where target_id = $1 and name like 'attachment.%' order by occurred_at",
+      [context.page.id],
+    );
+    expect(audit.rows.map((row) => row.name)).toEqual([
+      "attachment.versionKept",
+      "attachment.versionReleased",
+    ]);
+    expect(audit.rows[0]?.fields).toMatchObject({
+      attachmentId: file.id,
+      fileName: "contract.txt",
+      version: 1,
+    });
+    await expect(test.services.attachments.setKept(context.editor, file.id, 1, true)).rejects.toMatchObject({
+      code: "versionNotFound",
+    });
+  });
+
+  it("does not audit marking a version that is already marked", async () => {
+    const context = await setup();
+    const file = await upload(context, "note.txt", "x");
+    await test.services.attachments.setKept(context.editor, file.id, 1, true);
+    await test.services.attachments.setKept(context.editor, file.id, 1, true);
+    const audit = await test.pool.query(
+      "select 1 from audit_events where target_id = $1 and name = 'attachment.versionKept'",
+      [context.page.id],
+    );
+    expect(audit.rows).toHaveLength(1);
+  });
+
+  it("stores identical content once, encrypted, and keeps it while any version uses it", async () => {
+    const context = await setup();
+    const content = randomBytes(5000).toString("base64");
+    const count = async () =>
+      Number(
+        (await test.pool.query<{ count: string }>("select count(*) as count from stored_files")).rows[0]
+          ?.count,
+      );
+    const before = await count();
+    const first = await upload(context, "report.txt", content);
+    const second = await upload(context, "copy of report.txt", content);
+    await upload(context, "report.txt", content);
+    expect(await count()).toBe(before + 1);
+    const firstContent = await test.services.attachments.content(first.id);
+    const secondContent = await test.services.attachments.content(second.id);
+    expect(secondContent?.fileId).toBe(firstContent?.fileId);
+    const row = await test.pool.query<{ content_digest: Buffer }>(
+      "select content_digest from stored_files where id = $1",
+      [firstContent?.fileId],
+    );
+    expect(row.rows[0]?.content_digest.toString("hex")).not.toBe(
+      createHash("sha256").update(content).digest("hex"),
+    );
+    await test.settings.set(
+      keepVersionsSetting,
+      { organization: context.org.id, space: context.space.id },
+      "space",
+      1,
+    );
+    await upload(context, "report.txt", "rewritten");
+    expect(await versionNumbers(context, first.id)).toEqual([3]);
+    await test.services.files.deleteOrphaned();
+    expect(await read(second.id)).toBe(content);
+  });
+
+  it("does not reuse stored content of another type or size", async () => {
+    const context = await setup();
+    const text = await upload(context, "data.txt", "a,b\n1,2\n");
+    const table = await upload(context, "data.csv", "a,b\n1,2\n");
+    expect((await test.services.attachments.content(text.id))?.fileId).not.toBe(
+      (await test.services.attachments.content(table.id))?.fileId,
+    );
+  });
+
+  it("returns a still used file to ready instead of removing it", async () => {
+    const context = await setup();
+    const file = await upload(context, "kept.txt", "still here");
+    const content = await test.services.attachments.content(file.id);
+    await test.pool.query("update stored_files set state = 'orphaned' where id = $1", [content?.fileId]);
+    await test.services.files.deleteOrphaned();
+    const row = await test.pool.query<{ state: string }>("select state from stored_files where id = $1", [
+      content?.fileId,
+    ]);
+    expect(row.rows[0]?.state).toBe("ready");
+    expect(await read(file.id)).toBe("still here");
+  });
+
   it("keeps at most the configured number of versions and releases the files of removed ones", async () => {
     const context = await setup();
     await test.settings.set(keepVersionsSetting, { organization: context.org.id }, "organization", 2);
-    const first = await upload(context, "log.txt", "1");
-    await upload(context, "log.txt", "2");
-    await upload(context, "log.txt", "3");
+    const first = await upload(context, "log.txt", `1 ${randomUUID()}`);
+    await upload(context, "log.txt", `2 ${randomUUID()}`);
+    await upload(context, "log.txt", `3 ${randomUUID()}`);
     const versions = await test.services.attachments.versions(context.editor, first.id);
     expect(versions.map((version) => version.number)).toEqual([3, 2]);
     expect(await test.services.files.deleteOrphaned()).toBeGreaterThanOrEqual(1);
-    expect(await read(first.id)).toBe("3");
+    expect(await read(first.id)).toMatch(/^3 /);
   });
 
   it("refuses files above the organization's limit before storing them, naming the limit", async () => {
@@ -219,7 +406,7 @@ describe.skipIf(!baseUrl)("attachments", () => {
 
   it("are removed with their files when the page is deleted for good", async () => {
     const context = await setup();
-    const file = await upload(context, "plan.txt", "x");
+    const file = await upload(context, "plan.txt", randomUUID());
     const content = await test.services.attachments.content(file.id);
     const entry = await test.services.trash.deleteItem(context.editor, context.page.id);
     await test.services.trash.deleteImmediately(

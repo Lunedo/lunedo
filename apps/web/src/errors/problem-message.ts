@@ -91,6 +91,7 @@ const KNOWN = new Set([
   "instanceUrlFromEnvironment",
   "instanceMoved",
   "settingLocked",
+  "settingAboveMaximum",
   "setupIncomplete",
   "setupNotReady",
   "keysNotDownloaded",
@@ -137,6 +138,7 @@ const KNOWN = new Set([
   "linkNotForYou",
   "guestInvitesDisabled",
   "attachmentNotFound",
+  "versionNotFound",
   "shareNotFound",
   "restrictionNotFound",
   "linkNotFound",
@@ -191,6 +193,11 @@ export function problemMessage(t: TFunction, error: unknown): string {
   }
   if (error.code === "expiryTooLate" && problem.maxDays) {
     return t("problems.linkExpiryTooLate", { days: problem.maxDays });
+  }
+  if (error.code === "settingAboveMaximum" && problem.maximum !== undefined) {
+    return problem.maximum === "unlimited"
+      ? t("problems.settingAboveMaximum")
+      : t("problems.settingAboveMaximumValue", { maximum: problem.maximum });
   }
   if (error.code === "settingLocked" && problem.lockedBy) {
     return t("problems.settingLockedBy", { level: translateKey(t, `settings.levels.${problem.lockedBy}`) });

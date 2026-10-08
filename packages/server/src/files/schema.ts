@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
   bigint,
+  boolean,
   check,
   index,
   integer,
@@ -28,7 +29,7 @@ export const storedFiles = pgTable(
     id: primaryId(),
     storageKey: text().notNull(),
     size: bigint({ mode: "number" }).notNull().default(0),
-    sha256: bytes(),
+    contentDigest: bytes(),
     contentType: text().notNull().default("application/octet-stream"),
     masterKeyVersion: integer(),
     state: storedFileState().notNull().default("pending"),
@@ -38,6 +39,7 @@ export const storedFiles = pgTable(
     uniqueIndex("stored_files_storage_key_unique").on(table.storageKey),
     index().on(table.state, table.updatedAt),
     index().on(table.masterKeyVersion),
+    index().on(table.contentDigest),
   ],
 );
 
@@ -81,6 +83,7 @@ export const attachmentVersions = pgTable(
       .references(() => storedFiles.id),
     name: text().notNull(),
     restoredFrom: integer(),
+    kept: boolean().notNull().default(false),
     uploadedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     ...timestamps(),
   },

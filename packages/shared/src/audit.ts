@@ -134,6 +134,8 @@ export const auditEventNames = [
   "shareLink.revoked",
   "shareLink.opened",
   "accessRequest.decided",
+  "attachment.versionKept",
+  "attachment.versionReleased",
   "access.overviewExported",
   "page.published",
   "blogPost.publishedBySchedule",

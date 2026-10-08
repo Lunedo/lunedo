@@ -100,6 +100,7 @@ import { SetupRegistry } from "./setup/framework.js";
 import { SetupService } from "./setup/setup-service.js";
 import { builtinSetupSteps } from "./setup/steps.js";
 import { AccessExplanationService } from "./sharing/explain.js";
+import { GiveAccessDraftService } from "./sharing/give-access-drafts.js";
 import { GuestShareService } from "./sharing/guests.js";
 import { ShareLinkService } from "./sharing/links.js";
 import { sharingNotificationTypes } from "./sharing/notifications.js";
@@ -187,6 +188,7 @@ export interface AccountServices {
   shareLinks: ShareLinkService;
   accessRequests: AccessRequestService;
   accessExplanations: AccessExplanationService;
+  giveAccessDrafts: GiveAccessDraftService;
   files: FileService;
   attachments: AttachmentService;
   guestShares: GuestShareService;
@@ -492,13 +494,15 @@ export function createAccountServices(options: {
     spacePermissions,
   });
   const accessExplanations = new AccessExplanationService({ database, authorization, people, audit });
+  const giveAccessDrafts = new GiveAccessDraftService({ database });
   const files = new FileService({
     database,
     store: options.fileStore ?? new LocalFileStore(options.filesDir),
     keyRing: options.keyRing,
     logger,
+    signer,
   });
-  const attachments = new AttachmentService({ database, files, settings, people });
+  const attachments = new AttachmentService({ database, files, settings, people, audit });
   const guestShares = new GuestShareService({
     database,
     authorization,
@@ -591,6 +595,7 @@ export function createAccountServices(options: {
     shareLinks,
     accessRequests,
     accessExplanations,
+    giveAccessDrafts,
     files,
     attachments,
     guestShares,
