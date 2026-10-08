@@ -126,6 +126,19 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
+      minio:
+        image: bitnamilegacy/minio:2025.4.22@sha256:50cec18ac4184af4671a78aedd5554942c8ae105d51a465fa82037949046da01
+        env:
+          MINIO_ROOT_USER: pagehall
+          MINIO_ROOT_PASSWORD: pagehall-minio
+          MINIO_DEFAULT_BUCKETS: pagehall-test
+        ports:
+          - 9000
+        options: >-
+          --health-cmd "curl -fs http://127.0.0.1:9000/minio/health/live"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
     env:
       LANE: ${{ needs.scope.outputs.lane }}
       FORCE: ${{ github.event_name == 'push' || github.event_name == 'schedule' }}
@@ -170,6 +183,7 @@ jobs:
           PAGEHALL_TEST_MAILPIT_URL: http://localhost:${{ job.services.mailpit.ports['8025'] }}
           PAGEHALL_TEST_MAILPIT_SMTP_PORT: ${{ job.services.mailpit.ports['1025'] }}
           PAGEHALL_TEST_REDIS_URL: redis://localhost:${{ job.services.valkey.ports['6379'] }}
+          PAGEHALL_TEST_S3_ENDPOINT: http://localhost:${{ job.services.minio.ports['9000'] }}
         run: |
           args=(run test)
           if [ "$LANE" = "fast" ]; then args+=(--affected); fi

@@ -38,6 +38,12 @@ export {
 } from "../collaboration/schema.js";
 export { keyRotationStatus, keyRotations } from "../crypto/schema.js";
 export {
+  attachments,
+  attachmentVersions,
+  storedFileState,
+  storedFiles,
+} from "../files/schema.js";
+export {
   identities,
   identityCredentialKind,
   identityGroups,

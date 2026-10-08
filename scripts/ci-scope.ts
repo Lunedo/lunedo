@@ -49,6 +49,8 @@ export const identityProviderPaths = [
 
 export const backupPaths = [
   "packages/server/src/backup/",
+  "packages/server/src/files/",
+  "packages/server/src/crypto/stream.ts",
   "packages/server/drizzle/",
   "apps/worker/src/cli/",
   "docker/Dockerfile",

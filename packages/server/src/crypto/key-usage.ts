@@ -32,7 +32,13 @@ export async function masterKeyVersionsInUse(options: {
   }
   const streams = options.streams;
   for (const owner of streams?.owners() ?? []) {
-    for await (const stream of owner.streams((streams as EncryptedStreams).context)) {
+    const context = (streams as EncryptedStreams).context;
+    if (owner.versions) {
+      for (const [version, count] of Object.entries(await owner.versions(context)))
+        add(Number(version), count);
+      continue;
+    }
+    for await (const stream of owner.streams(context)) {
       const version = streamMasterKeyVersion(await stream.readHeader());
       if (version !== undefined) add(version, 1);
     }

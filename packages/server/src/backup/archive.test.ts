@@ -3,10 +3,12 @@ import { mkdir, mkdtemp, readdir, readFile, rm, truncate, writeFile } from "node
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { Readable } from "node:stream";
+import { buffer } from "node:stream/consumers";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { configurationForBackup } from "../config/backup-view.js";
 import { DecryptionError } from "../crypto/envelope.js";
 import { formatKeyEntry, type KeyRing, keyFingerprint, parseKeyRing } from "../crypto/key-ring.js";
+import { LocalFileStore } from "../files/store.js";
 import { createLogger } from "../logging/logger.js";
 import {
   BackupError,
@@ -192,6 +194,40 @@ describe("backups", () => {
     expect(await readFile(path.join(dir, "restored-config", "environment.json"), "utf8")).toContain(
       "PAGEHALL_HOST",
     );
+  });
+
+  it("include attachments from object storage and restore them there, removing objects not in the backup", async () => {
+    const source = new LocalFileStore(path.join(dir, "bucket"));
+    await source.write("ab/cd/object-one", Readable.from([Buffer.from("object content")]));
+    await createBackup({
+      output: archivePath,
+      backupKeys,
+      masterKeys: requiredMasterKeys(),
+      database: new FakeDatabase(databaseDump),
+      filesDir,
+      objectStore: source,
+      config: {},
+      pagehallVersion: "1.0.0",
+      schemaVersion,
+      logger,
+    });
+    const target = new LocalFileStore(path.join(dir, "other-bucket"));
+    await target.write("zz/zz/stale", Readable.from([Buffer.from("stale")]));
+    await restoreBackup({
+      input: archivePath,
+      backupKeys,
+      knownSchemaVersions,
+      masterKeys,
+      database: new FakeDatabase(Buffer.alloc(0)),
+      filesDir: path.join(dir, "restored-files"),
+      objectStore: target,
+      force: true,
+      logger,
+    });
+    const keys: string[] = [];
+    for await (const object of target.list()) keys.push(object.key);
+    expect(keys).toEqual(["2026/report.pdf", "ab/cd/object-one"]);
+    expect((await buffer(await target.read("ab/cd/object-one"))).toString()).toBe("object content");
   });
 
   it("refuse to overwrite a non-empty database or file store without force", async () => {

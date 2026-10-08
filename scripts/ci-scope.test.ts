@@ -74,9 +74,12 @@ describe("scopeOf", () => {
     });
   });
 
-  it("runs the backup round trip for backup, migrations and the Docker setup", () => {
+  it("runs the backup round trip for backup, the file storage, migrations and the Docker setup", () => {
     for (const file of [
       "packages/server/src/backup/restore.ts",
+      "packages/server/src/files/store.ts",
+      "packages/server/src/files/attachments.ts",
+      "packages/server/src/crypto/stream.ts",
       "packages/server/drizzle/0015_identity_providers.sql",
       "docker/Dockerfile",
       "docker/start.sh",
@@ -92,6 +95,7 @@ describe("scopeOf", () => {
       assert.equal(ready([file]).backup, false, file);
     }
     assert.equal(ready(["packages/server/src/backupish.ts"]).backup, false);
+    assert.equal(ready(["packages/server/src/filesystem.ts"]).backup, false);
   });
 
   it("runs the identity provider job, not the backup job, for the compose file", () => {

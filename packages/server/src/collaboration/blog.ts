@@ -36,6 +36,7 @@ export interface BlogPost {
   held: boolean;
   pinnedInSpace: boolean;
   pinnedInOrganization: boolean;
+  cover: { attachmentId: string; focusX: number; focusY: number } | null;
   createdAt: Date;
 }
 
@@ -59,6 +60,9 @@ type PostRow = {
   held_at: Date | string | null;
   space_pinned_at: Date | string | null;
   organization_pinned_at: Date | string | null;
+  cover_attachment_id: string | null;
+  cover_focus_x: number;
+  cover_focus_y: number;
   created_at: Date | string;
   sort_pinned: string;
   sort_date: string;
@@ -102,6 +106,13 @@ function toPost(row: PostRow): BlogPost {
     held: row.held_at !== null,
     pinnedInSpace: row.space_pinned_at !== null,
     pinnedInOrganization: row.organization_pinned_at !== null,
+    cover: row.cover_attachment_id
+      ? {
+          attachmentId: row.cover_attachment_id,
+          focusX: Number(row.cover_focus_x),
+          focusY: Number(row.cover_focus_y),
+        }
+      : null,
     createdAt: new Date(row.created_at),
   };
 }
@@ -137,7 +148,8 @@ export class BlogService {
         (select array_agg(l.label order by l.label) from page_labels l where l.item_id = t.id) as labels,
         t.creator_id, ${this.#people.visibleName(viewer, sql`a`)} as creator_name, b.published_at, b.scheduled_at, b.scheduled_time_zone,
         b.scheduled_by, ${this.#people.visibleName(viewer, sql`scheduler`)} as scheduler_name, b.held_at,
-        b.space_pinned_at, b.organization_pinned_at, t.created_at,
+        b.space_pinned_at, b.organization_pinned_at, b.cover_attachment_id, b.cover_focus_x, b.cover_focus_y,
+        t.created_at,
         coalesce(${pinned}, '-infinity'::timestamptz)::text as sort_pinned,
         coalesce(b.published_at, b.scheduled_at, t.created_at)::text as sort_date
       from blog_posts b join tree_items t on t.id = b.item_id join spaces s on s.id = t.space_id
@@ -224,6 +236,40 @@ export class BlogService {
           sql`update blog_posts set excerpt = ${excerpt}, updated_at = now() where item_id = ${itemId}`,
         );
       }
+      await signalSpaceChange(tx, { spaceId: post.spaceId, kind: "blog", itemId });
+    });
+    const post = await this.get(actor, itemId);
+    if (!post) throw new SpaceError("itemNotFound", "The blog post does not exist");
+    return post;
+  }
+
+  async setCover(
+    actor: Principal,
+    itemId: string,
+    cover: { attachmentId: string; focusX: number; focusY: number } | null,
+  ): Promise<BlogPost> {
+    if (
+      cover &&
+      [cover.focusX, cover.focusY].some((value) => !Number.isFinite(value) || value < 0 || value > 1)
+    ) {
+      throw new SpaceError("invalidFocus", "The focal point must lie inside the image");
+    }
+    await this.#database.transaction(async (tx) => {
+      const post = await this.#locked(tx, itemId);
+      if (cover) {
+        const image = await tx.execute<{ content_type: string }>(sql`
+          select f.content_type from attachments a join attachment_versions v on v.id = a.current_version_id
+          join stored_files f on f.id = v.file_id
+          where a.id = ${cover.attachmentId} and a.item_id = ${itemId} and a.deleted_at is null`);
+        const type = image.rows[0]?.content_type ?? "";
+        if (!["image/png", "image/jpeg", "image/gif", "image/webp", "image/avif"].includes(type)) {
+          throw new SpaceError("invalidCover", "Choose an image attached to this post as cover");
+        }
+      }
+      await tx.execute(sql`
+        update blog_posts set cover_attachment_id = ${cover?.attachmentId ?? null},
+          cover_focus_x = ${cover?.focusX ?? 0.5}, cover_focus_y = ${cover?.focusY ?? 0.5}, updated_at = now()
+        where item_id = ${itemId}`);
       await signalSpaceChange(tx, { spaceId: post.spaceId, kind: "blog", itemId });
     });
     const post = await this.get(actor, itemId);

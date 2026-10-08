@@ -113,7 +113,7 @@ export class KeyRotation {
     const keys = masterStreamKeys(() => ring);
     const streams = this.#streams;
     for (const owner of streams?.owners() ?? []) {
-      for await (const stream of owner.streams((streams as EncryptedStreams).context)) {
+      for await (const stream of owner.streams((streams as EncryptedStreams).context, targetVersion)) {
         if (job.signal.aborted) throw new Error("Key rotation interrupted");
         const header = await stream.readHeader();
         const version = streamMasterKeyVersion(header);

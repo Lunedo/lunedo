@@ -10,7 +10,7 @@ import { ensureSecretFile, generateToken } from "../config/generated-secrets.js"
 import { type Env, loadConfig, type ServerConfig } from "../config/load.js";
 import { Secret } from "../config/secret.js";
 import { type EncryptedColumn, encryptedColumns } from "../crypto/encrypted-column.js";
-import { type EncryptedStreamOwner, encryptedStreamOwners } from "../crypto/encrypted-stream.js";
+import type { EncryptedStreamOwner } from "../crypto/encrypted-stream.js";
 import { Encryption } from "../crypto/envelope.js";
 import { createKeyProvider } from "../crypto/key-provider.js";
 import { formatKeyEntry, KEY_LENGTH, type KeyRing, KeyRingError, parseKeyRing } from "../crypto/key-ring.js";
@@ -22,6 +22,8 @@ import { createDatabase, type Database } from "../database/database.js";
 import { runMigrations } from "../database/migrate.js";
 import { NotificationListener } from "../database/notifications.js";
 import { createDatabasePool, type DatabasePool } from "../database/pool.js";
+import { encryptedStreamOwnersOf, fileStoreOf } from "../files/owners.js";
+import { fileSettings } from "../files/settings.js";
 import { readinessChecks } from "../health/readiness.js";
 import { syncLogRetentionDaysSetting } from "../identity/sync.js";
 import type { JobQueue } from "../jobs/job-queue.js";
@@ -135,8 +137,10 @@ export async function createServerRuntime(options: {
     await runMigrations(pool, { logger });
 
     const columns = options.encrypted?.columns ?? encryptedColumns;
+    const fileStore = fileStoreOf(config);
+    const owners = options.encrypted?.streamOwners ?? encryptedStreamOwnersOf(fileStore);
     const streams = {
-      owners: () => options.encrypted?.streamOwners ?? encryptedStreamOwners,
+      owners: () => owners,
       context: { database, filesDir: config.paths.files },
     };
     const keyRing = new KeyRingHolder(createKeyProvider(config), logger);
@@ -156,6 +160,7 @@ export async function createServerRuntime(options: {
         ...spaceSettings,
         ...collaborationSettings,
         ...sharingSettings,
+        ...fileSettings,
         auditRetentionSetting,
         smtpSetting,
         mailMethodSetting,
@@ -199,6 +204,7 @@ export async function createServerRuntime(options: {
       jobs,
       logger,
       filesDir: config.paths.files,
+      fileStore,
       configuredInstanceUrl: config.instanceUrl,
       passwordHashConcurrency: config.passwordHashConcurrency,
       insecureIdentityProviders: config.insecureIdentityProviders,

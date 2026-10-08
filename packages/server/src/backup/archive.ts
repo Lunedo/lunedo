@@ -15,6 +15,7 @@ import {
   createEncryptStream,
   DEFAULT_CHUNK_SIZE,
 } from "../crypto/stream.js";
+import { ATTACHMENTS_DIRECTORY, type FileStore } from "../files/store.js";
 import type { Logger } from "../logging/logger.js";
 import type { DatabaseArchiver } from "./postgres.js";
 import {
@@ -300,6 +301,7 @@ export interface CreateBackupOptions {
   masterKeys: BackupHeader["masterKeys"];
   database: DatabaseArchiver;
   filesDir: string;
+  objectStore?: FileStore | undefined;
   /** Configuration files to include, by name. They must not contain the master or backup key. */
   config: Record<string, string>;
   pagehallVersion: string;
@@ -338,6 +340,15 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
     for (const file of await listFiles(options.filesDir)) {
       const full = path.join(options.filesDir, ...file.split("/"));
       await add(`${FILES_PREFIX}${file}`, createReadStream(full), (await stat(full)).size);
+    }
+    if (options.objectStore) {
+      for await (const object of options.objectStore.list()) {
+        await add(
+          `${FILES_PREFIX}${ATTACHMENTS_DIRECTORY}/${object.key}`,
+          await options.objectStore.read(object.key),
+          object.size,
+        );
+      }
     }
     for (const [name, content] of Object.entries(options.config)) {
       if (!isSafeRelativePath(name)) throw new BackupError(`Invalid configuration entry name ${name}`);
@@ -455,6 +466,7 @@ export interface RestoreBackupOptions extends ReadOptions {
   masterKeys: KeyRing | null;
   database: DatabaseArchiver;
   filesDir: string;
+  objectStore?: FileStore | undefined;
   /** Where configuration files from the backup are written; skipped when not set. */
   configDir?: string | undefined;
   /** Overwrite a database or file store that is not empty. */
@@ -477,7 +489,9 @@ export async function restoreBackup(options: RestoreBackupOptions): Promise<Back
   checkBackupHeader(header, options);
 
   const databaseEmpty = await options.database.isEmpty();
-  const filesEmpty = await isEmptyFileStore(options.filesDir);
+  const filesEmpty =
+    (await isEmptyFileStore(options.filesDir)) &&
+    (!options.objectStore || (await options.objectStore.list()[Symbol.asyncIterator]().next()).done === true);
   if (!options.force && (!databaseEmpty || !filesEmpty)) {
     throw new BackupError(
       `Restore refused: the ${!databaseEmpty ? "database" : "file store"} is not empty. Use --force to overwrite it`,
@@ -516,6 +530,8 @@ export async function restoreBackup(options: RestoreBackupOptions): Promise<Back
         await drain(content);
       }
     });
+    if (options.objectStore)
+      await replaceObjects(options.objectStore, path.join(staging, ATTACHMENTS_DIRECTORY));
     await replaceFiles(options.filesDir, staging);
   } catch (error) {
     if (databaseRestored) {
@@ -534,6 +550,18 @@ export async function restoreBackup(options: RestoreBackupOptions): Promise<Back
     "Backup restored",
   );
   return manifest;
+}
+
+async function replaceObjects(store: FileStore, staged: string): Promise<void> {
+  const keys = new Set<string>();
+  for (const file of await listFiles(staged)) {
+    keys.add(file);
+    await store.write(file, createReadStream(path.join(staged, ...file.split("/"))));
+  }
+  for await (const object of store.list()) {
+    if (!keys.has(object.key)) await store.delete(object.key);
+  }
+  await rm(staged, { recursive: true, force: true });
 }
 
 /** Replaces the content of the file store with the staged files. */

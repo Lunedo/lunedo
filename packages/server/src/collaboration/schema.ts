@@ -9,6 +9,7 @@ import {
   jsonb,
   pgTable,
   primaryKey,
+  real,
   text,
   timestamp,
   unique,
@@ -17,6 +18,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { accounts } from "../accounts/schema.js";
 import { primaryId, timestamps } from "../database/columns.js";
+import { attachments } from "../files/schema.js";
 import { spaces, treeItems } from "../spaces/schema.js";
 
 const timestampColumn = () => timestamp({ withTimezone: true, mode: "date" });
@@ -153,6 +155,9 @@ export const blogPosts = pgTable(
     scheduledBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     scheduledTimeZone: text(),
     heldAt: timestampColumn(),
+    coverAttachmentId: uuid().references(() => attachments.id, { onDelete: "set null" }),
+    coverFocusX: real().notNull().default(0.5),
+    coverFocusY: real().notNull().default(0.5),
     publishedAt: timestampColumn(),
     spacePinnedAt: timestampColumn(),
     spacePinnedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
@@ -166,6 +171,11 @@ export const blogPosts = pgTable(
     index().on(table.scheduledBy),
     index().on(table.spacePinnedBy),
     index().on(table.organizationPinnedBy),
+    index().on(table.coverAttachmentId),
+    check(
+      "blog_posts_cover_focus",
+      sql`${table.coverFocusX} between 0 and 1 and ${table.coverFocusY} between 0 and 1`,
+    ),
     check("blog_posts_excerpt_length", sql`length(${table.excerpt}) <= 500`),
   ],
 );

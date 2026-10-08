@@ -38,6 +38,10 @@ import type { KeyRing } from "./crypto/key-ring.js";
 import type { KeyRingHolder } from "./crypto/key-ring-holder.js";
 import type { Database } from "./database/database.js";
 import type { DatabasePool } from "./database/pool.js";
+import { AttachmentService } from "./files/attachments.js";
+import { FileService } from "./files/files.js";
+import { FILE_CLEANUP_SCHEDULE, fileCleanupJob } from "./files/jobs.js";
+import { type FileStore, LocalFileStore } from "./files/store.js";
 import { GroupMappingService } from "./identity/groups.js";
 import { LdapAdapter } from "./identity/ldap.js";
 import type { DirectoryConnector } from "./identity/ldap-connection.js";
@@ -182,6 +186,8 @@ export interface AccountServices {
   shareLinks: ShareLinkService;
   accessRequests: AccessRequestService;
   accessExplanations: AccessExplanationService;
+  files: FileService;
+  attachments: AttachmentService;
 }
 
 export function createAccountServices(options: {
@@ -195,6 +201,7 @@ export function createAccountServices(options: {
   jobs: JobQueue | undefined;
   logger: Logger;
   filesDir: string;
+  fileStore?: FileStore;
   configuredInstanceUrl?: string | undefined;
   passwordHashConcurrency: number;
   insecureIdentityProviders?: boolean;
@@ -482,6 +489,13 @@ export function createAccountServices(options: {
     spacePermissions,
   });
   const accessExplanations = new AccessExplanationService({ database, authorization, people, audit });
+  const files = new FileService({
+    database,
+    store: options.fileStore ?? new LocalFileStore(options.filesDir),
+    keyRing: options.keyRing,
+    logger,
+  });
+  const attachments = new AttachmentService({ database, files, settings, people });
   pageAccess.onAccessChange((tx, spaceId) => accessRequests.closeSatisfied(tx, spaceId));
   spacePermissions.onAccessChange((tx, spaceId) => accessRequests.closeSatisfied(tx, spaceId));
   memberships.onDeactivated((tx, accountId) => pageAccess.markOrphanedRestrictions(tx, accountId));
@@ -564,6 +578,8 @@ export function createAccountServices(options: {
     shareLinks,
     accessRequests,
     accessExplanations,
+    files,
+    attachments,
   };
 }
 
@@ -652,9 +668,20 @@ export async function workAccountJobs(
   await jobs.work(trashRetentionJob, async (job) => {
     const result = await services.trash.applyRetention({ signal: job.signal });
     const drafts = await services.versions.removeExpiredDrafts();
+    const files = result.purged > 0 ? await services.files.deleteOrphaned() : 0;
     if (result.moved + result.purged + drafts > 0) {
-      job.logger.info({ ...result, drafts }, "Trash retention applied");
+      job.logger.info({ ...result, drafts, files }, "Trash retention applied");
     }
+  });
+  await jobs.work(fileCleanupJob, async (job) => {
+    let removed = 0;
+    for (;;) {
+      job.signal.throwIfAborted();
+      const batch = await services.files.deleteOrphaned();
+      removed += batch;
+      if (batch === 0) break;
+    }
+    if (removed > 0) job.logger.info({ removed }, "Files without attachments removed");
   });
   await jobs.work(liveVersionsJob, async (job) => {
     const created = await services.versions.versionIdlePages();
@@ -675,6 +702,7 @@ export async function workAccountJobs(
   await jobs.schedule(collaborationCleanupJob, COLLABORATION_CLEANUP_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(dispatchPendingMailJob, DISPATCH_PENDING_MAIL_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(trashRetentionJob, TRASH_RETENTION_SCHEDULE, {}, { key: "hourly" });
+  await jobs.schedule(fileCleanupJob, FILE_CLEANUP_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(liveVersionsJob, LIVE_VERSIONS_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(authCleanupJob, AUTH_CLEANUP_SCHEDULE, {}, { key: "regular" });
   await jobs.schedule(auditRetentionJob, AUDIT_RETENTION_SCHEDULE, {}, { key: "daily" });

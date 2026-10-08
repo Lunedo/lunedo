@@ -267,6 +267,13 @@
       "when": 1791477634781,
       "tag": "0037_page_access",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1791477652992,
+      "tag": "0038_attachments",
+      "breakpoints": true
     }
   ]
 }
