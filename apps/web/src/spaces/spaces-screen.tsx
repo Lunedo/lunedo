@@ -9,6 +9,7 @@ import { request } from "../api/request.js";
 import { useDebounced } from "../components/table-state.js";
 import { LoadError } from "../errors/failure.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
+import { DiscoverableSpaces } from "../sharing/discoverable-spaces.js";
 import { useOrganizationState } from "../shell/shell-context.js";
 import { CreateSpaceDialog } from "./create-space-dialog.js";
 import { SpaceBadge, spaceDisplayName } from "./space-badge.js";
@@ -196,6 +197,9 @@ export function SpacesScreen() {
               {t("spaces.list.more")}
             </Button>
           </div>
+        ) : null}
+        {!archived && (organizationFilter ?? state.organizationId) ? (
+          <DiscoverableSpaces organizationId={organizationFilter ?? state.organizationId ?? ""} />
         ) : null}
       </div>
       <CreateSpaceDialog open={creating} onOpenChange={setCreating} />

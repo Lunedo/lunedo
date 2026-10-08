@@ -4237,7 +4237,9 @@
     "moved": "{title} moved",
     "moveFailed": "The item could not be moved",
     "undoFailed": "The move could not be undone",
-    "createFailed": "The page could not be created"
+    "createFailed": "The page could not be created",
+    "viewRestricted": "Restricted: only the access list can view it",
+    "editRestricted": "Restricted: only the access list can edit it"
   },
   "move": {
     "title": "Move {title}",
@@ -5281,6 +5283,12 @@
       "confirm": "Give {name} \"{role}\"",
       "done": "Access given to {name}",
       "failed": "The access was not given"
+    },
+    "discoverable": {
+      "title": "Spaces you can ask to join",
+      "description": "Their space admins let people in. You see the name and description only.",
+      "ask": "Ask to join",
+      "requested": "Request sent"
     }
   }
 }

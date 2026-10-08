@@ -647,3 +647,45 @@ describe("space access", () => {
     await waitFor(() => expect(requests.some((request) => request.method === "DELETE")).toBe(true));
   });
 });
+
+describe("finding spaces and restricted pages", () => {
+  it("lists spaces people can ask to join and sends the request", async () => {
+    const OTHER = "01929b1e-0000-7000-8000-0000000000a9";
+    const { requests } = mockApi({
+      ...baseRoutes(),
+      "GET /api/v1/spaces": () => ({ body: { items: [], nextCursor: null } }),
+      [`GET /api/v1/organizations/${ORGANIZATION.id}/discoverable-spaces`]: () => ({
+        body: [
+          { id: OTHER, key: "FIN", name: "Finance", description: "Budgets and invoices", requested: false },
+        ],
+      }),
+      [`POST /api/v1/spaces/${OTHER}/access-requests`]: () => ({ status: 201, body: {} }),
+    });
+    await renderAt("/spaces");
+    expect(await screen.findByText("Finance")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Ask to join" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ask to join Finance" }));
+    expect(await screen.findByText("Request sent")).toBeTruthy();
+    expect(requests.find((request) => request.method === "POST")?.path).toBe(
+      `/api/v1/spaces/${OTHER}/access-requests`,
+    );
+  });
+
+  it("marks restricted pages in the tree with a lock that screen readers announce", async () => {
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes("editor"),
+      [`GET /api/v1/spaces/${SPACE_ID}/items`]: () => ({
+        body: {
+          items: [
+            item(OVERVIEW, "IT Operations", "page", null),
+            { ...item(NETWORK, "Network", "page", null), viewRestriction: "own", editRestricted: false },
+          ],
+          nextCursor: null,
+        },
+      }),
+    });
+    await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+    expect(await screen.findByText("Restricted: only the access list can view it")).toBeTruthy();
+  });
+});

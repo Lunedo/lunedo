@@ -1,4 +1,4 @@
-import { Badge, classNames, IconButton, Menu, Spinner, useToast } from "@pagehall/ui";
+import { Badge, classNames, IconButton, Menu, Spinner, useToast, VisuallyHidden } from "@pagehall/ui";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -460,6 +460,14 @@ function TreeNode({
         )}
         {item.kind === "link" && !item.link?.accessible ? (
           <Lock aria-hidden="true" className="size-icon-sm shrink-0 text-text-muted" />
+        ) : null}
+        {item.kind !== "link" && (item.viewRestriction === "own" || item.editRestricted) ? (
+          <span className="flex shrink-0 items-center text-text-muted">
+            <Lock aria-hidden="true" className="size-icon-sm" />
+            <VisuallyHidden>
+              {item.viewRestriction === "own" ? t("tree.viewRestricted") : t("tree.editRestricted")}
+            </VisuallyHidden>
+          </span>
         ) : null}
         {item.kind === "page" && !item.published ? (
           <Badge variant="warning">{t("versions.draftBadge")}</Badge>

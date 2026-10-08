@@ -4237,7 +4237,9 @@
     "moved": "{title} verschoben",
     "moveFailed": "Der Eintrag konnte nicht verschoben werden",
     "undoFailed": "Das Verschieben konnte nicht rückgängig gemacht werden",
-    "createFailed": "Die Seite konnte nicht erstellt werden"
+    "createFailed": "Die Seite konnte nicht erstellt werden",
+    "viewRestricted": "Eingeschränkt: Nur die Zugriffsliste kann sie ansehen",
+    "editRestricted": "Eingeschränkt: Nur die Zugriffsliste kann sie bearbeiten"
   },
   "move": {
     "title": "{title} verschieben",
@@ -5281,6 +5283,12 @@
       "confirm": "{name} „{role}“ geben",
       "done": "Zugriff für {name} gegeben",
       "failed": "Der Zugriff wurde nicht gegeben"
+    },
+    "discoverable": {
+      "title": "Spaces, um deren Beitritt du bitten kannst",
+      "description": "Die Space-Admins nehmen Personen auf. Du siehst nur Name und Beschreibung.",
+      "ask": "Beitritt anfragen",
+      "requested": "Anfrage gesendet"
     }
   }
 }
