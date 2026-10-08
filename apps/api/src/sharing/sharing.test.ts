@@ -180,6 +180,10 @@ describe.skipIf(!databaseBaseUrl)("page access through the API", () => {
       const read = await visitor.get(`/api/v1/share-links/${token}/page`, { "x-pagehall-unlock": unlock });
       expect(read.statusCode, read.body).toBe(200);
       expect(read.json()).toMatchObject({ title: "Status page" });
+      const inAddress = await visitor.get(
+        `/api/v1/share-links/${token}/attachments/${shared}/content?unlock=${encodeURIComponent(unlock)}`,
+      );
+      expect(inAddress.statusCode).toBe(400);
       expect((await visitor.get(`/api/v1/items/${shared}`)).statusCode).toBe(401);
       expect((await owner.delete(`/api/v1/pages/${shared}/share-links/${link.id}`)).statusCode).toBe(204);
       expect(

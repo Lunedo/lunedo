@@ -125407,7 +125407,7 @@
       "get": {
         "operationId": "shareLinks.attachment",
         "summary": "Download an attachment through a link for anyone",
-        "description": "Sends an attachment of the page the link opens. Links with a password need the proof from the open endpoint, in the `X-Pagehall-Unlock` header or the `unlock` parameter.",
+        "description": "Sends an attachment of the page the link opens. Links with a password need the proof from the open endpoint in the `X-Pagehall-Unlock` header; it is never accepted in the address, so that it does not end up in histories or copied links.",
         "tags": [
           "Share links"
         ],
@@ -125436,13 +125436,16 @@
             }
           },
           {
-            "name": "unlock",
+            "name": "download",
             "in": "query",
             "required": false,
-            "description": "Proof of the password from the open endpoint, for links with a password.",
+            "description": "`true` sends the file as a download.",
             "schema": {
               "type": "string",
-              "maxLength": 200
+              "enum": [
+                "true",
+                "false"
+              ]
             }
           },
           {

@@ -4919,7 +4919,18 @@
     "scheduledTitle": "Geplant",
     "scheduledDescription": "Alle geplanten Beiträge dieses Space. Beiträge, die auf Freigabe warten, stehen oben. Nur Space-Admins sehen diese Liste.",
     "scheduledEmpty": "Es sind keine Beiträge geplant.",
-    "scheduledLoadFailed": "Die geplanten Beiträge konnten nicht geladen werden"
+    "scheduledLoadFailed": "Die geplanten Beiträge konnten nicht geladen werden",
+    "cover": {
+      "title": "Titelbild",
+      "image": "Bild",
+      "imageHint": "Wähle eines der an diesen Beitrag angehängten Bilder.",
+      "noImages": "Hänge zuerst ein Bild an diesen Beitrag an, zum Beispiel indem du es auf die Seite ziehst.",
+      "none": "Kein Titelbild",
+      "focusHint": "Klicke auf den Punkt, der sichtbar bleiben muss, wenn Listen das Bild zuschneiden, oder nutze die Pfeiltasten.",
+      "focus": "Fokuspunkt bei {x} % von links und {y} % von oben. Klicken oder Pfeiltasten verschieben ihn.",
+      "wide": "In breiten Listen",
+      "square": "In kleinen Kacheln"
+    }
   },
   "files": {
     "title": "Anhänge",
@@ -5302,7 +5313,8 @@
       "signIn": "Anmelden",
       "notForYouTitle": "Dieser Link ist für andere Personen",
       "goneTitle": "Dieser Link funktioniert nicht mehr",
-      "failed": "Der Link konnte nicht geöffnet werden"
+      "failed": "Der Link konnte nicht geöffnet werden",
+      "downloadFailed": "Die Datei wurde nicht heruntergeladen"
     }
   }
 }

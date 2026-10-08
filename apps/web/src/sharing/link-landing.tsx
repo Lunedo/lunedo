@@ -1,11 +1,11 @@
-import { Button, EmptyState, Field, Notice, PasswordInput, Skeleton } from "@pagehall/ui";
+import { Button, EmptyState, Field, Notice, PasswordInput, Skeleton, useToast } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { FileText, Link2Off, LockKeyhole, LogIn, Paperclip } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
-import { ApiError, request } from "../api/request.js";
+import { ApiError, networkError, request, toApiError } from "../api/request.js";
 import { PageReadView } from "../editor/read-view.js";
 import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
@@ -25,17 +25,98 @@ type State =
   | { kind: "password"; error: string | null }
   | { kind: "failed"; error: unknown };
 
-function attachmentHref(
-  token: string,
-  attachmentId: string,
-  unlock: string | null,
-  download = false,
-): string {
-  const query = new URLSearchParams();
-  if (unlock) query.set("unlock", unlock);
-  if (download) query.set("download", "true");
-  const suffix = query.toString();
-  return `/api/v1/share-links/${encodeURIComponent(token)}/attachments/${attachmentId}/content${suffix ? `?${suffix}` : ""}`;
+function attachmentHref(token: string, attachmentId: string, download = false): string {
+  return `/api/v1/share-links/${encodeURIComponent(token)}/attachments/${attachmentId}/content${download ? "?download=true" : ""}`;
+}
+
+async function attachmentBlob(token: string, attachmentId: string, unlock: string): Promise<Blob> {
+  let response: Response;
+  try {
+    response = await fetch(attachmentHref(token, attachmentId), { headers: { "x-pagehall-unlock": unlock } });
+  } catch {
+    throw networkError();
+  }
+  if (!response.ok) {
+    let body: unknown = null;
+    try {
+      body = await response.json();
+    } catch {
+      body = null;
+    }
+    throw toApiError(response, body);
+  }
+  return response.blob();
+}
+
+function useImageUrls(token: string, unlock: string | null, images: readonly string[]) {
+  const blobs = useQuery({
+    queryKey: ["shareLinkImages", token, unlock, images],
+    enabled: unlock !== null && images.length > 0,
+    throwOnError: false,
+    gcTime: 0,
+    queryFn: async () =>
+      new Map(
+        await Promise.all(
+          images.map(
+            async (id) => [id, URL.createObjectURL(await attachmentBlob(token, id, unlock ?? ""))] as const,
+          ),
+        ),
+      ),
+  });
+  useEffect(() => {
+    const urls = blobs.data;
+    return () => {
+      for (const url of urls?.values() ?? []) URL.revokeObjectURL(url);
+    };
+  }, [blobs.data]);
+  return (id: string) => (unlock === null ? attachmentHref(token, id) : (blobs.data?.get(id) ?? ""));
+}
+
+function DownloadLink({
+  token,
+  unlock,
+  attachment,
+}: {
+  token: string;
+  unlock: string | null;
+  attachment: { id: string; name: string };
+}) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const className = "min-h-hit px-2 text-accent underline focus-visible:focus-ring";
+  if (unlock === null) {
+    return (
+      <a href={attachmentHref(token, attachment.id, true)} download={attachment.name} className={className}>
+        {t("files.download")}
+      </a>
+    );
+  }
+  return (
+    <button
+      type="button"
+      className={className}
+      onClick={() =>
+        void attachmentBlob(token, attachment.id, unlock).then(
+          (blob) => {
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement("a");
+            anchor.href = url;
+            anchor.download = attachment.name;
+            anchor.click();
+            setTimeout(() => URL.revokeObjectURL(url), 0);
+          },
+          (error: unknown) =>
+            toast({
+              title: t("sharing.landing.downloadFailed"),
+              description: problemMessage(t, error),
+              variant: "error",
+            }),
+        )
+      }
+    >
+      {t("files.download")}
+    </button>
+  );
 }
 
 function AnonymousPage({ token, unlock }: { token: string; unlock: string | null }) {
@@ -53,6 +134,13 @@ function AnonymousPage({ token, unlock }: { token: string; unlock: string | null
     throwOnError: false,
     retry: false,
   });
+  const urlOf = useImageUrls(
+    token,
+    unlock,
+    (page.data?.attachments ?? [])
+      .filter((attachment) => attachment.preview === "image")
+      .map((attachment) => attachment.id),
+  );
   if (page.isPending) return <Skeleton className="h-card w-full" />;
   if (page.isError) {
     return (
@@ -75,10 +163,7 @@ function AnonymousPage({ token, unlock }: { token: string; unlock: string | null
         document={data.document}
         references={NO_REFERENCES}
         pageId={data.itemId}
-        attachments={{
-          url: (id) => attachmentHref(token, id, unlock),
-          onOpen: (id) => globalThis.open(attachmentHref(token, id, unlock), "_blank", "noopener"),
-        }}
+        attachments={{ url: urlOf, onOpen: () => undefined }}
       />
       {data.attachments.length > 0 ? (
         <section
@@ -98,13 +183,7 @@ function AnonymousPage({ token, unlock }: { token: string; unlock: string | null
                 <span className="text-sm text-text-muted">
                   {typeLabel(t, attachment)} · {format.bytes(attachment.size)}
                 </span>
-                <a
-                  href={attachmentHref(token, attachment.id, unlock, true)}
-                  download={attachment.name}
-                  className="min-h-hit px-2 text-accent underline focus-visible:focus-ring"
-                >
-                  {t("files.download")}
-                </a>
+                <DownloadLink token={token} unlock={unlock} attachment={attachment} />
               </li>
             ))}
           </ul>

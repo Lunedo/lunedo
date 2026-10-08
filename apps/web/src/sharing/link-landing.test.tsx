@@ -55,6 +55,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   window.history.replaceState(null, "", "/");
 });
 
@@ -68,6 +69,10 @@ describe("opening a share link", () => {
   it("asks anonymous visitors for the password and then shows only the page", async () => {
     const opens: RecordedRequest[] = [];
     let pageRequest: RecordedRequest | undefined;
+    const downloads: RecordedRequest[] = [];
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:file");
+    vi.spyOn(URL, "revokeObjectURL").mockReturnValue(undefined);
+    const saved = vi.spyOn(HTMLAnchorElement.prototype, "click").mockReturnValue(undefined);
     mockApi({
       "GET /api/v1/instance/info": info,
       "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
@@ -77,6 +82,10 @@ describe("opening a share link", () => {
         if (!password) return problem(401, "passwordRequired");
         if (password !== "harbour lantern") return problem(401, "wrongPassword");
         return { body: { kind: "anonymous", itemId: PAGE, unlock: "proof" } };
+      },
+      [`GET /api/v1/share-links/${TOKEN}/attachments/${FILE}/content`]: (request) => {
+        downloads.push(request);
+        return { body: {} };
       },
       [`GET /api/v1/share-links/${TOKEN}/page`]: (request) => {
         pageRequest = request;
@@ -97,9 +106,12 @@ describe("opening a share link", () => {
     expect(await screen.findByRole("heading", { name: "Status page" })).toBeTruthy();
     expect(screen.getByText("All systems normal")).toBeTruthy();
     expect(pageRequest?.headers.get("x-pagehall-unlock")).toBe("proof");
-    expect(screen.getByRole("link", { name: "Download" }).getAttribute("href")).toBe(
-      `/api/v1/share-links/${TOKEN}/attachments/${FILE}/content?unlock=proof&download=true`,
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Download" }));
+    await waitFor(() => expect(saved).toHaveBeenCalledOnce());
+    expect(downloads).toHaveLength(1);
+    expect(downloads[0]?.headers.get("x-pagehall-unlock")).toBe("proof");
+    expect(downloads[0]?.path).toBe(`/api/v1/share-links/${TOKEN}/attachments/${FILE}/content`);
+    expect(document.body.innerHTML).not.toContain("proof");
     expect(window.location.pathname).toBe(`/s/${TOKEN}`);
   });
 

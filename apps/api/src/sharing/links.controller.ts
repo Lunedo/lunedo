@@ -25,13 +25,9 @@ const tokenParams = z
 const tokenAttachmentParams = tokenParams.extend({ attachmentId: uuid("ID of the attachment.") }).strict();
 const UNLOCK_HEADER = "x-pagehall-unlock";
 
-const unlockQuery = z
+const versionQuery = z
   .object({
-    unlock: z
-      .string()
-      .max(200)
-      .optional()
-      .describe("Proof of the password from the open endpoint, for links with a password."),
+    download: z.enum(["true", "false"]).optional().describe("`true` sends the file as a download."),
     version: z.coerce
       .number()
       .int()
@@ -261,9 +257,9 @@ export class ShareLinksController {
     };
   }
 
-  #unlock(request: FastifyRequest, query?: { unlock?: string | undefined }): string | undefined {
+  #unlock(request: FastifyRequest): string | undefined {
     const header = request.headers[UNLOCK_HEADER];
-    return (typeof header === "string" ? header : undefined) ?? query?.unlock;
+    return typeof header === "string" ? header : undefined;
   }
 
   @Get("share-links/:token/page")
@@ -307,10 +303,10 @@ export class ShareLinksController {
   @ApiRoute({
     summary: "Download an attachment through a link for anyone",
     description:
-      "Sends an attachment of the page the link opens. Links with a password need the proof from the open endpoint, in the `X-Pagehall-Unlock` header or the `unlock` parameter.",
+      "Sends an attachment of the page the link opens. Links with a password need the proof from the open endpoint in the `X-Pagehall-Unlock` header; it is never accepted in the address, so that it does not end up in histories or copied links.",
     tags: [TAG],
     params: tokenAttachmentParams,
-    query: unlockQuery,
+    query: versionQuery,
     raw: {
       contentTypes: ["*/*"],
       ranges: true,
@@ -322,22 +318,18 @@ export class ShareLinksController {
   async attachment(
     @Param("token") token: string,
     @Param("attachmentId") attachmentId: string,
-    @Query() query: z.output<typeof unlockQuery>,
+    @Query() query: z.output<typeof versionQuery>,
     @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
-    const itemId = await this.#services.shareLinks.resolveAnonymous(
-      token,
-      this.#unlock(request, query),
-      request.ip,
-    );
+    const itemId = await this.#services.shareLinks.resolveAnonymous(token, this.#unlock(request), request.ip);
     const found = await this.#services.attachments.get(ANONYMOUS, attachmentId);
     if (!found || found.itemId !== itemId) throw notFound();
     const content = await this.#services.attachments.content(attachmentId, query.version);
     if (!content) throw notFound();
     reply.header("referrer-policy", "no-referrer");
     return sendAttachment(request, reply, this.#services.files, content, {
-      inline: true,
+      inline: query.download !== "true",
       crossOrigin: false,
     });
   }

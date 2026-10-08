@@ -4919,7 +4919,18 @@
     "scheduledTitle": "Scheduled",
     "scheduledDescription": "Every scheduled post of this space. Posts waiting for approval come first. Only space admins see this list.",
     "scheduledEmpty": "No posts are scheduled.",
-    "scheduledLoadFailed": "The scheduled posts could not be loaded"
+    "scheduledLoadFailed": "The scheduled posts could not be loaded",
+    "cover": {
+      "title": "Cover image",
+      "image": "Image",
+      "imageHint": "Choose one of the images attached to this post.",
+      "noImages": "Attach an image to this post first, for example by dropping it on the page.",
+      "none": "No cover",
+      "focusHint": "Click the point that must stay visible when lists crop the image, or use the arrow keys.",
+      "focus": "Focal point at {x} % from the left and {y} % from the top. Click or use the arrow keys to move it.",
+      "wide": "In wide lists",
+      "square": "In small tiles"
+    }
   },
   "files": {
     "title": "Attachments",
@@ -5302,7 +5313,8 @@
       "signIn": "Sign in",
       "notForYouTitle": "This link is for other people",
       "goneTitle": "This link no longer works",
-      "failed": "The link could not be opened"
+      "failed": "The link could not be opened",
+      "downloadFailed": "The file was not downloaded"
     }
   }
 }
