@@ -5,7 +5,7 @@ import { callApi, expectAccessible, linkFrom, signInWithPassword, waitForMail } 
 test.describe.configure({ mode: "serial" });
 test.use({ storageState: OWNER_STORAGE });
 
-const SPACE_KEY = "RN";
+let spaceKey = "RN";
 let spaceId = "";
 let pagePath = "";
 let reader = { email: "", password: "" };
@@ -47,19 +47,20 @@ test("creates a page from a template and publishes it while readers keep the pub
   page,
   browser,
 }) => {
+  spaceKey = `RN${test.info().retry || ""}`;
   await page.goto("/spaces");
   const person = await invite(page, browser, "Rita Reader");
   reader = person;
   const created = (await callApi(page, "POST", `/api/v1/organizations/${await organizationId(page)}/spaces`, {
     name: "Release Notes",
-    key: SPACE_KEY,
+    key: spaceKey,
     visibility: "private",
     grants: [{ principalKind: "account", principalId: person.id, role: "reader" }],
   })) as { id: string };
   spaceId = created.id;
   await callApi(page, "PUT", `/api/v1/spaces/${spaceId}/settings/pages.defaultMode`, { value: "publish" });
 
-  await page.goto(`/spaces/${SPACE_KEY}`);
+  await page.goto(`/spaces/${spaceKey}`);
   await page.getByRole("button", { name: "Create in this space" }).click();
   await page.getByRole("menuitem", { name: "New page" }).click();
   const gallery = page.getByRole("dialog", { name: "Create in Release Notes" });
@@ -67,7 +68,7 @@ test("creates a page from a template and publishes it while readers keep the pub
   await expect(gallery.getByRole("region", { name: "Preview" })).toBeVisible();
   await expectAccessible(page, "template gallery with a template");
   await gallery.getByRole("button", { name: "Create from Meeting notes" }).click();
-  await expect(editor(page)).toBeVisible();
+  await expect(editor(page)).toBeEditable();
   await expect(page.getByText("Not published yet").first()).toBeVisible();
   pagePath = new URL(page.url()).pathname;
 
@@ -84,6 +85,7 @@ test("creates a page from a template and publishes it while readers keep the pub
   await page.getByRole("button", { name: "Publish version 1" }).click();
   await expect(page.getByText("Published as version 1. Readers see it now.").first()).toBeVisible();
 
+  await expect(editor(page)).toBeEditable();
   await editor(page).click();
   await page.keyboard.press("Control+End");
   await page.keyboard.press("Enter");
@@ -111,7 +113,7 @@ test("creates a page from a template and publishes it while readers keep the pub
 
 test("compares versions and restores an earlier one into the draft", async ({ page }) => {
   await page.goto(`${pagePath}?edit=true`);
-  await expect(editor(page)).toBeVisible();
+  await expect(editor(page)).toBeEditable();
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await page.getByRole("button", { name: "Publish version 2" }).click();
   await expect(page.getByText("Published as version 2. Readers see it now.").first()).toBeVisible();
@@ -141,7 +143,7 @@ test("deletes a page to the trash, restores it and archives it", async ({ page }
   await page.getByRole("button", { name: "More actions" }).click();
   await page.getByRole("menuitem", { name: "Move to trash" }).click();
   await expect(page.getByText(/moved to the trash/).first()).toBeVisible();
-  await page.goto(`/spaces/${SPACE_KEY}/trash`);
+  await page.goto(`/spaces/${spaceKey}/trash`);
   await expect(page.getByRole("heading", { name: "Trash", level: 1 })).toBeVisible();
   await expectAccessible(page, "trash");
   await page.getByRole("button", { name: "Restore" }).first().click();
@@ -158,10 +160,10 @@ test("deletes a page to the trash, restores it and archives it", async ({ page }
 });
 
 test("passes the accessibility check on the new settings screens", async ({ page }) => {
-  await page.goto(`/spaces/${SPACE_KEY}/settings/content`);
+  await page.goto(`/spaces/${spaceKey}/settings/content`);
   await expect(page.getByRole("heading", { name: "Pages and trash", level: 1 })).toBeVisible();
   await expectAccessible(page, "space pages and trash");
-  await page.goto(`/spaces/${SPACE_KEY}/settings/templates`);
+  await page.goto(`/spaces/${spaceKey}/settings/templates`);
   await expect(page.getByRole("heading", { name: "Templates", level: 1 })).toBeVisible();
   await page.getByRole("button", { name: "Create template" }).first().click();
   await expect(page.getByRole("dialog", { name: "New template" })).toBeVisible();

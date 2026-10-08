@@ -69,7 +69,7 @@ async function documentText(page: Page): Promise<string> {
 
 async function openEditor(page: Page, path: string) {
   await page.goto(`${path}?edit=true`);
-  await expect(editor(page)).toBeVisible();
+  await expect(editor(page)).toBeEditable();
   await expect(page.getByText("Saved").or(page.getByText("Editing")).first()).toBeVisible();
 }
 
