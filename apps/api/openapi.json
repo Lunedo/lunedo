@@ -18124,13 +18124,13 @@
                           },
                           "kind": {
                             "type": "string",
-                            "enum": [
+                            "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
                               "page",
                               "folder",
                               "link",
                               "blogPost"
-                            ],
-                            "description": "Kind of the item."
+                            ]
                           },
                           "title": {
                             "type": "string",
@@ -18184,13 +18184,13 @@
                               },
                               "kind": {
                                 "type": "string",
-                                "enum": [
+                                "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
                                   "page",
                                   "folder",
                                   "link",
                                   "blogPost"
-                                ],
-                                "description": "Kind of the item."
+                                ]
                               },
                               "title": {
                                 "type": "string",
@@ -18343,11 +18343,11 @@
                               },
                               "kind": {
                                 "type": "string",
-                                "enum": [
+                                "description": "Kind of that item. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
                                   "page",
                                   "blogPost"
-                                ],
-                                "description": "Kind of that item."
+                                ]
                               },
                               "title": {
                                 "type": "string",
@@ -18413,13 +18413,13 @@
                               },
                               "kind": {
                                 "type": "string",
-                                "enum": [
+                                "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
                                   "page",
                                   "folder",
                                   "link",
                                   "blogPost"
-                                ],
-                                "description": "Kind of the item."
+                                ]
                               },
                               "title": {
                                 "type": "string",
@@ -75607,7 +75607,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "enum": [
+                          "x-extensible-enum": [
                             "page",
                             "folder",
                             "link",
@@ -75618,7 +75618,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Kind of the deleted item, or null for a space."
+                      "description": "Kind of the deleted item, or null for a space. New values can be added in later versions; handle unknown values."
                     },
                     "title": {
                       "type": "string",
@@ -76146,7 +76146,7 @@
                         "anyOf": [
                           {
                             "type": "string",
-                            "enum": [
+                            "x-extensible-enum": [
                               "page",
                               "folder",
                               "link",
@@ -76157,7 +76157,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Kind of the deleted item, or null for a space."
+                        "description": "Kind of the deleted item, or null for a space. New values can be added in later versions; handle unknown values."
                       },
                       "title": {
                         "type": "string",
@@ -81933,13 +81933,13 @@
                       },
                       "kind": {
                         "type": "string",
-                        "enum": [
+                        "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space. New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
                           "page",
                           "folder",
                           "link",
                           "blogPost"
-                        ],
-                        "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space."
+                        ]
                       },
                       "title": {
                         "type": "string",
@@ -82029,13 +82029,13 @@
                                       },
                                       "kind": {
                                         "type": "string",
-                                        "enum": [
+                                        "description": "Kind of the target. New values can be added in later versions; handle unknown values.",
+                                        "x-extensible-enum": [
                                           "page",
                                           "folder",
                                           "link",
                                           "blogPost"
-                                        ],
-                                        "description": "Kind of the target."
+                                        ]
                                       },
                                       "title": {
                                         "type": "string",
@@ -82357,7 +82357,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "enum": [
+                          "x-extensible-enum": [
                             "page",
                             "folder",
                             "link",
@@ -82368,7 +82368,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Kind of the deleted item, or null for a space."
+                      "description": "Kind of the deleted item, or null for a space. New values can be added in later versions; handle unknown values."
                     },
                     "title": {
                       "type": "string",
@@ -82698,13 +82698,13 @@
                     },
                     "kind": {
                       "type": "string",
-                      "enum": [
+                      "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
                         "page",
                         "folder",
                         "link",
                         "blogPost"
-                      ],
-                      "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space."
+                      ]
                     },
                     "title": {
                       "type": "string",
@@ -82794,13 +82794,13 @@
                                     },
                                     "kind": {
                                       "type": "string",
-                                      "enum": [
+                                      "description": "Kind of the target. New values can be added in later versions; handle unknown values.",
+                                      "x-extensible-enum": [
                                         "page",
                                         "folder",
                                         "link",
                                         "blogPost"
-                                      ],
-                                      "description": "Kind of the target."
+                                      ]
                                     },
                                     "title": {
                                       "type": "string",
@@ -82897,13 +82897,13 @@
                           },
                           "kind": {
                             "type": "string",
-                            "enum": [
+                            "description": "Kind of the ancestor. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
                               "page",
                               "folder",
                               "link",
                               "blogPost"
-                            ],
-                            "description": "Kind of the ancestor."
+                            ]
                           },
                           "title": {
                             "type": "string",
@@ -83195,13 +83195,13 @@
                     },
                     "kind": {
                       "type": "string",
-                      "enum": [
+                      "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
                         "page",
                         "folder",
                         "link",
                         "blogPost"
-                      ],
-                      "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space."
+                      ]
                     },
                     "title": {
                       "type": "string",
@@ -83291,13 +83291,13 @@
                                     },
                                     "kind": {
                                       "type": "string",
-                                      "enum": [
+                                      "description": "Kind of the target. New values can be added in later versions; handle unknown values.",
+                                      "x-extensible-enum": [
                                         "page",
                                         "folder",
                                         "link",
                                         "blogPost"
-                                      ],
-                                      "description": "Kind of the target."
+                                      ]
                                     },
                                     "title": {
                                       "type": "string",
@@ -83841,13 +83841,13 @@
                     },
                     "kind": {
                       "type": "string",
-                      "enum": [
+                      "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
                         "page",
                         "folder",
                         "link",
                         "blogPost"
-                      ],
-                      "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space."
+                      ]
                     },
                     "title": {
                       "type": "string",
@@ -83937,13 +83937,13 @@
                                     },
                                     "kind": {
                                       "type": "string",
-                                      "enum": [
+                                      "description": "Kind of the target. New values can be added in later versions; handle unknown values.",
+                                      "x-extensible-enum": [
                                         "page",
                                         "folder",
                                         "link",
                                         "blogPost"
-                                      ],
-                                      "description": "Kind of the target."
+                                      ]
                                     },
                                     "title": {
                                       "type": "string",
@@ -84349,13 +84349,13 @@
                     },
                     "kind": {
                       "type": "string",
-                      "enum": [
+                      "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
                         "page",
                         "folder",
                         "link",
                         "blogPost"
-                      ],
-                      "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space."
+                      ]
                     },
                     "title": {
                       "type": "string",
@@ -84445,13 +84445,13 @@
                                     },
                                     "kind": {
                                       "type": "string",
-                                      "enum": [
+                                      "description": "Kind of the target. New values can be added in later versions; handle unknown values.",
+                                      "x-extensible-enum": [
                                         "page",
                                         "folder",
                                         "link",
                                         "blogPost"
-                                      ],
-                                      "description": "Kind of the target."
+                                      ]
                                     },
                                     "title": {
                                       "type": "string",
@@ -85489,13 +85489,13 @@
                           },
                           "kind": {
                             "type": "string",
-                            "enum": [
+                            "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
                               "page",
                               "folder",
                               "link",
                               "blogPost"
-                            ],
-                            "description": "Kind of the item."
+                            ]
                           },
                           "title": {
                             "type": "string",
@@ -91261,13 +91261,13 @@
                             },
                             "kind": {
                               "type": "string",
-                              "enum": [
+                              "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
+                              "x-extensible-enum": [
                                 "page",
                                 "folder",
                                 "link",
                                 "blogPost"
-                              ],
-                              "description": "Kind of the item."
+                              ]
                             },
                             "title": {
                               "type": "string",
@@ -91526,13 +91526,13 @@
                             },
                             "kind": {
                               "type": "string",
-                              "enum": [
+                              "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
+                              "x-extensible-enum": [
                                 "page",
                                 "folder",
                                 "link",
                                 "blogPost"
-                              ],
-                              "description": "Kind of the item."
+                              ]
                             },
                             "title": {
                               "type": "string",
@@ -101914,7 +101914,7 @@
                         "anyOf": [
                           {
                             "type": "string",
-                            "enum": [
+                            "x-extensible-enum": [
                               "page",
                               "folder",
                               "link",
@@ -101925,7 +101925,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Kind of the deleted item, or null for a space."
+                        "description": "Kind of the deleted item, or null for a space. New values can be added in later versions; handle unknown values."
                       },
                       "title": {
                         "type": "string",
@@ -109979,13 +109979,13 @@
                       },
                       "kind": {
                         "type": "string",
-                        "enum": [
+                        "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
                           "page",
                           "folder",
                           "link",
                           "blogPost"
-                        ],
-                        "description": "Kind of the item."
+                        ]
                       },
                       "title": {
                         "type": "string",
@@ -114958,13 +114958,13 @@
                       },
                       "kind": {
                         "type": "string",
-                        "enum": [
+                        "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
                           "page",
                           "folder",
                           "link",
                           "blogPost"
-                        ],
-                        "description": "Kind of the item."
+                        ]
                       },
                       "title": {
                         "type": "string",
@@ -116650,7 +116650,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "enum": [
+                          "x-extensible-enum": [
                             "page",
                             "folder",
                             "link",
@@ -116661,7 +116661,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Kind of the deleted item, or null for a space."
+                      "description": "Kind of the deleted item, or null for a space. New values can be added in later versions; handle unknown values."
                     },
                     "title": {
                       "type": "string",
@@ -117018,13 +117018,13 @@
                           },
                           "kind": {
                             "type": "string",
-                            "enum": [
+                            "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
                               "page",
                               "folder",
                               "link",
                               "blogPost"
-                            ],
-                            "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space."
+                            ]
                           },
                           "title": {
                             "type": "string",
@@ -117114,13 +117114,13 @@
                                           },
                                           "kind": {
                                             "type": "string",
-                                            "enum": [
+                                            "description": "Kind of the target. New values can be added in later versions; handle unknown values.",
+                                            "x-extensible-enum": [
                                               "page",
                                               "folder",
                                               "link",
                                               "blogPost"
-                                            ],
-                                            "description": "Kind of the target."
+                                            ]
                                           },
                                           "title": {
                                             "type": "string",
@@ -117594,13 +117594,13 @@
                     },
                     "kind": {
                       "type": "string",
-                      "enum": [
+                      "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
                         "page",
                         "folder",
                         "link",
                         "blogPost"
-                      ],
-                      "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space."
+                      ]
                     },
                     "title": {
                       "type": "string",
@@ -117690,13 +117690,13 @@
                                     },
                                     "kind": {
                                       "type": "string",
-                                      "enum": [
+                                      "description": "Kind of the target. New values can be added in later versions; handle unknown values.",
+                                      "x-extensible-enum": [
                                         "page",
                                         "folder",
                                         "link",
                                         "blogPost"
-                                      ],
-                                      "description": "Kind of the target."
+                                      ]
                                     },
                                     "title": {
                                       "type": "string",
@@ -123139,7 +123139,7 @@
                         "anyOf": [
                           {
                             "type": "string",
-                            "enum": [
+                            "x-extensible-enum": [
                               "page",
                               "folder",
                               "link",
@@ -123150,7 +123150,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Kind of the deleted item, or null for a space."
+                        "description": "Kind of the deleted item, or null for a space. New values can be added in later versions; handle unknown values."
                       },
                       "title": {
                         "type": "string",
@@ -124500,13 +124500,13 @@
                           },
                           "kind": {
                             "type": "string",
-                            "enum": [
+                            "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
                               "page",
                               "folder",
                               "link",
                               "blogPost"
-                            ],
-                            "description": "Kind of the item."
+                            ]
                           },
                           "title": {
                             "type": "string",
@@ -125596,11 +125596,11 @@
                               },
                               "kind": {
                                 "type": "string",
-                                "enum": [
+                                "description": "Kind of that item. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
                                   "page",
                                   "blogPost"
-                                ],
-                                "description": "Kind of that item."
+                                ]
                               },
                               "title": {
                                 "type": "string",

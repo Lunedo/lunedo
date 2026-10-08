@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { RouteAccess } from "../access/route-access.js";
 import { type ApiRouteDefinition, successStatus } from "../http/api-route.js";
 import { type ProblemCode, problemBody, problemSchema, problems } from "../http/problems.js";
+import { EXTENSIBLE_ENUM } from "../http/schemas.js";
 import { GETTING_STARTED } from "./getting-started.js";
 import { type ApiRouteInfo, apiRoutes } from "./routes.js";
 
@@ -100,9 +101,10 @@ class SchemaCollector {
       if (Array.isArray(value)) return value.map(rewrite);
       if (value === null || typeof value !== "object") return value;
       const formatted = "format" in value && FORMATS_WITHOUT_PATTERN.has(String(value.format));
+      const extensible = Array.isArray((value as JsonSchema)[EXTENSIBLE_ENUM]);
       return Object.fromEntries(
         Object.entries(hoistDescription(value as JsonSchema))
-          .filter(([key]) => !(formatted && key === "pattern"))
+          .filter(([key]) => !(formatted && key === "pattern") && !(extensible && key === "enum"))
           .map(([key, entry]) => {
             if (key === "$ref" && entry === "#") {
               return [key, `#/components/schemas/${names.get(ROOT)}`];

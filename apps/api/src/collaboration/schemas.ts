@@ -8,7 +8,7 @@ import {
   treeItemKinds,
 } from "@pagehall/server";
 import { z } from "zod";
-import { inputTimestamp, timestamp, uuid } from "../http/schemas.js";
+import { extensibleEnum, inputTimestamp, timestamp, uuid } from "../http/schemas.js";
 import { exampleItem, exampleSpace } from "../spaces/schemas.js";
 
 const person = (description: string) =>
@@ -181,7 +181,7 @@ export const setTaskStatusSchema = z
 
 const contentReferenceShape = {
   id: uuid("ID of the page or blog post."),
-  kind: z.enum(treeItemKinds).describe("Kind of the item."),
+  kind: extensibleEnum(treeItemKinds, "Kind of the item."),
   title: z.string().describe("Title readers see."),
   spaceId: uuid("Space of the item."),
   spaceKey: z.string().describe("Key of that space."),
@@ -206,7 +206,7 @@ export const taskEntrySchema = z
     item: z
       .object({
         id: uuid("Page or blog post with the task."),
-        kind: z.enum(["page", "blogPost"]).describe("Kind of that item."),
+        kind: extensibleEnum(["page", "blogPost"], "Kind of that item."),
         title: z.string().describe("Its title."),
         spaceId: uuid("Its space."),
         spaceKey: z.string().describe("Key of the space."),

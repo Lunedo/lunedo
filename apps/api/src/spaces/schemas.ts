@@ -11,7 +11,7 @@ import {
   treeItemKinds,
 } from "@pagehall/server";
 import { z } from "zod";
-import { timestamp, uuid } from "../http/schemas.js";
+import { extensibleEnum, timestamp, uuid } from "../http/schemas.js";
 
 export const visibilitySchema = z
   .enum(spaceVisibilities)
@@ -206,7 +206,7 @@ export const linkSchema = z
       .object({
         spaceId: uuid("Space of the target."),
         spaceKey: z.string().describe("Key of that space."),
-        kind: z.enum(treeItemKinds).describe("Kind of the target."),
+        kind: extensibleEnum(treeItemKinds, "Kind of the target."),
         title: z.string().describe("Title of the target."),
       })
       .nullable()
@@ -225,11 +225,10 @@ export const treeItemSchema = z
     id: uuid("ID of the item."),
     spaceId: uuid("Space of the item."),
     parentId: uuid("Parent item, or null at the root of the tree.").nullable(),
-    kind: z
-      .enum(treeItemKinds)
-      .describe(
-        "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space.",
-      ),
+    kind: extensibleEnum(
+      treeItemKinds,
+      "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space.",
+    ),
     title: z.string().describe("Title. Empty for a link to content the caller cannot read."),
     description: z.string().describe("Short description of a folder."),
     width: z.enum(pageWidths).describe("Page width: `fixed` or `full`."),
@@ -281,7 +280,7 @@ export const itemDetailsSchema = treeItemSchema
         z
           .object({
             id: uuid("ID of the ancestor."),
-            kind: z.enum(treeItemKinds).describe("Kind of the ancestor."),
+            kind: extensibleEnum(treeItemKinds, "Kind of the ancestor."),
             title: z.string().describe("Title of the ancestor."),
             published: z
               .boolean()
@@ -461,7 +460,7 @@ export const trashEntrySchema = z
       .enum(["items", "space"])
       .describe("`items` for deleted pages, folders or links, `space` for a deleted space."),
     itemId: uuid("The deleted item, or null for a space.").nullable(),
-    itemKind: z.enum(treeItemKinds).nullable().describe("Kind of the deleted item, or null for a space."),
+    itemKind: extensibleEnum(treeItemKinds, "Kind of the deleted item, or null for a space.").nullable(),
     title: z.string().describe("Title of the deleted item, or name of the space."),
     descendants: z.number().int().describe("Number of descendants deleted with the item."),
     stage: z
@@ -496,7 +495,7 @@ export const exampleTrashEntry = {
 export const archivedItemSchema = z
   .object({
     id: uuid("ID of the archived item."),
-    kind: z.enum(treeItemKinds).describe("Kind of the item."),
+    kind: extensibleEnum(treeItemKinds, "Kind of the item."),
     title: z.string().describe("Title."),
     hasChildren: z.boolean().describe("Whether it has archived descendants."),
     archivedAt: timestamp("When it was archived.").nullable(),
