@@ -1,11 +1,24 @@
-import type { DocumentJson } from "./json.js";
+import type { DocumentJson, NodeJson } from "./json.js";
 
-export const editorSchemaVersion = 2;
+export const editorSchemaVersion = 3;
 
 export type Migration = (doc: DocumentJson) => DocumentJson;
 
+function mapNodes(node: NodeJson, change: (node: NodeJson) => NodeJson): NodeJson {
+  const changed = change(node);
+  return changed.content
+    ? { ...changed, content: changed.content.map((child) => mapNodes(child, change)) }
+    : changed;
+}
+
 export const migrations: Record<number, Migration> = {
   1: (doc) => doc,
+  2: (doc) =>
+    mapNodes(doc, (node) => {
+      if (node.type !== "taskItem" || !node.attrs || !("checked" in node.attrs)) return node;
+      const { checked: _checked, ...attrs } = node.attrs;
+      return { ...node, attrs };
+    }) as DocumentJson,
 };
 
 export class MigrationError extends Error {

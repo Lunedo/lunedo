@@ -342,13 +342,14 @@ describe("renderMarkdown", () => {
         {
           type: "taskList",
           content: [
-            { type: "taskItem", attrs: { checked: true }, content: [paragraph(text("Done"))] },
-            { type: "taskItem", content: [paragraph(text("Open"))] },
+            { type: "taskItem", attrs: { id: ID }, content: [paragraph(text("Done"))] },
+            { type: "taskItem", attrs: { id: PAGE }, content: [paragraph(text("Open"))] },
           ],
         },
         { type: "callout", attrs: { variant: "tip" }, content: [paragraph(text("Hint"))] },
         { type: "blockMath", attrs: { latex: "x" } },
       ),
+      { taskStatus: (id) => id === ID },
     );
     expect(markdown).toBe(
       [
@@ -477,13 +478,13 @@ describe("task items", () => {
           {
             type: "taskList",
             content: [
-              { type: "taskItem", attrs: { checked: true }, content: [paragraph(text("Done"))] },
-              { type: "taskItem", attrs: { checked: false }, content: [paragraph(text("Open"))] },
+              { type: "taskItem", attrs: { id: ID }, content: [paragraph(text("Done"))] },
+              { type: "taskItem", attrs: { id: PAGE }, content: [paragraph(text("Open"))] },
             ],
           },
         ],
       },
-      { labels: { taskDone: "Erledigt", taskOpen: "Offen" } },
+      { labels: { taskDone: "Erledigt", taskOpen: "Offen" }, taskStatus: (id) => id === ID },
     );
     expect(html).toContain('<input type="checkbox" disabled aria-label="Erledigt" checked>');
     expect(html).toContain('<input type="checkbox" disabled aria-label="Offen">');
