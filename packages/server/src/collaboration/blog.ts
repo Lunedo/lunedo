@@ -358,6 +358,7 @@ export class BlogService {
         spaceKey: row.key,
         reason: scheduledBy ? "noEditAccess" : "accountRemoved",
         scheduledBy,
+        spaceId: row.space_id,
       },
     });
   }

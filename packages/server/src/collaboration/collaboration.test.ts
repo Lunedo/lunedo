@@ -881,6 +881,22 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
       expect(await auditNames(post.id)).toEqual(["blogPost.scheduleHeld", "blogPost.heldCancelled"]);
     });
 
+    it("tell an author who lost all access to the space nothing about the post", async () => {
+      const context = await setup();
+      const { post, authorId } = await duePost(context, async (_authorId, permissionId) => {
+        await test.services.spacePermissions.apply(context.editor, context.space.id, {
+          action: "remove",
+          permissionId,
+        });
+      });
+      expect(await test.services.blog.publishDue()).toBe(0);
+      expect(await test.services.blog.get(context.editor, post.id)).toMatchObject({ held: true });
+      expect(await notificationsOf(authorId)).toEqual([]);
+      expect((await notificationsOf(context.editorId)).map((entry) => entry.type)).toEqual([
+        "blogPost.scheduleHeld",
+      ]);
+    });
+
     it("are published as planned when the author can still edit them", async () => {
       const context = await setup();
       const { post, authorId } = await duePost(context, async () => {});

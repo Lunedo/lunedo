@@ -113,6 +113,7 @@ export const contentNotificationParamSchemas = {
     spaceKey: z.string(),
     reason: z.enum(["noEditAccess", "accountRemoved"]),
     scheduledBy: idSchema.nullable(),
+    spaceId: idSchema,
   }),
 } as const;
 
