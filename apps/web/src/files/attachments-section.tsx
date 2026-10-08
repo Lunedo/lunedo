@@ -56,7 +56,7 @@ export function PageDropZone({
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: dropping files is an addition to the upload button
     <div
-      className="relative flex min-h-full flex-1"
+      className="relative flex min-h-full flex-1 flex-col"
       onDragEnter={(event) => {
         if (!hasFiles(event)) return;
         depth.current += 1;
