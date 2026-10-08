@@ -601,6 +601,38 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
       ).toEqual([[true, context.readerId]]);
     });
 
+    it("can be created with a status before the content that holds them is stored", async () => {
+      const context = await setup();
+      const created = await page(context, doc(paragraph("Checklist")));
+      const pasted = randomUUID();
+      const status = await test.services.tasks.setStatusOnPage(context.editor, created.id, pasted, true);
+      expect(status).toMatchObject({ id: pasted, done: true, changedBy: { id: context.editorId } });
+      await test.services.documents.replace(
+        context.editor,
+        created.id,
+        doc(paragraph("Checklist"), task(pasted, "Order badges", { assignee: context.readerId })),
+      );
+      await test.services.versions.publish(context.editor, created.id);
+      expect(await test.services.tasks.statuses(context.reader, created.id)).toEqual([
+        expect.objectContaining({ id: pasted, done: true }),
+      ]);
+      expect(
+        (await test.services.tasks.list(context.reader, { assignee: "me", status: "done" })).items.map(
+          (entry) => entry.id,
+        ),
+      ).toEqual([pasted]);
+      await test.services.tasks.setStatusOnPage(context.editor, created.id, pasted, false);
+      expect((await test.services.tasks.history(pasted)).map((change) => change.done)).toEqual([false, true]);
+
+      const other = await page(context, doc(paragraph("Other")));
+      await expect(
+        test.services.tasks.setStatusOnPage(context.editor, other.id, pasted, true),
+      ).rejects.toMatchObject({ code: "taskNotFound" });
+      expect(await test.services.tasks.statuses(context.editor, created.id)).toEqual([
+        expect.objectContaining({ id: pasted, done: false }),
+      ]);
+    });
+
     it("never lose concurrent changes from the editor and the read view", async () => {
       const context = await setup();
       const first = randomUUID();
@@ -643,6 +675,14 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
       );
       const report = await test.services.tasks.list(context.reader, { spaceId: context.space.id });
       expect(report.items.map((entry) => entry.assignee)).toEqual([null]);
+      const references = await test.services.documents.references(
+        context.reader,
+        doc(
+          task(taskId, "Hidden person", { assignee: stranger }),
+          task(randomUUID(), "Known", { assignee: context.editorId }),
+        ),
+      );
+      expect(Object.keys(references.people)).toEqual([context.editorId]);
       await test.database.execute(
         sql`insert into reactions (item_id, account_id, emoji) values (${created.id}, ${stranger}, '👍')`,
       );

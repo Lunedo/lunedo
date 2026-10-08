@@ -3,16 +3,19 @@ import { Extension } from "@tiptap/core";
 import { Fragment, type Node as ProseMirrorNode, Slice } from "@tiptap/pm/model";
 import { Plugin, PluginKey, type Transaction } from "@tiptap/pm/state";
 import { ySyncPluginKey } from "@tiptap/y-tiptap";
+import { pastedTaskState, rememberTaskStatus } from "./pasted-tasks.js";
 
-function withNewTaskIds(fragment: Fragment): Fragment {
+function withNewTaskIds(fragment: Fragment, counter = { index: 0 }): Fragment {
   const nodes: ProseMirrorNode[] = [];
   fragment.forEach((node) => {
-    const content = withNewTaskIds(node.content);
-    nodes.push(
-      node.type.name === "taskItem"
-        ? node.type.create({ ...node.attrs, id: uuidv7() }, content, node.marks)
-        : node.copy(content),
-    );
+    if (node.type.name !== "taskItem") {
+      nodes.push(node.copy(withNewTaskIds(node.content, counter)));
+      return;
+    }
+    const id = uuidv7();
+    if (pastedTaskState(counter.index)) rememberTaskStatus(id, true);
+    counter.index += 1;
+    nodes.push(node.type.create({ ...node.attrs, id }, withNewTaskIds(node.content, counter), node.marks));
   });
   return Fragment.fromArray(nodes);
 }

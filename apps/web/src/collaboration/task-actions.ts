@@ -6,14 +6,19 @@ import { request } from "../api/request.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { collaborationKeys, type TaskStatus } from "./queries.js";
 
-export function useSetTaskStatus(pageId: string | null) {
+export function useSetTaskStatus(pageId: string | null, options: { onPage?: boolean } = {}) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ taskId, done }: { taskId: string; done: boolean }) =>
       request(() =>
-        api.PUT("/api/v1/tasks/{taskId}/status", { params: { path: { taskId } }, body: { done } }),
+        options.onPage && pageId
+          ? api.PUT("/api/v1/pages/{pageId}/tasks/{taskId}/status", {
+              params: { path: { pageId, taskId } },
+              body: { done },
+            })
+          : api.PUT("/api/v1/tasks/{taskId}/status", { params: { path: { taskId } }, body: { done } }),
       ),
     onMutate: async ({ taskId, done }) => {
       if (!pageId) return { previous: undefined };

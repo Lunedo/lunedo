@@ -139,6 +139,12 @@ describe.skipIf(!databaseBaseUrl)("comments, tasks, blog and home pages through 
     const status = await reader.client.put(`/api/v1/tasks/${taskId}/status`, { done: true });
     expect(status.statusCode, status.body).toBe(200);
     expect(status.json()).toMatchObject({ id: taskId, done: true, changedBy: { id: reader.id } });
+    const pasted = randomUUID();
+    expect(
+      (await reader.client.put(`/api/v1/pages/${pageId}/tasks/${pasted}/status`, { done: true })).statusCode,
+    ).toBe(403);
+    const created = await editor.client.put(`/api/v1/pages/${pageId}/tasks/${pasted}/status`, { done: true });
+    expect(created.json()).toMatchObject({ id: pasted, done: true, changedBy: { id: editor.id } });
   });
 
   it("lets commenters discuss, authors change their comments and space admins delete any comment", async () => {

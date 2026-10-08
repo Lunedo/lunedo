@@ -4,7 +4,7 @@ import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import { accountScopeChain } from "../accounts/scope.js";
 import type { AuthorizationService } from "../authorization/service.js";
-import type { Database } from "../database/database.js";
+import type { Database, Transaction } from "../database/database.js";
 import { timeZoneSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, SpaceError } from "../spaces/common.js";
@@ -55,6 +55,32 @@ export interface TaskList {
 
 const NO_DUE_DATE = "9999-12-31";
 
+export async function writeTaskStatus(
+  tx: Transaction,
+  input: { taskId: string; itemId: string | null; done: boolean; actorId: string | null },
+): Promise<void> {
+  if (input.itemId) {
+    await tx.execute(sql`
+      insert into tasks (id, item_id) values (${input.taskId}, ${input.itemId}) on conflict (id) do nothing`);
+  }
+  const locked = await tx.execute<{ done: boolean; space_id: string; item_id: string }>(sql`
+    select k.done, t.space_id, k.item_id from tasks k join tree_items t on t.id = k.item_id
+    where k.id = ${input.taskId} for update of k`);
+  const row = locked.rows[0];
+  if (!row || (input.itemId && row.item_id !== input.itemId)) {
+    throw new SpaceError("taskNotFound", "The task does not exist");
+  }
+  if (row.done === input.done) return;
+  await tx.execute(sql`
+    update tasks set done = ${input.done}, status_changed_at = now(), status_changed_by = ${input.actorId},
+      updated_at = now()
+    where id = ${input.taskId}`);
+  await tx.execute(sql`
+    insert into task_status_changes (id, task_id, done, actor_id)
+    values (${uuidv7()}, ${input.taskId}, ${input.done}, ${input.actorId})`);
+  await signalSpaceChange(tx, { spaceId: row.space_id, kind: "tasks", itemId: row.item_id });
+}
+
 export class TaskService {
   readonly #database: Database;
   readonly #authorization: AuthorizationService;
@@ -74,22 +100,25 @@ export class TaskService {
   }
 
   async setStatus(actor: Principal, taskId: string, done: boolean): Promise<TaskStatus> {
-    const actorId = actorIdOf(actor);
-    await this.#database.transaction(async (tx) => {
-      const locked = await tx.execute<{ done: boolean; space_id: string; item_id: string }>(sql`
-        select k.done, t.space_id, k.item_id from tasks k join tree_items t on t.id = k.item_id
-        where k.id = ${taskId} for update of k`);
-      const row = locked.rows[0];
-      if (!row) throw new SpaceError("taskNotFound", "The task does not exist");
-      if (row.done === done) return;
-      await tx.execute(sql`
-        update tasks set done = ${done}, status_changed_at = now(), status_changed_by = ${actorId}, updated_at = now()
-        where id = ${taskId}`);
-      await tx.execute(
-        sql`insert into task_status_changes (id, task_id, done, actor_id) values (${uuidv7()}, ${taskId}, ${done}, ${actorId})`,
-      );
-      await signalSpaceChange(tx, { spaceId: row.space_id, kind: "tasks", itemId: row.item_id });
-    });
+    await this.#database.transaction((tx) =>
+      writeTaskStatus(tx, { taskId, itemId: null, done, actorId: actorIdOf(actor) }),
+    );
+    return this.#statusOf(actor, taskId);
+  }
+
+  async setStatusOnPage(
+    actor: Principal,
+    itemId: string,
+    taskId: string,
+    done: boolean,
+  ): Promise<TaskStatus> {
+    await this.#database.transaction((tx) =>
+      writeTaskStatus(tx, { taskId, itemId, done, actorId: actorIdOf(actor) }),
+    );
+    return this.#statusOf(actor, taskId);
+  }
+
+  async #statusOf(actor: Principal, taskId: string): Promise<TaskStatus> {
     const status = (await this.#statuses(actor, sql`k.id = ${taskId}`))[0];
     if (!status) throw new SpaceError("taskNotFound", "The task does not exist");
     return status;

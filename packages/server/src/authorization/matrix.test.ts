@@ -221,6 +221,7 @@ const EXPECTED: Record<string, Expectation> = {
   "item.comment": { scope: "space" },
   "item.react": { scope: "space" },
   "item.pin": { scope: "space" },
+  "item.approveSchedule": { scope: "space" },
   "comment.view": { scope: "space" },
   "comment.reply": { scope: "space" },
   "comment.resolve": { scope: "space" },

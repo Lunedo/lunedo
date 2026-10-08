@@ -4679,7 +4679,8 @@
       "status": "Status",
       "emptyTitle": "Keine passenden Aufgaben",
       "emptyDescription": "Ändere die Filter oder füge veröffentlichten Seiten Aufgaben mit Zuständigen hinzu."
-    }
+    },
+    "checkOnPages": "Aufgaben werden auf den Seiten abgehakt, die aus dieser Vorlage entstehen."
   },
   "blog": {
     "title": "Blog",

@@ -4679,7 +4679,8 @@
       "status": "Status",
       "emptyTitle": "No tasks match",
       "emptyDescription": "Change the filters, or add tasks with assignees to published pages."
-    }
+    },
+    "checkOnPages": "Tasks are checked on the pages made from this template."
   },
   "blog": {
     "title": "Blog",

@@ -751,6 +751,10 @@ details.ph-expand > summary {
   @apply mt-1 flex flex-wrap items-center gap-2 text-sm text-text-muted no-underline;
 }
 
+.ph-content .ph-task-hint {
+  @apply mt-1 text-sm text-text-muted;
+}
+
 .ph-content .ph-task-report-block,
 .ph-content .ph-task-report {
   @apply my-4 rounded-md border border-border bg-surface p-4;

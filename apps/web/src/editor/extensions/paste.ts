@@ -3,6 +3,7 @@ import { Extension } from "@tiptap/core";
 import { Fragment, type Mark, type Node as ProseMirrorNode, Slice } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import MarkdownIt from "markdown-it";
+import { withPastedTaskStates } from "./pasted-tasks.js";
 
 const markdown = new MarkdownIt({ html: false, linkify: true, breaks: false });
 
@@ -31,7 +32,12 @@ function firstTextNode(element: Element): Text | null {
 }
 
 export function markdownToHtml(text: string): string {
+  return pastedMarkdown(text).html;
+}
+
+export function pastedMarkdown(text: string): { html: string; taskStates: boolean[] } {
   const document = new DOMParser().parseFromString(markdown.render(text), "text/html");
+  const done = new WeakSet<Element>();
   for (const list of Array.from(document.body.querySelectorAll("ul"))) {
     const items = Array.from(list.children).filter((child) => child.tagName === "LI");
     const markers = items.map((item) => firstTextNode(item));
@@ -39,11 +45,15 @@ export function markdownToHtml(text: string): string {
     list.setAttribute("data-type", "taskList");
     items.forEach((item, index) => {
       const node = markers[index] as Text;
+      if (TASK_MARKER.exec(node.data)?.[1]?.trim()) done.add(item);
       node.data = node.data.replace(TASK_MARKER, "");
       item.setAttribute("data-type", "taskItem");
     });
   }
-  return document.body.innerHTML;
+  const taskStates = Array.from(document.body.querySelectorAll('li[data-type="taskItem"]')).map((item) =>
+    done.has(item),
+  );
+  return { html: document.body.innerHTML, taskStates };
 }
 
 function unwrap(element: Element): void {
@@ -176,7 +186,8 @@ export const CleanPaste = Extension.create({
             const text = data.getData("text/plain");
             const { $from } = view.state.selection;
             if (!text || $from.parent.type.spec.code || !looksLikeMarkdown(text)) return false;
-            view.pasteHTML(markdownToHtml(text), event);
+            const pasted = pastedMarkdown(text);
+            withPastedTaskStates(pasted.taskStates, () => view.pasteHTML(pasted.html));
             return true;
           },
         },

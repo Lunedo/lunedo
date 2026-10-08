@@ -1,9 +1,12 @@
 import { validateDocument } from "@pagehall/editor-schema";
 import { Editor } from "@tiptap/core";
+import { Slice } from "@tiptap/pm/model";
 import { afterEach, describe, expect, it } from "vitest";
 import { schemaExtensions } from "../schema/extensions.js";
-import { CleanPaste, cleanPastedHtml, looksLikeMarkdown, markdownToHtml } from "./paste.js";
+import { CleanPaste, cleanPastedHtml, looksLikeMarkdown, markdownToHtml, pastedMarkdown } from "./paste.js";
 import { pasteFixtures } from "./paste-fixtures.js";
+import { takeTaskStatus, withPastedTaskStates } from "./pasted-tasks.js";
+import { TaskIds } from "./task-ids.js";
 
 let editor: Editor | undefined;
 
@@ -87,6 +90,36 @@ describe("Markdown pasting", () => {
     expect(text).toContain('"language":"javascript"');
     expect(text).toContain('"type":"code"');
     expect(text).toContain("https://example.org");
+  });
+
+  it("creates checked tasks as done and unchecked ones as open, with new IDs", () => {
+    const pasted = pastedMarkdown("- [ ] Order badges\n- [x] Book the room\n- [X] Send the invite");
+    expect(pasted.taskStates).toEqual([false, true, true]);
+    editor = new Editor({ extensions: [...schemaExtensions(), CleanPaste, TaskIds], content: "<p></p>" });
+    const view = editor.view;
+    withPastedTaskStates(pasted.taskStates, () => view.pasteHTML(pasted.html));
+    const ids: string[] = [];
+    editor.state.doc.descendants((node) => {
+      if (node.type.name === "taskItem") ids.push(node.attrs.id as string);
+    });
+    expect(ids).toHaveLength(3);
+    expect(ids.map((id) => takeTaskStatus(id))).toEqual([undefined, true, true]);
+    expect(ids.map((id) => takeTaskStatus(id))).toEqual([undefined, undefined, undefined]);
+  });
+
+  it("pastes Markdown from plain text once, with checked tasks done", () => {
+    editor = new Editor({ extensions: [...schemaExtensions(), CleanPaste, TaskIds], content: "<p></p>" });
+    const view = editor.view;
+    const text = "- [x] Book the room\n- [ ] Send the invite";
+    const event = {
+      clipboardData: { getData: (type: string) => (type === "text/plain" ? text : "") },
+    } as unknown as ClipboardEvent;
+    expect(view.someProp("handlePaste", (handle) => handle(view, event, Slice.empty))).toBe(true);
+    const ids: string[] = [];
+    editor.state.doc.descendants((node) => {
+      if (node.type.name === "taskItem") ids.push(node.attrs.id as string);
+    });
+    expect(ids.map((id) => takeTaskStatus(id))).toEqual([true, undefined]);
   });
 
   it("does not turn raw HTML in Markdown into elements", () => {

@@ -186,6 +186,94 @@ test("two people discuss a page with comments, reactions, a mention and a task",
   await expectAccessible(other, "my tasks");
 });
 
+test("one task status in the editor, the read view, My tasks, the task report and pasted Markdown", async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(180_000);
+  await page.goto("/spaces");
+  const checklist = (await callApi(page, "POST", `/api/v1/spaces/${spaceId}/items`, {
+    kind: "page",
+    title: "Rollout checklist",
+    parentId: null,
+    mode: "publish",
+  })) as { id: string };
+  await callApi(page, "PUT", `/api/v1/pages/${checklist.id}/content`, {
+    document: {
+      type: "doc",
+      content: [
+        { type: "paragraph", content: [{ type: "text", text: "Before the rollout:" }] },
+        {
+          type: "taskList",
+          content: [
+            {
+              type: "taskItem",
+              attrs: { assignee: colleague.id },
+              content: [
+                { type: "paragraph", content: [{ type: "text", text: "Update the firewall rules" }] },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  });
+  await callApi(page, "POST", `/api/v1/pages/${checklist.id}/publish`, {});
+  const report = (await callApi(page, "POST", `/api/v1/spaces/${spaceId}/items`, {
+    kind: "page",
+    title: "Rollout report",
+    parentId: null,
+    mode: "live",
+  })) as { id: string };
+  await callApi(page, "PUT", `/api/v1/pages/${report.id}/content`, {
+    document: { type: "doc", content: [{ type: "taskReport", attrs: { spaceId, status: "all" } }] },
+  });
+  const checklistPath = `/spaces/${spaceKey}/pages/${checklist.id}/rollout-checklist`;
+  const task = { name: /Update the firewall rules/ };
+
+  const other = await colleaguePage(browser);
+  await other.goto(checklistPath);
+  const readView = other.getByRole("checkbox", task);
+  await page.goto(`${checklistPath}?edit=true`);
+  const editorView = page.getByRole("checkbox", task);
+  await expect(editorView).toBeEnabled();
+
+  await editorView.click();
+  await expect(editorView).toBeChecked();
+  await expect(readView).toBeChecked();
+  await readView.click();
+  await expect(editorView).not.toBeChecked();
+
+  const myTasks = await other.context().newPage();
+  await myTasks.goto("/tasks");
+  await myTasks.getByRole("checkbox", task).click();
+  await expect(readView).toBeChecked();
+  await expect(editorView).toBeChecked();
+
+  const reportView = await page.context().newPage();
+  await reportView.goto(`/spaces/${spaceKey}/pages/${report.id}/rollout-report`);
+  await reportView.getByRole("checkbox", task).click();
+  await expect(readView).not.toBeChecked();
+  await expect(editorView).not.toBeChecked();
+  await myTasks.close();
+  await reportView.close();
+
+  await page.getByRole("textbox", { name: "Page content" }).locator("p").last().click();
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.evaluate(() => navigator.clipboard.writeText("- [x] Order the badges\n- [ ] Book the room"));
+  await page.keyboard.press("ControlOrMeta+V");
+  await expect(page.getByRole("checkbox", { name: "Mark as open: Order the badges" })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Mark as done: Book the room" })).not.toBeChecked();
+  await expect(page.getByRole("status").getByText("Saved to draft", { exact: true })).toBeVisible({
+    timeout: 20_000,
+  });
+  await callApi(page, "POST", `/api/v1/pages/${checklist.id}/publish`, {});
+  const pasted = (text: string) =>
+    other.getByRole("listitem").filter({ hasText: text }).getByRole("checkbox");
+  await expect(pasted("Order the badges")).toBeChecked();
+  await expect(pasted("Book the room")).not.toBeChecked();
+});
+
 test("schedules a blog post that the job publishes, and pins it in the organization overview", async ({
   page,
 }) => {
@@ -209,7 +297,9 @@ test("schedules a blog post that the job publishes, and pins it in the organizat
     timeZone: "Europe/Vienna",
   });
   await page.goto(`/spaces/${spaceKey}/blog`);
-  await expect(page.getByText("Scheduled")).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Scheduled" }).getByRole("link", { name: "New VPN client from Monday" }),
+  ).toBeVisible();
   await expect
     .poll(
       async () =>

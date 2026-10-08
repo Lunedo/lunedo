@@ -103,4 +103,25 @@ export class TasksController {
   ) {
     return this.#services.tasks.setStatus(actorOf(request), taskId, body.done);
   }
+
+  @Put("pages/:pageId/tasks/:taskId/status")
+  @Permission("item.edit", { type: "item", param: "pageId" })
+  @ApiRoute({
+    summary: "Set the status of a task on a page",
+    description:
+      "Sets a task of the page to done or open, for editors of the page. A task ID that does not exist yet is created for this page with the given status, so a task can be checked before its content is stored, for example right after pasting a done task. Every change records who made it and when.",
+    tags: [TAG],
+    params: pageParams.extend({ taskId: uuid("ID of the task.") }).strict(),
+    body: setTaskStatusSchema,
+    bodyExample: { done: true },
+    response: { description: "The new status.", schema: taskStatusSchema, example: exampleStatus },
+  })
+  async setStatusOnPage(
+    @Param("pageId") pageId: string,
+    @Param("taskId") taskId: string,
+    @Body() body: z.output<typeof setTaskStatusSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.tasks.setStatusOnPage(actorOf(request), pageId, taskId, body.done);
+  }
 }
