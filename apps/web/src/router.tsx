@@ -344,6 +344,15 @@ const spacePermissionsRoute = createRoute({
   ),
 });
 
+const spaceAccessRoute = createRoute({
+  getParentRoute: () => spaceSettingsRoute,
+  path: "/access",
+  component: lazyRouteComponent(
+    () => import("./spaces/settings/space-access-screen.js"),
+    "SpaceAccessScreen",
+  ),
+});
+
 const spaceContentRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/content",
@@ -655,6 +664,7 @@ const routeTree = rootRoute.addChildren([
         spaceSettingsIndexRoute,
         spaceGeneralRoute,
         spacePermissionsRoute,
+        spaceAccessRoute,
         spaceContentRoute,
         spaceTemplatesRoute,
       ]),

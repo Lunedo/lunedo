@@ -35,6 +35,7 @@ const space = (role: "reader" | "editor" | "admin" = "admin") => ({
   name: "IT Operations",
   description: "Runbooks of the IT team",
   visibility: "private",
+  discoverable: false,
   organizationId: ORGANIZATION.id,
   organizationName: ORGANIZATION.name,
   personal: false,
@@ -504,5 +505,145 @@ describe("space permissions", () => {
     mockApi({ ...baseRoutes(), ...spaceRoutes("editor") });
     await renderAt("/spaces/ITOPS/settings/permissions");
     expect(await screen.findByText("Only space admins manage permissions")).toBeTruthy();
+  });
+});
+
+describe("space access", () => {
+  const emptyImpact = {
+    gaining: 0,
+    losing: 0,
+    raised: 0,
+    lowered: 0,
+    unlisted: 0,
+    truncated: false,
+    changes: [],
+  };
+  const people = () => ({
+    body: {
+      items: [{ id: ANNA, name: "Anna Berger", email: "anna@example.org", type: "standard" }],
+      nextCursor: null,
+    },
+  });
+
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it("gives access step by step and shows the effect before confirming", async () => {
+    const { requests } = mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes("admin"),
+      [`GET /api/v1/spaces/${SPACE_ID}/access-requests`]: () => ({ body: [] }),
+      [`GET /api/v1/spaces/${SPACE_ID}/restricted-pages`]: () => ({ body: [] }),
+      "GET /api/v1/people": people,
+      [`GET /api/v1/organizations/${ORGANIZATION.id}/groups`]: () => ({
+        body: { items: [], nextCursor: null },
+      }),
+      [`POST /api/v1/spaces/${SPACE_ID}/give-access/preview`]: () => ({
+        body: {
+          pages: 37,
+          readable: 34,
+          editable: 34,
+          restricted: 3,
+          alreadyHas: null,
+          impact: { ...emptyImpact, gaining: 1 },
+        },
+      }),
+      [`POST /api/v1/spaces/${SPACE_ID}/permissions`]: () => ({ body: [] }),
+    });
+    await renderAt("/spaces/ITOPS/settings/access");
+    await userEvent.click(await screen.findByRole("button", { name: "Give access" }));
+    const dialog = await screen.findByRole("dialog", { name: "Give access" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Next" }));
+    expect(await within(dialog).findByText("Choose a person or group from the search results.")).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("combobox", { name: "Person or group" }));
+    await userEvent.click(await screen.findByRole("option", { name: /Anna Berger/ }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Next" }));
+    await userEvent.click(within(dialog).getByRole("radio", { name: /Can edit/ }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Next" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Next" }));
+    expect(
+      await within(dialog).findByText("Anna Berger can then read 34 pages and edit 34 of them."),
+    ).toBeTruthy();
+    expect(within(dialog).getByText(/Anna Berger will still not see 3 restricted pages/)).toBeTruthy();
+    expect(requests.some((request) => request.path === `/api/v1/spaces/${SPACE_ID}/permissions`)).toBe(false);
+    await userEvent.click(within(dialog).getByRole("button", { name: 'Give Anna Berger "Can edit"' }));
+    await waitFor(() =>
+      expect(
+        requests.find(
+          (request) => request.method === "POST" && request.path === `/api/v1/spaces/${SPACE_ID}/permissions`,
+        )?.body,
+      ).toEqual({ action: "grant", principalKind: "account", principalId: ANNA, role: "editor" }),
+    );
+  });
+
+  it("keeps an unfinished assistant as a draft", async () => {
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes("admin"),
+      [`GET /api/v1/spaces/${SPACE_ID}/access-requests`]: () => ({ body: [] }),
+      [`GET /api/v1/spaces/${SPACE_ID}/restricted-pages`]: () => ({ body: [] }),
+      "GET /api/v1/people": people,
+      [`GET /api/v1/organizations/${ORGANIZATION.id}/groups`]: () => ({
+        body: { items: [], nextCursor: null },
+      }),
+    });
+    await renderAt("/spaces/ITOPS/settings/access");
+    await userEvent.click(await screen.findByRole("button", { name: "Give access" }));
+    const dialog = await screen.findByRole("dialog", { name: "Give access" });
+    await userEvent.click(within(dialog).getByRole("combobox", { name: "Person or group" }));
+    await userEvent.click(await screen.findByRole("option", { name: /Anna Berger/ }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Next" }));
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(await screen.findByRole("button", { name: "Continue giving access" }));
+    expect(await screen.findByRole("radiogroup", { name: "What they may do" })).toBeTruthy();
+  });
+
+  it("lets space admins make a private space findable and saves it at once", async () => {
+    const { requests } = mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes("admin"),
+      [`PATCH /api/v1/spaces/${SPACE_ID}`]: () => ({ body: {} }),
+    });
+    await renderAt("/spaces/ITOPS/settings/general");
+    await userEvent.click(
+      await screen.findByRole("switch", {
+        name: "Members of the organization can find this space and ask to join",
+      }),
+    );
+    await waitFor(() =>
+      expect(requests.find((request) => request.method === "PATCH")?.body).toEqual({ discoverable: true }),
+    );
+  });
+
+  it("lists restricted pages and removes a restriction only after naming its effects", async () => {
+    const { requests } = mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes("admin"),
+      [`GET /api/v1/spaces/${SPACE_ID}/access-requests`]: () => ({ body: [] }),
+      [`GET /api/v1/spaces/${SPACE_ID}/restricted-pages`]: () => ({
+        body: [
+          {
+            itemId: NETWORK,
+            title: "Network",
+            kind: "page",
+            view: { setBy: { id: ANNA, name: "Anna Berger" }, setAt: "2026-10-01T09:30:00.000Z" },
+            edit: null,
+            orphaned: true,
+          },
+        ],
+      }),
+      [`DELETE /api/v1/spaces/${SPACE_ID}/restricted-pages/${NETWORK}/restrictions/view`]: () => ({
+        status: 204,
+      }),
+    });
+    await renderAt("/spaces/ITOPS/settings/access");
+    expect(await screen.findByText("Nobody on the list is active")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Remove restriction" }));
+    const dialog = await screen.findByRole("dialog", { name: "Remove the restriction of Network?" });
+    expect(within(dialog).getByText(/recorded in the audit log/)).toBeTruthy();
+    expect(requests.some((request) => request.method === "DELETE")).toBe(false);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Remove restriction" }));
+    await waitFor(() => expect(requests.some((request) => request.method === "DELETE")).toBe(true));
   });
 });

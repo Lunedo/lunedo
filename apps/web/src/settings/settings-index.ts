@@ -108,6 +108,17 @@ export const TRASH_KEYS = ["trash.firstStageDays", "trash.secondStageDays"] as c
 
 export const COLLABORATION_KEYS = ["reactions.enabled"] as const;
 
+export const FILE_KEYS = ["files.maxFileSizeMegabytes", "files.keepVersions"] as const;
+
+export const SPACE_FILE_KEYS = ["files.keepVersions"] as const;
+
+export const SHARING_KEYS = [
+  "sharing.shareLinks",
+  "sharing.anyoneLinks",
+  "sharing.anyoneLinkMaxDays",
+  "sharing.membersInviteGuests",
+] as const;
+
 export const TRASH_MINIMUM_KEYS = ["trash.firstStageMinimumDays", "trash.secondStageMinimumDays"] as const;
 
 export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
@@ -115,10 +126,14 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
     section("content.pagesSection", PAGE_MODE_KEYS.map(setting)),
     section("content.trashSection", TRASH_KEYS.map(setting)),
     section("content.collaborationSection", COLLABORATION_KEYS.map(setting)),
+    section("content.sharingSection", SHARING_KEYS.map(setting)),
+    section("content.filesSection", FILE_KEYS.map(setting)),
   ],
   "instance.content": [
     section("content.pagesSection", ["pages.liveVersionIdleMinutes"].map(setting)),
     section("content.trashSection", [...TRASH_MINIMUM_KEYS, ...TRASH_KEYS].map(setting)),
+    section("content.sharingSection", SHARING_KEYS.map(setting)),
+    section("content.filesSection", FILE_KEYS.map(setting)),
   ],
   "account.preferences": [
     section("preferences.display", [

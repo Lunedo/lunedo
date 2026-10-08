@@ -1,4 +1,4 @@
-import { Button, Field, Input, Notice, RadioGroup, useToast } from "@pagehall/ui";
+import { Button, Field, Input, Notice, RadioGroup, Switch, useToast } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Settings } from "lucide-react";
@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
-import { AutoSaveTextField } from "../../components/auto-save.js";
+import { AutoSaveTextField, SaveIndicator, useSaveState } from "../../components/auto-save.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { ImpactConfirmDialog } from "../access/impact.js";
 import { useSpace } from "../space-context.js";
@@ -160,6 +160,47 @@ function KeySection() {
   );
 }
 
+function DiscoverableSwitch() {
+  const { t } = useTranslation();
+  const { space } = useSpace();
+  const queryClient = useQueryClient();
+  const tracker = useSaveState();
+  const [optimistic, setOptimistic] = useState<boolean | null>(null);
+  const checked = optimistic ?? space.discoverable;
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex flex-wrap items-center gap-3">
+        <Switch
+          checked={checked}
+          label={t("spaces.settings.discoverable")}
+          disabled={space.role !== "admin" || space.visibility !== "private"}
+          {...(space.visibility !== "private"
+            ? { disabledReason: t("spaces.settings.discoverableNotPrivate") }
+            : {})}
+          onCheckedChange={(next) => {
+            setOptimistic(next);
+            void tracker
+              .run(async () => {
+                await request(() =>
+                  api.PATCH("/api/v1/spaces/{spaceId}", {
+                    params: { path: { spaceId: space.id } },
+                    body: { discoverable: next },
+                  }),
+                );
+                await queryClient.invalidateQueries({ queryKey: spaceKeys.all });
+              })
+              .then((saved) => {
+                if (!saved) setOptimistic(null);
+              });
+          }}
+        />
+        <SaveIndicator tracker={tracker} />
+      </div>
+      <p className="text-sm text-text-muted">{t("spaces.settings.discoverableHint")}</p>
+    </div>
+  );
+}
+
 function VisibilitySection() {
   const { t } = useTranslation();
   const { space } = useSpace();
@@ -203,6 +244,7 @@ function VisibilitySection() {
           }),
         }))}
       />
+      <DiscoverableSwitch />
       <ImpactConfirmDialog
         open={pending !== null}
         onOpenChange={(open) => !open && setPending(null)}

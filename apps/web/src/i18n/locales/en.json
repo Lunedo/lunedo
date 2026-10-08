@@ -1775,7 +1775,9 @@
     "units": {
       "characters": "{count, plural, one {# character} other {{value} characters}}",
       "count": "{value}",
-      "perMinute": "{value} per minute"
+      "perMinute": "{value} per minute",
+      "megabytes": "{value} MB",
+      "versions": "{count, plural, one {# version} other {{value} versions}}"
     },
     "values": {
       "accentColor": {
@@ -2004,6 +2006,30 @@
       "reactions_enabled": {
         "label": "Reactions",
         "description": "People can react with emoji to pages, blog posts and comments."
+      },
+      "files_maxFileSizeMegabytes": {
+        "label": "Largest file to upload",
+        "description": "Uploads above this size are refused before anything is stored, with a message that names the limit. Organizations can only lower it."
+      },
+      "files_keepVersions": {
+        "label": "Earlier versions of a file to keep",
+        "description": "When a file with the same name is uploaded again, older versions beyond this number are removed. Not set means all versions are kept."
+      },
+      "sharing_shareLinks": {
+        "label": "Share links",
+        "description": "People who may share a page can create links for named people, the organization or everyone signed in."
+      },
+      "sharing_anyoneLinks": {
+        "label": "Links for anyone without signing in",
+        "description": "Visitors see only the shared page. Each link needs an expiry date. Restricted pages never get such links."
+      },
+      "sharing_anyoneLinkMaxDays": {
+        "label": "Longest lifetime of a link for anyone",
+        "description": "Links for anyone must expire within this time. Organizations can only shorten it."
+      },
+      "sharing_membersInviteGuests": {
+        "label": "Members can invite guests to a page",
+        "description": "When on, people who may share a page can invite someone by e-mail as a guest. Administrators of the organization can always do this."
       }
     },
     "disabled": {
@@ -4047,7 +4073,10 @@
       "visibilityFailed": "The visibility could not be changed",
       "personalPrivate": "Personal spaces are always private. Share them with people and groups in the permissions.",
       "adminsOnlyTitle": "Only space admins manage permissions",
-      "adminsOnly": "Your role in this space is {role}. Ask a space admin if someone needs another role."
+      "adminsOnly": "Your role in this space is {role}. Ask a space admin if someone needs another role.",
+      "discoverable": "Members of the organization can find this space and ask to join",
+      "discoverableHint": "They see its name and description in the list of spaces, but no pages, until a space admin lets them in.",
+      "discoverableNotPrivate": "Only private spaces can be found this way; other visibilities already let people in."
     },
     "permissions": {
       "visibilityTitle": "Readers through visibility",
@@ -4132,6 +4161,34 @@
       "delete": "Delete personal space",
       "deleteTitle": "Delete the personal space of {owner}?",
       "deleted": "Personal space deleted. Restore it under Pages and trash during second-stage recovery."
+    },
+    "access": {
+      "tab": "Access",
+      "title": "Access",
+      "description": "Give people access, decide on requests and review restricted pages.",
+      "giveTitle": "Give access",
+      "giveDescription": "A guided way to give a person or group access to the space or to single pages.",
+      "giveHint": "You see how many pages they can then read and edit before anything changes.",
+      "requestsTitle": "Access requests",
+      "requestsDescription": "Open requests for this space and its pages. They stay open until someone decides or the person gets access another way.",
+      "restrictedTitle": "Restricted pages",
+      "restrictedDescription": "Pages that only their access lists can see or edit. You see the titles but not the content. Removing a restriction is recorded in the audit log.",
+      "restrictedFailed": "the restricted pages",
+      "noRestrictedTitle": "No restricted pages",
+      "noRestricted": "Pages restricted in the share dialog appear here.",
+      "orphaned": "Nobody on the list is active",
+      "viewRestricted": "Viewing restricted",
+      "editRestricted": "Editing restricted",
+      "remove": "Remove restriction",
+      "removeTitle": "Remove the restriction of {title}?",
+      "removeViewEffects": "Everyone who can view the space can then see this page and the pages below, including their content. The removal is recorded in the audit log with your name.",
+      "removeEditEffects": "Everyone who can edit in the space can then edit this page. The removal is recorded in the audit log with your name.",
+      "removeConfirm": "Remove restriction",
+      "keep": "Keep restriction",
+      "removed": "Restriction of {title} removed",
+      "removeFailed": "The restriction was not removed",
+      "adminsOnlyTitle": "Only space admins manage restrictions",
+      "adminsOnly": "Ask a space admin if a restricted page needs attention."
     }
   },
   "tree": {
@@ -4274,7 +4331,9 @@
     "nameMismatch": "The name does not match. Type it exactly as shown.",
     "spaceDeleted": "{name} deleted",
     "deleteFailed": "The space could not be deleted",
-    "collaborationSection": "Collaboration"
+    "collaborationSection": "Collaboration",
+    "sharingSection": "Sharing",
+    "filesSection": "Files"
   },
   "archive": {
     "archive": "Archive",
@@ -4908,6 +4967,10 @@
       "restored": "Version {number} is current again",
       "restoreFailed": "The version was not restored. Try again.",
       "loadFailed": "the versions"
+    },
+    "storage": {
+      "used": "{size} used by {count, plural, one {# stored file} other {# stored files}}, including earlier versions",
+      "loadFailed": "the storage use"
     }
   },
   "sharing": {
@@ -5148,6 +5211,58 @@
         "withdrawn": "Withdrawn",
         "satisfied": "Access given another way"
       }
+    },
+    "give": {
+      "open": "Give access",
+      "continue": "Continue giving access",
+      "title": "Give access",
+      "description": "Choose who, what and where. You see the effect before you confirm.",
+      "progress": "Steps",
+      "stepLabel": "{number}. {name}",
+      "steps": {
+        "who": "Who",
+        "what": "What",
+        "where": "Where",
+        "check": "Check and confirm"
+      },
+      "who": "Person or group",
+      "whoHint": "Search by name. Groups give access to all their members.",
+      "chooseHolder": "Choose a person or group from the search results.",
+      "what": "What they may do",
+      "levels": {
+        "reader": "Read pages and attachments.",
+        "commenter": "Read and comment.",
+        "editor": "Create, edit, move and delete pages.",
+        "admin": "Everything editors do, and manage permissions and settings of the space."
+      },
+      "where": "Where",
+      "places": {
+        "space": "The whole space {space}",
+        "page": "One page",
+        "pageAndChildren": "One page and the pages below"
+      },
+      "placeHints": {
+        "space": "Includes all pages except restricted ones.",
+        "page": "Only this page, without the space and its tree.",
+        "pageAndChildren": "This page and everything below it."
+      },
+      "page": "Page",
+      "pagePlaceholder": "Search pages of this space",
+      "noPage": "No page matches. Check the spelling.",
+      "choosePage": "Choose the page.",
+      "adminSpaceOnly": "Space admins can only be appointed for the whole space.",
+      "previewFailed": "the effect of this access",
+      "effect": "{name} can then read {readable, plural, one {# page} other {# pages}} and edit {editable, plural, one {# of them} other {# of them}}.",
+      "restrictedTitle": "Restricted pages stay hidden",
+      "restricted": "{name} will still not see {count, plural, one {# restricted page} other {# restricted pages}}. Only the access list of a restricted page decides who sees it.",
+      "alreadyHas": "{name} already has \"{role}\" in this space.",
+      "spaceImpact": "{count, plural, one {# person gets access or more rights.} other {# people get access or more rights.}}",
+      "noChange": "Nobody gains access, for example because they already have it.",
+      "back": "Back",
+      "next": "Next",
+      "confirm": "Give {name} \"{role}\"",
+      "done": "Access given to {name}",
+      "failed": "The access was not given"
     }
   }
 }
