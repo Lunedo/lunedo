@@ -1012,6 +1012,10 @@
       "title": "No organization is assigned to you yet",
       "description": "Your account was created, but it is not a member of any organization yet. The administrators of this instance were told and will assign one. You can already change your preferences and security settings."
     },
+    "groupsClaimMissing": {
+      "title": "{provider} sends no groups since {since}",
+      "description": "Sign-ins through this provider carry no groups claim, so Pagehall treats everyone as having no groups and removes the access and roles that came from groups. Check the groups claim setting of the provider, in Pagehall and at the provider. The banner disappears with the next sign-in that carries the claim."
+    },
     "insecureProviders": {
       "title": "Identity providers are not checked strictly",
       "description": "PAGEHALL_INSECURE_IDENTITY_PROVIDERS is set, so identity providers may use plain HTTP and any host. Use this only for local tests and remove the variable from the server configuration before people sign in."
@@ -2887,6 +2891,7 @@
         "emergencySignIn": "Emergency sign-in",
         "signInRefused": "Sign-in through a provider refused",
         "providerSignedOut": "Signed out by the provider",
+        "groupsClaimMissing": "Provider sent no groups claim",
         "signedIn": "Signed in",
         "signInFailed": "Sign-in failed",
         "lockedOut": "Locked out",

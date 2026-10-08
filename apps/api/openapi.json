@@ -26135,6 +26135,18 @@
                             ],
                             "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                           },
+                          "groupsClaimMissingSince": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                          },
                           "warnings": {
                             "type": "array",
                             "items": {
@@ -26145,7 +26157,8 @@
                                 "credentialExpired",
                                 "metadataRefreshFailed",
                                 "caCertificateExpiring",
-                                "noGraphCredential"
+                                "noGraphCredential",
+                                "groupsClaimMissing"
                               ]
                             },
                             "description": "Problems that need attention."
@@ -26810,6 +26823,7 @@
                           "scim",
                           "setupComplete",
                           "deactivatedAt",
+                          "groupsClaimMissingSince",
                           "warnings",
                           "createdAt",
                           "updatedAt",
@@ -26969,6 +26983,18 @@
                             ],
                             "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                           },
+                          "groupsClaimMissingSince": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                          },
                           "warnings": {
                             "type": "array",
                             "items": {
@@ -26979,7 +27005,8 @@
                                 "credentialExpired",
                                 "metadataRefreshFailed",
                                 "caCertificateExpiring",
-                                "noGraphCredential"
+                                "noGraphCredential",
+                                "groupsClaimMissing"
                               ]
                             },
                             "description": "Problems that need attention."
@@ -27864,6 +27891,7 @@
                           "scim",
                           "setupComplete",
                           "deactivatedAt",
+                          "groupsClaimMissingSince",
                           "warnings",
                           "createdAt",
                           "updatedAt",
@@ -28024,6 +28052,18 @@
                             ],
                             "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                           },
+                          "groupsClaimMissingSince": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                          },
                           "warnings": {
                             "type": "array",
                             "items": {
@@ -28034,7 +28074,8 @@
                                 "credentialExpired",
                                 "metadataRefreshFailed",
                                 "caCertificateExpiring",
-                                "noGraphCredential"
+                                "noGraphCredential",
+                                "groupsClaimMissing"
                               ]
                             },
                             "description": "Problems that need attention."
@@ -28557,6 +28598,7 @@
                           "scim",
                           "setupComplete",
                           "deactivatedAt",
+                          "groupsClaimMissingSince",
                           "warnings",
                           "createdAt",
                           "updatedAt",
@@ -30917,6 +30959,18 @@
                               ],
                               "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                             },
+                            "groupsClaimMissingSince": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                            },
                             "warnings": {
                               "type": "array",
                               "items": {
@@ -30927,7 +30981,8 @@
                                   "credentialExpired",
                                   "metadataRefreshFailed",
                                   "caCertificateExpiring",
-                                  "noGraphCredential"
+                                  "noGraphCredential",
+                                  "groupsClaimMissing"
                                 ]
                               },
                               "description": "Problems that need attention."
@@ -31592,6 +31647,7 @@
                             "scim",
                             "setupComplete",
                             "deactivatedAt",
+                            "groupsClaimMissingSince",
                             "warnings",
                             "createdAt",
                             "updatedAt",
@@ -31751,6 +31807,18 @@
                               ],
                               "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                             },
+                            "groupsClaimMissingSince": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                            },
                             "warnings": {
                               "type": "array",
                               "items": {
@@ -31761,7 +31829,8 @@
                                   "credentialExpired",
                                   "metadataRefreshFailed",
                                   "caCertificateExpiring",
-                                  "noGraphCredential"
+                                  "noGraphCredential",
+                                  "groupsClaimMissing"
                                 ]
                               },
                               "description": "Problems that need attention."
@@ -32646,6 +32715,7 @@
                             "scim",
                             "setupComplete",
                             "deactivatedAt",
+                            "groupsClaimMissingSince",
                             "warnings",
                             "createdAt",
                             "updatedAt",
@@ -32806,6 +32876,18 @@
                               ],
                               "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                             },
+                            "groupsClaimMissingSince": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                            },
                             "warnings": {
                               "type": "array",
                               "items": {
@@ -32816,7 +32898,8 @@
                                   "credentialExpired",
                                   "metadataRefreshFailed",
                                   "caCertificateExpiring",
-                                  "noGraphCredential"
+                                  "noGraphCredential",
+                                  "groupsClaimMissing"
                                 ]
                               },
                               "description": "Problems that need attention."
@@ -33339,6 +33422,7 @@
                             "scim",
                             "setupComplete",
                             "deactivatedAt",
+                            "groupsClaimMissingSince",
                             "warnings",
                             "createdAt",
                             "updatedAt",
@@ -33884,6 +33968,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -33894,7 +33990,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -34559,6 +34656,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -34718,6 +34816,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -34728,7 +34838,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -35613,6 +35724,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -35773,6 +35885,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -35783,7 +35907,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -36306,6 +36431,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -38293,6 +38419,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -38303,7 +38441,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -38968,6 +39107,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -39127,6 +39267,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -39137,7 +39289,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -40022,6 +40175,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -40182,6 +40336,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -40192,7 +40358,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -40715,6 +40882,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -41053,6 +41221,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -41063,7 +41243,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -41728,6 +41909,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -41887,6 +42069,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -41897,7 +42091,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -42782,6 +42977,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -42942,6 +43138,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -42952,7 +43160,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -43475,6 +43684,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -43786,6 +43996,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -43796,7 +44018,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -44461,6 +44684,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -44620,6 +44844,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -44630,7 +44866,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -45515,6 +45752,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -45675,6 +45913,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -45685,7 +45935,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -46208,6 +46459,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -46540,6 +46792,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -46550,7 +46814,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -47215,6 +47480,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -47374,6 +47640,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -47384,7 +47662,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -48269,6 +48548,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -48429,6 +48709,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -48439,7 +48731,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -48962,6 +49255,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -49289,6 +49583,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -49299,7 +49605,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -49964,6 +50271,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -50123,6 +50431,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -50133,7 +50453,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -51018,6 +51339,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -51178,6 +51500,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -51188,7 +51522,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -51711,6 +52046,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -52720,6 +53056,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -52730,7 +53078,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -53395,6 +53744,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -53554,6 +53904,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -53564,7 +53926,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -54449,6 +54812,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -54609,6 +54973,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -54619,7 +54995,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -55142,6 +55519,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -55473,6 +55851,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -55483,7 +55873,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -56148,6 +56539,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -56307,6 +56699,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -56317,7 +56721,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -57202,6 +57607,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -57362,6 +57768,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -57372,7 +57790,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -57895,6 +58314,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -59579,6 +59999,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -59589,7 +60021,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -60254,6 +60687,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -60413,6 +60847,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -60423,7 +60869,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -61308,6 +61755,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -61468,6 +61916,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -61478,7 +61938,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -62001,6 +62462,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -64700,6 +65162,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -64710,7 +65184,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -65375,6 +65850,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -65534,6 +66010,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -65544,7 +66032,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -66429,6 +66918,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -66589,6 +67079,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -66599,7 +67101,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -67122,6 +67625,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -67452,6 +67956,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -67462,7 +67978,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -68127,6 +68644,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -68286,6 +68804,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -68296,7 +68826,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -69181,6 +69712,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",
@@ -69341,6 +69873,18 @@
                           ],
                           "description": "When the provider was deactivated, or null while it is active. Nobody signs in through a deactivated provider and it is not synchronized."
                         },
+                        "groupsClaimMissingSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups."
+                        },
                         "warnings": {
                           "type": "array",
                           "items": {
@@ -69351,7 +69895,8 @@
                               "credentialExpired",
                               "metadataRefreshFailed",
                               "caCertificateExpiring",
-                              "noGraphCredential"
+                              "noGraphCredential",
+                              "groupsClaimMissing"
                             ]
                           },
                           "description": "Problems that need attention."
@@ -69874,6 +70419,7 @@
                         "scim",
                         "setupComplete",
                         "deactivatedAt",
+                        "groupsClaimMissingSince",
                         "warnings",
                         "createdAt",
                         "updatedAt",

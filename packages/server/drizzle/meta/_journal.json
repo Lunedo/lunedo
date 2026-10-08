@@ -260,6 +260,13 @@
       "when": 1791467030029,
       "tag": "0036_blog_schedule_hold",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1791480821557,
+      "tag": "0037_provider_groups_claim",
+      "breakpoints": true
     }
   ]
 }

@@ -222,7 +222,6 @@ for (const provider of identityProviders) {
       );
       expect(rule.status(), await rule.text()).toBe(201);
       await owner.close();
-      await provider.addToGroup(user.username, "admins");
       await provider.addToGroup(user.username, "engineering");
 
       const { context, page } = await freshContext(browser);

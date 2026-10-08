@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { directoryPasswordSchema, type LdapConfig, type OidcConfig, type SamlConfig } from "@pagehall/shared";
-import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import * as client from "openid-client";
 import { ZodError } from "zod";
 import type { Account, AccountService } from "../accounts/accounts.js";
@@ -475,6 +475,7 @@ export class ProviderSignInService {
     }
 
     const { groups, failed: groupsFailed } = await this.#groups(provider, credentials, profile);
+    await this.#trackGroupsClaim(provider.id, profile);
     for (let attempt = 0; ; attempt++) {
       try {
         return await this.#signInWith({
@@ -504,6 +505,46 @@ export class ProviderSignInService {
         throw error;
       }
     }
+  }
+
+  async #trackGroupsClaim(providerId: string, profile: ProviderProfile): Promise<void> {
+    if (profile.groupsClaimMissing === undefined) return;
+    await this.#database.transaction(async (tx) => {
+      if (profile.groupsClaimMissing) {
+        await tx
+          .update(identityProviders)
+          .set({ groupsClaimMissingSince: this.#clock() })
+          .where(
+            and(
+              eq(identityProviders.id, providerId),
+              isNull(identityProviders.groupsClaimMissingSince),
+              isNotNull(identityProviders.groupsClaimSeenAt),
+            ),
+          );
+        await this.#audit.record(tx, {
+          name: "auth.groupsClaimMissing",
+          actor: SYSTEM,
+          targetId: providerId,
+          fields: {},
+        });
+        return;
+      }
+      await tx
+        .update(identityProviders)
+        .set({
+          groupsClaimSeenAt: sql`coalesce(${identityProviders.groupsClaimSeenAt}, ${this.#clock()})`,
+          groupsClaimMissingSince: null,
+        })
+        .where(
+          and(
+            eq(identityProviders.id, providerId),
+            or(
+              isNull(identityProviders.groupsClaimSeenAt),
+              isNotNull(identityProviders.groupsClaimMissingSince),
+            ),
+          ),
+        );
+    });
   }
 
   async #groups(
