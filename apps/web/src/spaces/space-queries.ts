@@ -204,11 +204,17 @@ export function spacesChanged(queryClient: QueryClient, events: SpaceChangeEvent
   for (const key of keys.values()) void queryClient.invalidateQueries({ queryKey: key });
 }
 
+export function sharedPath(itemId: string, slug: string): string {
+  return `/shared/${itemId}/${slug}`;
+}
+
 export function pagePath(spaceKey: string, itemId: string, slug: string): string {
+  if (!spaceKey) return sharedPath(itemId, slug);
   return `/spaces/${encodeURIComponent(spaceKey)}/pages/${itemId}/${slug}`;
 }
 
 export function blogPostPath(spaceKey: string, itemId: string, slug: string): string {
+  if (!spaceKey) return sharedPath(itemId, slug);
   return `/spaces/${encodeURIComponent(spaceKey)}/blog/${itemId}/${slug}`;
 }
 

@@ -52,7 +52,7 @@ export function usePageSharing(
     </p>
   ) : null;
   return {
-    canEditPage: mine.data ? role !== null && EDITING.has(role) : null,
+    canEditPage: mine.data ? role !== null && EDITING.has(role) : page.editRestricted ? false : null,
     shareButton,
     restrictionNote,
     dialog: canShare ? <ShareDialog page={page} open={open} onOpenChange={setOpen} /> : null,

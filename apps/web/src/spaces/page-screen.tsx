@@ -23,7 +23,7 @@ import {
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
-import { request } from "../api/request.js";
+import { ApiError, request } from "../api/request.js";
 import { StarButton, useContentCollaboration } from "../collaboration/content-collaboration.js";
 import { PageReactions } from "../collaboration/reaction-bar.js";
 import { PageReadView, type ReadViewCollaboration } from "../editor/read-view.js";
@@ -34,6 +34,7 @@ import { AttachmentPreviewProvider } from "../files/preview-host.js";
 import { UploadsProvider } from "../files/uploads.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
+import { NoPageAccess } from "../sharing/access-requests.js";
 import { type PageSharing, usePageSharing } from "../sharing/page-sharing.js";
 import { EDIT_PAGE_EVENT } from "../shell/builtin.js";
 import { useArchiveItem, useDeleteItem, useDiscardDraft } from "./content-actions.js";
@@ -84,6 +85,7 @@ export function PageScreen() {
     );
   }
   if (item.isError) {
+    if (item.error instanceof ApiError && item.error.status === 404) return <NoPageAccess pageId={itemId} />;
     return (
       <div className="p-6">
         <LoadError what={t("page.loadFailed")} error={item.error} onRetry={() => item.refetch()} />

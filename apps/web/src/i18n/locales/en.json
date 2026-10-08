@@ -4611,7 +4611,10 @@
     "organizationPageNone": "No home page is set. Everyone lands on \"For you\".",
     "choosePage": "Home page",
     "searchPage": "Search a page by title",
-    "removeOrganizationPage": "Remove home page"
+    "removeOrganizationPage": "Remove home page",
+    "shared": "Shared with you",
+    "noShared": "Pages that people share with you appear here.",
+    "sharedMeta": "{name}, {when}"
   },
   "starred": {
     "star": "Star {title}",
@@ -5097,6 +5100,54 @@
       "inherited": "Restricted by a page above: only people on its access list can view this page.",
       "edit": "Only people on the access list with \"Can edit\" can edit this page.",
       "manage": "Manage access"
+    },
+    "sharedPage": {
+      "shared": "Shared with you",
+      "sharedBy": "Shared with you by {name}"
+    },
+    "requests": {
+      "title": "Access request",
+      "oneFailed": "the access request",
+      "loadFailed": "the access requests",
+      "noAccessTitle": "This page does not exist or you have no access",
+      "noAccess": "If someone gave you this link, you can ask for access. The people who manage the page decide; you get a notification either way.",
+      "message": "Message (optional)",
+      "messageHint": "Say why you need access, up to {limit} characters.",
+      "messageTooLong": "The message is too long. Shorten it to {limit} characters.",
+      "requestPage": "Request access",
+      "requestSpace": "Ask to join {name}",
+      "sentTitle": "Request sent",
+      "sent": "You get a notification when someone decides.",
+      "mineLink": "Your access requests",
+      "mineTitle": "Your access requests",
+      "mineDescription": "Requests you sent for spaces and pages. Open requests close themselves when you get access another way.",
+      "mineEmptyTitle": "No access requests",
+      "mineEmpty": "When you ask for access to a space or page, the request appears here.",
+      "targetPage": "the page {title}",
+      "targetHiddenPage": "a page",
+      "targetSpace": "the space {name}",
+      "hiddenSpace": "a space",
+      "summary": "{name} asks for access to {target}",
+      "sentOn": "sent {date}",
+      "decidedBy": "Decided by {name} on {date}",
+      "role": "Access to give",
+      "approve": "Give {name} \"{role}\"",
+      "decline": "Decline",
+      "approved": "{name} now has access",
+      "declined": "Request of {name} declined",
+      "decideFailed": "The request was not decided",
+      "noneOpen": "No open access requests.",
+      "open": "Open",
+      "withdraw": "Withdraw",
+      "withdrawn": "Request withdrawn",
+      "withdrawFailed": "The request was not withdrawn",
+      "status": {
+        "open": "Open",
+        "approved": "Approved",
+        "declined": "Declined",
+        "withdrawn": "Withdrawn",
+        "satisfied": "Access given another way"
+      }
     }
   }
 }

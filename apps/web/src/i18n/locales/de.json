@@ -4611,7 +4611,10 @@
     "organizationPageNone": "Keine Startseite festgelegt. Alle landen auf „Für dich“.",
     "choosePage": "Startseite",
     "searchPage": "Seite nach Titel suchen",
-    "removeOrganizationPage": "Startseite entfernen"
+    "removeOrganizationPage": "Startseite entfernen",
+    "shared": "Für dich freigegeben",
+    "noShared": "Seiten, die andere für dich freigeben, erscheinen hier.",
+    "sharedMeta": "{name}, {when}"
   },
   "starred": {
     "star": "{title} zu Favoriten hinzufügen",
@@ -5097,6 +5100,54 @@
       "inherited": "Durch eine Seite darüber eingeschränkt: Nur Personen auf deren Zugriffsliste können diese Seite ansehen.",
       "edit": "Nur Personen auf der Zugriffsliste mit „Kann bearbeiten“ können diese Seite bearbeiten.",
       "manage": "Zugriff verwalten"
+    },
+    "sharedPage": {
+      "shared": "Für dich freigegeben",
+      "sharedBy": "Von {name} für dich freigegeben"
+    },
+    "requests": {
+      "title": "Zugriffsanfrage",
+      "oneFailed": "die Zugriffsanfrage",
+      "loadFailed": "die Zugriffsanfragen",
+      "noAccessTitle": "Diese Seite gibt es nicht oder du hast keinen Zugriff",
+      "noAccess": "Wenn dir jemand diesen Link gegeben hat, kannst du um Zugriff bitten. Die Verantwortlichen der Seite entscheiden; du bekommst in jedem Fall eine Benachrichtigung.",
+      "message": "Nachricht (optional)",
+      "messageHint": "Schreib, wofür du den Zugriff brauchst, bis zu {limit} Zeichen.",
+      "messageTooLong": "Die Nachricht ist zu lang. Kürze sie auf {limit} Zeichen.",
+      "requestPage": "Zugriff anfragen",
+      "requestSpace": "Beitritt zu {name} anfragen",
+      "sentTitle": "Anfrage gesendet",
+      "sent": "Du bekommst eine Benachrichtigung, sobald jemand entscheidet.",
+      "mineLink": "Deine Zugriffsanfragen",
+      "mineTitle": "Deine Zugriffsanfragen",
+      "mineDescription": "Anfragen, die du für Spaces und Seiten gesendet hast. Offene Anfragen schließen sich, sobald du auf anderem Weg Zugriff bekommst.",
+      "mineEmptyTitle": "Keine Zugriffsanfragen",
+      "mineEmpty": "Wenn du um Zugriff auf einen Space oder eine Seite bittest, erscheint die Anfrage hier.",
+      "targetPage": "die Seite {title}",
+      "targetHiddenPage": "eine Seite",
+      "targetSpace": "den Space {name}",
+      "hiddenSpace": "einen Space",
+      "summary": "{name} bittet um Zugriff auf {target}",
+      "sentOn": "gesendet am {date}",
+      "decidedBy": "Entschieden von {name} am {date}",
+      "role": "Zu gebender Zugriff",
+      "approve": "{name} „{role}“ geben",
+      "decline": "Ablehnen",
+      "approved": "{name} hat jetzt Zugriff",
+      "declined": "Anfrage von {name} abgelehnt",
+      "decideFailed": "Über die Anfrage wurde nicht entschieden",
+      "noneOpen": "Keine offenen Zugriffsanfragen.",
+      "open": "Öffnen",
+      "withdraw": "Zurückziehen",
+      "withdrawn": "Anfrage zurückgezogen",
+      "withdrawFailed": "Die Anfrage wurde nicht zurückgezogen",
+      "status": {
+        "open": "Offen",
+        "approved": "Genehmigt",
+        "declined": "Abgelehnt",
+        "withdrawn": "Zurückgezogen",
+        "satisfied": "Zugriff auf anderem Weg erhalten"
+      }
     }
   }
 }

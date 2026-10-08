@@ -217,6 +217,27 @@ const personalSpaceRoute = createRoute({
   component: lazyRouteComponent(() => import("./spaces/personal-space-screen.js"), "PersonalSpaceScreen"),
 });
 
+const myAccessRequestsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/access-requests",
+  component: lazyRouteComponent(() => import("./sharing/access-requests.js"), "MyAccessRequestsScreen"),
+});
+
+const accessRequestRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/access-requests/$requestId",
+  params: { parse: (params) => ({ ...params, requestId: z.uuid().parse(params.requestId) }) },
+  component: lazyRouteComponent(() => import("./sharing/access-requests.js"), "AccessRequestScreen"),
+});
+
+const sharedPageRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/shared/$itemId/{-$slug}",
+  params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
+  validateSearch: z.object({ edit: z.boolean().optional().catch(undefined) }),
+  component: lazyRouteComponent(() => import("./sharing/shared-page-screen.js"), "SharedPageScreen"),
+});
+
 const spaceRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/spaces/$spaceKey",
@@ -618,6 +639,9 @@ const routeTree = rootRoute.addChildren([
     blogRoute,
     spacesRoute,
     personalSpaceRoute,
+    sharedPageRoute,
+    myAccessRequestsRoute,
+    accessRequestRoute,
     spaceRoute.addChildren([
       spaceIndexRoute,
       spaceBlogRoute,

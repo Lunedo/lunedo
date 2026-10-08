@@ -80,3 +80,13 @@ export function changeAccess(pageId: string, changes: AccessChange[]) {
 export function linkAddress(token: string): string {
   return `${globalThis.location.origin}/s/${token}`;
 }
+
+export type SharedWithMe = Ok<"/api/v1/shared-with-me", "get">[number];
+
+export function sharedWithMeQuery() {
+  return queryOptions({
+    queryKey: ["sharedWithMe"] as const,
+    queryFn: () => request(() => api.GET("/api/v1/shared-with-me")),
+    staleTime: 30_000,
+  });
+}

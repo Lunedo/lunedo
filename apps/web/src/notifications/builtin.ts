@@ -6,12 +6,16 @@ import {
   CalendarClock,
   KeyRound,
   ListChecks,
+  Lock,
   Mail,
+  Share2,
   ShieldAlert,
   ShieldCheck,
+  UserPlus,
   UserRound,
   UserRoundX,
 } from "lucide-react";
+import { blogPostPath, pagePath } from "../spaces/space-queries.js";
 import { notificationTypes } from "./notification-types.js";
 import type { NotificationItem } from "./notifications-api.js";
 
@@ -19,10 +23,14 @@ const ORGANIZATION = "/settings/organizations/$organizationId";
 
 function contentLink(item: NotificationItem) {
   const params = item.params as { itemKind?: string; itemTitle?: string; spaceKey?: string };
-  if (!item.target.id || !params.spaceKey) return null;
-  const segment = params.itemKind === "blogPost" ? "blog" : "pages";
+  if (!item.target.id) return null;
+  const slug = slugify(params.itemTitle ?? "");
+  const spaceKey = params.spaceKey ?? "";
   return {
-    to: `/spaces/${encodeURIComponent(params.spaceKey)}/${segment}/${item.target.id}/${slugify(params.itemTitle ?? "")}`,
+    to:
+      params.itemKind === "blogPost"
+        ? blogPostPath(spaceKey, item.target.id, slug)
+        : pagePath(spaceKey, item.target.id, slug),
   };
 }
 
@@ -97,4 +105,23 @@ notificationTypes.register(
   { id: "content.mentioned", icon: AtSign, link: contentLink },
   { id: "task.assigned", icon: ListChecks, link: contentLink },
   { id: "blogPost.scheduleHeld", icon: CalendarClock, link: contentLink },
+  { id: "page.shared", icon: Share2, link: contentLink },
+  {
+    id: "access.requested",
+    icon: UserPlus,
+    link: (item) => (item.target.id ? { to: `/access-requests/${item.target.id}` } : null),
+  },
+  {
+    id: "access.requestDecided",
+    icon: UserPlus,
+    link: (item) => (item.target.id ? { to: `/access-requests/${item.target.id}` } : null),
+  },
+  {
+    id: "restriction.orphaned",
+    icon: Lock,
+    link: (item) => {
+      const spaceKey = (item.params as { spaceKey?: string }).spaceKey;
+      return spaceKey ? { to: `/spaces/${encodeURIComponent(spaceKey)}/settings/access` } : null;
+    },
+  },
 );

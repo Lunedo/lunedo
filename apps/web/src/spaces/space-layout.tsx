@@ -22,13 +22,14 @@ import { useTranslation } from "react-i18next";
 import { isApiError } from "../api/request.js";
 import { StarButton } from "../collaboration/content-collaboration.js";
 import { LoadError } from "../errors/failure.js";
+import { NoPageAccess } from "../sharing/access-requests.js";
 import { useShell } from "../shell/shell.js";
 import { ArchiveSection } from "./archive/archive-section.js";
-import { itemHref } from "./item-paths.js";
+import { itemHref, itemSlug } from "./item-paths.js";
 import { Redirect } from "./redirect.js";
 import { SpaceBadge, spaceDisplayName } from "./space-badge.js";
 import { SpaceContext, type SpaceContextValue } from "./space-context.js";
-import { itemQuery, type SpaceWithRole, spaceByKeyQuery } from "./space-queries.js";
+import { itemQuery, type SpaceWithRole, sharedPath, spaceByKeyQuery } from "./space-queries.js";
 import { TemplateGallery } from "./templates/template-gallery.js";
 import { CreateItemDialog } from "./tree/create-item-dialog.js";
 import { MoveDialog } from "./tree/move-dialog.js";
@@ -57,8 +58,18 @@ export function SpaceLayout() {
   const redirectByItem =
     urlItemId !== null &&
     (addressed.isPending || (addressed.data !== undefined && addressed.data.spaceKey !== currentKey));
-  const resolved = useQuery({ ...spaceByKeyQuery(spaceKey), retry: false, enabled: !redirectByItem });
+  const resolved = useQuery({
+    ...spaceByKeyQuery(spaceKey),
+    retry: false,
+    enabled: !redirectByItem,
+    throwOnError: false,
+  });
 
+  if (redirectByItem && addressed.data && !addressed.data.spaceKey && addressed.data.kind !== "folder") {
+    return (
+      <Redirect to={sharedPath(addressed.data.id, itemSlug(addressed.data.title))} search={location.search} />
+    );
+  }
   if (redirectByItem && addressed.data) {
     return (
       <Redirect to={["", "spaces", addressed.data.spaceKey, ...rest].join("/")} search={location.search} />
@@ -81,6 +92,9 @@ export function SpaceLayout() {
     );
   }
   if (resolved.isError) {
+    if (isApiError(resolved.error, "notFound") && urlItemId && rest[0] !== "folders") {
+      return <NoPageAccess pageId={urlItemId} />;
+    }
     return (
       <main id="main" tabIndex={-1} className="flex-1 p-6 outline-none">
         {isApiError(resolved.error, "notFound") ? (
