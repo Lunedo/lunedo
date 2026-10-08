@@ -95,6 +95,7 @@ describe("scopeOf", () => {
   });
 
   it("runs the identity provider job, not the backup job, for the compose file", () => {
+    assert.deepEqual(ready(["docker/compose.ci.yml"]), { lane: "full", ...none, identityProviders: true });
     assert.deepEqual(ready(["docker/compose.dev.yml"]), { lane: "full", ...none, identityProviders: true });
   });
 

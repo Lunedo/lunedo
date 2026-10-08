@@ -40,9 +40,15 @@ psql_in() {
 
 echo "Starting PostgreSQL"
 docker network create "$network" >/dev/null
-docker run -d --name "$postgres" --network "$network" \
+postgres_args=()
+postgres_settings=()
+if [ -n "${CI:-}" ]; then
+  postgres_args=(--tmpfs /var/lib/postgresql/data)
+  postgres_settings=(-c fsync=off -c synchronous_commit=off -c full_page_writes=off)
+fi
+docker run -d --name "$postgres" --network "$network" ${postgres_args[@]+"${postgres_args[@]}"} \
   -e POSTGRES_USER=pagehall -e POSTGRES_PASSWORD="$password" -e POSTGRES_DB=source \
-  postgres:16-alpine >/dev/null
+  postgres:16-alpine ${postgres_settings[@]+"${postgres_settings[@]}"} >/dev/null
 for _ in $(seq 1 60); do
   # Only the final server listens on TCP; the temporary one during initialization uses the socket.
   docker exec "$postgres" pg_isready -h 127.0.0.1 -U pagehall -d source >/dev/null 2>&1 && break

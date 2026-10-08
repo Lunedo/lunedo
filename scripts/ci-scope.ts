@@ -44,6 +44,7 @@ export const identityProviderPaths = [
   "apps/web/playwright.config.ts",
   "docker/idp/",
   "docker/compose.dev.yml",
+  "docker/compose.ci.yml",
 ];
 
 export const backupPaths = [

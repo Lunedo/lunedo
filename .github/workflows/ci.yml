@@ -109,6 +109,7 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
+          --tmpfs /var/lib/postgresql/data
       mailpit:
         image: axllent/mailpit:v1.31.3
         env:
@@ -157,6 +158,8 @@ jobs:
       - name: Install PostgreSQL client tools for the backup tests
         run: command -v pg_dump > /dev/null || (sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client)
       - run: pnpm install --frozen-lockfile
+      - name: Turn off durability in the test database
+        run: node scripts/tune-test-postgres.ts "postgres://pagehall:pagehall@localhost:${{ job.services.postgres.ports['5432'] }}/pagehall"
       - name: Collect the test reports of this job
         run: echo "PAGEHALL_TEST_REPORT_DIR=$GITHUB_WORKSPACE/.test-reports" >> "$GITHUB_ENV"
       - name: Run the tests of this shard
@@ -246,6 +249,7 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
+          --tmpfs /var/lib/postgresql/data
       mailpit:
         image: axllent/mailpit:v1.31.3
         env:
@@ -282,6 +286,8 @@ jobs:
           key: turbo-e2e-${{ github.sha }}
           restore-keys: turbo-e2e-
       - run: pnpm install --frozen-lockfile
+      - name: Turn off durability in the test database
+        run: node scripts/tune-test-postgres.ts "$PAGEHALL_E2E_DATABASE_URL"
       - run: pnpm build
       - run: pnpm --filter @pagehall/web build:e2e
       - name: Collect the test reports of this job
@@ -351,7 +357,7 @@ jobs:
         run: grep -q authentik.localhost /etc/hosts || echo "127.0.0.1 keycloak.localhost authentik.localhost" | sudo tee -a /etc/hosts
       - name: Start PostgreSQL, Mailpit, Keycloak, Authentik and OpenLDAP
         run: >-
-          docker compose -f docker/compose.dev.yml --profile idp up --detach --wait
+          docker compose -f docker/compose.dev.yml -f docker/compose.ci.yml --profile idp up --detach --wait
           postgres mailpit keycloak authentik-postgres authentik-server authentik-worker openldap
       - name: Wait until Authentik has applied the test blueprint
         run: |
@@ -359,7 +365,7 @@ jobs:
             if curl -fsS "$PAGEHALL_E2E_AUTHENTIK_URL/application/o/pagehall/.well-known/openid-configuration" > /dev/null; then exit 0; fi
             sleep 5
           done
-          docker compose -f docker/compose.dev.yml --profile idp logs authentik-worker
+          docker compose -f docker/compose.dev.yml -f docker/compose.ci.yml --profile idp logs authentik-worker
           exit 1
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -386,10 +392,10 @@ jobs:
           path: apps/web/playwright-report
           retention-days: 7
       - if: failure()
-        run: docker compose -f docker/compose.dev.yml --profile idp logs keycloak authentik-server authentik-worker openldap
+        run: docker compose -f docker/compose.dev.yml -f docker/compose.ci.yml --profile idp logs keycloak authentik-server authentik-worker openldap
       - name: Remove the containers, volumes and images of this job
         if: always()
-        run: docker compose -f docker/compose.dev.yml --profile idp down --volumes --remove-orphans --rmi local
+        run: docker compose -f docker/compose.dev.yml -f docker/compose.ci.yml --profile idp down --volumes --remove-orphans --rmi local
 
   quick-checks:
     name: Quick checks
