@@ -16,11 +16,13 @@ import {
   exampleExplanation,
   examplePageAccess,
   examplePageImpact,
+  exampleSharedWithMe,
   giveEffectSchema,
   givePreviewSchema,
   pageAccessSchema,
   pageImpactSchema,
   restrictedPageSchema,
+  sharedWithMeSchema,
   shareRoleSchema,
 } from "./schemas.js";
 
@@ -72,6 +74,23 @@ export class PageAccessController {
 
   get #services() {
     return servicesOf(this.context);
+  }
+
+  @Get("shared-with-me")
+  @Permission("instance.content.view", { type: "instance" }, { sessionOnly: true })
+  @ApiRoute({
+    summary: "List pages shared with you",
+    description:
+      "Lists the pages that someone shared with the caller or one of their groups, newest first. Pages the caller can no longer view are left out.",
+    tags: [TAG],
+    response: {
+      description: "The pages.",
+      schema: z.array(sharedWithMeSchema).describe("Shared pages, newest first."),
+      example: [exampleSharedWithMe],
+    },
+  })
+  async sharedWithMe(@Req() request: FastifyRequest) {
+    return this.#services.pageAccess.sharedWith(actorOf(request));
   }
 
   @Get("pages/:pageId/access")

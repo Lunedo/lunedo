@@ -92,6 +92,32 @@ describe.skipIf(!baseUrl)("sharing", () => {
       expect(await test.services.documents.backlinks(context.outsider, context.root.id)).toEqual([]);
     });
 
+    it("lists the pages shared with someone, without the space they cannot see", async () => {
+      const context = await setup();
+      await share(context);
+      expect(await test.services.pageAccess.sharedWith(context.outsider)).toEqual([
+        expect.objectContaining({
+          itemId: context.shared.id,
+          title: "Launch plan",
+          role: "reader",
+          sharedBy: { id: context.editorId, name: "Editor" },
+          spaceKey: "",
+          spaceName: "",
+        }),
+      ]);
+      await test.services.pageAccess.change(context.editor, context.shared.id, [
+        { action: "restrict", kind: "view" },
+      ]);
+      expect(
+        (await test.services.pageAccess.sharedWith(context.outsider)).map((entry) => entry.itemId),
+      ).toEqual([context.shared.id]);
+      await test.services.pageAccess.change(context.editor, context.root.id, [
+        { action: "restrict", kind: "view" },
+      ]);
+      expect(await test.services.pageAccess.sharedWith(context.outsider)).toEqual([]);
+      expect(await test.services.pageAccess.sharedWith(context.editor)).toEqual([]);
+    });
+
     it("includes the descendants only when the sharer chooses so", async () => {
       const context = await setup();
       await share(context, { includeDescendants: true });

@@ -145,6 +145,11 @@ describe.skipIf(!databaseBaseUrl)("page access through the API", () => {
     expect((await guest.client.get(`/api/v1/spaces/${created.id}/items`)).statusCode).toBe(404);
     expect((await guest.client.get(`/api/v1/items/${root}`)).statusCode).toBe(404);
     expect((await guest.client.get(`/api/v1/spaces/${created.id}`)).statusCode).toBe(404);
+    const list = (await guest.client.get("/api/v1/shared-with-me")).json() as {
+      itemId: string;
+      spaceKey: string;
+    }[];
+    expect(list).toEqual([expect.objectContaining({ itemId: shared, spaceKey: "", spaceName: "" })]);
   });
 
   it("open links for anyone without an account, with password, rate limit and revocation", async () => {

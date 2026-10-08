@@ -439,6 +439,7 @@ export {
   type PageAccessImpact,
   PageAccessService,
   type RestrictedPage,
+  type SharedWithMe,
 } from "./sharing/page-access.js";
 export {
   ACCESS_REQUEST_MESSAGE_MAX_LENGTH,

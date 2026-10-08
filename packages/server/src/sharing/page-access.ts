@@ -12,6 +12,7 @@ import { lockSpaces } from "../spaces/items.js";
 import type { PeopleService } from "../spaces/people.js";
 import type { SpaceRole, TreeItemKind } from "../spaces/schema.js";
 import { signalSpaceChange } from "../spaces/signals.js";
+import { spaceKeyFor, spaceNameFor, visibleItem } from "../spaces/visibility.js";
 import type { RestrictionKind, ShareRole } from "./schema.js";
 
 export type HolderKind = "account" | "group";
@@ -79,6 +80,18 @@ export interface RestrictedPage {
   orphaned: boolean;
 }
 
+export interface SharedWithMe {
+  itemId: string;
+  title: string;
+  kind: TreeItemKind;
+  role: ShareRole;
+  includeDescendants: boolean;
+  sharedBy: { id: string; name: string | null } | null;
+  sharedAt: Date;
+  spaceKey: string;
+  spaceName: string;
+}
+
 interface ItemRow {
   id: string;
   space_id: string;
@@ -141,6 +154,51 @@ export class PageAccessService {
     const row = result.rows[0];
     if (!row) throw new SpaceError("itemNotFound", "The page does not exist");
     return row;
+  }
+
+  async sharedWith(viewer: Principal, limit = 50): Promise<SharedWithMe[]> {
+    const accountId = actorIdOf(viewer);
+    if (!accountId) return [];
+    const result = await this.#database.execute<{
+      id: string;
+      title: string;
+      kind: TreeItemKind;
+      role: ShareRole;
+      include_descendants: boolean;
+      created_by: string | null;
+      shared_by_name: string | null;
+      shared_at: Date | string;
+      space_key: string;
+      space_name: string;
+    }>(sql`
+      select * from (
+        select distinct on (t.id) t.id, t.title, t.kind, ps.role, ps.include_descendants, ps.created_by,
+          ${this.#people.visibleName(viewer, sql`sb`)} as shared_by_name, ps.created_at as shared_at,
+          ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as space_key,
+          ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name
+        from page_shares ps
+        join tree_items t on t.id = ps.item_id
+        join spaces s on s.id = t.space_id
+        left join accounts sb on sb.id = ps.created_by
+        where ${holderCovers(sql`ps.principal_kind`, sql`ps.principal_id`, sql`${accountId}::uuid`)}
+          and ps.created_by is distinct from ${accountId}::uuid
+          and s.archived_at is null and t.archived_at is null
+          and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
+        order by t.id, ps.created_at desc
+      ) shared
+      order by shared_at desc, id
+      limit ${limit}`);
+    return result.rows.map((row) => ({
+      itemId: row.id,
+      title: row.title,
+      kind: row.kind,
+      role: row.role,
+      includeDescendants: row.include_descendants,
+      sharedBy: row.created_by ? { id: row.created_by, name: row.shared_by_name } : null,
+      sharedAt: new Date(row.shared_at),
+      spaceKey: row.space_key,
+      spaceName: row.space_name,
+    }));
   }
 
   async get(viewer: Principal, itemId: string): Promise<PageAccess> {

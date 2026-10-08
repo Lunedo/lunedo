@@ -125284,6 +125284,194 @@
         }
       }
     },
+    "/api/v1/shared-with-me": {
+      "get": {
+        "operationId": "pageAccess.sharedWithMe",
+        "summary": "List pages shared with you",
+        "description": "Lists the pages that someone shared with the caller or one of their groups, newest first. Pages the caller can no longer view are left out.\n\nRequires the permission `instance.content.view` on the instance. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Page access"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.content.view",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The pages.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "itemId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the page."
+                      },
+                      "title": {
+                        "type": "string",
+                        "description": "Title of the page."
+                      },
+                      "kind": {
+                        "type": "string",
+                        "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "page",
+                          "blogPost"
+                        ]
+                      },
+                      "role": {
+                        "type": "string",
+                        "enum": [
+                          "reader",
+                          "commenter",
+                          "editor"
+                        ],
+                        "description": "`reader` reads, `commenter` also comments, `editor` also edits, moves and deletes."
+                      },
+                      "includeDescendants": {
+                        "type": "boolean",
+                        "description": "Whether the pages below are shared as well."
+                      },
+                      "sharedBy": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the account."
+                              },
+                              "name": {
+                                "description": "Name, or null when hidden.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A person."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Who shared the page."
+                      },
+                      "sharedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When the page was shared. ISO 8601 timestamp in UTC."
+                      },
+                      "spaceKey": {
+                        "type": "string",
+                        "description": "Key of the space; empty when the caller has no access to the space."
+                      },
+                      "spaceName": {
+                        "type": "string",
+                        "description": "Name of the space; empty when the caller has no access to the space."
+                      }
+                    },
+                    "required": [
+                      "itemId",
+                      "title",
+                      "kind",
+                      "role",
+                      "includeDescendants",
+                      "sharedBy",
+                      "sharedAt",
+                      "spaceKey",
+                      "spaceName"
+                    ],
+                    "additionalProperties": false,
+                    "description": "A page shared with the caller or one of their groups."
+                  },
+                  "description": "Shared pages, newest first."
+                },
+                "example": [
+                  {
+                    "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                    "title": "VPN access for remote staff",
+                    "kind": "page",
+                    "role": "reader",
+                    "includeDescendants": false,
+                    "sharedBy": {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a21",
+                      "name": "Lukas Hofer"
+                    },
+                    "sharedAt": "2026-10-01T09:30:00.000Z",
+                    "spaceKey": "",
+                    "spaceName": ""
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/space-keys/{key}": {
       "get": {
         "operationId": "spaces.resolve",

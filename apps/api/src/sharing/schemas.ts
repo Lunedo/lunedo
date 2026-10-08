@@ -440,3 +440,29 @@ export const giveEffectSchema = z
       .describe("Who gains or loses access: for the space, or for read and edit of the page."),
   })
   .describe("The effect of giving access.");
+
+export const sharedWithMeSchema = z
+  .object({
+    itemId: uuid("ID of the page."),
+    title: z.string().describe("Title of the page."),
+    kind: extensibleEnum(["page", "blogPost"], "Kind of the item."),
+    role: shareRoleSchema,
+    includeDescendants: z.boolean().describe("Whether the pages below are shared as well."),
+    sharedBy: person.nullable().describe("Who shared the page."),
+    sharedAt: timestamp("When the page was shared."),
+    spaceKey: z.string().describe("Key of the space; empty when the caller has no access to the space."),
+    spaceName: z.string().describe("Name of the space; empty when the caller has no access to the space."),
+  })
+  .describe("A page shared with the caller or one of their groups.");
+
+export const exampleSharedWithMe = {
+  itemId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+  title: "VPN access for remote staff",
+  kind: "page",
+  role: "reader",
+  includeDescendants: false,
+  sharedBy: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a21", name: "Lukas Hofer" },
+  sharedAt: "2026-10-01T09:30:00.000Z",
+  spaceKey: "",
+  spaceName: "",
+};
