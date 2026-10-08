@@ -356,6 +356,325 @@
         }
       }
     },
+    "/api/v1/access-requests/{requestId}": {
+      "get": {
+        "operationId": "accessRequests.get",
+        "summary": "Get an access request",
+        "description": "Returns a request of the caller, or a request the caller may decide as a space admin or as someone who may share the page.\n\nRequires the permission `instance.content.view` on the instance. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Access requests"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.content.view",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the access request.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the request."
+                    },
+                    "requester": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of the account."
+                        },
+                        "name": {
+                          "description": "Name, or null when hidden.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "email": {
+                          "description": "E-mail address, when the caller may see it.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "email"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Who asks."
+                    },
+                    "spaceId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "The space."
+                    },
+                    "spaceName": {
+                      "type": "string",
+                      "description": "Name of the space; empty when the requester cannot see it."
+                    },
+                    "itemId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The page, or null for the whole space."
+                    },
+                    "itemTitle": {
+                      "description": "Title of the page, when the caller may see it.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Message of the requester."
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "`satisfied` means the person got access another way. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
+                        "open",
+                        "approved",
+                        "declined",
+                        "withdrawn",
+                        "satisfied"
+                      ]
+                    },
+                    "role": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "reader",
+                            "commenter",
+                            "editor",
+                            "admin"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The role given when approved."
+                    },
+                    "decidedBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the account."
+                            },
+                            "name": {
+                              "description": "Name, or null when hidden.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A person."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who decided."
+                    },
+                    "decidedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When it was decided. ISO 8601 timestamp in UTC."
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When it was sent. ISO 8601 timestamp in UTC."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "requester",
+                    "spaceId",
+                    "spaceName",
+                    "itemId",
+                    "itemTitle",
+                    "message",
+                    "status",
+                    "role",
+                    "decidedBy",
+                    "decidedAt",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A request for access to a space or page."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a70",
+                  "requester": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a22",
+                    "name": "Mia Kranz",
+                    "email": "mia.kranz@example.org"
+                  },
+                  "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
+                  "spaceName": "IT Operations",
+                  "itemId": null,
+                  "itemTitle": null,
+                  "message": "I take over the on-call duty next month.",
+                  "status": "open",
+                  "role": null,
+                  "decidedBy": null,
+                  "decidedAt": null,
+                  "createdAt": "2026-10-01T09:30:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found. `requestNotFound`: The access request does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  },
+                  "requestNotFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:requestNotFound",
+                      "title": "The access request does not exist",
+                      "status": 404,
+                      "code": "requestNotFound"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/access-requests/{requestId}/decide": {
       "post": {
         "operationId": "accessRequests.decide",

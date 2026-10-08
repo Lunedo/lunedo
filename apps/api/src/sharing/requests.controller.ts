@@ -6,6 +6,7 @@ import { Permission } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
+import { ProblemException } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import { organizationIdParams, uuid } from "../http/schemas.js";
 import {
@@ -172,6 +173,23 @@ export class AccessRequestsController {
   })
   async mine(@Req() request: FastifyRequest) {
     return this.#services.accessRequests.mine(actorOf(request));
+  }
+
+  @Get("access-requests/:requestId")
+  @Permission("instance.content.view", { type: "instance" }, { sessionOnly: true })
+  @ApiRoute({
+    summary: "Get an access request",
+    description:
+      "Returns a request of the caller, or a request the caller may decide as a space admin or as someone who may share the page.",
+    tags: [REQUESTS],
+    params: requestParams,
+    response: { description: "The request.", schema: accessRequestSchema, example: exampleAccessRequest },
+    errors: ["requestNotFound"],
+  })
+  async get(@Param("requestId") requestId: string, @Req() request: FastifyRequest) {
+    const found = await this.#services.accessRequests.get(actorOf(request), requestId);
+    if (!found) throw new ProblemException("requestNotFound", "The access request does not exist");
+    return found;
   }
 
   @Post("access-requests/:requestId/withdraw")

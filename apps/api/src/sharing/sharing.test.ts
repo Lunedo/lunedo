@@ -221,6 +221,12 @@ describe.skipIf(!databaseBaseUrl)("page access through the API", () => {
     const requests = await owner.get(`/api/v1/spaces/${created.id}/access-requests`);
     const [request] = requests.json() as { id: string; itemTitle: string }[];
     expect(request?.itemTitle).toBe("Budget");
+    expect((await owner.get(`/api/v1/access-requests/${request?.id}`)).json()).toMatchObject({
+      status: "open",
+    });
+    expect((await member.client.get(`/api/v1/access-requests/${request?.id}`)).statusCode).toBe(200);
+    const stranger = await person();
+    expect((await stranger.client.get(`/api/v1/access-requests/${request?.id}`)).statusCode).toBe(404);
     const decided = await owner.post(`/api/v1/access-requests/${request?.id}/decide`, {
       approve: true,
       role: "reader",
