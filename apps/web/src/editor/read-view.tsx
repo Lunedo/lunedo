@@ -7,6 +7,8 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { CommentHighlights } from "../collaboration/comment-highlights.js";
 import { reportFilters, TaskReport } from "../collaboration/task-report.js";
+import { contentUrl } from "../files/attachments-api.js";
+import { useAttachmentPreview } from "../files/preview-host.js";
 import type { Formatter } from "../format/format.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useOpenPath } from "./context.js";
@@ -21,8 +23,10 @@ export function readViewContext(
   t: TFunction,
   format: Formatter,
   taskStatuses?: ReadonlyMap<string, boolean>,
+  attachmentUrl: (id: string) => string = (id) => contentUrl(id),
 ): RenderContext {
   return {
+    attachment: (id) => ({ href: attachmentUrl(id) }),
     ...(taskStatuses ? { taskStatus: (id: string) => taskStatuses.get(id) ?? null } : {}),
     mention: (id) => {
       const name = references.people[id];
@@ -90,6 +94,11 @@ export function applyWidths(root: HTMLElement): void {
   }
 }
 
+export interface ReadViewAttachments {
+  url?: (id: string) => string;
+  onOpen?: (id: string) => void;
+}
+
 export interface ReadViewCollaboration {
   taskStatuses?: ReadonlyMap<string, boolean>;
   canToggleTask?: (task: { id: string; assignee: string | null }) => boolean;
@@ -108,12 +117,17 @@ export function PageReadView({
   references,
   pageId,
   collaboration = NO_COLLABORATION,
+  attachments,
 }: {
   document: unknown;
   references: References;
   pageId: string;
   collaboration?: ReadViewCollaboration;
+  attachments?: ReadViewAttachments;
 }) {
+  const preview = useAttachmentPreview();
+  const openAttachment = attachments?.onOpen ?? preview?.open;
+  const attachmentUrl = attachments?.url;
   const { t } = useTranslation();
   const format = useFormat();
   const open = useOpenPath();
@@ -124,11 +138,11 @@ export function PageReadView({
   const { taskStatuses, canToggleTask, onToggleTask, openThreads = [], activeThread = null } = collaboration;
   const html = useMemo(() => {
     try {
-      return renderHtml(content, readViewContext(references, t, format, taskStatuses));
+      return renderHtml(content, readViewContext(references, t, format, taskStatuses, attachmentUrl));
     } catch {
       return null;
     }
-  }, [content, references, t, format, taskStatuses]);
+  }, [content, references, t, format, taskStatuses, attachmentUrl]);
 
   useLayoutEffect(() => {
     rememberReferences(references);
@@ -170,6 +184,12 @@ export function PageReadView({
     if (target instanceof HTMLInputElement && target.type === "checkbox") {
       const id = target.closest<HTMLElement>(".ph-task-item")?.dataset.taskId;
       if (id) onToggleTask?.(id, target.checked);
+      return;
+    }
+    const file = target.closest<HTMLElement>(".ph-file[data-attachment-id]");
+    if (file && openAttachment && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
+      event.preventDefault();
+      openAttachment(file.dataset.attachmentId ?? "");
       return;
     }
     const thread = target.closest<HTMLElement>("[data-thread-id]")?.dataset.threadId;

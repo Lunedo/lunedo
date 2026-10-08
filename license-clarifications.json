@@ -1,0 +1,10 @@
+{
+  "$comment": "Packages whose package.json names a license that is not a valid SPDX identifier, while their license file is an approved license. Each entry names the exact version, the declared value, the license of the license file and where it was checked.",
+  "packages": {
+    "duck@0.1.12": {
+      "declared": "BSD",
+      "license": "BSD-2-Clause",
+      "reason": "Dependency of mammoth (Word previews). The LICENSE file of this version is the BSD 2-Clause text."
+    }
+  }
+}

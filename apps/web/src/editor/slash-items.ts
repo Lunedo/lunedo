@@ -23,6 +23,7 @@ import {
   ListTree,
   type LucideIcon,
   Minus,
+  Paperclip,
   Pilcrow,
   Quote,
   Sigma,
@@ -307,6 +308,18 @@ export const slashCommands: SlashCommandDefinition[] = [
     keywords: ["link", "page", "seite", "verknüpfen"],
     hint: "[[",
     run: (editor, range) => editor.chain().focus().deleteRange(range).insertContent("[[").run(),
+  },
+  {
+    id: "file",
+    group: "blocks",
+    icon: Paperclip,
+    labelKey: "editor.blocks.file",
+    descriptionKey: "editor.blocks.fileDescription",
+    keywords: ["file", "image", "upload", "attachment", "datei", "bild", "anhang", "hochladen"],
+    run: (editor, range) => {
+      editor.chain().focus().deleteRange(range).run();
+      editorActions(editor)?.pickFiles?.();
+    },
   },
   {
     id: "emoji",

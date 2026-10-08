@@ -61,6 +61,8 @@ const page = (id: string, title: string, extra: Record<string, unknown> = {}) =>
   archived: false,
   position: "a0",
   hasChildren: false,
+  viewRestriction: "none",
+  editRestricted: false,
   link: null,
   creatorId: OLIVIA.id,
   ownerId: OLIVIA.id,

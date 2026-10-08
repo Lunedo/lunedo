@@ -101,6 +101,14 @@ export interface AllowlistEntry {
 
 export type Allowlist = Record<string, AllowlistEntry>;
 
+export interface Clarification {
+  declared: string;
+  license: string;
+  reason: string;
+}
+
+export type Clarifications = Record<string, Clarification>;
+
 /**
  * Production dependencies ship in the image or the web client and must use an approved license.
  * Build and test dependencies may use other open licenses when the allowlist names the package,
@@ -110,14 +118,27 @@ export function findLicenseViolations(options: {
   all: readonly PackageLicense[];
   production: readonly PackageLicense[];
   allowlist: Allowlist;
+  clarifications?: Clarifications;
 }): string[] {
   const violations: string[] = [];
+  const clarifications = options.clarifications ?? {};
+  const usedClarifications = new Set<string>();
+  const effective = (pkg: PackageLicense): string => {
+    const keys = pkg.versions.map((version) => `${pkg.name}@${version}`);
+    const entries = keys.map((key) => clarifications[key]);
+    if (keys.length === 0 || entries.some((entry) => !entry || entry.declared !== pkg.license))
+      return pkg.license;
+    for (const key of keys) usedClarifications.add(key);
+    const licenses = new Set(entries.map((entry) => entry?.license ?? ""));
+    return licenses.size === 1 ? ([...licenses][0] ?? pkg.license) : pkg.license;
+  };
   const productionNames = new Set(options.production.map((pkg) => pkg.name));
   const usedEntries = new Set<string>();
   const label = (pkg: PackageLicense) => `${pkg.name}@${pkg.versions.join(", ")} (${pkg.license})`;
 
   for (const pkg of options.all) {
     if (isApprovedLicense(pkg.license)) continue;
+    if (isApprovedLicense(effective(pkg))) continue;
     if (productionNames.has(pkg.name)) {
       violations.push(`${label(pkg)} ships in the image or web client and needs an OSI-approved license`);
       continue;
@@ -134,6 +155,11 @@ export function findLicenseViolations(options: {
     }
   }
 
+  for (const [key, entry] of Object.entries(clarifications)) {
+    if (entry.reason.trim() === "") violations.push(`Clarification ${key} has no reason`);
+    if (!usedClarifications.has(key))
+      violations.push(`Clarification ${key} is not needed and must be removed`);
+  }
   for (const name of Object.keys(options.allowlist)) {
     if (!usedEntries.has(name)) violations.push(`Allowlist entry ${name} is not needed and must be removed`);
   }

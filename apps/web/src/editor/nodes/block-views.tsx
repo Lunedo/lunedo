@@ -3,9 +3,11 @@ import { Combobox, Menu } from "@pagehall/ui";
 import type { Editor } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
-import { ChevronDown, ChevronRight, Columns2, Info, ListTree } from "lucide-react";
+import { ChevronDown, ChevronRight, Columns2, Info, ListTree, Paperclip } from "lucide-react";
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { contentUrl } from "../../files/attachments-api.js";
+import { useAttachmentPreview } from "../../files/preview-host.js";
 import { translateKey } from "../../i18n/translate.js";
 
 export interface TocEntry {
@@ -277,17 +279,28 @@ export function UnsupportedMacroView({ node, selected }: NodeViewProps) {
 
 export function AttachmentView({ node, selected }: NodeViewProps) {
   const { t } = useTranslation();
+  const preview = useAttachmentPreview();
+  const id = String(node.attrs.attachmentId);
   const isImage = node.type.name === "image";
+  const name = String((isImage ? node.attrs.alt : node.attrs.name) || "");
   return (
     <NodeViewWrapper
       className={`${isImage ? "ph-image" : "ph-file"}${selected ? " ph-node-selected" : ""}`}
+      data-align={isImage ? String(node.attrs.align) : undefined}
       contentEditable={false}
     >
-      <p className="text-sm text-text-muted">
-        {isImage
-          ? t("editor.attachment.image", { name: String(node.attrs.alt || "") })
-          : t("editor.attachment.file", { name: String(node.attrs.name || "") })}
-      </p>
+      {isImage ? (
+        <img src={contentUrl(id)} alt={name} loading="lazy" draggable={false} />
+      ) : (
+        <button
+          type="button"
+          className="inline-flex min-h-hit items-center gap-2 rounded-md border border-border px-3 hover:bg-hover focus-visible:focus-ring"
+          onClick={() => preview?.open(id)}
+        >
+          <Paperclip aria-hidden="true" className="size-icon" />
+          {name || t("editor.attachment.file", { name: "" })}
+        </button>
+      )}
     </NodeViewWrapper>
   );
 }

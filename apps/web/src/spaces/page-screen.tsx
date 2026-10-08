@@ -29,6 +29,9 @@ import { PageReactions } from "../collaboration/reaction-bar.js";
 import { PageReadView, type ReadViewCollaboration } from "../editor/read-view.js";
 import type { SaveState } from "../editor/save-state.js";
 import { LoadError } from "../errors/failure.js";
+import { AttachmentsSection, PageDropZone } from "../files/attachments-section.js";
+import { AttachmentPreviewProvider } from "../files/preview-host.js";
+import { UploadsProvider } from "../files/uploads.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { EDIT_PAGE_EVENT } from "../shell/builtin.js";
@@ -95,6 +98,20 @@ export function PageScreen() {
 }
 
 function PageView({ page }: { page: ItemDetails }) {
+  const { space, canEdit } = useSpace();
+  const writable = canEdit && !page.archived && !space.archived;
+  return (
+    <UploadsProvider pageId={page.id}>
+      <AttachmentPreviewProvider canEdit={writable}>
+        <PageDropZone enabled={writable} title={page.title}>
+          <PageArticle page={page} />
+        </PageDropZone>
+      </AttachmentPreviewProvider>
+    </UploadsProvider>
+  );
+}
+
+function PageArticle({ page }: { page: ItemDetails }) {
   const { t } = useTranslation();
   const { space, canEdit, openMove, openCreate } = useSpace();
   const search = route.useSearch();
@@ -324,6 +341,7 @@ function PageView({ page }: { page: ItemDetails }) {
         ) : writable && publishMode && !page.published ? null : (
           <PageContent pageId={page.id} publishMode={publishMode} collaboration={collaboration.readView} />
         )}
+        <AttachmentsSection pageId={page.id} canEdit={writable} />
         <PageReactions itemId={page.id} canReact={!page.archived && !space.archived} />
         <Backlinks pageId={page.id} />
         <ModeSwitchDialog

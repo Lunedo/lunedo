@@ -121,12 +121,49 @@ const KNOWN = new Set([
   "notPlaceholder",
   "invalidMailConfiguration",
   "mailNotReady",
+  "invalidFileName",
+  "invalidItem",
+  "invalidCover",
+  "invalidFocus",
+  "invalidScope",
+  "peopleRequired",
+  "tooManyPeople",
+  "invalidPassword",
+  "messageTooLong",
+  "invalidRole",
+  "signInRequired",
+  "passwordRequired",
+  "wrongPassword",
+  "linkNotForYou",
+  "guestInvitesDisabled",
+  "attachmentNotFound",
+  "shareNotFound",
+  "restrictionNotFound",
+  "linkNotFound",
+  "requestNotFound",
+  "personNotFound",
+  "nameTaken",
+  "alreadyShared",
+  "restrictionWithoutViewers",
+  "restrictionWithoutEditors",
+  "shareLinksDisabled",
+  "anyoneLinksDisabled",
+  "restrictedPage",
+  "requestClosed",
+  "alreadyHasAccess",
+  "fileTooLarge",
+  "rangeNotSatisfiable",
+  "tooManyRequests",
 ]);
 
 const DIRECTORY_PROBLEMS: Record<string, string> = {
   invalidCredentials: "problems.directoryInvalidCredentials",
   providerUnavailable: "problems.directoryUnavailable",
 };
+
+function megabytes(bytes: number): string {
+  return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(bytes / 1024 / 1024)} MB`;
+}
 
 export function problemKey(error: unknown): string {
   if (error instanceof ApiError && KNOWN.has(error.code)) return `problems.${error.code}`;
@@ -148,6 +185,12 @@ export function problemMessage(t: TFunction, error: unknown): string {
   }
   if (error.code === "invalidSamlMetadata" && problem.detail) {
     return t("problems.invalidSamlMetadataDetail", { detail: problem.detail });
+  }
+  if (error.code === "fileTooLarge" && problem.maxBytes) {
+    return t("problems.fileTooLargeLimit", { size: megabytes(problem.maxBytes) });
+  }
+  if (error.code === "expiryTooLate" && problem.maxDays) {
+    return t("problems.linkExpiryTooLate", { days: problem.maxDays });
   }
   if (error.code === "settingLocked" && problem.lockedBy) {
     return t("problems.settingLockedBy", { level: translateKey(t, `settings.levels.${problem.lockedBy}`) });

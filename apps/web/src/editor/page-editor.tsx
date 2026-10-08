@@ -8,6 +8,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { useTranslation } from "react-i18next";
 import { CommentHighlights } from "../collaboration/comment-highlights.js";
 import { checkMentionAccess } from "../collaboration/people.js";
+import type { Attachment } from "../files/attachments-api.js";
+import { useUploads } from "../files/uploads.js";
 import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.js";
 import { usePreferences } from "../preferences/preferences-provider.js";
 import { useSession } from "../shell/shell-context.js";
@@ -80,6 +82,8 @@ function CollaborativeEditor({
   const [findOpen, setFindOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const uploads = useUploads();
+  const fileInput = useRef<HTMLInputElement>(null);
   const account = session.account;
   const self = useMemo(
     () => (account ? { id: account.id, name: account.name, color: presenceColor(account.id) } : null),
@@ -93,6 +97,7 @@ function CollaborativeEditor({
       openLinkDialog: () => setLinkOpen(true),
       openFind: () => setFindOpen(true),
       focusToolbar: () => toolbar.current?.focus(),
+      ...(uploads ? { pickFiles: () => fileInput.current?.click() } : {}),
       ...(onComment
         ? {
             comment: () => {
@@ -106,7 +111,24 @@ function CollaborativeEditor({
           }
         : {}),
     }),
-    [onComment, toast, t],
+    [onComment, toast, t, uploads],
+  );
+  const insertFiles = useCallback(
+    (files: File[], position: number | null) => {
+      if (!uploads) return;
+      uploads.start(files, (attachment: Attachment) => {
+        const current = editorRef.current;
+        if (!current || current.isDestroyed) return;
+        const node =
+          attachment.preview === "image"
+            ? { type: "image", attrs: { attachmentId: attachment.id, alt: attachment.name } }
+            : { type: "file", attrs: { attachmentId: attachment.id, name: attachment.name } };
+        const size = current.state.doc.content.size;
+        const at = position !== null && position <= size ? position : current.state.selection.to;
+        current.chain().insertContentAt(at, node).run();
+      });
+    },
+    [uploads],
   );
   const onMention = useCallback(
     async (person: { id: string; name: string }) => {
@@ -132,6 +154,7 @@ function CollaborativeEditor({
         onFocusToolbar: actions.focusToolbar,
         onOpenLinkDialog: actions.openLinkDialog,
         onMention: (person) => void onMention(person),
+        ...(uploads ? { onFiles: insertFiles } : {}),
       }),
       editorProps: {
         attributes: {
@@ -208,6 +231,21 @@ function CollaborativeEditor({
     <PageContextValue value={pageContext}>
       <div className="ph-page-editor flex flex-col gap-3">
         {snapshot.problem ? <CollaborationProblemNotice problem={snapshot.problem} /> : null}
+        {uploads ? (
+          <input
+            ref={fileInput}
+            type="file"
+            multiple
+            hidden
+            aria-hidden="true"
+            tabIndex={-1}
+            onChange={(event) => {
+              const files = Array.from(event.target.files ?? []);
+              event.target.value = "";
+              if (files.length > 0) insertFiles(files, null);
+            }}
+          />
+        ) : null}
         {blocked || !editor ? null : (
           <>
             <div className="ph-editor-bar sticky top-0 z-10 flex flex-col gap-1 rounded-md border border-border bg-surface p-1 shadow-card">

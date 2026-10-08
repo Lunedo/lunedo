@@ -39,6 +39,7 @@ import { schemaExtensions } from "../schema/extensions.js";
 import { slashSuggestionItems } from "../slash-items.js";
 import { BlockFormatting } from "./block-formatting.js";
 import { DocumentEdges } from "./document-edges.js";
+import { FileDrop } from "./file-drop.js";
 import { FindReplace } from "./find-replace.js";
 import { SchemaGuard } from "./guard.js";
 import { PageScope } from "./page-scope.js";
@@ -81,6 +82,7 @@ export interface EditorExtensionOptions {
   onFocusToolbar?: () => void;
   onOpenLinkDialog?: () => void;
   onMention?: (person: { id: string; name: string }) => void;
+  onFiles?: (files: File[], position: number | null) => void;
 }
 
 const MathInputRules = Extension.create({
@@ -174,6 +176,7 @@ export function createEditorExtensions(options: EditorExtensionOptions): AnyExte
   const collaboration = options.collaboration;
   return [
     ...base,
+    FileDrop.configure({ onFiles: options.onFiles ?? null }),
     CleanPaste,
     TaskIds,
     PageScope.configure({ spaceId: options.spaceId }),

@@ -15,6 +15,7 @@ export default defineConfig({
     host: process.env.PAGEHALL_DEV_HOST ?? "localhost",
     port: 5173,
     strictPort: true,
+    cors: { origin: [/^https?:\/\/(?:[^:]+\.)?localhost(?::\d+)?$/, "null"] },
     watch: polling ? { usePolling: true, interval: 300 } : undefined,
     allowedHosts: instance ? [instance.hostname] : [],
     hmr: instance
@@ -38,6 +39,11 @@ export default defineConfig({
         changeOrigin: false,
         xfwd: true,
       },
+    },
+  },
+  build: {
+    rollupOptions: {
+      input: { main: "index.html", preview: "preview.html" },
     },
   },
   preview: {
