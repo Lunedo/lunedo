@@ -2,7 +2,7 @@ import type { TextAnchor } from "@pagehall/editor-schema";
 import { IconButton, useToast } from "@pagehall/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageSquare, Star } from "lucide-react";
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
@@ -10,6 +10,7 @@ import type { ReadViewCollaboration } from "../editor/read-view.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { useSession } from "../shell/shell-context.js";
 import { CommentsPanel, openThreadIds } from "./comments-panel.js";
+import { useOverlayFocusTrap } from "./focus-trap.js";
 import { collaborationKeys, commentsQuery, recordView, starredQuery, taskStatusesQuery } from "./queries.js";
 import { useSetTaskStatus } from "./task-actions.js";
 
@@ -100,6 +101,20 @@ export function useContentCollaboration({
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<TextAnchor | null>(null);
   const [active, setActive] = useState<string | null>(null);
+  const toggleId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const close = useCallback(() => {
+    setOpen(false);
+    setPending(null);
+  }, []);
+  const toggleButton = useCallback(() => document.getElementById(toggleId), [toggleId]);
+  useOverlayFocusTrap({
+    active: open,
+    container: panelRef,
+    returnTo: toggleButton,
+    onEscape: close,
+    media: "(min-width: 48rem)",
+  });
   const comments = useQuery(commentsQuery(itemId));
   const statuses = useQuery(taskStatusesQuery(itemId));
   const setStatus = useSetTaskStatus(itemId);
@@ -156,6 +171,7 @@ export function useContentCollaboration({
             ? t("comments.toggleWithOpen", { count: openThreads.length })
             : t("comments.toggle")
         }
+        id={toggleId}
         icon={MessageSquare}
         aria-pressed={open}
         aria-expanded={open}
@@ -163,7 +179,10 @@ export function useContentCollaboration({
       />
     ),
     panel: open ? (
-      <div className="fixed inset-0 z-40 flex bg-surface md:sticky md:top-0 md:inset-auto md:z-auto md:h-dvh md:self-start">
+      <div
+        ref={panelRef}
+        className="fixed inset-0 z-40 flex bg-surface md:sticky md:top-0 md:inset-auto md:z-auto md:h-dvh md:self-start"
+      >
         <CommentsPanel
           itemId={itemId}
           permissions={{
@@ -176,10 +195,7 @@ export function useContentCollaboration({
           onPendingDone={() => setPending(null)}
           activeThread={active}
           onActivate={setActive}
-          onClose={() => {
-            setOpen(false);
-            setPending(null);
-          }}
+          onClose={close}
         />
       </div>
     ) : null,

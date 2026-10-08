@@ -256,6 +256,22 @@ describe("comments on a page", () => {
     );
   });
 
+  it("keep the focus inside the panel on narrow screens and return it when closed", async () => {
+    mockApi(routes("reader"));
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    const toggle = await screen.findByRole("button", { name: /^Comments/ });
+    await userEvent.click(toggle);
+    const panel = await screen.findByRole("complementary", { name: "Comments" });
+    await waitFor(() => expect(panel.contains(document.activeElement)).toBe(true));
+    for (let step = 0; step < 12; step += 1) {
+      await userEvent.tab();
+      expect(panel.contains(document.activeElement)).toBe(true);
+    }
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("complementary", { name: "Comments" })).toBeNull());
+    expect(document.activeElement).toBe(toggle);
+  });
+
   it("let commenters comment on selected text of the published version", async () => {
     mockApi(routes("commenter"));
     await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
