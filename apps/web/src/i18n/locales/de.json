@@ -5289,6 +5289,20 @@
       "description": "Die Space-Admins nehmen Personen auf. Du siehst nur Name und Beschreibung.",
       "ask": "Beitritt anfragen",
       "requested": "Anfrage gesendet"
+    },
+    "landing": {
+      "banner": "Diese Seite wurde über einen Link geteilt. Du siehst nur diese Seite.",
+      "pageFailed": "die geteilte Seite",
+      "updated": "Veröffentlicht am {date}",
+      "passwordTitle": "Dieser Link ist geschützt",
+      "password": "Gib das Passwort ein, das du von der Person bekommen hast, die den Link geteilt hat.",
+      "passwordMissing": "Gib das Passwort ein.",
+      "open": "Seite öffnen",
+      "signInTitle": "Melde dich an, um diese Seite zu öffnen",
+      "signIn": "Anmelden",
+      "notForYouTitle": "Dieser Link ist für andere Personen",
+      "goneTitle": "Dieser Link funktioniert nicht mehr",
+      "failed": "Der Link konnte nicht geöffnet werden"
     }
   }
 }

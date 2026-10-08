@@ -16,6 +16,7 @@ const PUBLIC_PATHS = [
   "/accept-invitation",
   "/register",
   "/complete-registration",
+  "/s/",
 ];
 
 export function RootLayout() {

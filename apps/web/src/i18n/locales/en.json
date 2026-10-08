@@ -5289,6 +5289,20 @@
       "description": "Their space admins let people in. You see the name and description only.",
       "ask": "Ask to join",
       "requested": "Request sent"
+    },
+    "landing": {
+      "banner": "Someone shared this page with a link. You see only this page.",
+      "pageFailed": "the shared page",
+      "updated": "Published {date}",
+      "passwordTitle": "This link is protected",
+      "password": "Enter the password you got from the person who shared the link.",
+      "passwordMissing": "Enter the password.",
+      "open": "Open page",
+      "signInTitle": "Sign in to open this page",
+      "signIn": "Sign in",
+      "notForYouTitle": "This link is for other people",
+      "goneTitle": "This link no longer works",
+      "failed": "The link could not be opened"
     }
   }
 }

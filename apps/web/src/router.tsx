@@ -52,6 +52,13 @@ const setupRoute = createRoute({
   component: lazyRouteComponent(() => import("./screens/setup/setup-screen.js"), "SetupScreen"),
 });
 
+const linkLandingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/s/$token",
+  beforeLoad: ({ context }) => requireSetupComplete(context.queryClient),
+  component: lazyRouteComponent(() => import("./sharing/link-landing.js"), "LinkLandingScreen"),
+});
+
 const publicRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "public",
@@ -635,6 +642,7 @@ const devRoutes =
 
 const routeTree = rootRoute.addChildren([
   setupRoute,
+  linkLandingRoute,
   publicRoute.addChildren([
     signInRoute,
     verifyRoute,
