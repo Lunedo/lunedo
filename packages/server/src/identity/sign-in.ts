@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { directoryPasswordSchema, type LdapConfig, type OidcConfig, type SamlConfig } from "@pagehall/shared";
 import { and, eq, gt, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import * as client from "openid-client";
@@ -32,6 +32,7 @@ import { hasSecondFactor, secondFactorsOf } from "../auth/two-factor.js";
 import { secretsEqual } from "../crypto/constant-time.js";
 import type { Database, Transaction } from "../database/database.js";
 import type { NotificationService } from "../notifications/service.js";
+import { currentRequestContext, runWithRequestContext } from "../observability/request-context.js";
 import { memberships } from "../organizations/access-schema.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import { organizationDomains } from "../organizations/schema.js";
@@ -521,12 +522,16 @@ export class ProviderSignInService {
               isNotNull(identityProviders.groupsClaimSeenAt),
             ),
           );
-        await this.#audit.record(tx, {
-          name: "auth.groupsClaimMissing",
-          actor: SYSTEM,
-          targetId: providerId,
-          fields: {},
-        });
+        await runWithRequestContext(
+          { requestId: currentRequestContext()?.requestId ?? randomUUID(), actor: SYSTEM },
+          () =>
+            this.#audit.record(tx, {
+              name: "auth.groupsClaimMissing",
+              actor: SYSTEM,
+              targetId: providerId,
+              fields: {},
+            }),
+        );
         return;
       }
       await tx

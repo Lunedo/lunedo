@@ -743,6 +743,19 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
       return rows.rowCount ?? 0;
     }
 
+    it("records the missing claim without the address or browser of the person", async () => {
+      const { id } = await mappedProvider();
+      await runWithRequestContext(
+        { requestId: randomUUID(), clientIp: "198.51.100.7", userAgent: "Test agent", actor: ANONYMOUS },
+        () => signIn(id, { sub: randomUUID(), email: `i.${randomUUID().slice(0, 8)}@example.org` }),
+      );
+      const rows = await test.pool.query<{ client_ip: string | null; user_agent: string | null }>(
+        "select client_ip, user_agent from audit_events where name = 'auth.groupsClaimMissing' and target_id = $1",
+        [id],
+      );
+      expect(rows.rows).toEqual([{ client_ip: null, user_agent: null }]);
+    });
+
     it("treats the missing claim as no groups, records it and warns once the claim was seen before", async () => {
       const { id, org, group } = await mappedProvider();
       const subject = randomUUID();
