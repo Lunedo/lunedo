@@ -47,7 +47,7 @@ function EntryRow({ entry }: { entry: Entry }) {
           ) : entry.itemId && entry.itemTitle ? (
             <Link
               to={pagePath(entry.spaceKey, entry.itemId, itemSlug(entry.itemTitle))}
-              className="text-accent hover:underline focus-visible:focus-ring"
+              className="text-accent underline focus-visible:focus-ring"
             >
               {where}
             </Link>
@@ -107,14 +107,14 @@ function PersonOverview({ organizationId, accountId }: { organizationId: string;
   const name = access.data.name ?? t("spaces.holders.unknownPerson");
   return (
     <section aria-labelledby="person-access" className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 id="person-access" className="min-w-0 flex-1 text-lg font-semibold">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <h2 id="person-access" className="min-w-0 text-lg font-semibold sm:flex-1">
           {t("organization.access.whatCan", { name })}
         </h2>
         <a
           href={exportHref(organizationId, accountId)}
           download
-          className="inline-flex min-h-hit items-center gap-2 rounded-md border border-border px-3 font-medium hover:bg-hover focus-visible:focus-ring"
+          className="inline-flex min-h-hit items-center gap-2 self-start rounded-md border border-border px-3 font-medium hover:bg-hover focus-visible:focus-ring sm:self-auto"
         >
           <Download aria-hidden="true" className="size-icon" />
           {t("organization.access.exportPerson")}
@@ -147,8 +147,8 @@ export function AccessOverviewScreen() {
       organizationId={organizationId}
     >
       <div className="flex flex-col gap-6">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-0 flex-1">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="w-full min-w-0 sm:flex-1">
             <Field label={t("organization.access.person")} hint={t("organization.access.personHint")}>
               <HolderPicker
                 organizationId={organizationId}
@@ -165,7 +165,7 @@ export function AccessOverviewScreen() {
           <a
             href={exportHref(organizationId)}
             download
-            className="inline-flex min-h-hit items-center gap-2 rounded-md border border-border px-3 font-medium hover:bg-hover focus-visible:focus-ring"
+            className="inline-flex min-h-hit items-center gap-2 self-start rounded-md border border-border px-3 font-medium hover:bg-hover focus-visible:focus-ring sm:self-auto"
           >
             <Download aria-hidden="true" className="size-icon" />
             {t("organization.access.exportAll")}

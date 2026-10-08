@@ -74,14 +74,22 @@ function RestrictedPages() {
               const info = page[kind];
               if (!info) return null;
               return (
-                <div key={kind} className="flex flex-wrap items-center gap-2 ps-6 text-sm">
-                  <span className="min-w-0 flex-1">
-                    {kind === "view" ? t("spaces.access.viewRestricted") : t("spaces.access.editRestricted")}
-                    {" · "}
-                    {t("sharing.restrict.setBy", {
-                      name: info.setBy?.name ?? t("files.someone"),
-                      date: format.date(info.setAt),
-                    })}
+                <div
+                  key={kind}
+                  className="flex flex-col items-start gap-2 ps-6 text-sm sm:flex-row sm:items-center"
+                >
+                  <span className="flex min-w-0 flex-col sm:flex-1">
+                    <span className="font-medium">
+                      {kind === "view"
+                        ? t("spaces.access.viewRestricted")
+                        : t("spaces.access.editRestricted")}
+                    </span>
+                    <span className="text-text-muted">
+                      {t("sharing.restrict.setBy", {
+                        name: info.setBy?.name ?? t("files.someone"),
+                        date: format.date(info.setAt),
+                      })}
+                    </span>
                   </span>
                   <Button size="sm" variant="secondary" onClick={() => setRemoving({ page, kind })}>
                     {t("spaces.access.remove")}

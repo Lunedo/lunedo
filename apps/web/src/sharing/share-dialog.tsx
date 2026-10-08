@@ -91,7 +91,7 @@ function ShareRow({ share, onChange }: { share: PageShare; onChange: (pending: P
       : t("sharing.people.notInSpace"),
   ].filter(Boolean);
   return (
-    <li className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center">
+    <li className="flex flex-col gap-2 py-3">
       <div className="flex min-w-0 flex-1 items-center gap-2">
         {share.holder.kind === "group" ? (
           <Users aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
@@ -114,10 +114,11 @@ function ShareRow({ share, onChange }: { share: PageShare; onChange: (pending: P
           </p>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2">
         <Select
           aria-label={t("sharing.people.roleOf", { name })}
           value={share.role}
+          className="min-w-0 flex-1"
           options={roleOptions}
           onValueChange={(role) => {
             if (role === share.role) return;
@@ -136,6 +137,7 @@ function ShareRow({ share, onChange }: { share: PageShare; onChange: (pending: P
         <Select
           aria-label={t("sharing.people.scopeOf", { name })}
           value={share.includeDescendants ? "descendants" : "page"}
+          className="min-w-0 flex-1"
           options={scopeOptions}
           onValueChange={(scope) => {
             const includeDescendants = scope === "descendants";
