@@ -44,13 +44,15 @@ export const identityProviderPaths = [
   "apps/web/playwright.config.ts",
   "docker/idp/",
   "docker/compose.dev.yml",
+  "docker/compose.ci.yml",
 ];
 
 export const backupPaths = [
   "packages/server/src/backup/",
   "packages/server/drizzle/",
   "apps/worker/src/cli/",
-  "docker/",
+  "docker/Dockerfile",
+  "docker/start.sh",
   "scripts/backup-roundtrip.sh",
 ];
 

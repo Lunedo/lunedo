@@ -8,7 +8,9 @@
     "./tsconfig/base.json": "./tsconfig/base.json",
     "./tsconfig/node.json": "./tsconfig/node.json",
     "./tsconfig/react.json": "./tsconfig/react.json",
-    "./vitest": "./vitest.ts"
+    "./vitest": "./vitest.ts",
+    "./test-report": "./src/test-report.ts",
+    "./vitest-report": "./src/vitest-report.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

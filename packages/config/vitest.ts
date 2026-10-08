@@ -1,3 +1,4 @@
+import { retriesFromEnv } from "@pagehall/config/test-report";
 import { defaultClientConditions, defaultServerConditions } from "vite";
 import { defineProject, type UserWorkspaceConfig } from "vitest/config";
 
@@ -35,6 +36,7 @@ export function createVitestConfig(options: VitestPresetOptions = {}): UserWorks
       globalSetup: options.globalSetup ?? [],
       testTimeout: options.testTimeout ?? 5000,
       maxWorkers: parallelismLimit(),
+      retry: retriesFromEnv(),
       hookTimeout: 60_000,
       restoreMocks: true,
       unstubGlobals: true,

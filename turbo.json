@@ -5,6 +5,9 @@
   "globalDependencies": ["biome.json", "packages/config/tsconfig/*.json", ".github/workflows/ci.yml"],
   "globalPassThroughEnv": [
     "CI_PARALLELISM",
+    "CI_RETRIES",
+    "PAGEHALL_TEST_REPORT_DIR",
+    "GITHUB_WORKSPACE",
     "GOMAXPROCS",
     "RAYON_NUM_THREADS",
     "GITHUB_ENV",

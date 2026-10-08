@@ -1,3 +1,4 @@
+import { retriesFromEnv } from "@pagehall/config/test-report";
 import { defineConfig, devices } from "@playwright/test";
 import { BASE_URL } from "./e2e/support/environment.js";
 
@@ -7,12 +8,12 @@ const identityProviders = process.env.PAGEHALL_E2E_IDP === "1";
 export default defineConfig({
   testDir: "e2e",
   forbidOnly: ci,
-  retries: ci ? 1 : 0,
+  retries: retriesFromEnv(),
   workers: 1,
   fullyParallel: false,
   timeout: 120_000,
   expect: { timeout: 10_000, toHaveScreenshot: { maxDiffPixelRatio: 0.002, animations: "disabled" } },
-  reporter: ci ? [["list"], ["html", { open: "never" }]] : "list",
+  reporter: ci ? [["list"], ["html", { open: "never" }], ["./e2e/support/flaky-reporter.ts"]] : "list",
   globalSetup: "./e2e/global-setup.ts",
   snapshotPathTemplate: "{testDir}/__screenshots__/{testFilePath}/{arg}{ext}",
   use: {
