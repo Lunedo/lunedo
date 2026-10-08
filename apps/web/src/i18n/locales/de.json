@@ -4252,7 +4252,8 @@
       "page": "Seite",
       "folder": "Ordner",
       "link": "Link",
-      "blogPost": "Blogbeitrag"
+      "blogPost": "Blogbeitrag",
+      "other": "Element"
     },
     "unknownPerson": "Unbekannte Person",
     "stageOne": "Papierkorb",

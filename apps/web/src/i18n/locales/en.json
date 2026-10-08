@@ -4252,7 +4252,8 @@
       "page": "Page",
       "folder": "Folder",
       "link": "Link",
-      "blogPost": "Blog post"
+      "blogPost": "Blog post",
+      "other": "Item"
     },
     "unknownPerson": "Unknown person",
     "stageOne": "Space trash",

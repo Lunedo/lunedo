@@ -12,14 +12,17 @@ export function itemHref(
   if (item.kind === "page") return pagePath(spaceKey, item.id, itemSlug(item.title));
   if (item.kind === "folder") return folderPath(spaceKey, item.id, itemSlug(item.title));
   if (item.kind === "blogPost") return blogPostPath(spaceKey, item.id, itemSlug(item.title));
+  if (item.kind !== "link") return null;
   const link = item.link;
   if (!link?.accessible) return null;
   if (link.url) return link.url;
   const target = link.target;
   if (!target || !link.itemId) return null;
-  return target.kind === "folder"
-    ? folderPath(target.spaceKey, link.itemId, itemSlug(target.title))
-    : pagePath(target.spaceKey, link.itemId, itemSlug(target.title));
+  const slug = itemSlug(target.title);
+  if (target.kind === "page") return pagePath(target.spaceKey, link.itemId, slug);
+  if (target.kind === "folder") return folderPath(target.spaceKey, link.itemId, slug);
+  if (target.kind === "blogPost") return blogPostPath(target.spaceKey, link.itemId, slug);
+  return null;
 }
 
 export function isExternal(href: string): boolean {
