@@ -36,6 +36,7 @@ import { searchPeople } from "../references.js";
 import { schemaExtensions } from "../schema/extensions.js";
 import { slashSuggestionItems } from "../slash-items.js";
 import { BlockFormatting } from "./block-formatting.js";
+import { DocumentEdges } from "./document-edges.js";
 import { FindReplace } from "./find-replace.js";
 import { SchemaGuard } from "./guard.js";
 import { CleanPaste } from "./paste.js";
@@ -173,6 +174,7 @@ export function createEditorExtensions(options: EditorExtensionOptions): AnyExte
       }),
     }),
     FindReplace.configure({ onOpen: options.onOpenFind ?? (() => undefined) }),
+    DocumentEdges,
     Extension.create({
       name: "editorShortcuts",
       addKeyboardShortcuts() {
