@@ -4206,7 +4206,8 @@
       "removed": "Restriction of {title} removed",
       "removeFailed": "The restriction was not removed",
       "adminsOnlyTitle": "Only space admins manage restrictions",
-      "adminsOnly": "Ask a space admin if a restricted page needs attention."
+      "adminsOnly": "Ask a space admin if a restricted page needs attention.",
+      "whyDescription": "Search a person to see their role in this space and where it comes from."
     }
   },
   "tree": {
@@ -5124,7 +5125,8 @@
       "unpublished": "The page is not published yet, so readers cannot see it.",
       "inTrash": "The page is in the trash.",
       "accountInactive": "Their account is not active.",
-      "noAccess": "No role in the space, share or link gives them access."
+      "noAccess": "No role in the space, share or link gives them access.",
+      "summaryNoneSpace": "{name} has no access to this space."
     },
     "links": {
       "loadFailed": "the share links",

@@ -4206,7 +4206,8 @@
       "removed": "Einschränkung von {title} entfernt",
       "removeFailed": "Die Einschränkung wurde nicht entfernt",
       "adminsOnlyTitle": "Nur Space-Admins verwalten Einschränkungen",
-      "adminsOnly": "Wende dich an einen Space-Admin, wenn eine eingeschränkte Seite Aufmerksamkeit braucht."
+      "adminsOnly": "Wende dich an einen Space-Admin, wenn eine eingeschränkte Seite Aufmerksamkeit braucht.",
+      "whyDescription": "Suche eine Person, um ihre Rolle in diesem Space und deren Herkunft zu sehen."
     }
   },
   "tree": {
@@ -5124,7 +5125,8 @@
       "unpublished": "Die Seite ist noch nicht veröffentlicht und für Lesezugriff noch nicht sichtbar.",
       "inTrash": "Die Seite liegt im Papierkorb.",
       "accountInactive": "Das Konto ist nicht aktiv.",
-      "noAccess": "Keine Rolle im Space, keine Freigabe und kein Link gibt Zugriff."
+      "noAccess": "Keine Rolle im Space, keine Freigabe und kein Link gibt Zugriff.",
+      "summaryNoneSpace": "{name} hat keinen Zugriff auf diesen Space."
     },
     "links": {
       "loadFailed": "die Freigabelinks",

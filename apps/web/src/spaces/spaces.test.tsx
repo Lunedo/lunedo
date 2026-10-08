@@ -616,6 +616,33 @@ describe("space access", () => {
     );
   });
 
+  it("explains why someone has access to the space", async () => {
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes("admin"),
+      [`GET /api/v1/spaces/${SPACE_ID}/access-requests`]: () => ({ body: [] }),
+      [`GET /api/v1/spaces/${SPACE_ID}/restricted-pages`]: () => ({ body: [] }),
+      "GET /api/v1/people": people,
+      [`GET /api/v1/spaces/${SPACE_ID}/access/explain`]: () => ({
+        body: {
+          accountId: ANNA,
+          name: "Anna Berger",
+          role: "editor",
+          reasons: [{ type: "spaceRole", role: "editor", via: { type: "organizationMembers" } }],
+          denial: null,
+          restrictions: [],
+          editRestricted: null,
+          published: true,
+        },
+      }),
+    });
+    await renderAt("/spaces/ITOPS/settings/access");
+    await userEvent.click(await screen.findByRole("combobox", { name: "Person" }));
+    await userEvent.click(await screen.findByRole("option", { name: /Anna Berger/ }));
+    expect(await screen.findByText("Anna Berger: Can edit")).toBeTruthy();
+    expect(screen.getByText("Can edit in the space as a member of the organization")).toBeTruthy();
+  });
+
   it("lists restricted pages and removes a restriction only after naming its effects", async () => {
     const { requests } = mockApi({
       ...baseRoutes(),

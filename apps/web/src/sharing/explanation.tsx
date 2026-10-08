@@ -60,7 +60,13 @@ export function denialText(t: TFunction, explanation: AccessExplanation): string
   }
 }
 
-export function ExplanationView({ explanation }: { explanation: AccessExplanation }) {
+export function ExplanationView({
+  explanation,
+  subject = "page",
+}: {
+  explanation: AccessExplanation;
+  subject?: "page" | "space";
+}) {
   const { t } = useTranslation();
   const name = explanation.name ?? t("spaces.holders.unknownPerson");
   const denial = denialText(t, explanation);
@@ -69,7 +75,9 @@ export function ExplanationView({ explanation }: { explanation: AccessExplanatio
       <p className="font-medium">
         {explanation.role
           ? t("sharing.why.summary", { name, role: accessRoleLabel(t, explanation.role) })
-          : t("sharing.why.summaryNone", { name })}
+          : subject === "space"
+            ? t("sharing.why.summaryNoneSpace", { name })
+            : t("sharing.why.summaryNone", { name })}
       </p>
       {explanation.reasons.length > 0 ? (
         <ul className="list-disc ps-5 text-sm">

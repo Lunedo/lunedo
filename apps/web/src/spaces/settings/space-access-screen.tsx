@@ -1,4 +1,4 @@
-import { Badge, Button, ConfirmDialog, EmptyState, Notice, Skeleton, useToast } from "@pagehall/ui";
+import { Badge, Button, ConfirmDialog, EmptyState, Field, Notice, Skeleton, useToast } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Lock, ShieldCheck } from "lucide-react";
@@ -10,8 +10,10 @@ import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { SpaceAccessRequests } from "../../sharing/access-requests.js";
+import { ExplanationView } from "../../sharing/explanation.js";
 import { GiveAccessButton } from "../../sharing/give-access.js";
 import { type RestrictedPage, sharingKeys } from "../../sharing/sharing-api.js";
+import { HolderPicker } from "../access/holders.js";
 import { itemSlug } from "../item-paths.js";
 import { useSpace } from "../space-context.js";
 import { pagePath } from "../space-queries.js";
@@ -137,6 +139,49 @@ function RestrictedPages() {
   );
 }
 
+function WhyAccess() {
+  const { t } = useTranslation();
+  const { space } = useSpace();
+  const [person, setPerson] = useState<string | null>(null);
+  const explanation = useQuery({
+    queryKey: ["spaces", space.id, "explain", person],
+    queryFn: () =>
+      request(() =>
+        api.GET("/api/v1/spaces/{spaceId}/access/explain", {
+          params: { path: { spaceId: space.id }, query: { accountId: person ?? "" } },
+        }),
+      ),
+    enabled: person !== null,
+    throwOnError: false,
+  });
+  return (
+    <div className="flex flex-col gap-3">
+      <Field label={t("sharing.why.person")}>
+        <HolderPicker
+          organizationId={space.organizationId}
+          organizationName={space.organizationName}
+          personal
+          groups={false}
+          exclude={[]}
+          value={person ? `account:${person}` : null}
+          onValueChange={(next) => setPerson(next?.principalId ?? null)}
+          label={t("sharing.why.person")}
+          placeholder={t("sharing.why.placeholder")}
+        />
+      </Field>
+      {person && explanation.isPending ? <Skeleton className="h-12 w-full" /> : null}
+      {explanation.isError ? (
+        <LoadError
+          what={t("sharing.why.loadFailed")}
+          error={explanation.error}
+          onRetry={() => explanation.refetch()}
+        />
+      ) : null}
+      {explanation.data ? <ExplanationView explanation={explanation.data} subject="space" /> : null}
+    </div>
+  );
+}
+
 export function SpaceAccessScreen() {
   const { t } = useTranslation();
   const { space } = useSpace();
@@ -156,6 +201,11 @@ export function SpaceAccessScreen() {
             actions={<GiveAccessButton spaceId={space.id} />}
           >
             <p className="text-sm text-text-muted">{t("spaces.access.giveHint")}</p>
+          </Panel>
+        ) : null}
+        {admin ? (
+          <Panel title={t("sharing.why.toggle")} description={t("spaces.access.whyDescription")}>
+            <WhyAccess />
           </Panel>
         ) : null}
         <Panel title={t("spaces.access.requestsTitle")} description={t("spaces.access.requestsDescription")}>
