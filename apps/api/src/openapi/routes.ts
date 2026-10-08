@@ -4,6 +4,10 @@ import { INTERNAL_ROUTE, ROUTE_ACCESS, type RouteAccess } from "../access/route-
 import { AuditController } from "../audit/audit.controller.js";
 import { AccountController } from "../auth/account.controller.js";
 import { AuthController } from "../auth/auth.controller.js";
+import { BlogController } from "../collaboration/blog.controller.js";
+import { CommentsController } from "../collaboration/comments.controller.js";
+import { HomeController } from "../collaboration/home.controller.js";
+import { TasksController } from "../collaboration/tasks.controller.js";
 import { DocsController } from "../docs/docs.controller.js";
 import { API_ROUTE, type ApiRouteDefinition } from "../http/api-route.js";
 import { IdentityProvidersController } from "../identity/identity-providers.controller.js";
@@ -48,6 +52,10 @@ export const apiControllers = (): Type[] => [
   VersionsController,
   TrashController,
   TemplatesController,
+  CommentsController,
+  TasksController,
+  BlogController,
+  HomeController,
 ];
 
 export interface ApiRouteInfo {

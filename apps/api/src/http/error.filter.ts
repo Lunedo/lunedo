@@ -2,6 +2,7 @@ import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException, Inject 
 import {
   AuthError,
   BusyError,
+  CommentInvalidError,
   DocumentInvalidError,
   EmailInUseError,
   ForbiddenError,
@@ -49,6 +50,8 @@ export function sendProblem(
 export function problemForStatus(status: number): ProblemCode {
   return STATUS_CODES[status] ?? (status >= 500 ? "internalError" : "invalidInput");
 }
+
+const NOT_FOUND_CODES = new Set(["spaceNotFound", "itemNotFound", "commentNotFound", "taskNotFound"]);
 
 function codeOf(code: string, fallback: ProblemCode): ProblemCode {
   return isProblemCode(code) ? code : fallback;
@@ -103,8 +106,15 @@ function map(error: unknown): Mapped | null {
   if (error instanceof OrganizationError)
     return { code: codeOf(error.code, "invalidInput"), detail: error.message, extensions: error.details };
   if (error instanceof SpaceError) {
-    const code = error.code === "spaceNotFound" || error.code === "itemNotFound" ? "notFound" : error.code;
+    const code = NOT_FOUND_CODES.has(error.code) ? "notFound" : error.code;
     return { code: codeOf(code, "invalidInput"), detail: error.message, extensions: error.details };
+  }
+  if (error instanceof CommentInvalidError) {
+    return {
+      code: "invalidComment",
+      detail: error.message,
+      extensions: { problems: error.problems.slice(0, 50) },
+    };
   }
   if (error instanceof DocumentInvalidError) {
     return {

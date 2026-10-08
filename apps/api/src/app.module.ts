@@ -4,6 +4,7 @@ import { RouteAccessGuard } from "./access/route-access.guard.js";
 import { RouteAccessVerifier } from "./access/route-access.verifier.js";
 import { AuditModule } from "./audit/audit.module.js";
 import { AuthModule } from "./auth/auth.module.js";
+import { CollaborationModule } from "./collaboration/collaboration.module.js";
 import { API_CONTEXT, type ApiContext } from "./context.js";
 import { DocsModule } from "./docs/docs.module.js";
 import { HealthModule } from "./health/health.module.js";
@@ -37,6 +38,7 @@ export class AppModule {
               DocsModule,
               IdentityModule,
               SpacesModule,
+              CollaborationModule,
             ]
           : []),
       ],

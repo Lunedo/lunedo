@@ -27,6 +27,7 @@ const MANAGED_ELSEWHERE = new Set([
   "auth.emergencySignInRecipients",
   "instance.url",
   "spaces.defaultPermissions",
+  "home.organizationPage",
 ]);
 
 export function definitionFor(

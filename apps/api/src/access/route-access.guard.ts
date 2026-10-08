@@ -207,10 +207,14 @@ export class RouteAccessGuard implements CanActivate {
   }
 
   async #hidden(services: AccountServices, principal: Principal, resource: Resource): Promise<boolean> {
-    if (resource.type === "space" || resource.type === "item") {
-      const view = resource.type === "space" ? "space.view" : "item.view";
-      return !(await services.authorization.authorize(principal, view, resource));
-    }
+    const views: Record<string, string> = {
+      space: "space.view",
+      item: "item.view",
+      comment: "comment.view",
+      task: "task.view",
+    };
+    const view = views[resource.type];
+    if (view) return !(await services.authorization.authorize(principal, view, resource));
     if (resource.type === "organization") {
       return !(await services.authorization.authorize(principal, "organization.view", resource));
     }

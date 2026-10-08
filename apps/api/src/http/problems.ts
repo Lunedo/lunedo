@@ -48,6 +48,19 @@ export const problems = {
   invalidConversion: { status: 400, title: "The item cannot be converted" },
   invalidDocument: { status: 400, title: "The document does not match the editor schema" },
   invalidLabel: { status: 400, title: "The label is not valid" },
+  invalidComment: { status: 400, title: "The comment does not match the comment schema" },
+  invalidAnchor: { status: 400, title: "The selected text cannot carry a comment" },
+  notInlineComment: { status: 400, title: "Only inline comments can be resolved" },
+  invalidEmoji: { status: 400, title: "The reaction is not a single emoji" },
+  reactionsUnavailable: { status: 400, title: "Only people can react" },
+  invalidExcerpt: { status: 400, title: "The excerpt is too long" },
+  invalidTimeZone: { status: 400, title: "The time zone is not known" },
+  scheduleInPast: { status: 400, title: "The scheduled time lies in the past" },
+  scheduleTooLate: { status: 400, title: "The scheduled time is too far ahead" },
+  notInOrganization: { status: 400, title: "The blog post does not belong to an organization" },
+  invalidKind: { status: 400, title: "This kind of item cannot be created here" },
+  personalOnly: { status: 400, title: "Only people have this personal data" },
+  invalidHomePage: { status: 400, title: "The page cannot be the organization home page" },
   invalidNote: { status: 400, title: "The note is too long" },
   reasonRequired: { status: 400, title: "A reason is required" },
   invalidTemplateName: { status: 400, title: "The template name is not valid" },
@@ -87,6 +100,14 @@ export const problems = {
   itemMoved: { status: 409, title: "The item was moved at the same moment" },
   overviewPage: { status: 409, title: "The overview page of a space stays a page in its space" },
   tooManyLabels: { status: 409, title: "The page has too many labels" },
+  tooManyComments: { status: 409, title: "The page has too many comments" },
+  anchorNotFound: { status: 409, title: "The selected text no longer exists" },
+  restoreExpired: { status: 409, title: "The time to restore has passed" },
+  reactionsDisabled: { status: 409, title: "Reactions are turned off" },
+  tooManyReactions: { status: 409, title: "Too many reactions from one person" },
+  notPublished: { status: 409, title: "The blog post is not published" },
+  blogPostMode: { status: 409, title: "Blog posts always use publish mode" },
+  tooManyStars: { status: 409, title: "Too many starred items" },
   notPublishMode: { status: 409, title: "The page is not in publish mode" },
   nothingToDiscard: { status: 409, title: "The draft has no changes to discard" },
   draftPending: { status: 409, title: "The draft has unpublished changes" },
@@ -211,7 +232,7 @@ export const problemSchema = z
           .describe("A problem in the document."),
       )
       .optional()
-      .describe("What is wrong with the document, for `invalidDocument`."),
+      .describe("What is wrong with the document, for `invalidDocument` and `invalidComment`."),
   })
   .describe("Error response following RFC 9457 Problem Details.");
 
