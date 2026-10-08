@@ -66,6 +66,12 @@ describe.skipIf(!baseUrl)("versions with open editors", () => {
     return { admin: accountPrincipal(admin), itemId: item.id, token };
   }
 
+  async function closed(node: Node, itemId: string) {
+    const name = `page:${itemId}`;
+    const server = node.server.hocuspocus;
+    await waitFor(() => !server.documents.has(name) && !server.unloadingDocuments.has(name));
+  }
+
   async function stored(itemId: string, text: string) {
     await waitFor(async () =>
       JSON.stringify((await services().documents.snapshot(itemId))?.document).includes(text),
@@ -82,11 +88,10 @@ describe.skipIf(!baseUrl)("versions with open editors", () => {
     await stored(target.itemId, "Left");
     await stored(target.itemId, "Right");
     left.destroy();
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await closed(first, target.itemId);
     expect(await services().versions.list(target.itemId)).toHaveLength(0);
     right.destroy();
-    await waitFor(async () => (await services().versions.list(target.itemId)).length > 0);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await closed(second, target.itemId);
     const versions = await services().versions.list(target.itemId);
     expect(versions).toHaveLength(1);
     expect(versions[0]?.reason).toBe("session");
