@@ -31,6 +31,17 @@ describe("recordTestResult", () => {
     expect(JSON.parse(readFileSync(file, "utf8"))).toEqual({ kind: "flaky", file: "a.ts", test: "t" });
   });
 
+  it("adds the job name when it is set", () => {
+    const directory = mkdtempSync(join(tmpdir(), "report-"));
+    recordTestResult(
+      "vitest",
+      { kind: "flaky", file: "a.ts", test: "t" },
+      { PAGEHALL_TEST_REPORT_DIR: directory, PAGEHALL_TEST_JOB: "Unit tests (2 of 3)" },
+    );
+    const file = join(directory, `vitest-${process.pid}.jsonl`);
+    expect(JSON.parse(readFileSync(file, "utf8")).job).toBe("Unit tests (2 of 3)");
+  });
+
   it("writes nothing without a report directory", () => {
     expect(() => recordTestResult("vitest", { kind: "failed", file: "a.ts", test: "t" }, {})).not.toThrow();
   });

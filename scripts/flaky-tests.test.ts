@@ -37,4 +37,14 @@ describe("readEntries", () => {
       { kind: "flaky", file: "f.ts", test: "t", job: "test-reports-unit-2" },
     ]);
   });
+
+  it("prefers the job named in the entry", () => {
+    const root = mkdtempSync(join(tmpdir(), "flaky-"));
+    writeFileSync(
+      join(root, "vitest-1.jsonl"),
+      `${JSON.stringify({ kind: "flaky", file: "f.ts", test: "t", job: "Unit tests (1 of 3)" })}
+`,
+    );
+    assert.equal(readEntries(root)[0]?.job, "Unit tests (1 of 3)");
+  });
 });

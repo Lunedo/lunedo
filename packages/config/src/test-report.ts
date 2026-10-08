@@ -7,6 +7,7 @@ export interface TestReportEntry {
   kind: TestReportKind;
   file: string;
   test: string;
+  job?: string;
 }
 
 export function retriesFromEnv(env: NodeJS.ProcessEnv = process.env): number {
@@ -30,5 +31,8 @@ export function recordTestResult(
   const directory = env.PAGEHALL_TEST_REPORT_DIR;
   if (!directory) return;
   mkdirSync(directory, { recursive: true });
-  appendFileSync(join(directory, `${tool}-${process.pid}.jsonl`), `${JSON.stringify(entry)}\n`);
+  appendFileSync(
+    join(directory, `${tool}-${process.pid}.jsonl`),
+    `${JSON.stringify(env.PAGEHALL_TEST_JOB ? { ...entry, job: env.PAGEHALL_TEST_JOB } : entry)}\n`,
+  );
 }

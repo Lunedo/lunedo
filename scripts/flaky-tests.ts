@@ -18,8 +18,8 @@ export function readEntries(directory: string): FlakyEntry[] {
         const job = relative(directory, current).split(sep)[0] ?? "";
         for (const line of readFileSync(path, "utf8").split("\n")) {
           if (line.trim().length === 0) continue;
-          const parsed: Omit<FlakyEntry, "job"> = JSON.parse(line);
-          entries.push({ ...parsed, job });
+          const parsed: Omit<FlakyEntry, "job"> & { job?: string } = JSON.parse(line);
+          entries.push({ ...parsed, job: parsed.job ?? job });
         }
       }
     }
