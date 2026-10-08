@@ -12,6 +12,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { accounts } from "../accounts/schema.js";
+import { encrypted } from "../crypto/encrypted-column.js";
 import { bytes, primaryId, timestamps } from "../database/columns.js";
 import { invitations, principalKind } from "../organizations/access-schema.js";
 import { spaceRole, spaces, treeItems } from "../spaces/schema.js";
@@ -79,6 +80,7 @@ export const shareLinks = pgTable(
       .references(() => treeItems.id, { onDelete: "cascade" }),
     lookup: text().notNull(),
     secretHash: bytes().notNull(),
+    secret: encrypted(),
     scope: shareLinkScope().notNull(),
     passwordHash: text(),
     expiresAt: timestampColumn(),

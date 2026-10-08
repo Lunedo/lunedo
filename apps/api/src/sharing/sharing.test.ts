@@ -204,9 +204,11 @@ describe.skipIf(!databaseBaseUrl)("page access through the API", () => {
     const opened = await member.client.post(`/api/v1/share-links/${token}/open`, {});
     expect(opened.json()).toMatchObject({ kind: "account", itemId: shared });
     const access = await owner.get(`/api/v1/pages/${shared}/access`);
-    expect(
-      (access.json() as { linkVisitors: { accountId: string }[] }).linkVisitors.map((v) => v.accountId),
-    ).toEqual([member.id]);
+    const body = access.json() as { linkVisitors: { accountId: string }[]; canInviteGuests: boolean };
+    expect(body.linkVisitors.map((v) => v.accountId)).toEqual([member.id]);
+    expect(body.canInviteGuests).toBe(true);
+    const links = await owner.get(`/api/v1/pages/${shared}/share-links`);
+    expect((links.json() as { links: { token: string }[] }).links.map((l) => l.token)).toEqual([token]);
     const other = await page(created.id, "Budget");
     expect(
       (await member.client.post(`/api/v1/pages/${other}/access-requests`, { message: "Please" })).statusCode,

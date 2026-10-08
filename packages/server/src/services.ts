@@ -480,6 +480,7 @@ export function createAccountServices(options: {
     rateLimiter,
     people,
     signer,
+    encryption,
   });
   const accessRequests = new AccessRequestService({
     database,

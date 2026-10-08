@@ -87,6 +87,7 @@ export const pageAccessSchema = z
           .describe("A signed-in person with access through a share link."),
       )
       .describe("People with access only through share links, marked as via link in the interface."),
+    canInviteGuests: z.boolean().describe("Whether the caller may invite a guest by e-mail to this page."),
   })
   .describe("Who has access to a page beyond the roles of its space.");
 
@@ -179,6 +180,7 @@ export const examplePageAccess = {
   ],
   restrictions: { view: null, edit: null, inherited: [] },
   linkVisitors: [],
+  canInviteGuests: false,
 };
 
 export const restrictedPageSchema = z
@@ -195,6 +197,12 @@ export const restrictedPageSchema = z
 export const shareLinkSchema = z
   .object({
     id: uuid("ID of the link."),
+    token: z
+      .string()
+      .nullable()
+      .describe(
+        "Secret part of the address: the instance URL followed by `/s/` and the token. Shown to people who may share the page.",
+      ),
     itemId: uuid("The page the link opens."),
     scope: extensibleEnum(shareLinkScopes, "Who can open the link."),
     expiresAt: timestamp("When the link stops working.").nullable(),
@@ -244,6 +252,7 @@ export const shareLinkUpdateSchema = shareLinkInputSchema.partial().describe("Ch
 
 export const exampleShareLink = {
   id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+  token: "Yk3mR0vQx8LfJ2aB7cT9wE4nU6pH1sD5gK0zV3iM8oA2qX7r",
   itemId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
   scope: "organization",
   expiresAt: "2026-11-30T00:00:00.000Z",

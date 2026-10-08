@@ -7,6 +7,7 @@ import type { PasswordHasher } from "../auth/passwords.js";
 import { clientSubject, type RateLimiter } from "../auth/throttle.js";
 import { activeLinkCondition, linkScopeCondition } from "../authorization/item-access.js";
 import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
+import type { Encryption } from "../crypto/envelope.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "../spaces/common.js";
@@ -43,6 +44,7 @@ export class ShareLinkRateLimitedError extends Error {
 
 export interface ShareLink {
   id: string;
+  token: string | null;
   itemId: string;
   scope: ShareLinkScope;
   expiresAt: Date | null;
@@ -85,6 +87,10 @@ interface LinkRow {
   [key: string]: unknown;
 }
 
+function secretContext(linkId: string): string {
+  return `share_links.secret:${linkId}`;
+}
+
 function secretHash(secret: string): Buffer {
   return createHash("sha256").update(secret, "utf8").digest();
 }
@@ -107,6 +113,7 @@ export class ShareLinkService {
   readonly #rateLimiter: RateLimiter;
   readonly #people: PeopleService;
   readonly #signer: ValueSigner;
+  readonly #encryption: Encryption;
 
   constructor(options: {
     database: Database;
@@ -117,7 +124,9 @@ export class ShareLinkService {
     rateLimiter: RateLimiter;
     people: PeopleService;
     signer: ValueSigner;
+    encryption: Encryption;
   }) {
+    this.#encryption = options.encryption;
     this.#database = options.database;
     this.#authorization = options.authorization;
     this.#audit = options.audit;
@@ -144,6 +153,8 @@ export class ShareLinkService {
     const result = await this.#database.execute<{
       id: string;
       item_id: string;
+      lookup: string;
+      secret: Buffer | null;
       scope: ShareLinkScope;
       expires_at: Date | string | null;
       has_password: boolean;
@@ -151,7 +162,7 @@ export class ShareLinkService {
       created_at: Date | string;
       visitors: string;
     }>(sql`
-      select l.id, l.item_id, l.scope, l.expires_at, l.password_hash is not null as has_password, l.created_by,
+      select l.id, l.item_id, l.lookup, l.secret, l.scope, l.expires_at, l.password_hash is not null as has_password, l.created_by,
         l.created_at, (select count(*) from share_link_accesses la where la.link_id = l.id) as visitors
       from share_links l
       where l.item_id = ${itemId} and l.revoked_at is null
@@ -175,6 +186,9 @@ export class ShareLinkService {
     );
     return result.rows.map((row) => ({
       id: row.id,
+      token: row.secret
+        ? `${row.lookup}${this.#encryption.decryptString(row.secret, secretContext(row.id))}`
+        : null,
       itemId: row.item_id,
       scope: row.scope,
       expiresAt: row.expires_at ? new Date(row.expires_at) : null,
@@ -307,8 +321,8 @@ export class ShareLinkService {
       const { expiresAt, people } = await this.#validate(tx, actor, itemId, input);
       const item = await this.#item(tx, itemId);
       await tx.execute(sql`
-        insert into share_links (id, item_id, lookup, secret_hash, scope, password_hash, expires_at, created_by)
-        values (${id}, ${itemId}, ${lookup}, ${secretHash(secret)}, ${input.scope}, ${passwordHash}, ${expiresAt},
+        insert into share_links (id, item_id, lookup, secret_hash, secret, scope, password_hash, expires_at, created_by)
+        values (${id}, ${itemId}, ${lookup}, ${secretHash(secret)}, ${this.#encryption.encrypt(secret, secretContext(id))}, ${input.scope}, ${passwordHash}, ${expiresAt},
           ${actorIdOf(actor)})`);
       await this.#setPeople(tx, id, people);
       await this.#audit.record(tx, {

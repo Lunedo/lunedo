@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Inject, Param, Post, Query, Req } from "@nestjs/common";
-import { type AccessChange, restrictionKinds } from "@pagehall/server";
+import { type AccessChange, type Principal, restrictionKinds } from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
@@ -89,7 +89,15 @@ export class PageAccessController {
     },
   })
   async get(@Param("pageId") pageId: string, @Req() request: FastifyRequest) {
-    return this.#services.pageAccess.get(actorOf(request), pageId);
+    return this.#withGuests(
+      actorOf(request),
+      pageId,
+      await this.#services.pageAccess.get(actorOf(request), pageId),
+    );
+  }
+
+  async #withGuests<T extends object>(actor: Principal, pageId: string, access: T) {
+    return { ...access, canInviteGuests: await this.#services.guestShares.allowed(actor, pageId) };
   }
 
   @Post("pages/:pageId/access/preview")
@@ -157,7 +165,12 @@ export class PageAccessController {
     @Body() body: z.output<typeof accessChangesSchema>,
     @Req() request: FastifyRequest,
   ) {
-    return this.#services.pageAccess.change(actorOf(request), pageId, body.changes as AccessChange[]);
+    const actor = actorOf(request);
+    return this.#withGuests(
+      actor,
+      pageId,
+      await this.#services.pageAccess.change(actor, pageId, body.changes as AccessChange[]),
+    );
   }
 
   @Get("pages/:pageId/access/explain")

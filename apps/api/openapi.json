@@ -107366,6 +107366,10 @@
                         "description": "A signed-in person with access through a share link."
                       },
                       "description": "People with access only through share links, marked as via link in the interface."
+                    },
+                    "canInviteGuests": {
+                      "type": "boolean",
+                      "description": "Whether the caller may invite a guest by e-mail to this page."
                     }
                   },
                   "required": [
@@ -107373,7 +107377,8 @@
                     "title",
                     "shares",
                     "restrictions",
-                    "linkVisitors"
+                    "linkVisitors",
+                    "canInviteGuests"
                   ],
                   "additionalProperties": false,
                   "description": "Who has access to a page beyond the roles of its space."
@@ -107407,7 +107412,8 @@
                     "edit": null,
                     "inherited": []
                   },
-                  "linkVisitors": []
+                  "linkVisitors": [],
+                  "canInviteGuests": false
                 }
               }
             }
@@ -108102,6 +108108,10 @@
                         "description": "A signed-in person with access through a share link."
                       },
                       "description": "People with access only through share links, marked as via link in the interface."
+                    },
+                    "canInviteGuests": {
+                      "type": "boolean",
+                      "description": "Whether the caller may invite a guest by e-mail to this page."
                     }
                   },
                   "required": [
@@ -108109,7 +108119,8 @@
                     "title",
                     "shares",
                     "restrictions",
-                    "linkVisitors"
+                    "linkVisitors",
+                    "canInviteGuests"
                   ],
                   "additionalProperties": false,
                   "description": "Who has access to a page beyond the roles of its space."
@@ -108143,7 +108154,8 @@
                     "edit": null,
                     "inherited": []
                   },
-                  "linkVisitors": []
+                  "linkVisitors": [],
+                  "canInviteGuests": false
                 }
               }
             }
@@ -117742,6 +117754,13 @@
                             "format": "uuid",
                             "description": "ID of the link."
                           },
+                          "token": {
+                            "description": "Secret part of the address: the instance URL followed by `/s/` and the token. Shown to people who may share the page.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "itemId": {
                             "type": "string",
                             "format": "uuid",
@@ -117854,6 +117873,7 @@
                         },
                         "required": [
                           "id",
+                          "token",
                           "itemId",
                           "scope",
                           "expiresAt",
@@ -117906,6 +117926,7 @@
                   "links": [
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                      "token": "Yk3mR0vQx8LfJ2aB7cT9wE4nU6pH1sD5gK0zV3iM8oA2qX7r",
                       "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                       "scope": "organization",
                       "expiresAt": "2026-11-30T00:00:00.000Z",
@@ -118178,6 +118199,13 @@
                           "format": "uuid",
                           "description": "ID of the link."
                         },
+                        "token": {
+                          "description": "Secret part of the address: the instance URL followed by `/s/` and the token. Shown to people who may share the page.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
                         "itemId": {
                           "type": "string",
                           "format": "uuid",
@@ -118290,6 +118318,7 @@
                       },
                       "required": [
                         "id",
+                        "token",
                         "itemId",
                         "scope",
                         "expiresAt",
@@ -118317,6 +118346,7 @@
                 "example": {
                   "link": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                    "token": "Yk3mR0vQx8LfJ2aB7cT9wE4nU6pH1sD5gK0zV3iM8oA2qX7r",
                     "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                     "scope": "organization",
                     "expiresAt": "2026-11-30T00:00:00.000Z",
@@ -118877,6 +118907,13 @@
                       "format": "uuid",
                       "description": "ID of the link."
                     },
+                    "token": {
+                      "description": "Secret part of the address: the instance URL followed by `/s/` and the token. Shown to people who may share the page.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "itemId": {
                       "type": "string",
                       "format": "uuid",
@@ -118989,6 +119026,7 @@
                   },
                   "required": [
                     "id",
+                    "token",
                     "itemId",
                     "scope",
                     "expiresAt",
@@ -119003,6 +119041,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                  "token": "Yk3mR0vQx8LfJ2aB7cT9wE4nU6pH1sD5gK0zV3iM8oA2qX7r",
                   "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "scope": "organization",
                   "expiresAt": "2026-11-30T00:00:00.000Z",

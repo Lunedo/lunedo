@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ANONYMOUS, accountPrincipal, type Principal, SYSTEM } from "../accounts/principal.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
@@ -194,6 +195,12 @@ describe.skipIf(!baseUrl)("sharing", () => {
     it("lets signed-in members of the organization open a page and lists them as visitors", async () => {
       const context = await setup();
       const { token } = await link(context, { scope: "organization" });
+      const listed = await test.services.shareLinks.list(context.editor, context.shared.id);
+      expect(listed.map((entry) => entry.token)).toEqual([token]);
+      const stored = await test.database.execute<{ secret: Buffer }>(
+        sql`select secret from share_links where item_id = ${context.shared.id}`,
+      );
+      expect(stored.rows[0]?.secret.includes(Buffer.from(token.slice(16)))).toBe(false);
       expect(await can(context.outsider, "item.view", { type: "item", id: context.shared.id })).toBe(false);
       const opened = await test.services.shareLinks.open(token, context.outsider, { clientIp: "192.0.2.1" });
       expect(opened).toEqual({ kind: "account", itemId: context.shared.id });
