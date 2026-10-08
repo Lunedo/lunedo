@@ -11,7 +11,6 @@ export const PREVIEW_CONTENT_SECURITY_POLICY = [
   "style-src 'self' 'unsafe-inline'",
   "img-src blob: data:",
   "font-src 'self' data:",
-  "worker-src blob:",
   "connect-src 'none'",
   "frame-ancestors 'self'",
 ].join("; ");

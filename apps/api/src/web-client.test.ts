@@ -52,6 +52,7 @@ describe("web client", () => {
     expect(policy).toMatch(/^sandbox allow-scripts;/);
     expect(policy).not.toContain("allow-same-origin");
     expect(policy).toContain("connect-src 'none'");
+    expect(policy).not.toContain("worker-src");
     expect(response.headers["x-content-type-options"]).toBe("nosniff");
     const asset = await app.inject({ method: "GET", url: "/assets/app-1234.js" });
     expect(asset.headers["access-control-allow-origin"]).toBe("*");

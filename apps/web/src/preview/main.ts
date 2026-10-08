@@ -107,9 +107,7 @@ function renderSvg(message: RenderMessage): void {
 
 async function renderPdf(message: RenderMessage): Promise<void> {
   const pdfjs = await import("pdfjs-dist");
-  const { default: workerSource } = await import("pdfjs-dist/build/pdf.worker.min.mjs?raw");
-  const workerUrl = URL.createObjectURL(new Blob([workerSource], { type: "text/javascript" }));
-  pdfjs.GlobalWorkerOptions.workerPort = new Worker(workerUrl, { type: "module" });
+  await import("pdfjs-dist/build/pdf.worker.min.mjs");
   const document_ = await pdfjs.getDocument({ data: new Uint8Array(message.bytes), enableXfa: false })
     .promise;
   const pages = Math.min(document_.numPages, MAX_PAGES);
