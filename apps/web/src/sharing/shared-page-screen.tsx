@@ -5,6 +5,7 @@ import { Check, FileText, Newspaper, Pencil } from "lucide-react";
 import { lazy, Suspense, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError } from "../api/request.js";
+import { useContentCollaboration } from "../collaboration/content-collaboration.js";
 import type { SaveState } from "../editor/save-state.js";
 import { LoadError } from "../errors/failure.js";
 import { AttachmentsSection, PageDropZone } from "../files/attachments-section.js";
@@ -49,6 +50,13 @@ function SharedPage({ page }: { page: ItemDetails }) {
   const mine = useQuery({ ...myAccessQuery(page.id), throwOnError: false });
   const role = mine.data?.role ?? null;
   const canEdit = role !== null && EDITING.has(role) && !page.archived;
+  const collaboration = useContentCollaboration({
+    itemId: page.id,
+    spaceId: page.spaceId,
+    role,
+    archived: page.archived,
+    writable: canEdit,
+  });
   const editing = canEdit && search.edit === true;
   const publishMode = page.mode === "publish";
   const saveState = useRef<SaveState>("saved");
@@ -67,7 +75,7 @@ function SharedPage({ page }: { page: ItemDetails }) {
     <UploadsProvider pageId={page.id}>
       <AttachmentPreviewProvider canEdit={canEdit}>
         <PageDropZone enabled={canEdit} title={page.title}>
-          <main id="main" tabIndex={-1} className="min-w-0 flex-1 overflow-y-auto outline-none">
+          <main id="main" tabIndex={-1} className="flex min-w-0 flex-1 overflow-y-auto outline-none">
             <article className="mx-auto flex w-full max-w-content flex-col gap-4 px-4 pt-6 pb-12 md:px-8">
               <PageHeader
                 title={page.title}
@@ -97,6 +105,7 @@ function SharedPage({ page }: { page: ItemDetails }) {
                         </Button>
                       )
                     ) : null}
+                    {collaboration.commentsButton}
                   </>
                 }
               />
@@ -111,13 +120,19 @@ function SharedPage({ page }: { page: ItemDetails }) {
                     onSaveStateChange={(state) => {
                       saveState.current = state;
                     }}
+                    {...collaboration.editor}
                   />
                 </Suspense>
               ) : (
-                <PageContent pageId={page.id} publishMode={publishMode} collaboration={{}} />
+                <PageContent
+                  pageId={page.id}
+                  publishMode={publishMode}
+                  collaboration={collaboration.readView}
+                />
               )}
               <AttachmentsSection pageId={page.id} canEdit={canEdit} />
             </article>
+            {collaboration.panel}
           </main>
         </PageDropZone>
       </AttachmentPreviewProvider>

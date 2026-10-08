@@ -524,6 +524,7 @@ describe("sharing and access", () => {
     expect(await screen.findByText("Shared with you by Lukas Hofer")).toBeTruthy();
     expect(await screen.findByText("Published text")).toBeTruthy();
     expect(window.location.pathname).toBe(`/shared/${VPN}/vpn-access`);
+    expect(await screen.findByRole("button", { name: /Comments/ })).toBeTruthy();
     expect(screen.queryByText("IT Operations")).toBeNull();
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
   });
