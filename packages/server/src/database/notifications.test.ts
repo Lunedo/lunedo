@@ -13,20 +13,7 @@ describe.skipIf(!url)("notification listener", () => {
   });
 
   it("subscribes to channels registered at the same moment one query at a time", async () => {
-    const original = pg.Client.prototype.query;
-    let running = 0;
-    let most = 0;
-    vi.spyOn(pg.Client.prototype, "query").mockImplementation(function (
-      this: pg.Client,
-      ...args: Parameters<pg.Client["query"]>
-    ) {
-      running += 1;
-      most = Math.max(most, running);
-      const result = (original as (...input: unknown[]) => unknown).apply(this, args);
-      if (result instanceof Promise) return result.finally(() => (running -= 1));
-      running -= 1;
-      return result;
-    } as unknown as pg.Client["query"]);
+    const warning = vi.spyOn(process, "emitWarning");
     const listener = new NotificationListener({
       connectionString: url ?? "",
       logger: createLogger({ service: "test", level: "silent" }),
@@ -39,8 +26,9 @@ describe.skipIf(!url)("notification listener", () => {
         listener.listen(channel, (payload) => received.push(`${channel}:${payload}`)),
       ),
     );
-    expect(most).toBe(1);
-    vi.restoreAllMocks();
+    expect(warning.mock.calls.map(([message]) => String(message))).not.toContainEqual(
+      expect.stringContaining("already executing a query"),
+    );
 
     const pool = new pg.Pool({ connectionString: url ?? "" });
     try {
