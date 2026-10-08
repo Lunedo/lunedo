@@ -2169,7 +2169,9 @@
         "inactive": "{guestName} hat {organizationName} seit {days, plural, one {# Tag} other {# Tagen}} nicht verwendet."
       },
       "access": {
-        "expiring": "{kind, select, role {Die Rolle {name}} group {Die Mitgliedschaft in der Gruppe {name}} other {Eine Mitgliedschaft}} in {organizationName} endet am {expiresAt}."
+        "expiring": "{kind, select, role {Die Rolle {name}} group {Die Mitgliedschaft in der Gruppe {name}} other {Eine Mitgliedschaft}} in {organizationName} endet am {expiresAt}.",
+        "requested": "{requesterName} bittet um Zugriff auf {target, select, page {{itemTitle} in {spaceName}} other {den Space {spaceName}}}.",
+        "requestDecided": "{decision, select, approved {Deine Anfrage für {target, select, page {{itemTitle}} other {{spaceName}}} wurde genehmigt.} satisfied {Du hast jetzt Zugriff auf {target, select, page {{itemTitle}} other {{spaceName}}}, deine Anfrage wurde deshalb geschlossen.} other {Deine Anfrage für {target, select, page {eine Seite} other {{spaceName}}} wurde abgelehnt.}}"
       },
       "serviceAccount": {
         "unattended": "Für das Dienstkonto {serviceAccountName} in {organizationName} ist niemand mehr verantwortlich."
@@ -2191,6 +2193,12 @@
       },
       "blogPost": {
         "scheduleHeld": "{reason, select, accountRemoved {Der geplante Beitrag {itemTitle} wartet auf Freigabe, weil die Person, die ihn geplant hat, kein Konto mehr hat.} other {Der geplante Beitrag {itemTitle} wartet auf Freigabe, weil {actor} ihn nicht mehr bearbeiten kann.}}"
+      },
+      "page": {
+        "shared": "{actor} hat {itemTitle} für dich freigegeben: {role, select, editor {du kannst die Seite bearbeiten} commenter {du kannst sie lesen und kommentieren} other {du kannst sie lesen}}{includeDescendants, select, true { mitsamt ihren Unterseiten} other {}}."
+      },
+      "restriction": {
+        "orphaned": "Niemand auf der Zugriffsliste der beschränkten Seite {itemTitle} in {spaceName} hat noch ein aktives Konto. Prüfe die Beschränkung in den Space-Einstellungen."
       }
     }
   },
@@ -3025,7 +3033,13 @@
         "versionRestored": "Version wiederhergestellt",
         "modeChanged": "Bearbeitungsmodus geändert",
         "archived": "Seite archiviert",
-        "unarchived": "Seite aus dem Archiv geholt"
+        "unarchived": "Seite aus dem Archiv geholt",
+        "restrictionSet": "Seite beschränkt",
+        "restrictionRemoved": "Seitenbeschränkung aufgehoben",
+        "shared": "Seite freigegeben",
+        "shareChanged": "Seitenzugriff geändert",
+        "unshared": "Seitenzugriff entfernt",
+        "guestInvited": "Gast zu einer Seite eingeladen"
       },
       "trash": {
         "itemsDeleted": "In den Papierkorb verschoben",
@@ -3050,6 +3064,18 @@
       },
       "comment": {
         "deletedByModerator": "Kommentar von einem Space-Admin gelöscht"
+      },
+      "shareLink": {
+        "created": "Freigabelink erstellt",
+        "changed": "Freigabelink geändert",
+        "revoked": "Freigabelink widerrufen",
+        "opened": "Freigabelink geöffnet"
+      },
+      "accessRequest": {
+        "decided": "Zugriffsanfrage entschieden"
+      },
+      "access": {
+        "overviewExported": "Rechteübersicht exportiert"
       }
     },
     "action": "Aktion",
@@ -3282,7 +3308,13 @@
     "roleExceedsOwnPermissions": "Die Rolle geht über die eigenen Berechtigungen hinaus",
     "selfExtension": "Niemand kann die eigenen Berechtigungen erweitern",
     "tokenScope": "Für dieses Token nicht erlaubt",
-    "noSpaceRole": "Keine Rolle im Space erlaubt das"
+    "noSpaceRole": "Keine Rolle im Space erlaubt das",
+    "inTrash": "Es liegt im Papierkorb",
+    "archived": "Es ist archiviert",
+    "unpublished": "Es ist noch nicht veröffentlicht",
+    "restricted": "Die Seite ist beschränkt und die Person steht nicht auf ihrer Zugriffsliste",
+    "editRestricted": "Das Bearbeiten ist beschränkt und die Person darf laut Zugriffsliste nicht bearbeiten",
+    "ruleNotMet": "Eine Bedingung dieser Aktion ist nicht erfüllt"
   },
   "grants": {
     "system": "System",

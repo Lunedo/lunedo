@@ -43,6 +43,7 @@ import { builtinSettings } from "../settings/builtin.js";
 import { type SettingDefinition, SettingsRegistry } from "../settings/definition.js";
 import { preferenceSettings } from "../settings/preferences.js";
 import { SettingsService } from "../settings/service.js";
+import { sharingSettings } from "../sharing/settings.js";
 import { spaceSettings } from "../spaces/settings.js";
 import { tokenSettings } from "../tokens/settings.js";
 
@@ -154,6 +155,7 @@ export async function createServerRuntime(options: {
         ...notificationSettings,
         ...spaceSettings,
         ...collaborationSettings,
+        ...sharingSettings,
         auditRetentionSetting,
         smtpSetting,
         mailMethodSetting,

@@ -2,6 +2,7 @@ import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import { type Principal, SYSTEM } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
+import type { AuthorizationService } from "../authorization/service.js";
 import type { ContentActivity } from "../collaboration/content.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { SettingsService } from "../settings/service.js";
@@ -84,6 +85,7 @@ export class TrashService {
   readonly #settings: SettingsService;
   readonly #people: PeopleService;
   readonly #activity: ContentActivity;
+  readonly #authorization: AuthorizationService;
 
   constructor(options: {
     database: Database;
@@ -91,7 +93,9 @@ export class TrashService {
     settings: SettingsService;
     people: PeopleService;
     activity: ContentActivity;
+    authorization: AuthorizationService;
   }) {
+    this.#authorization = options.authorization;
     this.#database = options.database;
     this.#audit = options.audit;
     this.#settings = options.settings;
@@ -148,6 +152,14 @@ export class TrashService {
     return row ? ((await this.#toEntries([row]))[0] ?? null) : null;
   }
 
+  async accessible(viewer: Principal, entryId: string): Promise<boolean> {
+    const result = await this.#database.execute<{ accessible: boolean }>(sql`
+      select (rt.id is null or ${this.#authorization.itemFilter(viewer, sql`rt`, sql`s`, "editor")}) as accessible
+      from trash_entries e join spaces s on s.id = e.space_id left join tree_items rt on rt.id = e.root_item_id
+      where e.id = ${entryId}`);
+    return result.rows[0]?.accessible === true;
+  }
+
   async spaceOf(
     entryId: string,
   ): Promise<{ spaceId: string; organizationId: string | null; personal: boolean } | null> {
@@ -157,10 +169,12 @@ export class TrashService {
       : null;
   }
 
-  async listSpace(spaceId: string): Promise<TrashEntry[]> {
+  async listSpace(viewer: Principal, spaceId: string): Promise<TrashEntry[]> {
     const result = await this.#database.execute<EntryRow>(sql`
       select ${ENTRY_COLUMNS} from trash_entries e join spaces s on s.id = e.space_id
+      left join tree_items rt on rt.id = e.root_item_id
       where e.space_id = ${spaceId} and e.kind = 'items' and e.stage = 1 and not e.purging
+        and (rt.id is null or ${this.#authorization.itemFilter(viewer, sql`rt`, sql`s`, "editor")})
       order by e.deleted_at desc, e.id limit 1000`);
     return this.#toEntries(result.rows);
   }

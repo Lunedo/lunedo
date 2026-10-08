@@ -2169,7 +2169,9 @@
         "inactive": "{guestName} has not used {organizationName} for {days, plural, one {# day} other {# days}}."
       },
       "access": {
-        "expiring": "{kind, select, role {The role {name}} group {The membership in the group {name}} other {A membership}} in {organizationName} ends on {expiresAt}."
+        "expiring": "{kind, select, role {The role {name}} group {The membership in the group {name}} other {A membership}} in {organizationName} ends on {expiresAt}.",
+        "requested": "{requesterName} asks for access to {target, select, page {{itemTitle} in {spaceName}} other {the space {spaceName}}}.",
+        "requestDecided": "{decision, select, approved {Your request for access to {target, select, page {{itemTitle}} other {{spaceName}}} was approved.} satisfied {You now have access to {target, select, page {{itemTitle}} other {{spaceName}}}, so your request was closed.} other {Your request for access to {target, select, page {a page} other {{spaceName}}} was declined.}}"
       },
       "serviceAccount": {
         "unattended": "Nobody is responsible for the service account {serviceAccountName} in {organizationName} anymore."
@@ -2191,6 +2193,12 @@
       },
       "blogPost": {
         "scheduleHeld": "{reason, select, accountRemoved {The scheduled post {itemTitle} is waiting for approval because the person who scheduled it no longer has an account.} other {The scheduled post {itemTitle} is waiting for approval because {actor} can no longer edit it.}}"
+      },
+      "page": {
+        "shared": "{actor} shared {itemTitle} with you: {role, select, editor {you can edit it} commenter {you can read and comment} other {you can read it}}{includeDescendants, select, true { together with its pages} other {}}."
+      },
+      "restriction": {
+        "orphaned": "Nobody on the access list of the restricted page {itemTitle} in {spaceName} has an active account anymore. Review the restriction in the space settings."
       }
     }
   },
@@ -3025,7 +3033,13 @@
         "versionRestored": "Version restored",
         "modeChanged": "Editing mode changed",
         "archived": "Page archived",
-        "unarchived": "Page brought back from the archive"
+        "unarchived": "Page brought back from the archive",
+        "restrictionSet": "Page restricted",
+        "restrictionRemoved": "Page restriction removed",
+        "shared": "Page shared",
+        "shareChanged": "Page access changed",
+        "unshared": "Page access removed",
+        "guestInvited": "Guest invited to a page"
       },
       "trash": {
         "itemsDeleted": "Moved to the trash",
@@ -3050,6 +3064,18 @@
       },
       "comment": {
         "deletedByModerator": "Comment deleted by a space admin"
+      },
+      "shareLink": {
+        "created": "Share link created",
+        "changed": "Share link changed",
+        "revoked": "Share link revoked",
+        "opened": "Share link opened"
+      },
+      "accessRequest": {
+        "decided": "Access request decided"
+      },
+      "access": {
+        "overviewExported": "Permission overview exported"
       }
     },
     "action": "Action",
@@ -3282,7 +3308,13 @@
     "roleExceedsOwnPermissions": "The role exceeds their own permissions",
     "selfExtension": "Nobody can extend their own permissions",
     "tokenScope": "Not allowed for this token",
-    "noSpaceRole": "No role in the space grants this"
+    "noSpaceRole": "No role in the space grants this",
+    "inTrash": "It is in the trash",
+    "archived": "It is archived",
+    "unpublished": "It is not published yet",
+    "restricted": "The page is restricted and they are not on its access list",
+    "editRestricted": "Editing is restricted and they are not allowed to edit on its access list",
+    "ruleNotMet": "A condition of this action is not met"
   },
   "grants": {
     "system": "System",

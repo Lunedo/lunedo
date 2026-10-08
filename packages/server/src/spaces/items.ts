@@ -42,6 +42,8 @@ export interface TreeItem {
   archived: boolean;
   position: string;
   hasChildren: boolean;
+  viewRestriction: "none" | "own" | "inherited";
+  editRestricted: boolean;
   link: ItemLink | null;
   creatorId: string | null;
   ownerId: string | null;
@@ -53,6 +55,7 @@ export interface TreeItem {
 export interface ItemDetails extends TreeItem {
   spaceKey: string;
   spaceName: string;
+  spaceAccess: boolean;
   ancestors: { id: string; kind: TreeItemKind; title: string; published: boolean }[];
 }
 
@@ -75,6 +78,8 @@ type ItemRow = {
   archived: boolean;
   position: string;
   has_children: boolean;
+  view_restriction: "none" | "own" | "inherited";
+  edit_restricted: boolean;
   link_item_id: string | null;
   link_url: string | null;
   link_accessible: boolean | null;
@@ -144,6 +149,8 @@ function toItem(row: ItemRow): TreeItem {
     archived: row.archived,
     position: row.position,
     hasChildren: row.has_children,
+    viewRestriction: row.view_restriction,
+    editRestricted: row.edit_restricted,
     link: isLink
       ? {
           itemId: accessible ? row.link_item_id : null,
@@ -265,13 +272,13 @@ export class TreeService {
       id: target.spaceId,
     });
     if (!readable.allowed) throw new ForbiddenError(readable);
-    let itemId = await this.findByTitle(target.spaceId, title);
+    let itemId = await this.findByTitle(actor, target.spaceId, title);
     let created = false;
     if (!itemId) {
       await this.#requireEdit(actor, target.spaceId);
       itemId = await this.#database.transaction(async (tx) => {
         await lockSpaces(tx, [target.spaceId]);
-        const existing = await this.findByTitle(target.spaceId, title, tx);
+        const existing = await this.findByTitle(actor, target.spaceId, title, tx);
         if (existing) return existing;
         created = true;
         const id = await insertPage(tx, {
@@ -303,11 +310,16 @@ export class TreeService {
     return sql`select t.id, t.space_id, t.parent_id, t.kind, t.title, t.description, t.width, t.mode,
         (t.kind not in ('page', 'blogPost') or t.mode = 'live' or t.published_version_id is not null) as published,
         (t.archived_root_id is not null) as archived, t.position,
-        exists (select 1 from tree_items c where c.parent_id = t.id and c.trash_entry_id is null
-          and ${publishedFor(this.#authorization, viewer, sql`c`, sql`ts`)}) as has_children,
+        exists (select 1 from tree_items c where c.parent_id = t.id
+          and ${visibleItem(this.#authorization, viewer, sql`c`, sql`ts`)}) as has_children,
+        case when exists (select 1 from page_restrictions r where r.item_id = t.id and r.kind = 'view') then 'own'
+          when exists (select 1 from page_restrictions r where r.item_id = any(t.path) and r.kind = 'view') then 'inherited'
+          else 'none' end as view_restriction,
+        exists (select 1 from page_restrictions r where r.item_id = t.id and r.kind = 'edit') as edit_restricted,
         t.link_item_id, t.link_url,
         (lt.id is not null and ${visibleItem(this.#authorization, viewer, sql`lt`, sql`ls`)}) as link_accessible,
-        (lt.trash_entry_id is not null and ${this.#authorization.spaceFilter(viewer, sql`ls`)}) as link_in_trash,
+        (lt.trash_entry_id is not null and ${this.#authorization.itemFilter(viewer, sql`lt`, sql`ls`)}
+          and ${publishedFor(this.#authorization, viewer, sql`lt`, sql`ls`)}) as link_in_trash,
         lt.space_id as link_space_id, ls.key as link_space_key, lt.kind as link_kind, lt.title as link_title,
         t.creator_id, t.owner_id, t.created_at, t.updated_at, t.content_updated_at
       from tree_items t
@@ -328,13 +340,13 @@ export class TreeService {
       where t.space_id = ${spaceId}
         and coalesce(t.parent_id, '00000000-0000-0000-0000-000000000000'::uuid)
           = coalesce(${parentId}::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
-        and t.trash_entry_id is null and t.kind <> 'blogPost'
+        and t.kind <> 'blogPost'
         and ${
           parentId === null
             ? sql`t.archived_root_id is null`
             : sql`t.archived_root_id is not distinct from (select archived_root_id from tree_items where id = ${parentId})`
         }
-        and ${publishedFor(this.#authorization, viewer, sql`t`, sql`ts`)}
+        and ${visibleItem(this.#authorization, viewer, sql`t`, sql`ts`)}
         ${options.after ? sql`and t.position > ${options.after}` : sql``}
       order by t.position
       limit ${limit + 1}`);
@@ -358,18 +370,22 @@ export class TreeService {
   async details(viewer: Principal, itemId: string): Promise<ItemDetails | null> {
     const item = await this.get(viewer, itemId);
     if (!item) return null;
-    const space = await this.#database.execute<{ key: string; name: string }>(
-      sql`select s.key, s.name from spaces s where s.id = ${item.spaceId}`,
+    const space = await this.#database.execute<{ key: string; name: string; access: boolean }>(
+      sql`select s.key, s.name, ${this.#authorization.spaceFilter(viewer, sql`s`)} as access
+        from spaces s where s.id = ${item.spaceId}`,
     );
+    const access = space.rows[0]?.access === true;
     return {
       ...item,
-      spaceKey: space.rows[0]?.key ?? "",
-      spaceName: space.rows[0]?.name ?? "",
-      ancestors: await this.ancestors(itemId),
+      spaceKey: access ? (space.rows[0]?.key ?? "") : "",
+      spaceName: access ? (space.rows[0]?.name ?? "") : "",
+      spaceAccess: access,
+      ancestors: await this.ancestors(viewer, itemId),
     };
   }
 
   async ancestors(
+    viewer: Principal,
     itemId: string,
     executor: Executor = this.#database,
   ): Promise<{ id: string; kind: TreeItemKind; title: string; published: boolean }[]> {
@@ -387,9 +403,12 @@ export class TreeService {
         select p.id, p.kind, p.title, p.mode, p.published_version_id, p.parent_id, up.depth + 1
         from up join tree_items p on p.id = up.parent_id where up.depth < 1000
       )
-      select id, kind, title, (kind not in ('page', 'blogPost') or mode = 'live' or published_version_id is not null) as published,
-        depth
-      from up order by depth desc`);
+      select up.id, up.kind, up.title,
+        (up.kind not in ('page', 'blogPost') or up.mode = 'live' or up.published_version_id is not null) as published,
+        up.depth
+      from up join tree_items p on p.id = up.id join spaces s on s.id = p.space_id
+      where ${visibleItem(this.#authorization, viewer, sql`p`, sql`s`)}
+      order by up.depth desc`);
     return result.rows.map((row) => ({
       id: row.id,
       kind: row.kind,
@@ -439,8 +458,23 @@ export class TreeService {
     return positionBetween(last.rows[0]?.position ?? null, null);
   }
 
-  async #checkParent(tx: Transaction, spaceId: string, parentId: string | null): Promise<void> {
+  async #checkParent(
+    tx: Transaction,
+    actor: Principal,
+    spaceId: string,
+    parentId: string | null,
+  ): Promise<void> {
     if (parentId === null) return;
+    const visible = await this.#authorization.explain(
+      actor,
+      "item.view",
+      { type: "item", id: parentId },
+      {
+        executor: tx,
+        fresh: true,
+      },
+    );
+    if (!visible.allowed) throw new SpaceError("invalidPlacement", "The parent is not in the target space");
     const parent = await tx.execute<{ space_id: string; kind: TreeItemKind; in_tree: boolean }>(
       sql`select space_id, kind, (trash_entry_id is null and archived_root_id is null) as in_tree
         from tree_items where id = ${parentId}`,
@@ -495,7 +529,7 @@ export class TreeService {
     const mode = input.kind === "page" ? await this.#modeFor(spaceId, input.mode) : "live";
     const id = await this.#database.transaction(async (tx) => {
       await lockSpaces(tx, [spaceId]);
-      await this.#checkParent(tx, spaceId, input.placement.parentId);
+      await this.#checkParent(tx, actor, spaceId, input.placement.parentId);
       const position = await this.#placementPosition(tx, spaceId, input.placement, null);
       const itemId = uuidv7();
       await tx.execute(sql`
@@ -608,7 +642,7 @@ export class TreeService {
       if (target.parentId === itemId) {
         throw new SpaceError("moveIntoDescendant", "An item cannot be moved below itself");
       }
-      await this.#checkParent(tx, targetSpaceId, target.parentId);
+      await this.#checkParent(tx, actor, targetSpaceId, target.parentId);
       if (target.parentId !== null) {
         const cycle = await tx.execute<{ found: boolean }>(sql`
           with recursive up as (
@@ -713,8 +747,7 @@ export class TreeService {
     const kinds = options.kinds ?? ["page", "folder"];
     const result = await this.#database.execute<ItemRow & { space_key: string; space_name: string }>(sql`
       select found.*, s.key as space_key, s.name as space_name from (${this.#select(viewer)}
-        where t.trash_entry_id is null and t.archived_root_id is null
-          and ${publishedFor(this.#authorization, viewer, sql`t`, sql`ts`)}) found
+        where t.archived_root_id is null and ${visibleItem(this.#authorization, viewer, sql`t`, sql`ts`)}) found
       join spaces s on s.id = found.space_id
       where ${this.#authorization.spaceFilter(viewer, sql`s`)}
         and found.kind = any(${sql.param(kinds)}::tree_item_kind[])
@@ -727,14 +760,16 @@ export class TreeService {
   }
 
   async findByTitle(
+    viewer: Principal,
     spaceId: string,
     title: string,
     executor: Executor = this.#database,
   ): Promise<string | null> {
     const result = await executor.execute<{ id: string }>(sql`
-      select id from tree_items where space_id = ${spaceId} and kind = 'page' and lower(title) = lower(${title.trim()})
-        and trash_entry_id is null
-      order by created_at limit 1`);
+      select t.id from tree_items t join spaces s on s.id = t.space_id
+      where t.space_id = ${spaceId} and t.kind = 'page' and lower(t.title) = lower(${title.trim()})
+        and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
+      order by t.created_at limit 1`);
     return result.rows[0]?.id ?? null;
   }
 

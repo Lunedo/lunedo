@@ -21,7 +21,7 @@ export function publishedFor(
   item: SQL,
   space: SQL,
 ): SQL {
-  return sql`(${item}.reader_visible or ${authorization.spaceFilter(viewer, space, "editor")})`;
+  return sql`(${item}.reader_visible or ${authorization.itemFilter(viewer, item, space, "editor")})`;
 }
 
 export async function refreshReaderVisibility(executor: Executor, itemIds: string[]): Promise<string[]> {
@@ -51,6 +51,14 @@ export function visibleItem(
   item: SQL,
   space: SQL,
 ): SQL {
-  return sql`(${notTrashed(item)} and ${authorization.spaceFilter(viewer, space)}
+  return sql`(${notTrashed(item)} and ${authorization.itemFilter(viewer, item, space)}
     and ${publishedFor(authorization, viewer, item, space)})`;
+}
+
+export function spaceKeyFor(authorization: AuthorizationService, viewer: Principal, space: SQL): SQL {
+  return sql`(case when ${authorization.spaceFilter(viewer, space)} then ${space}.key else '' end)`;
+}
+
+export function spaceNameFor(authorization: AuthorizationService, viewer: Principal, space: SQL): SQL {
+  return sql`(case when ${authorization.spaceFilter(viewer, space)} then ${space}.name else '' end)`;
 }

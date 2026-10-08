@@ -20,6 +20,8 @@ export const auditTargetTypes = [
   "page",
   "trashEntry",
   "template",
+  "shareLink",
+  "accessRequest",
 ] as const;
 export type AuditTargetType = (typeof auditTargetTypes)[number];
 
@@ -88,6 +90,22 @@ const templateFields = z.object({
   name: z.string(),
   level: z.enum(["instance", "organization"]),
   organizationId: z.uuid().nullable(),
+});
+const restrictionKindNames = ["view", "edit"] as const;
+const pageShareFields = pageFields.extend({
+  principalKind: z.enum(["account", "group"]),
+  principalId: z.uuid(),
+  name: z.string(),
+  role: z.enum(spaceRoleNames),
+  includeDescendants: z.boolean(),
+});
+const shareLinkFields = z.object({
+  spaceId: z.uuid(),
+  itemId: z.uuid(),
+  title: z.string(),
+  scope: z.enum(["people", "organization", "instance", "anyone"]),
+  expiresAt: z.iso.datetime().nullable(),
+  unlockRequired: z.boolean(),
 });
 const spacePermissionFields = z.object({
   name: z.string(),
@@ -1152,6 +1170,92 @@ export const auditCatalog = {
     actor: ["account"],
     target: "template",
     fields: templateFields,
+    visibility: "organization",
+  }),
+  "page.restrictionSet": event({
+    actor: ["account", "system"],
+    target: "page",
+    fields: pageFields.extend({ kind: z.enum(restrictionKindNames) }),
+    visibility: "organization",
+  }),
+  "page.restrictionRemoved": event({
+    actor: ["account", "system"],
+    target: "page",
+    fields: pageFields.extend({ kind: z.enum(restrictionKindNames), byAdministrator: z.boolean() }),
+    visibility: "organization",
+  }),
+  "page.shared": event({
+    actor: ["account", "system"],
+    target: "page",
+    fields: pageShareFields,
+    visibility: "organization",
+  }),
+  "page.shareChanged": event({
+    actor: ["account", "system"],
+    target: "page",
+    fields: pageShareFields.extend({
+      previousRole: z.enum(spaceRoleNames),
+      previousIncludeDescendants: z.boolean(),
+    }),
+    visibility: "organization",
+  }),
+  "page.unshared": event({
+    actor: ["account", "system"],
+    target: "page",
+    fields: pageShareFields,
+    visibility: "organization",
+  }),
+  "page.guestInvited": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({
+      invitationId: z.uuid(),
+      role: z.enum(spaceRoleNames),
+      includeDescendants: z.boolean(),
+    }),
+    visibility: "organization",
+  }),
+  "shareLink.created": event({
+    actor: ["account"],
+    target: "shareLink",
+    fields: shareLinkFields,
+    visibility: "organization",
+  }),
+  "shareLink.changed": event({
+    actor: ["account"],
+    target: "shareLink",
+    fields: shareLinkFields.extend({ changes: z.array(z.string()).max(10) }),
+    visibility: "organization",
+  }),
+  "shareLink.revoked": event({
+    actor: ["account", "system"],
+    target: "shareLink",
+    fields: shareLinkFields,
+    visibility: "organization",
+  }),
+  "shareLink.opened": event({
+    actor: ["account", "anonymous"],
+    target: "shareLink",
+    fields: shareLinkFields,
+    visibility: "organization",
+  }),
+  "accessRequest.decided": event({
+    actor: ["account"],
+    target: "accessRequest",
+    fields: z.object({
+      spaceId: z.uuid(),
+      itemId: z.uuid().nullable(),
+      title: z.string().nullable(),
+      requesterId: z.uuid(),
+      decision: z.enum(["approved", "declined"]),
+      role: z.enum(spaceRoleNames).nullable(),
+    }),
+    visibility: "organization",
+  }),
+  "access.overviewExported": event({
+    actor: ["account"],
+    target: "organization",
+    fields: z.object({ accountId: z.uuid().nullable(), rows: z.number().int().nonnegative() }),
     visibility: "organization",
   }),
   "page.updateRejected": event({

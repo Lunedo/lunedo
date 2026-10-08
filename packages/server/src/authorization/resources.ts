@@ -116,6 +116,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "organization.integrations.view": organizationArea("integrationsAndApi", "view"),
       "organization.integrations.manage": organizationArea("integrationsAndApi", "manage"),
       "organization.audit.view": organizationArea("auditLog", "view"),
+      "organization.access.view": organizationArea("spaces", "view"),
     },
     rules: {
       membersCreateGroups: async (context) => {
@@ -248,6 +249,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       );
       return result.rows[0]?.space_id ?? null;
     },
+    itemOf: async (_executor, id) => id,
     actions: {
       "item.view": { scope: "space", spaceRole: "reader", restriction: "readable" },
       "item.edit": { scope: "space", spaceRole: "editor", restriction: "writable" },
@@ -257,6 +259,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "item.react": { scope: "space", spaceRole: "reader", restriction: "interactive" },
       "item.pin": { scope: "space", spaceRole: "admin", restriction: "interactive" },
       "item.approveSchedule": { scope: "space", spaceRole: "admin", restriction: "writable" },
+      "item.share": { scope: "space", spaceRole: "editor", restriction: "readable" },
     },
     restrictions: {
       readable: async (executor, id) => {
@@ -287,6 +290,12 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
   const comment: ResourceType = {
     type: "comment",
     spaceOf: commentSpace,
+    itemOf: async (executor, id) => {
+      const result = await executor.execute<{ item_id: string }>(
+        sql`select item_id from comments where id = ${id}`,
+      );
+      return result.rows[0]?.item_id ?? null;
+    },
     actions: {
       "comment.view": { scope: "space", spaceRole: "reader", restriction: "visible" },
       "comment.reply": { scope: "space", spaceRole: "commenter", restriction: "open" },
@@ -343,6 +352,12 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
         sql`select t.space_id from tasks k join tree_items t on t.id = k.item_id where k.id = ${id}`,
       );
       return result.rows[0]?.space_id ?? null;
+    },
+    itemOf: async (executor, id) => {
+      const result = await executor.execute<{ item_id: string }>(
+        sql`select item_id from tasks where id = ${id}`,
+      );
+      return result.rows[0]?.item_id ?? null;
     },
     actions: {
       "task.view": { scope: "space", spaceRole: "reader", restriction: "visible" },

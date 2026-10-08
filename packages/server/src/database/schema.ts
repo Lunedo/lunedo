@@ -96,6 +96,18 @@ export { organizationDomains, organizationLogos, organizations } from "../organi
 export { settingLevel, settingValues } from "../settings/schema.js";
 export { setupSessions, setupSteps } from "../setup/schema.js";
 export {
+  accessRequestStatus,
+  accessRequests,
+  invitationShares,
+  pageRestrictions,
+  pageShares,
+  restrictionKind,
+  shareLinkAccesses,
+  shareLinkPeople,
+  shareLinkScope,
+  shareLinks,
+} from "../sharing/schema.js";
+export {
   collaborationClients,
   collaborationPresence,
   discardedDrafts,

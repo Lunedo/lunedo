@@ -142,7 +142,7 @@ export class CommentService {
       from comments c join comments r on r.id = coalesce(c.parent_id, c.id)
       join tree_items t on t.id = c.item_id join spaces s on s.id = t.space_id
       where c.item_id = ${itemId}
-        and (r.quote is null or r.quote_public or ${this.#authorization.spaceFilter(viewer, sql`s`, "editor")})
+        and (r.quote is null or r.quote_public or ${this.#authorization.itemFilter(viewer, sql`t`, sql`s`, "editor")})
       order by c.created_at, c.id
       limit ${MAX_COMMENTS_PER_PAGE}`);
     const rows = result.rows;
@@ -219,7 +219,7 @@ export class CommentService {
       snapshot: unknown;
       snapshot_schema: number;
     }>(sql`
-      select ${this.#authorization.spaceFilter(viewer, sql`s`, "editor")} as editor, t.mode,
+      select ${this.#authorization.itemFilter(viewer, sql`t`, sql`s`, "editor")} as editor, t.mode,
         v.document as version_document, v.schema_version as version_schema, d.snapshot,
         d.schema_version as snapshot_schema
       from tree_items t join spaces s on s.id = t.space_id join page_documents d on d.item_id = t.id

@@ -95,6 +95,12 @@ import type { SettingsService } from "./settings/service.js";
 import { SetupRegistry } from "./setup/framework.js";
 import { SetupService } from "./setup/setup-service.js";
 import { builtinSetupSteps } from "./setup/steps.js";
+import { AccessExplanationService } from "./sharing/explain.js";
+import { ShareLinkService } from "./sharing/links.js";
+import { sharingNotificationTypes } from "./sharing/notifications.js";
+import { PageAccessService } from "./sharing/page-access.js";
+import { AccessRequestService } from "./sharing/requests.js";
+import { ValueSigner } from "./sharing/signer.js";
 import { ArchiveService } from "./spaces/archive.js";
 import { PageDocumentService } from "./spaces/documents.js";
 import { TreeService } from "./spaces/items.js";
@@ -171,6 +177,11 @@ export interface AccountServices {
   tasks: TaskService;
   blog: BlogService;
   home: HomeService;
+  signer: ValueSigner;
+  pageAccess: PageAccessService;
+  shareLinks: ShareLinkService;
+  accessRequests: AccessRequestService;
+  accessExplanations: AccessExplanationService;
 }
 
 export function createAccountServices(options: {
@@ -240,6 +251,7 @@ export function createAccountServices(options: {
     registry: new NotificationRegistry().register(
       ...builtinNotificationTypes,
       ...collaborationNotificationTypes,
+      ...sharingNotificationTypes,
     ),
   });
   mail.useNotifications(notifications);
@@ -423,7 +435,7 @@ export function createAccountServices(options: {
     origin: options.nodeId ?? uuidv7(),
   });
   const versions = new VersionService({ database, audit, documents, people, settings, activity });
-  const trash = new TrashService({ database, audit, settings, people, activity });
+  const trash = new TrashService({ database, audit, settings, people, activity, authorization });
   const archive = new ArchiveService({ database, audit, authorization, activity });
   const tree = new TreeService({
     database,
@@ -448,6 +460,31 @@ export function createAccountServices(options: {
   const tasks = new TaskService({ database, authorization, settings, people });
   const blog = new BlogService({ database, authorization, versions, audit, people, notifications });
   const home = new HomeService({ database, authorization, settings, tasks, blog, people });
+  const signer = new ValueSigner({ database, encryption });
+  const pageAccess = new PageAccessService({ database, authorization, audit, people, notifications });
+  const shareLinks = new ShareLinkService({
+    database,
+    authorization,
+    audit,
+    settings,
+    hasher,
+    rateLimiter,
+    people,
+    signer,
+  });
+  const accessRequests = new AccessRequestService({
+    database,
+    authorization,
+    audit,
+    people,
+    notifications,
+    pageAccess,
+    spacePermissions,
+  });
+  const accessExplanations = new AccessExplanationService({ database, authorization, people, audit });
+  pageAccess.onAccessChange((tx, spaceId) => accessRequests.closeSatisfied(tx, spaceId));
+  spacePermissions.onAccessChange((tx, spaceId) => accessRequests.closeSatisfied(tx, spaceId));
+  memberships.onDeactivated((tx, accountId) => pageAccess.markOrphanedRestrictions(tx, accountId));
   setupRegistry.register(
     ...builtinSetupSteps({
       database,
@@ -522,6 +559,11 @@ export function createAccountServices(options: {
     tasks,
     blog,
     home,
+    signer,
+    pageAccess,
+    shareLinks,
+    accessRequests,
+    accessExplanations,
   };
 }
 

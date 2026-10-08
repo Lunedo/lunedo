@@ -282,21 +282,28 @@ data: ${JSON.stringify(signal)}
             spaceDecisions.set(cacheKey, { allowed, at: Date.now() });
             return allowed;
           };
-          if (!(await mayInSpace(signal.kind === "draft" ? "space.edit" : "space.view"))) return;
+          const mayOnItem = async (action: "item.view" | "item.edit", itemId: string): Promise<boolean> =>
+            (
+              await services.authorization.explain(accountPrincipal(session.accountId), action, {
+                type: "item",
+                id: itemId,
+              })
+            ).allowed;
+          const spaceVisible = await mayInSpace("space.view");
           let forwarded = signal;
           if (signal.itemId) {
-            const visible =
-              (await mayInSpace("space.edit")) ||
-              (
-                await services.authorization.explain(accountPrincipal(session.accountId), "item.view", {
-                  type: "item",
-                  id: signal.itemId,
-                })
-              ).allowed;
-            if (!visible) {
-              if (signal.kind === "page") return;
+            if (!(await mayOnItem("item.view", signal.itemId))) {
+              if (!spaceVisible || signal.kind === "page" || signal.kind === "draft") return;
               forwarded = { ...signal, itemId: null };
+            } else if (
+              signal.kind === "draft" &&
+              !(await mayInSpace("space.edit")) &&
+              !(await mayOnItem("item.edit", signal.itemId))
+            ) {
+              return;
             }
+          } else if (!spaceVisible || (signal.kind === "draft" && !(await mayInSpace("space.edit")))) {
+            return;
           }
           if (!closed) raw.write(`event: spaces\ndata: ${JSON.stringify(forwarded)}\n\n`);
         })

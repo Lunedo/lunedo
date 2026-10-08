@@ -6,7 +6,7 @@ import type { Database } from "../database/database.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, SpaceError } from "../spaces/common.js";
 import type { PeopleService } from "../spaces/people.js";
-import { visibleItem } from "../spaces/visibility.js";
+import { spaceKeyFor, spaceNameFor, visibleItem } from "../spaces/visibility.js";
 import type { BlogPost, BlogService } from "./blog.js";
 import { organizationHomePageSetting, RECENT_VIEW_DAYS } from "./settings.js";
 import type { TaskEntry, TaskService } from "./tasks.js";
@@ -140,7 +140,8 @@ export class HomeService {
   async starred(viewer: Principal): Promise<Starred> {
     const accountId = this.#account(viewer);
     const items = await this.#database.execute<ReferenceRow & { created_at: Date | string }>(sql`
-      select t.id, t.kind, t.title, t.space_id, s.key, s.name as space_name, st.created_at
+      select t.id, t.kind, t.title, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
+        ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name, st.created_at
       from stars st join tree_items t on t.id = st.item_id join spaces s on s.id = t.space_id
       where st.account_id = ${accountId} and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
       order by st.created_at desc limit ${MAX_STARS}`);
@@ -178,7 +179,8 @@ export class HomeService {
   async recent(viewer: Principal, limit = 20): Promise<(ContentReference & { viewedAt: Date })[]> {
     const accountId = this.#account(viewer);
     const result = await this.#database.execute<ReferenceRow & { viewed_at: Date | string }>(sql`
-      select t.id, t.kind, t.title, t.space_id, s.key, s.name as space_name, v.viewed_at
+      select t.id, t.kind, t.title, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
+        ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name, v.viewed_at
       from recent_views v join tree_items t on t.id = v.item_id join spaces s on s.id = t.space_id
       where v.account_id = ${accountId}
         and v.viewed_at > now() - make_interval(days => ${RECENT_VIEW_DAYS})
@@ -205,14 +207,15 @@ export class HomeService {
       }
     >(sql`
       select m.id as mention_id, m.comment_id, m.actor_id, ${this.#people.visibleName(viewer, sql`a`)} as actor_name, m.notified_at,
-        t.id, t.kind, t.title, t.space_id, s.key, s.name as space_name
+        t.id, t.kind, t.title, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
+        ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name
       from content_mentions m join tree_items t on t.id = m.item_id join spaces s on s.id = t.space_id
       left join accounts a on a.id = m.actor_id
       left join comments c on c.id = m.comment_id
       left join comments r on r.id = coalesce(c.parent_id, c.id)
       where m.account_id = ${accountId} and m.notified_at is not null
         and (m.comment_id is null or (c.deleted_at is null
-          and (r.quote is null or r.quote_public or ${this.#authorization.spaceFilter(viewer, sql`s`, "editor")})))
+          and (r.quote is null or r.quote_public or ${this.#authorization.itemFilter(viewer, sql`t`, sql`s`, "editor")})))
         and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
       order by m.notified_at desc limit ${Math.min(Math.max(limit, 1), 100)}`);
     return result.rows.map((row) => ({
@@ -239,7 +242,8 @@ export class HomeService {
     const itemId = await this.#settings.get(organizationHomePageSetting, { organization: organizationId });
     if (!itemId) return null;
     const result = await this.#database.execute<ReferenceRow>(sql`
-      select t.id, t.kind, t.title, t.space_id, s.key, s.name as space_name
+      select t.id, t.kind, t.title, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
+        ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name
       from tree_items t join spaces s on s.id = t.space_id
       where t.id = ${itemId} and s.organization_id = ${organizationId} and t.archived_root_id is null
         and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}`);

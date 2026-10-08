@@ -12,7 +12,7 @@ import { ITEM_TITLE_MAX_LENGTH, lockSpaces } from "../spaces/items.js";
 import type { PeopleService } from "../spaces/people.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import type { VersionService } from "../spaces/versions.js";
-import { refreshReaderVisibility, visibleItem } from "../spaces/visibility.js";
+import { refreshReaderVisibility, spaceKeyFor, spaceNameFor, visibleItem } from "../spaces/visibility.js";
 
 export const EXCERPT_MAX_LENGTH = 500;
 export const MAX_BLOG_PAGE = 100;
@@ -132,7 +132,8 @@ export class BlogService {
 
   #select(viewer: Principal, pinned: SQL): SQL {
     return sql`
-      select t.id, t.space_id, s.key, s.name as space_name, t.title, b.excerpt,
+      select t.id, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
+        ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name, t.title, b.excerpt,
         (select array_agg(l.label order by l.label) from page_labels l where l.item_id = t.id) as labels,
         t.creator_id, ${this.#people.visibleName(viewer, sql`a`)} as creator_name, b.published_at, b.scheduled_at, b.scheduled_time_zone,
         b.scheduled_by, ${this.#people.visibleName(viewer, sql`scheduler`)} as scheduler_name, b.held_at,

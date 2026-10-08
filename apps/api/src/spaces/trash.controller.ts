@@ -85,8 +85,8 @@ export class TrashController {
     params: spaceParams,
     response: { description: "Trash entries.", schema: entries, example: [exampleTrashEntry] },
   })
-  async spaceTrash(@Param("spaceId") spaceId: string) {
-    return this.#services.trash.listSpace(spaceId);
+  async spaceTrash(@Param("spaceId") spaceId: string, @Req() request: FastifyRequest) {
+    return this.#services.trash.listSpace(actorOf(request), spaceId);
   }
 
   @Post("spaces/:spaceId/trash/:entryId/restore")
@@ -113,6 +113,7 @@ export class TrashController {
       entryId,
       (entry) => entry.spaceId === spaceId && entry.kind === "items" && entry.stage === 1,
     );
+    if (!(await this.#services.trash.accessible(actorOf(request), entryId))) throw notFound();
     return this.#services.trash.restore(actorOf(request), entryId);
   }
 

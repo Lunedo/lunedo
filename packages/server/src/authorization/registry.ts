@@ -34,7 +34,7 @@ export interface RuleContext {
 
 export type Rule = (context: RuleContext) => Promise<boolean>;
 
-export type RestrictionDenial = "inTrash" | "archived" | "unpublished";
+export type RestrictionDenial = "inTrash" | "archived" | "unpublished" | "restricted" | "editRestricted";
 
 export interface RestrictionResult {
   denial: RestrictionDenial;
@@ -48,6 +48,7 @@ export interface ResourceType {
   actions: Record<string, ActionDefinition>;
   organizationOf?: (executor: Executor, id: string) => Promise<string | null>;
   spaceOf?: (executor: Executor, id: string) => Promise<string | null>;
+  itemOf?: (executor: Executor, id: string) => Promise<string | null>;
   rules?: Record<string, Rule>;
   restrictions?: Record<string, Restriction>;
 }
