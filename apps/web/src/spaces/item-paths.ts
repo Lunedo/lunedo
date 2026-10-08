@@ -1,5 +1,5 @@
 import { slugify } from "@pagehall/editor-schema";
-import { folderPath, pagePath, type TreeItem } from "./space-queries.js";
+import { blogPostPath, folderPath, pagePath, type TreeItem } from "./space-queries.js";
 
 export function itemSlug(title: string): string {
   return slugify(title);
@@ -11,6 +11,7 @@ export function itemHref(
 ): string | null {
   if (item.kind === "page") return pagePath(spaceKey, item.id, itemSlug(item.title));
   if (item.kind === "folder") return folderPath(spaceKey, item.id, itemSlug(item.title));
+  if (item.kind === "blogPost") return blogPostPath(spaceKey, item.id, itemSlug(item.title));
   const link = item.link;
   if (!link?.accessible) return null;
   if (link.url) return link.url;

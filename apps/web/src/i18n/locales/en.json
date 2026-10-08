@@ -1027,7 +1027,9 @@
     "help": "Help",
     "settings": "Settings",
     "account": "Account",
-    "spaces": "Spaces"
+    "spaces": "Spaces",
+    "forYou": "For you",
+    "tasks": "My tasks"
   },
   "help": {
     "shortcuts": "Keyboard shortcuts",
@@ -1257,7 +1259,27 @@
     "overviewPage": "The overview page of a space stays a page in its space. Move its children instead.",
     "invalidDocument": "The content does not match what Pagehall can store. Remove the last change and try again.",
     "invalidLabel": "A label needs 1 to 100 letters, digits, dots, dashes or underscores.",
-    "tooManyLabels": "A page can have up to 100 labels. Remove a label before you add another."
+    "tooManyLabels": "A page can have up to 100 labels. Remove a label before you add another.",
+    "invalidComment": "The comment contains something comments do not support. Remove tables, images or headings and try again.",
+    "invalidAnchor": "Select up to 1000 characters within one paragraph to comment on them.",
+    "anchorNotFound": "The selected text changed in the meantime. Select it again and comment.",
+    "tooManyComments": "This page has the maximum number of comments. Resolve or delete old ones first.",
+    "restoreExpired": "The comment can no longer be restored; deleted comments can be restored within an hour.",
+    "notInlineComment": "Only comments on text can be resolved.",
+    "invalidEmoji": "A reaction is exactly one emoji.",
+    "reactionsDisabled": "Reactions are turned off here. A space admin can turn them on.",
+    "tooManyReactions": "You added the maximum number of reactions here. Remove one first.",
+    "reactionsUnavailable": "Only people can react.",
+    "invalidExcerpt": "The excerpt can have up to 500 characters.",
+    "invalidTimeZone": "The time zone is not known. Check your preferences.",
+    "scheduleInPast": "Choose a date and time in the future.",
+    "scheduleTooLate": "Publishing can be scheduled up to a year ahead.",
+    "notPublished": "Publish the blog post before pinning it.",
+    "notInOrganization": "Only blog posts of an organization's spaces can be pinned there.",
+    "blogPostMode": "Blog posts always use publish mode.",
+    "tooManyStars": "You starred the maximum number of items. Remove a star first.",
+    "personalOnly": "Only people have starred items and a home page.",
+    "invalidHomePage": "Choose a page from a space of this organization that you can read."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -1638,7 +1660,10 @@
     "textSizeHint": "Scales text, spacing and icons together.",
     "density": "Density",
     "densityHint": "Compact fits more items on the screen.",
-    "fonts": { "default": "Default", "readable": "Reading-friendly" },
+    "fonts": {
+      "default": "Default",
+      "readable": "Reading-friendly"
+    },
     "densities": {
       "default": "Default",
       "compact": "Compact"
@@ -1658,6 +1683,13 @@
       "monday": "Monday",
       "sunday": "Sunday",
       "saturday": "Saturday"
+    },
+    "navigation": "Navigation",
+    "startPage": "Start page",
+    "startPageHint": "Where you land after signing in.",
+    "startPages": {
+      "forYou": "For you",
+      "organizationHome": "Organization home page"
     }
   },
   "settings": {
@@ -1730,9 +1762,18 @@
         "label": "Color mode",
         "description": "Light, dark or following the system."
       },
-      "appearance_highContrast": { "label": "High contrast", "description": "Stronger borders and text." },
-      "appearance_textSize": { "label": "Text size", "description": "Size of text and controls." },
-      "appearance_density": { "label": "Density", "description": "Spacing in lists and tables." },
+      "appearance_highContrast": {
+        "label": "High contrast",
+        "description": "Stronger borders and text."
+      },
+      "appearance_textSize": {
+        "label": "Text size",
+        "description": "Size of text and controls."
+      },
+      "appearance_density": {
+        "label": "Density",
+        "description": "Spacing in lists and tables."
+      },
       "appearance_font": {
         "label": "Reading-friendly font",
         "description": "A font designed for easier reading."
@@ -1920,6 +1961,10 @@
       "trash_secondStageMinimumDays": {
         "label": "Shortest time in second-stage recovery",
         "description": "Organizations and spaces cannot set a shorter time in second-stage recovery."
+      },
+      "reactions_enabled": {
+        "label": "Reactions",
+        "description": "People can react with emoji to pages, blog posts and comments."
       }
     },
     "disabled": {
@@ -2137,6 +2182,12 @@
       },
       "mail": {
         "credentialExpiring": "The client secret or certificate for sending e-mail through Microsoft Graph expires on {expiresAt}. Add a new one in the e-mail settings before then."
+      },
+      "content": {
+        "mentioned": "{actor} mentioned you in {itemTitle}"
+      },
+      "task": {
+        "assigned": "You were assigned a task in {itemTitle}: {taskText}"
       }
     }
   },
@@ -2985,6 +3036,14 @@
         "created": "Template created",
         "updated": "Template changed",
         "deleted": "Template deleted"
+      },
+      "blogPost": {
+        "publishedBySchedule": "Blog post published by schedule",
+        "pinned": "Blog post pinned",
+        "unpinned": "Blog post unpinned"
+      },
+      "comment": {
+        "deletedByModerator": "Comment deleted by a space admin"
       }
     },
     "action": "Action",
@@ -3485,7 +3544,9 @@
       "pageLink": "Link to a page",
       "pageLinkDescription": "Link to a page in any space you can read",
       "emoji": "Emoji",
-      "emojiDescription": "Pick an emoji"
+      "emojiDescription": "Pick an emoji",
+      "taskReport": "Task report",
+      "taskReportDescription": "Table of tasks with filters and counts"
     },
     "mention": {
       "unknown": "Unknown person"
@@ -4132,7 +4193,8 @@
     "typeName": "Type {name} to confirm",
     "nameMismatch": "The name does not match. Type it exactly as shown.",
     "spaceDeleted": "{name} deleted",
-    "deleteFailed": "The space could not be deleted"
+    "deleteFailed": "The space could not be deleted",
+    "collaborationSection": "Collaboration"
   },
   "archive": {
     "archive": "Archive",
@@ -4183,7 +4245,8 @@
     "kinds": {
       "page": "Page",
       "folder": "Folder",
-      "link": "Link"
+      "link": "Link",
+      "blogPost": "Blog post"
     },
     "unknownPerson": "Unknown person",
     "stageOne": "Space trash",
@@ -4439,5 +4502,245 @@
     "searchPerson": "Search a person",
     "createFrom": "Create from {name}",
     "createBlank": "Create blank page"
+  },
+  "home": {
+    "title": "For you",
+    "greeting": "Hello {name}. Here is what changed for you.",
+    "loadFailed": "Your home page could not be loaded",
+    "tasks": "My open tasks due soon",
+    "noTasks": "No open tasks are due in the next 7 days.",
+    "allTasks": "All my tasks",
+    "mentions": "Mentions",
+    "noMentions": "Nobody mentioned you recently.",
+    "mentionedBy": "{name}, {when}",
+    "recent": "Recently viewed",
+    "noRecent": "Pages you open appear here. Only you see this list.",
+    "starred": "Starred",
+    "noStarred": "Star pages, blog posts and spaces to find them here quickly.",
+    "posts": "New blog posts",
+    "noPosts": "No blog posts were published in your spaces in the last 30 days.",
+    "allPosts": "All blog posts",
+    "firstUseTitle": "Welcome to Pagehall",
+    "firstUseDescription": "Your tasks, mentions, starred items and recently viewed pages will appear here.",
+    "openSpaces": "Open the spaces",
+    "organizationPage": "Organization home page",
+    "organizationPageDescription": "Members who choose the organization home page as their start page land here after signing in.",
+    "organizationPageFailed": "The organization home page could not be loaded",
+    "organizationPageCurrent": "Current home page:",
+    "organizationPageNone": "No home page is set. Everyone lands on \"For you\".",
+    "choosePage": "Home page",
+    "searchPage": "Search a page by title",
+    "removeOrganizationPage": "Remove home page"
+  },
+  "starred": {
+    "star": "Star {title}",
+    "unstar": "Remove {title} from starred",
+    "added": "{title} starred",
+    "removed": "{title} removed from starred",
+    "addFailed": "The star could not be added. Check your connection and try again.",
+    "removeFailed": "The star could not be removed. Check your connection and try again."
+  },
+  "mentions": {
+    "noAccess": "{name} has no access to this page",
+    "noAccessDescription": "They will not be notified. Share the space or the page with them if they should read it."
+  },
+  "reactions": {
+    "add": "Add reaction",
+    "allEmoji": "All emoji",
+    "reactWith": "React with {emoji}",
+    "reactionLabel": "{emoji} {count}: {names}",
+    "namesAndMore": "{names} and {count, plural, one {# more} other {# more}}",
+    "pageLabel": "Reactions",
+    "commentLabel": "Reactions to the comment of {name}",
+    "failed": "The reaction could not be saved. Try again; if reactions are turned off here, ask a space admin."
+  },
+  "comments": {
+    "title": "Comments",
+    "toggle": "Comments",
+    "toggleWithOpen": "Comments, {count, plural, one {# open} other {# open}}",
+    "openCount": "{count, plural, one {# open} other {# open}}",
+    "close": "Close comments",
+    "loadFailed": "The comments could not be loaded",
+    "empty": "No comments yet.",
+    "emptyCanComment": "No comments yet. Select text to comment on it, or write a comment on the whole page below.",
+    "openSection": "Open",
+    "pageSection": "On the page",
+    "resolvedSection": "Resolved ({count})",
+    "pageThread": "Comment on the page",
+    "threadOn": "Comment on “{quote}”",
+    "showInText": "Show in the text",
+    "textGone": "The commented text no longer exists.",
+    "placeholder": "Write a comment. Use @ to mention someone.",
+    "newPageComment": "New comment on the page",
+    "newInline": "Comment on the selected text",
+    "replyLabel": "Reply",
+    "editLabel": "Edit comment",
+    "comment": "Comment",
+    "reply": "Reply",
+    "save": "Save comment",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete comment",
+    "edited": "edited",
+    "actions": "Actions for the comment of {name}",
+    "deleted": "Comment deleted",
+    "deletedPlaceholder": "Comment deleted",
+    "unreadable": "This comment cannot be shown.",
+    "resolve": "Resolve",
+    "reopen": "Reopen",
+    "commentOnSelection": "Comment",
+    "selectWithinParagraph": "Select text within one paragraph to comment on it.",
+    "emptyError": "Write a comment first.",
+    "tooLong": "The comment is too long. Shorten it and try again.",
+    "createFailed": "The comment could not be posted",
+    "replyFailed": "The reply could not be posted",
+    "editFailed": "The comment could not be saved",
+    "deleteFailed": "The comment could not be deleted",
+    "restoreFailed": "The comment could not be restored",
+    "resolveFailed": "The comment could not be resolved",
+    "reopenFailed": "The comment could not be reopened"
+  },
+  "tasks": {
+    "myTitle": "My tasks",
+    "myDescription": "Tasks assigned to you on pages and blog posts you can read, across all spaces.",
+    "filter": "Show",
+    "filters": {
+      "open": "Open",
+      "overdue": "Overdue",
+      "done": "Done"
+    },
+    "empty": {
+      "open": {
+        "title": "No open tasks",
+        "description": "Tasks assigned to you in published content appear here."
+      },
+      "overdue": {
+        "title": "Nothing overdue",
+        "description": "None of your open tasks is past its due date."
+      },
+      "done": {
+        "title": "No done tasks yet",
+        "description": "Tasks you or others check off appear here."
+      }
+    },
+    "listLabel": "Tasks",
+    "loadFailed": "The tasks could not be loaded",
+    "moreNotShown": "More tasks match. Narrow the filters to see them.",
+    "untitled": "Task without text",
+    "openCount": "{count, plural, one {# open} other {# open}}",
+    "doneCount": "{count, plural, one {# done} other {# done}}",
+    "overdueCount": "{count, plural, one {# overdue} other {# overdue}}",
+    "dueOn": "Due {date}",
+    "overdueSince": "Overdue since {date}",
+    "noDueDate": "No due date",
+    "markDone": "Mark as done: {task}",
+    "markOpen": "Mark as open: {task}",
+    "checkFailed": "The task could not be checked",
+    "uncheckFailed": "The task could not be unchecked",
+    "notSavedYet": "The task is not saved yet",
+    "notSavedYetDescription": "Wait a moment until the page is saved, then check it.",
+    "assign": "Assign",
+    "assignee": "Assignee",
+    "searchPerson": "Search a person by name",
+    "removeAssignee": "Remove assignee",
+    "assigneeNoAccessDescription": "They are not notified and do not see the task until they can read the page.",
+    "dueDate": "Due date",
+    "setDueDate": "Due date",
+    "removeDueDate": "Remove due date",
+    "due": {
+      "any": "Any due date",
+      "overdue": "Overdue",
+      "next7Days": "Due in the next 7 days",
+      "next30Days": "Due in the next 30 days",
+      "none": "Without due date"
+    },
+    "status": {
+      "open": "Open",
+      "done": "Done",
+      "all": "Open and done"
+    },
+    "report": {
+      "title": "Task report",
+      "scope": "Spaces",
+      "thisSpace": "This space",
+      "allSpaces": "All spaces I can read",
+      "assignee": "Assigned to",
+      "anyone": "Anyone",
+      "viewer": "The person reading",
+      "person": "A specific person",
+      "due": "Due date",
+      "status": "Status",
+      "emptyTitle": "No tasks match",
+      "emptyDescription": "Change the filters, or add tasks with assignees to published pages."
+    }
+  },
+  "blog": {
+    "title": "Blog",
+    "spaceTitle": "Blog of {space}",
+    "spaceDescription": "News and announcements of {space}.",
+    "organizationTitle": "Blog posts",
+    "organizationDescription": "Blog posts of all spaces of {organization} you can read, newest first.",
+    "noOrganization": "Blog posts of the spaces you can read.",
+    "write": "Write a post",
+    "writeTitle": "New blog post in {space}",
+    "writeDescription": "The post starts as a draft that only editors see. Publish it or schedule the publication when it is ready.",
+    "postTitle": "Title",
+    "postTitleExample": "For example: New VPN client from Monday",
+    "excerpt": "Excerpt",
+    "excerptHint": "A short summary shown in lists, up to {max} characters.",
+    "excerptTooLong": "The excerpt can have up to {max} characters.",
+    "titleRequired": "Enter a title.",
+    "titleTooLong": "The title can have up to {max} characters.",
+    "createPost": "Create post",
+    "cancel": "Cancel",
+    "createFailed": "The blog post could not be created",
+    "loadFailed": "The blog posts could not be loaded",
+    "postLoadFailed": "The blog post could not be loaded",
+    "loadMore": "Show more posts",
+    "emptyTitle": "No blog posts yet",
+    "emptyEditor": "Write the first post to share news with everyone who reads this space.",
+    "emptyReader": "Posts appear here once editors of this space publish them.",
+    "organizationEmptyTitle": "No blog posts yet",
+    "organizationEmptyDescription": "Published posts of all spaces you can read appear here.",
+    "noMatchesTitle": "No posts match",
+    "noMatchesDescription": "No published post matches the space and label you chose.",
+    "filterSpace": "Space",
+    "allSpaces": "All spaces",
+    "filterLabel": "Label",
+    "filterLabelExample": "For example: security",
+    "applyFilter": "Filter",
+    "clearFilters": "Clear filters",
+    "byOn": "{author} · {date}",
+    "byScheduled": "{author} · publishes {date}",
+    "byDraft": "{author} · draft",
+    "pinned": "Pinned",
+    "scheduled": "Scheduled",
+    "draft": "Draft",
+    "pin": "Pin {title}",
+    "unpin": "Unpin {title}",
+    "pinInSpace": "Pin in this space",
+    "unpinInSpace": "Unpin in this space",
+    "pinnedToast": "{title} pinned",
+    "unpinnedToast": "{title} unpinned",
+    "pinFailed": "The post could not be pinned",
+    "unpinFailed": "The post could not be unpinned",
+    "schedule": "Schedule publication",
+    "changeSchedule": "Change schedule",
+    "scheduleTitle": "Schedule the publication",
+    "scheduleDescription": "The draft is published at this time in your time zone ({timeZone}). You can change or cancel the schedule until then.",
+    "scheduleDate": "Date",
+    "scheduleTime": "Time",
+    "scheduleInvalid": "Enter a date and a time.",
+    "scheduleInPast": "Choose a date and time in the future.",
+    "schedulePublication": "Schedule",
+    "scheduledToast": "The post will be published on {date}",
+    "scheduleFailed": "The publication could not be scheduled",
+    "scheduledNotice": "Publishes on {date}",
+    "scheduledNoticeDescription": "The draft at that time is published. Readers see it from then on.",
+    "cancelSchedule": "Cancel schedule",
+    "scheduleCancelled": "Schedule cancelled. The post stays a draft.",
+    "cancelScheduleFailed": "The schedule could not be cancelled",
+    "notPublishedTitle": "Not published yet",
+    "notPublishedDescription": "Edit the post, then publish it or schedule the publication."
   }
 }

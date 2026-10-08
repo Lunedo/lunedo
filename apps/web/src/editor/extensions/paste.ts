@@ -39,10 +39,8 @@ export function markdownToHtml(text: string): string {
     list.setAttribute("data-type", "taskList");
     items.forEach((item, index) => {
       const node = markers[index] as Text;
-      const checked = /^\[[xX]\]/.test(node.data);
       node.data = node.data.replace(TASK_MARKER, "");
       item.setAttribute("data-type", "taskItem");
-      item.setAttribute("data-checked", String(checked));
     });
   }
   return document.body.innerHTML;

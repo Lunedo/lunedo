@@ -81,7 +81,7 @@ describe("Markdown pasting", () => {
     );
     const text = paste(html);
     expect(text).toContain('"type":"heading","attrs":{"level":2');
-    expect(text).toContain('"type":"taskItem","attrs":{"checked":true');
+    expect(text).toContain('"type":"taskItem"');
     expect(text).toContain('"type":"orderedList"');
     expect(text).toContain('"type":"blockquote"');
     expect(text).toContain('"language":"javascript"');

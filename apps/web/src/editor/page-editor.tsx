@@ -1,9 +1,13 @@
+import { anchorAt, type TextAnchor } from "@pagehall/editor-schema";
 import { IconButton, SkeletonText, useToast } from "@pagehall/ui";
+import type { Editor } from "@tiptap/core";
 import { DragHandle } from "@tiptap/extension-drag-handle-react";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { GripVertical, PanelTopClose, PanelTopOpen } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
+import { CommentHighlights } from "../collaboration/comment-highlights.js";
+import { checkMentionAccess } from "../collaboration/people.js";
 import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.js";
 import { usePreferences } from "../preferences/preferences-provider.js";
 import { useSession } from "../shell/shell-context.js";
@@ -33,6 +37,10 @@ export interface PageEditorProps {
   showStatus?: boolean;
   draft?: boolean;
   onSaveStateChange?: (state: SaveState) => void;
+  onComment?: (anchor: TextAnchor) => void;
+  openThreads?: readonly string[];
+  activeThread?: string | null;
+  onThreadClick?: (threadId: string) => void;
 }
 
 const READ_ONLY_PROBLEMS = new Set(["permissionRevoked", "noEditPermission", "pageNotFound"]);
@@ -55,6 +63,10 @@ function CollaborativeEditor({
   showStatus = true,
   draft = false,
   onSaveStateChange,
+  onComment,
+  openThreads = [],
+  activeThread = null,
+  onThreadClick,
   collaboration,
 }: PageEditorProps & { collaboration: PageCollaboration }) {
   const { t } = useTranslation();
@@ -74,14 +86,40 @@ function CollaborativeEditor({
     [account],
   );
 
+  const editorRef = useRef<Editor | null>(null);
   const actions = useMemo<EditorActions>(
     () => ({
       openEmojiPicker: () => setEmojiOpen(true),
       openLinkDialog: () => setLinkOpen(true),
       openFind: () => setFindOpen(true),
       focusToolbar: () => toolbar.current?.focus(),
+      ...(onComment
+        ? {
+            comment: () => {
+              const current = editorRef.current;
+              if (!current) return;
+              const { from, to } = current.state.selection;
+              const anchor = anchorAt(current.state.doc, from, to);
+              if (anchor) onComment(anchor);
+              else toast({ variant: "warning", title: t("comments.selectWithinParagraph") });
+            },
+          }
+        : {}),
     }),
-    [],
+    [onComment, toast, t],
+  );
+  const onMention = useCallback(
+    async (person: { id: string; name: string }) => {
+      const access = await checkMentionAccess(pageId, [person.id]);
+      if (access.some((entry) => !entry.hasAccess)) {
+        toast({
+          variant: "warning",
+          title: t("mentions.noAccess", { name: person.name }),
+          description: t("mentions.noAccessDescription"),
+        });
+      }
+    },
+    [pageId, toast, t],
   );
 
   const editor = useEditor(
@@ -93,6 +131,7 @@ function CollaborativeEditor({
         onOpenFind: actions.openFind,
         onFocusToolbar: actions.focusToolbar,
         onOpenLinkDialog: actions.openLinkDialog,
+        onMention: (person) => void onMention(person),
       }),
       editorProps: {
         attributes: {
@@ -108,6 +147,10 @@ function CollaborativeEditor({
     },
     [collaboration, self?.id],
   );
+
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
 
   useEffect(() => (editor ? registerEditorActions(editor, actions) : undefined), [editor, actions]);
 
@@ -197,7 +240,23 @@ function CollaborativeEditor({
               {editable ? <TableMenu editor={editor} /> : null}
               {findOpen ? <FindBar editor={editor} onClose={() => setFindOpen(false)} /> : null}
             </div>
-            <div ref={surface} className="ph-editor-surface relative">
+            <CommentHighlights
+              scope={`[data-comment-scope="${pageId}"]`}
+              open={openThreads}
+              active={activeThread}
+            />
+            {/* biome-ignore lint/a11y/noStaticElementInteractions: clicks on comment marks open their thread, which is also reachable from the comments panel */}
+            {/* biome-ignore lint/a11y/useKeyWithClickEvents: the comments panel offers the same threads by keyboard */}
+            <div
+              ref={surface}
+              className="ph-editor-surface relative"
+              data-comment-scope={pageId}
+              onClick={(event) => {
+                const mark = (event.target as HTMLElement).closest<HTMLElement>("[data-thread-id]");
+                const id = mark?.dataset.threadId;
+                if (id && openThreads.includes(id)) onThreadClick?.(id);
+              }}
+            >
               {snapshot.loaded ? null : (
                 <div className="py-2">
                   <SkeletonText lines={4} />

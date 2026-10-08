@@ -4,6 +4,7 @@ import {
   AtSign,
   Calendar,
   ChevronRight,
+  ClipboardList,
   Code2,
   Columns2,
   Columns3,
@@ -32,6 +33,7 @@ import {
 } from "lucide-react";
 import { translateKey } from "../i18n/translate.js";
 import { editorActions } from "./actions.js";
+import { pageScopeOf } from "./extensions/page-scope.js";
 import type { SuggestionItem } from "./extensions/suggestions.js";
 import { COLUMN_LAYOUTS } from "./nodes/block-views.js";
 
@@ -198,6 +200,21 @@ export const slashCommands: SlashCommandDefinition[] = [
     keywords: ["table", "grid", "tabelle"],
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+  },
+  {
+    id: "taskReport",
+    group: "blocks",
+    icon: ClipboardList,
+    labelKey: "editor.blocks.taskReport",
+    descriptionKey: "editor.blocks.taskReportDescription",
+    keywords: ["tasks", "report", "aufgaben", "bericht"],
+    run: (editor, range) =>
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({ type: "taskReport", attrs: { spaceId: pageScopeOf(editor) } })
+        .run(),
   },
   {
     id: "tableOfContents",

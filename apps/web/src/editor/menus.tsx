@@ -13,6 +13,7 @@ import {
   Link,
   ListChecks,
   type LucideIcon,
+  MessageSquarePlus,
   PaintBucket,
   PanelLeft,
   PanelTop,
@@ -115,6 +116,13 @@ export function SelectionMenu({ editor, actions }: { editor: Editor; actions: Ed
           active={state.highlight}
           onClick={() => editor.chain().focus().toggleMark("highlight", { color: "yellow" }).run()}
         />
+        {actions.comment ? (
+          <MenuButton
+            label={t("comments.commentOnSelection")}
+            icon={MessageSquarePlus}
+            onClick={() => actions.comment?.()}
+          />
+        ) : null}
         <MenuButton
           label={t("editor.selectionMenu.turnIntoTask")}
           shortcut="mod+shift+9"

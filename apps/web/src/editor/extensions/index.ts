@@ -31,6 +31,8 @@ import {
   TemplateFieldView,
 } from "../nodes/inline-views.js";
 import { MathView } from "../nodes/math-view.js";
+import { TaskItemView } from "../nodes/task-item-view.js";
+import { TaskReportView } from "../nodes/task-report-view.js";
 import { hiddenCaret, type PresenceUser, selectionAttributes } from "../presence.js";
 import { searchPeople } from "../references.js";
 import { schemaExtensions } from "../schema/extensions.js";
@@ -39,9 +41,11 @@ import { BlockFormatting } from "./block-formatting.js";
 import { DocumentEdges } from "./document-edges.js";
 import { FindReplace } from "./find-replace.js";
 import { SchemaGuard } from "./guard.js";
+import { PageScope } from "./page-scope.js";
 import { CleanPaste } from "./paste.js";
 import { TemplatePlaceholders } from "./placeholders.js";
 import { PageLinkSuggestion, SlashCommand, type SuggestionItem, suggestionRender } from "./suggestions.js";
+import { TaskIds } from "./task-ids.js";
 
 const INLINE_VIEWS: Record<string, ComponentType<ReactNodeViewProps>> = {
   mention: MentionView,
@@ -66,6 +70,7 @@ const BLOCK_VIEWS: Record<string, ComponentType<ReactNodeViewProps>> = {
   unsupportedMacro: UnsupportedMacroView,
   image: AttachmentView,
   file: AttachmentView,
+  taskReport: TaskReportView,
 };
 
 export interface EditorExtensionOptions {
@@ -75,6 +80,7 @@ export interface EditorExtensionOptions {
   onOpenFind?: () => void;
   onFocusToolbar?: () => void;
   onOpenLinkDialog?: () => void;
+  onMention?: (person: { id: string; name: string }) => void;
 }
 
 const MathInputRules = Extension.create({
@@ -105,19 +111,23 @@ function withViews(extensions: AnyExtension[]): AnyExtension[] {
     if (inline) {
       return extension.extend({ addNodeView: () => ReactNodeViewRenderer(inline, { as: "span" }) });
     }
+    if (extension.name === "taskItem") {
+      return extension.extend({
+        addNodeView: () =>
+          ReactNodeViewRenderer(TaskItemView, { as: "li", attrs: { "data-type": "taskItem" } }),
+      });
+    }
     const block = BLOCK_VIEWS[extension.name];
     if (block) return extension.extend({ addNodeView: () => ReactNodeViewRenderer(block) });
     return extension;
   });
 }
 
-export function createEditorExtensions(options: EditorExtensionOptions): AnyExtension[] {
-  const { t } = options;
-  const labels = (label: string) => () => ({
-    label: translateKey(t, label),
-    empty: t("editor.suggestions.empty"),
-  });
-  const mentionSuggestion: Omit<SuggestionOptions<SuggestionItem, SuggestionItem>, "editor"> = {
+export function createMentionSuggestion(
+  t: TFunction,
+  onMention?: (person: { id: string; name: string }) => void,
+): Omit<SuggestionOptions<SuggestionItem, SuggestionItem>, "editor"> {
+  return {
     char: "@",
     debounce: 200,
     allow: ({ state }) => !state.selection.$from.parent.type.spec.code,
@@ -136,11 +146,24 @@ export function createEditorExtensions(options: EditorExtensionOptions): AnyExte
               { type: "text", text: " " },
             ])
             .run();
+          onMention?.({ id: person.id, name: person.name });
         },
       })),
     command: ({ editor, range, props }) => props.run(editor, range),
-    render: suggestionRender(labels("editor.suggestions.people")),
+    render: suggestionRender(() => ({
+      label: t("editor.suggestions.people"),
+      empty: t("editor.suggestions.empty"),
+    })),
   };
+}
+
+export function createEditorExtensions(options: EditorExtensionOptions): AnyExtension[] {
+  const { t } = options;
+  const labels = (label: string) => () => ({
+    label: translateKey(t, label),
+    empty: t("editor.suggestions.empty"),
+  });
+  const mentionSuggestion = createMentionSuggestion(t, options.onMention);
   const base = withViews(schemaExtensions()).map((extension) =>
     extension.name === "mention"
       ? extension.configure({
@@ -152,6 +175,8 @@ export function createEditorExtensions(options: EditorExtensionOptions): AnyExte
   return [
     ...base,
     CleanPaste,
+    TaskIds,
+    PageScope.configure({ spaceId: options.spaceId }),
     SchemaGuard,
     TemplatePlaceholders,
     BlockFormatting,

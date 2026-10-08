@@ -9,6 +9,7 @@ import {
   Link2,
   ListTree,
   MoreVertical,
+  Newspaper,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
@@ -19,6 +20,7 @@ import {
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isApiError } from "../api/request.js";
+import { StarButton } from "../collaboration/content-collaboration.js";
 import { LoadError } from "../errors/failure.js";
 import { useShell } from "../shell/shell.js";
 import { ArchiveSection } from "./archive/archive-section.js";
@@ -44,7 +46,8 @@ export function SpaceLayout() {
   const { spaceKey } = route.useParams();
   const location = useLocation();
   const [, , currentKey = "", ...rest] = location.pathname.split("/");
-  const urlItemId = (rest[0] === "pages" || rest[0] === "folders") && isUuid(rest[1]) ? rest[1] : null;
+  const urlItemId =
+    (rest[0] === "pages" || rest[0] === "folders" || rest[0] === "blog") && isUuid(rest[1]) ? rest[1] : null;
   const addressed = useQuery({
     ...itemQuery(urlItemId ?? ""),
     enabled: urlItemId !== null,
@@ -216,6 +219,7 @@ function SpaceNavigation({
     : null;
   const settingsActive = location.pathname.startsWith(`/spaces/${space.key}/settings`);
   const trashActive = location.pathname === `/spaces/${space.key}/trash`;
+  const blogActive = location.pathname.startsWith(`/spaces/${space.key}/blog`);
   return (
     <div
       className="flex flex-col gap-1 px-2 py-4"
@@ -264,6 +268,7 @@ function SpaceNavigation({
             ]}
           />
         ) : null}
+        <StarButton target={{ spaceId: space.id }} title={name} />
         <IconButton
           className="hidden md:inline-flex"
           label={t("navigation.collapseSidebar")}
@@ -284,6 +289,17 @@ function SpaceNavigation({
             </Link>
           </li>
         ) : null}
+        <li>
+          <Link
+            to="/spaces/$spaceKey/blog"
+            params={{ spaceKey: space.key }}
+            aria-current={blogActive ? "page" : undefined}
+            className={`flex h-row items-center gap-2 rounded-sm px-2 focus-visible:focus-ring ${blogActive ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
+          >
+            <Newspaper aria-hidden="true" className="size-icon text-text-muted" />
+            {t("blog.title")}
+          </Link>
+        </li>
         {canEdit ? (
           <li>
             <Link

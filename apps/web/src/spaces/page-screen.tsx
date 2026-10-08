@@ -24,7 +24,9 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
-import { PageReadView } from "../editor/read-view.js";
+import { StarButton, useContentCollaboration } from "../collaboration/content-collaboration.js";
+import { PageReactions } from "../collaboration/reaction-bar.js";
+import { PageReadView, type ReadViewCollaboration } from "../editor/read-view.js";
 import type { SaveState } from "../editor/save-state.js";
 import { LoadError } from "../errors/failure.js";
 import { useFormat } from "../preferences/preferences-provider.js";
@@ -111,6 +113,13 @@ function PageView({ page }: { page: ItemDetails }) {
   const [savingTemplate, setSavingTemplate] = useState(false);
   const switchMode = useModeSwitch(page, draft.data, () => setConfirmingLive(true));
   const title = writable && publishMode && draft.data ? draft.data.title : page.title;
+  const collaboration = useContentCollaboration({
+    itemId: page.id,
+    spaceId: space.id,
+    role: space.role,
+    archived: page.archived || space.archived,
+    writable,
+  });
 
   const setEditing = (next: boolean) =>
     void navigate({
@@ -209,122 +218,141 @@ function PageView({ page }: { page: ItemDetails }) {
   }
 
   return (
-    <article
-      className={`mx-auto flex w-full flex-col gap-4 px-4 pt-6 pb-12 md:px-8 ${width === "full" ? "max-w-none" : "max-w-content"}`}
-    >
-      <PageHeader
-        title={
-          writable ? (
-            <InlineTitle
-              value={title}
-              label={t("page.titleLabel")}
-              autoFocus={editing && title === t("tree.untitledPage")}
-              onSave={async (next) => {
-                await save({ title: next });
-                if (!publishMode || !page.published) {
-                  await navigate({ to: pagePath(space.key, page.id, itemSlug(next)), search, replace: true });
-                }
-              }}
-            />
-          ) : (
-            title
-          )
-        }
-        icon={FileText}
-        breadcrumbs={breadcrumbs}
-        actions={
-          <>
-            {writable ? (
-              editing ? (
-                publishMode ? (
-                  <>
-                    <Button variant="secondary" icon={Check} onClick={() => setEditing(false)}>
+    <div className="flex min-h-full">
+      <article
+        className={`mx-auto flex w-full min-w-0 flex-col gap-4 px-4 pt-6 pb-12 md:px-8 ${width === "full" ? "max-w-none" : "max-w-content"}`}
+      >
+        <PageHeader
+          title={
+            writable ? (
+              <InlineTitle
+                value={title}
+                label={t("page.titleLabel")}
+                autoFocus={editing && title === t("tree.untitledPage")}
+                onSave={async (next) => {
+                  await save({ title: next });
+                  if (!publishMode || !page.published) {
+                    await navigate({
+                      to: pagePath(space.key, page.id, itemSlug(next)),
+                      search,
+                      replace: true,
+                    });
+                  }
+                }}
+              />
+            ) : (
+              title
+            )
+          }
+          icon={FileText}
+          breadcrumbs={breadcrumbs}
+          actions={
+            <>
+              {writable ? (
+                editing ? (
+                  publishMode ? (
+                    <>
+                      <Button variant="secondary" icon={Check} onClick={() => setEditing(false)}>
+                        {t("page.done")}
+                      </Button>
+                      <PublishButton page={page} draft={draft.data} saveState={saveState} />
+                    </>
+                  ) : (
+                    <Button variant="primary" icon={Check} onClick={() => setEditing(false)}>
                       {t("page.done")}
                     </Button>
-                    <PublishButton page={page} draft={draft.data} saveState={saveState} />
-                  </>
+                  )
                 ) : (
-                  <Button variant="primary" icon={Check} onClick={() => setEditing(false)}>
-                    {t("page.done")}
+                  <Button
+                    variant="primary"
+                    icon={Pencil}
+                    onClick={() => setEditing(true)}
+                    aria-keyshortcuts="E"
+                  >
+                    {t("page.edit")}
                   </Button>
                 )
-              ) : (
-                <Button
-                  variant="primary"
-                  icon={Pencil}
-                  onClick={() => setEditing(true)}
-                  aria-keyshortcuts="E"
-                >
-                  {t("page.edit")}
-                </Button>
-              )
-            ) : null}
-            <IconButton label={t("versions.history")} icon={History} onClick={openHistory} />
-            <Menu trigger={<IconButton label={t("page.more")} icon={MoreHorizontal} />} items={menuItems} />
-          </>
-        }
-      />
-      {page.archived || space.archived ? (
-        <Notice
-          variant="warning"
-          title={page.archived ? t("archive.pageArchivedTitle") : t("archive.spaceArchivedTitle")}
-          action={
-            page.archived && canEdit && !space.archived ? (
-              <Button
-                size="sm"
-                variant="secondary"
-                icon={ArchiveRestore}
-                onClick={() => void unarchive(page)}
-              >
-                {t("archive.unarchive")}
-              </Button>
-            ) : undefined
+              ) : null}
+              <StarButton target={{ itemId: page.id }} title={title} />
+              {collaboration.commentsButton}
+              <IconButton label={t("versions.history")} icon={History} onClick={openHistory} />
+              <Menu trigger={<IconButton label={t("page.more")} icon={MoreHorizontal} />} items={menuItems} />
+            </>
           }
-        >
-          {page.archived ? t("archive.pageArchivedDescription") : t("archive.spaceArchivedDescription")}
-        </Notice>
-      ) : null}
-      {writable && publishMode ? (
-        editing ? (
-          <DraftStatusLine draft={draft.data} />
-        ) : (
-          <DraftBanner draft={draft.data} onOpen={() => setEditing(true)} />
-        )
-      ) : null}
-      <PageLabels pageId={page.id} />
-      {editing ? (
-        <Suspense fallback={<Skeleton className="h-field w-full" />}>
-          <PageEditor
-            pageId={page.id}
-            spaceId={space.id}
-            spaceKey={space.key}
-            draft={publishMode}
-            onSaveStateChange={(state) => {
-              saveState.current = state;
-            }}
-          />
-        </Suspense>
-      ) : writable && publishMode && !page.published ? null : (
-        <PageContent pageId={page.id} publishMode={publishMode} />
-      )}
-      <Backlinks pageId={page.id} />
-      <ModeSwitchDialog
-        page={page}
-        draft={draft.data}
-        open={confirmingLive}
-        onOpenChange={setConfirmingLive}
-      />
-      <SaveTemplateDialog
-        spaceId={space.id}
-        page={{ id: page.id, title }}
-        open={savingTemplate}
-        onOpenChange={setSavingTemplate}
-      />
-    </article>
+        />
+        {page.archived || space.archived ? (
+          <Notice
+            variant="warning"
+            title={page.archived ? t("archive.pageArchivedTitle") : t("archive.spaceArchivedTitle")}
+            action={
+              page.archived && canEdit && !space.archived ? (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  icon={ArchiveRestore}
+                  onClick={() => void unarchive(page)}
+                >
+                  {t("archive.unarchive")}
+                </Button>
+              ) : undefined
+            }
+          >
+            {page.archived ? t("archive.pageArchivedDescription") : t("archive.spaceArchivedDescription")}
+          </Notice>
+        ) : null}
+        {writable && publishMode ? (
+          editing ? (
+            <DraftStatusLine draft={draft.data} />
+          ) : (
+            <DraftBanner draft={draft.data} onOpen={() => setEditing(true)} />
+          )
+        ) : null}
+        <PageLabels pageId={page.id} />
+        {editing ? (
+          <Suspense fallback={<Skeleton className="h-field w-full" />}>
+            <PageEditor
+              pageId={page.id}
+              spaceId={space.id}
+              spaceKey={space.key}
+              draft={publishMode}
+              onSaveStateChange={(state) => {
+                saveState.current = state;
+              }}
+              {...collaboration.editor}
+            />
+          </Suspense>
+        ) : writable && publishMode && !page.published ? null : (
+          <PageContent pageId={page.id} publishMode={publishMode} collaboration={collaboration.readView} />
+        )}
+        <PageReactions itemId={page.id} canReact={!page.archived && !space.archived} />
+        <Backlinks pageId={page.id} />
+        <ModeSwitchDialog
+          page={page}
+          draft={draft.data}
+          open={confirmingLive}
+          onOpenChange={setConfirmingLive}
+        />
+        <SaveTemplateDialog
+          spaceId={space.id}
+          page={{ id: page.id, title }}
+          open={savingTemplate}
+          onOpenChange={setSavingTemplate}
+        />
+      </article>
+      {collaboration.panel}
+    </div>
   );
 }
 
-function PageContent({ pageId, publishMode }: { pageId: string; publishMode: boolean }) {
+export function PageContent({
+  pageId,
+  publishMode,
+  collaboration,
+}: {
+  pageId: string;
+  publishMode: boolean;
+  collaboration: ReadViewCollaboration;
+}) {
   const { t } = useTranslation();
   const format = useFormat();
   const content = useQuery(contentQuery(pageId));
@@ -342,7 +370,12 @@ function PageContent({ pageId, publishMode }: { pageId: string; publishMode: boo
           {t("versions.publishedMeta", { date: format.date(content.data.updatedAt), version })}
         </p>
       ) : null}
-      <PageReadView pageId={pageId} document={content.data.document} references={content.data.references} />
+      <PageReadView
+        pageId={pageId}
+        document={content.data.document}
+        references={content.data.references}
+        collaboration={collaboration}
+      />
     </>
   );
 }
