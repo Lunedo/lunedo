@@ -11,8 +11,8 @@ export interface VitestPresetOptions {
   testTimeout?: number;
 }
 
-export function parallelismLimit(value: string | undefined = process.env.CI_PARALLELISM): number | undefined {
-  const limit = Number(value);
+export function parallelismLimit(env: NodeJS.ProcessEnv = process.env): number | undefined {
+  const limit = Number(env.CI_PARALLELISM);
   return Number.isInteger(limit) && limit > 0 ? limit : undefined;
 }
 

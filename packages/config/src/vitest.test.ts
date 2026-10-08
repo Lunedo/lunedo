@@ -3,11 +3,11 @@ import { createVitestConfig, parallelismLimit } from "../vitest.ts";
 
 describe("parallelismLimit", () => {
   it("returns a positive whole number", () => {
-    expect(parallelismLimit("3")).toBe(3);
+    expect(parallelismLimit({ CI_PARALLELISM: "3" })).toBe(3);
   });
 
   it.each([undefined, "", "0", "-2", "1.5", "many"])("ignores %j so the defaults apply", (value) => {
-    expect(parallelismLimit(value)).toBeUndefined();
+    expect(parallelismLimit({ CI_PARALLELISM: value })).toBeUndefined();
   });
 
   it("limits the Vitest workers when CI_PARALLELISM is set", () => {
