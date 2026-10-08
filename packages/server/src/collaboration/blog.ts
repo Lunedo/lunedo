@@ -303,8 +303,8 @@ export class BlogService {
   async listScheduled(viewer: Principal, spaceId: string): Promise<BlogPost[]> {
     const result = await this.#database.execute<PostRow>(sql`
       ${this.#select(viewer, sql`null::timestamptz`)}
-      where t.space_id = ${spaceId} and b.scheduled_at is not null and t.trash_entry_id is null
-        and t.archived_root_id is null
+      where t.space_id = ${spaceId} and b.scheduled_at is not null and t.archived_root_id is null
+        and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
       order by b.held_at is null, b.scheduled_at, t.id
       limit ${MAX_BLOG_PAGE}`);
     return result.rows.map(toPost);

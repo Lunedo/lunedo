@@ -885,6 +885,10 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
           entry.held,
         ]),
       ).toEqual([[post.id, true]]);
+      expect(await test.services.blog.listScheduled(context.reader, context.space.id)).toEqual([]);
+      expect(await test.services.blog.listScheduled(accountPrincipal(authorId), context.space.id)).toEqual(
+        [],
+      );
       expect(
         await can(accountPrincipal(authorId), "item.approveSchedule", { type: "item", id: post.id }),
       ).toBe(false);
