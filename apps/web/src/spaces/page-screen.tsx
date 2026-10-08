@@ -34,6 +34,7 @@ import { AttachmentPreviewProvider } from "../files/preview-host.js";
 import { UploadsProvider } from "../files/uploads.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
+import { type PageSharing, usePageSharing } from "../sharing/page-sharing.js";
 import { EDIT_PAGE_EVENT } from "../shell/builtin.js";
 import { useArchiveItem, useDeleteItem, useDiscardDraft } from "./content-actions.js";
 import { draftQuery } from "./content-queries.js";
@@ -99,19 +100,31 @@ export function PageScreen() {
 
 function PageView({ page }: { page: ItemDetails }) {
   const { space, canEdit } = useSpace();
-  const writable = canEdit && !page.archived && !space.archived;
+  const sharing = usePageSharing(
+    {
+      id: page.id,
+      title: page.title,
+      spaceId: space.id,
+      organizationId: space.organizationId,
+      organizationName: space.organizationName,
+      viewRestriction: page.viewRestriction,
+      editRestricted: page.editRestricted,
+    },
+    true,
+  );
+  const writable = canEdit && sharing.canEditPage !== false && !page.archived && !space.archived;
   return (
     <UploadsProvider pageId={page.id}>
       <AttachmentPreviewProvider canEdit={writable}>
         <PageDropZone enabled={writable} title={page.title}>
-          <PageArticle page={page} />
+          <PageArticle page={page} sharing={sharing} />
         </PageDropZone>
       </AttachmentPreviewProvider>
     </UploadsProvider>
   );
 }
 
-function PageArticle({ page }: { page: ItemDetails }) {
+function PageArticle({ page, sharing }: { page: ItemDetails; sharing: PageSharing }) {
   const { t } = useTranslation();
   const { space, canEdit, openMove, openCreate } = useSpace();
   const search = route.useSearch();
@@ -121,7 +134,7 @@ function PageArticle({ page }: { page: ItemDetails }) {
   const deleteItem = useDeleteItem(space);
   const { archive, unarchive } = useArchiveItem();
   const discard = useDiscardDraft();
-  const writable = canEdit && !page.archived && !space.archived;
+  const writable = canEdit && sharing.canEditPage !== false && !page.archived && !space.archived;
   const editing = writable && search.edit === true;
   const publishMode = page.mode === "publish";
   const draft = useQuery({ ...draftQuery(page.id), enabled: writable && publishMode, throwOnError: false });
@@ -290,6 +303,7 @@ function PageArticle({ page }: { page: ItemDetails }) {
                   </Button>
                 )
               ) : null}
+              {sharing.shareButton}
               <StarButton target={{ itemId: page.id }} title={title} />
               {collaboration.commentsButton}
               <IconButton label={t("versions.history")} icon={History} onClick={openHistory} />
@@ -297,6 +311,7 @@ function PageArticle({ page }: { page: ItemDetails }) {
             </>
           }
         />
+        {sharing.restrictionNote}
         {page.archived || space.archived ? (
           <Notice
             variant="warning"
@@ -350,6 +365,7 @@ function PageArticle({ page }: { page: ItemDetails }) {
           open={confirmingLive}
           onOpenChange={setConfirmingLive}
         />
+        {sharing.dialog}
         <SaveTemplateDialog
           spaceId={space.id}
           page={{ id: page.id, title }}
