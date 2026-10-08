@@ -8,7 +8,7 @@ import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.
 import { usePreferences } from "../preferences/preferences-provider.js";
 import { useSession } from "../shell/shell-context.js";
 import { type EditorActions, registerEditorActions } from "./actions.js";
-import { PageCollaboration } from "./collaboration.js";
+import { closeCollaboration, openCollaboration, type PageCollaboration } from "./collaboration.js";
 import { PageContextValue } from "./context.js";
 import { EmojiPicker } from "./emoji-picker.js";
 import { createEditorExtensions } from "./extensions/index.js";
@@ -31,6 +31,7 @@ export interface PageEditorProps {
   spaceId: string;
   spaceKey: string;
   showStatus?: boolean;
+  draft?: boolean;
   onSaveStateChange?: (state: SaveState) => void;
 }
 
@@ -39,9 +40,9 @@ const READ_ONLY_PROBLEMS = new Set(["permissionRevoked", "noEditPermission", "pa
 export function PageEditor(props: PageEditorProps) {
   const [collaboration, setCollaboration] = useState<PageCollaboration | null>(null);
   useEffect(() => {
-    const created = new PageCollaboration(props.pageId);
-    setCollaboration(created);
-    return () => created.destroy();
+    const opened = openCollaboration(props.pageId);
+    setCollaboration(opened);
+    return () => closeCollaboration(opened);
   }, [props.pageId]);
   if (!collaboration) return null;
   return <CollaborativeEditor key={props.pageId} {...props} collaboration={collaboration} />;
@@ -52,6 +53,7 @@ function CollaborativeEditor({
   spaceId,
   spaceKey,
   showStatus = true,
+  draft = false,
   onSaveStateChange,
   collaboration,
 }: PageEditorProps & { collaboration: PageCollaboration }) {
@@ -66,7 +68,6 @@ function CollaborativeEditor({
   const [findOpen, setFindOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
-  const [everSynced, setEverSynced] = useState(false);
   const account = session.account;
   const self = useMemo(
     () => (account ? { id: account.id, name: account.name, color: presenceColor(account.id) } : null),
@@ -101,6 +102,7 @@ function CollaborativeEditor({
           role: "textbox",
         },
       },
+      editable: collaboration.getSnapshot().loaded,
       immediatelyRender: true,
       shouldRerenderOnTransaction: false,
     },
@@ -110,17 +112,13 @@ function CollaborativeEditor({
   useEffect(() => (editor ? registerEditorActions(editor, actions) : undefined), [editor, actions]);
 
   useEffect(() => {
-    if (snapshot.synced) setEverSynced(true);
-  }, [snapshot.synced]);
-
-  useEffect(() => {
     onSaveStateChange?.(snapshot.saveState);
   }, [snapshot.saveState, onSaveStateChange]);
 
   useEffect(() => {
     if (!editor) return;
-    editor.setEditable(!(snapshot.problem && READ_ONLY_PROBLEMS.has(snapshot.problem)));
-  }, [editor, snapshot.problem]);
+    editor.setEditable(snapshot.loaded && !(snapshot.problem && READ_ONLY_PROBLEMS.has(snapshot.problem)));
+  }, [editor, snapshot.loaded, snapshot.problem]);
 
   useEffect(() => {
     if (!editor) return;
@@ -161,7 +159,7 @@ function CollaborativeEditor({
     selector: ({ editor: current }) => current?.isEditable ?? false,
   });
   const pageContext = useMemo(() => ({ pageId, spaceId, spaceKey }), [pageId, spaceId, spaceKey]);
-  const blocked = snapshot.problem !== null && !everSynced;
+  const blocked = snapshot.problem !== null && !snapshot.loaded;
 
   return (
     <PageContextValue value={pageContext}>
@@ -191,7 +189,7 @@ function CollaborativeEditor({
                 ) : null}
                 {showStatus ? (
                   <div className="flex shrink-0 items-center gap-2 px-1">
-                    <SaveStateIndicator state={snapshot.saveState} />
+                    <SaveStateIndicator state={snapshot.saveState} draft={draft} />
                     <AvatarStack self={self} others={others} />
                   </div>
                 ) : null}
@@ -200,7 +198,7 @@ function CollaborativeEditor({
               {findOpen ? <FindBar editor={editor} onClose={() => setFindOpen(false)} /> : null}
             </div>
             <div ref={surface} className="ph-editor-surface relative">
-              {everSynced ? null : (
+              {snapshot.loaded ? null : (
                 <div className="py-2">
                   <SkeletonText lines={4} />
                 </div>

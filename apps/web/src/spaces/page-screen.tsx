@@ -1,18 +1,47 @@
-import { Button, IconButton, Menu, PageHeader, SegmentedControl, Skeleton } from "@pagehall/ui";
+import { Button, IconButton, Menu, type MenuItem, Notice, PageHeader, Skeleton } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowRightLeft, Check, FilePlus, FileText, MoreHorizontal, Move, Pencil } from "lucide-react";
-import { lazy, Suspense, useEffect } from "react";
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowRightLeft,
+  Check,
+  FileCheck,
+  FilePlus,
+  FileText,
+  History,
+  LayoutTemplate,
+  Maximize2,
+  Minimize2,
+  MoreHorizontal,
+  Move,
+  Pencil,
+  Radio,
+  Trash2,
+  Undo2,
+} from "lucide-react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
 import { PageReadView } from "../editor/read-view.js";
+import type { SaveState } from "../editor/save-state.js";
 import { LoadError } from "../errors/failure.js";
+import { useFormat } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { EDIT_PAGE_EVENT } from "../shell/builtin.js";
+import { useArchiveItem, useDeleteItem, useDiscardDraft } from "./content-actions.js";
+import { draftQuery } from "./content-queries.js";
 import { InlineTitle } from "./inline-title.js";
 import { itemHref, itemSlug } from "./item-paths.js";
 import { PageLabels } from "./page-labels.js";
+import {
+  DraftBanner,
+  DraftStatusLine,
+  ModeSwitchDialog,
+  PublishButton,
+  useModeSwitch,
+} from "./page-publishing.js";
 import { Redirect } from "./redirect.js";
 import { spaceDisplayName } from "./space-badge.js";
 import { useSpace } from "./space-context.js";
@@ -24,6 +53,7 @@ import {
   pagePath,
   spaceKeys,
 } from "./space-queries.js";
+import { SaveTemplateDialog } from "./templates/save-template-dialog.js";
 import { useConvert } from "./tree/item-actions.js";
 
 const route = getRouteApi("/app/spaces/$spaceKey/pages/$itemId/{-$slug}");
@@ -69,7 +99,18 @@ function PageView({ page }: { page: ItemDetails }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const convert = useConvert();
-  const editing = canEdit && search.edit === true;
+  const deleteItem = useDeleteItem(space);
+  const { archive, unarchive } = useArchiveItem();
+  const discard = useDiscardDraft();
+  const writable = canEdit && !page.archived && !space.archived;
+  const editing = writable && search.edit === true;
+  const publishMode = page.mode === "publish";
+  const draft = useQuery({ ...draftQuery(page.id), enabled: writable && publishMode, throwOnError: false });
+  const saveState = useRef<SaveState>("saved");
+  const [confirmingLive, setConfirmingLive] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const switchMode = useModeSwitch(page, draft.data, () => setConfirmingLive(true));
+  const title = writable && publishMode && draft.data ? draft.data.title : page.title;
 
   const setEditing = (next: boolean) =>
     void navigate({
@@ -80,7 +121,7 @@ function PageView({ page }: { page: ItemDetails }) {
 
   useEffect(() => {
     const onEdit = () => {
-      if (canEdit) setEditing(true);
+      if (writable) setEditing(true);
     };
     globalThis.addEventListener(EDIT_PAGE_EVENT, onEdit);
     return () => globalThis.removeEventListener(EDIT_PAGE_EVENT, onEdit);
@@ -91,6 +132,7 @@ function PageView({ page }: { page: ItemDetails }) {
       api.PATCH("/api/v1/items/{itemId}", { params: { path: { itemId: page.id } }, body: changes }),
     );
     await queryClient.invalidateQueries({ queryKey: spaceKeys.item(page.id) });
+    await queryClient.invalidateQueries({ queryKey: ["items", page.id, "draft"] });
     await queryClient.invalidateQueries({ queryKey: ["spaces", space.id, "children"] });
   };
 
@@ -103,6 +145,68 @@ function PageView({ page }: { page: ItemDetails }) {
   ];
   const overview = space.overviewItemId === page.id;
   const width = page.width;
+  const openHistory = () =>
+    void navigate({
+      to: "/spaces/$spaceKey/pages/$itemId/history",
+      params: { spaceKey: space.key, itemId: page.id },
+    });
+
+  const menuItems: MenuItem[] = [];
+  if (writable) {
+    menuItems.push(
+      { label: t("tree.newPageInside"), icon: FilePlus, onSelect: () => openCreate("page", page.id) },
+      { label: t("tree.move"), icon: Move, onSelect: () => openMove(page) },
+      ...(overview
+        ? []
+        : [
+            {
+              label: t("tree.convertToFolder"),
+              icon: ArrowRightLeft,
+              onSelect: () => void convert(page, "folder", space.key),
+            },
+          ]),
+      {
+        label: width === "full" ? t("page.useFixedWidth") : t("page.useFullWidth"),
+        icon: width === "full" ? Minimize2 : Maximize2,
+        onSelect: () => void save({ width: width === "full" ? "fixed" : "full" }),
+      },
+      { type: "separator" },
+      {
+        label: publishMode ? t("versions.switchToLive") : t("versions.switchToPublish"),
+        icon: publishMode ? Radio : FileCheck,
+        onSelect: () => void switchMode(),
+      },
+      ...(publishMode && draft.data?.hasChanges && draft.data.basedOn !== null
+        ? [
+            {
+              label: t("versions.discardDraft"),
+              icon: Undo2,
+              onSelect: () => void discard(page, draft.data?.basedOn ?? null),
+            },
+          ]
+        : []),
+      {
+        label: t("templates.saveAsTemplate"),
+        icon: LayoutTemplate,
+        onSelect: () => setSavingTemplate(true),
+      },
+    );
+  }
+  menuItems.push({ label: t("versions.history"), icon: History, onSelect: openHistory });
+  if (canEdit && !space.archived && !overview) {
+    menuItems.push(
+      { type: "separator" },
+      page.archived
+        ? { label: t("archive.unarchive"), icon: ArchiveRestore, onSelect: () => void unarchive(page) }
+        : { label: t("archive.archive"), icon: Archive, onSelect: () => void archive(page) },
+      {
+        label: t("trash.moveToTrash"),
+        icon: Trash2,
+        danger: true,
+        onSelect: () => void deleteItem(page, { leave: true }),
+      },
+    );
+  }
 
   return (
     <article
@@ -110,29 +214,40 @@ function PageView({ page }: { page: ItemDetails }) {
     >
       <PageHeader
         title={
-          canEdit ? (
+          writable ? (
             <InlineTitle
-              value={page.title}
+              value={title}
               label={t("page.titleLabel")}
-              autoFocus={editing && page.title === t("tree.untitledPage")}
-              onSave={async (title) => {
-                await save({ title });
-                await navigate({ to: pagePath(space.key, page.id, itemSlug(title)), search, replace: true });
+              autoFocus={editing && title === t("tree.untitledPage")}
+              onSave={async (next) => {
+                await save({ title: next });
+                if (!publishMode || !page.published) {
+                  await navigate({ to: pagePath(space.key, page.id, itemSlug(next)), search, replace: true });
+                }
               }}
             />
           ) : (
-            page.title
+            title
           )
         }
         icon={FileText}
         breadcrumbs={breadcrumbs}
         actions={
           <>
-            {canEdit ? (
+            {writable ? (
               editing ? (
-                <Button variant="primary" icon={Check} onClick={() => setEditing(false)}>
-                  {t("page.done")}
-                </Button>
+                publishMode ? (
+                  <>
+                    <Button variant="secondary" icon={Check} onClick={() => setEditing(false)}>
+                      {t("page.done")}
+                    </Button>
+                    <PublishButton page={page} draft={draft.data} saveState={saveState} />
+                  </>
+                ) : (
+                  <Button variant="primary" icon={Check} onClick={() => setEditing(false)}>
+                    {t("page.done")}
+                  </Button>
+                )
               ) : (
                 <Button
                   variant="primary"
@@ -144,59 +259,74 @@ function PageView({ page }: { page: ItemDetails }) {
                 </Button>
               )
             ) : null}
-            {canEdit ? (
-              <Menu
-                trigger={<IconButton label={t("page.more")} icon={MoreHorizontal} />}
-                items={[
-                  {
-                    label: t("tree.newPageInside"),
-                    icon: FilePlus,
-                    onSelect: () => openCreate("page", page.id),
-                  },
-                  { label: t("tree.move"), icon: Move, onSelect: () => openMove(page) },
-                  ...(overview
-                    ? []
-                    : [
-                        {
-                          label: t("tree.convertToFolder"),
-                          icon: ArrowRightLeft,
-                          onSelect: () => void convert(page, "folder", space.key),
-                        },
-                      ]),
-                ]}
-              />
-            ) : null}
+            <IconButton label={t("versions.history")} icon={History} onClick={openHistory} />
+            <Menu trigger={<IconButton label={t("page.more")} icon={MoreHorizontal} />} items={menuItems} />
           </>
         }
       />
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <PageLabels pageId={page.id} />
-        {canEdit ? (
-          <SegmentedControl
-            label={t("page.width")}
-            value={width}
-            onValueChange={(value) => void save({ width: value as "fixed" | "full" })}
-            options={[
-              { value: "fixed", label: t("page.widthFixed") },
-              { value: "full", label: t("page.widthFull") },
-            ]}
-          />
-        ) : null}
-      </div>
+      {page.archived || space.archived ? (
+        <Notice
+          variant="warning"
+          title={page.archived ? t("archive.pageArchivedTitle") : t("archive.spaceArchivedTitle")}
+          action={
+            page.archived && canEdit && !space.archived ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                icon={ArchiveRestore}
+                onClick={() => void unarchive(page)}
+              >
+                {t("archive.unarchive")}
+              </Button>
+            ) : undefined
+          }
+        >
+          {page.archived ? t("archive.pageArchivedDescription") : t("archive.spaceArchivedDescription")}
+        </Notice>
+      ) : null}
+      {writable && publishMode ? (
+        editing ? (
+          <DraftStatusLine draft={draft.data} />
+        ) : (
+          <DraftBanner draft={draft.data} onOpen={() => setEditing(true)} />
+        )
+      ) : null}
+      <PageLabels pageId={page.id} />
       {editing ? (
         <Suspense fallback={<Skeleton className="h-field w-full" />}>
-          <PageEditor pageId={page.id} spaceId={space.id} spaceKey={space.key} />
+          <PageEditor
+            pageId={page.id}
+            spaceId={space.id}
+            spaceKey={space.key}
+            draft={publishMode}
+            onSaveStateChange={(state) => {
+              saveState.current = state;
+            }}
+          />
         </Suspense>
-      ) : (
-        <PageContent pageId={page.id} />
+      ) : writable && publishMode && !page.published ? null : (
+        <PageContent pageId={page.id} publishMode={publishMode} />
       )}
       <Backlinks pageId={page.id} />
+      <ModeSwitchDialog
+        page={page}
+        draft={draft.data}
+        open={confirmingLive}
+        onOpenChange={setConfirmingLive}
+      />
+      <SaveTemplateDialog
+        spaceId={space.id}
+        page={{ id: page.id, title }}
+        open={savingTemplate}
+        onOpenChange={setSavingTemplate}
+      />
     </article>
   );
 }
 
-function PageContent({ pageId }: { pageId: string }) {
+function PageContent({ pageId, publishMode }: { pageId: string; publishMode: boolean }) {
   const { t } = useTranslation();
+  const format = useFormat();
   const content = useQuery(contentQuery(pageId));
   if (content.isPending) return <Skeleton className="h-field w-full" />;
   if (content.isError) {
@@ -204,8 +334,16 @@ function PageContent({ pageId }: { pageId: string }) {
       <LoadError what={t("page.contentFailed")} error={content.error} onRetry={() => content.refetch()} />
     );
   }
+  const version = content.data.version;
   return (
-    <PageReadView pageId={pageId} document={content.data.document} references={content.data.references} />
+    <>
+      {publishMode && version !== null ? (
+        <p className="text-sm text-text-muted">
+          {t("versions.publishedMeta", { date: format.date(content.data.updatedAt), version })}
+        </p>
+      ) : null}
+      <PageReadView pageId={pageId} document={content.data.document} references={content.data.references} />
+    </>
   );
 }
 

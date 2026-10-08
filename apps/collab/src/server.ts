@@ -109,6 +109,7 @@ export async function createCollabServer(options: {
   const { services, logger } = runtime;
   const proxies = trustedProxyList(runtime.config.trustedProxies, { loopback: true });
   const guards = new Map<string, DocumentGuard>();
+  const node = services.documents.origin;
   const lastEditors = new Map<string, string>();
   const buckets = new WeakMap<Connection<CollabContext>, Bucket>();
   const redis = options.redisUrl
@@ -340,10 +341,30 @@ export async function createCollabServer(options: {
         throw error;
       }
     },
+    async connected({ documentName, instance: server }) {
+      const itemId = itemIdOf(documentName);
+      const document = server.documents.get(documentName);
+      if (!itemId || !document) return;
+      await services.versions
+        .touchPresence(itemId, node, document.getConnectionsCount())
+        .catch((error: unknown) => logger.warn({ err: error }, "Recording presence failed"));
+    },
+    async onDisconnect({ documentName, clientsCount }) {
+      const itemId = itemIdOf(documentName);
+      if (!itemId || clientsCount === 0) return;
+      await services.versions
+        .touchPresence(itemId, node, clientsCount)
+        .catch((error: unknown) => logger.warn({ err: error }, "Recording presence failed"));
+    },
     async afterUnloadDocument({ documentName }) {
       guards.get(documentName)?.destroy();
       guards.delete(documentName);
       lastEditors.delete(documentName);
+      const itemId = itemIdOf(documentName);
+      if (!itemId) return;
+      await services.versions
+        .endSession(itemId, node)
+        .catch((error: unknown) => logger.warn({ err: error, itemId }, "Ending an editing session failed"));
     },
     async onDestroy() {
       destroyed = true;
@@ -366,6 +387,10 @@ export async function createCollabServer(options: {
 
   const timer = setInterval(() => {
     scheduleRecheck(true);
+    const open = [...instance.documents.keys()].map(itemIdOf).filter((id): id is string => id !== null);
+    services.versions
+      .heartbeat(node, open)
+      .catch((error: unknown) => logger.warn({ err: error }, "Recording presence failed"));
     for (const document of instance.documents.values()) redis?.requestSync(document);
   }, RECHECK_INTERVAL_MS);
   timer.unref();

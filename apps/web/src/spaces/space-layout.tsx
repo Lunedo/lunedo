@@ -5,6 +5,7 @@ import {
   FilePlus,
   Folder,
   Home,
+  LayoutTemplate,
   Link2,
   ListTree,
   MoreVertical,
@@ -13,18 +14,21 @@ import {
   Plus,
   Settings,
   Shield,
+  Trash2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isApiError } from "../api/request.js";
 import { LoadError } from "../errors/failure.js";
 import { useShell } from "../shell/shell.js";
+import { ArchiveSection } from "./archive/archive-section.js";
 import { itemHref } from "./item-paths.js";
 import { Redirect } from "./redirect.js";
 import { SpaceBadge, spaceDisplayName } from "./space-badge.js";
 import { SpaceContext, type SpaceContextValue } from "./space-context.js";
 import { itemQuery, type SpaceWithRole, spaceByKeyQuery } from "./space-queries.js";
-import { CreateItemDialog, useCreatePage } from "./tree/create-item-dialog.js";
+import { TemplateGallery } from "./templates/template-gallery.js";
+import { CreateItemDialog } from "./tree/create-item-dialog.js";
 import { MoveDialog } from "./tree/move-dialog.js";
 import { PageTree } from "./tree/page-tree.js";
 
@@ -113,22 +117,22 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
     () => current.data?.ancestors.map((ancestor) => ancestor.id) ?? [],
     [current.data],
   );
-  const canEdit = space.role === "editor" || space.role === "admin";
+  const canEdit = (space.role === "editor" || space.role === "admin") && !space.archived;
   const [moving, setMoving] = useState<Parameters<SpaceContextValue["openMove"]>[0] | null>(null);
   const [creating, setCreating] = useState<{ kind: "folder" | "link"; parentId: string | null } | null>(null);
   const [treeOpen, setTreeOpen] = useState(false);
-  const createPage = useCreatePage(space);
+  const [galleryParent, setGalleryParent] = useState<string | null | undefined>(undefined);
   const context = useMemo<SpaceContextValue>(
     () => ({
       space,
       canEdit,
       openMove: (item) => setMoving(item),
       openCreate: (kind, parentId) => {
-        if (kind === "page") void createPage(parentId);
+        if (kind === "page") setGalleryParent(parentId);
         else setCreating({ kind, parentId });
       },
     }),
-    [space, canEdit, createPage],
+    [space, canEdit],
   );
   const navigation = (
     <SpaceNavigation
@@ -180,6 +184,11 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
         request={creating}
         onOpenChange={(open) => !open && setCreating(null)}
       />
+      <TemplateGallery
+        space={space}
+        parentId={galleryParent}
+        onOpenChange={(open) => !open && setGalleryParent(undefined)}
+      />
     </SpaceContext>
   );
 }
@@ -200,12 +209,13 @@ function SpaceNavigation({
   const { t } = useTranslation();
   const shell = useShell();
   const location = useLocation();
-  const canEdit = space.role === "editor" || space.role === "admin";
+  const canEdit = (space.role === "editor" || space.role === "admin") && !space.archived;
   const name = spaceDisplayName(t, space);
   const overviewHref = space.overviewItemId
     ? itemHref({ id: space.overviewItemId, kind: "page", title: name, link: null }, space.key)
     : null;
   const settingsActive = location.pathname.startsWith(`/spaces/${space.key}/settings`);
+  const trashActive = location.pathname === `/spaces/${space.key}/trash`;
   return (
     <div
       className="flex flex-col gap-1 px-2 py-4"
@@ -240,6 +250,17 @@ function SpaceNavigation({
                 onSelect: () =>
                   shell.navigate("/spaces/$spaceKey/settings/permissions", { spaceKey: space.key }),
               },
+              {
+                label: t("content.title"),
+                icon: Trash2,
+                onSelect: () => shell.navigate("/spaces/$spaceKey/settings/content", { spaceKey: space.key }),
+              },
+              {
+                label: t("templates.title"),
+                icon: LayoutTemplate,
+                onSelect: () =>
+                  shell.navigate("/spaces/$spaceKey/settings/templates", { spaceKey: space.key }),
+              },
             ]}
           />
         ) : null}
@@ -260,6 +281,19 @@ function SpaceNavigation({
             >
               <Home aria-hidden="true" className="size-icon text-text-muted" />
               {t("spaces.overview")}
+            </Link>
+          </li>
+        ) : null}
+        {canEdit ? (
+          <li>
+            <Link
+              to="/spaces/$spaceKey/trash"
+              params={{ spaceKey: space.key }}
+              aria-current={trashActive ? "page" : undefined}
+              className={`flex h-row items-center gap-2 rounded-sm px-2 focus-visible:focus-ring ${trashActive ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
+            >
+              <Trash2 aria-hidden="true" className="size-icon text-text-muted" />
+              {t("trash.sidebarLink")}
             </Link>
           </li>
         ) : null}
@@ -293,6 +327,7 @@ function SpaceNavigation({
         ) : null}
       </div>
       <PageTree space={space} currentId={currentId} ancestors={ancestors} />
+      <ArchiveSection space={space} currentId={currentId} />
     </div>
   );
 }

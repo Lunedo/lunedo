@@ -10,6 +10,7 @@ import {
   ProviderResponseError,
   RelyingPartyError,
   SessionGoneError,
+  SettingBelowMinimumError,
   SettingError,
   SettingLockedError,
   SetupNotFoundError,
@@ -111,6 +112,9 @@ function map(error: unknown): Mapped | null {
       detail: error.message,
       extensions: { problems: error.problems.slice(0, 50) },
     };
+  }
+  if (error instanceof SettingBelowMinimumError) {
+    return { code: "settingBelowMinimum", detail: error.message, extensions: { minimum: error.minimum } };
   }
   if (error instanceof SettingLockedError) {
     return { code: "settingLocked", detail: error.message, extensions: { lockedBy: error.lockedBy.level } };

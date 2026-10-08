@@ -1060,7 +1060,9 @@
     "mail": "E-Mail",
     "breakGlass": "Notfallzugriff",
     "spaces": "Spaces",
-    "personalSpaces": "Persönliche Spaces"
+    "personalSpaces": "Persönliche Spaces",
+    "pagesAndTrash": "Seiten und Papierkorb",
+    "templates": "Vorlagen"
   },
   "commands": {
     "label": "Befehlspalette",
@@ -1695,7 +1697,9 @@
       "fromOrganization": "Standard von {name}: {value}",
       "fromInstance": "Standard der Instanz: {value}",
       "fromDefault": "Standard: {value}",
-      "lockedBelow": "für untere Ebenen gesperrt"
+      "lockedBelow": "für untere Ebenen gesperrt",
+      "fromOrganizationUnnamed": "Standard der Organisation: {value}",
+      "setForSpace": "Für diesen Space festgelegt"
     },
     "units": {
       "characters": "{count, plural, one {# Zeichen} other {{value} Zeichen}}",
@@ -1711,6 +1715,10 @@
         "red": "Rot",
         "green": "Grün",
         "gray": "Grau"
+      },
+      "pageMode": {
+        "publish": "Veröffentlichen-Modus",
+        "live": "Live-Modus"
       }
     },
     "keys": {
@@ -1885,6 +1893,30 @@
       "appearance_folderView": {
         "label": "Ordneransicht",
         "description": "Zeigt den Inhalt von Ordnern als Liste oder als Kacheln."
+      },
+      "pages_defaultMode": {
+        "label": "Standardmodus neuer Seiten",
+        "description": "Im Veröffentlichen-Modus sehen Leser die zuletzt veröffentlichte Version, während Bearbeiter an einem Entwurf arbeiten. Im Live-Modus sehen Leser jede Änderung sofort. Jede Seite kann abweichen."
+      },
+      "pages_liveVersionIdleMinutes": {
+        "label": "Version nach einer Pause im Live-Modus",
+        "description": "Eine Seite im Live-Modus erhält nach dieser Zeit ohne Änderungen eine Version, oder wenn die letzte bearbeitende Person sie verlässt."
+      },
+      "trash_firstStageDays": {
+        "label": "Zeit im Papierkorb",
+        "description": "Wie lange Bearbeiter gelöschte Seiten aus dem Papierkorb eines Space wiederherstellen können."
+      },
+      "trash_secondStageDays": {
+        "label": "Zeit in der Admin-Wiederherstellung",
+        "description": "Nach dem Papierkorb können nur Organisationsadministratoren Inhalte so lange wiederherstellen. Danach werden sie endgültig gelöscht."
+      },
+      "trash_firstStageMinimumDays": {
+        "label": "Kürzeste Zeit im Papierkorb",
+        "description": "Organisationen und Spaces können keine kürzere Zeit im Papierkorb festlegen."
+      },
+      "trash_secondStageMinimumDays": {
+        "label": "Kürzeste Zeit in der Admin-Wiederherstellung",
+        "description": "Organisationen und Spaces können keine kürzere Zeit in der Admin-Wiederherstellung festlegen."
       }
     },
     "disabled": {
@@ -1902,7 +1934,8 @@
     "searchResults": "{count, plural, one {# Einstellung passt zu „{query}“} other {# Einstellungen passen zu „{query}“}}",
     "searchNone": "Keine Einstellung passt zu „{query}“. Prüfe die Schreibweise oder suche nach einem anderen Wort.",
     "searchClear": "Suche leeren",
-    "searchWhere": "{page} › {section}"
+    "searchWhere": "{page} › {section}",
+    "lockForSpaces": "Für Spaces sperren"
   },
   "security": {
     "activity": {
@@ -2922,10 +2955,33 @@
         "permissionChanged": "Space-Berechtigung geändert",
         "permissionRemoved": "Space-Berechtigung entfernt",
         "administratorAppointed": "Space-Admin ernannt",
-        "personalTransferred": "Persönlicher Space übertragen"
+        "personalTransferred": "Persönlicher Space übertragen",
+        "deleted": "Space gelöscht",
+        "restored": "Space wiederhergestellt",
+        "archived": "Space archiviert",
+        "unarchived": "Space aus dem Archiv geholt"
       },
       "page": {
-        "updateRejected": "Seitenänderung abgelehnt"
+        "updateRejected": "Seitenänderung abgelehnt",
+        "published": "Seite veröffentlicht",
+        "draftDiscarded": "Entwurf verworfen",
+        "versionRestored": "Version wiederhergestellt",
+        "modeChanged": "Bearbeitungsmodus geändert",
+        "archived": "Seite archiviert",
+        "unarchived": "Seite aus dem Archiv geholt"
+      },
+      "trash": {
+        "itemsDeleted": "In den Papierkorb verschoben",
+        "itemsRestored": "Aus dem Papierkorb wiederhergestellt",
+        "movedToStageTwo": "In die Admin-Wiederherstellung verschoben",
+        "deletedPermanently": "Endgültig gelöscht",
+        "deletedImmediately": "Sofort endgültig gelöscht",
+        "emptied": "Papierkorb geleert"
+      },
+      "template": {
+        "created": "Vorlage erstellt",
+        "updated": "Vorlage geändert",
+        "deleted": "Vorlage gelöscht"
       }
     },
     "action": "Aktion",
@@ -2966,7 +3022,9 @@
       "identityProvider": "Identitätsanbieter",
       "mappingRule": "Gruppenzuordnung",
       "space": "Space",
-      "page": "Seite"
+      "page": "Seite",
+      "trashEntry": "Papierkorbeintrag",
+      "template": "Vorlage"
     },
     "properties": {
       "value": "Wert",
@@ -3047,7 +3105,19 @@
       "sender": "Absender",
       "senderName": "Absendername",
       "url": "Adresse",
-      "previousUrl": "Vorherige Adresse"
+      "previousUrl": "Vorherige Adresse",
+      "title": "Titel",
+      "version": "Version",
+      "newVersion": "Neue Version",
+      "note": "Notiz",
+      "mode": "Modus",
+      "previousMode": "Vorheriger Modus",
+      "itemKind": "Art des Eintrags",
+      "descendants": "Untergeordnete Einträge",
+      "stage": "Stufe",
+      "cause": "Anlass",
+      "entries": "Einträge",
+      "level": "Ebene"
     },
     "values": {
       "account": "Konto",
@@ -3085,7 +3155,13 @@
       "smtp": "SMTP",
       "graph": "Microsoft Graph",
       "clientSecret": "Client-Secret",
-      "certificate": "Zertifikat"
+      "certificate": "Zertifikat",
+      "publish": "Veröffentlichen",
+      "live": "Live",
+      "expired": "Frist abgelaufen",
+      "emptied": "Papierkorb geleert",
+      "items": "Seiten",
+      "space": "Space"
     },
     "formerUser": "Ehemalige Person {id}"
   },
@@ -3416,7 +3492,8 @@
       "loading": "Seite wird geladen …",
       "missingHint": "Diese Seite gibt es noch nicht. Das Öffnen des Links legt sie an.",
       "followFailed": "Die Seite konnte nicht geöffnet werden",
-      "followFailedDescription": "Vielleicht wurde sie verschoben, oder du darfst in diesem Space keine Seiten anlegen. Versuche es erneut oder frage einen Space-Admin."
+      "followFailedDescription": "Vielleicht wurde sie verschoben, oder du darfst in diesem Space keine Seiten anlegen. Versuche es erneut oder frage einen Space-Admin.",
+      "inTrash": "Im Papierkorb"
     },
     "status": {
       "edit": "Status {text}, ändern",
@@ -3499,7 +3576,8 @@
       "saving": "Wird gespeichert …",
       "saved": "Gespeichert",
       "offline": "Offline, Änderungen bleiben in diesem Tab erhalten",
-      "error": "Nicht gespeichert"
+      "error": "Nicht gespeichert",
+      "savedDraft": "Im Entwurf gespeichert"
     },
     "toolbar": {
       "label": "Formatierung",
@@ -3603,7 +3681,9 @@
       "unsupportedMacro": "Nicht unterstütztes Makro: {name}",
       "file": "Datei",
       "image": "Bild",
-      "invalid": "Diese Seite kann nicht angezeigt werden, weil ihr gespeicherter Inhalt beschädigt ist. Bitte einen Space-Admin, eine frühere Version wiederherzustellen."
+      "invalid": "Diese Seite kann nicht angezeigt werden, weil ihr gespeicherter Inhalt beschädigt ist. Bitte einen Space-Admin, eine frühere Version wiederherzustellen.",
+      "taskDone": "Erledigt",
+      "taskOpen": "Offen"
     },
     "shortcuts": {
       "slash": "Block einfügen",
@@ -3658,6 +3738,12 @@
         "title": "Bearbeitung beendet",
         "description": "Die Verbindung zum Server wurde geschlossen. Lade neu, um weiter zu bearbeiten."
       }
+    },
+    "placeholderNode": {
+      "hint": "Hinweistext aus der Vorlage. Tippe hier, um ihn zu ersetzen."
+    },
+    "templateField": {
+      "hint": "Eingabefeld {field}: wird beim Anlegen einer Seite aus der Vorlage ausgefüllt."
     }
   },
   "spaces": {
@@ -3736,7 +3822,10 @@
       "noMatch": "Kein Space passt zum Filter",
       "noMatchDescription": "Versuch einen anderen Namen oder Schlüssel oder zeig die Spaces aller Organisationen.",
       "clearFilters": "Filter zurücksetzen",
-      "more": "Weitere Spaces zeigen"
+      "more": "Weitere Spaces zeigen",
+      "archiveFilter": "Aktive oder archivierte Spaces zeigen",
+      "activeSpaces": "Aktive Spaces",
+      "archivedSpaces": "Archivierte Spaces"
     },
     "create": {
       "action": "Space erstellen",
@@ -3895,7 +3984,10 @@
       "transferEffect": "Der neue Inhaber wird Space-Admin und kann alles lesen, was {owner} dort geschrieben hat. Die Übertragung wird im Audit-Log festgehalten.",
       "transferSubmit": "Space übertragen",
       "transferred": "Der persönliche Space von {owner} gehört jetzt {account}",
-      "transferFailed": "Der persönliche Space konnte nicht übertragen werden"
+      "transferFailed": "Der persönliche Space konnte nicht übertragen werden",
+      "delete": "Persönlichen Space löschen",
+      "deleteTitle": "Persönlichen Space von {owner} löschen?",
+      "deleted": "Persönlicher Space gelöscht. Du kannst ihn während der Admin-Wiederherstellung unter Seiten und Papierkorb zurückholen."
     }
   },
   "tree": {
@@ -4011,10 +4103,338 @@
     "width": "Seitenbreite",
     "widthFixed": "Fest",
     "widthFull": "Voll",
-    "backlinks": "{count, plural, one {Verlinkt von # Seite} other {Verlinkt von # Seiten}}"
+    "backlinks": "{count, plural, one {Verlinkt von # Seite} other {Verlinkt von # Seiten}}",
+    "useFixedWidth": "Feste Breite verwenden",
+    "useFullWidth": "Volle Breite verwenden"
   },
   "pageTitle": {
     "edit": "{title} umbenennen",
     "saveFailed": "Der Titel konnte nicht gespeichert werden"
+  },
+  "content": {
+    "title": "Seiten und Papierkorb",
+    "spaceDescription": "Wie Seiten dieses Space veröffentlicht werden und wie lange gelöschte Inhalte wiederherstellbar sind.",
+    "organizationDescription": "Standards für alle Spaces der Organisation und darin gelöschte Inhalte.",
+    "instanceDescription": "Standards für alle Organisationen, die kürzesten Fristen im Papierkorb und gelöschte persönliche Spaces.",
+    "pagesSection": "Seiten",
+    "trashSection": "Papierkorb",
+    "minimumHint": "Die kürzesten Fristen gelten für alle Organisationen und Spaces; längere Fristen sind immer möglich.",
+    "dangerZone": "Gefahrenbereich",
+    "deleteSpace": "Space löschen",
+    "deleteSpaceDescription": "Verschiebt den Space mit allen Seiten in die Admin-Wiederherstellung. Nur Organisationsadministratoren können ihn bis zum Ende dieser Frist wiederherstellen.",
+    "deleteSpaceTitle": "{name} löschen?",
+    "deleteSpaceConsequences": "Niemand kann den Space oder seine Seiten mehr öffnen. Links auf seine Seiten funktionieren nicht mehr. Organisationsadministratoren können ihn während der Admin-Wiederherstellung zurückholen; danach wird er endgültig gelöscht.",
+    "deletePersonalSpaceConsequences": "Niemand kann den persönlichen Space oder seine Seiten mehr öffnen. Instanzadministratoren können ihn während der Admin-Wiederherstellung zurückholen; danach wird er endgültig gelöscht.",
+    "keepSpace": "Space behalten",
+    "typeName": "Gib {name} zur Bestätigung ein",
+    "nameMismatch": "Der Name stimmt nicht überein. Gib ihn genau wie angezeigt ein.",
+    "spaceDeleted": "{name} gelöscht",
+    "deleteFailed": "Der Space konnte nicht gelöscht werden"
+  },
+  "archive": {
+    "archive": "Archivieren",
+    "unarchive": "Aus dem Archiv holen",
+    "archived": "„{title}“ archiviert",
+    "archivedDescription": "Die Seite ist jetzt schreibgeschützt und steht im Archiv des Space.",
+    "unarchived": "„{title}“ zurückgeholt",
+    "backAtPlace": "Sie steht wieder an ihrem alten Platz im Seitenbaum.",
+    "backAtTop": "Ihr alter Platz existiert nicht mehr, daher steht sie auf der obersten Ebene des Seitenbaums.",
+    "archiveFailed": "Die Seite konnte nicht archiviert werden",
+    "unarchiveFailed": "Die Seite konnte nicht zurückgeholt werden",
+    "pageArchivedTitle": "Archiviert",
+    "pageArchivedDescription": "Diese Seite ist schreibgeschützt. Hole sie aus dem Archiv, um sie zu ändern.",
+    "spaceArchivedTitle": "Dieser Space ist archiviert",
+    "spaceArchivedDescription": "Seine Seiten sind schreibgeschützt. Ein Space-Admin kann den Space zurückholen.",
+    "archiveSpace": "Space archivieren",
+    "unarchiveSpace": "Space zurückholen",
+    "archiveSpaceDescription": "Macht alle Seiten schreibgeschützt und blendet den Space in der Standardliste aus. Du kannst ihn jederzeit zurückholen.",
+    "unarchiveSpaceDescription": "Macht die Seiten wieder bearbeitbar und zeigt den Space wieder in der Liste.",
+    "archiveSpaceTitle": "{name} archivieren?",
+    "archiveSpaceConfirm": "Niemand kann seine Seiten ändern, bis der Space zurückgeholt wird. Leser behalten ihren Zugriff, Versionen und Links bleiben erhalten.",
+    "keepSpaceActive": "Space aktiv lassen",
+    "spaceArchived": "{name} archiviert",
+    "spaceUnarchived": "{name} zurückgeholt",
+    "spaceFailed": "Der Archivstatus konnte nicht geändert werden",
+    "sectionTitle": "Archiv",
+    "sectionEmpty": "Archivierte Seiten erscheinen hier."
+  },
+  "trash": {
+    "title": "Papierkorb",
+    "description": "Gelöschte Seiten, Ordner und Links dieses Space. Stelle sie mit ihrem Verlauf wieder her, bevor sie in die Admin-Wiederherstellung wechseln.",
+    "editorsOnly": "Nur Bearbeiter und Space-Admins sehen den Papierkorb.",
+    "loadFailed": "Der Papierkorb konnte nicht geladen werden",
+    "emptyTitle": "Der Papierkorb ist leer",
+    "emptyDescription": "Gelöschte Seiten, Ordner und Links erscheinen hier und können wiederhergestellt werden.",
+    "columns": {
+      "item": "Eintrag",
+      "space": "Space",
+      "deletedBy": "Gelöscht von",
+      "deletedAt": "Gelöscht am",
+      "stage": "Stufe",
+      "removedIn": "Endgültig gelöscht in",
+      "actions": "Aktionen"
+    },
+    "days": "{count, plural, one {# Tag} other {# Tagen}}",
+    "wholeSpace": "Ganzer Space",
+    "withDescendants": "{count, plural, one {Mit # untergeordneten Eintrag} other {Mit # untergeordneten Einträgen}}",
+    "kinds": {
+      "page": "Seite",
+      "folder": "Ordner",
+      "link": "Link"
+    },
+    "unknownPerson": "Unbekannte Person",
+    "stageOne": "Papierkorb",
+    "stageTwo": "Admin-Wiederherstellung",
+    "restore": "Wiederherstellen",
+    "restored": "„{title}“ wiederhergestellt",
+    "restoredAtPlace": "Der Eintrag steht wieder an seinem alten Platz im Seitenbaum.",
+    "restoredAtTop": "Sein alter Platz existiert nicht mehr, daher steht er auf der obersten Ebene des Seitenbaums.",
+    "restoreFailed": "Der Eintrag konnte nicht wiederhergestellt werden",
+    "open": "Öffnen",
+    "moveToTrash": "In den Papierkorb",
+    "deleted": "„{title}“ in den Papierkorb verschoben",
+    "deletedDescription": "Du kannst ihn jederzeit aus dem Papierkorb des Space wiederherstellen.",
+    "deletedWithDescendants": "{count, plural, one {Zusammen mit # untergeordneten Eintrag.} other {Zusammen mit # untergeordneten Einträgen.}}",
+    "deleteFailed": "Der Eintrag konnte nicht gelöscht werden",
+    "dangerZone": "Gefahrenbereich",
+    "emptyTrash": "Papierkorb leeren",
+    "emptyTrashDescription": "{count, plural, one {Verschiebt # Eintrag in die Admin-Wiederherstellung, wo nur Organisationsadministratoren ihn wiederherstellen können.} other {Verschiebt # Einträge in die Admin-Wiederherstellung, wo nur Organisationsadministratoren sie wiederherstellen können.}}",
+    "emptyTrashAction": "{count, plural, one {Papierkorb mit # Eintrag leeren} other {Papierkorb mit # Einträgen leeren}}",
+    "emptyConfirmTitle": "{count, plural, one {Papierkorb mit # Eintrag leeren?} other {Papierkorb mit # Einträgen leeren?}}",
+    "emptyConfirmDescription": "Bearbeiter können diese Einträge nicht mehr wiederherstellen. Organisationsadministratoren können sie bis zum Ende der Admin-Wiederherstellung zurückholen; danach werden sie endgültig gelöscht.",
+    "keepEntries": "Einträge behalten",
+    "emptied": "{count, plural, one {# Eintrag in die Admin-Wiederherstellung verschoben} other {# Einträge in die Admin-Wiederherstellung verschoben}}",
+    "emptyFailed": "Der Papierkorb konnte nicht geleert werden",
+    "deletedContent": "Gelöschte Inhalte",
+    "deletedContentDescription": "Alles, was in den Spaces dieser Organisation gelöscht wurde, und gelöschte Spaces. Stelle es wieder her oder lösche es sofort endgültig, etwa für eine Löschanfrage.",
+    "deletedPersonal": "Gelöschte persönliche Spaces",
+    "deletedPersonalDescription": "Gelöschte persönliche Spaces und Inhalte persönlicher Spaces in der Admin-Wiederherstellung.",
+    "nothingDeletedTitle": "Nichts gelöscht",
+    "nothingDeletedDescription": "Gelöschte Seiten und Spaces erscheinen hier, bis sie endgültig gelöscht werden.",
+    "deleteNow": "Endgültig löschen",
+    "deleteNowTitle": "„{title}“ endgültig löschen?",
+    "deleteNowConsequences": "Das kann nicht rückgängig gemacht werden:",
+    "consequenceItems": "{count, plural, one {# Eintrag wird sofort gelöscht.} other {# Einträge werden sofort gelöscht.}}",
+    "consequenceSpace": "Der ganze Space mit allen Seiten wird sofort gelöscht.",
+    "consequenceVersions": "Alle Versionen, Entwürfe, Labels und Links davon werden entfernt.",
+    "consequenceAudit": "Die Löschung und ihr Grund werden im Audit-Log festgehalten.",
+    "reason": "Grund",
+    "reasonHint": "Zum Beispiel die Löschanfrage und ihr Aktenzeichen. Der Grund wird im Audit-Log gespeichert.",
+    "reasonRequired": "Gib einen Grund mit höchstens {max} Zeichen an.",
+    "typeTitle": "Gib {title} zur Bestätigung ein",
+    "titleMismatch": "Der Titel stimmt nicht überein. Gib ihn genau wie angezeigt ein.",
+    "keepEntry": "Eintrag behalten",
+    "deleteNowAction": "Endgültig löschen",
+    "deletedNow": "„{title}“ endgültig gelöscht",
+    "deleteNowFailed": "Der Eintrag konnte nicht gelöscht werden",
+    "sidebarLink": "Papierkorb",
+    "moreActionsFor": "Weitere Aktionen für {title}"
+  },
+  "templates": {
+    "title": "Vorlagen",
+    "spaceDescription": "Vorlagen für neue Seiten in diesem Space. Bearbeiter können jede Seite als Vorlage speichern.",
+    "organizationDescription": "Vorlagen, die in allen Spaces der Organisation angeboten werden.",
+    "instanceDescription": "Vorlagen, die in allen Organisationen angeboten werden. Die eingebauten Vorlagen gibt es immer zusätzlich.",
+    "loadFailed": "Die Vorlagen konnten nicht geladen werden",
+    "create": "Vorlage erstellen",
+    "createAction": "Vorlage erstellen",
+    "createTitle": "Neue Vorlage",
+    "editTitle": "Vorlage ändern",
+    "saveChanges": "Vorlage speichern",
+    "emptyTitle": "Noch keine Vorlagen",
+    "emptyDescription": "Vorlagen, die du hier erstellst, erscheinen in der Galerie beim Anlegen einer Seite.",
+    "name": "Name",
+    "description": "Beschreibung",
+    "descriptionHint": "Ein Satz, wann man die Vorlage verwendet.",
+    "category": "Kategorie",
+    "fields": "Eingabefelder",
+    "fieldsHint": "Werden beim Anlegen einer Seite abgefragt. Verwende sie als '{key}' im Seitentitel und füge sie in den Inhalt ein.",
+    "updated": "Geändert",
+    "actions": "Aktionen",
+    "actionsFor": "Aktionen für {name}",
+    "edit": "Ändern",
+    "delete": "Vorlage löschen",
+    "deleteTitle": "{name} löschen?",
+    "deleteDescription": "Die Vorlage verschwindet aus der Galerie. Damit erstellte Seiten bleiben unverändert.",
+    "keep": "Vorlage behalten",
+    "deleted": "{name} gelöscht",
+    "deleteFailed": "Die Vorlage konnte nicht gelöscht werden",
+    "savedTemplate": "{name} gespeichert",
+    "saveFailed": "Die Vorlage konnte nicht gespeichert werden",
+    "nameInvalid": "Gib einen Namen mit höchstens 100 Zeichen ein.",
+    "titleInvalid": "Gib einen Seitentitel mit höchstens 255 Zeichen ein.",
+    "unknownTitleField": "Der Titel verwendet {key}, aber es gibt kein Eingabefeld mit diesem Schlüssel. Füge das Feld hinzu oder entferne es aus dem Titel.",
+    "pageTitle": "Titel neuer Seiten",
+    "pageTitleHint": "Füge Eingabefelder mit ihrem Schlüssel in geschweiften Klammern ein.",
+    "pageTitleExample": "Projekt '{name}'",
+    "fieldLabel": "Bezeichnung",
+    "fieldKey": "Schlüssel",
+    "fieldKeyHint": "Buchstaben und Ziffern, beginnend mit einem Kleinbuchstaben.",
+    "fieldType": "Art",
+    "fieldTypes": {
+      "text": "Text",
+      "date": "Datum",
+      "person": "Person",
+      "choice": "Auswahl"
+    },
+    "required": "Pflichtfeld",
+    "removeField": "Feld {name} entfernen",
+    "addField": "Eingabefeld hinzufügen",
+    "options": "Optionen",
+    "optionsHint": "Eine Option pro Zeile.",
+    "optionsRequired": "Eine Auswahl braucht mindestens eine Option.",
+    "keyInvalid": "Verwende einen eindeutigen Schlüssel aus Buchstaben und Ziffern, der mit einem Kleinbuchstaben beginnt.",
+    "labelRequired": "Gib eine Bezeichnung ein.",
+    "content": "Inhalt",
+    "contentHint": "Füge Hinweistexte ein, die beim Tippen verschwinden, und Eingabefelder, die beim Anlegen ausgefüllt werden.",
+    "insertField": "Eingabefeld",
+    "noFieldsYet": "Lege zuerst oben Eingabefelder an.",
+    "insertPlaceholder": "Hinweistext",
+    "placeholderText": "Hinweistext",
+    "placeholderHint": "Wird grau angezeigt, bis jemand dort zu tippen beginnt.",
+    "placeholderExample": "Beschreibe das Ziel in einem Satz.",
+    "placeholderInvalid": "Gib einen Hinweistext mit höchstens 500 Zeichen ein.",
+    "insert": "Einfügen",
+    "saveAsTemplate": "Als Vorlage speichern",
+    "saveTitle": "Als Vorlage speichern",
+    "saveDescription": "Der aktuelle Inhalt einschließlich Entwurf wird zu einer Vorlage dieses Space. Space-Admins können später Eingabefelder ergänzen.",
+    "saveAction": "Vorlage speichern",
+    "saved": "Vorlage {name} gespeichert",
+    "categories": {
+      "meetings": "Besprechungen",
+      "decisions": "Entscheidungen",
+      "projects": "Projekte",
+      "engineering": "Produkt und Entwicklung",
+      "operations": "Betrieb",
+      "knowledge": "Wissen",
+      "teams": "Teams"
+    }
+  },
+  "versions": {
+    "history": "Versionsverlauf",
+    "historyTitle": "Verlauf",
+    "historyOf": "Verlauf von {title}",
+    "historyHint": "Wiederherstellen erzeugt einen neuen Stand. Im Verlauf geht nichts verloren.",
+    "loadFailed": "Die Versionen konnten nicht geladen werden",
+    "emptyTitle": "Noch keine Versionen",
+    "emptyLive": "Eine Version entsteht nach einer Pause beim Bearbeiten oder wenn die letzte bearbeitende Person die Seite verlässt.",
+    "emptyPublish": "Jede Veröffentlichung erzeugt eine Version.",
+    "list": "Versionen",
+    "draft": "Entwurf",
+    "draftBadge": "Entwurf",
+    "versionNumber": "Version {number}",
+    "now": "jetzt",
+    "formerPerson": "Ehemalige Person",
+    "reasons": {
+      "published": "Veröffentlicht",
+      "session": "Bearbeitungssitzung",
+      "restored": "Aus Version {number} wiederhergestellt",
+      "modeChanged": "Bearbeitungsmodus geändert"
+    },
+    "draftChanges": "{count, plural, one {# Änderung, nicht veröffentlicht} other {# Änderungen, nicht veröffentlicht}}",
+    "compare": "Vergleichen",
+    "with": "mit",
+    "compareFrom": "Älterer Stand",
+    "compareTo": "Neuerer Stand",
+    "view": "Ansicht",
+    "inline": "Im Text",
+    "sideBySide": "Nebeneinander",
+    "comparison": "Vergleich",
+    "compareFailed": "Der Vergleich konnte nicht geladen werden",
+    "noDifferences": "Keine Unterschiede",
+    "changeCount": "{count, plural, one {# Änderung} other {# Änderungen}}",
+    "added": "Hinzugefügt",
+    "removed": "Entfernt",
+    "changes": "Änderungen",
+    "titleChanged": "Titel:",
+    "diff": {
+      "moved": "Verschoben",
+      "attributes": "Geändert: {names}"
+    },
+    "restoreVersion": "Version {number} wiederherstellen",
+    "restoreTitle": "Version {number} wiederherstellen?",
+    "restorePublish": "Der Entwurf erhält Inhalt und Titel von Version {number}. Prüfe ihn und veröffentliche ihn, damit Leser ihn sehen.",
+    "restorePublishWithDraft": "{count, plural, one {Der Entwurf erhält Inhalt und Titel von Version {number}. Prüfe ihn und veröffentliche ihn, damit Leser ihn sehen. Der aktuelle Entwurf mit # Änderung bleibt 30 Tage erhalten und kann wiederhergestellt werden.} other {Der Entwurf erhält Inhalt und Titel von Version {number}. Prüfe ihn und veröffentliche ihn, damit Leser ihn sehen. Der aktuelle Entwurf mit # Änderungen bleibt 30 Tage erhalten und kann wiederhergestellt werden.}}",
+    "restoreLive": "Die Seite erhält sofort den Inhalt von Version {number} als neue Version. Leser sehen sie sofort. Im Verlauf geht nichts verloren.",
+    "keepCurrent": "Aktuelle Seite behalten",
+    "restoredAsDraft": "Version {number} ist jetzt der Entwurf. Veröffentliche ihn, damit Leser ihn sehen.",
+    "restoredAsVersion": "Version {number} als Version {version} wiederhergestellt.",
+    "restoreFailed": "Die Version konnte nicht wiederhergestellt werden",
+    "discardedTitle": "Verworfene Entwürfe",
+    "discardedBadge": "Verworfen",
+    "replacedBadge": "Ersetzt",
+    "discardedDetail": "{time} · erhalten bis {expires}",
+    "restoreAsDraft": "Als Entwurf wiederherstellen",
+    "discardedRestored": "Der verworfene Entwurf ist wieder der Entwurf.",
+    "publish": "Veröffentlichen",
+    "publishTitle": "Entwurf veröffentlichen",
+    "publishVersion": "Version {version} veröffentlichen",
+    "publishHint": "Leser sehen Version {current}, bis du veröffentlichst. Das Veröffentlichen erzeugt Version {version}.",
+    "publishFirstHint": "Bis zur Veröffentlichung sehen nur Bearbeiter diese Seite.",
+    "ancestorUnpublishedTitle": "Leser sehen diese Seite noch nicht",
+    "ancestorUnpublished": "Sie liegt unter {names}, {count, plural, one {die noch nicht veröffentlicht ist} other {die noch nicht veröffentlicht sind}}. Leser sehen diese Seite, sobald {count, plural, one {diese Seite} other {diese Seiten}} veröffentlicht {count, plural, one {ist} other {sind}}. Hier wird nur diese Seite veröffentlicht.",
+    "quotedTitle": "„{title}“",
+    "note": "Was hat sich geändert?",
+    "noteHint": "Optional. Erscheint im Versionsverlauf.",
+    "notePlaceholder": "Abschnitt zu verlorenen Geräten ergänzt",
+    "noteTooLong": "Kürze die Notiz auf {max} Zeichen.",
+    "notSavedYet": "Die letzten Änderungen sind noch nicht gespeichert. Prüfe die Verbindung und versuche es erneut.",
+    "published": "Als Version {version} veröffentlicht. Leser sehen sie jetzt.",
+    "alreadyPublished": "Nichts Neues zu veröffentlichen. Leser sehen bereits Version {version}.",
+    "publishFailed": "Der Entwurf konnte nicht veröffentlicht werden",
+    "changesSince": "{count, plural, one {# Änderung seit Version {version}} other {# Änderungen seit Version {version}}}",
+    "noChangesSince": "Keine Änderungen seit Version {version}",
+    "readersSee": "Leser sehen Version {version}, bis du veröffentlichst",
+    "notPublishedYet": "Noch nicht veröffentlicht",
+    "onlyEditorsSee": "Bis zur Veröffentlichung sehen nur Bearbeiter diese Seite",
+    "openDraft": "Entwurf öffnen",
+    "draftBanner": "{count, plural, one {Es gibt einen Entwurf mit # unveröffentlichten Änderung. Du siehst die veröffentlichte Version.} other {Es gibt einen Entwurf mit # unveröffentlichten Änderungen. Du siehst die veröffentlichte Version.}}",
+    "draftBannerBy": "{count, plural, one {{names} hat an einem Entwurf mit # unveröffentlichten Änderung gearbeitet. Du siehst die veröffentlichte Version.} other {{names} hat an einem Entwurf mit # unveröffentlichten Änderungen gearbeitet. Du siehst die veröffentlichte Version.}}",
+    "unpublishedBanner": "Diese Seite ist noch nicht veröffentlicht. Bis jemand sie veröffentlicht, sehen sie nur Bearbeiter.",
+    "discardDraft": "Entwurf verwerfen",
+    "discarded": "Entwurf verworfen",
+    "discardedDescription": "Der Entwurf ist für alle Bearbeitenden wieder auf Version {version}.",
+    "discardFailed": "Der Entwurf konnte nicht verworfen werden",
+    "undoFailed": "Der Entwurf konnte nicht zurückgeholt werden",
+    "switchToLive": "In den Live-Modus wechseln",
+    "switchToPublish": "In den Veröffentlichen-Modus wechseln",
+    "modeLive": "Live-Modus ist aktiv. Leser sehen jede Änderung sofort.",
+    "modePublish": "Veröffentlichen-Modus ist aktiv. Der aktuelle Stand ist veröffentlicht; weitere Änderungen bleiben im Entwurf.",
+    "modeFailed": "Der Bearbeitungsmodus konnte nicht geändert werden",
+    "toLiveTitle": "In den Live-Modus wechseln?",
+    "toLiveDraft": "{count, plural, one {Der Entwurf mit # unveröffentlichten Änderung wird sofort für Leser sichtbar.} other {Der Entwurf mit # unveröffentlichten Änderungen wird sofort für Leser sichtbar.}}",
+    "toLiveUnpublished": "Die Seite wurde nie veröffentlicht. Sie wird sofort für Leser sichtbar.",
+    "toLiveConfirm": "Wechseln und Entwurf zeigen",
+    "keepPublishMode": "Veröffentlichen-Modus behalten",
+    "notPublishedTitle": "Noch nicht veröffentlicht",
+    "notPublishedDescription": "Bis jemand die Seite veröffentlicht, sehen sie nur Bearbeiter.",
+    "publishedMeta": "Veröffentlicht am {date} · Version {version}"
+  },
+  "gallery": {
+    "title": "In {space} erstellen",
+    "search": "Vorlagen durchsuchen",
+    "searchPlaceholder": "Besprechung, Entscheidung, Anleitung …",
+    "category": "Kategorie",
+    "allCategories": "Alle Kategorien",
+    "templates": "Vorlagen",
+    "loadFailed": "Die Vorlagen konnten nicht geladen werden",
+    "blank": "Leere Seite",
+    "blankDescription": "Ohne Vorlage beginnen.",
+    "levels": {
+      "instance": "Von der Instanz",
+      "organization": "Von der Organisation",
+      "space": "Aus diesem Space"
+    },
+    "noResults": "Keine Vorlagen gefunden",
+    "noResultsDescription": "Versuche ein anderes Wort oder eine andere Kategorie.",
+    "clearFilters": "Filter zurücksetzen",
+    "preview": "Vorschau",
+    "noInput": "Diese Vorlage braucht keine Eingaben. Die Seite beginnt mit ihrer Struktur.",
+    "required": "Gib {label} an.",
+    "optional": "Optional",
+    "choose": "Auswählen",
+    "searchPerson": "Person suchen",
+    "createFrom": "Mit {name} erstellen",
+    "createBlank": "Leere Seite erstellen"
   }
 }

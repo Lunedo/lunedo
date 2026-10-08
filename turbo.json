@@ -3,6 +3,14 @@
   "agentGuidance": false,
   "ui": "stream",
   "globalDependencies": ["biome.json", "packages/config/tsconfig/*.json", ".github/workflows/ci.yml"],
+  "globalPassThroughEnv": [
+    "GITHUB_ENV",
+    "GITHUB_EVENT_NAME",
+    "GITHUB_EVENT_PATH",
+    "GITHUB_OUTPUT",
+    "GITHUB_SHA",
+    "GITHUB_STEP_SUMMARY"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

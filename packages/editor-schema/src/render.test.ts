@@ -282,6 +282,18 @@ describe("renderHtml", () => {
     expect(html).toBe('<p><span class="ph-page-link" data-access="none">Kein Zugriff</span></p>');
   });
 
+  it("marks links to pages in the trash for people who could read them", () => {
+    const link = doc(paragraph({ type: "pageLink", attrs: { pageId: PAGE, title: "Old title" } }));
+    const context = {
+      pageLink: () => ({ href: "", title: "Printer list", accessible: false, inTrash: true }),
+      labels: { inTrash: "Im Papierkorb" },
+    };
+    expect(renderHtml(link, context)).toBe(
+      '<p><span class="ph-page-link" data-state="trash">Printer list (Im Papierkorb)</span></p>',
+    );
+    expect(renderMarkdown(link, context).trim()).toBe("Printer list (Im Papierkorb)");
+  });
+
   it("uses translated labels", () => {
     const html = renderHtml(
       doc(
@@ -425,5 +437,55 @@ describe("renderMarkdown", () => {
     expect(markdown).toBe(
       "<details>\n<summary>More &lt;info&gt;</summary>\n\nBody\n\n</details>\n\n2. Two\n   - Sub\n",
     );
+  });
+});
+
+describe("template nodes", () => {
+  const document = {
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [
+          { type: "templateField", attrs: { field: "name" } },
+          { type: "placeholder", attrs: { text: "Describe the goal" } },
+        ],
+      },
+    ],
+  };
+
+  it("hides placeholder instructions from readers and shows them in previews", () => {
+    expect(renderHtml(document)).not.toContain("Describe the goal");
+    expect(renderHtml(document, { showPlaceholders: true })).toContain(
+      '<span class="ph-placeholder">Describe the goal</span>',
+    );
+    expect(renderMarkdown(document)).not.toContain("Describe the goal");
+  });
+
+  it("shows unfilled template fields by their key", () => {
+    expect(renderHtml(document)).toContain('data-field="name"');
+    expect(renderMarkdown(document)).toContain("{name}");
+  });
+});
+
+describe("task items", () => {
+  it("name their checkbox so screen readers can tell done from open tasks", () => {
+    const html = renderHtml(
+      {
+        type: "doc",
+        content: [
+          {
+            type: "taskList",
+            content: [
+              { type: "taskItem", attrs: { checked: true }, content: [paragraph(text("Done"))] },
+              { type: "taskItem", attrs: { checked: false }, content: [paragraph(text("Open"))] },
+            ],
+          },
+        ],
+      },
+      { labels: { taskDone: "Erledigt", taskOpen: "Offen" } },
+    );
+    expect(html).toContain('<input type="checkbox" disabled aria-label="Erledigt" checked>');
+    expect(html).toContain('<input type="checkbox" disabled aria-label="Offen">');
   });
 });

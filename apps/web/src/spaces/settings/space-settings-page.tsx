@@ -7,6 +7,15 @@ import { useDocumentTitle } from "../../screens/settings/settings-page.js";
 import { spaceDisplayName } from "../space-badge.js";
 import { useSpace } from "../space-context.js";
 
+export type SpaceSettingsTab = "general" | "permissions" | "content" | "templates";
+
+const TAB_PATHS = {
+  general: "/spaces/$spaceKey/settings/general",
+  permissions: "/spaces/$spaceKey/settings/permissions",
+  content: "/spaces/$spaceKey/settings/content",
+  templates: "/spaces/$spaceKey/settings/templates",
+} as const;
+
 export function SpaceSettingsPage({
   tab,
   title,
@@ -14,7 +23,7 @@ export function SpaceSettingsPage({
   icon,
   children,
 }: {
-  tab: "general" | "permissions";
+  tab: SpaceSettingsTab;
   title: string;
   description: string;
   icon: LucideIcon;
@@ -37,17 +46,13 @@ export function SpaceSettingsPage({
         label={t("spaces.settings.title")}
         value={tab}
         onValueChange={(value) =>
-          void navigate({
-            to:
-              value === "general"
-                ? "/spaces/$spaceKey/settings/general"
-                : "/spaces/$spaceKey/settings/permissions",
-            params: { spaceKey: space.key },
-          })
+          void navigate({ to: TAB_PATHS[value as SpaceSettingsTab], params: { spaceKey: space.key } })
         }
         tabs={[
           { value: "general", label: t("spaces.settings.general") },
           { value: "permissions", label: t("spaces.settings.permissions") },
+          { value: "content", label: t("content.title") },
+          { value: "templates", label: t("templates.title") },
         ]}
       >
         {children}

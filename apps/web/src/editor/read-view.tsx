@@ -21,6 +21,7 @@ export function readViewContext(references: References, t: TFunction, format: Fo
       if (link.pageId) {
         const page = references.pages[link.pageId];
         if (!page) return null;
+        if (page.inTrash) return { href: "", title: page.title, accessible: false, inTrash: true };
         return page.accessible
           ? { href: pagePath(page.spaceKey, link.pageId, page.title), title: page.title, accessible: true }
           : { href: "", title: "", accessible: false };
@@ -31,6 +32,9 @@ export function readViewContext(references: References, t: TFunction, format: Fo
     formatDate: (iso) => (isIsoDate(iso) ? format.date(`${iso}T12:00:00Z`) : iso),
     labels: {
       noAccess: t("editor.pageLink.noAccess"),
+      inTrash: t("editor.pageLink.inTrash"),
+      taskDone: t("editor.readView.taskDone"),
+      taskOpen: t("editor.readView.taskOpen"),
       untitledPage: t("editor.readView.untitledPage"),
       unknownPerson: t("editor.mention.unknown"),
       unsupportedMacro: t("editor.readView.unsupportedMacro"),

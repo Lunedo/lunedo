@@ -28,7 +28,7 @@ import { SaveIndicator, useSaveState } from "./auto-save.js";
 import { SettingControl } from "./setting-control.js";
 import { disabledReason, inheritedValue, SettingSource } from "./setting-source.js";
 
-type Level = "instance" | "organization";
+type Level = "instance" | "organization" | "space";
 
 export function useSettingValueFormatter() {
   const { t, i18n } = useTranslation();
@@ -175,7 +175,11 @@ function SettingItem({
               }
             : {
                 label:
-                  level === "instance" ? t("settings.lockForOrganizations") : t("settings.lockForMembers"),
+                  level === "instance"
+                    ? t("settings.lockForOrganizations")
+                    : entry.levelsBelow.includes("space")
+                      ? t("settings.lockForSpaces")
+                      : t("settings.lockForMembers"),
                 icon: Lock,
                 onSelect: () => setConfirmingLock(true),
               },
@@ -227,7 +231,11 @@ function SettingItem({
               })
         }
         confirmLabel={
-          level === "instance" ? t("settings.lockForOrganizations") : t("settings.lockForMembers")
+          level === "instance"
+            ? t("settings.lockForOrganizations")
+            : entry.levelsBelow.includes("space")
+              ? t("settings.lockForSpaces")
+              : t("settings.lockForMembers")
         }
         cancelLabel={t("common.cancel")}
         onConfirm={async () => {

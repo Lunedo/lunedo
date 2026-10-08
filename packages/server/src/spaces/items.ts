@@ -4,12 +4,16 @@ import type { Principal } from "../accounts/principal.js";
 import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
 import { type AccessImpact, accessImpact } from "../authorization/space-access.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
+import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, currentGrants, SpaceError } from "./common.js";
 import { insertInitialDocument, type PageDocumentService } from "./documents.js";
 import { positionBetween } from "./fractional-index.js";
 import type { PeopleService } from "./people.js";
-import type { PageWidth, TreeItemKind } from "./schema.js";
+import type { PageMode, PageWidth, TreeItemKind } from "./schema.js";
+import { defaultPageModeSetting } from "./settings.js";
 import { signalSpaceChange } from "./signals.js";
+import { insertFirstVersion, type VersionService } from "./versions.js";
+import { publishedFor, refreshReaderVisibility, visibleItem } from "./visibility.js";
 
 export const ITEM_TITLE_MAX_LENGTH = 255;
 export const ITEM_DESCRIPTION_MAX_LENGTH = 1000;
@@ -20,6 +24,7 @@ export interface ItemLink {
   itemId: string | null;
   url: string | null;
   accessible: boolean;
+  inTrash: boolean;
   target: { spaceId: string; spaceKey: string; kind: TreeItemKind; title: string } | null;
 }
 
@@ -31,6 +36,9 @@ export interface TreeItem {
   title: string;
   description: string;
   width: PageWidth;
+  mode: PageMode;
+  published: boolean;
+  archived: boolean;
   position: string;
   hasChildren: boolean;
   link: ItemLink | null;
@@ -44,7 +52,7 @@ export interface TreeItem {
 export interface ItemDetails extends TreeItem {
   spaceKey: string;
   spaceName: string;
-  ancestors: { id: string; kind: TreeItemKind; title: string }[];
+  ancestors: { id: string; kind: TreeItemKind; title: string; published: boolean }[];
 }
 
 export interface Placement {
@@ -61,11 +69,15 @@ type ItemRow = {
   title: string;
   description: string;
   width: PageWidth;
+  mode: PageMode;
+  published: boolean;
+  archived: boolean;
   position: string;
   has_children: boolean;
   link_item_id: string | null;
   link_url: string | null;
   link_accessible: boolean | null;
+  link_in_trash: boolean | null;
   link_space_id: string | null;
   link_space_key: string | null;
   link_kind: TreeItemKind | null;
@@ -126,6 +138,9 @@ function toItem(row: ItemRow): TreeItem {
     title: isLink && !accessible ? "" : row.title,
     description: row.description,
     width: row.width,
+    mode: row.mode,
+    published: row.published,
+    archived: row.archived,
     position: row.position,
     hasChildren: row.has_children,
     link: isLink
@@ -133,6 +148,7 @@ function toItem(row: ItemRow): TreeItem {
           itemId: accessible ? row.link_item_id : null,
           url: row.link_url,
           accessible,
+          inTrash: !accessible && row.link_in_trash === true,
           target:
             accessible && row.link_space_id && row.link_space_key && row.link_kind && row.link_title !== null
               ? {
@@ -154,16 +170,35 @@ function toItem(row: ItemRow): TreeItem {
 
 export async function insertPage(
   tx: Transaction,
-  input: { spaceId: string; parentId: string | null; title: string; actorId: string | null },
+  input: {
+    spaceId: string;
+    parentId: string | null;
+    title: string;
+    actorId: string | null;
+    mode: PageMode;
+    published?: boolean;
+  },
 ): Promise<string> {
   const id = uuidv7();
   const position = await endPosition(tx, input.spaceId, input.parentId);
   await tx.execute(sql`
-    insert into tree_items (id, space_id, parent_id, kind, position, title, creator_id, owner_id)
+    insert into tree_items (id, space_id, parent_id, kind, position, title, mode, creator_id, owner_id)
     values (${id}, ${input.spaceId}, ${input.parentId}, 'page', ${position}, ${cleanTitle(input.title)},
-      ${input.actorId}, ${input.actorId})`);
+      ${input.mode}, ${input.actorId}, ${input.actorId})`);
   await insertInitialDocument(tx, id, input.actorId);
+  if (input.published) await insertFirstVersion(tx, id, input.actorId);
+  await refreshReaderVisibility(tx, [id]);
   return id;
+}
+
+export async function defaultPageMode(
+  settings: SettingsService,
+  space: { id: string; organizationId: string | null },
+): Promise<PageMode> {
+  return settings.get(defaultPageModeSetting, {
+    ...(space.organizationId ? { organization: space.organizationId } : {}),
+    space: space.id,
+  });
 }
 
 async function endPosition(executor: Executor, spaceId: string, parentId: string | null): Promise<string> {
@@ -185,17 +220,34 @@ export class TreeService {
   readonly #authorization: AuthorizationService;
   readonly #documents: PageDocumentService;
   readonly #people: PeopleService;
+  readonly #versions: VersionService;
+  readonly #settings: SettingsService;
 
   constructor(options: {
     database: Database;
     authorization: AuthorizationService;
     documents: PageDocumentService;
     people: PeopleService;
+    versions: VersionService;
+    settings: SettingsService;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
     this.#documents = options.documents;
     this.#people = options.people;
+    this.#versions = options.versions;
+    this.#settings = options.settings;
+  }
+
+  async #modeFor(spaceId: string, requested: PageMode | undefined): Promise<PageMode> {
+    if (requested) return requested;
+    const space = await this.#database.execute<{ organization_id: string | null }>(
+      sql`select organization_id from spaces where id = ${spaceId}`,
+    );
+    return defaultPageMode(this.#settings, {
+      id: spaceId,
+      organizationId: space.rows[0]?.organization_id ?? null,
+    });
   }
 
   async followTitleLink(
@@ -223,6 +275,7 @@ export class TreeService {
           parentId: null,
           title,
           actorId: actorIdOf(actor),
+          mode: await this.#modeFor(target.spaceId, undefined),
         });
         await signalSpaceChange(tx, { spaceId: target.spaceId, kind: "tree", itemId: id });
         return id;
@@ -243,13 +296,18 @@ export class TreeService {
   }
 
   #select(viewer: Principal) {
-    return sql`select t.id, t.space_id, t.parent_id, t.kind, t.title, t.description, t.width, t.position,
-        exists (select 1 from tree_items c where c.parent_id = t.id) as has_children,
+    return sql`select t.id, t.space_id, t.parent_id, t.kind, t.title, t.description, t.width, t.mode,
+        (t.kind <> 'page' or t.mode = 'live' or t.published_version_id is not null) as published,
+        (t.archived_root_id is not null) as archived, t.position,
+        exists (select 1 from tree_items c where c.parent_id = t.id and c.trash_entry_id is null
+          and ${publishedFor(this.#authorization, viewer, sql`c`, sql`ts`)}) as has_children,
         t.link_item_id, t.link_url,
-        (lt.id is not null and ${this.#authorization.spaceFilter(viewer, sql`ls`)}) as link_accessible,
+        (lt.id is not null and ${visibleItem(this.#authorization, viewer, sql`lt`, sql`ls`)}) as link_accessible,
+        (lt.trash_entry_id is not null and ${this.#authorization.spaceFilter(viewer, sql`ls`)}) as link_in_trash,
         lt.space_id as link_space_id, ls.key as link_space_key, lt.kind as link_kind, lt.title as link_title,
         t.creator_id, t.owner_id, t.created_at, t.updated_at, t.content_updated_at
       from tree_items t
+      join spaces ts on ts.id = t.space_id
       left join tree_items lt on lt.id = t.link_item_id
       left join spaces ls on ls.id = lt.space_id`;
   }
@@ -266,6 +324,13 @@ export class TreeService {
       where t.space_id = ${spaceId}
         and coalesce(t.parent_id, '00000000-0000-0000-0000-000000000000'::uuid)
           = coalesce(${parentId}::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
+        and t.trash_entry_id is null
+        and ${
+          parentId === null
+            ? sql`t.archived_root_id is null`
+            : sql`t.archived_root_id is not distinct from (select archived_root_id from tree_items where id = ${parentId})`
+        }
+        and ${publishedFor(this.#authorization, viewer, sql`t`, sql`ts`)}
         ${options.after ? sql`and t.position > ${options.after}` : sql``}
       order by t.position
       limit ${limit + 1}`);
@@ -290,7 +355,7 @@ export class TreeService {
     const item = await this.get(viewer, itemId);
     if (!item) return null;
     const space = await this.#database.execute<{ key: string; name: string }>(
-      sql`select key, name from spaces where id = ${item.spaceId}`,
+      sql`select s.key, s.name from spaces s where s.id = ${item.spaceId}`,
     );
     return {
       ...item,
@@ -303,22 +368,30 @@ export class TreeService {
   async ancestors(
     itemId: string,
     executor: Executor = this.#database,
-  ): Promise<{ id: string; kind: TreeItemKind; title: string }[]> {
+  ): Promise<{ id: string; kind: TreeItemKind; title: string; published: boolean }[]> {
     const result = await executor.execute<{
       id: string;
       kind: TreeItemKind;
       title: string;
+      published: boolean;
       depth: number;
     }>(sql`
       with recursive up as (
-        select p.id, p.kind, p.title, p.parent_id, 1 as depth
+        select p.id, p.kind, p.title, p.mode, p.published_version_id, p.parent_id, 1 as depth
         from tree_items t join tree_items p on p.id = t.parent_id where t.id = ${itemId}
         union all
-        select p.id, p.kind, p.title, p.parent_id, up.depth + 1
+        select p.id, p.kind, p.title, p.mode, p.published_version_id, p.parent_id, up.depth + 1
         from up join tree_items p on p.id = up.parent_id where up.depth < 1000
       )
-      select id, kind, title, depth from up order by depth desc`);
-    return result.rows.map((row) => ({ id: row.id, kind: row.kind, title: row.title }));
+      select id, kind, title, (kind <> 'page' or mode = 'live' or published_version_id is not null) as published,
+        depth
+      from up order by depth desc`);
+    return result.rows.map((row) => ({
+      id: row.id,
+      kind: row.kind,
+      title: row.title,
+      published: row.published,
+    }));
   }
 
   async #placementPosition(
@@ -364,11 +437,12 @@ export class TreeService {
 
   async #checkParent(tx: Transaction, spaceId: string, parentId: string | null): Promise<void> {
     if (parentId === null) return;
-    const parent = await tx.execute<{ space_id: string; kind: TreeItemKind }>(
-      sql`select space_id, kind from tree_items where id = ${parentId}`,
+    const parent = await tx.execute<{ space_id: string; kind: TreeItemKind; in_tree: boolean }>(
+      sql`select space_id, kind, (trash_entry_id is null and archived_root_id is null) as in_tree
+        from tree_items where id = ${parentId}`,
     );
     const row = parent.rows[0];
-    if (!row || row.space_id !== spaceId) {
+    if (!row || row.space_id !== spaceId || !row.in_tree) {
       throw new SpaceError("invalidPlacement", "The parent is not in the target space");
     }
     if (row.kind === "link") throw new SpaceError("invalidPlacement", "Links cannot contain items");
@@ -383,6 +457,8 @@ export class TreeService {
       description?: string | undefined;
       placement: Placement;
       link?: { itemId?: string | null | undefined; url?: string | null | undefined } | undefined;
+      mode?: PageMode | undefined;
+      document?: unknown;
     },
   ): Promise<TreeItem> {
     const title = cleanTitle(input.title);
@@ -407,6 +483,7 @@ export class TreeService {
       } else throw new SpaceError("invalidLinkTarget", "A link needs a page, a folder or an address");
     }
     const actorId = actorIdOf(actor);
+    const mode = input.kind === "page" ? await this.#modeFor(spaceId, input.mode) : "live";
     const id = await this.#database.transaction(async (tx) => {
       await lockSpaces(tx, [spaceId]);
       await this.#checkParent(tx, spaceId, input.placement.parentId);
@@ -414,10 +491,11 @@ export class TreeService {
       const itemId = uuidv7();
       await tx.execute(sql`
         insert into tree_items (id, space_id, parent_id, kind, position, title, description, link_item_id, link_url,
-          creator_id, owner_id)
+          mode, creator_id, owner_id)
         values (${itemId}, ${spaceId}, ${input.placement.parentId}, ${input.kind}, ${position}, ${title},
-          ${description}, ${linkItemId}, ${linkUrl}, ${actorId}, ${actorId})`);
-      if (input.kind === "page") await insertInitialDocument(tx, itemId, actorId);
+          ${description}, ${linkItemId}, ${linkUrl}, ${mode}, ${actorId}, ${actorId})`);
+      if (input.kind === "page") await insertInitialDocument(tx, itemId, actorId, input.document);
+      await refreshReaderVisibility(tx, [itemId]);
       await signalSpaceChange(tx, { spaceId, kind: "tree", itemId });
       return itemId;
     });
@@ -437,9 +515,13 @@ export class TreeService {
       );
       const row = current.rows[0];
       if (!row) throw new SpaceError("itemNotFound", "The item does not exist");
-      const title = changes.title === undefined ? undefined : cleanTitle(changes.title);
+      let title = changes.title === undefined ? undefined : cleanTitle(changes.title);
       const description =
         changes.description === undefined ? undefined : cleanDescription(changes.description);
+      if (title !== undefined && (await this.#versions.renameDraft(tx, itemId, title))) {
+        await signalSpaceChange(tx, { spaceId: row.space_id, kind: "draft", itemId });
+        title = undefined;
+      }
       await tx.execute(sql`
         update tree_items set
           title = coalesce(${title ?? null}, title),
@@ -496,11 +578,12 @@ export class TreeService {
 
     await this.#database.transaction(async (tx) => {
       await lockSpaces(tx, [sourceSpaceId, targetSpaceId]);
-      const current = await tx.execute<{ space_id: string; parent_id: string | null }>(
-        sql`select space_id, parent_id from tree_items where id = ${itemId} for update`,
+      const current = await tx.execute<{ space_id: string; parent_id: string | null; in_tree: boolean }>(
+        sql`select space_id, parent_id, (trash_entry_id is null and archived_root_id is null) as in_tree
+          from tree_items where id = ${itemId} for update`,
       );
       const row = current.rows[0];
-      if (!row) throw new SpaceError("itemNotFound", "The item does not exist");
+      if (!row?.in_tree) throw new SpaceError("itemNotFound", "The item does not exist");
       if (row.space_id !== sourceSpaceId) {
         throw new SpaceError("itemMoved", "Someone else moved the item at the same moment; try again");
       }
@@ -543,6 +626,7 @@ export class TreeService {
           update tree_items set space_id = ${targetSpaceId}, updated_at = now() where id in (select id from down)`);
         await signalSpaceChange(tx, { spaceId: targetSpaceId, kind: "tree", itemId });
       }
+      await refreshReaderVisibility(tx, [itemId]);
       await signalSpaceChange(tx, { spaceId: sourceSpaceId, kind: "tree", itemId });
     });
     const moved = await this.get(actor, itemId);
@@ -556,12 +640,21 @@ export class TreeService {
   }
 
   async convert(actor: Principal, itemId: string, kind: "page" | "folder"): Promise<TreeItem> {
+    const located = await this.#database.execute<{ space_id: string }>(
+      sql`select space_id from tree_items where id = ${itemId}`,
+    );
+    const spaceId = located.rows[0]?.space_id;
+    if (!spaceId) throw new SpaceError("itemNotFound", "The item does not exist");
     await this.#database.transaction(async (tx) => {
+      await lockSpaces(tx, [spaceId]);
       const current = await tx.execute<{ space_id: string; kind: TreeItemKind }>(
         sql`select space_id, kind from tree_items where id = ${itemId} for update`,
       );
       const row = current.rows[0];
       if (!row) throw new SpaceError("itemNotFound", "The item does not exist");
+      if (row.space_id !== spaceId) {
+        throw new SpaceError("itemMoved", "Someone else moved the item at the same moment; try again");
+      }
       if (row.kind === "link") throw new SpaceError("invalidConversion", "Links cannot be converted");
       if (row.kind === kind) return;
       const overview = await tx.execute<{ id: string }>(
@@ -577,6 +670,7 @@ export class TreeService {
         );
         if (!document.rows[0]) await insertInitialDocument(tx, itemId, actorIdOf(actor));
       }
+      await refreshReaderVisibility(tx, [itemId]);
       await signalSpaceChange(tx, { spaceId: row.space_id, kind: "tree", itemId });
     });
     const item = await this.get(actor, itemId);
@@ -598,7 +692,9 @@ export class TreeService {
     const limit = Math.min(Math.max(options.limit ?? 20, 1), 50);
     const kinds = options.kinds ?? ["page", "folder"];
     const result = await this.#database.execute<ItemRow & { space_key: string; space_name: string }>(sql`
-      select found.*, s.key as space_key, s.name as space_name from (${this.#select(viewer)}) found
+      select found.*, s.key as space_key, s.name as space_name from (${this.#select(viewer)}
+        where t.trash_entry_id is null and t.archived_root_id is null
+          and ${publishedFor(this.#authorization, viewer, sql`t`, sql`ts`)}) found
       join spaces s on s.id = found.space_id
       where ${this.#authorization.spaceFilter(viewer, sql`s`)}
         and found.kind = any(${sql.param(kinds)}::tree_item_kind[])
@@ -617,6 +713,7 @@ export class TreeService {
   ): Promise<string | null> {
     const result = await executor.execute<{ id: string }>(sql`
       select id from tree_items where space_id = ${spaceId} and kind = 'page' and lower(title) = lower(${title.trim()})
+        and trash_entry_id is null
       order by created_at limit 1`);
     return result.rows[0]?.id ?? null;
   }

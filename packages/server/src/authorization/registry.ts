@@ -19,6 +19,7 @@ export interface ActionDefinition {
   breakGlass?: boolean;
   ownerOnly?: boolean;
   rule?: string;
+  restriction?: string;
 }
 
 export interface RuleContext {
@@ -31,12 +32,22 @@ export interface RuleContext {
 
 export type Rule = (context: RuleContext) => Promise<boolean>;
 
+export type RestrictionDenial = "inTrash" | "archived" | "unpublished";
+
+export interface RestrictionResult {
+  denial: RestrictionDenial;
+  unless?: SpaceRole;
+}
+
+export type Restriction = (executor: Executor, id: string) => Promise<RestrictionResult | null>;
+
 export interface ResourceType {
   type: string;
   actions: Record<string, ActionDefinition>;
   organizationOf?: (executor: Executor, id: string) => Promise<string | null>;
   spaceOf?: (executor: Executor, id: string) => Promise<string | null>;
   rules?: Record<string, Rule>;
+  restrictions?: Record<string, Restriction>;
 }
 
 export interface RegisteredAction extends ActionDefinition {
@@ -70,6 +81,10 @@ export class AuthorizationRegistry {
         if (this.#actions.has(name)) throw new Error(`Action ${name} is registered twice`);
         if (action.rule && !type.rules?.[action.rule])
           throw new Error(`Action ${name} uses the unknown rule ${action.rule}`);
+        if (action.restriction && !type.restrictions?.[action.restriction])
+          throw new Error(`Action ${name} uses the unknown restriction ${action.restriction}`);
+        if (action.restriction && action.scope !== "space")
+          throw new Error(`Action ${name} can only have a restriction as a space action`);
         if ((action.area === undefined) !== (action.level === undefined)) {
           throw new Error(`Action ${name} needs both an area and a level`);
         }

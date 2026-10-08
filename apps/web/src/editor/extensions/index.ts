@@ -21,16 +21,26 @@ import {
   TableOfContentsView,
   UnsupportedMacroView,
 } from "../nodes/block-views.js";
-import { DateView, EmojiView, MentionView, PageLinkView, StatusView } from "../nodes/inline-views.js";
+import {
+  DateView,
+  EmojiView,
+  MentionView,
+  PageLinkView,
+  PlaceholderView,
+  StatusView,
+  TemplateFieldView,
+} from "../nodes/inline-views.js";
 import { MathView } from "../nodes/math-view.js";
 import { hiddenCaret, type PresenceUser, selectionAttributes } from "../presence.js";
 import { searchPeople } from "../references.js";
 import { schemaExtensions } from "../schema/extensions.js";
 import { slashSuggestionItems } from "../slash-items.js";
 import { BlockFormatting } from "./block-formatting.js";
+import { DocumentEdges } from "./document-edges.js";
 import { FindReplace } from "./find-replace.js";
 import { SchemaGuard } from "./guard.js";
 import { CleanPaste } from "./paste.js";
+import { TemplatePlaceholders } from "./placeholders.js";
 import { PageLinkSuggestion, SlashCommand, type SuggestionItem, suggestionRender } from "./suggestions.js";
 
 const INLINE_VIEWS: Record<string, ComponentType<ReactNodeViewProps>> = {
@@ -40,6 +50,8 @@ const INLINE_VIEWS: Record<string, ComponentType<ReactNodeViewProps>> = {
   date: DateView,
   emoji: EmojiView,
   inlineMath: MathView,
+  placeholder: PlaceholderView,
+  templateField: TemplateFieldView,
 };
 
 const BLOCK_VIEWS: Record<string, ComponentType<ReactNodeViewProps>> = {
@@ -141,12 +153,13 @@ export function createEditorExtensions(options: EditorExtensionOptions): AnyExte
     ...base,
     CleanPaste,
     SchemaGuard,
+    TemplatePlaceholders,
     BlockFormatting,
     MathInputRules,
     Dropcursor.configure({ color: "var(--ph-color-accent)", width: 2, class: "ph-drop-cursor" }),
     Gapcursor,
     TrailingNode,
-    Placeholder.configure({ placeholder: t("editor.placeholder") }),
+    Placeholder.extend({ name: "emptyHint" }).configure({ placeholder: t("editor.placeholder") }),
     SlashCommand.configure({
       items: (query) => slashSuggestionItems(query, t),
       labels: labels("editor.suggestions.blocks"),
@@ -161,6 +174,7 @@ export function createEditorExtensions(options: EditorExtensionOptions): AnyExte
       }),
     }),
     FindReplace.configure({ onOpen: options.onOpenFind ?? (() => undefined) }),
+    DocumentEdges,
     Extension.create({
       name: "editorShortcuts",
       addKeyboardShortcuts() {

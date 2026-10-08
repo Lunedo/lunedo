@@ -40,6 +40,12 @@ const listQuery = z
       .max(200)
       .optional()
       .describe("Only spaces whose name, key or description contain this text."),
+    archived: z
+      .enum(["true", "false"])
+      .optional()
+      .describe(
+        "`true` lists only archived spaces. Without it, only spaces that are not archived are listed.",
+      ),
     organizationId: uuid("Only spaces of this organization.").optional(),
   })
   .strict();
@@ -87,7 +93,7 @@ export class SpacesController {
   @ApiRoute({
     summary: "List spaces",
     description:
-      "Lists the spaces the caller can read, ordered by name. API tokens see the spaces their scopes reach.",
+      "Lists the spaces the caller can read, ordered by name. Archived spaces are listed only when asked for. API tokens see the spaces their scopes reach.",
     tags: [TAG],
     query: listQuery,
     response: {
@@ -100,6 +106,7 @@ export class SpacesController {
     return toApiPage(
       await this.#services.spaces.list(actorOf(request), {
         organizationId: query.organizationId,
+        archived: query.archived === "true",
         page: pageRequest(query, nameCursor),
       }),
     );

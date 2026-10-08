@@ -85,7 +85,7 @@ export const tasksModule = defineModule({
             "data-assignee": attrOf<string | null>(node, "assignee"),
             "data-due-date": attrOf<string | null>(node, "dueDate"),
           },
-          `<input type="checkbox" disabled${checked ? " checked" : ""}>${element("div", {}, renderer.children(node))}`,
+          `<input type="checkbox" disabled aria-label="${renderer.escape(renderer.label(checked ? "taskDone" : "taskOpen"))}"${checked ? " checked" : ""}>${element("div", {}, renderer.children(node))}`,
         );
       },
       markdown: (node, renderer) =>

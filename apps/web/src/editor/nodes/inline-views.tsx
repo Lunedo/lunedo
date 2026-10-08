@@ -34,11 +34,13 @@ export function PageLinkView({ node, selected }: NodeViewProps) {
   const accessible = missing || reference?.accessible !== false;
   const title = missing
     ? String(node.attrs.title ?? "")
-    : reference?.accessible
-      ? reference.title
-      : reference
-        ? t("editor.pageLink.noAccess")
-        : String(node.attrs.title ?? t("editor.pageLink.loading"));
+    : reference?.inTrash
+      ? `${reference.title} (${t("editor.pageLink.inTrash")})`
+      : reference?.accessible
+        ? reference.title
+        : reference
+          ? t("editor.pageLink.noAccess")
+          : String(node.attrs.title ?? t("editor.pageLink.loading"));
   const follow = async () => {
     if (!accessible) return;
     if (pageId && reference) {
@@ -202,6 +204,35 @@ export function EmojiView({ node }: NodeViewProps) {
   return (
     <NodeViewWrapper as="span" className="ph-emoji">
       {String(node.attrs.emoji)}
+    </NodeViewWrapper>
+  );
+}
+
+export function PlaceholderView({ node, selected }: NodeViewProps) {
+  const { t } = useTranslation();
+  return (
+    <NodeViewWrapper
+      as="span"
+      className={`ph-placeholder${selected ? " ph-node-selected" : ""}`}
+      contentEditable={false}
+      title={t("editor.placeholderNode.hint")}
+    >
+      {String(node.attrs.text)}
+    </NodeViewWrapper>
+  );
+}
+
+export function TemplateFieldView({ node, selected }: NodeViewProps) {
+  const { t } = useTranslation();
+  const field = String(node.attrs.field);
+  return (
+    <NodeViewWrapper
+      as="span"
+      className={`ph-template-field${selected ? " ph-node-selected" : ""}`}
+      contentEditable={false}
+      title={t("editor.templateField.hint", { field })}
+    >
+      {`{${field}}`}
     </NodeViewWrapper>
   );
 }

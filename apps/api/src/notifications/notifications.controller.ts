@@ -266,21 +266,39 @@ data: ${JSON.stringify(signal)}
         .then(async () => {
           pendingSpaces.delete(data);
           if (closed) return;
-          const cached = spaceDecisions.get(signal.spaceId);
-          let allowed =
-            cached && signal.kind !== "access" && Date.now() - cached.at < SPACE_DECISION_MS
-              ? cached.allowed
-              : null;
-          if (allowed === null) {
-            allowed = (
-              await services.authorization.explain(accountPrincipal(session.accountId), "space.view", {
+          if (signal.kind === "access") spaceDecisions.delete(`space.edit:${signal.spaceId}`);
+          const mayInSpace = async (action: "space.view" | "space.edit"): Promise<boolean> => {
+            const cacheKey = `${action}:${signal.spaceId}`;
+            const cached = spaceDecisions.get(cacheKey);
+            if (cached && signal.kind !== "access" && Date.now() - cached.at < SPACE_DECISION_MS) {
+              return cached.allowed;
+            }
+            const allowed = (
+              await services.authorization.explain(accountPrincipal(session.accountId), action, {
                 type: "space",
                 id: signal.spaceId,
               })
             ).allowed;
-            spaceDecisions.set(signal.spaceId, { allowed, at: Date.now() });
+            spaceDecisions.set(cacheKey, { allowed, at: Date.now() });
+            return allowed;
+          };
+          if (!(await mayInSpace(signal.kind === "draft" ? "space.edit" : "space.view"))) return;
+          let forwarded = signal;
+          if (signal.itemId) {
+            const visible =
+              (await mayInSpace("space.edit")) ||
+              (
+                await services.authorization.explain(accountPrincipal(session.accountId), "item.view", {
+                  type: "item",
+                  id: signal.itemId,
+                })
+              ).allowed;
+            if (!visible) {
+              if (signal.kind === "page") return;
+              forwarded = { ...signal, itemId: null };
+            }
           }
-          if (allowed && !closed) raw.write(`event: spaces\ndata: ${data}\n\n`);
+          if (!closed) raw.write(`event: spaces\ndata: ${JSON.stringify(forwarded)}\n\n`);
         })
         .catch((error: unknown) => logger.warn({ err: error }, "Sending a space event failed"));
     };

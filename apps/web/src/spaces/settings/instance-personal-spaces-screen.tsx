@@ -1,6 +1,7 @@
 import {
   Button,
   Combobox,
+  ConfirmDialog,
   Dialog,
   EmptyState,
   Field,
@@ -29,6 +30,8 @@ import { Panel } from "./panel.js";
 
 interface ReviewEntry {
   spaceId: string;
+  key: string;
+  name: string;
   ownerId: string | null;
   ownerName: string | null;
   ownerState: string | null;
@@ -48,6 +51,9 @@ export function InstancePersonalSpacesScreen() {
       request(() => api.GET("/api/v1/instance/personal-spaces", { params: { query: { limit: 200 } } })),
   });
   const [transferring, setTransferring] = useState<ReviewEntry | null>(null);
+  const [deleting, setDeleting] = useState<ReviewEntry | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const canManage = state.can("instance.personalSpaces.manage");
   return (
     <SettingsPage
@@ -122,9 +128,14 @@ export function InstancePersonalSpacesScreen() {
                 header: t("spaces.instance.actions"),
                 cell: (entry) =>
                   canManage ? (
-                    <Button variant="secondary" size="sm" onClick={() => setTransferring(entry)}>
-                      {t("spaces.instance.transfer")}
-                    </Button>
+                    <span className="flex justify-end gap-2">
+                      <Button variant="secondary" size="sm" onClick={() => setTransferring(entry)}>
+                        {t("spaces.instance.transfer")}
+                      </Button>
+                      <Button variant="danger" size="sm" onClick={() => setDeleting(entry)}>
+                        {t("spaces.instance.delete")}
+                      </Button>
+                    </span>
                   ) : null,
               },
             ]}
@@ -132,6 +143,41 @@ export function InstancePersonalSpacesScreen() {
         ) : null}
       </Panel>
       <TransferDialog entry={transferring} onOpenChange={(open) => !open && setTransferring(null)} />
+      <ConfirmDialog
+        open={deleting !== null}
+        onOpenChange={(open) => !open && setDeleting(null)}
+        title={t("spaces.instance.deleteTitle", {
+          owner: deleting?.ownerName ?? t("spaces.instance.formerOwner"),
+        })}
+        description={t("content.deletePersonalSpaceConsequences")}
+        confirmLabel={t("spaces.instance.delete")}
+        cancelLabel={t("content.keepSpace")}
+        destructive
+        typedConfirmation={{
+          value: deleting?.name || deleting?.key || "",
+          label: t("content.typeName", { name: deleting?.name || deleting?.key || "" }),
+          mismatch: t("content.nameMismatch"),
+        }}
+        onConfirm={async () => {
+          if (!deleting) return;
+          try {
+            await request(() =>
+              api.POST("/api/v1/instance/personal-spaces/{spaceId}/delete", {
+                params: { path: { spaceId: deleting.spaceId } },
+                body: { confirmation: deleting.name || deleting.key },
+              }),
+            );
+            await queryClient.invalidateQueries({ queryKey: spaceKeys.personalReview });
+            toast({ title: t("spaces.instance.deleted"), variant: "success" });
+          } catch (error) {
+            toast({
+              title: t("content.deleteFailed"),
+              description: problemMessage(t, error),
+              variant: "error",
+            });
+          }
+        }}
+      />
     </SettingsPage>
   );
 }

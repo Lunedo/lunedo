@@ -15,6 +15,7 @@ export interface SettingDefinition<T> {
   /** Whether a level can lock the value for the levels below it. */
   lockable: boolean;
   stricterOnly?: "lower" | "higher";
+  minimum?: SettingDefinition<number>;
 }
 
 export function defineSetting<T>(definition: SettingDefinition<T>): SettingDefinition<T> {
@@ -31,6 +32,9 @@ export function defineSetting<T>(definition: SettingDefinition<T>): SettingDefin
     !["number", "boolean"].includes(typeof definition.default)
   ) {
     throw new Error(`Setting ${definition.key} can only be stricter-only with a number or boolean value`);
+  }
+  if (definition.minimum && typeof definition.default !== "number") {
+    throw new Error(`Setting ${definition.key} can only have a minimum with a number value`);
   }
   const levels = settingLevels.filter((level) => definition.levels.includes(level));
   return { ...definition, levels };

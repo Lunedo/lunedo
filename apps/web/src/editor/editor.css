@@ -114,8 +114,17 @@ details.ph-expand > div {
   @apply mt-1 shrink-0;
 }
 
-.ph-content :is(li[data-type="taskItem"] > label input, .ph-task-item > input) {
-  @apply size-4;
+.ph-content li > label:has(> input[type="checkbox"]) {
+  @apply mt-0 flex size-6 items-center justify-center;
+}
+
+.ph-content .ph-task-item > input {
+  @apply size-5;
+  accent-color: var(--ph-color-accent);
+}
+
+.ph-content li > label > input[type="checkbox"] {
+  @apply size-6;
   accent-color: var(--ph-color-accent);
 }
 
@@ -405,6 +414,22 @@ details.ph-expand > summary {
   @apply inline-flex rounded-sm bg-surface-sunken px-1 text-sm;
 }
 
+.ph-editor-content .ph-date {
+  @apply min-h-6 items-center;
+}
+
+.ph-placeholder {
+  @apply text-text-muted italic;
+}
+
+.ph-template-field {
+  @apply inline-flex rounded-sm border border-dashed border-accent bg-accent-soft px-1 font-mono text-sm text-accent;
+}
+
+.ph-content .ph-page-link[data-state="trash"] {
+  @apply text-text-muted line-through;
+}
+
 .ph-mention {
   @apply rounded-sm bg-accent-soft px-1 text-accent;
 }
@@ -654,4 +679,56 @@ details.ph-expand > summary {
 .ph-content mark.ph-highlight {
   color: var(--ph-color-text);
   background-color: var(--content-background, var(--ph-content-yellow-background));
+}
+
+.ph-diff-added {
+  @apply rounded-sm bg-success-soft underline decoration-success decoration-2 underline-offset-2;
+}
+
+.ph-diff-removed {
+  @apply rounded-sm bg-danger-soft text-text-muted line-through decoration-danger;
+}
+
+.ph-diff-formatted {
+  @apply rounded-sm bg-info-soft underline decoration-info decoration-dotted decoration-2 underline-offset-2;
+}
+
+.ph-diff-note {
+  @apply mb-1 block text-xs font-semibold tracking-label text-text-muted uppercase;
+}
+
+.ph-diff [data-change="added"] {
+  @apply border-l-4 border-solid border-success pl-2;
+}
+
+.ph-diff [data-change="removed"] {
+  @apply border-l-4 border-dashed border-danger pl-2 text-text-muted line-through;
+}
+
+.ph-diff [data-change="changed"],
+.ph-diff [data-change="moved"] {
+  @apply border-l-4 border-dotted border-info pl-2;
+}
+
+.ph-diff tr[data-change],
+.ph-diff td[data-change],
+.ph-diff th[data-change] {
+  @apply border-l-0 pl-0;
+}
+
+.ph-diff tr[data-change="added"] > td,
+.ph-diff td[data-change="added"],
+.ph-diff th[data-change="added"] {
+  @apply bg-success-soft;
+}
+
+.ph-diff tr[data-change="removed"] > td,
+.ph-diff td[data-change="removed"],
+.ph-diff th[data-change="removed"] {
+  @apply bg-danger-soft line-through;
+}
+
+.ph-diff td[data-change="changed"],
+.ph-diff th[data-change="changed"] {
+  @apply bg-info-soft;
 }

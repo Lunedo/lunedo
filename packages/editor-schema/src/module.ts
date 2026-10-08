@@ -35,10 +35,14 @@ export interface ResolvedPageLink {
   href: string;
   title: string;
   accessible: boolean;
+  inTrash?: boolean;
 }
 
 export interface RenderLabels {
   noAccess: string;
+  inTrash: string;
+  taskDone: string;
+  taskOpen: string;
   untitledPage: string;
   unknownPerson: string;
   unsupportedMacro: string;
@@ -54,6 +58,7 @@ export interface RenderContext {
   attachment?: (id: string) => { href: string } | null;
   formatDate?: (iso: string) => string;
   labels?: Partial<RenderLabels>;
+  showPlaceholders?: boolean;
 }
 
 interface BaseRenderer {

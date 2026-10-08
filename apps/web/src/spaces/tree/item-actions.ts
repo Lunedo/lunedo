@@ -1,11 +1,22 @@
 import { type MenuItem, useToast } from "@pagehall/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowRightLeft, FilePlus, FileText, Folder, Link as LinkIcon, Move } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowRightLeft,
+  FilePlus,
+  FileText,
+  Folder,
+  Link as LinkIcon,
+  Move,
+  Trash2,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
 import { problemMessage } from "../../errors/problem-message.js";
+import { useArchiveItem, useDeleteItem } from "../content-actions.js";
 import { itemHref } from "../item-paths.js";
 import { useSpace } from "../space-context.js";
 import type { SpaceWithRole, TreeItem } from "../space-queries.js";
@@ -37,11 +48,17 @@ export function useConvert() {
       );
 }
 
-export function useItemActions(space: SpaceWithRole, item: TreeItem): MenuItem[] {
+export function useItemActions(
+  space: SpaceWithRole,
+  item: TreeItem,
+  currentId: string | null = null,
+): MenuItem[] {
   const { t } = useTranslation();
   const { toast } = useToast();
   const context = useSpace();
   const convert = useConvert();
+  const deleteItem = useDeleteItem(space);
+  const archiving = useArchiveItem();
   const href = itemHref(item, space.key);
   const overview = space.overviewItemId === item.id;
   const items: MenuItem[] = [];
@@ -85,6 +102,26 @@ export function useItemActions(space: SpaceWithRole, item: TreeItem): MenuItem[]
           .then(() => toast({ title: t("tree.linkCopied"), variant: "success" }))
           .catch(() => toast({ title: t("tree.copyFailed"), variant: "error" }));
       },
+    });
+  }
+  if (context.canEdit && !overview && item.kind !== "link") {
+    items.push(
+      { type: "separator" },
+      item.archived
+        ? {
+            label: t("archive.unarchive"),
+            icon: ArchiveRestore,
+            onSelect: () => void archiving.unarchive(item),
+          }
+        : { label: t("archive.archive"), icon: Archive, onSelect: () => void archiving.archive(item) },
+    );
+  }
+  if (context.canEdit && !overview) {
+    items.push({
+      label: t("trash.moveToTrash"),
+      icon: Trash2,
+      danger: true,
+      onSelect: () => void deleteItem(item, { leave: currentId === item.id }),
     });
   }
   return items.length > 0 && items.at(-1)?.type === "separator" ? items.slice(0, -1) : items;

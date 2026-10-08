@@ -69,7 +69,7 @@ async function documentText(page: Page): Promise<string> {
 
 async function openEditor(page: Page, path: string) {
   await page.goto(`${path}?edit=true`);
-  await expect(editor(page)).toBeVisible();
+  await expect(editor(page)).toBeEditable();
   await expect(page.getByText("Saved").or(page.getByText("Editing")).first()).toBeVisible();
 }
 
@@ -79,18 +79,26 @@ async function waitSaved(page: Page) {
 
 test("creates a space and arranges pages, folders and links", async ({ page }) => {
   await page.goto("/spaces");
+  await callApi(
+    page,
+    "PUT",
+    `/api/v1/organizations/${await organizationId(page)}/settings/pages.defaultMode`,
+    {
+      value: "live",
+    },
+  );
   await expect(page.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
   await expectAccessible(page, "spaces list");
   await page.getByRole("button", { name: "Create space" }).first().click();
   const dialog = page.getByRole("dialog", { name: "Create a space" });
   await dialog.getByLabel("Name").fill("Team Handbook");
-  await expect(dialog.getByLabel("Key")).toHaveValue("TH");
+  await expect(dialog.getByLabel("Key")).toHaveValue(/^TH\d*$/);
+  spaceKey = await dialog.getByLabel("Key").inputValue();
   await expect(dialog.getByText("Who gets access")).toBeVisible();
   await expectAccessible(page, "create space");
   await dialog.getByRole("button", { name: "Create space" }).click();
-  await expect(page).toHaveURL(/\/spaces\/TH\/pages\//);
-  spaceKey = "TH";
-  const resolved = (await (await page.request.get("/api/v1/space-keys/TH")).json()) as {
+  await expect(page).toHaveURL(new RegExp(`/spaces/${spaceKey}/pages/`));
+  const resolved = (await (await page.request.get(`/api/v1/space-keys/${spaceKey}`)).json()) as {
     space: { id: string };
   };
   spaceId = resolved.space.id;
@@ -107,6 +115,9 @@ test("creates a space and arranges pages, folders and links", async ({ page }) =
 
   await page.getByRole("button", { name: "Create in this space" }).click();
   await page.getByRole("menuitem", { name: "New page" }).click();
+  const gallery = page.getByRole("dialog", { name: "Create in Team Handbook" });
+  await expectAccessible(page, "template gallery");
+  await gallery.getByRole("button", { name: "Create blank page" }).click();
   const title = page.getByRole("textbox", { name: "Page title" });
   await expect(title).toBeFocused();
   await title.fill("VPN access");
@@ -254,7 +265,10 @@ test("lets three people edit one page at the same time without conflicts", async
   }
 });
 
-test("brings an offline editor back in line when it reconnects", async ({ page, browser }) => {
+test("keeps offline changes across leaving the page and brings them in when it reconnects", async ({
+  page,
+  browser,
+}) => {
   const other = await signedIn(browser, people[0] as Person);
   try {
     await openEditor(page, sharedPage);
@@ -266,6 +280,10 @@ test("brings an offline editor back in line when it reconnects", async ({ page, 
     await editor(other.page).click();
     await other.page.keyboard.press("Control+End");
     await other.page.keyboard.type(" Written while offline.");
+    await other.page.getByRole("link", { name: "Overview" }).click();
+    await expect(editor(other.page)).toBeHidden();
+    await other.page.goBack();
+    await expect(editor(other.page)).toContainText("Written while offline.");
     await editor(page).click();
     await page.keyboard.press("Control+Home");
     await page.keyboard.type("Written online meanwhile. ");

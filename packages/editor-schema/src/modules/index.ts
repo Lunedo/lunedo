@@ -15,6 +15,7 @@ import { colorsModule, formattingModule, inlineCommentModule, linkModule } from 
 import { dateModule, emojiModule, mentionModule, pageLinkModule } from "./references.js";
 import { fileModule, imageModule, sectionModule } from "./structure.js";
 import { tableModule } from "./table.js";
+import { templatesModule } from "./templates.js";
 
 export {
   calloutModule,
@@ -39,6 +40,7 @@ export {
   tableModule,
   tableOfContentsModule,
   tasksModule,
+  templatesModule,
   unsupportedMacroModule,
 };
 
@@ -65,6 +67,7 @@ export const defaultModules = [
   tableOfContentsModule,
   columnsModule,
   mathModule,
+  templatesModule,
   unsupportedMacroModule,
 ] as const;
 

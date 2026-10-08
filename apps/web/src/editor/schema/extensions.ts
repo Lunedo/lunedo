@@ -369,6 +369,8 @@ export function schemaExtensions(): AnyExtension[] {
     atomNode("emoji", "span"),
     atomNode("date", "span"),
     atomNode("status", "span"),
+    atomNode("placeholder", "span"),
+    atomNode("templateField", "span"),
     atomNode("inlineMath", "span"),
     atomNode("blockMath", "div"),
     atomNode("tableOfContents", "div", { maxLevel: dataAttribute("maxLevel", "number") }),

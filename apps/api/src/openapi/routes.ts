@@ -19,6 +19,9 @@ import { ItemsController } from "../spaces/items.controller.js";
 import { OrganizationSpacesController } from "../spaces/organization-spaces.controller.js";
 import { PersonalSpacesController } from "../spaces/personal-spaces.controller.js";
 import { SpacesController } from "../spaces/spaces.controller.js";
+import { TemplatesController } from "../spaces/templates.controller.js";
+import { TrashController } from "../spaces/trash.controller.js";
+import { VersionsController } from "../spaces/versions.controller.js";
 import { ServiceAccountsController } from "../tokens/service-accounts.controller.js";
 import { TokensController } from "../tokens/tokens.controller.js";
 
@@ -42,6 +45,9 @@ export const apiControllers = (): Type[] => [
   OrganizationSpacesController,
   ItemsController,
   PersonalSpacesController,
+  VersionsController,
+  TrashController,
+  TemplatesController,
 ];
 
 export interface ApiRouteInfo {

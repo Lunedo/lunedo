@@ -87,16 +87,25 @@ export { settingLevel, settingValues } from "../settings/schema.js";
 export { setupSessions, setupSteps } from "../setup/schema.js";
 export {
   collaborationClients,
+  collaborationPresence,
+  discardedDrafts,
+  discardReason,
   pageDocuments,
   pageLabels,
   pageLinks,
+  pageMode,
+  pageVersions,
   pageWidth,
   spaceKeyAliases,
   spacePermissions,
   spaceRole,
   spaces,
   spaceVisibility,
+  trashEntries,
+  trashEntryKind,
   treeItemKind,
   treeItems,
+  versionReason,
 } from "../spaces/schema.js";
+export { pageTemplates, templateCategory, templateLevel } from "../templates/schema.js";
 export { apiTokens, serviceAccountResponsibles, serviceAccounts } from "../tokens/schema.js";

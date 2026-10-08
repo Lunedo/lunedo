@@ -56,6 +56,15 @@ export const pageLinkModule = defineModule({
         const target = linkTarget(node);
         const resolved = renderer.pageLink(target);
         const missing = target.pageId === null ? "true" : null;
+        if (resolved?.inTrash) {
+          return element(
+            "span",
+            { class: "ph-page-link", "data-state": "trash" },
+            renderer.escape(
+              `${resolved.title || renderer.label("untitledPage")} (${renderer.label("inTrash")})`,
+            ),
+          );
+        }
         if (resolved && !resolved.accessible) {
           return element(
             "span",
@@ -73,6 +82,11 @@ export const pageLinkModule = defineModule({
       markdown: (node, renderer) => {
         const target = linkTarget(node);
         const resolved = renderer.pageLink(target);
+        if (resolved?.inTrash) {
+          return renderer.escape(
+            `${resolved.title || renderer.label("untitledPage")} (${renderer.label("inTrash")})`,
+          );
+        }
         if (resolved && !resolved.accessible) return renderer.escape(renderer.label("noAccess"));
         const title = renderer.escape(resolved?.title || target.title || renderer.label("untitledPage"));
         const href = resolved ? renderer.safeHref(resolved.href) : null;

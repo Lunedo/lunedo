@@ -56,6 +56,9 @@ const TAG_DESCRIPTIONS: Record<string, string> = {
   "API tokens": "Personal tokens and tokens of service accounts.",
   "Audit log": "Reading and exporting the tamper-evident audit log.",
   Spaces: "Spaces, their settings and permissions, and personal spaces.",
+  Versions: "Drafts, publishing, editing modes, versions, comparison and restoring of pages.",
+  Trash: "Deleting and restoring content in two trash stages, archiving spaces and deleting spaces.",
+  Templates: "Page templates of the instance, organizations and spaces, and the template gallery.",
   Pages: "The page tree with pages, folders and links, page content, labels and backlinks.",
 };
 

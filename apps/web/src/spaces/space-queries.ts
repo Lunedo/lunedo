@@ -120,7 +120,7 @@ export function spaceDefaultsQuery(organizationId: string) {
 
 export interface SpaceChangeEvent {
   spaceId: string;
-  kind: "space" | "tree" | "page" | "access";
+  kind: "space" | "tree" | "page" | "draft" | "access";
   itemId: string | null;
 }
 
@@ -129,7 +129,7 @@ export function isSpaceChangeEvent(value: unknown): value is SpaceChangeEvent {
   const event = value as Partial<SpaceChangeEvent>;
   return (
     typeof event.spaceId === "string" &&
-    ["space", "tree", "page", "access"].includes(event.kind ?? "") &&
+    ["space", "tree", "page", "draft", "access"].includes(event.kind ?? "") &&
     (event.itemId === null || typeof event.itemId === "string")
   );
 }
@@ -147,9 +147,19 @@ export function spacesChanged(queryClient: QueryClient, events: SpaceChangeEvent
     }
     if (event.kind === "tree") {
       add(["spaces", event.spaceId, "children"]);
+      add(["spaces", event.spaceId, "trash"]);
+      add(["spaces", event.spaceId, "archive"]);
       if (event.itemId) add(spaceKeys.item(event.itemId));
     }
+    if (event.kind === "draft" && event.itemId) {
+      add(["items", event.itemId, "draft"]);
+      add(["items", event.itemId, "compare"]);
+      add(["items", event.itemId, "discarded"]);
+    }
     if (event.kind === "page" && event.itemId) {
+      add(["items", event.itemId, "draft"]);
+      add(["items", event.itemId, "versions"]);
+      add(["items", event.itemId, "compare"]);
       add(spaceKeys.content(event.itemId));
       add(spaceKeys.labels(event.itemId));
       add(spaceKeys.backlinks(event.itemId));

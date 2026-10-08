@@ -34,6 +34,8 @@ const ensureSchema = z
 const reviewSchema = z
   .object({
     spaceId: uuid("ID of the personal space."),
+    key: z.string().describe("Key of the personal space."),
+    name: z.string().describe("Name of the personal space; empty when it has no name of its own."),
     ownerId: uuid("Owner of the personal space, or null.").nullable(),
     ownerName: z.string().nullable().describe("Name of the owner, or null."),
     ownerState: z.string().nullable().describe("State of the owner's account, such as `deactivated`."),
@@ -125,6 +127,8 @@ export class PersonalSpacesController {
         items: [
           {
             spaceId: exampleSpace.id,
+            key: "P7K2M9QX",
+            name: "",
             ownerId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
             ownerName: "Anna Berger",
             ownerState: "deactivated",

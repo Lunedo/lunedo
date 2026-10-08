@@ -324,6 +324,7 @@ export {
   INSTANCE_SCOPE_ID,
   type Scope,
   type ScopeChain,
+  SettingBelowMinimumError,
   type SettingChangeSignal,
   SettingError,
   type SettingExplanation,
@@ -332,6 +333,7 @@ export {
 } from "./settings/service.js";
 export { applyConfiguredSetup } from "./setup/configured.js";
 export { SetupNotFoundError, type SetupStatus, SetupStepError } from "./setup/setup-service.js";
+export { type ArchivedItem, ArchiveService } from "./spaces/archive.js";
 export { auditScopeOf, SpaceError } from "./spaces/common.js";
 export {
   API_ORIGIN,
@@ -344,6 +346,7 @@ export {
   type PageReferences,
   type PageSnapshot,
   pagePath,
+  type ReadablePage,
   recordClient,
   renderPageMarkdown,
 } from "./spaces/documents.js";
@@ -357,12 +360,20 @@ export {
   type Placement,
   type TreeItem,
 } from "./spaces/items.js";
+export {
+  LIVE_VERSIONS_SCHEDULE,
+  liveVersionsJob,
+  TRASH_RETENTION_SCHEDULE,
+  trashRetentionJob,
+} from "./spaces/jobs.js";
 export { isValidSpaceKey, normalizeSpaceKey, SPACE_KEY_PATTERN, suggestSpaceKey } from "./spaces/keys.js";
 export type { Person } from "./spaces/people.js";
 export type { PermissionChange, SpacePermissionEntry } from "./spaces/permissions.js";
 export type { PersonalSpaceForReview } from "./spaces/personal.js";
 export {
+  type PageMode,
   type PageWidth,
+  pageModes,
   pageWidths,
   type SpaceRole,
   type SpaceVisibility,
@@ -370,11 +381,15 @@ export {
   spaceVisibilities,
   type TreeItemKind,
   treeItemKinds,
+  type VersionReason,
+  versionReasons,
 } from "./spaces/schema.js";
 export {
   type DefaultSpacePermissions,
+  defaultPageModeSetting,
   defaultSpacePermissionsSchema,
   defaultSpacePermissionsSetting,
+  liveVersionIdleMinutesSetting,
   membersCreateSpacesSetting,
   personalSpacesSetting,
   type SpaceGrant,
@@ -394,6 +409,36 @@ export {
   type Space,
   type SpaceWithRole,
 } from "./spaces/spaces.js";
+export { ERASURE_REASON_MAX_LENGTH, type TrashEntry, TrashService } from "./spaces/trash.js";
+export {
+  DISCARDED_DRAFT_DAYS,
+  type DiscardedDraft,
+  type DraftState,
+  type PageVersion,
+  VERSION_NOTE_MAX_LENGTH,
+  type VersionContent,
+  type VersionPerson,
+  type VersionReference,
+  VersionService,
+} from "./spaces/versions.js";
+export {
+  MAX_CHOICE_OPTIONS,
+  MAX_TEMPLATE_FIELDS,
+  type TemplateField,
+  templateFieldSchema,
+  templateFieldTypes,
+} from "./templates/fields.js";
+export { type TemplateCategory, type TemplateLevel, templateCategories } from "./templates/schema.js";
+export {
+  type PageTemplate,
+  TEMPLATE_DESCRIPTION_MAX_LENGTH,
+  TEMPLATE_NAME_MAX_LENGTH,
+  TEMPLATE_TITLE_MAX_LENGTH,
+  TEMPLATE_VALUE_MAX_LENGTH,
+  type TemplateInput,
+  type TemplateScope,
+  TemplateService,
+} from "./templates/templates.js";
 export {
   type ApiToken,
   type AuthenticatedToken,

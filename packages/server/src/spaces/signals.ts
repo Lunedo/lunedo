@@ -4,7 +4,7 @@ import type { Executor } from "../database/database.js";
 export const SPACE_CHANGES_CHANNEL = "pagehall_space_changes";
 export const DOCUMENT_CHANGES_CHANNEL = "pagehall_document_changes";
 
-export const spaceChangeKinds = ["space", "tree", "page", "access"] as const;
+export const spaceChangeKinds = ["space", "tree", "page", "draft", "access"] as const;
 export type SpaceChangeKind = (typeof spaceChangeKinds)[number];
 
 export interface SpaceChangeSignal {

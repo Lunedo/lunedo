@@ -19,6 +19,7 @@ export class NotificationListener {
   #client: pg.Client | undefined;
   #closed = false;
   #connecting: Promise<void> | undefined;
+  #queue: Promise<unknown> = Promise.resolve();
 
   constructor(options: { connectionString: string; logger: Logger }) {
     this.#connectionString = options.connectionString;
@@ -32,9 +33,15 @@ export class NotificationListener {
       handlers = new Set();
       this.#handlers.set(channel, handlers);
       await this.#connect();
-      await this.#client?.query(`listen ${channel}`);
+      await this.#serial(() => this.#client?.query(`listen ${channel}`) ?? Promise.resolve());
     }
     handlers.add(handler);
+  }
+
+  #serial(task: () => Promise<unknown>): Promise<unknown> {
+    const run = this.#queue.then(task, task);
+    this.#queue = run.catch(() => undefined);
+    return run;
   }
 
   onReconnect(handler: () => void): void {

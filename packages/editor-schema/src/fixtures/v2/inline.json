@@ -1,0 +1,115 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Owner: "
+        },
+        {
+          "type": "mention",
+          "attrs": {
+            "id": "01929b1e-0000-7000-8000-000000000001"
+          }
+        },
+        {
+          "type": "text",
+          "text": ", see "
+        },
+        {
+          "type": "pageLink",
+          "attrs": {
+            "pageId": "01929b1e-0000-7000-8000-000000000002",
+            "spaceId": null,
+            "title": "Device naming"
+          }
+        },
+        {
+          "type": "text",
+          "text": " and "
+        },
+        {
+          "type": "pageLink",
+          "attrs": {
+            "pageId": null,
+            "spaceId": "01929b1e-0000-7000-8000-000000000003",
+            "title": "New page"
+          }
+        },
+        {
+          "type": "text",
+          "text": "."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "emoji",
+          "attrs": {
+            "emoji": "👍"
+          }
+        },
+        {
+          "type": "text",
+          "text": " Due "
+        },
+        {
+          "type": "date",
+          "attrs": {
+            "date": "2026-10-12"
+          }
+        },
+        {
+          "type": "text",
+          "text": " "
+        },
+        {
+          "type": "status",
+          "attrs": {
+            "text": "Documented",
+            "color": "green"
+          }
+        },
+        {
+          "type": "text",
+          "text": " "
+        },
+        {
+          "type": "status",
+          "attrs": {
+            "text": "Draft"
+          }
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Energy "
+        },
+        {
+          "type": "inlineMath",
+          "attrs": {
+            "latex": "E = mc^2"
+          }
+        },
+        {
+          "type": "text",
+          "text": "."
+        }
+      ]
+    },
+    {
+      "type": "blockMath",
+      "attrs": {
+        "latex": "\\int_0^1 x\\,dx = \\frac{1}{2}"
+      }
+    }
+  ]
+}

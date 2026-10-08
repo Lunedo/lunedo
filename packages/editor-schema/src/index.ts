@@ -34,6 +34,7 @@ export {
 } from "./module.js";
 export { createDefaultRegistry, defaultModules } from "./modules/index.js";
 export { MAX_LATEX_LENGTH, MAX_MACRO_DATA_BYTES } from "./modules/macros.js";
+export { MAX_PLACEHOLDER_LENGTH, TEMPLATE_FIELD_KEY } from "./modules/templates.js";
 export { defaultLabels, MAX_EXPENSIVE_RENDER_COST } from "./render.js";
 export { escapeHtml, slugify } from "./text.js";
 export {
@@ -88,3 +89,23 @@ export function extractHeadings(doc: DocumentJson): Heading[] {
 export function plainText(doc: DocumentJson): string {
   return editorKit.plainText(doc);
 }
+
+export {
+  type AttributeChange,
+  type BlockChange,
+  type BlockDiff,
+  type DiffInput,
+  type DocumentDiff,
+  diffDocuments,
+  type InlineChange,
+  type InlineSegment,
+  type LineChange,
+  type TitleDiff,
+} from "./diff.js";
+export {
+  type DiffLabels,
+  type DiffRenderOptions,
+  type DiffView,
+  defaultDiffLabels,
+  renderDiffHtml,
+} from "./diff-render.js";

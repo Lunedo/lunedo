@@ -38,3 +38,13 @@ describe("migrateDocument", () => {
     expect(() => migrateDocument(document, 1, {}, 2)).toThrow(MigrationError);
   });
 });
+
+describe("migration from schema version 1", () => {
+  it("keeps version 1 documents unchanged, as placeholders and template fields only add nodes", () => {
+    const stored: DocumentJson = {
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "Project {name}" }] }],
+    };
+    expect(migrateDocument(stored, 1, migrations, 2)).toEqual(stored);
+  });
+});
