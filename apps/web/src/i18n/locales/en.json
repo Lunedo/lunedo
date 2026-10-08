@@ -1068,7 +1068,8 @@
     "spaces": "Spaces",
     "personalSpaces": "Personal spaces",
     "pagesAndTrash": "Pages and trash",
-    "templates": "Templates"
+    "templates": "Templates",
+    "accessOverview": "Access overview"
   },
   "commands": {
     "label": "Command palette",
@@ -2446,6 +2447,23 @@
       "removeDescription": "New accounts with this domain no longer join the organization automatically. Existing members stay.",
       "registration": "Registration and groups",
       "guests": "Guests and expiry"
+    },
+    "access": {
+      "title": "Access overview",
+      "description": "See what a person can do in the spaces of this organization and why. Exports are recorded in the audit log.",
+      "person": "Person",
+      "personHint": "Search a member or guest by name.",
+      "chooseTitle": "Choose a person",
+      "choose": "Their spaces, shared pages and links appear here, each with the reason.",
+      "exportAll": "Export everyone as CSV",
+      "exportPerson": "Export as CSV",
+      "loadFailed": "the access of this person",
+      "whatCan": "What can {name} do?",
+      "nothing": "{name} has no access to spaces or pages of this organization.",
+      "wholeSpace": "whole space",
+      "withPagesBelow": "and the pages below",
+      "restrictedPages": "{count, plural, one {# shared restricted page you cannot read} other {# shared restricted pages you cannot read}}",
+      "why": "Why?"
     }
   },
   "members": {

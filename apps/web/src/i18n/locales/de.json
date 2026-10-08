@@ -1068,7 +1068,8 @@
     "spaces": "Spaces",
     "personalSpaces": "Persönliche Spaces",
     "pagesAndTrash": "Seiten und Papierkorb",
-    "templates": "Vorlagen"
+    "templates": "Vorlagen",
+    "accessOverview": "Zugriffsübersicht"
   },
   "commands": {
     "label": "Befehlspalette",
@@ -2446,6 +2447,23 @@
       "removeDescription": "Neue Konten mit dieser Domain treten der Organisation nicht mehr automatisch bei. Bestehende Mitglieder bleiben.",
       "registration": "Registrierung und Gruppen",
       "guests": "Gäste und Ablauf"
+    },
+    "access": {
+      "title": "Zugriffsübersicht",
+      "description": "Sieh, was eine Person in den Spaces dieser Organisation tun kann und warum. Exporte werden im Audit-Log festgehalten.",
+      "person": "Person",
+      "personHint": "Ein Mitglied oder einen Gast nach Namen suchen.",
+      "chooseTitle": "Person auswählen",
+      "choose": "Hier erscheinen ihre Spaces, freigegebenen Seiten und Links, jeweils mit Grund.",
+      "exportAll": "Alle als CSV exportieren",
+      "exportPerson": "Als CSV exportieren",
+      "loadFailed": "den Zugriff dieser Person",
+      "whatCan": "Was kann {name} tun?",
+      "nothing": "{name} hat keinen Zugriff auf Spaces oder Seiten dieser Organisation.",
+      "wholeSpace": "ganzer Space",
+      "withPagesBelow": "und die Seiten darunter",
+      "restrictedPages": "{count, plural, one {# freigegebene eingeschränkte Seite, die du nicht lesen kannst} other {# freigegebene eingeschränkte Seiten, die du nicht lesen kannst}}",
+      "why": "Warum?"
     }
   },
   "members": {

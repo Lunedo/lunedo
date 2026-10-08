@@ -502,6 +502,12 @@ const organizationTemplatesRoute = organizationScreen(
   () => import("./spaces/templates/organization-templates-screen.js"),
   "OrganizationTemplatesScreen",
 );
+const organizationAccessRoute = organizationScreen(
+  "/access",
+  () => import("./screens/organization/access-overview-screen.js"),
+  "AccessOverviewScreen",
+);
+
 const organizationAuditRoute = organizationScreen(
   "/audit-log",
   () => import("./screens/organization/audit-screen.js"),
@@ -690,6 +696,7 @@ const routeTree = rootRoute.addChildren([
         organizationSpacesRoute,
         organizationContentRoute,
         organizationTemplatesRoute,
+        organizationAccessRoute,
         organizationAuditRoute,
       ]),
       instanceRoute.addChildren([
