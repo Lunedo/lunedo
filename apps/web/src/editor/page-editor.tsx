@@ -68,7 +68,6 @@ function CollaborativeEditor({
   const [findOpen, setFindOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
-  const [everSynced, setEverSynced] = useState(false);
   const account = session.account;
   const self = useMemo(
     () => (account ? { id: account.id, name: account.name, color: presenceColor(account.id) } : null),
@@ -103,6 +102,7 @@ function CollaborativeEditor({
           role: "textbox",
         },
       },
+      editable: collaboration.getSnapshot().loaded,
       immediatelyRender: true,
       shouldRerenderOnTransaction: false,
     },
@@ -112,17 +112,13 @@ function CollaborativeEditor({
   useEffect(() => (editor ? registerEditorActions(editor, actions) : undefined), [editor, actions]);
 
   useEffect(() => {
-    if (snapshot.synced) setEverSynced(true);
-  }, [snapshot.synced]);
-
-  useEffect(() => {
     onSaveStateChange?.(snapshot.saveState);
   }, [snapshot.saveState, onSaveStateChange]);
 
   useEffect(() => {
     if (!editor) return;
-    editor.setEditable(!(snapshot.problem && READ_ONLY_PROBLEMS.has(snapshot.problem)));
-  }, [editor, snapshot.problem]);
+    editor.setEditable(snapshot.loaded && !(snapshot.problem && READ_ONLY_PROBLEMS.has(snapshot.problem)));
+  }, [editor, snapshot.loaded, snapshot.problem]);
 
   useEffect(() => {
     if (!editor) return;
@@ -163,7 +159,7 @@ function CollaborativeEditor({
     selector: ({ editor: current }) => current?.isEditable ?? false,
   });
   const pageContext = useMemo(() => ({ pageId, spaceId, spaceKey }), [pageId, spaceId, spaceKey]);
-  const blocked = snapshot.problem !== null && !everSynced;
+  const blocked = snapshot.problem !== null && !snapshot.loaded;
 
   return (
     <PageContextValue value={pageContext}>
@@ -202,7 +198,7 @@ function CollaborativeEditor({
               {findOpen ? <FindBar editor={editor} onClose={() => setFindOpen(false)} /> : null}
             </div>
             <div ref={surface} className="ph-editor-surface relative">
-              {everSynced ? null : (
+              {snapshot.loaded ? null : (
                 <div className="py-2">
                   <SkeletonText lines={4} />
                 </div>

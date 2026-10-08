@@ -27,6 +27,19 @@ describe("page collaboration", () => {
     expect(connect).toHaveBeenCalledTimes(1);
   });
 
+  it("stays loaded after the first sync when the connection drops", () => {
+    collaboration = new PageCollaboration("01929b1e-0000-7000-8000-0000000000b0", {
+      origin: "http://127.0.0.1:9",
+    });
+    vi.spyOn(collaboration.provider, "disconnect");
+    expect(collaboration.getSnapshot().loaded).toBe(false);
+    (collaboration.provider as unknown as { emit(event: string, payload: unknown): void }).emit("synced", {
+      state: true,
+    });
+    globalThis.dispatchEvent(new Event("offline"));
+    expect(collaboration.getSnapshot()).toMatchObject({ loaded: true, synced: false, connected: false });
+  });
+
   it("stops listening to the network once it is destroyed", () => {
     const destroyed = new PageCollaboration("01929b1e-0000-7000-8000-0000000000b0", {
       origin: "http://127.0.0.1:9",

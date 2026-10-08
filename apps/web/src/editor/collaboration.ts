@@ -27,6 +27,7 @@ export type CollaborationProblem =
 export interface CollaborationSnapshot {
   connected: boolean;
   synced: boolean;
+  loaded: boolean;
   problem: CollaborationProblem | null;
   saveState: SaveState;
 }
@@ -53,7 +54,13 @@ export class PageCollaboration {
   readonly provider: HocuspocusProvider;
   readonly tracker: SaveTracker;
   readonly #listeners = new Set<Listener>();
-  #snapshot: CollaborationSnapshot = { connected: false, synced: false, problem: null, saveState: "offline" };
+  #snapshot: CollaborationSnapshot = {
+    connected: false,
+    synced: false,
+    loaded: false,
+    problem: null,
+    saveState: "offline",
+  };
   #reattachAttempts = 0;
   #reattachTimer: ReturnType<typeof setTimeout> | null = null;
   #destroyed = false;
@@ -76,7 +83,7 @@ export class PageCollaboration {
         if (state) {
           this.#reattachAttempts = 0;
           this.tracker.connection(true);
-          this.#set({ synced: true, connected: true });
+          this.#set({ synced: true, connected: true, loaded: true });
           return;
         }
         this.#set({ synced: false });
@@ -147,6 +154,7 @@ export class PageCollaboration {
     if (
       next.connected === this.#snapshot.connected &&
       next.synced === this.#snapshot.synced &&
+      next.loaded === this.#snapshot.loaded &&
       next.problem === this.#snapshot.problem &&
       next.saveState === this.#snapshot.saveState
     ) {
