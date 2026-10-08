@@ -4,6 +4,7 @@ import {
   emptyDocument,
   extractMentions,
   extractPageLinks,
+  extractTasks,
   migrateDocument,
   renderMarkdown,
   slugify,
@@ -394,7 +395,12 @@ export class PageDocumentService {
   }
 
   async references(viewer: Principal, document: DocumentJson): Promise<PageReferences> {
-    const mentions = extractMentions(document);
+    const mentions = [
+      ...new Set([
+        ...extractMentions(document),
+        ...extractTasks(document).flatMap((task) => (task.assignee ? [task.assignee] : [])),
+      ]),
+    ];
     const pageIds = [
       ...new Set(
         extractPageLinks(document)
