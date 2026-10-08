@@ -12,6 +12,7 @@ export interface RawResponse {
   contentTypes: string[];
   description: string;
   example: string;
+  ranges?: boolean;
 }
 
 export interface ApiRouteDefinition {
@@ -24,6 +25,7 @@ export interface ApiRouteDefinition {
   query?: z.ZodObject;
   body?: z.ZodType;
   bodyExample?: unknown;
+  upload?: { contentTypes: string[]; description: string };
   response?: ApiResponse;
   raw?: RawResponse;
   errors?: ProblemCode[];

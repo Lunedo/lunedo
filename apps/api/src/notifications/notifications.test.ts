@@ -457,6 +457,78 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
     }
   });
 
+  it("keeps restricted pages out of the live updates of people without access, also of space editors", async () => {
+    const secondRuntime = await createServerRuntime({ role: "api", env: test.env });
+    let second: NestFastifyApplication | undefined;
+    const responses: IncomingMessage[] = [];
+    const editor = await createAccount(test, "live-editor@pagehall.test");
+    const editorClient = await signedInClient(test, editor.email, editor.password);
+    try {
+      second = await createTestApp(apiContextOf(secondRuntime));
+      await second.listen(0, "127.0.0.1");
+      const { port } = second.getHttpServer().address() as AddressInfo;
+      const received = {
+        connected: false,
+        spaces: [] as { spaceId: string; kind: string; itemId: string | null }[],
+      };
+      const response = await new Promise<IncomingMessage>((resolve, reject) => {
+        get(
+          `http://127.0.0.1:${port}/api/v1/notifications/stream`,
+          { headers: { cookie: `${SESSION_COOKIE}=${editorClient.cookies.get(SESSION_COOKIE)}` } },
+          resolve,
+        ).on("error", reject);
+      });
+      responses.push(response);
+      response.setEncoding("utf8");
+      response.on("data", (chunk: string) => {
+        if (chunk.includes("event: notifications")) received.connected = true;
+        for (const match of chunk.matchAll(/event: spaces\ndata: (\{.*\})\n\n/g)) {
+          received.spaces.push(JSON.parse(match[1] ?? "{}"));
+        }
+      });
+      await expect.poll(() => received.connected, { timeout: 5000 }).toBe(true);
+      const space = await owner.post(`/api/v1/organizations/${organizationId}/spaces`, {
+        name: "Restricted live space",
+        key: "RLIVE",
+        visibility: "private",
+        grants: [{ principalKind: "account", principalId: editor.id, role: "editor" }],
+      });
+      const spaceId = space.json().id as string;
+      const secret = await owner.post(`/api/v1/spaces/${spaceId}/items`, {
+        kind: "page",
+        title: "Secret",
+        parentId: null,
+        mode: "live",
+      });
+      const secretId = secret.json().id as string;
+      await expect
+        .poll(() => received.spaces.some((event) => event.itemId === secretId), { timeout: 5000 })
+        .toBe(true);
+      received.spaces.length = 0;
+      await owner.post(`/api/v1/pages/${secretId}/access`, {
+        changes: [{ action: "restrict", kind: "view" }],
+      });
+      await owner.patch(`/api/v1/items/${secretId}`, { title: "Secret renamed" });
+      await owner.put(`/api/v1/pages/${secretId}/content`, {
+        document: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "x" }] }] },
+      });
+      await expect
+        .poll(
+          () => received.spaces.filter((event) => event.kind === "tree" && event.itemId === null).length,
+          {
+            timeout: 5000,
+          },
+        )
+        .toBeGreaterThan(0);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(JSON.stringify(received.spaces)).not.toContain(secretId);
+    } finally {
+      for (const entry of responses) entry.destroy();
+      await second?.close();
+      await secondRuntime.close();
+    }
+  });
+
   it("tells a client of another node about settings whose value for it changed", async () => {
     const secondRuntime = await createServerRuntime({ role: "api", env: test.env });
     let second: NestFastifyApplication | undefined;

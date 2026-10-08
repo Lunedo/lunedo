@@ -19,6 +19,7 @@ export function createFastifyAdapter(logger: Logger, trustedProxies: string[] = 
     logController: new LogController({ disableRequestLogging: true, requestIdLogLabel: "requestId" }),
     genReqId: () => randomUUID(),
     trustProxy: trustedProxies.length > 0 ? trustedProxies : false,
+    routerOptions: { maxParamLength: 300 },
   });
 }
 
@@ -62,6 +63,7 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
     { parseAs: "string" },
     fastify.getDefaultJsonParser("error", "error"),
   );
+  fastify.addContentTypeParser("application/octet-stream", (_request, payload, done) => done(null, payload));
 
   fastify.addHook("onRequest", async (request, reply) => {
     const userAgent = request.headers["user-agent"];

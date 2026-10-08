@@ -298,6 +298,14 @@ export const blogPostSchema = z
     pinnedInOrganization: z
       .boolean()
       .describe("Whether the post is pinned in the organization's blog overview."),
+    cover: z
+      .object({
+        attachmentId: uuid("The image attachment."),
+        focusX: z.number().describe("Horizontal focal point from 0 (left) to 1 (right)."),
+        focusY: z.number().describe("Vertical focal point from 0 (top) to 1 (bottom)."),
+      })
+      .nullable()
+      .describe("Cover image with the point that stays visible in every crop, or null."),
     createdAt: timestamp("When the post was created."),
   })
   .describe("A blog post.");
@@ -319,6 +327,7 @@ export const exampleBlogPost = {
   held: false,
   pinnedInSpace: false,
   pinnedInOrganization: true,
+  cover: { attachmentId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40", focusX: 0.5, focusY: 0.3 },
   createdAt: "2026-10-05T15:00:00.000Z",
 };
 

@@ -1,0 +1,197 @@
+import { uuidv7 } from "@pagehall/shared";
+import { sql } from "drizzle-orm";
+import { accountPrincipal, type Principal } from "../accounts/principal.js";
+import type { AuditLog } from "../audit/audit-log.js";
+import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
+import type { Database, Transaction } from "../database/database.js";
+import type { NotificationService } from "../notifications/service.js";
+import type { Invitation, InvitationService } from "../organizations/invitations.js";
+import type { SettingsService } from "../settings/service.js";
+import { auditScopeOf, SpaceError } from "../spaces/common.js";
+import type { PageAccessService } from "./page-access.js";
+import type { AccessRequestService } from "./requests.js";
+import type { ShareRole } from "./schema.js";
+import { membersInviteGuestsSetting } from "./settings.js";
+
+export class GuestShareService {
+  readonly #database: Database;
+  readonly #authorization: AuthorizationService;
+  readonly #audit: AuditLog;
+  readonly #settings: SettingsService;
+  readonly #invitations: InvitationService;
+  readonly #pageAccess: PageAccessService;
+  readonly #requests: AccessRequestService;
+  readonly #notifications: NotificationService;
+
+  constructor(options: {
+    database: Database;
+    authorization: AuthorizationService;
+    audit: AuditLog;
+    settings: SettingsService;
+    invitations: InvitationService;
+    pageAccess: PageAccessService;
+    requests: AccessRequestService;
+    notifications: NotificationService;
+  }) {
+    this.#database = options.database;
+    this.#authorization = options.authorization;
+    this.#audit = options.audit;
+    this.#settings = options.settings;
+    this.#invitations = options.invitations;
+    this.#pageAccess = options.pageAccess;
+    this.#requests = options.requests;
+    this.#notifications = options.notifications;
+    options.invitations.onAccepted((tx, invitationId, accountId) =>
+      this.#accepted(tx, invitationId, accountId),
+    );
+  }
+
+  async allowed(actor: Principal, itemId: string): Promise<boolean> {
+    const organizationId = await this.#organizationOf(itemId);
+    if (!organizationId || actor.type !== "account") return false;
+    if (
+      await this.#authorization.authorize(actor, "organization.members.manage", {
+        type: "organization",
+        id: organizationId,
+      })
+    ) {
+      return true;
+    }
+    const facts = await this.#authorization.explain(actor, "organization.view", {
+      type: "organization",
+      id: organizationId,
+    });
+    const member = facts.grants.some(
+      (grant) => grant.kind === "membership" && grant.membershipKind === "member",
+    );
+    return member && (await this.#settings.get(membersInviteGuestsSetting, { organization: organizationId }));
+  }
+
+  async #organizationOf(itemId: string): Promise<string | null> {
+    const result = await this.#database.execute<{ organization_id: string | null }>(sql`
+      select s.organization_id from tree_items t join spaces s on s.id = t.space_id where t.id = ${itemId}`);
+    return result.rows[0]?.organization_id ?? null;
+  }
+
+  async invite(
+    actor: Principal,
+    itemId: string,
+    input: { email: string; role: ShareRole; includeDescendants: boolean },
+  ): Promise<Invitation> {
+    const share = await this.#authorization.explain(actor, "item.share", { type: "item", id: itemId });
+    if (!share.allowed) throw new ForbiddenError(share);
+    const organizationId = await this.#organizationOf(itemId);
+    if (!organizationId) {
+      throw new SpaceError("invalidScope", "Guests can be invited to pages of an organization only");
+    }
+    if (!(await this.allowed(actor, itemId))) {
+      throw new SpaceError("guestInvitesDisabled", "Your organization does not let members invite guests");
+    }
+    return this.#invitations.create(
+      actor,
+      organizationId,
+      { email: input.email, kind: "guest" },
+      {
+        within: async (tx, invitationId) => {
+          const item = await tx.execute<{ space_id: string; title: string }>(
+            sql`select space_id, title from tree_items where id = ${itemId}`,
+          );
+          await tx.execute(sql`
+            insert into invitation_shares (invitation_id, item_id, role, include_descendants, shared_by)
+            values (${invitationId}, ${itemId}, ${input.role}, ${input.includeDescendants},
+              ${actor.type === "account" ? actor.id : null})`);
+          await this.#audit.record(tx, {
+            name: "page.guestInvited",
+            actor,
+            targetId: itemId,
+            fields: {
+              spaceId: item.rows[0]?.space_id ?? "",
+              title: item.rows[0]?.title ?? "",
+              invitationId,
+              role: input.role,
+              includeDescendants: input.includeDescendants,
+            },
+            scope: auditScopeOf({ organizationId }),
+          });
+        },
+      },
+    );
+  }
+
+  async #accepted(tx: Transaction, invitationId: string, accountId: string): Promise<void> {
+    const shares = await tx.execute<{
+      item_id: string;
+      role: ShareRole;
+      include_descendants: boolean;
+      shared_by: string | null;
+      space_id: string;
+    }>(sql`
+      select s.item_id, s.role, s.include_descendants, s.shared_by, t.space_id
+      from invitation_shares s join tree_items t on t.id = s.item_id
+      where s.invitation_id = ${invitationId} and t.trash_entry_id is null`);
+    for (const share of shares.rows) {
+      const sharer = share.shared_by ? accountPrincipal(share.shared_by) : null;
+      const allowed =
+        sharer !== null &&
+        (
+          await this.#authorization.explain(
+            sharer,
+            "item.share",
+            { type: "item", id: share.item_id },
+            { executor: tx, fresh: true },
+          )
+        ).allowed;
+      if (allowed && sharer) {
+        await this.#pageAccess.changeWithin(tx, sharer, share.item_id, [
+          {
+            action: "share",
+            holderKind: "account",
+            holderId: accountId,
+            role: share.role,
+            includeDescendants: share.include_descendants,
+          },
+        ]);
+        continue;
+      }
+      await this.#hold(tx, accountId, share.space_id, share.item_id);
+    }
+  }
+
+  async #hold(tx: Transaction, accountId: string, spaceId: string, itemId: string): Promise<void> {
+    const id = uuidv7();
+    const inserted = await tx.execute(sql`
+      insert into access_requests (id, requester_id, space_id, item_id, message)
+      values (${id}, ${accountId}, ${spaceId}, ${itemId}, '')
+      on conflict do nothing returning id`);
+    if (inserted.rows.length === 0) return;
+    const details = await tx.execute<{
+      requester: string;
+      space_name: string;
+      space_key: string;
+      title: string;
+      organization_id: string | null;
+    }>(sql`
+      select a.name as requester, s.name as space_name, s.key as space_key, t.title, s.organization_id
+      from accounts a cross join tree_items t join spaces s on s.id = t.space_id
+      where a.id = ${accountId} and t.id = ${itemId}`);
+    const row = details.rows[0];
+    if (!row) return;
+    await this.#notifications.notify(tx, {
+      type: "access.requested",
+      recipients: await this.#requests.deciders(tx, spaceId, itemId),
+      actor: null,
+      organizationId: row.organization_id,
+      targetId: id,
+      params: {
+        requestId: id,
+        target: "page",
+        requesterName: row.requester,
+        spaceId,
+        spaceName: row.space_name,
+        spaceKey: row.space_key,
+        itemTitle: row.title,
+        message: "",
+      },
+    });
+  }
+}

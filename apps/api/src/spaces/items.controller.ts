@@ -261,7 +261,13 @@ export class ItemsController {
     response: {
       description: "The item.",
       schema: itemDetailsSchema,
-      example: { ...exampleItem, spaceKey: "ITOPS", spaceName: "IT Operations", ancestors: [] },
+      example: {
+        ...exampleItem,
+        spaceKey: "ITOPS",
+        spaceName: "IT Operations",
+        spaceAccess: true,
+        ancestors: [],
+      },
     },
   })
   async get(@Param("itemId") itemId: string, @Req() request: FastifyRequest) {

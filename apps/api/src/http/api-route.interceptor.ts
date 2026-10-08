@@ -45,7 +45,7 @@ export class ApiRouteInterceptor implements NestInterceptor {
     const request = execution.switchToHttp().getRequest<FastifyRequest>();
     if (definition.params) request.params = parse(definition.params, request.params ?? {}, "params");
     if (definition.query) request.query = parse(definition.query, request.query ?? {}, "query");
-    request.body = parse(definition.body ?? emptyBody, request.body, "body");
+    if (!definition.upload) request.body = parse(definition.body ?? emptyBody, request.body, "body");
     return next
       .handle()
       .pipe(switchMap((result: unknown) => from(this.#respond(definition, execution, result))));

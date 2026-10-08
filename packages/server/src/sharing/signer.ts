@@ -71,6 +71,7 @@ export class ValueSigner {
       .update([purpose, expiry, ...parts].join("\n"), "utf8")
       .digest();
     const provided = Buffer.from(match[2], "base64url");
+    if (provided.toString("base64url") !== match[2]) return false;
     return provided.length === expected.length && timingSafeEqual(provided, expected);
   }
 }

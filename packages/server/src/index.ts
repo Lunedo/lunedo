@@ -423,11 +423,13 @@ export {
   type PersonAccess,
   type PersonAccessEntry,
 } from "./sharing/explain.js";
+export { GuestShareService } from "./sharing/guests.js";
 export {
   type OpenResult,
   type ShareLink,
   ShareLinkError,
   type ShareLinkInput,
+  type ShareLinkOptions,
   ShareLinkRateLimitedError,
   ShareLinkService,
 } from "./sharing/links.js";

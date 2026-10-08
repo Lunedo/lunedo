@@ -90,7 +90,7 @@ export class OpenApiValidator {
     if (!documented.content) {
       return response.body === "" ? [] : [`${method} ${found.path} ${response.statusCode} must have no body`];
     }
-    const content = documented.content[contentType];
+    const content = documented.content[contentType] ?? documented.content["*/*"];
     if (!content) return [`${method} ${found.path} ${response.statusCode} does not document ${contentType}`];
     if (contentType !== "application/json" || content.schema.type === "string") return [];
     return this.validateSchema(

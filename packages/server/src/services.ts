@@ -100,6 +100,7 @@ import { SetupRegistry } from "./setup/framework.js";
 import { SetupService } from "./setup/setup-service.js";
 import { builtinSetupSteps } from "./setup/steps.js";
 import { AccessExplanationService } from "./sharing/explain.js";
+import { GuestShareService } from "./sharing/guests.js";
 import { ShareLinkService } from "./sharing/links.js";
 import { sharingNotificationTypes } from "./sharing/notifications.js";
 import { PageAccessService } from "./sharing/page-access.js";
@@ -188,6 +189,7 @@ export interface AccountServices {
   accessExplanations: AccessExplanationService;
   files: FileService;
   attachments: AttachmentService;
+  guestShares: GuestShareService;
 }
 
 export function createAccountServices(options: {
@@ -496,6 +498,16 @@ export function createAccountServices(options: {
     logger,
   });
   const attachments = new AttachmentService({ database, files, settings, people });
+  const guestShares = new GuestShareService({
+    database,
+    authorization,
+    audit,
+    settings,
+    invitations,
+    pageAccess,
+    requests: accessRequests,
+    notifications,
+  });
   pageAccess.onAccessChange((tx, spaceId) => accessRequests.closeSatisfied(tx, spaceId));
   spacePermissions.onAccessChange((tx, spaceId) => accessRequests.closeSatisfied(tx, spaceId));
   memberships.onDeactivated((tx, accountId) => pageAccess.markOrphanedRestrictions(tx, accountId));
@@ -580,6 +592,7 @@ export function createAccountServices(options: {
     accessExplanations,
     files,
     attachments,
+    guestShares,
   };
 }
 

@@ -13,6 +13,7 @@ export type ApiContext = Pick<ServerRuntime, "logger" | "metrics" | "metricsToke
   webRoot: string | undefined;
   trustedProxies: string[];
   configuredInstanceUrl: string | undefined;
+  filesUrl: string | undefined;
   services: AccountServices | undefined;
   settings: SettingsService | undefined;
   settingsRegistry: SettingsRegistry | undefined;
@@ -28,6 +29,7 @@ export function apiContextOf(runtime: ServerRuntime): ApiContext {
     webRoot: runtime.config.paths.webRoot,
     trustedProxies: runtime.config.trustedProxies,
     configuredInstanceUrl: runtime.config.instanceUrl,
+    filesUrl: runtime.config.filesUrl,
     services: runtime.services,
     settings: runtime.settings,
     settingsRegistry: runtime.settingsRegistry,

@@ -70,6 +70,12 @@ export class InvitationService {
   readonly #settings: SettingsService;
   readonly #rateLimiter: RateLimiter;
   readonly #jobs: JobQueue | undefined;
+  readonly #acceptListeners: ((tx: Transaction, invitationId: string, accountId: string) => Promise<void>)[] =
+    [];
+
+  onAccepted(listener: (tx: Transaction, invitationId: string, accountId: string) => Promise<void>): void {
+    this.#acceptListeners.push(listener);
+  }
 
   constructor(options: {
     database: Database;
@@ -147,6 +153,7 @@ export class InvitationService {
       membershipExpiresAt?: Date | null;
       responsibleAccountId?: string | null;
     },
+    options: { within?: (tx: Transaction, invitationId: string) => Promise<void> } = {},
   ): Promise<Invitation> {
     const email = emailSchema.parse(input.email.trim());
     if (input.role && input.kind !== "member") {
@@ -207,6 +214,7 @@ export class InvitationService {
         })
         .returning();
       if (!row) throw new Error("The invitation was not created");
+      await options.within?.(tx, row.id);
       const [organization] = await tx
         .select({ name: organizations.name })
         .from(organizations)
@@ -413,6 +421,7 @@ export class InvitationService {
           { tx, collect: events },
         );
       }
+      for (const listener of this.#acceptListeners) await listener(tx, invitation.id, accountId);
       events.push({
         name: "invitation.accepted",
         actor: ANONYMOUS,

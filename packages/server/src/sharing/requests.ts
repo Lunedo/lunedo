@@ -125,6 +125,31 @@ export class AccessRequestService {
     return result.rows[0]?.access === true;
   }
 
+  async discoverableSpaces(
+    viewer: Principal,
+    organizationId: string,
+  ): Promise<{ id: string; key: string; name: string; description: string; requested: boolean }[]> {
+    if (viewer.type !== "account") return [];
+    const result = await this.#database.execute<{
+      id: string;
+      key: string;
+      name: string;
+      description: string;
+      requested: boolean;
+    }>(sql`
+      select s.id, s.key, s.name, s.description,
+        exists (select 1 from access_requests r where r.space_id = s.id and r.item_id is null
+          and r.requester_id = ${viewer.id} and r.status = 'open') as requested
+      from spaces s
+      where s.organization_id = ${organizationId} and s.discoverable and s.deleted_at is null
+        and s.personal_of is null
+        and exists (select 1 from memberships m where m.organization_id = s.organization_id
+          and m.account_id = ${viewer.id} and m.kind = 'member' and (m.expires_at is null or m.expires_at > now()))
+        and not ${spaceRoleConditionFor(sql`${viewer.id}::uuid`, sql`s`, "reader")}
+      order by lower(s.name), s.id limit 500`);
+    return result.rows;
+  }
+
   async requestSpace(actor: Principal, spaceId: string, message: string): Promise<AccessRequest> {
     if (actor.type !== "account") throw new SpaceError("signInRequired", "Sign in to request access");
     const space = await this.#database.execute<{ discoverable: boolean; organization_id: string | null }>(sql`

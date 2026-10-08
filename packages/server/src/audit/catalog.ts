@@ -973,7 +973,7 @@ export const auditCatalog = {
     target: "space",
     fields: z.object({
       name: z.string(),
-      setting: z.enum(["name", "description", "key", "visibility"]),
+      setting: z.enum(["name", "description", "key", "visibility", "discoverable"]),
       value: z.string(),
       previousValue: z.string(),
     }),
