@@ -35,7 +35,9 @@ describe.skipIf(!url)("notification listener", () => {
     const received: string[] = [];
     const channels = ["listener_test_first", "listener_test_second", "listener_test_third"];
     await Promise.all(
-      channels.map((channel) => listener.listen(channel, (payload) => received.push(`${channel}:${payload}`))),
+      channels.map((channel) =>
+        listener.listen(channel, (payload) => received.push(`${channel}:${payload}`)),
+      ),
     );
     expect(most).toBe(1);
     vi.restoreAllMocks();
