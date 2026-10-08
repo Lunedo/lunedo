@@ -183,4 +183,8 @@ Every job runs on the runners named in the repository variable `RUNNER_LABELS`, 
 
 Several runners can share one host. Jobs publish no fixed host ports: unit test services get random ports, and the identity provider job picks free ports with `scripts/pick-free-ports.ts`, names its compose project after the workflow run and removes only that project's containers, volumes and images. The compose file reads the ports from `POSTGRES_PORT`, `VALKEY_PORT`, `MAILPIT_SMTP_PORT`, `MAILPIT_PORT`, `KEYCLOAK_PORT`, `AUTHENTIK_PORT` and `LDAP_PORT`, defaulting to the usual ones for local development.
 
+The repository variable `CI_PARALLELISM` limits how many processes one job starts. When it is set, it caps the Vitest workers, Turborepo's task concurrency (`TURBO_CONCURRENCY`) and the threads of the TypeScript compiler (`GOMAXPROCS`) and Biome (`RAYON_NUM_THREADS`); without it every tool sizes itself to the CPU count, as on GitHub-hosted runners. Set it to the number of CPUs divided by the number of runners on the host, for example `3` for three runners on 10 vCPUs.
+
+Runners on one host must not share caches. Give each runner its own directories in the runner's `.env`: `npm_config_store_dir` (pnpm store), `PLAYWRIGHT_BROWSERS_PATH`, `COREPACK_HOME` and `XDG_CACHE_HOME`. The pnpm store is therefore not restored through `actions/cache` on self-hosted runners; the end-to-end job runs in a fresh container and keeps its store cache.
+
 Dependabot opens one pull request per ecosystem every Monday (`.github/dependabot.yml`).

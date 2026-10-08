@@ -17,6 +17,10 @@ concurrency:
 env:
   TURBO_TELEMETRY_DISABLED: "1"
   DO_NOT_TRACK: "1"
+  CI_PARALLELISM: ${{ vars.CI_PARALLELISM }}
+  TURBO_CONCURRENCY: ${{ vars.CI_PARALLELISM || '10' }}
+  GOMAXPROCS: ${{ vars.CI_PARALLELISM }}
+  RAYON_NUM_THREADS: ${{ vars.CI_PARALLELISM }}
 
 jobs:
   scope:
@@ -59,7 +63,8 @@ jobs:
       - name: Locate the pnpm store
         id: pnpm
         run: echo "store=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - if: ${{ !contains(vars.RUNNER_LABELS, 'self-hosted') }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ steps.pnpm.outputs.store }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -135,7 +140,8 @@ jobs:
       - name: Locate the pnpm store
         id: pnpm
         run: echo "store=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - if: ${{ !contains(vars.RUNNER_LABELS, 'self-hosted') }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ steps.pnpm.outputs.store }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -280,7 +286,8 @@ jobs:
       - name: Locate the pnpm store
         id: pnpm
         run: echo "store=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - if: ${{ !contains(vars.RUNNER_LABELS, 'self-hosted') }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ steps.pnpm.outputs.store }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -352,7 +359,8 @@ jobs:
       - name: Locate the pnpm store
         id: pnpm
         run: echo "store=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - if: ${{ !contains(vars.RUNNER_LABELS, 'self-hosted') }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ steps.pnpm.outputs.store }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
