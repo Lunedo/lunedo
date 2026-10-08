@@ -11,6 +11,11 @@ export interface VitestPresetOptions {
   testTimeout?: number;
 }
 
+export function parallelismLimit(env: NodeJS.ProcessEnv = process.env): number | undefined {
+  const limit = Number(env.CI_PARALLELISM);
+  return Number.isInteger(limit) && limit > 0 ? limit : undefined;
+}
+
 export function createVitestConfig(options: VitestPresetOptions = {}): UserWorkspaceConfig {
   return defineProject({
     resolve: { conditions: [sourceCondition, ...defaultClientConditions] },
@@ -29,6 +34,7 @@ export function createVitestConfig(options: VitestPresetOptions = {}): UserWorks
       setupFiles: options.setupFiles ?? [],
       globalSetup: options.globalSetup ?? [],
       testTimeout: options.testTimeout ?? 5000,
+      maxWorkers: parallelismLimit(),
       hookTimeout: 60_000,
       restoreMocks: true,
       unstubGlobals: true,

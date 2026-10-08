@@ -4,6 +4,9 @@
   "ui": "stream",
   "globalDependencies": ["biome.json", "packages/config/tsconfig/*.json", ".github/workflows/ci.yml"],
   "globalPassThroughEnv": [
+    "CI_PARALLELISM",
+    "GOMAXPROCS",
+    "RAYON_NUM_THREADS",
     "GITHUB_ENV",
     "GITHUB_EVENT_NAME",
     "GITHUB_EVENT_PATH",
