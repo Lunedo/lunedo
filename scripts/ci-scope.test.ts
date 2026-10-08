@@ -79,11 +79,27 @@ describe("scopeOf", () => {
       "packages/server/src/backup/restore.ts",
       "packages/server/drizzle/0015_identity_providers.sql",
       "docker/Dockerfile",
+      "docker/start.sh",
       "scripts/backup-roundtrip.sh",
     ]) {
       assert.equal(ready([file]).backup, true, file);
     }
+    for (const file of [
+      "docker/compose.dev.yml",
+      "docker/idp/keycloak/pagehall-realm.json",
+      "docker/dev-healthcheck.ts",
+    ]) {
+      assert.equal(ready([file]).backup, false, file);
+    }
     assert.equal(ready(["packages/server/src/backupish.ts"]).backup, false);
+  });
+
+  it("runs the identity provider job, not the backup job, for the compose file", () => {
+    assert.deepEqual(ready(["docker/compose.dev.yml"]), { lane: "full", ...none, identityProviders: true });
+  });
+
+  it("runs every job for scheduled runs", () => {
+    assert.deepEqual(scopeOf({ event: "schedule", draft: false, files: null }), { lane: "full", ...all });
   });
 
   it("does not take a nested package.json for a shared dependency", () => {

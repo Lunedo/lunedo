@@ -161,7 +161,7 @@ Screens are built from the components in `packages/ui`; `/dev/components` shows 
 
 | Workflow | Trigger | Checks |
 |---|---|---|
-| `ci.yml` | pull requests, pushes to `main`, manual | see below |
+| `ci.yml` | pull requests, pushes to `main`, Saturdays 02:00 UTC (stress run), manual | see below |
 | `image.yml` | pushes to `main`, release tags `v*`, Mondays 03:00 UTC, manual | image build, not published; amd64 only on pushes to `main`, amd64 and arm64 otherwise |
 | `audit.yml` | Mondays 05:00 UTC, manual | `pnpm audit` on `main`; fails on any known vulnerability and lists the findings in the job summary |
 
@@ -174,9 +174,11 @@ Screens are built from the components in `packages/ui`; `/dev/components` shows 
 |---|---|
 | End-to-end, accessibility and visual tests | `apps/web/`, `packages/ui/`, `packages/tokens/` |
 | Sign-in through identity providers | identity, authentication and sign-in code in server, API and web client including SAML and LDAP, the shared provider configuration, `apps/web/e2e/idp/`, the end-to-end setup, `docker/idp/`, `docker/compose.dev.yml` |
-| Backup round trip (builds the image for amd64 only) | `packages/server/src/backup/`, `packages/server/drizzle/`, `apps/worker/src/cli/`, `docker/`, `scripts/backup-roundtrip.sh` |
+| Backup round trip (builds the image for amd64 only) | `packages/server/src/backup/`, `packages/server/drizzle/`, `apps/worker/src/cli/`, `docker/Dockerfile`, `docker/start.sh`, `scripts/backup-roundtrip.sh` |
 
 The job `Scope` decides the lane and the areas (`scripts/ci-scope.ts`) and lists them in its summary. The job `CI result` fails when any job failed or was cancelled and passes when the others passed or were skipped; it is the one check branch protection needs. The pnpm store, the Turborepo cache and Docker layers are cached between runs; on `main` the unit tests ignore cached results.
+
+In CI a failed test is retried once, in Vitest and in Playwright; a test that passes on the retry does not fail the run. Locally nothing is retried. The job `Flaky tests` lists every test that needed the retry (file, test, job) in its summary and attaches the list as the artifact `flaky-tests`; fix these tests, a retry only hides the instability. The stress run on Saturday nights starts every job of the full lane at the same time on `main` with `CI_RETRIES=0`, so load-dependent failures show up. Its summary lists every failed test. It blocks nothing and opens no issue.
 
 Every job runs on the runners named in the repository variable `RUNNER_LABELS`, a JSON array such as `["self-hosted","linux","x64","pagehall"]`. Without the variable, jobs run on GitHub-hosted `ubuntu-24.04`, so no code changes when the repository goes public. When `RUNNER_LABELS` names a self-hosted runner, no job runs for pull requests from forks; `CI result` then runs on `ubuntu-24.04` and fails, so such a pull request cannot pass the required check.
 
