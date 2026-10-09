@@ -320,6 +320,58 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
     }
   });
 
+  it("disconnects a person whose connection was being opened while they lost the edit permission", async () => {
+    const target = await editor();
+    const runtime = cluster.runtimes[0] as ServerRuntime;
+    const other = await runtime.services.tree.create(accountPrincipal(target.admin), target.space.id, {
+      kind: "page",
+      title: "Second page",
+      mode: "live",
+      placement: { parentId: null },
+    });
+    const editing = open(first.url, target.itemId, { token: target.token });
+    await editing.authenticated;
+    const documents = first.runtime.services.documents;
+    const stored = documents.stored.bind(documents);
+    let loading: () => void = () => undefined;
+    const loadingStarted = new Promise<void>((resolve) => {
+      loading = resolve;
+    });
+    let release: () => void = () => undefined;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const held = vi.spyOn(documents, "stored").mockImplementation(async (itemId) => {
+      if (itemId === other.id) {
+        loading();
+        await released;
+      }
+      return stored(itemId);
+    });
+    try {
+      const opening = open(first.url, other.id, { token: target.token });
+      await loadingStarted;
+      const entry = (await runtime.services.spacePermissions.list(target.space.id)).find(
+        (candidate) => candidate.principalId === target.account,
+      );
+      await cluster.runtimes[1]?.services.spacePermissions.apply(
+        accountPrincipal(target.admin),
+        target.space.id,
+        {
+          action: "change",
+          permissionId: entry?.id ?? "",
+          role: "reader",
+        },
+      );
+      await waitFor(() => editing.closeReasons.includes("permissionRevoked"), 3000);
+      release();
+      await opening.authenticated;
+      await waitFor(() => opening.closeReasons.includes("permissionRevoked"), 3000);
+    } finally {
+      release();
+      held.mockRestore();
+    }
+  });
 
   it("closes connections whose permission cannot be checked instead of keeping them", async () => {
     const target = await editor();

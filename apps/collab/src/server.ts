@@ -61,13 +61,15 @@ export interface CollabContext {
   itemId: string;
   spaceId: string;
   organizationId: string | null;
+  passesBeforeCheck: number;
+  checkedAt: number;
 }
 
 const RECHECKED_AUDIT_TARGETS = new Set(["group", "account", "organization", "roleAssignment"]);
 const STORE_ORIGIN = { source: "local", skipStoreHooks: true } as const;
 const REJECTED_UPDATE_TYPES = new Set([1, 2]);
 
-type RecheckReason = "access" | "tree" | "audit" | "interval" | "reconnect";
+type RecheckReason = "access" | "tree" | "audit" | "interval" | "reconnect" | "connected";
 type RecheckResult = "kept" | "sessionEnded" | "permissionRevoked" | "unavailable";
 
 interface Recheck {
@@ -128,6 +130,7 @@ export async function createCollabServer(options: {
   let destroyed = false;
   let recheckRunning: Promise<void> | undefined;
   let recheckQueued: Recheck | undefined;
+  let passes = 0;
 
   async function instanceOrigin(): Promise<string | null> {
     const stored = await runtime.settings.get(instanceUrlSetting, {});
@@ -225,6 +228,7 @@ export async function createCollabServer(options: {
   }
 
   function run(pass: Recheck): void {
+    passes += 1;
     recheckRunning = recheck(pass).finally(() => {
       recheckRunning = undefined;
       const queued = recheckQueued;
@@ -258,6 +262,8 @@ export async function createCollabServer(options: {
     },
     async onAuthenticate({ requestHeaders, documentName }): Promise<CollabContext> {
       try {
+        const passesBeforeCheck = passes;
+        const checkedAt = Date.now();
         const address = requestHeaders.get(CLIENT_ADDRESS_HEADER) ?? "unknown";
         if (!(await allowed(address, "address", CONNECTIONS_PER_ADDRESS_PER_MINUTE))) {
           throw new Refusal("tooManyConnections");
@@ -287,6 +293,8 @@ export async function createCollabServer(options: {
           itemId: itemId ?? "",
           spaceId: row?.space_id ?? "",
           organizationId: row?.organization_id ?? null,
+          passesBeforeCheck,
+          checkedAt,
         };
         if ((row?.kind !== "page" && row?.kind !== "blogPost") || !(await may(context, "item.view"))) {
           throw new Refusal("pageNotFound");
@@ -377,7 +385,11 @@ export async function createCollabServer(options: {
         throw error;
       }
     },
-    async connected({ documentName, instance: server }) {
+    async connected({ documentName, instance: server, connection }) {
+      const { passesBeforeCheck, checkedAt } = connection.context as CollabContext;
+      if (passesBeforeCheck !== passes) {
+        await check(connection, { sessions: true, reasons: new Set(["connected"]), since: checkedAt });
+      }
       const itemId = itemIdOf(documentName);
       const document = server.documents.get(documentName);
       if (!itemId || !document) return;
