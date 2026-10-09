@@ -5616,7 +5616,6 @@
       "loadFailed": "The topic could not be loaded",
       "notFoundTitle": "This topic is not available",
       "notFoundDescription": "It was deleted, or you do not have access.",
-      "series": "Series",
       "status": "Status",
       "open": "Open",
       "raised": "Raised in",

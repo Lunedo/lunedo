@@ -354,6 +354,7 @@ describe.skipIf(!baseUrl)("meeting series", () => {
       );
       const details = await test.services.topics.get(context.lead, topicId);
       expect(details.status).toBe("closed");
+      expect(details.seriesTitle).toBe("Jour fixe IT");
       expect(details.timeline.map((entry) => entry.meetingId)).toEqual([created.firstMeetingId]);
     });
 

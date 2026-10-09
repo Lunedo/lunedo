@@ -546,7 +546,13 @@ export class MeetingsController {
     response: {
       description: "The topic.",
       schema: topicDetailsSchema,
-      example: { ...exampleTopic, spaceId: exampleSeries.spaceId, timeline: [], decision: null },
+      example: {
+        ...exampleTopic,
+        spaceId: exampleSeries.spaceId,
+        seriesTitle: exampleSeries.title,
+        timeline: [],
+        decision: null,
+      },
     },
     errors: ["invalidTitle", "invalidLabel", "tooManyLabels", "invalidMember", "seriesEnded"],
   })
@@ -571,7 +577,13 @@ export class MeetingsController {
     response: {
       description: "The topic.",
       schema: topicDetailsSchema,
-      example: { ...exampleTopic, spaceId: exampleSeries.spaceId, timeline: [], decision: null },
+      example: {
+        ...exampleTopic,
+        spaceId: exampleSeries.spaceId,
+        seriesTitle: exampleSeries.title,
+        timeline: [],
+        decision: null,
+      },
     },
   })
   async topic(@Param("topicId") topicId: string, @Req() request: FastifyRequest) {
@@ -590,7 +602,13 @@ export class MeetingsController {
     response: {
       description: "The topic.",
       schema: topicDetailsSchema,
-      example: { ...exampleTopic, spaceId: exampleSeries.spaceId, timeline: [], decision: null },
+      example: {
+        ...exampleTopic,
+        spaceId: exampleSeries.spaceId,
+        seriesTitle: exampleSeries.title,
+        timeline: [],
+        decision: null,
+      },
     },
     errors: ["invalidTitle", "invalidLabel", "tooManyLabels", "invalidMember", "seriesEnded"],
   })

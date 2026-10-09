@@ -44,6 +44,7 @@ export interface TopicUpdateEntry {
 
 export interface TopicDetails extends TopicSummary {
   spaceId: string;
+  seriesTitle: string;
   timeline: TopicUpdateEntry[];
   decision: { id: string; itemId: string; itemTitle: string; statement: NodeJson[]; text: string } | null;
 }
@@ -228,9 +229,13 @@ export class TopicService {
             and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}`)
       : null;
     const found = decision?.rows[0];
+    const series = await this.#database.execute<{ title: string }>(
+      sql`select title from tree_items where id = ${row.series_id}`,
+    );
     return {
       ...this.#summary(row),
       spaceId: row.space_id,
+      seriesTitle: series.rows[0]?.title ?? "",
       timeline: timeline.rows.map((entry) => ({
         meetingId: entry.item_id,
         meetingTitle: entry.title,

@@ -93515,6 +93515,10 @@
                       "format": "uuid",
                       "description": "Space of the topic."
                     },
+                    "seriesTitle": {
+                      "type": "string",
+                      "description": "Name of the series."
+                    },
                     "timeline": {
                       "type": "array",
                       "items": {
@@ -93628,6 +93632,7 @@
                     "closedAt",
                     "decisionId",
                     "spaceId",
+                    "seriesTitle",
                     "timeline",
                     "decision"
                   ],
@@ -93658,6 +93663,7 @@
                   "closedAt": null,
                   "decisionId": null,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
+                  "seriesTitle": "Jour fixe IT",
                   "timeline": [],
                   "decision": null
                 }
@@ -154161,6 +154167,10 @@
                       "format": "uuid",
                       "description": "Space of the topic."
                     },
+                    "seriesTitle": {
+                      "type": "string",
+                      "description": "Name of the series."
+                    },
                     "timeline": {
                       "type": "array",
                       "items": {
@@ -154274,6 +154284,7 @@
                     "closedAt",
                     "decisionId",
                     "spaceId",
+                    "seriesTitle",
                     "timeline",
                     "decision"
                   ],
@@ -154304,6 +154315,7 @@
                   "closedAt": null,
                   "decisionId": null,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
+                  "seriesTitle": "Jour fixe IT",
                   "timeline": [],
                   "decision": null
                 }
@@ -154678,6 +154690,10 @@
                       "format": "uuid",
                       "description": "Space of the topic."
                     },
+                    "seriesTitle": {
+                      "type": "string",
+                      "description": "Name of the series."
+                    },
                     "timeline": {
                       "type": "array",
                       "items": {
@@ -154791,6 +154807,7 @@
                     "closedAt",
                     "decisionId",
                     "spaceId",
+                    "seriesTitle",
                     "timeline",
                     "decision"
                   ],
@@ -154821,6 +154838,7 @@
                   "closedAt": null,
                   "decisionId": null,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
+                  "seriesTitle": "Jour fixe IT",
                   "timeline": [],
                   "decision": null
                 }

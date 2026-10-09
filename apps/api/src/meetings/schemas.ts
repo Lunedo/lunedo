@@ -410,6 +410,7 @@ export const exampleTopic = {
 export const topicDetailsSchema = topicSchema
   .extend({
     spaceId: uuid("Space of the topic."),
+    seriesTitle: z.string().describe("Name of the series."),
     timeline: z
       .array(
         z

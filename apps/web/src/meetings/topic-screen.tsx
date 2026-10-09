@@ -149,7 +149,7 @@ function TopicView({ topic }: { topic: TopicDetails }) {
           breadcrumbs={[
             { label: spaceDisplayName(t, space), href: `/spaces/${space.key}` },
             { label: t("meetings.title"), href: `/spaces/${space.key}/meetings` },
-            { label: t("meetings.topic.series"), href: seriesPath(space.key, topic.seriesId) },
+            { label: topic.seriesTitle, href: seriesPath(space.key, topic.seriesId) },
             { label: topic.title },
           ]}
           actions={
