@@ -77,6 +77,12 @@ import {
   mailCredentialReminderJob,
 } from "./mail/mail-service.js";
 import type { MailTransport, SmtpOptions } from "./mail/transport.js";
+import { DecisionService } from "./meetings/decisions.js";
+import { MeetingService } from "./meetings/meetings.js";
+import { meetingNotificationTypes } from "./meetings/notifications.js";
+import { OneOnOneService } from "./meetings/one-on-ones.js";
+import { PrivateNotesService } from "./meetings/private-notes.js";
+import { TopicService } from "./meetings/topics.js";
 import { NotificationRegistry } from "./notifications/registry.js";
 import { NOTIFICATION_RETENTION_SCHEDULE, notificationRetentionJob } from "./notifications/retention.js";
 import { NotificationService } from "./notifications/service.js";
@@ -108,6 +114,7 @@ import { PageAccessService } from "./sharing/page-access.js";
 import { AccessRequestService } from "./sharing/requests.js";
 import { ValueSigner } from "./sharing/signer.js";
 import { ArchiveService } from "./spaces/archive.js";
+import { ConfidentialSpaceService } from "./spaces/confidential.js";
 import { PageDocumentService } from "./spaces/documents.js";
 import { TreeService } from "./spaces/items.js";
 import {
@@ -192,6 +199,12 @@ export interface AccountServices {
   files: FileService;
   attachments: AttachmentService;
   guestShares: GuestShareService;
+  confidentialSpaces: ConfidentialSpaceService;
+  meetings: MeetingService;
+  topics: TopicService;
+  decisions: DecisionService;
+  privateNotes: PrivateNotesService;
+  oneOnOnes: OneOnOneService;
 }
 
 export function createAccountServices(options: {
@@ -263,6 +276,7 @@ export function createAccountServices(options: {
       ...builtinNotificationTypes,
       ...collaborationNotificationTypes,
       ...sharingNotificationTypes,
+      ...meetingNotificationTypes,
     ),
   });
   mail.useNotifications(notifications);
@@ -516,6 +530,29 @@ export function createAccountServices(options: {
   pageAccess.onAccessChange((tx, spaceId) => accessRequests.closeSatisfied(tx, spaceId));
   spacePermissions.onAccessChange((tx, spaceId) => accessRequests.closeSatisfied(tx, spaceId));
   memberships.onDeactivated((tx, accountId) => pageAccess.markOrphanedRestrictions(tx, accountId));
+  const confidentialSpaces = new ConfidentialSpaceService({ database, audit, notifications });
+  memberships.onDeactivated((tx, accountId) => confidentialSpaces.afterDeactivation(tx, accountId));
+  const meetings = new MeetingService({
+    database,
+    authorization,
+    documents,
+    templates,
+    people,
+    notifications,
+    activity,
+  });
+  const topics = new TopicService({ database, authorization, people, documents, meetings });
+  const decisions = new DecisionService({ database, authorization });
+  const privateNotes = new PrivateNotesService({ database, authorization });
+  const oneOnOnes = new OneOnOneService({
+    database,
+    spaces,
+    permissions: spacePermissions,
+    holders: spacePermissions.holders,
+    meetings,
+    people,
+    notifications,
+  });
   setupRegistry.register(
     ...builtinSetupSteps({
       database,
@@ -599,6 +636,12 @@ export function createAccountServices(options: {
     files,
     attachments,
     guestShares,
+    confidentialSpaces,
+    meetings,
+    topics,
+    decisions,
+    privateNotes,
+    oneOnOnes,
   };
 }
 

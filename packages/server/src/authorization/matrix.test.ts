@@ -119,6 +119,7 @@ type Rule =
   | "selfService"
   | "membersCreateGroups"
   | "membersCreateSpaces"
+  | "membersCreateConfidentialSpaces"
   | "personalSpace"
   | "activeAccount"
   | "homeOrganizationAdministrator"
@@ -188,6 +189,11 @@ const EXPECTED: Record<string, Expectation> = {
   "organization.spaces.view": organization("spaces", "view"),
   "organization.spaces.manage": organization("spaces", "manage"),
   "organization.spaces.create": organization("spaces", "manage", "membersCreateSpaces"),
+  "organization.spaces.createConfidential": organization(
+    "spaces",
+    "manage",
+    "membersCreateConfidentialSpaces",
+  ),
   "organization.trash.manage": organization("spaces", "manage"),
   "organization.templates.manage": organization("settings", "manage"),
   "organization.blog.pin": organization("spaces", "manage"),
@@ -249,6 +255,7 @@ function expectedAllowed(held: Held, actionName: string): boolean {
     selfService: () => false,
     membersCreateGroups: () => false,
     membersCreateSpaces: () => facts.membership === "member",
+    membersCreateConfidentialSpaces: () => facts.membership === "member",
     personalSpace: () => facts.type === "standard",
     activeAccount: () => true,
     homeOrganizationAdministrator: () => grantsLevel(organizationAreas.membersAndGroups, "manage"),

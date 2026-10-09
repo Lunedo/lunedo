@@ -67,11 +67,18 @@ export class TrashController {
 
   async #entryIn(
     entryId: string,
-    check: (entry: TrashEntry, organizationId: string | null, personal: boolean) => boolean,
+    check: (
+      entry: TrashEntry,
+      organizationId: string | null,
+      personal: boolean,
+      confidential: boolean,
+    ) => boolean,
   ) {
     const located = await this.#services.trash.spaceOf(entryId);
     const entry = await this.#services.trash.get(entryId);
-    if (!located || !entry || !check(entry, located.organizationId, located.personal)) throw notFound();
+    if (!located || !entry || !check(entry, located.organizationId, located.personal, located.confidential)) {
+      throw notFound();
+    }
     return entry;
   }
 
@@ -80,13 +87,22 @@ export class TrashController {
   @ApiRoute({
     summary: "List the trash of a space",
     description:
-      "Lists deleted pages, folders and links still in the space trash, newest first, with who deleted them and when they will be removed for good.",
+      "Lists deleted pages, folders and links still in the space trash, newest first, with who deleted them and when they will be removed for good. In a confidential space, its space admins also get the entries of the second stage, which only they can restore.",
     tags: [TAG],
     params: spaceParams,
     response: { description: "Trash entries.", schema: entries, example: [exampleTrashEntry] },
   })
   async spaceTrash(@Param("spaceId") spaceId: string, @Req() request: FastifyRequest) {
-    return this.#services.trash.listSpace(actorOf(request), spaceId);
+    const actor = actorOf(request);
+    const entries = await this.#services.trash.listSpace(actor, spaceId);
+    if (!(await this.#confidentialAdministrator(actor, spaceId))) return entries;
+    return [...entries, ...(await this.#services.trash.listSpace(actor, spaceId, { secondStage: true }))];
+  }
+
+  async #confidentialAdministrator(actor: ReturnType<typeof actorOf>, spaceId: string): Promise<boolean> {
+    const found = await this.#services.spaces.get(spaceId);
+    if (!found?.confidential) return false;
+    return this.#services.authorization.authorize(actor, "space.manage", { type: "space", id: spaceId });
   }
 
   @Post("spaces/:spaceId/trash/:entryId/restore")
@@ -109,9 +125,10 @@ export class TrashController {
     @Param("entryId") entryId: string,
     @Req() request: FastifyRequest,
   ) {
+    const secondStage = await this.#confidentialAdministrator(actorOf(request), spaceId);
     await this.#entryIn(
       entryId,
-      (entry) => entry.spaceId === spaceId && entry.kind === "items" && entry.stage === 1,
+      (entry) => entry.spaceId === spaceId && entry.kind === "items" && (entry.stage === 1 || secondStage),
     );
     if (!(await this.#services.trash.accessible(actorOf(request), entryId))) throw notFound();
     return this.#services.trash.restore(actorOf(request), entryId);
@@ -188,7 +205,7 @@ export class TrashController {
   @ApiRoute({
     summary: "List deleted content of an organization",
     description:
-      "Lists all trash entries of the organization's spaces, both stages, and deleted spaces. Only organization administrators can restore entries of the second stage.",
+      "Lists all trash entries of the organization's spaces, both stages, and deleted spaces. Only organization administrators can restore entries of the second stage. Confidential spaces are left out.",
     tags: [TAG],
     params: organizationParams,
     response: {
@@ -206,7 +223,7 @@ export class TrashController {
   @ApiRoute({
     summary: "Restore deleted content of an organization",
     description:
-      "Restores a trash entry of either stage or a deleted space. Items return to their old place or the top level of their space.",
+      "Restores a trash entry of either stage or a deleted space. Items return to their old place or the top level of their space. Confidential spaces are not reachable here; only their own space admins restore their content.",
     tags: [TAG],
     status: 200,
     params: organizationEntryParams,
@@ -221,7 +238,10 @@ export class TrashController {
     @Param("entryId") entryId: string,
     @Req() request: FastifyRequest,
   ) {
-    await this.#entryIn(entryId, (_entry, owner) => owner === organizationId);
+    await this.#entryIn(
+      entryId,
+      (_entry, owner, _personal, confidential) => owner === organizationId && !confidential,
+    );
     return this.#services.trash.restore(actorOf(request), entryId);
   }
 
@@ -243,7 +263,10 @@ export class TrashController {
     @Body() body: z.output<typeof reasonSchema>,
     @Req() request: FastifyRequest,
   ) {
-    await this.#entryIn(entryId, (_entry, owner) => owner === organizationId);
+    await this.#entryIn(
+      entryId,
+      (_entry, owner, _personal, confidential) => owner === organizationId && !confidential,
+    );
     await this.#services.trash.deleteImmediately(actorOf(request), entryId, body.reason);
   }
 

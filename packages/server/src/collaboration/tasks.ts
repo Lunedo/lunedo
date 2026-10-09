@@ -41,6 +41,7 @@ export interface TaskEntry {
 export interface TaskFilter {
   assignee?: string | undefined;
   spaceId?: string | undefined;
+  seriesId?: string | undefined;
   status?: TaskReportStatus | undefined;
   due?: TaskReportDue | undefined;
   after?: [sortDate: string, id: string] | undefined;
@@ -208,6 +209,7 @@ export class TaskService {
         and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
         ${assignee ? sql`and k.assignee_id = ${assignee}` : sql``}
         ${filter.spaceId ? sql`and t.space_id = ${filter.spaceId}` : sql``}
+        ${filter.seriesId ? sql`and exists (select 1 from meetings m where m.item_id = t.id and m.series_id = ${filter.seriesId} and m.state <> 'skipped')` : sql``}
         ${dueCondition}`;
     const status = filter.status ?? "open";
     const statusCondition =

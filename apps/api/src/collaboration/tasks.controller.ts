@@ -54,6 +54,7 @@ export class TasksController {
     const result = await this.#services.tasks.list(actorOf(request), {
       assignee: query.assignee,
       spaceId: query.spaceId,
+      seriesId: query.seriesId,
       status: query.status,
       due: query.due,
       after: after ?? undefined,

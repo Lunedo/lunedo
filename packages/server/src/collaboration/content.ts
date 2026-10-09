@@ -1,25 +1,64 @@
 import {
   type DocumentJson,
   editorSchemaVersion,
+  extractDecisions,
   extractInlineCommentThreads,
   extractMentions,
   extractTasks,
+  extractTopicUpdates,
   migrateDocument,
   type NodeJson,
+  normalizeDecisionIds,
   normalizeTaskIds,
 } from "@pagehall/editor-schema";
 import { uuidv7 } from "@pagehall/shared";
-import { sql } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 import { accountPrincipal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { NotificationService } from "../notifications/service.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 
-function taskIds(node: NodeJson, ids: Set<string> = new Set()): Set<string> {
-  if (node.type === "taskItem" && typeof node.attrs?.id === "string") ids.add(node.attrs.id);
-  for (const child of node.content ?? []) taskIds(child, ids);
+function idsOf(type: string, node: NodeJson, ids: Set<string> = new Set()): Set<string> {
+  if (node.type === type && typeof node.attrs?.id === "string") ids.add(node.attrs.id);
+  for (const child of node.content ?? []) idsOf(type, child, ids);
   return ids;
+}
+
+type Normalize = (
+  doc: DocumentJson,
+  options: { newId: () => string; taken?: (id: string) => boolean },
+) => DocumentJson | null;
+
+async function claimIds(
+  tx: Transaction,
+  itemId: string,
+  document: DocumentJson,
+  kind: { node: string; table: SQL; normalize: Normalize },
+): Promise<DocumentJson | null> {
+  const takenElsewhere = async (ids: string[]) => {
+    if (ids.length === 0) return new Set<string>();
+    const taken = await tx.execute<{ id: string }>(sql`
+      select id from ${kind.table} where id = any(${sql.param(ids)}::uuid[]) and item_id <> ${itemId}`);
+    return new Set(taken.rows.map((row) => row.id));
+  };
+  let taken = await takenElsewhere([...idsOf(kind.node, document)]);
+  let current = kind.normalize(document, { newId: uuidv7, taken: (id) => taken.has(id) }) ?? document;
+  const ids = [...idsOf(kind.node, current)];
+  if (ids.length > 0) {
+    await tx.execute(sql`
+      insert into ${kind.table} (id, item_id) select unnest(${sql.param(ids)}::uuid[]), ${itemId}
+      on conflict (id) do nothing`);
+    taken = await takenElsewhere(ids);
+    if (taken.size > 0) {
+      current = kind.normalize(current, { newId: uuidv7, taken: (id) => taken.has(id) }) ?? current;
+      const fresh = [...idsOf(kind.node, current)].filter((id) => !ids.includes(id));
+      await tx.execute(sql`
+        insert into ${kind.table} (id, item_id) select unnest(${sql.param(fresh)}::uuid[]), ${itemId}
+        on conflict (id) do nothing`);
+    }
+  }
+  return current === document ? null : current;
 }
 
 export async function claimTaskIds(
@@ -27,29 +66,17 @@ export async function claimTaskIds(
   itemId: string,
   document: DocumentJson,
 ): Promise<DocumentJson | null> {
-  const takenElsewhere = async (ids: string[]) => {
-    if (ids.length === 0) return new Set<string>();
-    const taken = await tx.execute<{ id: string }>(sql`
-      select id from tasks where id = any(${sql.param(ids)}::uuid[]) and item_id <> ${itemId}`);
-    return new Set(taken.rows.map((row) => row.id));
-  };
-  let taken = await takenElsewhere([...taskIds(document)]);
-  let current = normalizeTaskIds(document, { newId: uuidv7, taken: (id) => taken.has(id) }) ?? document;
-  const ids = [...taskIds(current)];
-  if (ids.length > 0) {
-    await tx.execute(sql`
-      insert into tasks (id, item_id) select unnest(${sql.param(ids)}::uuid[]), ${itemId}
-      on conflict (id) do nothing`);
-    taken = await takenElsewhere(ids);
-    if (taken.size > 0) {
-      current = normalizeTaskIds(current, { newId: uuidv7, taken: (id) => taken.has(id) }) ?? current;
-      const fresh = [...taskIds(current)].filter((id) => !ids.includes(id));
-      await tx.execute(sql`
-        insert into tasks (id, item_id) select unnest(${sql.param(fresh)}::uuid[]), ${itemId}
-        on conflict (id) do nothing`);
-    }
-  }
-  return current === document ? null : current;
+  const tasks = await claimIds(tx, itemId, document, {
+    node: "taskItem",
+    table: sql`tasks`,
+    normalize: normalizeTaskIds,
+  });
+  const decisions = await claimIds(tx, itemId, tasks ?? document, {
+    node: "decision",
+    table: sql`decisions`,
+    normalize: normalizeDecisionIds,
+  });
+  return decisions ?? tasks;
 }
 
 async function publishedThreads(executor: Executor, itemId: string): Promise<Set<string>> {
@@ -103,9 +130,61 @@ export async function syncCommentAnchors(
   }
 }
 
+async function syncDecisions(tx: Transaction, itemId: string, document: DocumentJson): Promise<void> {
+  const decisions = extractDecisions(document);
+  const ids = decisions.map((decision) => decision.id);
+  if (decisions.length > 0) {
+    await tx.execute(sql`
+      insert into decisions (id, item_id) select unnest(${sql.param(ids)}::uuid[]), ${itemId}
+      on conflict (id) do nothing`);
+    await tx.execute(sql`
+      update decisions d set published = true, topic_id = topic.id, statement = s.statement, text = s.text,
+        position = s.position, updated_at = now()
+      from jsonb_to_recordset(${JSON.stringify(decisions)}::jsonb)
+        as s(id uuid, "topicId" uuid, statement jsonb, text text, position int)
+      left join tree_items topic on topic.id = s."topicId" and topic.kind = 'meetingTopic'
+      where d.id = s.id and d.item_id = ${itemId}`);
+  }
+  await tx.execute(sql`
+    update decisions set published = false, updated_at = now()
+    where item_id = ${itemId} and published and not (id = any(${sql.param(ids)}::uuid[]))`);
+}
+
+async function syncTopicUpdates(tx: Transaction, itemId: string, document: DocumentJson): Promise<void> {
+  const meeting = await tx.execute<{ series_id: string }>(
+    sql`select series_id from meetings where item_id = ${itemId}`,
+  );
+  const seriesId = meeting.rows[0]?.series_id;
+  if (!seriesId) return;
+  const updates = extractTopicUpdates(document).filter((update) =>
+    update.content.some((node) => node.type !== "paragraph" || (node.content ?? []).length > 0),
+  );
+  const topics = updates.map((update) => update.topicId);
+  if (updates.length > 0) {
+    await tx.execute(sql`
+      insert into meeting_topic_updates (topic_id, item_id, content, text, position)
+      select s."topicId", ${itemId}, s.content, s.text, s.position
+      from jsonb_to_recordset(${JSON.stringify(updates)}::jsonb)
+        as s("topicId" uuid, content jsonb, text text, position int)
+      join meeting_topics mt on mt.item_id = s."topicId" and mt.series_id = ${seriesId}
+      on conflict (topic_id, item_id) do update set content = excluded.content, text = excluded.text,
+        position = excluded.position, updated_at = now()
+      where meeting_topic_updates.content is distinct from excluded.content
+        or meeting_topic_updates.position is distinct from excluded.position`);
+  }
+  await tx.execute(sql`
+    delete from meeting_topic_updates
+    where item_id = ${itemId} and not (topic_id = any(${sql.param(topics)}::uuid[]))`);
+  await tx.execute(sql`
+    update meeting_topics mt set last_update_at = (
+      select max(u.updated_at) from meeting_topic_updates u join meetings m on m.item_id = u.item_id
+      where u.topic_id = mt.item_id and m.state <> 'skipped')
+    where mt.series_id = ${seriesId}`);
+}
+
 interface ItemFacts {
   title: string;
-  kind: "page" | "blogPost";
+  kind: "page" | "blogPost" | "meetingTopic";
   spaceId: string;
   spaceKey: string;
   organizationId: string | null;
@@ -153,6 +232,8 @@ export class ContentActivity {
     await tx.execute(sql`
       update tasks set published = false, updated_at = now()
       where item_id = ${itemId} and published and not (id = any(${sql.param(ids)}::uuid[]))`);
+    await syncDecisions(tx, itemId, document);
+    await syncTopicUpdates(tx, itemId, document);
     const threads = [...extractInlineCommentThreads(document).keys()];
     if (threads.length > 0) {
       await tx.execute(sql`
@@ -199,14 +280,14 @@ export class ContentActivity {
   async #facts(executor: Executor, itemId: string): Promise<ItemFacts | null> {
     const result = await executor.execute<{
       title: string;
-      kind: "page" | "blogPost";
+      kind: "page" | "blogPost" | "meetingTopic";
       space_id: string;
       key: string;
       organization_id: string | null;
     }>(sql`
       select t.title, t.kind, t.space_id, s.key, s.organization_id
       from tree_items t join spaces s on s.id = t.space_id
-      where t.id = ${itemId} and t.kind in ('page', 'blogPost')`);
+      where t.id = ${itemId} and t.kind in ('page', 'blogPost', 'meetingTopic')`);
     const row = result.rows[0];
     return row
       ? {

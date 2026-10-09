@@ -86,6 +86,14 @@ export function propertyTable(...rows: [string, Cell][]): NodeJson {
   };
 }
 
+export function section(key: string, title: string, ...content: NodeJson[]): NodeJson {
+  return { type: "section", attrs: { key, title }, content };
+}
+
+export function openTaskReport(): NodeJson {
+  return { type: "taskReport", attrs: { status: "open" } };
+}
+
 export function callout(variant: CalloutVariant, ...content: NodeJson[]): NodeJson {
   return { type: "callout", attrs: { variant }, content };
 }

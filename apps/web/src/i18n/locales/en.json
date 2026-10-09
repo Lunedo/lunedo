@@ -3116,7 +3116,9 @@
         "deleted": "Space deleted",
         "restored": "Space restored",
         "archived": "Space archived",
-        "unarchived": "Space brought back from the archive"
+        "unarchived": "Space brought back from the archive",
+        "confidentialAdministratorAppointed": "Space admin of a confidential space appointed",
+        "confidentialDeleted": "Confidential space deleted"
       },
       "page": {
         "updateRejected": "Page change rejected",

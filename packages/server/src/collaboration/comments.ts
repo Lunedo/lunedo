@@ -322,8 +322,10 @@ export class CommentService {
         sql`select space_id, kind from tree_items where id = ${itemId}`,
       );
       const item = located.rows[0];
-      if (!item || (item.kind !== "page" && item.kind !== "blogPost")) {
-        throw new SpaceError("itemNotFound", "The page does not exist");
+      const commentable = item?.kind === "page" || item?.kind === "blogPost" || item?.kind === "meetingTopic";
+      if (!item || !commentable) throw new SpaceError("itemNotFound", "The page does not exist");
+      if (anchor && item.kind === "meetingTopic") {
+        throw new SpaceError("invalidAnchor", "Comments on a topic refer to the whole topic");
       }
       await this.#count(tx, itemId);
       const id = uuidv7();

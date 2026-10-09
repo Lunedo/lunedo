@@ -35,6 +35,7 @@ export const pageTemplates = pgTable(
     document: jsonb().notNull(),
     schemaVersion: integer().notNull(),
     fields: jsonb().notNull(),
+    series: jsonb(),
     createdBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     updatedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     ...timestamps(),

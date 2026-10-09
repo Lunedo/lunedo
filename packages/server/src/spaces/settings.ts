@@ -32,6 +32,14 @@ export const membersCreateSpacesSetting = defineSetting({
   lockable: true,
 });
 
+export const membersCreateConfidentialSpacesSetting = defineSetting({
+  key: "spaces.membersCreateConfidentialSpaces",
+  schema: z.boolean(),
+  default: true,
+  levels: ["instance", "organization"],
+  lockable: true,
+});
+
 export const defaultSpacePermissionsSetting = defineSetting<DefaultSpacePermissions>({
   key: "spaces.defaultPermissions",
   schema: defaultSpacePermissionsSchema,
@@ -105,6 +113,7 @@ export const trashSecondStageDaysSetting = defineSetting({
 
 export const spaceSettings = [
   membersCreateSpacesSetting,
+  membersCreateConfidentialSpacesSetting,
   defaultSpacePermissionsSetting,
   personalSpacesSetting,
   defaultPageModeSetting,

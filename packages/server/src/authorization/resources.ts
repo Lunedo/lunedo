@@ -8,7 +8,11 @@ import {
 import type { SettingsService } from "../settings/service.js";
 import { grantsSpaceRole } from "../spaces/roles.js";
 import type { SpaceRole } from "../spaces/schema.js";
-import { membersCreateSpacesSetting, personalSpacesSetting } from "../spaces/settings.js";
+import {
+  membersCreateConfidentialSpacesSetting,
+  membersCreateSpacesSetting,
+  personalSpacesSetting,
+} from "../spaces/settings.js";
 import { grantsLevel } from "./areas.js";
 import type { ActionDefinition, ResourceType, RestrictionResult, RuleContext } from "./registry.js";
 
@@ -108,6 +112,10 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "organization.spaces.view": organizationArea("spaces", "view"),
       "organization.spaces.manage": organizationArea("spaces", "manage"),
       "organization.spaces.create": { ...organizationArea("spaces", "manage"), rule: "membersCreateSpaces" },
+      "organization.spaces.createConfidential": {
+        ...organizationArea("spaces", "manage"),
+        rule: "membersCreateConfidentialSpaces",
+      },
       "organization.trash.manage": organizationArea("spaces", "manage"),
       "organization.templates.manage": organizationArea("settings", "manage"),
       "organization.blog.pin": organizationArea("spaces", "manage"),
@@ -130,6 +138,16 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
         const facts = await context.organizationFacts(context.organizationId);
         if (facts.membership?.kind !== "member") return false;
         return settings.get(membersCreateSpacesSetting, organizationSettingsChain(context.organizationId));
+      },
+      membersCreateConfidentialSpaces: async (context) => {
+        if (!context.organizationId) return false;
+        const facts = await context.organizationFacts(context.organizationId);
+        if (facts.membership?.kind !== "member") return false;
+        const chain = organizationSettingsChain(context.organizationId);
+        return (
+          (await settings.get(membersCreateSpacesSetting, chain)) &&
+          settings.get(membersCreateConfidentialSpacesSetting, chain)
+        );
       },
     },
   };

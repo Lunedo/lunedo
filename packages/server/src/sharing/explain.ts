@@ -41,8 +41,8 @@ export interface AccessExplanation {
 }
 
 export interface PersonAccessEntry {
-  kind: "space" | "share" | "link" | "restrictedPages";
-  spaceId: string;
+  kind: "space" | "share" | "link" | "restrictedPages" | "confidentialSpaces";
+  spaceId: string | null;
   spaceName: string;
   spaceKey: string;
   itemId: string | null;
@@ -283,7 +283,13 @@ export class AccessExplanationService {
       throw new SpaceError("personNotFound", "The person does not exist");
     }
     const limit = options.spaceIds ? sql`s.id = any(${sql.param(options.spaceIds)}::uuid[])` : sql`true`;
-    const scope = sql`${this.#spaceScope(options.organizationId)} and ${limit} and s.deleted_at is null and s.personal_of is null`;
+    const base = sql`${this.#spaceScope(options.organizationId)} and ${limit} and s.deleted_at is null and s.personal_of is null`;
+    const scope = sql`${base} and (not s.confidential or ${this.#authorization.spaceFilter(viewer, sql`s`)})`;
+    const confidential = await this.#database.execute<{ count: string }>(sql`
+      select count(*) as count from spaces s
+      where ${base} and s.confidential and not ${this.#authorization.spaceFilter(viewer, sql`s`)}
+        and exists (select 1 from space_permissions sp where sp.space_id = s.id
+          and sp.principal_kind = 'account' and sp.principal_id = ${accountId})`);
     const spaces = await this.#database.execute<{ id: string; name: string; key: string }>(sql`
       select s.id, s.name, s.key from spaces s where ${scope} order by lower(s.name), s.id limit 2000`);
     const entries: PersonAccessEntry[] = [];
@@ -412,6 +418,20 @@ export class AccessExplanationService {
       });
     }
     entries.push(...hidden.values());
+    const confidentialCount = Number(confidential.rows[0]?.count ?? 0);
+    if (confidentialCount > 0) {
+      entries.push({
+        kind: "confidentialSpaces",
+        spaceId: null,
+        spaceName: "",
+        spaceKey: "",
+        itemId: null,
+        itemTitle: null,
+        role: null,
+        count: confidentialCount,
+        reasons: [],
+      });
+    }
     return { accountId, name: person.name, email: person.email, entries };
   }
 

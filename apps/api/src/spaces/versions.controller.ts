@@ -91,7 +91,7 @@ const exampleDraft = {
   changes: 3,
   basedOn: 7,
   contributors: [{ id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger" }],
-  references: { people: {}, pages: {} },
+  references: { people: {}, pages: {}, topics: {} },
 };
 
 const publishSchema = z
@@ -277,7 +277,7 @@ export class VersionsController {
       example: {
         title: exampleDraft.title,
         document: exampleDocument,
-        references: { people: {}, pages: {} },
+        references: { people: {}, pages: {}, topics: {} },
       },
     },
   })
@@ -362,7 +362,11 @@ export class VersionsController {
     response: {
       description: "The version.",
       schema: versionContentSchema,
-      example: { ...exampleVersion, document: exampleDocument, references: { people: {}, pages: {} } },
+      example: {
+        ...exampleVersion,
+        document: exampleDocument,
+        references: { people: {}, pages: {}, topics: {} },
+      },
     },
   })
   async version(
@@ -427,7 +431,7 @@ export class VersionsController {
         diff: { title: null, blocks: [], changes: 0 },
         before: exampleDocument,
         after: exampleDocument,
-        references: { people: {}, pages: {} },
+        references: { people: {}, pages: {}, topics: {} },
       },
     },
     errors: ["versionNotFound"],

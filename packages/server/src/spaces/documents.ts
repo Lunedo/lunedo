@@ -2,9 +2,11 @@ import {
   type DocumentJson,
   editorSchemaVersion,
   emptyDocument,
+  extractDecisions,
   extractMentions,
   extractPageLinks,
   extractTasks,
+  extractTopicUpdates,
   migrateDocument,
   renderMarkdown,
   slugify,
@@ -64,6 +66,7 @@ export interface PageReferences {
     string,
     { title: string; spaceKey: string; kind: string; accessible: boolean; inTrash: boolean }
   >;
+  topics: Record<string, { title: string; status: "open" | "closed" }>;
 }
 
 export interface Backlink {
@@ -366,6 +369,30 @@ export class PageDocumentService {
     return snapshot;
   }
 
+  async editLocked(
+    tx: Transaction,
+    itemId: string,
+    change: (document: DocumentJson) => DocumentJson | null,
+    actorId: string | null,
+  ): Promise<boolean> {
+    const locked = await tx.execute<{ state: Buffer; schema_version: number }>(sql`
+      select d.state, d.schema_version from page_documents d join tree_items t on t.id = d.item_id
+      where d.item_id = ${itemId} and t.kind = 'page' for update of d`);
+    const row = locked.rows[0];
+    if (!row) throw new SpaceError("itemNotFound", "The page does not exist");
+    const doc = new Y.Doc();
+    Y.applyUpdate(doc, new Uint8Array(row.state), MERGE_ORIGIN);
+    migrateYDoc(doc, row.schema_version, NORMALIZE_ORIGIN);
+    const next = change(documentFromYDoc(doc) as DocumentJson);
+    if (!next) return false;
+    const validation = validateDocument(next);
+    if (!validation.ok) throw new DocumentInvalidError(validation.problems);
+    applyDocument(doc, validation.document, API_ORIGIN);
+    if (actorId) await recordClient(tx, itemId, doc.clientID, actorId);
+    await this.#store(tx, itemId, doc, actorId);
+    return true;
+  }
+
   async resolveTitleLinks(
     actor: Principal,
     itemId: string,
@@ -436,7 +463,26 @@ export class PageDocumentService {
               from tree_items t join spaces s on s.id = t.space_id
               where t.id = any(${sql.param(pageIds)}::uuid[])`)
           ).rows;
+    const topicIds = [
+      ...new Set([
+        ...extractTopicUpdates(document).map((update) => update.topicId),
+        ...extractDecisions(document).flatMap((decision) => (decision.topicId ? [decision.topicId] : [])),
+      ]),
+    ];
+    const topics =
+      topicIds.length === 0
+        ? []
+        : (
+            await this.#database.execute<{ id: string; title: string; status: "open" | "closed" }>(sql`
+              select t.id, t.title, mt.status from tree_items t join spaces s on s.id = t.space_id
+              join meeting_topics mt on mt.item_id = t.id
+              where t.id = any(${sql.param(topicIds)}::uuid[])
+                and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}`)
+          ).rows;
     return {
+      topics: Object.fromEntries(
+        topics.map((topic) => [topic.id, { title: topic.title, status: topic.status }]),
+      ),
       people: Object.fromEntries(people.map((person) => [person.id, person.name])),
       pages: Object.fromEntries(
         pageIds.map((id) => {

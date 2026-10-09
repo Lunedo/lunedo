@@ -1,4 +1,5 @@
 import type { DocumentJson } from "@pagehall/editor-schema";
+import type { Rhythm } from "../../meetings/schedule.js";
 import type { TemplateField } from "../fields.js";
 import type { TemplateCategory } from "../schema.js";
 
@@ -13,8 +14,14 @@ export interface BuiltInTemplateText {
   document: DocumentJson;
 }
 
+export interface SeriesDefaults {
+  rhythm: Rhythm;
+  durationMinutes: number;
+}
+
 export interface BuiltInTemplate {
   key: string;
   category: TemplateCategory;
   text: Record<TemplateLanguage, BuiltInTemplateText>;
+  series?: SeriesDefaults;
 }

@@ -82,6 +82,22 @@ export {
   mailOutbox,
   mailStatus,
 } from "../mail/schema.js";
+export {
+  attendance,
+  decisions,
+  meetingAttendees,
+  meetingOccurrenceOverrides,
+  meetingPrivateNotes,
+  meetingSeries,
+  meetingSeriesMembers,
+  meetingState,
+  meetings,
+  meetingTopics,
+  meetingTopicUpdates,
+  scheduleSource,
+  topicOutcome,
+  topicStatus,
+} from "../meetings/schema.js";
 export { knownDevices, notifications } from "../notifications/schema.js";
 export {
   breakGlassAccesses,

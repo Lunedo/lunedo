@@ -43,6 +43,7 @@ type EntryRow = {
   space_name: string;
   organization_id: string | null;
   personal: boolean;
+  confidential: boolean;
   kind: TrashEntryKind;
   root_item_id: string | null;
   item_kind: TreeItemKind | null;
@@ -56,7 +57,7 @@ type EntryRow = {
 };
 
 const ENTRY_COLUMNS = sql`e.id, e.space_id, s.key as space_key, s.name as space_name, s.organization_id,
-  s.personal_of is not null as personal, e.kind, e.root_item_id, e.item_kind, e.title, e.descendants, e.stage,
+  s.personal_of is not null as personal, s.confidential, e.kind, e.root_item_id, e.item_kind, e.title, e.descendants, e.stage,
   e.purging, e.deleted_at, e.deleted_by, e.stage_two_at`;
 
 export interface PurgeOptions {
@@ -160,20 +161,33 @@ export class TrashService {
     return result.rows[0]?.accessible === true;
   }
 
-  async spaceOf(
-    entryId: string,
-  ): Promise<{ spaceId: string; organizationId: string | null; personal: boolean } | null> {
+  async spaceOf(entryId: string): Promise<{
+    spaceId: string;
+    organizationId: string | null;
+    personal: boolean;
+    confidential: boolean;
+  } | null> {
     const row = await this.#entry(this.#database, entryId);
     return row
-      ? { spaceId: row.space_id, organizationId: row.organization_id, personal: row.personal }
+      ? {
+          spaceId: row.space_id,
+          organizationId: row.organization_id,
+          personal: row.personal,
+          confidential: row.confidential,
+        }
       : null;
   }
 
-  async listSpace(viewer: Principal, spaceId: string): Promise<TrashEntry[]> {
+  async listSpace(
+    viewer: Principal,
+    spaceId: string,
+    options: { secondStage?: boolean } = {},
+  ): Promise<TrashEntry[]> {
     const result = await this.#database.execute<EntryRow>(sql`
       select ${ENTRY_COLUMNS} from trash_entries e join spaces s on s.id = e.space_id
       left join tree_items rt on rt.id = e.root_item_id
-      where e.space_id = ${spaceId} and e.kind = 'items' and e.stage = 1 and not e.purging
+      where e.space_id = ${spaceId} and e.kind = 'items' and not e.purging
+        and ${options.secondStage ? sql`e.stage = 2 and s.confidential` : sql`e.stage = 1`}
         and (rt.id is null or ${this.#authorization.itemFilter(viewer, sql`rt`, sql`s`, "editor")})
       order by e.deleted_at desc, e.id limit 1000`);
     return this.#toEntries(result.rows);
@@ -182,7 +196,7 @@ export class TrashService {
   async listOrganization(organizationId: string): Promise<TrashEntry[]> {
     const result = await this.#database.execute<EntryRow>(sql`
       select ${ENTRY_COLUMNS} from trash_entries e join spaces s on s.id = e.space_id
-      where s.organization_id = ${organizationId} and not e.purging
+      where s.organization_id = ${organizationId} and not e.purging and not s.confidential
         and (e.kind = 'space' or s.deleted_at is null)
       order by e.stage desc, e.deleted_at desc, e.id limit 1000`);
     return this.#toEntries(result.rows);
@@ -554,7 +568,7 @@ export class TrashService {
           targetId: entryId,
           fields: {
             spaceId: start.space_id,
-            title: start.title,
+            title: start.confidential ? "" : start.title,
             kind: start.kind,
             itemKind: start.item_kind,
             descendants: Number(start.descendants),

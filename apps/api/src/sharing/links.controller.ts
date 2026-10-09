@@ -45,6 +45,9 @@ const linkListSchema = z
         enabled: z.boolean().describe("Whether the organization allows share links."),
         anyone: z.boolean().describe("Whether links for anyone are allowed."),
         anyoneMaxDays: z.number().int().describe("Longest lifetime of a link for anyone, in days."),
+        peopleOnly: z
+          .boolean()
+          .describe("True in a confidential space, where links can only name specific people."),
       })
       .describe("What the organization allows."),
   })
@@ -109,7 +112,10 @@ export class ShareLinksController {
     response: {
       description: "The links.",
       schema: linkListSchema,
-      example: { links: [exampleShareLink], options: { enabled: true, anyone: false, anyoneMaxDays: 30 } },
+      example: {
+        links: [exampleShareLink],
+        options: { enabled: true, anyone: false, anyoneMaxDays: 30, peopleOnly: false },
+      },
     },
   })
   async list(@Param("pageId") pageId: string, @Req() request: FastifyRequest) {

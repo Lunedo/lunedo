@@ -90,7 +90,7 @@ export function notificationSettingKey(type: string): string {
   return `notifications.${first}${rest.map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("")}`;
 }
 
-const contentKind = z.enum(["page", "blogPost"]);
+const contentKind = z.enum(["page", "blogPost", "meetingTopic"]);
 const shareRole = z.enum(["reader", "commenter", "editor"]);
 
 export const contentNotificationParamSchemas = {
@@ -147,6 +147,17 @@ export const contentNotificationParamSchemas = {
     spaceId: idSchema,
     spaceName: z.string(),
     spaceKey: z.string(),
+  }),
+  "space.confidentialWithoutAdministrator": z.object({ spaceKey: z.string() }),
+  "meeting.notesAvailable": z.object({
+    itemTitle: z.string(),
+    spaceKey: z.string(),
+    startsAt: z.iso.datetime().nullable(),
+  }),
+  "oneOnOne.started": z.object({
+    itemTitle: z.string(),
+    spaceKey: z.string(),
+    startedBy: idSchema.nullable(),
   }),
 } as const;
 

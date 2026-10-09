@@ -3116,7 +3116,9 @@
         "deleted": "Space gelöscht",
         "restored": "Space wiederhergestellt",
         "archived": "Space archiviert",
-        "unarchived": "Space aus dem Archiv geholt"
+        "unarchived": "Space aus dem Archiv geholt",
+        "confidentialAdministratorAppointed": "Space-Admin eines vertraulichen Space ernannt",
+        "confidentialDeleted": "Vertraulicher Space gelöscht"
       },
       "page": {
         "updateRejected": "Seitenänderung abgelehnt",
