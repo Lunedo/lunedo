@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { readdirSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ANONYMOUS, type Principal, SYSTEM } from "../accounts/principal.js";
 import {
@@ -25,7 +26,7 @@ import type { RegisteredAction, Resource } from "./registry.js";
 const baseUrl = testDatabaseBaseUrl();
 
 const subjects = ["member", "serviceAccount", "collaborator", "guest", "deactivated", "nonMember"] as const;
-type Subject = (typeof subjects)[number];
+export type Subject = (typeof subjects)[number];
 
 interface RoleCase {
   scope: RoleScope;
@@ -293,303 +294,317 @@ interface Fixture {
   deletedSpaceEntryId: string;
 }
 
-describe.skipIf(!baseUrl)("permission matrix", () => {
-  let test: TestServices;
-  let actions: RegisteredAction[];
-  let evaluated = 0;
+export function permissionMatrix(only: readonly Subject[], extras: boolean): void {
+  describe.skipIf(!baseUrl)(`permission matrix for ${only.join(", ")}`, () => {
+    let test: TestServices;
+    let actions: RegisteredAction[];
+    let evaluated = 0;
 
-  beforeAll(async () => {
-    test = await createTestServices(baseUrl ?? "");
-    await test.pool.query("insert into instance (id) values (1)");
-    actions = test.services.authorization.registry.actions();
-  });
-
-  afterAll(async () => {
-    await test?.close();
-  });
-
-  async function account(type: "standard" | "guest", home: string | null): Promise<string> {
-    const result = await test.pool.query<{ id: string }>(
-      "insert into accounts (id, type, state, email, name, home_organization_id) values ($1, $2, 'active', $3, 'Test', $4) returning id",
-      [randomUUID(), type, `${randomUUID()}@example.org`, home],
-    );
-    return result.rows[0]?.id ?? "";
-  }
-
-  async function membership(organizationId: string, accountId: string, kind: MembershipKind) {
-    await test.pool.query(
-      "insert into memberships (id, organization_id, account_id, kind) values ($1, $2, $3, $4)",
-      [randomUUID(), organizationId, accountId, kind],
-    );
-  }
-
-  async function fixture(): Promise<Fixture> {
-    const owner = await account("standard", null);
-    const created = await test.services.organizations.createAsActor(SYSTEM, {
-      name: `Organization ${randomUUID().slice(0, 8)}`,
-      ownerAccountId: owner,
+    beforeAll(async () => {
+      test = await createTestServices(baseUrl ?? "");
+      await test.pool.query("insert into instance (id) values (1)");
+      actions = test.services.authorization.registry.actions();
     });
-    const group = await test.pool.query<{ id: string }>(
-      "insert into groups (id, organization_id, name) values ($1, $2, 'Group') returning id",
-      [randomUUID(), created.id],
-    );
-    const targetId = await account("standard", created.id);
-    await membership(created.id, targetId, "member");
-    const space = await test.services.spaces.create(
-      { type: "account", id: owner },
-      created.id,
-      {
-        name: "Matrix space",
-        key: `M${randomUUID().slice(0, 8).replace(/-/g, "").toUpperCase()}`,
-        visibility: "private",
-        grants: [],
-      },
-      test.services.spacePermissions.holders,
-    );
-    const itemId = space.overviewItemId ?? "";
-    const deletedSpace = await test.services.spaces.create(
-      { type: "account", id: owner },
-      created.id,
-      {
-        name: "Deleted matrix space",
-        key: `D${randomUUID().slice(0, 8).replace(/-/g, "").toUpperCase()}`,
-        visibility: "private",
-        grants: [],
-      },
-      test.services.spacePermissions.holders,
-    );
-    const deleted = await test.services.trash.deleteSpace(
-      { type: "account", id: owner },
-      deletedSpace.id,
-      deletedSpace.name,
-    );
-    const comment = await test.pool.query<{ id: string }>(
-      "insert into comments (id, item_id, author_id, body) values ($1, $2, $3, $4) returning id",
-      [randomUUID(), itemId, owner, { type: "doc", content: [{ type: "paragraph" }] }],
-    );
-    const task = await test.pool.query<{ id: string }>(
-      "insert into tasks (id, item_id, published, assignee_id) values ($1, $2, true, $3) returning id",
-      [randomUUID(), itemId, owner],
-    );
-    const file = await test.pool.query<{ id: string }>(
-      "insert into stored_files (id, storage_key, state) values ($1, $2, 'ready') returning id",
-      [randomUUID(), `matrix/${randomUUID()}`],
-    );
-    const attachment = await test.pool.query<{ id: string }>(
-      "insert into attachments (id, item_id, name, name_key) values ($1, $2, 'a.txt', 'a.txt') returning id",
-      [randomUUID(), itemId],
-    );
-    await test.pool.query(
-      "insert into attachment_versions (id, attachment_id, number, file_id, name) values ($1, $2, 1, $3, 'a.txt')",
-      [randomUUID(), attachment.rows[0]?.id, file.rows[0]?.id],
-    );
-    return {
-      organizationId: created.id,
-      groupId: group.rows[0]?.id ?? "",
-      targetId,
-      spaceId: space.id,
-      itemId,
-      commentId: comment.rows[0]?.id ?? "",
-      taskId: task.rows[0]?.id ?? "",
-      attachmentId: attachment.rows[0]?.id ?? "",
-      deletedSpaceEntryId: deleted.id,
-    };
-  }
 
-  async function subjectAccount(subject: Subject, target: Fixture): Promise<string> {
-    switch (subject) {
-      case "member":
-      case "deactivated": {
-        const id = await account("standard", target.organizationId);
-        await membership(target.organizationId, id, "member");
-        return id;
-      }
-      case "serviceAccount":
-        return (await test.services.serviceAccounts.create(SYSTEM, target.organizationId, { name: "Bot" }))
-          .id;
-      case "collaborator": {
-        const id = await account("standard", null);
-        await membership(target.organizationId, id, "collaborator");
-        return id;
-      }
-      case "guest": {
-        const id = await account("guest", null);
-        await membership(target.organizationId, id, "guest");
-        return id;
-      }
-      case "nonMember":
-        return account("standard", null);
-    }
-  }
+    afterAll(async () => {
+      await test?.close();
+    });
 
-  function resourceFor(action: RegisteredAction, target: Fixture & { serviceAccountId: string }): Resource {
-    switch (action.resourceType.type) {
-      case "instance":
-        return { type: "instance" };
-      case "organization":
-        return { type: "organization", id: target.organizationId };
-      case "group":
-        return { type: "group", id: target.groupId };
-      case "account":
-        return { type: "account", id: target.targetId };
-      case "serviceAccount":
-        return { type: "serviceAccount", id: target.serviceAccountId };
-      case "space":
-        return { type: "space", id: target.spaceId };
-      case "item":
-        return { type: "item", id: target.itemId };
-      case "comment":
-        return { type: "comment", id: target.commentId };
-      case "task":
-        return { type: "task", id: target.taskId };
-      case "attachment":
-        return { type: "attachment", id: target.attachmentId };
-      case "deletedSpace":
-        return { type: "deletedSpace", id: target.deletedSpaceEntryId };
-      default:
-        throw new Error(`The matrix has no resource for ${action.resourceType.type}`);
-    }
-  }
-
-  async function check(
-    principal: Principal,
-    target: Fixture & { serviceAccountId: string },
-    held: Held | "system" | "anonymous",
-  ) {
-    const mismatches: string[] = [];
-    for (const action of actions) {
-      const decision = await test.services.authorization.explain(
-        principal,
-        action.name,
-        resourceFor(action, target),
+    async function account(type: "standard" | "guest", home: string | null): Promise<string> {
+      const result = await test.pool.query<{ id: string }>(
+        "insert into accounts (id, type, state, email, name, home_organization_id) values ($1, $2, 'active', $3, 'Test', $4) returning id",
+        [randomUUID(), type, `${randomUUID()}@example.org`, home],
       );
-      const expected =
-        held === "system" ? true : held === "anonymous" ? false : expectedAllowed(held, action.name);
-      evaluated += 1;
-      if (decision.allowed !== expected) mismatches.push(`${action.name}: expected ${expected}`);
+      return result.rows[0]?.id ?? "";
     }
-    expect(mismatches).toEqual([]);
-  }
 
-  async function withServiceAccount(target: Fixture) {
-    const service = await test.services.serviceAccounts.create(SYSTEM, target.organizationId, {
-      name: "Target",
-    });
-    return { ...target, serviceAccountId: service.id };
-  }
-
-  async function assign(
-    held: Held & { role: RoleCase; via: PrincipalKind },
-    target: Fixture,
-    accountId: string,
-  ) {
-    const { role, via } = held;
-    if (via === "group") {
-      await test.pool.query("insert into group_members (group_id, account_id) values ($1, $2)", [
-        target.groupId,
-        accountId,
-      ]);
+    async function membership(organizationId: string, accountId: string, kind: MembershipKind) {
+      await test.pool.query(
+        "insert into memberships (id, organization_id, account_id, kind) values ($1, $2, $3, $4)",
+        [randomUUID(), organizationId, accountId, kind],
+      );
     }
-    if (role.scope === "instance" && role.builtIn === "owner") {
-      if (assignmentValid(held.subject, via, role)) {
-        await test.pool.query("update instance set owner_account_id = $1", [accountId]);
+
+    async function fixture(): Promise<Fixture> {
+      const owner = await account("standard", null);
+      const created = await test.services.organizations.createAsActor(SYSTEM, {
+        name: `Organization ${randomUUID().slice(0, 8)}`,
+        ownerAccountId: owner,
+      });
+      const group = await test.pool.query<{ id: string }>(
+        "insert into groups (id, organization_id, name) values ($1, $2, 'Group') returning id",
+        [randomUUID(), created.id],
+      );
+      const targetId = await account("standard", created.id);
+      await membership(created.id, targetId, "member");
+      const space = await test.services.spaces.create(
+        { type: "account", id: owner },
+        created.id,
+        {
+          name: "Matrix space",
+          key: `M${randomUUID().slice(0, 8).replace(/-/g, "").toUpperCase()}`,
+          visibility: "private",
+          grants: [],
+        },
+        test.services.spacePermissions.holders,
+      );
+      const itemId = space.overviewItemId ?? "";
+      const deletedSpace = await test.services.spaces.create(
+        { type: "account", id: owner },
+        created.id,
+        {
+          name: "Deleted matrix space",
+          key: `D${randomUUID().slice(0, 8).replace(/-/g, "").toUpperCase()}`,
+          visibility: "private",
+          grants: [],
+        },
+        test.services.spacePermissions.holders,
+      );
+      const deleted = await test.services.trash.deleteSpace(
+        { type: "account", id: owner },
+        deletedSpace.id,
+        deletedSpace.name,
+      );
+      const comment = await test.pool.query<{ id: string }>(
+        "insert into comments (id, item_id, author_id, body) values ($1, $2, $3, $4) returning id",
+        [randomUUID(), itemId, owner, { type: "doc", content: [{ type: "paragraph" }] }],
+      );
+      const task = await test.pool.query<{ id: string }>(
+        "insert into tasks (id, item_id, published, assignee_id) values ($1, $2, true, $3) returning id",
+        [randomUUID(), itemId, owner],
+      );
+      const file = await test.pool.query<{ id: string }>(
+        "insert into stored_files (id, storage_key, state) values ($1, $2, 'ready') returning id",
+        [randomUUID(), `matrix/${randomUUID()}`],
+      );
+      const attachment = await test.pool.query<{ id: string }>(
+        "insert into attachments (id, item_id, name, name_key) values ($1, $2, 'a.txt', 'a.txt') returning id",
+        [randomUUID(), itemId],
+      );
+      await test.pool.query(
+        "insert into attachment_versions (id, attachment_id, number, file_id, name) values ($1, $2, 1, $3, 'a.txt')",
+        [randomUUID(), attachment.rows[0]?.id, file.rows[0]?.id],
+      );
+      return {
+        organizationId: created.id,
+        groupId: group.rows[0]?.id ?? "",
+        targetId,
+        spaceId: space.id,
+        itemId,
+        commentId: comment.rows[0]?.id ?? "",
+        taskId: task.rows[0]?.id ?? "",
+        attachmentId: attachment.rows[0]?.id ?? "",
+        deletedSpaceEntryId: deleted.id,
+      };
+    }
+
+    async function subjectAccount(subject: Subject, target: Fixture): Promise<string> {
+      switch (subject) {
+        case "member":
+        case "deactivated": {
+          const id = await account("standard", target.organizationId);
+          await membership(target.organizationId, id, "member");
+          return id;
+        }
+        case "serviceAccount":
+          return (await test.services.serviceAccounts.create(SYSTEM, target.organizationId, { name: "Bot" }))
+            .id;
+        case "collaborator": {
+          const id = await account("standard", null);
+          await membership(target.organizationId, id, "collaborator");
+          return id;
+        }
+        case "guest": {
+          const id = await account("guest", null);
+          await membership(target.organizationId, id, "guest");
+          return id;
+        }
+        case "nonMember":
+          return account("standard", null);
+      }
+    }
+
+    function resourceFor(action: RegisteredAction, target: Fixture & { serviceAccountId: string }): Resource {
+      switch (action.resourceType.type) {
+        case "instance":
+          return { type: "instance" };
+        case "organization":
+          return { type: "organization", id: target.organizationId };
+        case "group":
+          return { type: "group", id: target.groupId };
+        case "account":
+          return { type: "account", id: target.targetId };
+        case "serviceAccount":
+          return { type: "serviceAccount", id: target.serviceAccountId };
+        case "space":
+          return { type: "space", id: target.spaceId };
+        case "item":
+          return { type: "item", id: target.itemId };
+        case "comment":
+          return { type: "comment", id: target.commentId };
+        case "task":
+          return { type: "task", id: target.taskId };
+        case "attachment":
+          return { type: "attachment", id: target.attachmentId };
+        case "deletedSpace":
+          return { type: "deletedSpace", id: target.deletedSpaceEntryId };
+        default:
+          throw new Error(`The matrix has no resource for ${action.resourceType.type}`);
+      }
+    }
+
+    async function check(
+      principal: Principal,
+      target: Fixture & { serviceAccountId: string },
+      held: Held | "system" | "anonymous",
+    ) {
+      const mismatches: string[] = [];
+      for (const action of actions) {
+        const decision = await test.services.authorization.explain(
+          principal,
+          action.name,
+          resourceFor(action, target),
+        );
+        const expected =
+          held === "system" ? true : held === "anonymous" ? false : expectedAllowed(held, action.name);
+        evaluated += 1;
+        if (decision.allowed !== expected) mismatches.push(`${action.name}: expected ${expected}`);
+      }
+      expect(mismatches).toEqual([]);
+    }
+
+    async function withServiceAccount(target: Fixture) {
+      const service = await test.services.serviceAccounts.create(SYSTEM, target.organizationId, {
+        name: "Target",
+      });
+      return { ...target, serviceAccountId: service.id };
+    }
+
+    async function assign(
+      held: Held & { role: RoleCase; via: PrincipalKind },
+      target: Fixture,
+      accountId: string,
+    ) {
+      const { role, via } = held;
+      if (via === "group") {
+        await test.pool.query("insert into group_members (group_id, account_id) values ($1, $2)", [
+          target.groupId,
+          accountId,
+        ]);
+      }
+      if (role.scope === "instance" && role.builtIn === "owner") {
+        if (assignmentValid(held.subject, via, role)) {
+          await test.pool.query("update instance set owner_account_id = $1", [accountId]);
+          return;
+        }
+        await expect(
+          test.services.roles.assign(SYSTEM, {
+            scope: "instance",
+            organizationId: null,
+            role: { builtIn: "owner" },
+            principal: { kind: via, id: via === "account" ? accountId : null },
+          }),
+        ).rejects.toThrow();
         return;
       }
-      await expect(
-        test.services.roles.assign(SYSTEM, {
-          scope: "instance",
-          organizationId: null,
-          role: { builtIn: "owner" },
-          principal: { kind: via, id: via === "account" ? accountId : null },
-        }),
-      ).rejects.toThrow();
-      return;
+      const organizationId = role.scope === "organization" ? target.organizationId : null;
+      const reference = role.builtIn
+        ? { builtIn: role.builtIn }
+        : {
+            customRoleId: (
+              await test.services.roles.createCustom(SYSTEM, role.scope, organizationId, {
+                name: `${role.name} ${randomUUID().slice(0, 6)}`,
+                areas: role.areas,
+              })
+            ).id,
+          };
+      const principalId = via === "account" ? accountId : via === "group" ? target.groupId : null;
+      const assignment = test.services.roles.assign(SYSTEM, {
+        scope: role.scope,
+        organizationId,
+        role: reference,
+        principal: { kind: via, id: principalId },
+      });
+      if (assignmentValid(held.subject, via, role)) await expect(assignment).resolves.toBeTruthy();
+      else await expect(assignment).rejects.toMatchObject({ name: "OrganizationError" });
     }
-    const organizationId = role.scope === "organization" ? target.organizationId : null;
-    const reference = role.builtIn
-      ? { builtIn: role.builtIn }
-      : {
-          customRoleId: (
-            await test.services.roles.createCustom(SYSTEM, role.scope, organizationId, {
-              name: `${role.name} ${randomUUID().slice(0, 6)}`,
-              areas: role.areas,
-            })
-          ).id,
-        };
-    const principalId = via === "account" ? accountId : via === "group" ? target.groupId : null;
-    const assignment = test.services.roles.assign(SYSTEM, {
-      scope: role.scope,
-      organizationId,
-      role: reference,
-      principal: { kind: via, id: principalId },
-    });
-    if (assignmentValid(held.subject, via, role)) await expect(assignment).resolves.toBeTruthy();
-    else await expect(assignment).rejects.toMatchObject({ name: "OrganizationError" });
-  }
 
-  for (const subject of subjects) {
-    for (const via of principalKinds) {
-      for (const role of ROLES) {
-        it(`${subject} holding ${role.scope} ${role.name} through ${via}`, async () => {
-          const target = await withServiceAccount(await fixture());
-          const accountId = await subjectAccount(subject, target);
-          const held = { subject, via, role, breakGlass: false };
-          try {
-            await assign(held, target, accountId);
-            if (subject === "deactivated") {
-              await test.pool.query("update accounts set state = 'deactivated' where id = $1", [accountId]);
+    for (const subject of only) {
+      for (const via of principalKinds) {
+        for (const role of ROLES) {
+          it(`${subject} holding ${role.scope} ${role.name} through ${via}`, async () => {
+            const target = await withServiceAccount(await fixture());
+            const accountId = await subjectAccount(subject, target);
+            const held = { subject, via, role, breakGlass: false };
+            try {
+              await assign(held, target, accountId);
+              if (subject === "deactivated") {
+                await test.pool.query("update accounts set state = 'deactivated' where id = $1", [accountId]);
+              }
+              await check({ type: "account", id: accountId }, target, held);
+            } finally {
+              await test.pool.query("delete from role_assignments where scope = 'instance'");
+              await test.pool.query("update instance set owner_account_id = null");
             }
-            await check({ type: "account", id: accountId }, target, held);
+          });
+        }
+      }
+    }
+
+    if (extras) {
+      for (const keepsInstanceRole of [true, false]) {
+        it(`break-glass access ${keepsInstanceRole ? "while" : "after"} the requester holds the instance role`, async () => {
+          const target = await withServiceAccount(await fixture());
+          const accountId = await account("standard", null);
+          const role = ROLES.find(
+            (candidate) => candidate.scope === "instance" && candidate.name === "custom organizations",
+          );
+          if (!role) throw new Error("The matrix has no instance role for organizations");
+          const held: Held = { subject: "nonMember", via: "account", role, breakGlass: true };
+          await assign({ ...held, role, via: "account" }, target, accountId);
+          await test.pool.query(
+            "insert into break_glass_accesses (id, organization_id, account_id, reason, expires_at) values ($1, $2, $3, 'Matrix test reason', now() + interval '1 hour')",
+            [randomUUID(), target.organizationId, accountId],
+          );
+          try {
+            if (keepsInstanceRole) {
+              await check({ type: "account", id: accountId }, target, held);
+            } else {
+              await test.pool.query("delete from role_assignments where scope = 'instance'");
+              await check({ type: "account", id: accountId }, target, { ...held, via: null, role: null });
+            }
           } finally {
             await test.pool.query("delete from role_assignments where scope = 'instance'");
-            await test.pool.query("update instance set owner_account_id = null");
           }
         });
       }
+
+      it("runs every subject in a file of its own", () => {
+        const files = readdirSync(new URL(".", import.meta.url)).filter((file) =>
+          /^matrix-.+.test.ts$/.test(file),
+        );
+        const expected = subjects.map(
+          (subject) => `matrix-${subject.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}.test.ts`,
+        );
+        expect(files.sort()).toEqual(expected.sort());
+      });
+
+      it("has an expectation for every registered action and none for unknown actions", () => {
+        expect(Object.keys(EXPECTED).sort()).toEqual(actions.map((action) => action.name).sort());
+      });
+
+      it("anonymous", async () => {
+        await check(ANONYMOUS, await withServiceAccount(await fixture()), "anonymous");
+      });
+
+      it("system", async () => {
+        await check(SYSTEM, await withServiceAccount(await fixture()), "system");
+      });
     }
-  }
 
-  for (const keepsInstanceRole of [true, false]) {
-    it(`break-glass access ${keepsInstanceRole ? "while" : "after"} the requester holds the instance role`, async () => {
-      const target = await withServiceAccount(await fixture());
-      const accountId = await account("standard", null);
-      const role = ROLES.find(
-        (candidate) => candidate.scope === "instance" && candidate.name === "custom organizations",
-      );
-      if (!role) throw new Error("The matrix has no instance role for organizations");
-      const held: Held = { subject: "nonMember", via: "account", role, breakGlass: true };
-      await assign({ ...held, role, via: "account" }, target, accountId);
-      await test.pool.query(
-        "insert into break_glass_accesses (id, organization_id, account_id, reason, expires_at) values ($1, $2, $3, 'Matrix test reason', now() + interval '1 hour')",
-        [randomUUID(), target.organizationId, accountId],
-      );
-      try {
-        if (keepsInstanceRole) {
-          await check({ type: "account", id: accountId }, target, held);
-        } else {
-          await test.pool.query("delete from role_assignments where scope = 'instance'");
-          await check({ type: "account", id: accountId }, target, { ...held, via: null, role: null });
-        }
-      } finally {
-        await test.pool.query("delete from role_assignments where scope = 'instance'");
-      }
+    it("evaluates the full cross product", () => {
+      const cases = only.length * principalKinds.length * ROLES.length + (extras ? 4 : 0);
+      expect(evaluated).toBe(cases * actions.length);
     });
-  }
-
-  it("has an expectation for every registered action and none for unknown actions", () => {
-    expect(Object.keys(EXPECTED).sort()).toEqual(actions.map((action) => action.name).sort());
   });
-
-  it("anonymous", async () => {
-    await check(ANONYMOUS, await withServiceAccount(await fixture()), "anonymous");
-  });
-
-  it("system", async () => {
-    await check(SYSTEM, await withServiceAccount(await fixture()), "system");
-  });
-
-  it("evaluates the full cross product", () => {
-    const cases = subjects.length * principalKinds.length * ROLES.length + 4;
-    expect(evaluated).toBe(cases * actions.length);
-  });
-});
+}
