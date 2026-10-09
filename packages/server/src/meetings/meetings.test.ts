@@ -464,6 +464,60 @@ describe.skipIf(!baseUrl)("meeting series", () => {
     });
   });
 
+  describe("gates", () => {
+    it("refuse to close a topic in a meeting of another series", async () => {
+      const context = await setup();
+      const created = await series(context);
+      const other = await series(context);
+      const topicId = await test.services.topics.create(context.lead, created.id, { title: "Budget" });
+      await expect(
+        test.services.topics.close(context.lead, topicId, {
+          outcome: "resolved",
+          meetingId: other.firstMeetingId,
+        }),
+      ).rejects.toMatchObject({ code: "meetingNotFound" });
+      expect((await test.services.topics.get(context.lead, topicId)).status).toBe("open");
+    });
+
+    it("accept only members of a confidential space as attendees, as for series members", async () => {
+      const context = await setup();
+      const confidential = await test.services.spaces.create(
+        context.lead,
+        context.org.id,
+        {
+          name: "Works council",
+          key: `WC${Math.floor(Math.random() * 9000 + 1000)}`,
+          visibility: "private",
+          confidential: true,
+          grants: [{ principalKind: "account", principalId: context.editorId, role: "editor" }],
+        },
+        test.services.spacePermissions.holders,
+      );
+      const id = await test.services.meetings.createSeries(context.lead, confidential.id, {
+        name: "Council meeting",
+        parentId: null,
+        members: [context.leadId, context.editorId],
+        templateId: "builtin:team-meeting",
+        rhythm: WEEKLY,
+        startsOn: "2030-03-18",
+        startTime: "09:30",
+        timeZone: "Europe/Vienna",
+        durationMinutes: 45,
+      });
+      const meetingId = (await test.services.meetings.details(context.lead, id)).upcoming?.id ?? "";
+      await expect(
+        test.services.meetings.addAttendee(context.lead, meetingId, context.outsiderId),
+      ).rejects.toMatchObject({
+        code: "invalidMember",
+      });
+      await expect(
+        test.services.meetings.updateSeries(context.lead, id, {
+          members: [context.leadId, context.outsiderId],
+        }),
+      ).rejects.toMatchObject({ code: "invalidMember" });
+    });
+  });
+
   describe("readers", () => {
     it("never see topics, decisions or meetings below an unpublished page", async () => {
       const context = await setup();

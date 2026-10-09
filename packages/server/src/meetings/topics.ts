@@ -360,6 +360,12 @@ export class TopicService {
     await this.#database.transaction(async (tx) => {
       const topic = await this.#lock(tx, topicId);
       if (topic.status === "closed") throw new SpaceError("topicClosed", "The topic is closed already");
+      if (
+        input.meetingId &&
+        (await this.#meetings.seriesOfMeeting(input.meetingId, tx)) !== topic.series_id
+      ) {
+        throw new SpaceError("meetingNotFound", "The meeting does not belong to this series");
+      }
       const meetingId = input.meetingId ?? (await this.#meetings.currentMeeting(tx, topic.series_id));
       await tx.execute(sql`
         update meeting_topics set status = 'closed', outcome = ${input.outcome}, closed_at = now(),

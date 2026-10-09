@@ -1003,9 +1003,10 @@ export class MeetingService {
     await this.#database.transaction(async (tx) => {
       const meeting = await this.#meeting(tx, meetingId, true);
       const id = accountId.toLowerCase();
-      if (!(await this.#people.canSee(actor, id, tx))) {
-        throw new SpaceError("invalidMember", "Choose attendees among the people you can see");
-      }
+      const located = await tx.execute<{ space_id: string }>(
+        sql`select space_id from tree_items where id = ${meetingId}`,
+      );
+      await this.#validMembers(tx, actor, located.rows[0]?.space_id ?? "", [id]);
       const count = await tx.execute<{ count: string }>(
         sql`select count(*) as count from meeting_attendees where meeting_id = ${meetingId}`,
       );
