@@ -443,7 +443,7 @@ export class TrashService {
       await tx.execute(sql`
         insert into deleted_space_administrators (trash_entry_id, account_id)
         select ${id}, a.id from accounts a join spaces s on s.id = ${spaceId}
-        where s.personal_of = a.id or exists (
+        where (s.personal_of = a.id and a.id = ${actorIdOf(actor)}) or (s.personal_of is null and exists (
           select 1 from space_permissions g where g.space_id = s.id and g.role = 'admin' and (
             (g.principal_kind = 'account' and g.principal_id = a.id)
             or (g.principal_kind = 'group' and exists (select 1 from group_members gm
@@ -452,7 +452,7 @@ export class TrashService {
             or (g.principal_kind = 'organizationMembers' and exists (select 1 from memberships m
               where m.organization_id = s.organization_id and m.account_id = a.id and m.kind = 'member'
                 and (m.expires_at is null or m.expires_at > now())))
-            or (g.principal_kind = 'instanceUsers' and a.type = 'standard')))`);
+            or (g.principal_kind = 'instanceUsers' and a.type = 'standard'))))`);
       await tx.execute(sql`update spaces set deleted_at = now(), updated_at = now() where id = ${spaceId}`);
       await this.#audit.record(tx, {
         name: "space.deleted",

@@ -214,7 +214,7 @@ export class TrashController {
   }
 
   @Get("deleted-spaces")
-  @Permission("instance.content.view")
+  @Permission("instance.content.view", { type: "instance" }, { sessionOnly: true })
   @ApiRoute({
     summary: "List the deleted spaces the caller can restore",
     description:
@@ -231,7 +231,7 @@ export class TrashController {
   }
 
   @Post("deleted-spaces/:entryId/restore")
-  @Permission("deletedSpace.restore", deletedSpace)
+  @Permission("deletedSpace.restore", deletedSpace, { sessionOnly: true })
   @ApiRoute({
     summary: "Restore a deleted space",
     description:

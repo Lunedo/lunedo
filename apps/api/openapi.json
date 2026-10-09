@@ -20021,7 +20021,7 @@
       "get": {
         "operationId": "trash.deletedSpaces",
         "summary": "List the deleted spaces the caller can restore",
-        "description": "Lists deleted spaces in the second stage of the trash that the caller was space admin of when they were deleted, newest first, with when they will be removed for good.\n\nRequires the permission `instance.content.view` on the instance.",
+        "description": "Lists deleted spaces in the second stage of the trash that the caller was space admin of when they were deleted, newest first, with when they will be removed for good.\n\nRequires the permission `instance.content.view` on the instance. Needs a signed-in session; API tokens are refused.",
         "tags": [
           "Trash"
         ],
@@ -20030,9 +20030,6 @@
           "resource": "instance"
         },
         "security": [
-          {
-            "bearerAuth": []
-          },
           {
             "sessionCookie": []
           }
@@ -20226,42 +20223,14 @@
               }
             }
           },
-          "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "ambiguousCredentials": {
-                    "value": {
-                      "type": "urn:pagehall:problem:ambiguousCredentials",
-                      "title": "The request carries both a session and an API token",
-                      "status": 400,
-                      "code": "ambiguousCredentials"
-                    }
-                  }
-                }
-              }
-            }
-          },
           "401": {
-            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "description": "`notSignedIn`: Sign in or send an API token.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
-                  "invalidApiToken": {
-                    "value": {
-                      "type": "urn:pagehall:problem:invalidApiToken",
-                      "title": "The API token is not valid",
-                      "status": 401,
-                      "code": "invalidApiToken"
-                    }
-                  },
                   "notSignedIn": {
                     "value": {
                       "type": "urn:pagehall:problem:notSignedIn",
@@ -20275,7 +20244,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: Not allowed.",
+            "description": "`forbidden`: Not allowed. `sessionRequired`: This endpoint needs a signed-in session.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -20289,25 +20258,13 @@
                       "status": 403,
                       "code": "forbidden"
                     }
-                  }
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "`rateLimited`: Too many requests.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "rateLimited": {
+                  },
+                  "sessionRequired": {
                     "value": {
-                      "type": "urn:pagehall:problem:rateLimited",
-                      "title": "Too many requests",
-                      "status": 429,
-                      "code": "rateLimited"
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
                     }
                   }
                 }
@@ -20321,7 +20278,7 @@
       "post": {
         "operationId": "trash.restoreDeletedSpace",
         "summary": "Restore a deleted space",
-        "description": "Restores a deleted space with its content and permissions as they were. Only people who were its space admins when it was deleted can do this, as long as they are still active members of its organization.\n\nRequires the permission `deletedSpace.restore` on the deletedSpace in `entryId`.",
+        "description": "Restores a deleted space with its content and permissions as they were. Only people who were its space admins when it was deleted can do this, as long as they are still active members of its organization.\n\nRequires the permission `deletedSpace.restore` on the deletedSpace in `entryId`. Needs a signed-in session; API tokens are refused.",
         "tags": [
           "Trash"
         ],
@@ -20331,9 +20288,6 @@
           "parameter": "entryId"
         },
         "security": [
-          {
-            "bearerAuth": []
-          },
           {
             "sessionCookie": []
           }
@@ -20398,21 +20352,13 @@
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "description": "`invalidInput`: The request is not valid.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
-                  "ambiguousCredentials": {
-                    "value": {
-                      "type": "urn:pagehall:problem:ambiguousCredentials",
-                      "title": "The request carries both a session and an API token",
-                      "status": 400,
-                      "code": "ambiguousCredentials"
-                    }
-                  },
                   "invalidInput": {
                     "value": {
                       "type": "urn:pagehall:problem:invalidInput",
@@ -20426,21 +20372,13 @@
             }
           },
           "401": {
-            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "description": "`notSignedIn`: Sign in or send an API token.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
-                  "invalidApiToken": {
-                    "value": {
-                      "type": "urn:pagehall:problem:invalidApiToken",
-                      "title": "The API token is not valid",
-                      "status": 401,
-                      "code": "invalidApiToken"
-                    }
-                  },
                   "notSignedIn": {
                     "value": {
                       "type": "urn:pagehall:problem:notSignedIn",
@@ -20454,7 +20392,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `sessionRequired`: This endpoint needs a signed-in session.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -20476,6 +20414,14 @@
                       "status": 403,
                       "code": "forbidden"
                     }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
                   }
                 }
               }
@@ -20495,26 +20441,6 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "`rateLimited`: Too many requests.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "rateLimited": {
-                    "value": {
-                      "type": "urn:pagehall:problem:rateLimited",
-                      "title": "Too many requests",
-                      "status": 429,
-                      "code": "rateLimited"
                     }
                   }
                 }

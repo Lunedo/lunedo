@@ -264,11 +264,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
   const deletedSpace: ResourceType = {
     type: "deletedSpace",
     actions: {
-      "deletedSpace.restore": {
-        scope: "instance",
-        rule: "formerAdministrator",
-        tokenScope: { area: "spaces", level: "manage" },
-      },
+      "deletedSpace.restore": { scope: "instance", rule: "formerAdministrator" },
     },
     rules: {
       formerAdministrator: async (context) => {

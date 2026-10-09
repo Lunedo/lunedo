@@ -8,7 +8,7 @@ export function formerAdministratorCondition(entry: SQL, account: SQL): SQL {
     where d.trash_entry_id = ${entry} and d.account_id = ${account} and fe.kind = 'space' and not fe.purging
       and fa.state = 'active'
       and (fs.organization_id is null or exists (select 1 from memberships m
-        where m.organization_id = fs.organization_id and m.account_id = fa.id
+        where m.organization_id = fs.organization_id and m.account_id = fa.id and m.kind = 'member'
           and (m.expires_at is null or m.expires_at > now()))))`;
 }
 

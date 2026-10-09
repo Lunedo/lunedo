@@ -572,6 +572,25 @@ describe.skipIf(!databaseBaseUrl)("confidential spaces through the API", () => {
       },
     );
 
+    it("is neither listed nor restorable with an API token", async () => {
+      const admin = await person();
+      const space = await confidentialSpace(admin);
+      const entryId = await deleteSpace(admin, space);
+      const created = await admin.client.post("/api/v1/account/tokens", {
+        name: "Automation",
+        scopes: { organization: { spaces: "manage" } },
+      });
+      expect(created.statusCode, created.body).toBe(201);
+      const headers = { authorization: `Bearer ${created.json().token}` };
+      const anonymous = new TestClient(test.app);
+      const listed = await anonymous.get("/api/v1/deleted-spaces", headers);
+      expect(listed.json()).toMatchObject({ code: "sessionRequired" });
+      expectHidden(listed.body, space, "token list");
+      const restored = await anonymous.post(`/api/v1/deleted-spaces/${entryId}/restore`, undefined, headers);
+      expect(restored.json()).toMatchObject({ code: "sessionRequired" });
+      expect((await admin.client.get("/api/v1/deleted-spaces")).json()).toHaveLength(1);
+    });
+
     it("is neither listed nor restorable for people who were not space admin at deletion", async () => {
       const admin = await person();
       const reader = await person();
