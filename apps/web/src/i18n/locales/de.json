@@ -4063,7 +4063,8 @@
       "loadFailed": "Die gelöschten Spaces konnten nicht geladen werden",
       "restored": "„{name}“ ist mit Inhalt und Berechtigungen zurück",
       "restoreFailed": "Der Space konnte nicht wiederhergestellt werden",
-      "restoreNamed": "{name} wiederherstellen"
+      "restoreNamed": "{name} wiederherstellen",
+      "showActive": "Aktive Spaces zeigen"
     },
     "create": {
       "action": "Space erstellen",

@@ -12,7 +12,15 @@ import { TrashTable } from "./trash/trash-table.js";
 
 export const deletedSpacesKey = ["spaces", "deleted"] as const;
 
-export function DeletedSpaces({ search }: { search: string }) {
+export function DeletedSpaces({
+  search,
+  onClearSearch,
+  onShowActive,
+}: {
+  search: string;
+  onClearSearch: () => void;
+  onShowActive: () => void;
+}) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -70,6 +78,11 @@ export function DeletedSpaces({ search }: { search: string }) {
             title={needle ? t("spaces.list.noMatch") : t("spaces.deleted.none")}
             description={
               needle ? t("spaces.deleted.noMatchDescription") : t("spaces.deleted.noneDescription")
+            }
+            action={
+              <Button variant="secondary" onClick={needle ? onClearSearch : onShowActive}>
+                {needle ? t("spaces.list.clearFilters") : t("spaces.deleted.showActive")}
+              </Button>
             }
           />
         }

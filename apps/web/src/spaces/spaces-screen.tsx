@@ -159,7 +159,16 @@ export function SpacesScreen() {
             </div>
           ) : null}
         </div>
-        {deleted ? <DeletedSpaces search={query} /> : null}
+        {deleted ? (
+          <DeletedSpaces
+            search={query}
+            onClearSearch={() => {
+              setText("");
+              setFilter({ q: "" });
+            }}
+            onShowActive={() => setFilter({ deleted: false })}
+          />
+        ) : null}
         {spaces.isError ? (
           <LoadError
             what={t("spaces.list.loadFailed")}

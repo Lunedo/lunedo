@@ -4063,7 +4063,8 @@
       "loadFailed": "The deleted spaces could not be loaded",
       "restored": "“{name}” is back with its content and permissions",
       "restoreFailed": "The space could not be restored",
-      "restoreNamed": "Restore {name}"
+      "restoreNamed": "Restore {name}",
+      "showActive": "Show active spaces"
     },
     "create": {
       "action": "Create space",
