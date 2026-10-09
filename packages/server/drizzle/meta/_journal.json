@@ -309,6 +309,13 @@
       "when": 1791538477817,
       "tag": "0043_meeting_series",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1791549156271,
+      "tag": "0044_deleted_space_administrators",
+      "breakpoints": true
     }
   ]
 }

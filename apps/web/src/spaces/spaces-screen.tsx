@@ -13,6 +13,7 @@ import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { DiscoverableSpaces } from "../sharing/discoverable-spaces.js";
 import { useOrganizationState } from "../shell/shell-context.js";
 import { CreateSpaceDialog } from "./create-space-dialog.js";
+import { DeletedSpaces } from "./deleted-spaces.js";
 import { SpaceBadge, spaceDisplayName } from "./space-badge.js";
 import { type Space, spaceKeys } from "./space-queries.js";
 
@@ -27,8 +28,9 @@ export function SpacesScreen() {
   const [text, setText] = useState(search.q ?? "");
   const query = useDebounced(text.trim(), 250);
   const organizationFilter = search.organization ?? null;
-  const oneOnOnes = search.oneOnOnes === true;
-  const archived = search.archived === true && !oneOnOnes;
+  const deleted = search.deleted === true;
+  const oneOnOnes = search.oneOnOnes === true && !deleted;
+  const archived = search.archived === true && !oneOnOnes && !deleted;
   const [creating, setCreating] = useState(false);
   const [creatingOneOnOne, setCreatingOneOnOne] = useState(false);
   const spaces = useInfiniteQuery({
@@ -50,6 +52,7 @@ export function SpacesScreen() {
         }),
       ),
     getNextPageParam: (page) => page.nextCursor ?? undefined,
+    enabled: !deleted,
   });
   const items = spaces.data?.pages.flatMap((page) => page.items) ?? [];
   const filtered = query !== "" || organizationFilter !== null || archived || oneOnOnes;
@@ -60,6 +63,7 @@ export function SpacesScreen() {
     organization?: string | null;
     archived?: boolean;
     oneOnOnes?: boolean;
+    deleted?: boolean;
   }) => {
     void navigate({
       search: (previous) => ({
@@ -68,6 +72,7 @@ export function SpacesScreen() {
         ...("organization" in next ? { organization: next.organization ?? undefined } : {}),
         ...("archived" in next ? { archived: next.archived || undefined } : {}),
         ...("oneOnOnes" in next ? { oneOnOnes: next.oneOnOnes || undefined } : {}),
+        ...("deleted" in next ? { deleted: next.deleted || undefined } : {}),
       }),
       replace: true,
     });
@@ -121,18 +126,23 @@ export function SpacesScreen() {
           <div className="sm:w-field">
             <Select
               aria-label={t("spaces.list.archiveFilter")}
-              value={oneOnOnes ? "oneOnOnes" : archived ? "archived" : "active"}
+              value={deleted ? "deleted" : oneOnOnes ? "oneOnOnes" : archived ? "archived" : "active"}
               onValueChange={(value) =>
-                setFilter({ archived: value === "archived", oneOnOnes: value === "oneOnOnes" })
+                setFilter({
+                  archived: value === "archived",
+                  oneOnOnes: value === "oneOnOnes",
+                  deleted: value === "deleted",
+                })
               }
               options={[
                 { value: "active", label: t("spaces.list.activeSpaces") },
                 { value: "archived", label: t("spaces.list.archivedSpaces") },
                 { value: "oneOnOnes", label: t("spaces.list.oneOnOnes") },
+                { value: "deleted", label: t("spaces.list.deletedSpaces") },
               ]}
             />
           </div>
-          {state.multipleOrganizations ? (
+          {state.multipleOrganizations && !deleted ? (
             <div className="sm:w-field">
               <Select
                 aria-label={t("spaces.list.organizationFilter")}
@@ -149,6 +159,7 @@ export function SpacesScreen() {
             </div>
           ) : null}
         </div>
+        {deleted ? <DeletedSpaces search={query} /> : null}
         {spaces.isError ? (
           <LoadError
             what={t("spaces.list.loadFailed")}
@@ -156,7 +167,7 @@ export function SpacesScreen() {
             onRetry={() => spaces.refetch()}
           />
         ) : null}
-        {spaces.isPending ? (
+        {spaces.isPending && !deleted ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {[0, 1, 2].map((index) => (
               <Skeleton key={index} className="h-12 w-full" />
@@ -174,7 +185,13 @@ export function SpacesScreen() {
                   variant="secondary"
                   onClick={() => {
                     setText("");
-                    setFilter({ q: "", organization: null, archived: false, oneOnOnes: false });
+                    setFilter({
+                      q: "",
+                      organization: null,
+                      archived: false,
+                      oneOnOnes: false,
+                      deleted: false,
+                    });
                   }}
                 >
                   {t("spaces.list.clearFilters")}
@@ -214,7 +231,7 @@ export function SpacesScreen() {
             </Button>
           </div>
         ) : null}
-        {!archived && (organizationFilter ?? state.organizationId) ? (
+        {!archived && !deleted && (organizationFilter ?? state.organizationId) ? (
           <DiscoverableSpaces organizationId={organizationFilter ?? state.organizationId ?? ""} />
         ) : null}
       </div>

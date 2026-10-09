@@ -183,6 +183,76 @@ describe("spaces", () => {
     expect(requests.some((request) => request.path.includes("q=nothing"))).toBe(true);
   });
 
+  it("lists the deleted spaces the person was space admin of and restores one", async () => {
+    const entry = {
+      id: "01929b1e-0000-7000-8000-0000000000e1",
+      spaceId: SPACE_ID,
+      spaceKey: "ITOPS",
+      spaceName: "IT Operations",
+      kind: "space",
+      itemId: null,
+      itemKind: null,
+      title: "IT Operations",
+      descendants: 0,
+      stage: 2,
+      deletedAt: "2026-10-02T10:00:00.000Z",
+      deletedBy: { id: OLIVIA.id, name: OLIVIA.name },
+      stageTwoAt: "2026-10-02T10:00:00.000Z",
+      removedAt: "2099-11-16T10:00:00.000Z",
+    };
+    let restored = false;
+    const { requests } = mockApi({
+      ...baseRoutes(),
+      "GET /api/v1/spaces": () => ({ body: { items: restored ? [space()] : [], nextCursor: null } }),
+      "GET /api/v1/deleted-spaces": () => ({ body: restored ? [] : [entry] }),
+      [`POST /api/v1/deleted-spaces/${entry.id}/restore`]: () => {
+        restored = true;
+        return { body: { itemId: null, parentId: null } };
+      },
+    });
+    await renderAt("/spaces?deleted=true");
+    expect(await screen.findByRole("heading", { name: "Deleted spaces" })).toBeTruthy();
+    expect(await screen.findByText("IT Operations")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Restore IT Operations" }));
+    expect(await screen.findByText("“IT Operations” is back with its content and permissions")).toBeTruthy();
+    expect(await screen.findByText("No deleted spaces")).toBeTruthy();
+    expect(requests.some((request) => request.method === "POST" && request.path.includes(entry.id))).toBe(
+      true,
+    );
+  });
+
+  it("says what failed when a deleted space cannot be restored", async () => {
+    mockApi({
+      ...baseRoutes(),
+      "GET /api/v1/spaces": () => ({ body: { items: [], nextCursor: null } }),
+      "GET /api/v1/deleted-spaces": () => ({
+        body: [
+          {
+            id: "01929b1e-0000-7000-8000-0000000000e2",
+            spaceId: SPACE_ID,
+            spaceKey: "ITOPS",
+            spaceName: "IT Operations",
+            kind: "space",
+            itemId: null,
+            itemKind: null,
+            title: "IT Operations",
+            descendants: 0,
+            stage: 2,
+            deletedAt: "2026-10-02T10:00:00.000Z",
+            deletedBy: null,
+            stageTwoAt: "2026-10-02T10:00:00.000Z",
+            removedAt: "2099-11-16T10:00:00.000Z",
+          },
+        ],
+      }),
+      "POST /api/v1/deleted-spaces/01929b1e-0000-7000-8000-0000000000e2/restore": () =>
+        problem(404, "notFound"),
+    });
+    await renderAt("/spaces?deleted=true");
+    await userEvent.click(await screen.findByRole("button", { name: "Restore IT Operations" }));
+    expect(await screen.findByText("The space could not be restored")).toBeTruthy();
+  });
+
   it("creates a space with a suggested key, validates on submit and names who gets access", async () => {
     const { requests } = mockApi({
       ...baseRoutes(),

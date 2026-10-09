@@ -4051,7 +4051,19 @@
       "archiveFilter": "Aktive oder archivierte Spaces zeigen",
       "activeSpaces": "Aktive Spaces",
       "archivedSpaces": "Archivierte Spaces",
-      "oneOnOnes": "1:1-Gespräche"
+      "oneOnOnes": "1:1-Gespräche",
+      "deletedSpaces": "Gelöschte Spaces"
+    },
+    "deleted": {
+      "title": "Gelöschte Spaces",
+      "description": "Spaces, deren Space-Admin du beim Löschen warst. Du kannst sie mit Inhalt und Berechtigungen wiederherstellen, bis die Admin-Wiederherstellung endet.",
+      "none": "Keine gelöschten Spaces",
+      "noneDescription": "Wird ein Space gelöscht, dessen Space-Admin du bist, kannst du ihn hier eine Zeit lang wiederherstellen.",
+      "noMatchDescription": "Versuch einen anderen Namen oder Schlüssel.",
+      "loadFailed": "Die gelöschten Spaces konnten nicht geladen werden",
+      "restored": "„{name}“ ist mit Inhalt und Berechtigungen zurück",
+      "restoreFailed": "Der Space konnte nicht wiederhergestellt werden",
+      "restoreNamed": "{name} wiederherstellen"
     },
     "create": {
       "action": "Space erstellen",
@@ -4381,10 +4393,10 @@
     "minimumHint": "Die kürzesten Fristen gelten für alle Organisationen und Spaces; längere Fristen sind immer möglich.",
     "dangerZone": "Gefahrenbereich",
     "deleteSpace": "Space löschen",
-    "deleteSpaceDescription": "Verschiebt den Space mit allen Seiten in die Admin-Wiederherstellung. Nur Organisationsadministratoren können ihn bis zum Ende dieser Frist wiederherstellen.",
+    "deleteSpaceDescription": "Verschiebt den Space mit allen Seiten in die Admin-Wiederherstellung. Seine Space-Admins können ihn bis zum Ende dieser Frist über die Liste der gelöschten Spaces wiederherstellen, Organisationsadministratoren ebenfalls, außer der Space ist vertraulich.",
     "deleteSpaceTitle": "{name} löschen?",
-    "deleteSpaceConsequences": "Niemand kann den Space oder seine Seiten mehr öffnen. Links auf seine Seiten funktionieren nicht mehr. Organisationsadministratoren können ihn während der Admin-Wiederherstellung zurückholen; danach wird er endgültig gelöscht.",
-    "deletePersonalSpaceConsequences": "Niemand kann den persönlichen Space oder seine Seiten mehr öffnen. Instanzadministratoren können ihn während der Admin-Wiederherstellung zurückholen; danach wird er endgültig gelöscht.",
+    "deleteSpaceConsequences": "Niemand kann den Space oder seine Seiten mehr öffnen. Links auf seine Seiten funktionieren nicht mehr. Wer jetzt Space-Admin ist, kann ihn während der Admin-Wiederherstellung zurückholen, Organisationsadministratoren ebenfalls, außer der Space ist vertraulich; danach wird er endgültig gelöscht.",
+    "deletePersonalSpaceConsequences": "Niemand kann den persönlichen Space oder seine Seiten mehr öffnen. Sein Besitzer und Instanzadministratoren können ihn während der Admin-Wiederherstellung zurückholen; danach wird er endgültig gelöscht.",
     "keepSpace": "Space behalten",
     "typeName": "Gib {name} zur Bestätigung ein",
     "nameMismatch": "Der Name stimmt nicht überein. Gib ihn genau wie angezeigt ein.",
@@ -5744,6 +5756,8 @@
     "createNoticeTitle": "Privat, nur für einzelne Personen",
     "moveOutTitle": "Der Inhalt verlässt den vertraulichen Space",
     "moveOut": "Nach dem Verschieben ist er nicht mehr vor Admins geschützt und die oben genannten Personen erhalten Zugriff.",
+    "deletedCountTitle": "{count, plural, one {# gelöschter vertraulicher Space} other {# gelöschte vertrauliche Spaces}}",
+    "deletedCount": "Gelöschte vertrauliche Spaces stehen nicht in dieser Liste. Nur die Personen, die ihre Space-Admins waren, können sie wiederherstellen, bis die Admin-Wiederherstellung endet.",
     "organization": {
       "title": "Vertrauliche Spaces",
       "description": "Vertrauliche Spaces erscheinen nur mit ihrem Schlüssel. Namen, Mitglieder und Inhalte bleiben vor Admins verborgen.",

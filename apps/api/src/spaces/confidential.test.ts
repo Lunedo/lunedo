@@ -497,4 +497,117 @@ describe.skipIf(!databaseBaseUrl)("confidential spaces through the API", () => {
     expect(preview.statusCode, preview.body).toBe(200);
     expect(preview.json().leavesConfidential).toBe(true);
   });
+
+  describe("once deleted", () => {
+    async function deleteSpace(admin: Person, space: { id: string; name: string }): Promise<string> {
+      const deleted = await admin.client.post(`/api/v1/spaces/${space.id}/delete`, {
+        confirmation: space.name,
+      });
+      expect(deleted.statusCode, deleted.body).toBe(200);
+      return (deleted.json() as { id: string }).id;
+    }
+
+    async function ordinarySpace(admin: Person, reader: Person) {
+      counter += 1;
+      const created = await admin.client.post(`/api/v1/organizations/${organizationId}/spaces`, {
+        name: `Team room ${counter}`,
+        key: `TR${counter}X`,
+        visibility: "private",
+        grants: [{ principalKind: "account", principalId: reader.id, role: "reader" }],
+      });
+      expect(created.statusCode, created.body).toBe(201);
+      const space = created.json() as { id: string; key: string; name: string };
+      const page = await admin.client.post(`/api/v1/spaces/${space.id}/items`, {
+        kind: "page",
+        title: SECRET_TITLE,
+        parentId: null,
+        mode: "live",
+      });
+      expect(page.statusCode, page.body).toBe(201);
+      return { ...space, pageId: (page.json() as { id: string }).id };
+    }
+
+    it.each([
+      { kind: "an ordinary", confidential: false },
+      { kind: "a confidential", confidential: true },
+    ])(
+      "$kind space can be restored by its space admins at deletion with content and permissions",
+      async ({ confidential }) => {
+        const admin = await person();
+        const reader = await person();
+        const space = confidential
+          ? await confidentialSpace(admin, [{ person: reader, role: "reader" }])
+          : await ordinarySpace(admin, reader);
+        const entryId = await deleteSpace(admin, space);
+        expect((await reader.client.get(`/api/v1/items/${space.pageId}`)).statusCode).toBeGreaterThanOrEqual(
+          400,
+        );
+
+        const listed = await admin.client.get("/api/v1/deleted-spaces");
+        expect(listed.statusCode, listed.body).toBe(200);
+        expect(listed.json()).toEqual([
+          expect.objectContaining({
+            id: entryId,
+            kind: "space",
+            spaceId: space.id,
+            spaceName: space.name,
+            stage: 2,
+          }),
+        ]);
+        const restored = await admin.client.post(`/api/v1/deleted-spaces/${entryId}/restore`);
+        expect(restored.statusCode, restored.body).toBe(200);
+
+        expect((await admin.client.get("/api/v1/deleted-spaces")).json()).toEqual([]);
+        const item = await reader.client.get(`/api/v1/items/${space.pageId}`);
+        expect(item.statusCode, item.body).toBe(200);
+        expect(item.json().title).toBe(SECRET_TITLE);
+        const permissions = await admin.client.get(`/api/v1/spaces/${space.id}/permissions`);
+        expect(permissions.statusCode, permissions.body).toBe(200);
+        expect(permissions.json()).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ principalId: admin.id, role: "admin" }),
+            expect.objectContaining({ principalId: reader.id, role: "reader" }),
+          ]),
+        );
+      },
+    );
+
+    it("is neither listed nor restorable for people who were not space admin at deletion", async () => {
+      const admin = await person();
+      const reader = await person();
+      const stranger = await person();
+      const space = await confidentialSpace(admin, [{ person: reader, role: "editor" }]);
+      const entryId = await deleteSpace(admin, space);
+      for (const client of [reader.client, stranger.client, owner, instanceAdministrator.client]) {
+        const listed = await client.get("/api/v1/deleted-spaces");
+        expect(listed.statusCode, listed.body).toBe(200);
+        expect(listed.json()).toEqual([]);
+        const restored = await client.post(`/api/v1/deleted-spaces/${entryId}/restore`);
+        expect(restored.statusCode).toBe(404);
+        expectHidden(restored.body, space, "restore");
+      }
+      expect((await admin.client.get("/api/v1/deleted-spaces")).json()).toHaveLength(1);
+    });
+
+    it("stays out of reach of organization administrators, who see only the number", async () => {
+      const admin = await person();
+      const space = await confidentialSpace(admin);
+      const before = await owner.get(`/api/v1/organizations/${organizationId}/trash/confidential-spaces`);
+      expect(before.statusCode, before.body).toBe(200);
+      const entryId = await deleteSpace(admin, space);
+
+      const counted = await owner.get(`/api/v1/organizations/${organizationId}/trash/confidential-spaces`);
+      expect(counted.json()).toEqual({ deleted: before.json().deleted + 1 });
+      const trash = await owner.get(`/api/v1/organizations/${organizationId}/trash`);
+      expect(trash.statusCode, trash.body).toBe(200);
+      expectHidden(trash.body, space, "organization trash");
+      expect(trash.body).not.toContain(entryId);
+      const restored = await owner.post(`/api/v1/organizations/${organizationId}/trash/${entryId}/restore`);
+      expect(restored.statusCode).toBe(404);
+      expectHidden(restored.body, space, "organization restore");
+      const audit = await owner.get(`/api/v1/organizations/${organizationId}/audit-events?limit=100`);
+      expectHidden(audit.body, space, "audit");
+      expect((await admin.client.get("/api/v1/deleted-spaces")).json()).toHaveLength(1);
+    });
+  });
 });

@@ -133,6 +133,7 @@ export {
 export {
   collaborationClients,
   collaborationPresence,
+  deletedSpaceAdministrators,
   discardedDrafts,
   discardReason,
   pageDocuments,

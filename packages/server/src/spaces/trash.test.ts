@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { accountPrincipal } from "../accounts/principal.js";
+import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { SettingBelowMinimumError } from "../settings/service.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
@@ -15,7 +15,7 @@ const baseUrl = testDatabaseBaseUrl();
 
 describe.skipIf(!baseUrl)("trash and archive", () => {
   let test: TestServices;
-  const { organization, member, space } = spaceFixtures(() => test);
+  const { organization, member, space, group, deactivate } = spaceFixtures(() => test);
 
   beforeAll(async () => {
     test = await createTestServices(baseUrl ?? "");
@@ -355,6 +355,94 @@ describe.skipIf(!baseUrl)("trash and archive", () => {
       ).not.toContain(context.space.id);
       await test.services.trash.restore(context.admin, entry.id);
       expect(await allowed(context.editor, "space.view", context.space.id)).toBe(true);
+    });
+
+    it("lets the people who were space admins at deletion restore it, also through a group", async () => {
+      const org = await organization();
+      const creator = await member(org.id);
+      const viaGroup = await member(org.id);
+      const later = await member(org.id);
+      const editor = await member(org.id);
+      const team = await group(org.id, [viaGroup]);
+      const created = await space(org.id, creator, {
+        grants: [
+          { principalKind: "group", principalId: team, role: "admin" },
+          { principalKind: "account", principalId: editor, role: "editor" },
+        ],
+      });
+      const entry = await test.services.trash.deleteSpace(
+        accountPrincipal(creator),
+        created.id,
+        created.name,
+      );
+      await test.services.groups.addMember(SYSTEM, team, later);
+      const restorable = async (accountId: string) =>
+        (
+          await test.services.authorization.explain(accountPrincipal(accountId), "deletedSpace.restore", {
+            type: "deletedSpace",
+            id: entry.id,
+          })
+        ).allowed;
+
+      expect(await restorable(creator)).toBe(true);
+      expect(await restorable(viaGroup)).toBe(true);
+      expect(await restorable(later)).toBe(false);
+      expect(await restorable(editor)).toBe(false);
+      expect(await restorable(org.owner)).toBe(false);
+      expect(
+        (await test.services.trash.listDeletedSpaces(accountPrincipal(viaGroup))).map((found) => found.id),
+      ).toEqual([entry.id]);
+      expect(await test.services.trash.listDeletedSpaces(accountPrincipal(later))).toEqual([]);
+
+      await test.database.execute(
+        sql`delete from memberships where account_id = ${viaGroup} and organization_id = ${org.id}`,
+      );
+      expect(await restorable(viaGroup)).toBe(false);
+      expect(await test.services.trash.listDeletedSpaces(accountPrincipal(viaGroup))).toEqual([]);
+      await deactivate(creator);
+      expect(await restorable(creator)).toBe(false);
+      expect(await test.services.trash.listDeletedSpaces(accountPrincipal(creator))).toEqual([]);
+    });
+
+    it("stops offering a deleted space once its permanent deletion has started", async () => {
+      const context = await setup();
+      const entry = await test.services.trash.deleteSpace(
+        context.editor,
+        context.space.id,
+        context.space.name,
+      );
+      await test.database.execute(sql`update trash_entries set purging = true where id = ${entry.id}`);
+      expect(
+        (
+          await test.services.authorization.explain(context.editor, "deletedSpace.restore", {
+            type: "deletedSpace",
+            id: entry.id,
+          })
+        ).allowed,
+      ).toBe(false);
+      expect(await test.services.trash.listDeletedSpaces(context.editor)).toEqual([]);
+    });
+
+    it("counts deleted confidential spaces for the organization without listing them", async () => {
+      const context = await setup();
+      const confidential = await test.services.spaces.create(
+        context.editor,
+        context.org.id,
+        {
+          name: "Board",
+          key: `B${Date.now().toString(36).toUpperCase()}`,
+          visibility: "private",
+          confidential: true,
+          grants: [],
+        },
+        test.services.spacePermissions.holders,
+      );
+      expect(await test.services.trash.countDeletedConfidential(context.org.id)).toBe(0);
+      const entry = await test.services.trash.deleteSpace(context.editor, confidential.id, "Board");
+      expect(await test.services.trash.countDeletedConfidential(context.org.id)).toBe(1);
+      expect(
+        (await test.services.trash.listOrganization(context.org.id)).map((found) => found.id),
+      ).not.toContain(entry.id);
     });
 
     it("removes a deleted space completely after the second stage", async () => {

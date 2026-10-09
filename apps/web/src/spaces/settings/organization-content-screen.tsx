@@ -20,6 +20,7 @@ import {
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { contentKeys } from "../content-queries.js";
 import { DeletedContent } from "../trash/deleted-content.js";
+import { DeletedConfidentialNotice } from "./confidential-spaces.js";
 import { Panel } from "./panel.js";
 
 const route = getRouteApi("/app/settings/organizations/$organizationId/content");
@@ -115,6 +116,7 @@ export function OrganizationContentScreen() {
       </Panel>
       {canManageTrash ? (
         <Panel title={t("trash.deletedContent")} description={t("trash.deletedContentDescription")}>
+          <DeletedConfidentialNotice organizationId={organizationId} />
           <DeletedContent
             entries={trash.data}
             loading={trash.isPending}

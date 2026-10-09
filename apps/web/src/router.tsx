@@ -215,6 +215,7 @@ const spacesRoute = createRoute({
     organization: idSchema.optional().catch(undefined),
     archived: z.boolean().optional().catch(undefined),
     oneOnOnes: z.boolean().optional().catch(undefined),
+    deleted: z.boolean().optional().catch(undefined),
   }),
   component: lazyRouteComponent(() => import("./spaces/spaces-screen.js"), "SpacesScreen"),
 });

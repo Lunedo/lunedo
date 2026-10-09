@@ -6,6 +6,7 @@ import {
   selfServiceOrganizationsSetting,
 } from "../organizations/settings.js";
 import type { SettingsService } from "../settings/service.js";
+import { isFormerSpaceAdministrator } from "../spaces/former-administrators.js";
 import { grantsSpaceRole } from "../spaces/roles.js";
 import type { SpaceRole } from "../spaces/schema.js";
 import {
@@ -17,6 +18,7 @@ import { grantsLevel } from "./areas.js";
 import type { ActionDefinition, ResourceType, RestrictionResult, RuleContext } from "./registry.js";
 
 const ALL_MEMBERSHIPS = ["member", "collaborator", "guest"] as const;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function instanceArea(area: ActionDefinition["area"], level: ActionDefinition["level"]): ActionDefinition {
   return { scope: "instance", area, level };
@@ -259,6 +261,24 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     },
   };
 
+  const deletedSpace: ResourceType = {
+    type: "deletedSpace",
+    actions: {
+      "deletedSpace.restore": {
+        scope: "instance",
+        rule: "formerAdministrator",
+        tokenScope: { area: "spaces", level: "manage" },
+      },
+    },
+    rules: {
+      formerAdministrator: async (context) => {
+        const id = context.resource.id;
+        if (!id || !UUID.test(id)) return false;
+        return isFormerSpaceAdministrator(context.executor, id.toLowerCase(), context.accountId);
+      },
+    },
+  };
+
   const item: ResourceType = {
     type: "item",
     spaceOf: async (executor, id) => {
@@ -449,7 +469,19 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     },
   };
 
-  return [instance, organization, group, account, serviceAccount, space, item, comment, task, attachment];
+  return [
+    instance,
+    organization,
+    group,
+    account,
+    serviceAccount,
+    space,
+    deletedSpace,
+    item,
+    comment,
+    task,
+    attachment,
+  ];
 }
 
 function interactiveItem(state: Awaited<ReturnType<typeof itemState>>): RestrictionResult | null {

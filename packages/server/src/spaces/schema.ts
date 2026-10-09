@@ -282,6 +282,19 @@ export const trashEntries = pgTable(
   ],
 );
 
+export const deletedSpaceAdministrators = pgTable(
+  "deleted_space_administrators",
+  {
+    trashEntryId: uuid()
+      .notNull()
+      .references(() => trashEntries.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+  },
+  (table) => [primaryKey({ columns: [table.trashEntryId, table.accountId] }), index().on(table.accountId)],
+);
+
 export const collaborationPresence = pgTable(
   "collaboration_presence",
   {

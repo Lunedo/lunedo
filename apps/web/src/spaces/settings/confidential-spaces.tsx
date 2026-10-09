@@ -315,3 +315,22 @@ function DeleteDialog({
     </ConfirmDialog>
   );
 }
+
+export function DeletedConfidentialNotice({ organizationId }: { organizationId: string }) {
+  const { t } = useTranslation();
+  const deleted = useQuery({
+    queryKey: ["organization", organizationId, "confidentialSpaces", "deleted"],
+    queryFn: () =>
+      request(() =>
+        api.GET("/api/v1/organizations/{organizationId}/trash/confidential-spaces", {
+          params: { path: { organizationId } },
+        }),
+      ),
+  });
+  if (!deleted.data || deleted.data.deleted === 0) return null;
+  return (
+    <Notice variant="info" title={t("confidential.deletedCountTitle", { count: deleted.data.deleted })}>
+      {t("confidential.deletedCount")}
+    </Notice>
+  );
+}

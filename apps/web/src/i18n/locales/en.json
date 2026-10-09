@@ -4051,7 +4051,19 @@
       "archiveFilter": "Show active or archived spaces",
       "activeSpaces": "Active spaces",
       "archivedSpaces": "Archived spaces",
-      "oneOnOnes": "One-on-ones"
+      "oneOnOnes": "One-on-ones",
+      "deletedSpaces": "Deleted spaces"
+    },
+    "deleted": {
+      "title": "Deleted spaces",
+      "description": "Spaces you were space admin of when they were deleted. You can restore them with their content and permissions until second-stage recovery ends.",
+      "none": "No deleted spaces",
+      "noneDescription": "When a space you are space admin of is deleted, you can restore it here for a while.",
+      "noMatchDescription": "Try another name or key.",
+      "loadFailed": "The deleted spaces could not be loaded",
+      "restored": "“{name}” is back with its content and permissions",
+      "restoreFailed": "The space could not be restored",
+      "restoreNamed": "Restore {name}"
     },
     "create": {
       "action": "Create space",
@@ -4381,10 +4393,10 @@
     "minimumHint": "The shortest times apply to every organization and space; a longer time can always be set.",
     "dangerZone": "Danger zone",
     "deleteSpace": "Delete space",
-    "deleteSpaceDescription": "Moves the space with all its pages to second-stage recovery. Only organization administrators can restore it until that period ends.",
+    "deleteSpaceDescription": "Moves the space with all its pages to second-stage recovery. Its space admins can restore it from the list of deleted spaces until that period ends; organization administrators can too, unless the space is confidential.",
     "deleteSpaceTitle": "Delete {name}?",
-    "deleteSpaceConsequences": "Nobody can open the space or its pages anymore. Links to its pages stop working. Organization administrators can restore it during second-stage recovery; after that it is deleted for good.",
-    "deletePersonalSpaceConsequences": "Nobody can open the personal space or its pages anymore. Instance administrators can restore it during second-stage recovery; after that it is deleted for good.",
+    "deleteSpaceConsequences": "Nobody can open the space or its pages anymore. Links to its pages stop working. The people who are space admins now can restore it during second-stage recovery, and organization administrators unless the space is confidential; after that it is deleted for good.",
+    "deletePersonalSpaceConsequences": "Nobody can open the personal space or its pages anymore. Its owner and instance administrators can restore it during second-stage recovery; after that it is deleted for good.",
     "keepSpace": "Keep space",
     "typeName": "Type {name} to confirm",
     "nameMismatch": "The name does not match. Type it exactly as shown.",
@@ -5744,6 +5756,8 @@
     "createNoticeTitle": "Private, for individual people only",
     "moveOutTitle": "The content leaves the confidential space",
     "moveOut": "After the move it is no longer protected from administrators, and the people above gain access.",
+    "deletedCountTitle": "{count, plural, one {# deleted confidential space} other {# deleted confidential spaces}}",
+    "deletedCount": "Deleted confidential spaces are not listed here. Only the people who were their space admins can restore them until second-stage recovery ends.",
     "organization": {
       "title": "Confidential spaces",
       "description": "Confidential spaces are listed by key only. Their names, members and content stay hidden from administrators.",

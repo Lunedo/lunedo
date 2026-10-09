@@ -20017,6 +20017,513 @@
         }
       }
     },
+    "/api/v1/deleted-spaces": {
+      "get": {
+        "operationId": "trash.deletedSpaces",
+        "summary": "List the deleted spaces the caller can restore",
+        "description": "Lists deleted spaces in the second stage of the trash that the caller was space admin of when they were deleted, newest first, with when they will be removed for good.\n\nRequires the permission `instance.content.view` on the instance.",
+        "tags": [
+          "Trash"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.content.view",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trash entries of deleted spaces.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the trash entry."
+                      },
+                      "spaceId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Space of the entry."
+                      },
+                      "spaceKey": {
+                        "type": "string",
+                        "description": "Key of the space."
+                      },
+                      "spaceName": {
+                        "type": "string",
+                        "description": "Name of the space."
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "items",
+                          "space"
+                        ],
+                        "description": "`items` for deleted pages, folders or links, `space` for a deleted space."
+                      },
+                      "itemId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The deleted item, or null for a space."
+                      },
+                      "itemKind": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "x-extensible-enum": [
+                              "page",
+                              "folder",
+                              "link",
+                              "blogPost",
+                              "meetingSeries",
+                              "meetingTopic"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Kind of the deleted item, or null for a space. New values can be added in later versions; handle unknown values."
+                      },
+                      "title": {
+                        "type": "string",
+                        "description": "Title of the deleted item, or name of the space."
+                      },
+                      "descendants": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Number of descendants deleted with the item."
+                      },
+                      "stage": {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "const": 1
+                          },
+                          {
+                            "type": "number",
+                            "const": 2
+                          }
+                        ],
+                        "description": "1 while the entry is in the space trash, 2 after that period or after the trash was emptied; then only organization administrators can restore it."
+                      },
+                      "deletedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When it was deleted. ISO 8601 timestamp in UTC."
+                      },
+                      "deletedBy": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the account."
+                              },
+                              "name": {
+                                "description": "Name of the person, or null when the account no longer exists.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A person."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Who deleted it."
+                      },
+                      "stageTwoAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "When the entry reached stage 2, or null. ISO 8601 timestamp in UTC."
+                      },
+                      "removedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When the entry will be deleted permanently, by the current retention settings. ISO 8601 timestamp in UTC."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "spaceId",
+                      "spaceKey",
+                      "spaceName",
+                      "kind",
+                      "itemId",
+                      "itemKind",
+                      "title",
+                      "descendants",
+                      "stage",
+                      "deletedAt",
+                      "deletedBy",
+                      "stageTwoAt",
+                      "removedAt"
+                    ],
+                    "additionalProperties": false,
+                    "description": "An entry of the trash."
+                  },
+                  "description": "Trash entries."
+                },
+                "example": [
+                  {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                    "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                    "spaceKey": "ITOPS",
+                    "spaceName": "IT Operations",
+                    "kind": "space",
+                    "itemId": null,
+                    "itemKind": null,
+                    "title": "Old VPN (OpenVPN) setup",
+                    "descendants": 2,
+                    "stage": 2,
+                    "deletedAt": "2026-10-02T10:00:00.000Z",
+                    "deletedBy": {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                      "name": "Lukas Hofer"
+                    },
+                    "stageTwoAt": null,
+                    "removedAt": "2027-02-14T10:00:00.000Z"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/deleted-spaces/{entryId}/restore": {
+      "post": {
+        "operationId": "trash.restoreDeletedSpace",
+        "summary": "Restore a deleted space",
+        "description": "Restores a deleted space with its content and permissions as they were. Only people who were its space admins when it was deleted can do this, as long as they are still active members of its organization.\n\nRequires the permission `deletedSpace.restore` on the deletedSpace in `entryId`.",
+        "tags": [
+          "Trash"
+        ],
+        "x-pagehall-permission": {
+          "action": "deletedSpace.restore",
+          "resource": "deletedSpace",
+          "parameter": "entryId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the trash entry of the deleted space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "itemId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The restored item, or null for a space."
+                    },
+                    "parentId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Where the item went: its parent, or null for the top level."
+                    }
+                  },
+                  "required": [
+                    "itemId",
+                    "parentId"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Where the restored content went."
+                },
+                "example": {
+                  "itemId": null,
+                  "parentId": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/files/{token}": {
       "get": {
         "operationId": "attachments.file",
@@ -89873,10 +90380,6 @@
                       "type": "boolean",
                       "description": "Whether `changes` lists only the first 100 people."
                     },
-                    "leavesConfidential": {
-                      "description": "For moves: true when the content leaves a confidential space and loses its protection.",
-                      "type": "boolean"
-                    },
                     "changes": {
                       "type": "array",
                       "items": {
@@ -89938,6 +90441,10 @@
                         "description": "How the access of one person changes."
                       },
                       "description": "People whose access changes, ordered by name."
+                    },
+                    "leavesConfidential": {
+                      "type": "boolean",
+                      "description": "True when the content leaves a confidential space and loses its protection."
                     }
                   },
                   "required": [
@@ -89947,10 +90454,11 @@
                     "lowered",
                     "unlisted",
                     "truncated",
-                    "changes"
+                    "changes",
+                    "leavesConfidential"
                   ],
                   "additionalProperties": false,
-                  "description": "Who gains, loses or changes access."
+                  "description": "Who gains, loses or changes access through the move."
                 },
                 "example": {
                   "gaining": 1,
@@ -89966,7 +90474,8 @@
                       "before": null,
                       "after": "reader"
                     }
-                  ]
+                  ],
+                  "leavesConfidential": false
                 }
               }
             }
@@ -107912,7 +108421,7 @@
       "get": {
         "operationId": "accessRequests.person",
         "summary": "What can a person do?",
-        "description": "Lists all access of a person in the organization with the reason for each entry: role in a space, group, share or link. Shared pages the caller cannot read are only counted per space.\n\nRequires the permission `organization.access.view` on the organization in `organizationId`.",
+        "description": "Lists all access of a person in the organization with the reason for each entry: role in a space, group, share or link. Shared pages the caller cannot read are only counted per space; confidential spaces the caller does not belong to are only counted.\n\nRequires the permission `organization.access.view` on the organization in `organizationId`.",
         "tags": [
           "Access"
         ],
@@ -107985,34 +108494,26 @@
                         "properties": {
                           "kind": {
                             "type": "string",
-                            "description": "`restrictedPages` counts shared pages the caller cannot read, without titles. `confidentialSpaces` counts confidential spaces the person belongs to and the caller does not, without names or keys. New values can be added in later versions; handle unknown values.",
+                            "description": "`restrictedPages` counts shared pages the caller cannot read, without titles. New values can be added in later versions; handle unknown values.",
                             "x-extensible-enum": [
                               "space",
                               "share",
                               "link",
-                              "restrictedPages",
-                              "confidentialSpaces"
+                              "restrictedPages"
                             ]
                           },
                           "spaceId": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "format": "uuid"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "description": "The space, or null for `confidentialSpaces`."
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "The space."
                           },
                           "spaceName": {
                             "type": "string",
-                            "description": "Name of the space, empty for `confidentialSpaces`."
+                            "description": "Name of the space."
                           },
                           "spaceKey": {
                             "type": "string",
-                            "description": "Key of the space, empty for `confidentialSpaces`."
+                            "description": "Key of the space."
                           },
                           "itemId": {
                             "anyOf": [
@@ -108054,7 +108555,7 @@
                             "type": "integer",
                             "minimum": -9007199254740991,
                             "maximum": 9007199254740991,
-                            "description": "Number of pages for `restrictedPages`, number of spaces for `confidentialSpaces`; otherwise 1, or 2 for a share with the pages below."
+                            "description": "Number of pages for `restrictedPages`; otherwise 1, or 2 for a share with the pages below."
                           },
                           "reasons": {
                             "type": "array",
@@ -108164,13 +108665,20 @@
                         "description": "An access of the person."
                       },
                       "description": "All access of the person in the organization."
+                    },
+                    "confidentialSpaceCount": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of confidential spaces the person belongs to and the caller does not. They are not listed in `entries`, and their names and keys stay hidden."
                     }
                   },
                   "required": [
                     "accountId",
                     "name",
                     "email",
-                    "entries"
+                    "entries",
+                    "confidentialSpaceCount"
                   ],
                   "additionalProperties": false,
                   "description": "What a person can do."
@@ -108201,7 +108709,8 @@
                         }
                       ]
                     }
-                  ]
+                  ],
+                  "confidentialSpaceCount": 0
                 }
               }
             }
@@ -117160,6 +117669,185 @@
         }
       }
     },
+    "/api/v1/organizations/{organizationId}/trash/confidential-spaces": {
+      "get": {
+        "operationId": "trash.deletedConfidentialSpaces",
+        "summary": "Count deleted confidential spaces",
+        "description": "Counts the deleted confidential spaces of the organization. Organization administrators cannot see or restore them; only the people who were their space admins at deletion can.\n\nRequires the permission `organization.trash.manage` on the organization in `organizationId`.",
+        "tags": [
+          "Trash"
+        ],
+        "x-pagehall-permission": {
+          "action": "organization.trash.manage",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deleted": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of deleted confidential spaces that their former space admins can still restore."
+                    }
+                  },
+                  "required": [
+                    "deleted"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Deleted confidential spaces, counted without names or keys."
+                },
+                "example": {
+                  "deleted": 1
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/pages/{pageId}/access": {
       "get": {
         "operationId": "pageAccess.get",
@@ -120012,10 +120700,6 @@
                           "type": "boolean",
                           "description": "Whether `changes` lists only the first 100 people."
                         },
-                        "leavesConfidential": {
-                          "description": "For moves: true when the content leaves a confidential space and loses its protection.",
-                          "type": "boolean"
-                        },
                         "changes": {
                           "type": "array",
                           "items": {
@@ -120127,10 +120811,6 @@
                         "truncated": {
                           "type": "boolean",
                           "description": "Whether `changes` lists only the first 100 people."
-                        },
-                        "leavesConfidential": {
-                          "description": "For moves: true when the content leaves a confidential space and loses its protection.",
-                          "type": "boolean"
                         },
                         "changes": {
                           "type": "array",
@@ -125231,10 +125911,6 @@
                               "type": "boolean",
                               "description": "Whether `changes` lists only the first 100 people."
                             },
-                            "leavesConfidential": {
-                              "description": "For moves: true when the content leaves a confidential space and loses its protection.",
-                              "type": "boolean"
-                            },
                             "changes": {
                               "type": "array",
                               "items": {
@@ -125350,10 +126026,6 @@
                                   "type": "boolean",
                                   "description": "Whether `changes` lists only the first 100 people."
                                 },
-                                "leavesConfidential": {
-                                  "description": "For moves: true when the content leaves a confidential space and loses its protection.",
-                                  "type": "boolean"
-                                },
                                 "changes": {
                                   "type": "array",
                                   "items": {
@@ -125465,10 +126137,6 @@
                                 "truncated": {
                                   "type": "boolean",
                                   "description": "Whether `changes` lists only the first 100 people."
-                                },
-                                "leavesConfidential": {
-                                  "description": "For moves: true when the content leaves a confidential space and loses its protection.",
-                                  "type": "boolean"
                                 },
                                 "changes": {
                                   "type": "array",
@@ -140185,7 +140853,7 @@
       "post": {
         "operationId": "trash.deleteSpace",
         "summary": "Delete a space",
-        "description": "Deletes the space with all its content. It goes directly to the second stage of the trash; organization administrators can restore it until that period ends. Requires typing the name of the space.\n\nRequires the permission `space.delete` on the space in `spaceId`.",
+        "description": "Deletes the space with all its content. It goes directly to the second stage of the trash. Until that period ends, the people who were its space admins at deletion can restore it, and for a space that is not confidential also organization administrators. Requires typing the name of the space.\n\nRequires the permission `space.delete` on the space in `spaceId`.",
         "tags": [
           "Trash"
         ],
@@ -141617,10 +142285,6 @@
                               "type": "boolean",
                               "description": "Whether `changes` lists only the first 100 people."
                             },
-                            "leavesConfidential": {
-                              "description": "For moves: true when the content leaves a confidential space and loses its protection.",
-                              "type": "boolean"
-                            },
                             "changes": {
                               "type": "array",
                               "items": {
@@ -141736,10 +142400,6 @@
                                   "type": "boolean",
                                   "description": "Whether `changes` lists only the first 100 people."
                                 },
-                                "leavesConfidential": {
-                                  "description": "For moves: true when the content leaves a confidential space and loses its protection.",
-                                  "type": "boolean"
-                                },
                                 "changes": {
                                   "type": "array",
                                   "items": {
@@ -141851,10 +142511,6 @@
                                 "truncated": {
                                   "type": "boolean",
                                   "description": "Whether `changes` lists only the first 100 people."
-                                },
-                                "leavesConfidential": {
-                                  "description": "For moves: true when the content leaves a confidential space and loses its protection.",
-                                  "type": "boolean"
                                 },
                                 "changes": {
                                   "type": "array",
@@ -146559,10 +147215,6 @@
                     "truncated": {
                       "type": "boolean",
                       "description": "Whether `changes` lists only the first 100 people."
-                    },
-                    "leavesConfidential": {
-                      "description": "For moves: true when the content leaves a confidential space and loses its protection.",
-                      "type": "boolean"
                     },
                     "changes": {
                       "type": "array",
@@ -152093,10 +152745,6 @@
                     "truncated": {
                       "type": "boolean",
                       "description": "Whether `changes` lists only the first 100 people."
-                    },
-                    "leavesConfidential": {
-                      "description": "For moves: true when the content leaves a confidential space and loses its protection.",
-                      "type": "boolean"
                     },
                     "changes": {
                       "type": "array",

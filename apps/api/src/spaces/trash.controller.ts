@@ -20,6 +20,19 @@ const organizationParams = z.object({ organizationId: uuid("ID of the organizati
 const organizationEntryParams = organizationParams.extend({ entryId: uuid("ID of the trash entry.") });
 const entryParams = z.object({ entryId: uuid("ID of the trash entry.") }).strict();
 const personalSpaceParams = z.object({ spaceId: uuid("ID of the personal space.") }).strict();
+const deletedSpace = { type: "deletedSpace", param: "entryId" } as const;
+const deletedSpaceParams = z
+  .object({ entryId: uuid("ID of the trash entry of the deleted space.") })
+  .strict();
+
+const deletedConfidentialSchema = z
+  .object({
+    deleted: z
+      .number()
+      .int()
+      .describe("Number of deleted confidential spaces that their former space admins can still restore."),
+  })
+  .describe("Deleted confidential spaces, counted without names or keys.");
 
 const restoreResultSchema = z
   .object({
@@ -160,7 +173,7 @@ export class TrashController {
   @ApiRoute({
     summary: "Delete a space",
     description:
-      "Deletes the space with all its content. It goes directly to the second stage of the trash; organization administrators can restore it until that period ends. Requires typing the name of the space.",
+      "Deletes the space with all its content. It goes directly to the second stage of the trash. Until that period ends, the people who were its space admins at deletion can restore it, and for a space that is not confidential also organization administrators. Requires typing the name of the space.",
     tags: [TAG],
     status: 200,
     params: spaceParams,
@@ -198,6 +211,60 @@ export class TrashController {
     @Req() request: FastifyRequest,
   ) {
     await this.#services.archive.setSpaceArchived(actorOf(request), spaceId, body.archived);
+  }
+
+  @Get("deleted-spaces")
+  @Permission("instance.content.view")
+  @ApiRoute({
+    summary: "List the deleted spaces the caller can restore",
+    description:
+      "Lists deleted spaces in the second stage of the trash that the caller was space admin of when they were deleted, newest first, with when they will be removed for good.",
+    tags: [TAG],
+    response: {
+      description: "Trash entries of deleted spaces.",
+      schema: entries,
+      example: [{ ...exampleTrashEntry, kind: "space", itemId: null, itemKind: null, stage: 2 }],
+    },
+  })
+  async deletedSpaces(@Req() request: FastifyRequest) {
+    return this.#services.trash.listDeletedSpaces(actorOf(request));
+  }
+
+  @Post("deleted-spaces/:entryId/restore")
+  @Permission("deletedSpace.restore", deletedSpace)
+  @ApiRoute({
+    summary: "Restore a deleted space",
+    description:
+      "Restores a deleted space with its content and permissions as they were. Only people who were its space admins when it was deleted can do this, as long as they are still active members of its organization.",
+    tags: [TAG],
+    status: 200,
+    params: deletedSpaceParams,
+    response: {
+      description: "The result.",
+      schema: restoreResultSchema,
+      example: { itemId: null, parentId: null },
+    },
+  })
+  async restoreDeletedSpace(@Param("entryId") entryId: string, @Req() request: FastifyRequest) {
+    return this.#services.trash.restore(actorOf(request), entryId);
+  }
+
+  @Get("organizations/:organizationId/trash/confidential-spaces")
+  @Permission("organization.trash.manage", organization)
+  @ApiRoute({
+    summary: "Count deleted confidential spaces",
+    description:
+      "Counts the deleted confidential spaces of the organization. Organization administrators cannot see or restore them; only the people who were their space admins at deletion can.",
+    tags: [TAG],
+    params: organizationParams,
+    response: {
+      description: "The number.",
+      schema: deletedConfidentialSchema,
+      example: { deleted: 1 },
+    },
+  })
+  async deletedConfidentialSpaces(@Param("organizationId") organizationId: string) {
+    return { deleted: await this.#services.trash.countDeletedConfidential(organizationId) };
   }
 
   @Get("organizations/:organizationId/trash")

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PreferencesProvider } from "../../preferences/preferences-provider.js";
 import { mockApi, renderWithProviders } from "../../testing/render.js";
-import { ConfidentialSpaces } from "./confidential-spaces.js";
+import { ConfidentialSpaces, DeletedConfidentialNotice } from "./confidential-spaces.js";
 
 const ORGANIZATION = "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f";
 const SPACE = "01929b1e-0000-7000-8000-0000000000a1";
@@ -94,5 +94,29 @@ describe("confidential spaces in the organization settings", () => {
     expect(await screen.findByText("MSAB")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Appoint space admin" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Delete space" })).toBeNull();
+  });
+});
+
+describe("deleted confidential spaces in the organization trash", () => {
+  it("are counted only, with who can restore them", async () => {
+    mockApi({
+      [`GET /api/v1/organizations/${ORGANIZATION}/trash/confidential-spaces`]: () => ({
+        body: { deleted: 2 },
+      }),
+    });
+    await renderWithProviders(<DeletedConfidentialNotice organizationId={ORGANIZATION} />);
+    expect(await screen.findByText("2 deleted confidential spaces")).toBeTruthy();
+    expect(screen.getByText(/Only the people who were their space admins can restore them/)).toBeTruthy();
+  });
+
+  it("are not mentioned when there are none", async () => {
+    const api = mockApi({
+      [`GET /api/v1/organizations/${ORGANIZATION}/trash/confidential-spaces`]: () => ({
+        body: { deleted: 0 },
+      }),
+    });
+    await renderWithProviders(<DeletedConfidentialNotice organizationId={ORGANIZATION} />);
+    await waitFor(() => expect(api.requests).toHaveLength(1));
+    expect(screen.queryByText(/deleted confidential/)).toBeNull();
   });
 });
