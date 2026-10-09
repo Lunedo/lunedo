@@ -50,7 +50,7 @@ export function DecisionsSection({ seriesId, spaceKey }: { seriesId: string; spa
   return (
     <section aria-labelledby="series-decisions" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 id="series-decisions" className="flex flex-1 items-center gap-2 text-lg font-semibold">
+        <h2 id="series-decisions" className="flex grow items-center gap-2 text-lg font-semibold">
           <Flag aria-hidden className="size-icon text-text-muted" />
           {t("meetings.decisions.title")}
         </h2>
