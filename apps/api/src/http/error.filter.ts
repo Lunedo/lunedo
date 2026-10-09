@@ -5,17 +5,20 @@ import {
   CommentInvalidError,
   DocumentInvalidError,
   EmailInUseError,
+  FileTooLargeError,
   ForbiddenError,
   OrganizationError,
   PasswordPolicyError,
   ProviderResponseError,
   RelyingPartyError,
   SessionGoneError,
+  SettingAboveMaximumError,
   SettingBelowMinimumError,
   SettingError,
   SettingLockedError,
   SetupNotFoundError,
   SetupStepError,
+  ShareLinkRateLimitedError,
   SmtpConfigurationError,
   SpaceError,
   TokenRejectedError,
@@ -101,6 +104,20 @@ function map(error: unknown): Mapped | null {
   if (error instanceof RelyingPartyError) return { code: "instanceUrlMissing", detail: error.message };
   if (error instanceof SmtpConfigurationError)
     return { code: "invalidSmtpConfiguration", detail: error.message };
+  if (error instanceof FileTooLargeError) {
+    return {
+      code: "fileTooLarge",
+      detail: `The file is larger than ${Math.round(error.limit / 1024 / 1024)} MB`,
+      extensions: { maxBytes: error.limit },
+    };
+  }
+  if (error instanceof ShareLinkRateLimitedError) {
+    return {
+      code: "rateLimited",
+      detail: "Too many attempts to open this link",
+      extensions: { retryAfterSeconds: error.retryAfterSeconds },
+    };
+  }
   if (error instanceof ForbiddenError)
     return { code: "forbidden", extensions: { denials: error.decision.denials } };
   if (error instanceof OrganizationError)
@@ -125,6 +142,9 @@ function map(error: unknown): Mapped | null {
   }
   if (error instanceof SettingBelowMinimumError) {
     return { code: "settingBelowMinimum", detail: error.message, extensions: { minimum: error.minimum } };
+  }
+  if (error instanceof SettingAboveMaximumError) {
+    return { code: "settingAboveMaximum", detail: error.message, extensions: { maximum: error.maximum } };
   }
   if (error instanceof SettingLockedError) {
     return { code: "settingLocked", detail: error.message, extensions: { lockedBy: error.lockedBy.level } };

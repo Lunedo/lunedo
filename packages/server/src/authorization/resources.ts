@@ -116,6 +116,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "organization.integrations.view": organizationArea("integrationsAndApi", "view"),
       "organization.integrations.manage": organizationArea("integrationsAndApi", "manage"),
       "organization.audit.view": organizationArea("auditLog", "view"),
+      "organization.access.view": organizationArea("spaces", "view"),
     },
     rules: {
       membersCreateGroups: async (context) => {
@@ -248,6 +249,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       );
       return result.rows[0]?.space_id ?? null;
     },
+    itemOf: async (_executor, id) => id,
     actions: {
       "item.view": { scope: "space", spaceRole: "reader", restriction: "readable" },
       "item.edit": { scope: "space", spaceRole: "editor", restriction: "writable" },
@@ -257,6 +259,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "item.react": { scope: "space", spaceRole: "reader", restriction: "interactive" },
       "item.pin": { scope: "space", spaceRole: "admin", restriction: "interactive" },
       "item.approveSchedule": { scope: "space", spaceRole: "admin", restriction: "writable" },
+      "item.share": { scope: "space", spaceRole: "editor", restriction: "readable" },
     },
     restrictions: {
       readable: async (executor, id) => {
@@ -287,6 +290,12 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
   const comment: ResourceType = {
     type: "comment",
     spaceOf: commentSpace,
+    itemOf: async (executor, id) => {
+      const result = await executor.execute<{ item_id: string }>(
+        sql`select item_id from comments where id = ${id}`,
+      );
+      return result.rows[0]?.item_id ?? null;
+    },
     actions: {
       "comment.view": { scope: "space", spaceRole: "reader", restriction: "visible" },
       "comment.reply": { scope: "space", spaceRole: "commenter", restriction: "open" },
@@ -344,6 +353,12 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       );
       return result.rows[0]?.space_id ?? null;
     },
+    itemOf: async (executor, id) => {
+      const result = await executor.execute<{ item_id: string }>(
+        sql`select item_id from tasks where id = ${id}`,
+      );
+      return result.rows[0]?.item_id ?? null;
+    },
     actions: {
       "task.view": { scope: "space", spaceRole: "reader", restriction: "visible" },
       "task.update": { scope: "space", spaceRole: "editor", rule: "assignee", restriction: "interactive" },
@@ -376,7 +391,47 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     },
   };
 
-  return [instance, organization, group, account, serviceAccount, space, item, comment, task];
+  const attachmentItem = async (executor: Executor, id: string): Promise<string | null> => {
+    const result = await executor.execute<{ item_id: string }>(
+      sql`select item_id from attachments where id = ${id} and deleted_at is null`,
+    );
+    return result.rows[0]?.item_id ?? null;
+  };
+  const viaItem =
+    (restriction: (executor: Executor, id: string) => Promise<RestrictionResult | null>) =>
+    async (executor: Executor, id: string): Promise<RestrictionResult | null> => {
+      const itemId = await attachmentItem(executor, id);
+      return itemId ? restriction(executor, itemId) : { denial: "inTrash" };
+    };
+
+  const attachment: ResourceType = {
+    type: "attachment",
+    spaceOf: async (executor, id) => {
+      const result = await executor.execute<{ space_id: string }>(sql`
+        select t.space_id from attachments a join tree_items t on t.id = a.item_id
+        where a.id = ${id} and a.deleted_at is null`);
+      return result.rows[0]?.space_id ?? null;
+    },
+    itemOf: attachmentItem,
+    actions: {
+      "attachment.view": { scope: "space", spaceRole: "reader", restriction: "readable" },
+      "attachment.edit": { scope: "space", spaceRole: "editor", restriction: "writable" },
+    },
+    restrictions: {
+      readable: viaItem(async (executor, itemId) => {
+        const state = await itemState(executor, itemId);
+        if (!state || state.trashed) return { denial: "inTrash" };
+        return state.unpublished ? { denial: "unpublished", unless: "editor" } : null;
+      }),
+      writable: viaItem(async (executor, itemId) => {
+        const state = await itemState(executor, itemId);
+        if (!state || state.trashed) return { denial: "inTrash" };
+        return state.archived ? { denial: "archived" } : null;
+      }),
+    },
+  };
+
+  return [instance, organization, group, account, serviceAccount, space, item, comment, task, attachment];
 }
 
 function interactiveItem(state: Awaited<ReturnType<typeof itemState>>): RestrictionResult | null {

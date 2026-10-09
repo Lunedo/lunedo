@@ -25,6 +25,13 @@ import {
   spaceFacts,
   type Via,
 } from "./facts.js";
+import {
+  type ItemAccessOptions,
+  type ItemFacts,
+  itemFacts,
+  itemRoleCondition,
+  type ShareVia,
+} from "./item-access.js";
 import type { AuthorizationRegistry, RegisteredAction, Resource, RestrictionDenial } from "./registry.js";
 import { spaceRoleCondition, tokenSpaceCondition } from "./space-access.js";
 
@@ -33,6 +40,8 @@ export type Grant =
   | { kind: "role"; role: RoleReference; via: Via; expiresAt: Date | null }
   | { kind: "membership"; membershipKind: string }
   | { kind: "spaceRole"; role: SpaceRole; via: SpaceVia }
+  | { kind: "share"; role: SpaceRole; itemId: string; inherited: boolean; via: ShareVia }
+  | { kind: "link"; linkId: string; scope: string }
   | { kind: "rule"; rule: string };
 
 export type Denial =
@@ -183,12 +192,23 @@ export class AuthorizationService {
       if (!facts.space) return decision([], ["resourceNotFound"]);
       if (facts.account?.state !== "active") return decision([], ["accountInactive"]);
       let grants = this.#spaceGrants(action, facts);
+      const item = await this.#itemFacts(action, resource, accountId, facts, executor, fresh);
+      if (item) grants.push(...this.#itemGrants(action, item));
       const ruleMet =
         action.rule !== undefined && (await this.#rule(action, accountId, resource, null, executor, fresh));
       if (action.ruleRequired) {
         if (grants.length > 0 && !ruleMet) return decision([], ["ruleNotMet"]);
       } else if (ruleMet && action.rule) {
         grants.push({ kind: "rule", rule: action.rule });
+      }
+      if (item && grants.length > 0) {
+        if (item.viewRestrictions.some((restriction) => !restriction.listed)) {
+          return decision([], ["restricted"]);
+        }
+        const editsItem = action.resourceType.type === "item" && action.spaceRole === "editor";
+        if (editsItem && item.editRestriction && !item.editRestriction.listed) {
+          return decision([], ["editRestricted"]);
+        }
       }
       const restriction = action.restriction
         ? await action.resourceType.restrictions?.[action.restriction]?.(
@@ -199,7 +219,10 @@ export class AuthorizationService {
       if (restriction && grants.length > 0) {
         const { unless } = restriction;
         grants = unless
-          ? grants.filter((grant) => grant.kind === "spaceRole" && grantsSpaceRole(grant.role, unless))
+          ? grants.filter(
+              (grant) =>
+                (grant.kind === "spaceRole" || grant.kind === "share") && grantsSpaceRole(grant.role, unless),
+            )
           : [];
         if (grants.length === 0) return decision([], [restriction.denial]);
       }
@@ -455,6 +478,64 @@ export class AuthorizationService {
     if (actor.type !== "account" || !actor.token) return roles;
     const limit = tokenAreas(actor.token, scope, organizationId);
     return roles.map((role) => ({ ...role, areas: intersectAreas(role.areas, limit) }));
+  }
+
+  async #itemFacts(
+    action: RegisteredAction,
+    resource: Resource,
+    accountId: string,
+    facts: SpaceFacts,
+    executor: Executor,
+    fresh: boolean,
+  ): Promise<ItemFacts | null> {
+    if (!action.resourceType.itemOf || !resource.id) return null;
+    const itemId = await action.resourceType.itemOf(executor, resource.id.toLowerCase());
+    if (!itemId) return null;
+    const item = await itemFacts(executor, accountId, itemId, { fresh });
+    if (!item) return null;
+    if (facts.account?.type === "portal") return { ...item, sources: [] };
+    return item;
+  }
+
+  #itemGrants(action: RegisteredAction, item: ItemFacts): Grant[] {
+    const required = action.spaceRole;
+    if (!required) return [];
+    const grants: Grant[] = [];
+    for (const source of item.sources) {
+      if (source.type === "share" && grantsSpaceRole(source.role, required)) {
+        grants.push({
+          kind: "share",
+          role: source.role,
+          itemId: source.itemId,
+          inherited: source.inherited,
+          via: source.via,
+        });
+      }
+      if (source.type === "link" && required === "reader") {
+        grants.push({ kind: "link", linkId: source.linkId, scope: source.scope });
+      }
+    }
+    return grants;
+  }
+
+  itemFacts(
+    accountId: string,
+    itemId: string,
+    options: { executor?: Executor; fresh?: boolean } = {},
+  ): Promise<ItemFacts | null> {
+    return itemFacts(options.executor ?? this.#database, accountId, itemId, {
+      fresh: options.fresh ?? false,
+    });
+  }
+
+  itemFilter(
+    principal: Principal,
+    item: SQL,
+    space: SQL,
+    minimum: SpaceRole = "reader",
+    options: ItemAccessOptions = {},
+  ): SQL {
+    return itemRoleCondition(principal, item, space, minimum, options);
   }
 
   #spaceGrants(action: RegisteredAction, facts: SpaceFacts): Grant[] {

@@ -31,5 +31,6 @@ export const encryptedColumns: readonly EncryptedColumn[] = [
   { table: "instance_secrets", idColumn: "name", column: "value" },
   { table: "mail_credentials", idColumn: "id", column: "secret" },
   { table: "mail_outbox", idColumn: "id", column: "message" },
+  { table: "share_links", idColumn: "id", column: "secret" },
   { table: "totp_credentials", idColumn: "id", column: "secret" },
 ];

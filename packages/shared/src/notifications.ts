@@ -91,6 +91,7 @@ export function notificationSettingKey(type: string): string {
 }
 
 const contentKind = z.enum(["page", "blogPost"]);
+const shareRole = z.enum(["reader", "commenter", "editor"]);
 
 export const contentNotificationParamSchemas = {
   "content.mentioned": z.object({
@@ -114,6 +115,38 @@ export const contentNotificationParamSchemas = {
     reason: z.enum(["noEditAccess", "accountRemoved"]),
     scheduledBy: idSchema.nullable(),
     spaceId: idSchema,
+  }),
+  "page.shared": z.object({
+    itemTitle: z.string(),
+    itemKind: contentKind,
+    spaceKey: z.string(),
+    role: shareRole,
+    includeDescendants: z.boolean(),
+  }),
+  "access.requested": z.object({
+    requestId: idSchema,
+    target: z.enum(["space", "page"]),
+    requesterName: z.string(),
+    spaceId: idSchema,
+    spaceName: z.string(),
+    spaceKey: z.string(),
+    itemTitle: z.string().nullable(),
+    message: z.string(),
+  }),
+  "access.requestDecided": z.object({
+    requestId: idSchema,
+    target: z.enum(["space", "page"]),
+    decision: z.enum(["approved", "declined", "satisfied"]),
+    role: z.enum(["reader", "commenter", "editor", "admin"]).nullable(),
+    spaceName: z.string(),
+    spaceKey: z.string(),
+    itemTitle: z.string().nullable(),
+  }),
+  "restriction.orphaned": z.object({
+    itemTitle: z.string(),
+    spaceId: idSchema,
+    spaceName: z.string(),
+    spaceKey: z.string(),
   }),
 } as const;
 

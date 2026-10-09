@@ -13,6 +13,7 @@ beforeAll(async () => {
   mkdirSync(path.join(webRoot, "assets"));
   writeFileSync(path.join(webRoot, "index.html"), "<!doctype html><title>Pagehall</title>");
   writeFileSync(path.join(webRoot, "assets", "app-1234.js"), "console.log(1)");
+  writeFileSync(path.join(webRoot, "preview.html"), "<!doctype html><title>Preview</title>");
   app = await createTestApp({ webRoot });
 });
 
@@ -42,6 +43,19 @@ describe("web client", () => {
       expect(response.statusCode, url).toBe(404);
       expect(response.body).not.toContain("<title>");
     }
+  });
+
+  it("serves the preview frame in a sandbox without same-origin access", async () => {
+    const response = await app.inject({ method: "GET", url: "/preview.html" });
+    expect(response.statusCode).toBe(200);
+    const policy = String(response.headers["content-security-policy"]);
+    expect(policy).toMatch(/^sandbox allow-scripts;/);
+    expect(policy).not.toContain("allow-same-origin");
+    expect(policy).toContain("connect-src 'none'");
+    expect(policy).not.toContain("worker-src");
+    expect(response.headers["x-content-type-options"]).toBe("nosniff");
+    const asset = await app.inject({ method: "GET", url: "/assets/app-1234.js" });
+    expect(asset.headers["access-control-allow-origin"]).toBe("*");
   });
 
   it("keeps the health endpoints", async () => {

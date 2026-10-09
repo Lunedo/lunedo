@@ -54,6 +54,23 @@ services:
       - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
       - "127.0.0.1:${MAILPIT_PORT:-8025}:8025"
 
+  # S3-compatible object storage for the tests of the s3 file storage.
+  minio:
+    image: bitnamilegacy/minio:2025.4.22@sha256:50cec18ac4184af4671a78aedd5554942c8ae105d51a465fa82037949046da01
+    environment:
+      MINIO_ROOT_USER: pagehall
+      MINIO_ROOT_PASSWORD: pagehall-minio
+      MINIO_DEFAULT_BUCKETS: pagehall-test
+    ports:
+      - "127.0.0.1:${MINIO_PORT:-9100}:9000"
+    volumes:
+      - minio-data:/bitnami/minio/data
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   app:
     build:
       context: ..
@@ -197,6 +214,7 @@ services:
 
 volumes:
   postgres-data:
+  minio-data:
   pnpm-store:
   node-modules-root:
   node-modules-web:

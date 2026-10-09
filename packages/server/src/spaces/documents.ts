@@ -22,7 +22,7 @@ import { actorIdOf, SpaceError } from "./common.js";
 import type { PeopleService } from "./people.js";
 import type { PageMode } from "./schema.js";
 import { signalDocumentChange, signalSpaceChange } from "./signals.js";
-import { publishedFor, visibleItem } from "./visibility.js";
+import { publishedFor, spaceKeyFor, spaceNameFor, visibleItem } from "./visibility.js";
 
 export const LABEL_MAX_LENGTH = 100;
 export const MAX_LABELS_PER_PAGE = 100;
@@ -431,7 +431,7 @@ export class PageDocumentService {
             }>(sql`
               select t.id, t.title, t.kind::text as kind, s.key,
                 ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)} as accessible,
-                (t.trash_entry_id is not null and ${this.#authorization.spaceFilter(viewer, sql`s`)}
+                (t.trash_entry_id is not null and ${this.#authorization.itemFilter(viewer, sql`t`, sql`s`)}
                   and ${publishedFor(this.#authorization, viewer, sql`t`, sql`s`)}) as in_trash
               from tree_items t join spaces s on s.id = t.space_id
               where t.id = any(${sql.param(pageIds)}::uuid[])`)
@@ -466,7 +466,8 @@ export class PageDocumentService {
       key: string;
       name: string;
     }>(sql`
-      select t.id, t.title, t.space_id, s.key, s.name
+      select t.id, t.title, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
+        ${spaceNameFor(this.#authorization, viewer, sql`s`)} as name
       from page_links l join tree_items t on t.id = l.source_item_id join spaces s on s.id = t.space_id
       where l.target_item_id = ${itemId} and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
       order by lower(t.title), t.id

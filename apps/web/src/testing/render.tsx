@@ -89,7 +89,9 @@ type Handler = (request: RecordedRequest) => { status?: number; body?: unknown }
 
 export function mockApi(routes: Record<string, Handler>) {
   const requests: RecordedRequest[] = [];
-  const fetch = vi.fn(async (input: Request) => {
+  const fetch = vi.fn(async (resource: Request | string, init?: RequestInit) => {
+    const input =
+      resource instanceof Request ? resource : new Request(new URL(resource, "http://localhost"), init);
     const url = new URL(input.url);
     const text = input.method === "GET" ? "" : await input.text();
     const recorded: RecordedRequest = {

@@ -106,11 +106,16 @@ export class MembershipService {
   readonly #database: Database;
   readonly #audit: AuditLog;
   readonly #authorization: AuthorizationService;
+  readonly #deactivationListeners: ((tx: Transaction, accountId: string) => Promise<void>)[] = [];
 
   constructor(options: { database: Database; audit: AuditLog; authorization: AuthorizationService }) {
     this.#database = options.database;
     this.#audit = options.audit;
     this.#authorization = options.authorization;
+  }
+
+  onDeactivated(listener: (tx: Transaction, accountId: string) => Promise<void>): void {
+    this.#deactivationListeners.push(listener);
   }
 
   async list(organizationId: string, page: PageRequest = FIRST_PAGE): Promise<Page<Member>> {
@@ -670,6 +675,7 @@ export class MembershipService {
           fields: { providerId: options.byProvider.providerId, state: options.byProvider.state },
         });
       }
+      for (const listener of this.#deactivationListeners) await listener(tx, accountId);
       await this.#audit.recordMany(tx, events);
       return ended.length;
     });

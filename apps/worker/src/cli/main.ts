@@ -11,7 +11,8 @@ import {
   currentSchemaVersion,
   Encryption,
   encryptedColumns,
-  encryptedStreamOwners,
+  encryptedStreamOwnersOf,
+  fileStoreOf,
   type KeyRing,
   KeyRingError,
   KeyRingHolder,
@@ -43,7 +44,10 @@ async function requiredMasterKeys(config: ServerConfig, databaseUrl: string) {
       await masterKeyVersionsInUse({
         database,
         columns: encryptedColumns,
-        streams: { owners: () => encryptedStreamOwners, context: { database, filesDir: config.paths.files } },
+        streams: {
+          owners: () => encryptedStreamOwnersOf(fileStoreOf(config)),
+          context: { database, filesDir: config.paths.files },
+        },
       }),
     ).map(Number);
     if (inUse.length === 0) return [];
@@ -91,6 +95,7 @@ async function run(command: Command): Promise<void> {
         masterKeys: await requiredMasterKeys(config, databaseUrl),
         database: new PostgresArchiver({ databaseUrl }),
         filesDir: config.paths.files,
+        objectStore: config.fileStorage.kind === "s3" ? fileStoreOf(config) : undefined,
         config: configurationForBackup(env),
         pagehallVersion: env.PAGEHALL_VERSION ?? "dev",
         schemaVersion: currentSchemaVersion(),
@@ -120,6 +125,7 @@ async function run(command: Command): Promise<void> {
         masterKeys: await availableMasterKeys(config),
         database: new PostgresArchiver({ databaseUrl }),
         filesDir: config.paths.files,
+        objectStore: config.fileStorage.kind === "s3" ? fileStoreOf(config) : undefined,
         configDir: command.configDir,
         force: command.force,
         knownSchemaVersions: knownSchemaVersions(),
@@ -149,7 +155,7 @@ async function run(command: Command): Promise<void> {
           jobs,
           columns: () => encryptedColumns,
           streams: {
-            owners: () => encryptedStreamOwners,
+            owners: () => encryptedStreamOwnersOf(fileStoreOf(config)),
             context: { database, filesDir: config.paths.files },
           },
         });

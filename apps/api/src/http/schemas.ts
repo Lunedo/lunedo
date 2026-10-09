@@ -296,6 +296,11 @@ export const settingSchema = z
       .array(z.string())
       .describe("Lower levels where the setting can be set. A lock at this level applies to them."),
     editable: z.boolean().describe("Whether the setting can be changed through the settings endpoint."),
+    maximum: z
+      .json()
+      .describe(
+        "Highest value allowed, set for the instance, or null when the setting has no maximum. `unlimited` allows any value.",
+      ),
     levels: z
       .array(
         z
@@ -325,6 +330,7 @@ export const exampleSetting = {
   lockable: true,
   levelsBelow: ["organization"],
   editable: true,
+  maximum: null,
   levels: [
     { level: "instance", value: null, locked: false, effective: true },
     { level: "organization", value: null, locked: false, effective: true },

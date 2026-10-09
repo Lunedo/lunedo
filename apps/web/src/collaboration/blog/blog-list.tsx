@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { CircleAlert, Clock, FilePen, Pin, PinOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { problemMessage } from "../../errors/problem-message.js";
+import { CoverImage } from "../../files/cover.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { itemHref } from "../../spaces/item-paths.js";
 import type { BlogPost } from "../queries.js";
@@ -122,6 +123,13 @@ export function BlogList({
                 </span>
                 {post.excerpt ? <p className="text-text">{post.excerpt}</p> : null}
               </article>
+              {post.cover ? (
+                <CoverImage
+                  cover={post.cover}
+                  alt=""
+                  className="hidden aspect-video w-1/4 shrink-0 rounded-md sm:block"
+                />
+              ) : null}
               {canPin && post.published ? (
                 <IconButton
                   label={

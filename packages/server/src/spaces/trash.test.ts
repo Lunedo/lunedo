@@ -79,14 +79,14 @@ describe.skipIf(!baseUrl)("trash and archive", () => {
       expect(await rootTitles(context)).not.toContain("Folder");
       expect(await allowed(context.editor, "item.view", child.id)).toBe(false);
       expect(await allowed(context.editor, "item.edit", child.id)).toBe(false);
-      expect((await test.services.trash.listSpace(context.space.id)).map((listed) => listed.id)).toEqual([
-        entry.id,
-      ]);
+      expect(
+        (await test.services.trash.listSpace(context.editor, context.space.id)).map((listed) => listed.id),
+      ).toEqual([entry.id]);
 
       await test.services.trash.restore(context.editor, entry.id);
       expect(await rootTitles(context)).toContain("Folder");
       expect(await rootTitles(context, child.id)).toEqual(["Grandchild"]);
-      expect(await test.services.trash.listSpace(context.space.id)).toEqual([]);
+      expect(await test.services.trash.listSpace(context.editor, context.space.id)).toEqual([]);
     });
 
     it("restores to the old place, or to the top level when that place is gone", async () => {
@@ -168,7 +168,7 @@ describe.skipIf(!baseUrl)("trash and archive", () => {
       const page = await item(context, "Old");
       const entry = await test.services.trash.deleteItem(context.editor, page.id);
       expect(await test.services.trash.empty(context.editor, context.space.id)).toBe(1);
-      expect(await test.services.trash.listSpace(context.space.id)).toEqual([]);
+      expect(await test.services.trash.listSpace(context.editor, context.space.id)).toEqual([]);
       const listed = await test.services.trash.listOrganization(context.org.id);
       expect(listed.find((candidate) => candidate.id === entry.id)?.stage).toBe(2);
       expect(

@@ -6,7 +6,8 @@ export type SettingFieldType =
       kind: "number";
       min: number;
       max: number;
-      unit: "characters" | "count" | "perMinute";
+      unit: "characters" | "count" | "perMinute" | "megabytes" | "versions";
+      unlimited?: boolean;
     }
   | {
       kind: "duration";
@@ -40,6 +41,19 @@ function days(min: number, max: number, quickChoices: readonly number[], nullabl
 const fields: SettingField[] = [
   { key: "instance.name", type: { kind: "text" } },
   { key: "reactions.enabled", type: { kind: "boolean" } },
+  { key: "files.maxFileSizeMegabytes", type: { kind: "number", min: 1, max: 100_000, unit: "megabytes" } },
+  {
+    key: "files.keepVersionsMaximum",
+    type: { kind: "number", min: 1, max: 1_000_000, unit: "versions", unlimited: true },
+  },
+  {
+    key: "files.keepVersions",
+    type: { kind: "number", min: 1, max: 1_000_000, unit: "versions", unlimited: true },
+  },
+  { key: "sharing.shareLinks", type: { kind: "boolean" } },
+  { key: "sharing.anyoneLinks", type: { kind: "boolean" } },
+  { key: "sharing.anyoneLinkMaxDays", type: days(1, 3650, [7, 30, 90]) },
+  { key: "sharing.membersInviteGuests", type: { kind: "boolean" } },
   { key: "instance.url", type: { kind: "text", inputType: "url" } },
   { key: "locale.language", type: { kind: "locale" } },
   { key: "locale.timeZone", type: { kind: "locale" } },

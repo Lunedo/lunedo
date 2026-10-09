@@ -66,6 +66,49 @@ export const configSettings = [
   setting("PAGEHALL_DATABASE_POOL_SIZE", positiveInt.default(10), "Maximum connections per process."),
   setting("PAGEHALL_FILES_DIR", path.default("/var/lib/pagehall/files"), "Directory of the file store."),
   setting(
+    "PAGEHALL_FILE_STORAGE",
+    z.enum(["local", "s3"]).default("local"),
+    "Where attachments are stored: local in the file store directory, or s3 in S3-compatible object storage.",
+  ),
+  setting("PAGEHALL_S3_BUCKET", nonEmpty.optional(), "Bucket for attachments when the file storage is s3."),
+  setting(
+    "PAGEHALL_S3_ENDPOINT",
+    nonEmpty
+      .refine((value) => /^https?:\/\//.test(value), "must be an http:// or https:// address")
+      .optional(),
+    "Address of the S3-compatible service. Leave it out for Amazon S3.",
+  ),
+  setting("PAGEHALL_S3_REGION", nonEmpty.default("us-east-1"), "Region of the bucket."),
+  setting("PAGEHALL_S3_ACCESS_KEY_ID", nonEmpty.optional(), "Access key ID for the bucket.", true),
+  setting("PAGEHALL_S3_SECRET_ACCESS_KEY", nonEmpty.optional(), "Secret access key for the bucket.", true),
+  setting(
+    "PAGEHALL_S3_FORCE_PATH_STYLE",
+    z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
+    "Addresses the bucket in the path instead of the host name, as MinIO and some other services need.",
+  ),
+  setting(
+    "PAGEHALL_S3_PREFIX",
+    z
+      .string()
+      .trim()
+      .regex(/^([A-Za-z0-9._-]+\/)*$/, "must be empty or end with /")
+      .default(""),
+    "Prefix for all object names, for example pagehall/.",
+  ),
+  setting(
+    "PAGEHALL_FILES_URL",
+    nonEmpty
+      .refine(
+        (value) => /^https?:\/\/[^/]+\/?$/.test(value),
+        "must be an http:// or https:// address without a path",
+      )
+      .optional(),
+    "Separate origin that serves attachments, as an additional isolation layer. It must forward to the API.",
+  ),
+  setting(
     "PAGEHALL_SECRETS_DIR",
     path.default("/var/lib/pagehall/secrets"),
     "Directory for secrets generated on first start.",

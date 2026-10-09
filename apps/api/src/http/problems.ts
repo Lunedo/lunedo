@@ -12,6 +12,7 @@ export const problems = {
   invalidMailConfiguration: { status: 400, title: "The e-mail configuration is not valid" },
   invalidSetting: { status: 400, title: "The setting value is not valid" },
   settingBelowMinimum: { status: 400, title: "The value is below the minimum set for the instance" },
+  settingAboveMaximum: { status: 400, title: "The value is above the maximum set for the instance" },
   settingManagedElsewhere: { status: 400, title: "The setting is changed through another endpoint" },
   ambiguousCredentials: { status: 400, title: "The request carries both a session and an API token" },
   invalidPrincipal: { status: 400, title: "The role cannot go to this principal" },
@@ -68,6 +69,21 @@ export const problems = {
   unknownTemplateField: { status: 400, title: "The template uses an input field that does not exist" },
   invalidTemplateValues: { status: 400, title: "Some input values are missing or not valid" },
   selfAppointment: { status: 400, title: "Nobody can give themselves access this way" },
+  invalidFileName: { status: 400, title: "The file name is not valid" },
+  invalidItem: { status: 400, title: "Files can only be attached to pages and blog posts" },
+  invalidCover: { status: 400, title: "The cover must be an image attached to the post" },
+  invalidFocus: { status: 400, title: "The focal point lies outside the image" },
+  invalidScope: { status: 400, title: "The link scope cannot be used here" },
+  peopleRequired: { status: 400, title: "The link needs at least one person or group" },
+  tooManyPeople: { status: 400, title: "The link names too many people or groups" },
+  invalidPassword: { status: 400, title: "The link password is not valid" },
+  messageTooLong: { status: 400, title: "The message is too long" },
+  invalidRole: { status: 400, title: "The role cannot be given here" },
+  signInRequired: { status: 401, title: "Sign in to open this link" },
+  passwordRequired: { status: 401, title: "The link needs its password" },
+  wrongPassword: { status: 401, title: "The link password is not correct" },
+  linkNotForYou: { status: 403, title: "The link was shared with other people" },
+  guestInvitesDisabled: { status: 403, title: "Members cannot invite guests in this organization" },
   invalidCredentials: { status: 401, title: "The credentials are not valid" },
   invalidSecondFactor: { status: 401, title: "The second factor is not valid" },
   challengeExpired: { status: 401, title: "The sign-in step expired" },
@@ -114,6 +130,24 @@ export const problems = {
   draftPending: { status: 409, title: "The draft has unpublished changes" },
   notArchived: { status: 409, title: "The item is not archived" },
   versionNotFound: { status: 404, title: "The version does not exist" },
+  attachmentNotFound: { status: 404, title: "The file does not exist" },
+  shareNotFound: { status: 404, title: "The access entry does not exist" },
+  restrictionNotFound: { status: 404, title: "The page is not restricted" },
+  linkNotFound: { status: 404, title: "The link does not exist, has expired or was revoked" },
+  requestNotFound: { status: 404, title: "The access request does not exist" },
+  personNotFound: { status: 404, title: "The person does not exist" },
+  nameTaken: { status: 409, title: "A file with this name exists" },
+  alreadyShared: { status: 409, title: "The page is already shared with them" },
+  restrictionWithoutViewers: { status: 409, title: "A restricted page needs someone who can view it" },
+  restrictionWithoutEditors: {
+    status: 409,
+    title: "A page restricted for editing needs someone who can edit it",
+  },
+  shareLinksDisabled: { status: 409, title: "Share links are turned off" },
+  anyoneLinksDisabled: { status: 409, title: "Links for anyone are turned off" },
+  restrictedPage: { status: 409, title: "A restricted page cannot be opened by anyone with a link" },
+  requestClosed: { status: 409, title: "The access request was already decided" },
+  alreadyHasAccess: { status: 409, title: "The person already has access" },
   discardedDraftNotFound: { status: 404, title: "The discarded draft does not exist" },
   trashEntryNotFound: { status: 404, title: "The trash entry does not exist" },
   templateNotFound: { status: 404, title: "The template does not exist" },
@@ -172,9 +206,12 @@ export const problems = {
   instanceUrlMissing: { status: 409, title: "The instance URL is not set" },
   mailNotReady: { status: 409, title: "The sending method is not set up yet" },
   payloadTooLarge: { status: 413, title: "The request body is too large" },
+  fileTooLarge: { status: 413, title: "The file is larger than allowed" },
   unsupportedMediaType: { status: 415, title: "The request body has an unsupported type" },
+  rangeNotSatisfiable: { status: 416, title: "The requested range is not available" },
   locked: { status: 429, title: "Too many failed attempts" },
   rateLimited: { status: 429, title: "Too many requests" },
+  tooManyRequests: { status: 429, title: "Too many access requests today" },
   internalError: { status: 500, title: "Internal server error" },
   busy: { status: 503, title: "The server is busy" },
 } as const satisfies Record<string, { status: number; title: string }>;
@@ -212,6 +249,11 @@ export const problemSchema = z
     problem: z.string().optional().describe("Which password rule failed, for `passwordPolicy`."),
     minLength: z.number().int().optional().describe("Minimum password length, for `passwordPolicy`."),
     lockedBy: z.string().optional().describe("Level that locked the setting, for `settingLocked`."),
+    minimum: z.number().optional().describe("Lowest allowed value, for `settingBelowMinimum`."),
+    maximum: z
+      .union([z.number(), z.literal("unlimited")])
+      .optional()
+      .describe("Highest allowed value, for `settingAboveMaximum`."),
     maxLifetimeDays: z
       .number()
       .int()
@@ -222,6 +264,12 @@ export const problemSchema = z
       .optional()
       .describe("Domains that belong to another identity provider, for `domainInUse`."),
     instanceUrl: z.string().optional().describe("The current address of the instance, for `instanceMoved`."),
+    maxBytes: z.number().int().optional().describe("Largest allowed file size in bytes, for `fileTooLarge`."),
+    maxDays: z
+      .number()
+      .int()
+      .optional()
+      .describe("Longest allowed lifetime of a link for anyone in days, for `expiryTooLate`."),
     problems: z
       .array(
         z

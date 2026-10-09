@@ -16,6 +16,14 @@ export interface SettingDefinition<T> {
   lockable: boolean;
   stricterOnly?: "lower" | "higher";
   minimum?: SettingDefinition<number>;
+  maximum?: SettingDefinition<Limit>;
+}
+
+export const UNLIMITED = "unlimited";
+export type Limit = number | typeof UNLIMITED;
+
+export function limitOf(value: unknown): number {
+  return value === UNLIMITED ? Number.POSITIVE_INFINITY : Number(value);
 }
 
 export function defineSetting<T>(definition: SettingDefinition<T>): SettingDefinition<T> {
@@ -35,6 +43,9 @@ export function defineSetting<T>(definition: SettingDefinition<T>): SettingDefin
   }
   if (definition.minimum && typeof definition.default !== "number") {
     throw new Error(`Setting ${definition.key} can only have a minimum with a number value`);
+  }
+  if (definition.maximum && typeof definition.default !== "number" && definition.default !== UNLIMITED) {
+    throw new Error(`Setting ${definition.key} can only have a maximum with a number or unlimited value`);
   }
   const levels = settingLevels.filter((level) => definition.levels.includes(level));
   return { ...definition, levels };

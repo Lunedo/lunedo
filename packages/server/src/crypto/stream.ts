@@ -272,11 +272,22 @@ class DecryptStream extends Transform {
   #chunkSize = 0;
   #counter = 0;
   #finished = false;
+  readonly #partial: boolean;
 
-  constructor(keys: StreamKeys, associatedData: Buffer) {
+  constructor(
+    keys: StreamKeys,
+    associatedData: Buffer,
+    start?: { header: Buffer; chunk: number; partial: boolean },
+  ) {
     super();
     this.#keys = keys;
     this.#associatedData = associatedData;
+    this.#partial = start?.partial ?? false;
+    if (start) {
+      this.#buffer = Buffer.from(start.header);
+      this.#readHeader();
+      this.#counter = start.chunk;
+    }
   }
 
   #readHeader(): boolean {
@@ -340,7 +351,8 @@ class DecryptStream extends Transform {
 
   override _flush(callback: TransformCallback): void {
     this.#dataKey?.fill(0);
-    callback(this.#finished && this.#buffer.length === 0 ? null : new DecryptionError());
+    const complete = this.#finished || this.#partial;
+    callback(complete && this.#buffer.length === 0 ? null : new DecryptionError());
   }
 }
 
@@ -354,6 +366,29 @@ export function createEncryptStream(
     options.chunkSize ?? DEFAULT_CHUNK_SIZE,
     options.associatedData ?? Buffer.alloc(0),
   );
+}
+
+export function encryptedChunkSize(head: Buffer): number {
+  kindOf(head);
+  const size = head.readUInt32BE(80);
+  if (size < 1 || size > MAX_CHUNK_SIZE) throw new DecryptionError();
+  return size;
+}
+
+export function encryptedChunkOffset(chunkSize: number, index: number): number {
+  return HEADER_LENGTH + index * (FRAME_HEADER_LENGTH + chunkSize + TAG_LENGTH);
+}
+
+export function createChunkDecryptStream(
+  keys: StreamKeys,
+  head: Buffer,
+  options: { associatedData?: Buffer; firstChunk: number; partial: boolean },
+): Transform {
+  return new DecryptStream(keys, options.associatedData ?? Buffer.alloc(0), {
+    header: head.subarray(0, HEADER_LENGTH),
+    chunk: options.firstChunk,
+    partial: options.partial,
+  });
 }
 
 /** Decrypts and authenticates a stream; fails if any part was changed, removed or appended. */

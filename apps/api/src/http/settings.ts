@@ -68,6 +68,7 @@ export async function listSettings(
         lockable: definition.lockable,
         levelsBelow: definition.levels.slice(definition.levels.indexOf(level) + 1),
         editable: !MANAGED_ELSEWHERE.has(definition.key),
+        maximum: definition.maximum ? await settings.get(definition.maximum, chain) : null,
         levels: explanation.levels
           .filter((state) => state.applies)
           .map((state) => ({

@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App, createQueryClient } from "../app.js";
 import { initI18n } from "../i18n/index.js";
-import { mockApi, type RecordedRequest } from "../testing/render.js";
+import { mockApi, problem, type RecordedRequest } from "../testing/render.js";
 
 const OLIVIA = {
   id: "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
@@ -61,6 +61,8 @@ const page = (id: string, title: string, extra: Record<string, unknown> = {}) =>
   archived: false,
   position: "a0",
   hasChildren: false,
+  viewRestriction: "none",
+  editRestricted: false,
   link: null,
   creatorId: OLIVIA.id,
   ownerId: OLIVIA.id,
@@ -437,5 +439,154 @@ describe("template gallery", () => {
           .startDate,
       ).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
+  });
+});
+
+describe("sharing and access", () => {
+  const LUKAS = "01929b1e-0000-7000-8000-00000000a002";
+  const REQUEST = "01929b1e-0000-7000-8000-00000000f001";
+  const mine =
+    (role: string, denial: string | null = null) =>
+    () => ({
+      body: {
+        accountId: OLIVIA.id,
+        name: OLIVIA.name,
+        role,
+        reasons: [],
+        denial,
+        restrictions: [],
+        editRestricted: denial === "editRestricted" ? { listed: false } : null,
+        published: true,
+      },
+    });
+
+  it("offers sharing to editors and hides editing when the page restricts it", async () => {
+    mockApi(
+      routes("editor", {
+        [`GET /api/v1/items/${VPN}`]: () => ({
+          body: {
+            ...page(VPN, "VPN access", { editRestricted: true }),
+            spaceKey: "ITOPS",
+            spaceName: "IT Operations",
+            spaceAccess: true,
+            ancestors: [],
+          },
+        }),
+        [`GET /api/v1/pages/${VPN}/access/mine`]: mine("reader", "editRestricted"),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    expect(
+      await screen.findByText(/Only people on the access list with "Can edit" can edit this page/),
+    ).toBeTruthy();
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Edit" })).toBeNull());
+    expect(screen.queryByRole("button", { name: "Share" })).toBeNull();
+  });
+
+  it("shows a Share button to people who may share", async () => {
+    mockApi(routes("editor", { [`GET /api/v1/pages/${VPN}/access/mine`]: mine("editor") }));
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    expect(await screen.findByRole("button", { name: "Share" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
+  });
+
+  it("opens a page shared with someone outside the space without the space", async () => {
+    const shareOnly = {
+      ...page(VPN, "VPN access", { mode: "live" }),
+      spaceKey: "",
+      spaceName: "",
+      spaceAccess: false,
+      ancestors: [],
+    };
+    mockApi({
+      ...routes("reader"),
+      "GET /api/v1/space-keys/ITOPS": () => problem(404, "notFound"),
+      [`GET /api/v1/items/${VPN}`]: () => ({ body: shareOnly }),
+      [`GET /api/v1/pages/${VPN}/access/mine`]: mine("reader"),
+      [`GET /api/v1/pages/${VPN}/attachments`]: () => ({ body: [] }),
+      "GET /api/v1/shared-with-me": () => ({
+        body: [
+          {
+            itemId: VPN,
+            title: "VPN access",
+            kind: "page",
+            role: "reader",
+            includeDescendants: false,
+            sharedBy: { id: LUKAS, name: "Lukas Hofer" },
+            sharedAt: "2026-10-05T08:00:00.000Z",
+            spaceKey: "",
+            spaceName: "",
+          },
+        ],
+      }),
+    });
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    expect(await screen.findByText("Shared with you by Lukas Hofer")).toBeTruthy();
+    expect(await screen.findByText("Published text")).toBeTruthy();
+    expect(window.location.pathname).toBe(`/shared/${VPN}/vpn-access`);
+    expect(await screen.findByRole("button", { name: /Comments/ })).toBeTruthy();
+    expect(screen.queryByText("IT Operations")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+  });
+
+  it("lets people without access ask for it", async () => {
+    const { requests } = mockApi({
+      ...routes("reader"),
+      "GET /api/v1/space-keys/ITOPS": () => problem(404, "notFound"),
+      [`GET /api/v1/items/${VPN}`]: () => problem(404, "notFound"),
+      [`POST /api/v1/pages/${VPN}/access-requests`]: () => ({ status: 202 }),
+    });
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    expect(await screen.findByText("This page does not exist or you have no access")).toBeTruthy();
+    await userEvent.type(screen.getByRole("textbox", { name: /Message/ }), "I take over the VPN rollout.");
+    await userEvent.click(screen.getByRole("button", { name: "Request access" }));
+    expect(await screen.findByText("Request sent")).toBeTruthy();
+    expect(requests.find((request) => request.method === "POST")?.body).toEqual({
+      message: "I take over the VPN rollout.",
+    });
+  });
+
+  it("lets a space admin approve a request with the chosen role", async () => {
+    const entry = {
+      id: REQUEST,
+      requester: { id: LUKAS, name: "Lukas Hofer", email: "lukas@example.org" },
+      spaceId: SPACE_ID,
+      spaceName: "IT Operations",
+      itemId: null,
+      itemTitle: null,
+      message: "On-call next month",
+      status: "open",
+      role: null,
+      decidedBy: null,
+      decidedAt: null,
+      createdAt: "2026-10-05T08:00:00.000Z",
+    };
+    const { requests } = mockApi({
+      ...routes("admin"),
+      [`GET /api/v1/access-requests/${REQUEST}`]: () => ({ body: entry }),
+      [`POST /api/v1/access-requests/${REQUEST}/decide`]: () => ({
+        body: {
+          ...entry,
+          status: "approved",
+          role: "editor",
+          decidedBy: { id: OLIVIA.id, name: OLIVIA.name },
+          decidedAt: "2026-10-06T08:00:00.000Z",
+        },
+      }),
+    });
+    await renderAt(`/access-requests/${REQUEST}`);
+    expect(await screen.findByText("Lukas Hofer asks for access to the space IT Operations")).toBeTruthy();
+    expect(screen.getByText("On-call next month")).toBeTruthy();
+    await userEvent.click(screen.getByRole("combobox", { name: "Access to give" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Can edit" }));
+    await userEvent.click(screen.getByRole("button", { name: 'Give Lukas Hofer "Can edit"' }));
+    await waitFor(() =>
+      expect(requests.find((request) => request.path.endsWith("/decide"))?.body).toEqual({
+        approve: true,
+        role: "editor",
+        includeDescendants: false,
+      }),
+    );
+    expect(await screen.findByText("Approved")).toBeTruthy();
   });
 });

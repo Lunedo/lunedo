@@ -43,6 +43,15 @@ The master keys and the backup keys are needed to read encrypted data and backup
 | `PAGEHALL_DATABASE_URL` | required | yes | PostgreSQL connection URL, `postgres://user:password@host:5432/database`. |
 | `PAGEHALL_DATABASE_POOL_SIZE` | `10` | | Maximum database connections per process. |
 | `PAGEHALL_FILES_DIR` | `/var/lib/pagehall/files` | | Directory of the file store. |
+| `PAGEHALL_FILE_STORAGE` | `local` | | Where attachments are stored: `local` in the file store directory, or `s3` in S3-compatible object storage. Attachments are encrypted in both cases. |
+| `PAGEHALL_S3_BUCKET` | none | | Bucket for attachments; required when the file storage is `s3`. |
+| `PAGEHALL_S3_ENDPOINT` | none | | Address of the S3-compatible service, for example `https://minio.example.org`. Leave it out for Amazon S3. |
+| `PAGEHALL_S3_REGION` | `us-east-1` | | Region of the bucket. |
+| `PAGEHALL_S3_ACCESS_KEY_ID` | none | yes | Access key ID for the bucket. Without it, the usual AWS credential sources apply. |
+| `PAGEHALL_S3_SECRET_ACCESS_KEY` | none | yes | Secret access key for the bucket. |
+| `PAGEHALL_S3_FORCE_PATH_STYLE` | `false` | | `true` addresses the bucket in the path instead of the host name, as MinIO and some other services need. |
+| `PAGEHALL_S3_PREFIX` | empty | | Prefix for all object names, ending with `/`, for example `pagehall/`. |
+| `PAGEHALL_FILES_URL` | none | | Separate origin, such as `https://files.wiki.example.org`, that serves attachment content and previews as an additional isolation layer. It must forward to the API. Attachments are isolated without it as well. |
 | `PAGEHALL_SECRETS_DIR` | `/var/lib/pagehall/secrets` | | Directory for secrets generated on first start. |
 | `PAGEHALL_KEY_PROVIDER` | see description | | `env` or `file`. Defaults to `env` when `PAGEHALL_MASTER_KEYS` is set, `file` otherwise. |
 | `PAGEHALL_MASTER_KEYS` | none | yes | Master key ring for the env key provider. |

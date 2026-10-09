@@ -36,3 +36,6 @@ jobs:
             echo "::error title=Dependency audit::pnpm audit found known vulnerabilities. See the job summary."
           fi
           exit "$status"
+      - name: Compare the pinned SheetJS release
+        if: ${{ !cancelled() }}
+        run: node scripts/check-sheetjs.ts

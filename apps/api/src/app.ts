@@ -19,6 +19,7 @@ export function createFastifyAdapter(logger: Logger, trustedProxies: string[] = 
     logController: new LogController({ disableRequestLogging: true, requestIdLogLabel: "requestId" }),
     genReqId: () => randomUUID(),
     trustProxy: trustedProxies.length > 0 ? trustedProxies : false,
+    routerOptions: { maxParamLength: 300 },
   });
 }
 
@@ -55,6 +56,12 @@ function isSamlResponse(request: FastifyRequest): boolean {
   return request.method === "POST" && SAML_RESPONSE.test(request.url.split("?")[0] ?? "");
 }
 
+const TOKEN_SEGMENTS = /^(\/api\/v1\/share-links\/|\/api\/v1\/files\/|\/s\/)[^/]+/;
+
+export function withoutTokens(path: string): string {
+  return path.replace(TOKEN_SEGMENTS, "$1:token");
+}
+
 export async function configureApp(app: NestFastifyApplication, context: ApiContext): Promise<void> {
   const fastify = app.getHttpAdapter().getInstance();
   fastify.addContentTypeParser(
@@ -62,6 +69,7 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
     { parseAs: "string" },
     fastify.getDefaultJsonParser("error", "error"),
   );
+  fastify.addContentTypeParser("application/octet-stream", (_request, payload, done) => done(null, payload));
 
   fastify.addHook("onRequest", async (request, reply) => {
     const userAgent = request.headers["user-agent"];
@@ -101,7 +109,7 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
     context.metrics.observeHttpRequest(request.method, route, reply.statusCode, reply.elapsedTime / 1000);
     const entry = {
       method: request.method,
-      path,
+      path: withoutTokens(path),
       statusCode: reply.statusCode,
       durationMs: Math.round(reply.elapsedTime),
     };

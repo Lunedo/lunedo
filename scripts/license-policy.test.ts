@@ -48,6 +48,27 @@ describe("findLicenseViolations", () => {
     assert.deepEqual(findLicenseViolations({ all: [react], production: [react], allowlist: {} }), []);
   });
 
+  it("accepts a shipped package whose declared license is clarified for its exact version", () => {
+    const duck = pkg("duck", "BSD");
+    const clarifications = {
+      "duck@1.0.0": { declared: "BSD", license: "BSD-2-Clause", reason: "LICENSE file is BSD 2-Clause" },
+    };
+    assert.deepEqual(
+      findLicenseViolations({ all: [duck], production: [duck], allowlist: {}, clarifications }),
+      [],
+    );
+    const newer = { ...duck, versions: ["2.0.0"] };
+    assert.equal(
+      findLicenseViolations({ all: [newer], production: [newer], allowlist: {}, clarifications }).length,
+      2,
+    );
+    const changed = pkg("duck", "SSPL-1.0");
+    assert.equal(
+      findLicenseViolations({ all: [changed], production: [changed], allowlist: {}, clarifications }).length,
+      2,
+    );
+  });
+
   it("accepts an allowlisted build or test dependency", () => {
     const violations = findLicenseViolations({
       all: [data],

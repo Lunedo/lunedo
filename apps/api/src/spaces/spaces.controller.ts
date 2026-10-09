@@ -54,6 +54,12 @@ const updateSchema = z
   .object({
     name: z.string().max(100).optional().describe("New name, 1 to 100 characters."),
     description: z.string().max(1000).optional().describe("New description, up to 1000 characters."),
+    discoverable: z
+      .boolean()
+      .optional()
+      .describe(
+        "Whether members of the organization can find the space and ask for access. Not for personal spaces.",
+      ),
   })
   .strict()
   .describe("Fields to change.");

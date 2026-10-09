@@ -196,6 +196,7 @@ const EXPECTED: Record<string, Expectation> = {
   "organization.integrations.view": organization("integrationsAndApi", "view"),
   "organization.integrations.manage": organization("integrationsAndApi", "manage"),
   "organization.audit.view": organization("auditLog", "view"),
+  "organization.access.view": organization("spaces", "view"),
   "group.view": organization("membersAndGroups", "view", "memberOrManager"),
   "group.manage": organization("membersAndGroups", "manage", "manager"),
   "group.delete": organization("membersAndGroups", "manage", "manager"),
@@ -222,6 +223,7 @@ const EXPECTED: Record<string, Expectation> = {
   "item.react": { scope: "space" },
   "item.pin": { scope: "space" },
   "item.approveSchedule": { scope: "space" },
+  "item.share": { scope: "space" },
   "comment.view": { scope: "space" },
   "comment.reply": { scope: "space" },
   "comment.resolve": { scope: "space" },
@@ -231,6 +233,8 @@ const EXPECTED: Record<string, Expectation> = {
   "comment.restore": { scope: "space" },
   "task.view": { scope: "space" },
   "task.update": { scope: "space" },
+  "attachment.view": { scope: "space" },
+  "attachment.edit": { scope: "space" },
 };
 
 function expectedAllowed(held: Held, actionName: string): boolean {
@@ -275,6 +279,7 @@ interface Fixture {
   itemId: string;
   commentId: string;
   taskId: string;
+  attachmentId: string;
 }
 
 describe.skipIf(!baseUrl)("permission matrix", () => {
@@ -339,6 +344,18 @@ describe.skipIf(!baseUrl)("permission matrix", () => {
       "insert into tasks (id, item_id, published, assignee_id) values ($1, $2, true, $3) returning id",
       [randomUUID(), itemId, owner],
     );
+    const file = await test.pool.query<{ id: string }>(
+      "insert into stored_files (id, storage_key, state) values ($1, $2, 'ready') returning id",
+      [randomUUID(), `matrix/${randomUUID()}`],
+    );
+    const attachment = await test.pool.query<{ id: string }>(
+      "insert into attachments (id, item_id, name, name_key) values ($1, $2, 'a.txt', 'a.txt') returning id",
+      [randomUUID(), itemId],
+    );
+    await test.pool.query(
+      "insert into attachment_versions (id, attachment_id, number, file_id, name) values ($1, $2, 1, $3, 'a.txt')",
+      [randomUUID(), attachment.rows[0]?.id, file.rows[0]?.id],
+    );
     return {
       organizationId: created.id,
       groupId: group.rows[0]?.id ?? "",
@@ -347,6 +364,7 @@ describe.skipIf(!baseUrl)("permission matrix", () => {
       itemId,
       commentId: comment.rows[0]?.id ?? "",
       taskId: task.rows[0]?.id ?? "",
+      attachmentId: attachment.rows[0]?.id ?? "",
     };
   }
 
@@ -396,6 +414,8 @@ describe.skipIf(!baseUrl)("permission matrix", () => {
         return { type: "comment", id: target.commentId };
       case "task":
         return { type: "task", id: target.taskId };
+      case "attachment":
+        return { type: "attachment", id: target.attachmentId };
       default:
         throw new Error(`The matrix has no resource for ${action.resourceType.type}`);
     }

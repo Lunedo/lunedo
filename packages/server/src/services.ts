@@ -38,6 +38,10 @@ import type { KeyRing } from "./crypto/key-ring.js";
 import type { KeyRingHolder } from "./crypto/key-ring-holder.js";
 import type { Database } from "./database/database.js";
 import type { DatabasePool } from "./database/pool.js";
+import { AttachmentService } from "./files/attachments.js";
+import { FileService } from "./files/files.js";
+import { FILE_CLEANUP_SCHEDULE, fileCleanupJob } from "./files/jobs.js";
+import { type FileStore, LocalFileStore } from "./files/store.js";
 import { GroupMappingService } from "./identity/groups.js";
 import { LdapAdapter } from "./identity/ldap.js";
 import type { DirectoryConnector } from "./identity/ldap-connection.js";
@@ -95,6 +99,14 @@ import type { SettingsService } from "./settings/service.js";
 import { SetupRegistry } from "./setup/framework.js";
 import { SetupService } from "./setup/setup-service.js";
 import { builtinSetupSteps } from "./setup/steps.js";
+import { AccessExplanationService } from "./sharing/explain.js";
+import { GiveAccessDraftService } from "./sharing/give-access-drafts.js";
+import { GuestShareService } from "./sharing/guests.js";
+import { ShareLinkService } from "./sharing/links.js";
+import { sharingNotificationTypes } from "./sharing/notifications.js";
+import { PageAccessService } from "./sharing/page-access.js";
+import { AccessRequestService } from "./sharing/requests.js";
+import { ValueSigner } from "./sharing/signer.js";
 import { ArchiveService } from "./spaces/archive.js";
 import { PageDocumentService } from "./spaces/documents.js";
 import { TreeService } from "./spaces/items.js";
@@ -171,6 +183,15 @@ export interface AccountServices {
   tasks: TaskService;
   blog: BlogService;
   home: HomeService;
+  signer: ValueSigner;
+  pageAccess: PageAccessService;
+  shareLinks: ShareLinkService;
+  accessRequests: AccessRequestService;
+  accessExplanations: AccessExplanationService;
+  giveAccessDrafts: GiveAccessDraftService;
+  files: FileService;
+  attachments: AttachmentService;
+  guestShares: GuestShareService;
 }
 
 export function createAccountServices(options: {
@@ -184,6 +205,7 @@ export function createAccountServices(options: {
   jobs: JobQueue | undefined;
   logger: Logger;
   filesDir: string;
+  fileStore?: FileStore;
   configuredInstanceUrl?: string | undefined;
   passwordHashConcurrency: number;
   insecureIdentityProviders?: boolean;
@@ -240,6 +262,7 @@ export function createAccountServices(options: {
     registry: new NotificationRegistry().register(
       ...builtinNotificationTypes,
       ...collaborationNotificationTypes,
+      ...sharingNotificationTypes,
     ),
   });
   mail.useNotifications(notifications);
@@ -423,7 +446,7 @@ export function createAccountServices(options: {
     origin: options.nodeId ?? uuidv7(),
   });
   const versions = new VersionService({ database, audit, documents, people, settings, activity });
-  const trash = new TrashService({ database, audit, settings, people, activity });
+  const trash = new TrashService({ database, audit, settings, people, activity, authorization });
   const archive = new ArchiveService({ database, audit, authorization, activity });
   const tree = new TreeService({
     database,
@@ -448,6 +471,51 @@ export function createAccountServices(options: {
   const tasks = new TaskService({ database, authorization, settings, people });
   const blog = new BlogService({ database, authorization, versions, audit, people, notifications });
   const home = new HomeService({ database, authorization, settings, tasks, blog, people });
+  const signer = new ValueSigner({ database, encryption });
+  const pageAccess = new PageAccessService({ database, authorization, audit, people, notifications });
+  const shareLinks = new ShareLinkService({
+    database,
+    authorization,
+    audit,
+    settings,
+    hasher,
+    rateLimiter,
+    people,
+    signer,
+    encryption,
+  });
+  const accessRequests = new AccessRequestService({
+    database,
+    authorization,
+    audit,
+    people,
+    notifications,
+    pageAccess,
+    spacePermissions,
+  });
+  const accessExplanations = new AccessExplanationService({ database, authorization, people, audit });
+  const giveAccessDrafts = new GiveAccessDraftService({ database });
+  const files = new FileService({
+    database,
+    store: options.fileStore ?? new LocalFileStore(options.filesDir),
+    keyRing: options.keyRing,
+    logger,
+    signer,
+  });
+  const attachments = new AttachmentService({ database, files, settings, people, audit });
+  const guestShares = new GuestShareService({
+    database,
+    authorization,
+    audit,
+    settings,
+    invitations,
+    pageAccess,
+    requests: accessRequests,
+    notifications,
+  });
+  pageAccess.onAccessChange((tx, spaceId) => accessRequests.closeSatisfied(tx, spaceId));
+  spacePermissions.onAccessChange((tx, spaceId) => accessRequests.closeSatisfied(tx, spaceId));
+  memberships.onDeactivated((tx, accountId) => pageAccess.markOrphanedRestrictions(tx, accountId));
   setupRegistry.register(
     ...builtinSetupSteps({
       database,
@@ -522,6 +590,15 @@ export function createAccountServices(options: {
     tasks,
     blog,
     home,
+    signer,
+    pageAccess,
+    shareLinks,
+    accessRequests,
+    accessExplanations,
+    giveAccessDrafts,
+    files,
+    attachments,
+    guestShares,
   };
 }
 
@@ -610,9 +687,20 @@ export async function workAccountJobs(
   await jobs.work(trashRetentionJob, async (job) => {
     const result = await services.trash.applyRetention({ signal: job.signal });
     const drafts = await services.versions.removeExpiredDrafts();
+    const files = result.purged > 0 ? await services.files.deleteOrphaned() : 0;
     if (result.moved + result.purged + drafts > 0) {
-      job.logger.info({ ...result, drafts }, "Trash retention applied");
+      job.logger.info({ ...result, drafts, files }, "Trash retention applied");
     }
+  });
+  await jobs.work(fileCleanupJob, async (job) => {
+    let removed = 0;
+    for (;;) {
+      job.signal.throwIfAborted();
+      const batch = await services.files.deleteOrphaned();
+      removed += batch;
+      if (batch === 0) break;
+    }
+    if (removed > 0) job.logger.info({ removed }, "Files without attachments removed");
   });
   await jobs.work(liveVersionsJob, async (job) => {
     const created = await services.versions.versionIdlePages();
@@ -633,6 +721,7 @@ export async function workAccountJobs(
   await jobs.schedule(collaborationCleanupJob, COLLABORATION_CLEANUP_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(dispatchPendingMailJob, DISPATCH_PENDING_MAIL_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(trashRetentionJob, TRASH_RETENTION_SCHEDULE, {}, { key: "hourly" });
+  await jobs.schedule(fileCleanupJob, FILE_CLEANUP_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(liveVersionsJob, LIVE_VERSIONS_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(authCleanupJob, AUTH_CLEANUP_SCHEDULE, {}, { key: "regular" });
   await jobs.schedule(auditRetentionJob, AUDIT_RETENTION_SCHEDULE, {}, { key: "daily" });

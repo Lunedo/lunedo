@@ -28,7 +28,11 @@ export interface Operation {
   "x-stability-level"?: "alpha";
   security: Record<string, string[]>[];
   parameters?: Parameter[];
-  requestBody?: { required: boolean; content: Record<string, { schema: JsonSchema; example?: unknown }> };
+  requestBody?: {
+    required: boolean;
+    description?: string;
+    content: Record<string, { schema: JsonSchema; example?: unknown }>;
+  };
   responses: Record<string, Response>;
 }
 
@@ -180,7 +184,8 @@ function accessText(access: RouteAccess | undefined): string | null {
 function automaticErrors(route: ApiRouteInfo, definition: ApiRouteDefinition): ProblemCode[] {
   const access = route.access;
   const codes: ProblemCode[] = [];
-  if (definition.params || definition.query || definition.body) codes.push("invalidInput");
+  if (definition.params || definition.query || definition.body || definition.upload)
+    codes.push("invalidInput");
   if (access?.kind === "session" || access?.kind === "permission" || access?.kind === "apiDocumentation") {
     codes.push("notSignedIn");
     if (acceptsTokens(access)) codes.push("invalidApiToken", "ambiguousCredentials", "rateLimited");
@@ -299,6 +304,20 @@ function operation(
     ...(route.internal ? { "x-pagehall-internal": true, "x-stability-level": "alpha" } : {}),
     security: security(route.access),
     ...(parameterList.length > 0 ? { parameters: parameterList } : {}),
+    ...(definition.upload
+      ? {
+          requestBody: {
+            required: true,
+            description: definition.upload.description,
+            content: Object.fromEntries(
+              definition.upload.contentTypes.map((type) => [
+                type,
+                { schema: { type: "string", format: "binary" } },
+              ]),
+            ),
+          },
+        }
+      : {}),
     ...(definition.body
       ? {
           requestBody: {
@@ -314,6 +333,12 @@ function operation(
       : {}),
     responses: {
       [status]: success,
+      ...(definition.raw?.ranges
+        ? {
+            "206": { ...success, description: "Part of the file, for a request with a `Range` header." },
+            "304": { description: "Not modified: the file matches the `If-None-Match` header." },
+          }
+        : {}),
       ...errorResponses([...automaticErrors(route, definition), ...(definition.errors ?? [])]),
     },
   };

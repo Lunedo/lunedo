@@ -27,6 +27,24 @@ const post = { type: "item", param: "postId" } as const;
 const spaceParams = z.object({ spaceId: uuid("ID of the space.") }).strict();
 const postParams = z.object({ postId: uuid("ID of the blog post.") }).strict();
 const organizationPostParams = organizationIdParams.extend({ postId: uuid("ID of the blog post.") }).strict();
+const coverSchema = z
+  .object({
+    attachmentId: uuid("An image attached to the post, or null for no cover.").nullable(),
+    focusX: z
+      .number()
+      .min(0)
+      .max(1)
+      .default(0.5)
+      .describe("Horizontal focal point from 0 (left) to 1 (right)."),
+    focusY: z
+      .number()
+      .min(0)
+      .max(1)
+      .default(0.5)
+      .describe("Vertical focal point from 0 (top) to 1 (bottom)."),
+  })
+  .strict()
+  .describe("The cover image.");
 const blogCursor = z.tuple([z.string().max(64), z.string().max(64), z.string().max(40)]);
 
 function page(result: { posts: unknown[]; next: BlogCursor | null }) {
@@ -160,6 +178,33 @@ export class BlogController {
     @Req() request: FastifyRequest,
   ) {
     return this.#services.blog.schedule(actorOf(request), postId, body);
+  }
+
+  @Put("blog-posts/:postId/cover")
+  @Permission("item.edit", post)
+  @ApiRoute({
+    summary: "Set the cover image of a blog post",
+    description:
+      "Chooses an image attached to the post as cover, with the focal point that stays visible when lists crop the image. Send `attachmentId: null` to remove the cover.",
+    tags: [TAG],
+    params: postParams,
+    body: coverSchema,
+    bodyExample: { attachmentId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40", focusX: 0.5, focusY: 0.3 },
+    response: { description: "The post.", schema: blogPostSchema, example: exampleBlogPost },
+    errors: ["invalidCover", "invalidFocus"],
+  })
+  async cover(
+    @Param("postId") postId: string,
+    @Body() body: z.output<typeof coverSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.blog.setCover(
+      actorOf(request),
+      postId,
+      body.attachmentId
+        ? { attachmentId: body.attachmentId, focusX: body.focusX, focusY: body.focusY }
+        : null,
+    );
   }
 
   @Delete("blog-posts/:postId/schedule")

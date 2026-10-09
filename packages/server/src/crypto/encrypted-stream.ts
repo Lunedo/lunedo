@@ -17,11 +17,6 @@ export interface EncryptedStreamContext {
 /** A module that stores stream-encrypted data and lists it for key rotation. */
 export interface EncryptedStreamOwner {
   name: string;
-  streams(context: EncryptedStreamContext): AsyncIterable<EncryptedStream>;
+  versions?(context: EncryptedStreamContext): Promise<Record<number, number>>;
+  streams(context: EncryptedStreamContext, targetVersion?: number): AsyncIterable<EncryptedStream>;
 }
-
-/**
- * All owners of stream-encrypted data. Modules add their owner here together with the code
- * that writes such data, so that key rotation re-wraps it.
- */
-export const encryptedStreamOwners: readonly EncryptedStreamOwner[] = [];

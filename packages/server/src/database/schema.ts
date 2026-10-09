@@ -38,6 +38,12 @@ export {
 } from "../collaboration/schema.js";
 export { keyRotationStatus, keyRotations } from "../crypto/schema.js";
 export {
+  attachments,
+  attachmentVersions,
+  storedFileState,
+  storedFiles,
+} from "../files/schema.js";
+export {
   identities,
   identityCredentialKind,
   identityGroups,
@@ -95,6 +101,19 @@ export {
 export { organizationDomains, organizationLogos, organizations } from "../organizations/schema.js";
 export { settingLevel, settingValues } from "../settings/schema.js";
 export { setupSessions, setupSteps } from "../setup/schema.js";
+export {
+  accessRequestStatus,
+  accessRequests,
+  giveAccessDrafts,
+  invitationShares,
+  pageRestrictions,
+  pageShares,
+  restrictionKind,
+  shareLinkAccesses,
+  shareLinkPeople,
+  shareLinkScope,
+  shareLinks,
+} from "../sharing/schema.js";
 export {
   collaborationClients,
   collaborationPresence,

@@ -36,6 +36,7 @@ export interface Space {
   name: string;
   description: string;
   visibility: SpaceVisibility;
+  discoverable: boolean;
   organizationId: string | null;
   organizationName: string | null;
   personal: boolean;
@@ -57,6 +58,7 @@ type SpaceRow = {
   name: string;
   description: string;
   visibility: SpaceVisibility;
+  discoverable: boolean;
   organization_id: string | null;
   organization_name: string | null;
   personal_of: string | null;
@@ -68,7 +70,7 @@ type SpaceRow = {
   updated_at: Date | string;
 };
 
-const SPACE_COLUMNS = sql`s.id, s.key, s.name, s.description, s.visibility, s.organization_id,
+const SPACE_COLUMNS = sql`s.id, s.key, s.name, s.description, s.visibility, s.discoverable, s.organization_id,
   o.name as organization_name, s.personal_of, s.owner_account_id, owner.name as owner_name,
   s.overview_item_id, s.archived_at is not null as archived, s.created_at, s.updated_at`;
 
@@ -83,6 +85,7 @@ function toSpace(row: SpaceRow): Space {
     name: row.name,
     description: row.description,
     visibility: row.visibility,
+    discoverable: row.discoverable,
     organizationId: row.organization_id,
     organizationName: row.organization_name,
     personal: row.personal_of !== null,
@@ -325,10 +328,33 @@ export class SpaceService {
   async update(
     actor: Principal,
     spaceId: string,
-    changes: { name?: string | undefined; description?: string | undefined },
+    changes: {
+      name?: string | undefined;
+      description?: string | undefined;
+      discoverable?: boolean | undefined;
+    },
   ): Promise<Space> {
     return this.#database.transaction(async (tx) => {
       const space = await this.lock(tx, spaceId);
+      if (changes.discoverable !== undefined && changes.discoverable !== space.discoverable) {
+        if (space.personal) {
+          throw new SpaceError("personalSpaceVisibility", "Personal spaces cannot be found by others");
+        }
+        await tx.execute(sql`update spaces set discoverable = ${changes.discoverable}, updated_at = now()
+          where id = ${spaceId}`);
+        await this.#audit.record(tx, {
+          name: "space.updated",
+          actor,
+          targetId: spaceId,
+          fields: {
+            name: space.name,
+            setting: "discoverable",
+            value: String(changes.discoverable),
+            previousValue: String(space.discoverable),
+          },
+          scope: auditScopeOf(space),
+        });
+      }
       const name = changes.name === undefined ? space.name : cleanName(changes.name, !space.personal);
       const description =
         changes.description === undefined ? space.description : cleanDescription(changes.description);

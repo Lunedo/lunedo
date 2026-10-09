@@ -52,6 +52,13 @@ const setupRoute = createRoute({
   component: lazyRouteComponent(() => import("./screens/setup/setup-screen.js"), "SetupScreen"),
 });
 
+const linkLandingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/s/$token",
+  beforeLoad: ({ context }) => requireSetupComplete(context.queryClient),
+  component: lazyRouteComponent(() => import("./sharing/link-landing.js"), "LinkLandingScreen"),
+});
+
 const publicRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "public",
@@ -217,6 +224,27 @@ const personalSpaceRoute = createRoute({
   component: lazyRouteComponent(() => import("./spaces/personal-space-screen.js"), "PersonalSpaceScreen"),
 });
 
+const myAccessRequestsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/access-requests",
+  component: lazyRouteComponent(() => import("./sharing/access-requests.js"), "MyAccessRequestsScreen"),
+});
+
+const accessRequestRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/access-requests/$requestId",
+  params: { parse: (params) => ({ ...params, requestId: z.uuid().parse(params.requestId) }) },
+  component: lazyRouteComponent(() => import("./sharing/access-requests.js"), "AccessRequestScreen"),
+});
+
+const sharedPageRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/shared/$itemId/{-$slug}",
+  params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
+  validateSearch: z.object({ edit: z.boolean().optional().catch(undefined) }),
+  component: lazyRouteComponent(() => import("./sharing/shared-page-screen.js"), "SharedPageScreen"),
+});
+
 const spaceRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/spaces/$spaceKey",
@@ -320,6 +348,15 @@ const spacePermissionsRoute = createRoute({
   component: lazyRouteComponent(
     () => import("./spaces/settings/space-permissions-screen.js"),
     "SpacePermissionsScreen",
+  ),
+});
+
+const spaceAccessRoute = createRoute({
+  getParentRoute: () => spaceSettingsRoute,
+  path: "/access",
+  component: lazyRouteComponent(
+    () => import("./spaces/settings/space-access-screen.js"),
+    "SpaceAccessScreen",
   ),
 });
 
@@ -472,6 +509,12 @@ const organizationTemplatesRoute = organizationScreen(
   () => import("./spaces/templates/organization-templates-screen.js"),
   "OrganizationTemplatesScreen",
 );
+const organizationAccessRoute = organizationScreen(
+  "/access",
+  () => import("./screens/organization/access-overview-screen.js"),
+  "AccessOverviewScreen",
+);
+
 const organizationAuditRoute = organizationScreen(
   "/audit-log",
   () => import("./screens/organization/audit-screen.js"),
@@ -599,6 +642,7 @@ const devRoutes =
 
 const routeTree = rootRoute.addChildren([
   setupRoute,
+  linkLandingRoute,
   publicRoute.addChildren([
     signInRoute,
     verifyRoute,
@@ -618,6 +662,9 @@ const routeTree = rootRoute.addChildren([
     blogRoute,
     spacesRoute,
     personalSpaceRoute,
+    sharedPageRoute,
+    myAccessRequestsRoute,
+    accessRequestRoute,
     spaceRoute.addChildren([
       spaceIndexRoute,
       spaceBlogRoute,
@@ -631,6 +678,7 @@ const routeTree = rootRoute.addChildren([
         spaceSettingsIndexRoute,
         spaceGeneralRoute,
         spacePermissionsRoute,
+        spaceAccessRoute,
         spaceContentRoute,
         spaceTemplatesRoute,
       ]),
@@ -656,6 +704,7 @@ const routeTree = rootRoute.addChildren([
         organizationSpacesRoute,
         organizationContentRoute,
         organizationTemplatesRoute,
+        organizationAccessRoute,
         organizationAuditRoute,
       ]),
       instanceRoute.addChildren([

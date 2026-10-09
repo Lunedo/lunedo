@@ -7,6 +7,7 @@ import { AuthModule } from "./auth/auth.module.js";
 import { CollaborationModule } from "./collaboration/collaboration.module.js";
 import { API_CONTEXT, type ApiContext } from "./context.js";
 import { DocsModule } from "./docs/docs.module.js";
+import { FilesModule } from "./files/files.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { ApiRouteInterceptor } from "./http/api-route.interceptor.js";
 import { ErrorFilter } from "./http/error.filter.js";
@@ -15,6 +16,7 @@ import { MetricsController } from "./metrics/metrics.controller.js";
 import { NotificationsModule } from "./notifications/notifications.module.js";
 import { OrganizationsModule } from "./organizations/organizations.module.js";
 import { SetupModule } from "./setup/setup.module.js";
+import { SharingModule } from "./sharing/sharing.module.js";
 import { SpacesModule } from "./spaces/spaces.module.js";
 import { TokensModule } from "./tokens/tokens.module.js";
 
@@ -39,6 +41,8 @@ export class AppModule {
               IdentityModule,
               SpacesModule,
               CollaborationModule,
+              FilesModule,
+              SharingModule,
             ]
           : []),
       ],

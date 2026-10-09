@@ -1068,7 +1068,8 @@
     "spaces": "Spaces",
     "personalSpaces": "Persönliche Spaces",
     "pagesAndTrash": "Seiten und Papierkorb",
-    "templates": "Vorlagen"
+    "templates": "Vorlagen",
+    "accessOverview": "Zugriffsübersicht"
   },
   "commands": {
     "label": "Befehlspalette",
@@ -1283,7 +1284,45 @@
     "blogPostMode": "Blogbeiträge verwenden immer den Veröffentlichungsmodus.",
     "tooManyStars": "Du hast die höchste Zahl an Favoriten erreicht. Entferne zuerst einen.",
     "personalOnly": "Nur Personen haben Favoriten und eine Startseite.",
-    "invalidHomePage": "Wähle eine Seite aus einem Space dieser Organisation, die du lesen kannst."
+    "invalidHomePage": "Wähle eine Seite aus einem Space dieser Organisation, die du lesen kannst.",
+    "invalidFileName": "Der Dateiname ist leer oder zu lang. Benenne die Datei um und lade sie erneut hoch.",
+    "invalidItem": "Dateien können nur an Seiten und Blogbeiträge angehängt werden.",
+    "invalidCover": "Das Titelbild muss ein an diesen Beitrag angehängtes Bild sein. Lade das Bild zuerst hoch und wähle es dann aus.",
+    "invalidFocus": "Der Fokuspunkt liegt außerhalb des Bildes. Klicke in das Bild, um ihn zu setzen.",
+    "invalidScope": "Diese Art von Link ist für diese Seite nicht möglich. Wähle unter „Wer ihn öffnen kann“ eine andere Option.",
+    "peopleRequired": "Füge mindestens eine Person oder Gruppe hinzu, die den Link öffnen darf.",
+    "tooManyPeople": "Der Link nennt zu viele Personen oder Gruppen. Gib die Seite stattdessen für eine Gruppe frei.",
+    "invalidPassword": "Das Passwort darf höchstens 200 Zeichen haben.",
+    "messageTooLong": "Die Nachricht ist zu lang. Kürze sie auf 1.000 Zeichen.",
+    "invalidRole": "Diese Rolle kann hier nicht vergeben werden. Wähle eine andere Rolle.",
+    "signInRequired": "Melde dich an, um diesen Link zu öffnen.",
+    "passwordRequired": "Dieser Link ist geschützt. Gib sein Passwort ein.",
+    "wrongPassword": "Das Passwort stimmt nicht. Frag die Person, die den Link geteilt hat.",
+    "linkNotForYou": "Dieser Link wurde mit anderen Personen geteilt. Bitte die Person, die ihn geteilt hat, um Zugriff.",
+    "guestInvitesDisabled": "Mitglieder können in dieser Organisation keine Gäste einladen. Wende dich an die Administration der Organisation.",
+    "attachmentNotFound": "Die Datei wurde gelöscht oder verschoben. Lade die Seite neu.",
+    "shareNotFound": "Der Zugriffseintrag wurde bereits entfernt. Lade die Seite neu.",
+    "restrictionNotFound": "Die Seite ist nicht mehr eingeschränkt. Lade die Seite neu.",
+    "linkNotFound": "Der Link existiert nicht, ist abgelaufen oder wurde widerrufen. Bitte die Person, die ihn geteilt hat, um einen neuen Link.",
+    "requestNotFound": "Die Zugriffsanfrage wurde zurückgezogen oder entfernt. Lade die Seite neu.",
+    "personNotFound": "Die Person wurde nicht gefunden. Suche erneut nach dem Namen.",
+    "nameTaken": "Eine Datei mit diesem Namen gibt es bereits.",
+    "alreadyShared": "Die Seite ist bereits für sie freigegeben. Ändere stattdessen ihren Eintrag.",
+    "restrictionWithoutViewers": "Eine eingeschränkte Seite braucht mindestens eine Person oder Gruppe, die sie ansehen kann. Füge zuerst jemanden hinzu.",
+    "restrictionWithoutEditors": "Eine zum Bearbeiten eingeschränkte Seite braucht mindestens eine Person oder Gruppe, die sie bearbeiten kann. Füge zuerst jemanden mit „Kann bearbeiten“ hinzu.",
+    "shareLinksDisabled": "Freigabelinks sind in dieser Organisation ausgeschaltet. Gib die Seite stattdessen für Personen frei.",
+    "anyoneLinksDisabled": "Links für alle sind in dieser Organisation ausgeschaltet. Wähle einen Link für angemeldete Personen.",
+    "restrictedPage": "Eine eingeschränkte Seite kann nicht über einen Link für alle geöffnet werden. Wähle einen Link für bestimmte Personen.",
+    "requestClosed": "Über die Zugriffsanfrage wurde bereits entschieden oder sie wurde zurückgezogen. Lade die Seite neu.",
+    "alreadyHasAccess": "Die Person hat bereits Zugriff.",
+    "fileTooLarge": "Die Datei ist größer als erlaubt. Wähle eine kleinere Datei.",
+    "fileTooLargeLimit": "Die Datei ist größer als die Grenze von {size}. Wähle eine kleinere Datei oder bitte die Administration, die Grenze zu erhöhen.",
+    "rangeNotSatisfiable": "Die Datei hat sich beim Laden geändert. Lade die Seite neu.",
+    "tooManyRequests": "Du hast heute viele Zugriffsanfragen gesendet. Warte bis morgen oder wende dich an die Space-Admins.",
+    "linkExpiryTooLate": "Links für alle dürfen in dieser Organisation höchstens {days, plural, one {# Tag} other {# Tage}} gelten. Wähle ein früheres Datum.",
+    "versionNotFound": "Diese Version wurde inzwischen entfernt. Lade die Versionen neu.",
+    "settingAboveMaximum": "Der Wert liegt über dem Höchstwert, den die Instanz erlaubt. Wähle einen niedrigeren Wert.",
+    "settingAboveMaximumValue": "Die Instanz erlaubt höchstens {maximum}. Wähle einen Wert bis {maximum}."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -1740,7 +1779,9 @@
     "units": {
       "characters": "{count, plural, one {# Zeichen} other {{value} Zeichen}}",
       "count": "{value}",
-      "perMinute": "{value} pro Minute"
+      "perMinute": "{value} pro Minute",
+      "megabytes": "{value} MB",
+      "versions": "{count, plural, one {# Version} other {{value} Versionen}}"
     },
     "values": {
       "accentColor": {
@@ -1969,6 +2010,34 @@
       "reactions_enabled": {
         "label": "Reaktionen",
         "description": "Personen können mit Emojis auf Seiten, Blogbeiträge und Kommentare reagieren."
+      },
+      "files_maxFileSizeMegabytes": {
+        "label": "Größte hochladbare Datei",
+        "description": "Größere Uploads werden abgelehnt, bevor etwas gespeichert wird, mit einer Meldung, die die Grenze nennt. Organisationen können sie nur senken."
+      },
+      "files_keepVersions": {
+        "label": "Versionen einer Datei, die behalten werden",
+        "description": "Wird eine neue Version hochgeladen und gibt es mehr als diese Anzahl, wird die älteste nicht zum Behalten markierte Version entfernt. Markierte Versionen zählen nicht mit."
+      },
+      "sharing_shareLinks": {
+        "label": "Freigabelinks",
+        "description": "Wer eine Seite freigeben darf, kann Links für bestimmte Personen, die Organisation oder alle Angemeldeten erstellen."
+      },
+      "sharing_anyoneLinks": {
+        "label": "Links für alle ohne Anmeldung",
+        "description": "Wer den Link öffnet, sieht nur die freigegebene Seite. Jeder Link braucht ein Ablaufdatum. Eingeschränkte Seiten bekommen nie solche Links."
+      },
+      "sharing_anyoneLinkMaxDays": {
+        "label": "Längste Gültigkeit eines Links für alle",
+        "description": "Links für alle müssen innerhalb dieser Zeit ablaufen. Organisationen können sie nur verkürzen."
+      },
+      "sharing_membersInviteGuests": {
+        "label": "Mitglieder können Gäste zu einer Seite einladen",
+        "description": "Wenn eingeschaltet, kann jede Person, die eine Seite freigeben darf, jemanden per E-Mail als Gast einladen. Die Administration der Organisation kann das immer."
+      },
+      "files_keepVersionsMaximum": {
+        "label": "Höchstens behaltene Versionen für Organisationen und Spaces",
+        "description": "Organisationen und Spaces können jede Zahl bis zu diesem Höchstwert wählen. Nur hier lässt sich „Kein Limit“ einstellen."
       }
     },
     "disabled": {
@@ -1987,7 +2056,8 @@
     "searchNone": "Keine Einstellung passt zu „{query}“. Prüfe die Schreibweise oder suche nach einem anderen Wort.",
     "searchClear": "Suche leeren",
     "searchWhere": "{page} › {section}",
-    "lockForSpaces": "Für Spaces sperren"
+    "lockForSpaces": "Für Spaces sperren",
+    "aboveMaximum": "Gib eine ganze Zahl von {minimum} bis {maximum} ein. Die Instanz erlaubt höchstens {maximum}."
   },
   "security": {
     "activity": {
@@ -2173,7 +2243,9 @@
         "inactive": "{guestName} hat {organizationName} seit {days, plural, one {# Tag} other {# Tagen}} nicht verwendet."
       },
       "access": {
-        "expiring": "{kind, select, role {Die Rolle {name}} group {Die Mitgliedschaft in der Gruppe {name}} other {Eine Mitgliedschaft}} in {organizationName} endet am {expiresAt}."
+        "expiring": "{kind, select, role {Die Rolle {name}} group {Die Mitgliedschaft in der Gruppe {name}} other {Eine Mitgliedschaft}} in {organizationName} endet am {expiresAt}.",
+        "requested": "{requesterName} bittet um Zugriff auf {target, select, page {{itemTitle} in {spaceName}} other {den Space {spaceName}}}.",
+        "requestDecided": "{decision, select, approved {Deine Anfrage für {target, select, page {{itemTitle}} other {{spaceName}}} wurde genehmigt.} satisfied {Du hast jetzt Zugriff auf {target, select, page {{itemTitle}} other {{spaceName}}}, deine Anfrage wurde deshalb geschlossen.} other {Deine Anfrage für {target, select, page {eine Seite} other {{spaceName}}} wurde abgelehnt.}}"
       },
       "serviceAccount": {
         "unattended": "Für das Dienstkonto {serviceAccountName} in {organizationName} ist niemand mehr verantwortlich."
@@ -2195,6 +2267,12 @@
       },
       "blogPost": {
         "scheduleHeld": "{reason, select, accountRemoved {Der geplante Beitrag {itemTitle} wartet auf Freigabe, weil die Person, die ihn geplant hat, kein Konto mehr hat.} other {Der geplante Beitrag {itemTitle} wartet auf Freigabe, weil {actor} ihn nicht mehr bearbeiten kann.}}"
+      },
+      "page": {
+        "shared": "{actor} hat {itemTitle} für dich freigegeben: {role, select, editor {du kannst die Seite bearbeiten} commenter {du kannst sie lesen und kommentieren} other {du kannst sie lesen}}{includeDescendants, select, true { mitsamt ihren Unterseiten} other {}}."
+      },
+      "restriction": {
+        "orphaned": "Niemand auf der Zugriffsliste der beschränkten Seite {itemTitle} in {spaceName} hat noch ein aktives Konto. Prüfe die Beschränkung in den Space-Einstellungen."
       }
     }
   },
@@ -2377,6 +2455,23 @@
       "removeDescription": "Neue Konten mit dieser Domain treten der Organisation nicht mehr automatisch bei. Bestehende Mitglieder bleiben.",
       "registration": "Registrierung und Gruppen",
       "guests": "Gäste und Ablauf"
+    },
+    "access": {
+      "title": "Zugriffsübersicht",
+      "description": "Sieh, was eine Person in den Spaces dieser Organisation tun kann und warum. Exporte werden im Audit-Log festgehalten.",
+      "person": "Person",
+      "personHint": "Ein Mitglied oder einen Gast nach Namen suchen.",
+      "chooseTitle": "Person auswählen",
+      "choose": "Hier erscheinen ihre Spaces, freigegebenen Seiten und Links, jeweils mit Grund.",
+      "exportAll": "Alle als CSV exportieren",
+      "exportPerson": "Als CSV exportieren",
+      "loadFailed": "den Zugriff dieser Person",
+      "whatCan": "Was kann {name} tun?",
+      "nothing": "{name} hat keinen Zugriff auf Spaces oder Seiten dieser Organisation.",
+      "wholeSpace": "ganzer Space",
+      "withPagesBelow": "und die Seiten darunter",
+      "restrictedPages": "{count, plural, one {# freigegebene eingeschränkte Seite, die du nicht lesen kannst} other {# freigegebene eingeschränkte Seiten, die du nicht lesen kannst}}",
+      "why": "Warum?"
     }
   },
   "members": {
@@ -3030,7 +3125,13 @@
         "versionRestored": "Version wiederhergestellt",
         "modeChanged": "Bearbeitungsmodus geändert",
         "archived": "Seite archiviert",
-        "unarchived": "Seite aus dem Archiv geholt"
+        "unarchived": "Seite aus dem Archiv geholt",
+        "restrictionSet": "Seite beschränkt",
+        "restrictionRemoved": "Seitenbeschränkung aufgehoben",
+        "shared": "Seite freigegeben",
+        "shareChanged": "Seitenzugriff geändert",
+        "unshared": "Seitenzugriff entfernt",
+        "guestInvited": "Gast zu einer Seite eingeladen"
       },
       "trash": {
         "itemsDeleted": "In den Papierkorb verschoben",
@@ -3055,6 +3156,22 @@
       },
       "comment": {
         "deletedByModerator": "Kommentar von einem Space-Admin gelöscht"
+      },
+      "shareLink": {
+        "created": "Freigabelink erstellt",
+        "changed": "Freigabelink geändert",
+        "revoked": "Freigabelink widerrufen",
+        "opened": "Freigabelink geöffnet"
+      },
+      "accessRequest": {
+        "decided": "Zugriffsanfrage entschieden"
+      },
+      "access": {
+        "overviewExported": "Rechteübersicht exportiert"
+      },
+      "attachment": {
+        "versionKept": "Dateiversion zum Behalten markiert",
+        "versionReleased": "Dateiversion wird nicht mehr behalten"
       }
     },
     "action": "Aktion",
@@ -3287,7 +3404,13 @@
     "roleExceedsOwnPermissions": "Die Rolle geht über die eigenen Berechtigungen hinaus",
     "selfExtension": "Niemand kann die eigenen Berechtigungen erweitern",
     "tokenScope": "Für dieses Token nicht erlaubt",
-    "noSpaceRole": "Keine Rolle im Space erlaubt das"
+    "noSpaceRole": "Keine Rolle im Space erlaubt das",
+    "inTrash": "Es liegt im Papierkorb",
+    "archived": "Es ist archiviert",
+    "unpublished": "Es ist noch nicht veröffentlicht",
+    "restricted": "Die Seite ist beschränkt und die Person steht nicht auf ihrer Zugriffsliste",
+    "editRestricted": "Das Bearbeiten ist beschränkt und die Person darf laut Zugriffsliste nicht bearbeiten",
+    "ruleNotMet": "Eine Bedingung dieser Aktion ist nicht erfüllt"
   },
   "grants": {
     "system": "System",
@@ -3557,7 +3680,9 @@
       "emoji": "Emoji",
       "emojiDescription": "Ein Emoji auswählen",
       "taskReport": "Aufgabenbericht",
-      "taskReportDescription": "Tabelle mit Aufgaben, Filtern und Zählern"
+      "taskReportDescription": "Tabelle mit Aufgaben, Filtern und Zählern",
+      "file": "Bild oder Datei",
+      "fileDescription": "Ein Bild oder eine Datei hochladen und einfügen"
     },
     "mention": {
       "unknown": "Unbekannte Person"
@@ -3978,7 +4103,10 @@
       "visibilityFailed": "Die Sichtbarkeit konnte nicht geändert werden",
       "personalPrivate": "Persönliche Spaces sind immer privat. Teile sie in den Berechtigungen mit Personen und Gruppen.",
       "adminsOnlyTitle": "Nur Space-Admins verwalten Berechtigungen",
-      "adminsOnly": "Deine Rolle in diesem Space ist {role}. Frag einen Space-Admin, wenn jemand eine andere Rolle braucht."
+      "adminsOnly": "Deine Rolle in diesem Space ist {role}. Frag einen Space-Admin, wenn jemand eine andere Rolle braucht.",
+      "discoverable": "Mitglieder der Organisation können diesen Space finden und um Beitritt bitten",
+      "discoverableHint": "Sie sehen Name und Beschreibung in der Liste der Spaces, aber keine Seiten, bis ein Space-Admin sie aufnimmt.",
+      "discoverableNotPrivate": "Nur private Spaces lassen sich so finden; andere Sichtbarkeiten geben bereits Zugriff."
     },
     "permissions": {
       "visibilityTitle": "Leser über die Sichtbarkeit",
@@ -4063,6 +4191,35 @@
       "delete": "Persönlichen Space löschen",
       "deleteTitle": "Persönlichen Space von {owner} löschen?",
       "deleted": "Persönlicher Space gelöscht. Du kannst ihn während der Admin-Wiederherstellung unter Seiten und Papierkorb zurückholen."
+    },
+    "access": {
+      "tab": "Zugriff",
+      "title": "Zugriff",
+      "description": "Zugriff geben, über Anfragen entscheiden und eingeschränkte Seiten prüfen.",
+      "giveTitle": "Zugriff geben",
+      "giveDescription": "Ein geführter Weg, um einer Person oder Gruppe Zugriff auf den Space oder einzelne Seiten zu geben.",
+      "giveHint": "Du siehst, wie viele Seiten sie dann lesen und bearbeiten können, bevor sich etwas ändert.",
+      "requestsTitle": "Zugriffsanfragen",
+      "requestsDescription": "Offene Anfragen für diesen Space und seine Seiten. Sie bleiben offen, bis jemand entscheidet oder die Person auf anderem Weg Zugriff bekommt.",
+      "restrictedTitle": "Eingeschränkte Seiten",
+      "restrictedDescription": "Seiten, die nur ihre Zugriffslisten sehen oder bearbeiten können. Du siehst die Titel, aber nicht den Inhalt. Das Entfernen einer Einschränkung wird im Audit-Log festgehalten.",
+      "restrictedFailed": "die eingeschränkten Seiten",
+      "noRestrictedTitle": "Keine eingeschränkten Seiten",
+      "noRestricted": "Seiten, die im Freigabedialog eingeschränkt werden, erscheinen hier.",
+      "orphaned": "Niemand auf der Liste ist aktiv",
+      "viewRestricted": "Ansehen eingeschränkt",
+      "editRestricted": "Bearbeiten eingeschränkt",
+      "remove": "Einschränkung entfernen",
+      "removeTitle": "Einschränkung von {title} entfernen?",
+      "removeViewEffects": "Alle, die den Space ansehen können, sehen dann diese Seite und die Seiten darunter samt Inhalt. Das Entfernen wird mit deinem Namen im Audit-Log festgehalten.",
+      "removeEditEffects": "Alle, die im Space bearbeiten können, können diese Seite dann bearbeiten. Das Entfernen wird mit deinem Namen im Audit-Log festgehalten.",
+      "removeConfirm": "Einschränkung entfernen",
+      "keep": "Einschränkung behalten",
+      "removed": "Einschränkung von {title} entfernt",
+      "removeFailed": "Die Einschränkung wurde nicht entfernt",
+      "adminsOnlyTitle": "Nur Space-Admins verwalten Einschränkungen",
+      "adminsOnly": "Wende dich an einen Space-Admin, wenn eine eingeschränkte Seite Aufmerksamkeit braucht.",
+      "whyDescription": "Suche eine Person, um ihre Rolle in diesem Space und deren Herkunft zu sehen."
     }
   },
   "tree": {
@@ -4093,7 +4250,9 @@
     "moved": "{title} verschoben",
     "moveFailed": "Der Eintrag konnte nicht verschoben werden",
     "undoFailed": "Das Verschieben konnte nicht rückgängig gemacht werden",
-    "createFailed": "Die Seite konnte nicht erstellt werden"
+    "createFailed": "Die Seite konnte nicht erstellt werden",
+    "viewRestricted": "Eingeschränkt: Nur die Zugriffsliste kann sie ansehen",
+    "editRestricted": "Eingeschränkt: Nur die Zugriffsliste kann sie bearbeiten"
   },
   "move": {
     "title": "{title} verschieben",
@@ -4205,7 +4364,9 @@
     "nameMismatch": "Der Name stimmt nicht überein. Gib ihn genau wie angezeigt ein.",
     "spaceDeleted": "{name} gelöscht",
     "deleteFailed": "Der Space konnte nicht gelöscht werden",
-    "collaborationSection": "Zusammenarbeit"
+    "collaborationSection": "Zusammenarbeit",
+    "sharingSection": "Freigabe",
+    "filesSection": "Dateien"
   },
   "archive": {
     "archive": "Archivieren",
@@ -4542,7 +4703,10 @@
     "organizationPageNone": "Keine Startseite festgelegt. Alle landen auf „Für dich“.",
     "choosePage": "Startseite",
     "searchPage": "Seite nach Titel suchen",
-    "removeOrganizationPage": "Startseite entfernen"
+    "removeOrganizationPage": "Startseite entfernen",
+    "shared": "Für dich freigegeben",
+    "noShared": "Seiten, die andere für dich freigeben, erscheinen hier.",
+    "sharedMeta": "{name}, {when}"
   },
   "starred": {
     "star": "{title} zu Favoriten hinzufügen",
@@ -4768,6 +4932,415 @@
     "scheduledTitle": "Geplant",
     "scheduledDescription": "Alle geplanten Beiträge dieses Space. Beiträge, die auf Freigabe warten, stehen oben. Nur Space-Admins sehen diese Liste.",
     "scheduledEmpty": "Es sind keine Beiträge geplant.",
-    "scheduledLoadFailed": "Die geplanten Beiträge konnten nicht geladen werden"
+    "scheduledLoadFailed": "Die geplanten Beiträge konnten nicht geladen werden",
+    "cover": {
+      "title": "Titelbild",
+      "image": "Bild",
+      "imageHint": "Wähle eines der an diesen Beitrag angehängten Bilder.",
+      "noImages": "Hänge zuerst ein Bild an diesen Beitrag an, zum Beispiel indem du es auf die Seite ziehst.",
+      "none": "Kein Titelbild",
+      "focusHint": "Klicke auf den Punkt, der sichtbar bleiben muss, wenn Listen das Bild zuschneiden, oder nutze die Pfeiltasten.",
+      "focus": "Fokuspunkt bei {x} % von links und {y} % von oben. Klicken oder Pfeiltasten verschieben ihn.",
+      "wide": "In breiten Listen",
+      "square": "In kleinen Kacheln"
+    }
+  },
+  "files": {
+    "title": "Anhänge",
+    "upload": "Dateien hochladen",
+    "uploads": "Laufende Uploads",
+    "empty": "Noch keine Dateien. Lade Dateien hoch oder ziehe sie auf die Seite.",
+    "dropToAttach": "Loslassen, um an {title} anzuhängen",
+    "uploading": "{loaded} von {total}",
+    "progress": "Upload von {name}",
+    "cancelUpload": "Upload von {name} abbrechen",
+    "dismissUpload": "{name} aus der Liste entfernen",
+    "retry": "Erneut versuchen",
+    "uploadFailed": "{name} wurde nicht hochgeladen: {reason}",
+    "rowMeta": "{type} · {size} · Version {version} · {date}",
+    "summary": "{type} · {size} · Version {version}",
+    "typeWithExtension": "{kind} ({extension})",
+    "actions": "Aktionen für {name}",
+    "download": "Herunterladen",
+    "delete": "Datei löschen",
+    "deleted": "{name} gelöscht",
+    "deleteFailed": "Die Datei wurde nicht gelöscht. Prüfe deine Verbindung und versuche es erneut.",
+    "restoreFailed": "Die Datei konnte nicht zurückgeholt werden. Lade die Seite neu und versuche es erneut.",
+    "loadFailed": "die Anhänge",
+    "someone": "jemand",
+    "kinds": {
+      "image": "Bild",
+      "pdf": "PDF-Dokument",
+      "video": "Video",
+      "audio": "Audio",
+      "text": "Text",
+      "code": "Code",
+      "markdown": "Markdown",
+      "csv": "Tabelle",
+      "svg": "Vektorgrafik",
+      "word": "Word-Dokument",
+      "excel": "Excel-Arbeitsmappe",
+      "none": "Datei"
+    },
+    "preview": {
+      "open": "Vorschau",
+      "frameTitle": "Vorschau von {name}",
+      "pageNumber": "Seite {number}",
+      "sheet": "Blatt {name}",
+      "truncated": "Die Vorschau zeigt nur den ersten Teil. Lade die Datei herunter, um alles zu sehen.",
+      "failed": "Diese Datei kann nicht angezeigt werden. Lade sie herunter, um sie in einem anderen Programm zu öffnen.",
+      "empty": "Die Datei ist leer.",
+      "loadFailed": "die Datei für die Vorschau",
+      "failedTitle": "Keine Vorschau",
+      "failedDescription": "Die Datei konnte nicht angezeigt werden, vielleicht ist sie beschädigt oder nutzt eine nicht unterstützte Variante. Lade sie herunter, um sie in einem anderen Programm zu öffnen.",
+      "tooLargeTitle": "Zu groß für eine Vorschau",
+      "tooLarge": "Lade die Datei herunter, um sie zu öffnen.",
+      "noneTitle": "Keine Vorschau für diesen Typ",
+      "none": "Lade die Datei herunter, um sie in einem passenden Programm zu öffnen.",
+      "fileFailed": "die Angaben zur Datei"
+    },
+    "versions": {
+      "title": "Versionen",
+      "show": "Versionen ({count})",
+      "hide": "Versionen ausblenden",
+      "number": "Version {number}",
+      "current": "aktuell",
+      "meta": "{date} · {size} · {name}",
+      "restoredFrom": "aus Version {number} wiederhergestellt",
+      "restore": "Wiederherstellen",
+      "restored": "Version {number} ist wieder aktuell",
+      "restoreFailed": "Die Version wurde nicht wiederhergestellt. Versuche es erneut.",
+      "loadFailed": "die Versionen",
+      "keepHint": "Zum Behalten markierte Versionen werden nie automatisch entfernt und zählen nicht zur Grenze.",
+      "kept": "Behalten",
+      "keep": "Behalten",
+      "release": "Nicht mehr behalten",
+      "keptDone": "Version {number} wird behalten",
+      "releasedDone": "Version {number} kann wieder entfernt werden, wenn neuere Versionen hinzukommen",
+      "keepFailed": "Die Version wurde nicht zum Behalten markiert. Versuche es noch einmal.",
+      "releaseFailed": "Die Markierung wurde nicht entfernt. Versuche es noch einmal."
+    },
+    "storage": {
+      "used": "{size} belegt durch {count, plural, one {# gespeicherte Datei} other {# gespeicherte Dateien}}, einschließlich früherer Versionen",
+      "loadFailed": "die Speicherbelegung"
+    }
+  },
+  "sharing": {
+    "impact": {
+      "noChangeTitle": "Niemandes Zugriff ändert sich",
+      "noChange": "Die Änderung lässt den Zugriff aller auf diese Seite unverändert.",
+      "readGaining": "{count, plural, one {# Person kann diese Seite dann lesen} other {# Personen können diese Seite dann lesen}}",
+      "readLosing": "{count, plural, one {# Person kann diese Seite dann nicht mehr lesen} other {# Personen können diese Seite dann nicht mehr lesen}}",
+      "editGaining": "{count, plural, one {# Person kann diese Seite dann bearbeiten} other {# Personen können diese Seite dann bearbeiten}}",
+      "editLosing": "{count, plural, one {# Person kann diese Seite dann nicht mehr bearbeiten} other {# Personen können diese Seite dann nicht mehr bearbeiten}}",
+      "loadFailed": "Die Änderung des Zugriffs konnte nicht berechnet werden"
+    },
+    "share": "Freigeben",
+    "dialogTitle": "„{title}“ freigeben",
+    "dialogDescription": "Gib Personen Zugriff auf diese Seite, schränke sie ein oder erstelle einen Link.",
+    "loadFailed": "wer Zugriff auf diese Seite hat",
+    "changeFailed": "Der Zugriff wurde nicht geändert",
+    "tabs": {
+      "label": "Freigabe",
+      "people": "Personen und Zugriff",
+      "links": "Freigabelinks"
+    },
+    "roles": {
+      "reader": "Kann lesen",
+      "commenter": "Kann kommentieren",
+      "editor": "Kann bearbeiten",
+      "admin": "Space-Admin",
+      "none": "Kein Zugriff"
+    },
+    "people": {
+      "addLabel": "Personen oder Gruppen hinzufügen",
+      "addHint": "Personen außerhalb des Space sehen nur, was du für sie freigibst, nicht den Space selbst.",
+      "addPlaceholder": "Nach Name oder E-Mail-Adresse suchen",
+      "chooseSomeone": "Wähle eine Person oder Gruppe aus den Suchergebnissen.",
+      "role": "Zugriff",
+      "includeBelow": "Auch die Seiten darunter",
+      "share": "Freigeben",
+      "titleVisible": "Hinzugefügte Personen sehen den Titel „{title}“ in ihrer Benachrichtigung.",
+      "shareTitle": "Für {name} freigeben ({role})?",
+      "shareConfirm": "Seite freigeben",
+      "shared": "Für {name} freigegeben",
+      "listTitle": "Personen und Gruppen auf der Zugriffsliste",
+      "listHint": "Sie haben zusätzlich zu den Rollen im Space Zugriff auf diese Seite. Ist die Seite eingeschränkt, haben nur sie Zugriff.",
+      "empty": "Noch niemand steht auf der Liste. Alle mit einer Rolle im Space haben Zugriff.",
+      "groupMembers": "{count, plural, one {Gruppe mit # Mitglied} other {Gruppe mit # Mitgliedern}}",
+      "spaceRole": "{role} im Space",
+      "notInSpace": "Nicht im Space",
+      "inactive": "Inaktiv",
+      "groupDeleted": "Gelöscht",
+      "roleOf": "Zugriff von {name}",
+      "scopeOf": "Seiten für {name}",
+      "onlyThisPage": "Diese Seite",
+      "withPagesBelow": "Diese Seite und die Seiten darunter",
+      "changeRoleTitle": "Zugriff von {name} auf „{role}“ ändern?",
+      "changeRole": "Zugriff ändern",
+      "addBelowTitle": "{name} auch Zugriff auf die Seiten darunter geben?",
+      "removeBelowTitle": "{name} auf diese Seite beschränken?",
+      "changeScope": "Seiten ändern",
+      "changed": "Zugriff von {name} geändert",
+      "remove": "{name} von der Liste entfernen",
+      "removeTitle": "{name} von der Zugriffsliste entfernen?",
+      "removeConfirm": "Zugriff entfernen",
+      "removed": "{name} von der Liste entfernt",
+      "viaLinkTitle": "Über einen Freigabelink geöffnet",
+      "viaLink": "Über Link",
+      "lastOpened": "zuletzt geöffnet am {date}"
+    },
+    "guest": {
+      "toggle": "Gast per E-Mail einladen",
+      "email": "E-Mail-Adresse des Gasts",
+      "hint": "Die Person erhält eine Einladung als Gast der Organisation und sieht diese Seite, sobald sie annimmt.",
+      "placeholder": "name@example.com",
+      "invalidEmail": "Gib eine vollständige E-Mail-Adresse ein, zum Beispiel name@example.com.",
+      "send": "Einladung senden",
+      "sent": "Einladung an {email} gesendet. Der Zugriff gilt ab der Annahme."
+    },
+    "restrict": {
+      "title": "Zugriff einschränken",
+      "viewLabel": "Wer diese Seite ansehen kann",
+      "viewSpace": "Alle, die den Space ansehen können",
+      "viewList": "Nur die Personen und Gruppen auf der Liste",
+      "viewHint": "Eine Einschränkung des Ansehens verbirgt auch die Seiten darunter, und die Seite verschwindet für alle anderen aus Suche, Links und Listen.",
+      "editLabel": "Wer diese Seite bearbeiten kann",
+      "editSpace": "Alle, die im Space bearbeiten können",
+      "editList": "Nur Einträge auf der Liste mit „Kann bearbeiten“",
+      "editHint": "Andere können die Seite weiterhin lesen.",
+      "setBy": "Eingeschränkt von {name} am {date}",
+      "inheritedTitle": "Eine Seite darüber ist eingeschränkt",
+      "inherited": "Das Ansehen ist bei {pages} eingeschränkt. Nur Personen auf der Liste jener Seite sehen diese Seite, egal was du hier einstellst.",
+      "viewRestrictTitle": "Ansehen auf die Zugriffsliste beschränken?",
+      "viewOpenTitle": "Wieder alle, die den Space ansehen können, diese Seite sehen lassen?",
+      "editRestrictTitle": "Bearbeiten auf die Zugriffsliste beschränken?",
+      "editOpenTitle": "Wieder alle, die im Space bearbeiten können, diese Seite bearbeiten lassen?",
+      "restrictConfirm": "Einschränken",
+      "openConfirm": "Einschränkung entfernen",
+      "restricted": "Seite eingeschränkt. Du wurdest zur Liste hinzugefügt und behältst den Zugriff.",
+      "opened": "Einschränkung entfernt"
+    },
+    "why": {
+      "toggle": "Warum hat jemand Zugriff?",
+      "person": "Person",
+      "placeholder": "Person nach Namen suchen",
+      "loadFailed": "den Zugriff dieser Person",
+      "summary": "{name}: {role}",
+      "summaryNone": "{name} hat keinen Zugriff auf diese Seite.",
+      "limitedTitle": "Warum der Zugriff begrenzt ist",
+      "spaceDirect": "{role} im Space, direkt vergeben",
+      "spaceGroup": "{role} im Space über die Gruppe {group}",
+      "spaceOrganization": "{role} im Space als Mitglied der Organisation",
+      "spaceInstance": "{role} im Space als Konto der Instanz",
+      "spaceVisibility": "{role} durch die Sichtbarkeit des Space",
+      "share": "{role}: Die Seite ist für diese Person freigegeben",
+      "shareAbove": "{role}: freigegeben auf der Seite darüber „{title}“",
+      "shareAboveHidden": "{role}: freigegeben auf einer Seite darüber",
+      "link": "Hat einen Freigabelink geöffnet ({scope})",
+      "other": "Ein anderer Grund",
+      "hiddenPage": "einer Seite, die du nicht sehen kannst",
+      "restricted": "Das Ansehen ist bei {pages} eingeschränkt, und die Person steht nicht auf deren Liste.",
+      "editRestricted": "Das Bearbeiten ist eingeschränkt, und die Person steht nicht mit „Kann bearbeiten“ auf der Liste.",
+      "unpublished": "Die Seite ist noch nicht veröffentlicht und für Lesezugriff noch nicht sichtbar.",
+      "inTrash": "Die Seite liegt im Papierkorb.",
+      "accountInactive": "Das Konto ist nicht aktiv.",
+      "noAccess": "Keine Rolle im Space, keine Freigabe und kein Link gibt Zugriff.",
+      "summaryNoneSpace": "{name} hat keinen Zugriff auf diesen Space."
+    },
+    "links": {
+      "loadFailed": "die Freigabelinks",
+      "disabledTitle": "Freigabelinks sind ausgeschaltet",
+      "disabled": "Die Administration der Organisation kann sie einschalten. Du kannst die Seite weiterhin für Personen freigeben.",
+      "new": "Link erstellen",
+      "createTitle": "Neuer Freigabelink",
+      "scope": "Wer ihn öffnen kann",
+      "scopes": {
+        "people": "Nur die Personen und Gruppen, die du auswählst",
+        "organization": "Angemeldete Mitglieder der Organisation",
+        "organizationOf": "Angemeldete Mitglieder von {organization}",
+        "instance": "Alle, die bei dieser Instanz angemeldet sind",
+        "anyone": "Alle mit dem Link, ohne Anmeldung"
+      },
+      "scopeHints": {
+        "people": "Sie melden sich an und öffnen die Seite, auch wenn sie nicht im Space sind.",
+        "organization": "Angemeldete Personen, die den Link öffnen, erscheinen hier als „über Link“.",
+        "instance": "Auch Personen anderer Organisationen dieser Instanz.",
+        "anyone": "Wer den Link öffnet, sieht nur diese Seite, ohne Seitenbaum, Kommentare oder andere Seiten."
+      },
+      "anyoneOff": "Links für alle ohne Anmeldung sind in dieser Organisation ausgeschaltet.",
+      "restrictedOnlyPeople": "Diese Seite ist eingeschränkt, ein Link kann daher nur für Personen sein, die sie sehen dürfen.",
+      "people": "Personen und Gruppen",
+      "peopleHint": "Nur sie können den Link nach der Anmeldung öffnen.",
+      "peopleRequired": "Füge mindestens eine Person oder Gruppe hinzu.",
+      "removePerson": "{name} entfernen",
+      "expiry": "Gültig bis",
+      "expiryHint": "Optional. Der Link funktioniert bis zum Ende dieses Tages.",
+      "expiryHintAnyone": "Pflichtfeld, höchstens {days, plural, one {# Tag} other {# Tage}} ab heute. Der Link funktioniert bis zum Ende dieses Tages.",
+      "expiryRequired": "Wähle ein Enddatum. Links für alle dürfen höchstens {days, plural, one {# Tag} other {# Tage}} gelten.",
+      "expiryInvalid": "Gib ein Datum ein, zum Beispiel über den Kalender des Felds.",
+      "expiryPast": "Das Datum liegt in der Vergangenheit. Wähle heute oder ein späteres Datum.",
+      "expiryTooLate": "Links für alle dürfen höchstens {days, plural, one {# Tag} other {# Tage}} gelten. Wähle ein früheres Datum.",
+      "password": "Passwort",
+      "newPassword": "Neues Passwort",
+      "passwordHint": "Optional. Es wird abgefragt, bevor sich die Seite öffnet. Teile es auf einem anderen Weg mit.",
+      "hasPassword": "Der Link fragt nach einem Passwort.",
+      "removePassword": "Passwort entfernen",
+      "passwordRemoved": "Das Passwort wird beim Speichern entfernt.",
+      "create": "Link erstellen",
+      "createFailed": "Der Link wurde nicht erstellt",
+      "createdTitle": "Link erstellt",
+      "createdHint": "{scope}: Über diese Adresse lässt sich die Seite öffnen. Du kannst sie später erneut kopieren.",
+      "done": "Fertig",
+      "copy": "Link kopieren",
+      "listTitle": "Aktive Links",
+      "passwordBadge": "Passwort",
+      "expires": "gültig bis {date}",
+      "noExpiry": "ohne Ablaufdatum",
+      "visitors": "{count, plural, =0 {noch von keiner angemeldeten Person geöffnet} one {von # angemeldeten Person geöffnet} other {von # angemeldeten Personen geöffnet}}",
+      "createdBy": "erstellt von {name} am {date}",
+      "forPeople": "Für {names}",
+      "change": "Ändern",
+      "save": "Link speichern",
+      "changed": "Link geändert",
+      "changeFailed": "Der Link wurde nicht geändert",
+      "revoke": "Widerrufen",
+      "revokeTitle": "Diesen Link widerrufen?",
+      "revokeEffects": "{count, plural, =0 {Die Adresse funktioniert sofort nicht mehr.} one {Die Adresse funktioniert sofort nicht mehr, und # Person, die die Seite nur über diesen Link geöffnet hat, verliert den Zugriff.} other {Die Adresse funktioniert sofort nicht mehr, und # Personen, die die Seite nur über diesen Link geöffnet haben, verlieren den Zugriff.}}",
+      "keep": "Link behalten",
+      "revokeConfirm": "Link widerrufen",
+      "revoked": "Link widerrufen"
+    },
+    "note": {
+      "view": "Eingeschränkt: Nur Personen und Gruppen auf der Zugriffsliste können diese Seite und die Seiten darunter ansehen.",
+      "inherited": "Durch eine Seite darüber eingeschränkt: Nur Personen auf deren Zugriffsliste können diese Seite ansehen.",
+      "edit": "Nur Personen auf der Zugriffsliste mit „Kann bearbeiten“ können diese Seite bearbeiten.",
+      "manage": "Zugriff verwalten"
+    },
+    "sharedPage": {
+      "shared": "Für dich freigegeben",
+      "sharedBy": "Von {name} für dich freigegeben"
+    },
+    "requests": {
+      "title": "Zugriffsanfrage",
+      "oneFailed": "die Zugriffsanfrage",
+      "loadFailed": "die Zugriffsanfragen",
+      "noAccessTitle": "Diese Seite gibt es nicht oder du hast keinen Zugriff",
+      "noAccess": "Wenn dir jemand diesen Link gegeben hat, kannst du um Zugriff bitten. Die Verantwortlichen der Seite entscheiden; du bekommst in jedem Fall eine Benachrichtigung.",
+      "message": "Nachricht (optional)",
+      "messageHint": "Schreib, wofür du den Zugriff brauchst, bis zu {limit} Zeichen.",
+      "messageTooLong": "Die Nachricht ist zu lang. Kürze sie auf {limit} Zeichen.",
+      "requestPage": "Zugriff anfragen",
+      "requestSpace": "Beitritt zu {name} anfragen",
+      "sentTitle": "Anfrage gesendet",
+      "sent": "Du bekommst eine Benachrichtigung, sobald jemand entscheidet.",
+      "mineLink": "Deine Zugriffsanfragen",
+      "mineTitle": "Deine Zugriffsanfragen",
+      "mineDescription": "Anfragen, die du für Spaces und Seiten gesendet hast. Offene Anfragen schließen sich, sobald du auf anderem Weg Zugriff bekommst.",
+      "mineEmptyTitle": "Keine Zugriffsanfragen",
+      "mineEmpty": "Wenn du um Zugriff auf einen Space oder eine Seite bittest, erscheint die Anfrage hier.",
+      "targetPage": "die Seite {title}",
+      "targetHiddenPage": "eine Seite",
+      "targetSpace": "den Space {name}",
+      "hiddenSpace": "einen Space",
+      "summary": "{name} bittet um Zugriff auf {target}",
+      "sentOn": "gesendet am {date}",
+      "decidedBy": "Entschieden von {name} am {date}",
+      "role": "Zu gebender Zugriff",
+      "approve": "{name} „{role}“ geben",
+      "decline": "Ablehnen",
+      "approved": "{name} hat jetzt Zugriff",
+      "declined": "Anfrage von {name} abgelehnt",
+      "decideFailed": "Über die Anfrage wurde nicht entschieden",
+      "noneOpen": "Keine offenen Zugriffsanfragen.",
+      "open": "Öffnen",
+      "withdraw": "Zurückziehen",
+      "withdrawn": "Anfrage zurückgezogen",
+      "withdrawFailed": "Die Anfrage wurde nicht zurückgezogen",
+      "status": {
+        "open": "Offen",
+        "approved": "Genehmigt",
+        "declined": "Abgelehnt",
+        "withdrawn": "Zurückgezogen",
+        "satisfied": "Zugriff auf anderem Weg erhalten"
+      }
+    },
+    "give": {
+      "open": "Zugriff geben",
+      "continue": "Zugriff geben fortsetzen",
+      "title": "Zugriff geben",
+      "description": "Wähle wer, was und wo. Du siehst die Wirkung, bevor du bestätigst.",
+      "progress": "Schritte",
+      "stepLabel": "{number}. {name}",
+      "steps": {
+        "who": "Wer",
+        "what": "Was",
+        "where": "Wo",
+        "check": "Prüfen und bestätigen"
+      },
+      "who": "Person oder Gruppe",
+      "whoHint": "Nach Namen suchen. Gruppen geben allen Mitgliedern Zugriff.",
+      "chooseHolder": "Wähle eine Person oder Gruppe aus den Suchergebnissen.",
+      "what": "Was sie tun dürfen",
+      "levels": {
+        "reader": "Seiten und Anhänge lesen.",
+        "commenter": "Lesen und kommentieren.",
+        "editor": "Seiten erstellen, bearbeiten, verschieben und löschen.",
+        "admin": "Alles wie beim Bearbeiten, dazu Berechtigungen und Einstellungen des Space verwalten."
+      },
+      "where": "Wo",
+      "places": {
+        "space": "Der ganze Space {space}",
+        "page": "Eine Seite",
+        "pageAndChildren": "Eine Seite und die Seiten darunter"
+      },
+      "placeHints": {
+        "space": "Alle Seiten außer eingeschränkten.",
+        "page": "Nur diese Seite, ohne Space und Seitenbaum.",
+        "pageAndChildren": "Diese Seite und alles darunter."
+      },
+      "page": "Seite",
+      "pagePlaceholder": "Seiten dieses Space suchen",
+      "noPage": "Keine Seite passt. Prüfe die Schreibweise.",
+      "choosePage": "Wähle die Seite.",
+      "adminSpaceOnly": "Space-Admins können nur für den ganzen Space ernannt werden.",
+      "previewFailed": "die Wirkung dieses Zugriffs",
+      "effect": "{name} kann dann {readable, plural, one {# Seite} other {# Seiten}} lesen und {editable, plural, one {# davon} other {# davon}} bearbeiten.",
+      "restrictedTitle": "Eingeschränkte Seiten bleiben verborgen",
+      "restricted": "{name} sieht weiterhin {count, plural, one {# eingeschränkte Seite} other {# eingeschränkte Seiten}} nicht. Nur die Zugriffsliste einer eingeschränkten Seite entscheidet, wer sie sieht.",
+      "alreadyHas": "{name} hat in diesem Space bereits „{role}“.",
+      "spaceImpact": "{count, plural, one {# Person bekommt Zugriff oder mehr Rechte.} other {# Personen bekommen Zugriff oder mehr Rechte.}}",
+      "noChange": "Niemand bekommt neuen Zugriff, zum Beispiel weil er bereits besteht.",
+      "back": "Zurück",
+      "next": "Weiter",
+      "confirm": "{name} „{role}“ geben",
+      "done": "Zugriff für {name} gegeben",
+      "failed": "Der Zugriff wurde nicht gegeben",
+      "cancel": "Abbrechen und verwerfen",
+      "discardFailed": "Der Entwurf wurde nicht verworfen. Versuche es noch einmal.",
+      "saveFailedTitle": "Dein Fortschritt ist noch nicht gespeichert",
+      "saveFailed": "{reason} Du kannst weitermachen; der Assistent speichert mit der nächsten Änderung erneut."
+    },
+    "discoverable": {
+      "title": "Spaces, um deren Beitritt du bitten kannst",
+      "description": "Die Space-Admins nehmen Personen auf. Du siehst nur Name und Beschreibung.",
+      "ask": "Beitritt anfragen",
+      "requested": "Anfrage gesendet"
+    },
+    "landing": {
+      "banner": "Diese Seite wurde über einen Link geteilt. Du siehst nur diese Seite.",
+      "pageFailed": "die geteilte Seite",
+      "updated": "Veröffentlicht am {date}",
+      "passwordTitle": "Dieser Link ist geschützt",
+      "password": "Gib das Passwort ein, das du von der Person bekommen hast, die den Link geteilt hat.",
+      "passwordMissing": "Gib das Passwort ein.",
+      "open": "Seite öffnen",
+      "signInTitle": "Melde dich an, um diese Seite zu öffnen",
+      "signIn": "Anmelden",
+      "notForYouTitle": "Dieser Link ist für andere Personen",
+      "goneTitle": "Dieser Link funktioniert nicht mehr",
+      "failed": "Der Link konnte nicht geöffnet werden",
+      "downloadFailed": "Die Datei wurde nicht heruntergeladen"
+    }
   }
 }

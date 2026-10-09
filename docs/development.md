@@ -25,6 +25,7 @@ The workspace is managed with pnpm and Turborepo. The compiler is TypeScript 7 (
 
 - `postgres`: PostgreSQL 16 on `localhost:5432`, user, password and database `pagehall`.
 - `mailpit`: catches all outgoing e-mail. SMTP on `localhost:1025`, web interface on `http://localhost:8025`. See [email.md](email.md).
+- `minio`: S3-compatible object storage on `localhost:9100` (`MINIO_PORT`), user `pagehall`, password `pagehall-minio`. The tests of the `s3` file storage use it when `PAGEHALL_TEST_S3_ENDPOINT=http://localhost:9100` is set; each test creates its own bucket. The development instance itself stores files locally unless `PAGEHALL_FILE_STORAGE=s3` is set (see [configuration.md](configuration.md)).
 - `app`: installs dependencies inside the container and runs `pnpm dev:apps`, which starts every package's `dev` task through Turborepo.
 
 The repository is mounted into the container. Dependencies live in Docker volumes, so the container never uses packages installed for the host system. File changes are detected by polling, because file system events do not reach containers through Windows bind mounts. The Node.js processes use `pagehall-dev` from `packages/config`, which rebuilds a package on changes and restarts its process; the web client uses Vite with polling.

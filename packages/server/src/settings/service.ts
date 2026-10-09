@@ -2,7 +2,14 @@ import { and, eq, or, sql } from "drizzle-orm";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { NotificationListener } from "../database/notifications.js";
 import type { Logger } from "../logging/logger.js";
-import { isAtLeastAsStrict, type SettingDefinition, type SettingLevel, settingLevels } from "./definition.js";
+import {
+  isAtLeastAsStrict,
+  type Limit,
+  limitOf,
+  type SettingDefinition,
+  type SettingLevel,
+  settingLevels,
+} from "./definition.js";
 import { settingValues } from "./schema.js";
 
 /** Scope ID of the instance level. */
@@ -92,6 +99,17 @@ export class SettingBelowMinimumError extends SettingError {
     readonly minimum: number,
   ) {
     super(`Setting ${key} cannot be lower than the minimum of ${minimum} set for the instance`);
+  }
+}
+
+export class SettingAboveMaximumError extends SettingError {
+  override name = "SettingAboveMaximumError";
+
+  constructor(
+    key: string,
+    readonly maximum: Limit,
+  ) {
+    super(`Setting ${key} cannot be higher than the maximum of ${maximum} set for the instance`);
   }
 }
 
@@ -224,6 +242,7 @@ export class SettingsService {
     const scopes = scopesOf(chain);
     const rows = await this.#rows(scopes, options.executor);
     const floor = definition.minimum ? await this.get(definition.minimum, chain, options) : null;
+    const ceiling = definition.maximum ? await this.get(definition.maximum, chain, options) : null;
     let value = definition.default;
     let source: Scope | "default" = "default";
     let lockedBy: Scope | null = null;
@@ -242,7 +261,8 @@ export class SettingsService {
       const weaker =
         stored !== undefined &&
         ((scope.level !== definition.levels[0] && !isAtLeastAsStrict(definition, stored, value)) ||
-          (floor !== null && Number(stored) < floor));
+          (floor !== null && Number(stored) < floor) ||
+          (ceiling !== null && limitOf(stored) > limitOf(ceiling)));
       const effective = applies && lockedBy === null && !weaker;
       if (effective && stored !== undefined) {
         value = stored;
@@ -253,6 +273,7 @@ export class SettingsService {
       levels.push({ scope, applies, value: stored, locked, effective });
     }
     if (floor !== null && Number(value) < floor) value = floor as T;
+    if (ceiling !== null && limitOf(value) > limitOf(ceiling)) value = ceiling as T;
     return { key: definition.key, value, source, lockedBy, levels };
   }
 
@@ -353,6 +374,12 @@ export class SettingsService {
       const floor = await this.get(definition.minimum, chain);
       if (Number(parsed.data) < floor) {
         throw new SettingBelowMinimumError(definition.key, floor);
+      }
+    }
+    if (definition.maximum) {
+      const ceiling = await this.get(definition.maximum, chain);
+      if (limitOf(parsed.data) > limitOf(ceiling)) {
+        throw new SettingAboveMaximumError(definition.key, ceiling);
       }
     }
     await this.#write(target, definition.key, { value: parsed.data }, "set", options);

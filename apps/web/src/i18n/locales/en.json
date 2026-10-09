@@ -1068,7 +1068,8 @@
     "spaces": "Spaces",
     "personalSpaces": "Personal spaces",
     "pagesAndTrash": "Pages and trash",
-    "templates": "Templates"
+    "templates": "Templates",
+    "accessOverview": "Access overview"
   },
   "commands": {
     "label": "Command palette",
@@ -1283,7 +1284,45 @@
     "blogPostMode": "Blog posts always use publish mode.",
     "tooManyStars": "You starred the maximum number of items. Remove a star first.",
     "personalOnly": "Only people have starred items and a home page.",
-    "invalidHomePage": "Choose a page from a space of this organization that you can read."
+    "invalidHomePage": "Choose a page from a space of this organization that you can read.",
+    "invalidFileName": "The file name is empty or too long. Rename the file and upload it again.",
+    "invalidItem": "Files can only be attached to pages and blog posts.",
+    "invalidCover": "The cover must be an image attached to this post. Upload the image first, then choose it.",
+    "invalidFocus": "The focal point lies outside the image. Click inside the image to set it.",
+    "invalidScope": "This kind of link cannot be used for this page. Choose another option under \"Who can open it\".",
+    "peopleRequired": "Add at least one person or group who may open the link.",
+    "tooManyPeople": "The link names too many people or groups. Share the page with a group instead.",
+    "invalidPassword": "The password may have at most 200 characters.",
+    "messageTooLong": "The message is too long. Shorten it to 1,000 characters.",
+    "invalidRole": "This role cannot be given here. Choose another role.",
+    "signInRequired": "Sign in to open this link.",
+    "passwordRequired": "This link is protected. Enter its password.",
+    "wrongPassword": "The password is not correct. Ask the person who shared the link.",
+    "linkNotForYou": "This link was shared with other people. Ask the person who shared it for access.",
+    "guestInvitesDisabled": "Members cannot invite guests in this organization. Ask an administrator of the organization.",
+    "attachmentNotFound": "The file was deleted or moved. Reload the page.",
+    "shareNotFound": "The access entry was already removed. Reload the page.",
+    "restrictionNotFound": "The page is no longer restricted. Reload the page.",
+    "linkNotFound": "The link does not exist, has expired or was revoked. Ask the person who shared it for a new link.",
+    "requestNotFound": "The access request was withdrawn or removed. Reload the page.",
+    "personNotFound": "The person was not found. Search again by name.",
+    "nameTaken": "A file with this name exists already.",
+    "alreadyShared": "The page is already shared with them. Change their entry instead.",
+    "restrictionWithoutViewers": "A restricted page needs at least one person or group who can view it. Add someone first.",
+    "restrictionWithoutEditors": "A page restricted for editing needs at least one person or group who can edit it. Add someone with \"Can edit\" first.",
+    "shareLinksDisabled": "Share links are turned off in this organization. Share the page with people instead.",
+    "anyoneLinksDisabled": "Links for anyone are turned off in this organization. Choose a link for signed-in people.",
+    "restrictedPage": "A restricted page cannot be opened by anyone with a link. Choose a link for named people.",
+    "requestClosed": "The access request was already decided or withdrawn. Reload the page.",
+    "alreadyHasAccess": "The person already has access.",
+    "fileTooLarge": "The file is larger than allowed. Choose a smaller file.",
+    "fileTooLargeLimit": "The file is larger than the limit of {size}. Choose a smaller file or ask an administrator to raise the limit.",
+    "rangeNotSatisfiable": "The file changed while loading. Reload the page.",
+    "tooManyRequests": "You sent many access requests today. Wait until tomorrow or contact an administrator of the space.",
+    "linkExpiryTooLate": "Links for anyone may last at most {days, plural, one {# day} other {# days}} in this organization. Choose an earlier date.",
+    "versionNotFound": "This version was removed in the meantime. Reload the versions.",
+    "settingAboveMaximum": "The value is above the maximum the instance allows. Choose a lower value.",
+    "settingAboveMaximumValue": "The instance allows at most {maximum}. Choose a value up to {maximum}."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -1740,7 +1779,9 @@
     "units": {
       "characters": "{count, plural, one {# character} other {{value} characters}}",
       "count": "{value}",
-      "perMinute": "{value} per minute"
+      "perMinute": "{value} per minute",
+      "megabytes": "{value} MB",
+      "versions": "{count, plural, one {# version} other {{value} versions}}"
     },
     "values": {
       "accentColor": {
@@ -1969,6 +2010,34 @@
       "reactions_enabled": {
         "label": "Reactions",
         "description": "People can react with emoji to pages, blog posts and comments."
+      },
+      "files_maxFileSizeMegabytes": {
+        "label": "Largest file to upload",
+        "description": "Uploads above this size are refused before anything is stored, with a message that names the limit. Organizations can only lower it."
+      },
+      "files_keepVersions": {
+        "label": "Versions of a file to keep",
+        "description": "When a new version is uploaded and there are more than this number, the oldest version not marked to keep is removed. Marked versions do not count."
+      },
+      "sharing_shareLinks": {
+        "label": "Share links",
+        "description": "People who may share a page can create links for named people, the organization or everyone signed in."
+      },
+      "sharing_anyoneLinks": {
+        "label": "Links for anyone without signing in",
+        "description": "Visitors see only the shared page. Each link needs an expiry date. Restricted pages never get such links."
+      },
+      "sharing_anyoneLinkMaxDays": {
+        "label": "Longest lifetime of a link for anyone",
+        "description": "Links for anyone must expire within this time. Organizations can only shorten it."
+      },
+      "sharing_membersInviteGuests": {
+        "label": "Members can invite guests to a page",
+        "description": "When on, people who may share a page can invite someone by e-mail as a guest. Administrators of the organization can always do this."
+      },
+      "files_keepVersionsMaximum": {
+        "label": "Most versions organizations and spaces may keep",
+        "description": "Organizations and spaces can choose any number up to this maximum. Only here can it be set to no limit."
       }
     },
     "disabled": {
@@ -1987,7 +2056,8 @@
     "searchNone": "No setting matches “{query}”. Check the spelling or search for another word.",
     "searchClear": "Clear search",
     "searchWhere": "{page} › {section}",
-    "lockForSpaces": "Lock for spaces"
+    "lockForSpaces": "Lock for spaces",
+    "aboveMaximum": "Enter a whole number from {minimum} to {maximum}. The instance allows at most {maximum}."
   },
   "security": {
     "activity": {
@@ -2173,7 +2243,9 @@
         "inactive": "{guestName} has not used {organizationName} for {days, plural, one {# day} other {# days}}."
       },
       "access": {
-        "expiring": "{kind, select, role {The role {name}} group {The membership in the group {name}} other {A membership}} in {organizationName} ends on {expiresAt}."
+        "expiring": "{kind, select, role {The role {name}} group {The membership in the group {name}} other {A membership}} in {organizationName} ends on {expiresAt}.",
+        "requested": "{requesterName} asks for access to {target, select, page {{itemTitle} in {spaceName}} other {the space {spaceName}}}.",
+        "requestDecided": "{decision, select, approved {Your request for access to {target, select, page {{itemTitle}} other {{spaceName}}} was approved.} satisfied {You now have access to {target, select, page {{itemTitle}} other {{spaceName}}}, so your request was closed.} other {Your request for access to {target, select, page {a page} other {{spaceName}}} was declined.}}"
       },
       "serviceAccount": {
         "unattended": "Nobody is responsible for the service account {serviceAccountName} in {organizationName} anymore."
@@ -2195,6 +2267,12 @@
       },
       "blogPost": {
         "scheduleHeld": "{reason, select, accountRemoved {The scheduled post {itemTitle} is waiting for approval because the person who scheduled it no longer has an account.} other {The scheduled post {itemTitle} is waiting for approval because {actor} can no longer edit it.}}"
+      },
+      "page": {
+        "shared": "{actor} shared {itemTitle} with you: {role, select, editor {you can edit it} commenter {you can read and comment} other {you can read it}}{includeDescendants, select, true { together with its pages} other {}}."
+      },
+      "restriction": {
+        "orphaned": "Nobody on the access list of the restricted page {itemTitle} in {spaceName} has an active account anymore. Review the restriction in the space settings."
       }
     }
   },
@@ -2377,6 +2455,23 @@
       "removeDescription": "New accounts with this domain no longer join the organization automatically. Existing members stay.",
       "registration": "Registration and groups",
       "guests": "Guests and expiry"
+    },
+    "access": {
+      "title": "Access overview",
+      "description": "See what a person can do in the spaces of this organization and why. Exports are recorded in the audit log.",
+      "person": "Person",
+      "personHint": "Search a member or guest by name.",
+      "chooseTitle": "Choose a person",
+      "choose": "Their spaces, shared pages and links appear here, each with the reason.",
+      "exportAll": "Export everyone as CSV",
+      "exportPerson": "Export as CSV",
+      "loadFailed": "the access of this person",
+      "whatCan": "What can {name} do?",
+      "nothing": "{name} has no access to spaces or pages of this organization.",
+      "wholeSpace": "whole space",
+      "withPagesBelow": "and the pages below",
+      "restrictedPages": "{count, plural, one {# shared restricted page you cannot read} other {# shared restricted pages you cannot read}}",
+      "why": "Why?"
     }
   },
   "members": {
@@ -3030,7 +3125,13 @@
         "versionRestored": "Version restored",
         "modeChanged": "Editing mode changed",
         "archived": "Page archived",
-        "unarchived": "Page brought back from the archive"
+        "unarchived": "Page brought back from the archive",
+        "restrictionSet": "Page restricted",
+        "restrictionRemoved": "Page restriction removed",
+        "shared": "Page shared",
+        "shareChanged": "Page access changed",
+        "unshared": "Page access removed",
+        "guestInvited": "Guest invited to a page"
       },
       "trash": {
         "itemsDeleted": "Moved to the trash",
@@ -3055,6 +3156,22 @@
       },
       "comment": {
         "deletedByModerator": "Comment deleted by a space admin"
+      },
+      "shareLink": {
+        "created": "Share link created",
+        "changed": "Share link changed",
+        "revoked": "Share link revoked",
+        "opened": "Share link opened"
+      },
+      "accessRequest": {
+        "decided": "Access request decided"
+      },
+      "access": {
+        "overviewExported": "Permission overview exported"
+      },
+      "attachment": {
+        "versionKept": "File version marked to keep",
+        "versionReleased": "File version no longer kept"
       }
     },
     "action": "Action",
@@ -3287,7 +3404,13 @@
     "roleExceedsOwnPermissions": "The role exceeds their own permissions",
     "selfExtension": "Nobody can extend their own permissions",
     "tokenScope": "Not allowed for this token",
-    "noSpaceRole": "No role in the space grants this"
+    "noSpaceRole": "No role in the space grants this",
+    "inTrash": "It is in the trash",
+    "archived": "It is archived",
+    "unpublished": "It is not published yet",
+    "restricted": "The page is restricted and they are not on its access list",
+    "editRestricted": "Editing is restricted and they are not allowed to edit on its access list",
+    "ruleNotMet": "A condition of this action is not met"
   },
   "grants": {
     "system": "System",
@@ -3557,7 +3680,9 @@
       "emoji": "Emoji",
       "emojiDescription": "Pick an emoji",
       "taskReport": "Task report",
-      "taskReportDescription": "Table of tasks with filters and counts"
+      "taskReportDescription": "Table of tasks with filters and counts",
+      "file": "Image or file",
+      "fileDescription": "Upload and insert an image or file"
     },
     "mention": {
       "unknown": "Unknown person"
@@ -3978,7 +4103,10 @@
       "visibilityFailed": "The visibility could not be changed",
       "personalPrivate": "Personal spaces are always private. Share them with people and groups in the permissions.",
       "adminsOnlyTitle": "Only space admins manage permissions",
-      "adminsOnly": "Your role in this space is {role}. Ask a space admin if someone needs another role."
+      "adminsOnly": "Your role in this space is {role}. Ask a space admin if someone needs another role.",
+      "discoverable": "Members of the organization can find this space and ask to join",
+      "discoverableHint": "They see its name and description in the list of spaces, but no pages, until a space admin lets them in.",
+      "discoverableNotPrivate": "Only private spaces can be found this way; other visibilities already let people in."
     },
     "permissions": {
       "visibilityTitle": "Readers through visibility",
@@ -4063,6 +4191,35 @@
       "delete": "Delete personal space",
       "deleteTitle": "Delete the personal space of {owner}?",
       "deleted": "Personal space deleted. Restore it under Pages and trash during second-stage recovery."
+    },
+    "access": {
+      "tab": "Access",
+      "title": "Access",
+      "description": "Give people access, decide on requests and review restricted pages.",
+      "giveTitle": "Give access",
+      "giveDescription": "A guided way to give a person or group access to the space or to single pages.",
+      "giveHint": "You see how many pages they can then read and edit before anything changes.",
+      "requestsTitle": "Access requests",
+      "requestsDescription": "Open requests for this space and its pages. They stay open until someone decides or the person gets access another way.",
+      "restrictedTitle": "Restricted pages",
+      "restrictedDescription": "Pages that only their access lists can see or edit. You see the titles but not the content. Removing a restriction is recorded in the audit log.",
+      "restrictedFailed": "the restricted pages",
+      "noRestrictedTitle": "No restricted pages",
+      "noRestricted": "Pages restricted in the share dialog appear here.",
+      "orphaned": "Nobody on the list is active",
+      "viewRestricted": "Viewing restricted",
+      "editRestricted": "Editing restricted",
+      "remove": "Remove restriction",
+      "removeTitle": "Remove the restriction of {title}?",
+      "removeViewEffects": "Everyone who can view the space can then see this page and the pages below, including their content. The removal is recorded in the audit log with your name.",
+      "removeEditEffects": "Everyone who can edit in the space can then edit this page. The removal is recorded in the audit log with your name.",
+      "removeConfirm": "Remove restriction",
+      "keep": "Keep restriction",
+      "removed": "Restriction of {title} removed",
+      "removeFailed": "The restriction was not removed",
+      "adminsOnlyTitle": "Only space admins manage restrictions",
+      "adminsOnly": "Ask a space admin if a restricted page needs attention.",
+      "whyDescription": "Search a person to see their role in this space and where it comes from."
     }
   },
   "tree": {
@@ -4093,7 +4250,9 @@
     "moved": "{title} moved",
     "moveFailed": "The item could not be moved",
     "undoFailed": "The move could not be undone",
-    "createFailed": "The page could not be created"
+    "createFailed": "The page could not be created",
+    "viewRestricted": "Restricted: only the access list can view it",
+    "editRestricted": "Restricted: only the access list can edit it"
   },
   "move": {
     "title": "Move {title}",
@@ -4205,7 +4364,9 @@
     "nameMismatch": "The name does not match. Type it exactly as shown.",
     "spaceDeleted": "{name} deleted",
     "deleteFailed": "The space could not be deleted",
-    "collaborationSection": "Collaboration"
+    "collaborationSection": "Collaboration",
+    "sharingSection": "Sharing",
+    "filesSection": "Files"
   },
   "archive": {
     "archive": "Archive",
@@ -4542,7 +4703,10 @@
     "organizationPageNone": "No home page is set. Everyone lands on \"For you\".",
     "choosePage": "Home page",
     "searchPage": "Search a page by title",
-    "removeOrganizationPage": "Remove home page"
+    "removeOrganizationPage": "Remove home page",
+    "shared": "Shared with you",
+    "noShared": "Pages that people share with you appear here.",
+    "sharedMeta": "{name}, {when}"
   },
   "starred": {
     "star": "Star {title}",
@@ -4768,6 +4932,415 @@
     "scheduledTitle": "Scheduled",
     "scheduledDescription": "Every scheduled post of this space. Posts waiting for approval come first. Only space admins see this list.",
     "scheduledEmpty": "No posts are scheduled.",
-    "scheduledLoadFailed": "The scheduled posts could not be loaded"
+    "scheduledLoadFailed": "The scheduled posts could not be loaded",
+    "cover": {
+      "title": "Cover image",
+      "image": "Image",
+      "imageHint": "Choose one of the images attached to this post.",
+      "noImages": "Attach an image to this post first, for example by dropping it on the page.",
+      "none": "No cover",
+      "focusHint": "Click the point that must stay visible when lists crop the image, or use the arrow keys.",
+      "focus": "Focal point at {x} % from the left and {y} % from the top. Click or use the arrow keys to move it.",
+      "wide": "In wide lists",
+      "square": "In small tiles"
+    }
+  },
+  "files": {
+    "title": "Attachments",
+    "upload": "Upload files",
+    "uploads": "Uploads in progress",
+    "empty": "No files yet. Upload files or drop them on the page.",
+    "dropToAttach": "Drop to attach to {title}",
+    "uploading": "{loaded} of {total}",
+    "progress": "Upload of {name}",
+    "cancelUpload": "Cancel upload of {name}",
+    "dismissUpload": "Remove {name} from the list",
+    "retry": "Retry",
+    "uploadFailed": "{name} was not uploaded: {reason}",
+    "rowMeta": "{type} · {size} · version {version} · {date}",
+    "summary": "{type} · {size} · version {version}",
+    "typeWithExtension": "{kind} ({extension})",
+    "actions": "Actions for {name}",
+    "download": "Download",
+    "delete": "Delete file",
+    "deleted": "{name} deleted",
+    "deleteFailed": "The file was not deleted. Check your connection and try again.",
+    "restoreFailed": "The file could not be brought back. Reload the page and try again.",
+    "loadFailed": "the attachments",
+    "someone": "someone",
+    "kinds": {
+      "image": "Image",
+      "pdf": "PDF document",
+      "video": "Video",
+      "audio": "Audio",
+      "text": "Text",
+      "code": "Code",
+      "markdown": "Markdown",
+      "csv": "Table",
+      "svg": "Vector image",
+      "word": "Word document",
+      "excel": "Excel workbook",
+      "none": "File"
+    },
+    "preview": {
+      "open": "Preview",
+      "frameTitle": "Preview of {name}",
+      "pageNumber": "Page {number}",
+      "sheet": "Sheet {name}",
+      "truncated": "The preview shows only the first part. Download the file to see everything.",
+      "failed": "This file cannot be shown. Download it to open it in another program.",
+      "empty": "The file is empty.",
+      "loadFailed": "the file for the preview",
+      "failedTitle": "No preview",
+      "failedDescription": "The file could not be shown, perhaps it is damaged or uses an unsupported variant. Download it to open it in another program.",
+      "tooLargeTitle": "Too large for a preview",
+      "tooLarge": "Download the file to open it.",
+      "noneTitle": "No preview for this type",
+      "none": "Download the file to open it in a program that supports it.",
+      "fileFailed": "the file details"
+    },
+    "versions": {
+      "title": "Versions",
+      "show": "Versions ({count})",
+      "hide": "Hide versions",
+      "number": "Version {number}",
+      "current": "current",
+      "meta": "{date} · {size} · {name}",
+      "restoredFrom": "restored from version {number}",
+      "restore": "Restore",
+      "restored": "Version {number} is current again",
+      "restoreFailed": "The version was not restored. Try again.",
+      "loadFailed": "the versions",
+      "keepHint": "Versions marked to keep are never removed automatically and do not count towards the limit.",
+      "kept": "Kept",
+      "keep": "Keep",
+      "release": "Stop keeping",
+      "keptDone": "Version {number} is kept",
+      "releasedDone": "Version {number} can be removed again when newer versions arrive",
+      "keepFailed": "The version was not marked to keep. Try again.",
+      "releaseFailed": "The mark was not removed. Try again."
+    },
+    "storage": {
+      "used": "{size} used by {count, plural, one {# stored file} other {# stored files}}, including earlier versions",
+      "loadFailed": "the storage use"
+    }
+  },
+  "sharing": {
+    "impact": {
+      "noChangeTitle": "Nobody's access changes",
+      "noChange": "The change keeps everyone's access to this page as it is.",
+      "readGaining": "{count, plural, one {# person can then read this page} other {# people can then read this page}}",
+      "readLosing": "{count, plural, one {# person can then no longer read this page} other {# people can then no longer read this page}}",
+      "editGaining": "{count, plural, one {# person can then edit this page} other {# people can then edit this page}}",
+      "editLosing": "{count, plural, one {# person can then no longer edit this page} other {# people can then no longer edit this page}}",
+      "loadFailed": "The change in access could not be calculated"
+    },
+    "share": "Share",
+    "dialogTitle": "Share \"{title}\"",
+    "dialogDescription": "Give people access to this page, restrict it, or create a link.",
+    "loadFailed": "who has access to this page",
+    "changeFailed": "The access was not changed",
+    "tabs": {
+      "label": "Sharing",
+      "people": "People and access",
+      "links": "Share links"
+    },
+    "roles": {
+      "reader": "Can read",
+      "commenter": "Can comment",
+      "editor": "Can edit",
+      "admin": "Space admin",
+      "none": "No access"
+    },
+    "people": {
+      "addLabel": "Add people or groups",
+      "addHint": "People outside the space see only what you share with them, not the space itself.",
+      "addPlaceholder": "Search by name or e-mail address",
+      "chooseSomeone": "Choose a person or group from the search results.",
+      "role": "Access",
+      "includeBelow": "Also the pages below",
+      "share": "Share",
+      "titleVisible": "People you add see the title \"{title}\" in their notification.",
+      "shareTitle": "Share with {name} ({role})?",
+      "shareConfirm": "Share page",
+      "shared": "Shared with {name}",
+      "listTitle": "People and groups on the access list",
+      "listHint": "They have access to this page in addition to the roles of the space. If the page is restricted, only they have access.",
+      "empty": "Nobody is on the list yet. Everyone with a role in the space has access.",
+      "groupMembers": "{count, plural, one {Group with # member} other {Group with # members}}",
+      "spaceRole": "{role} in the space",
+      "notInSpace": "Not in the space",
+      "inactive": "Inactive",
+      "groupDeleted": "Deleted",
+      "roleOf": "Access of {name}",
+      "scopeOf": "Pages for {name}",
+      "onlyThisPage": "This page",
+      "withPagesBelow": "This page and the pages below",
+      "changeRoleTitle": "Change the access of {name} to \"{role}\"?",
+      "changeRole": "Change access",
+      "addBelowTitle": "Also give {name} access to the pages below?",
+      "removeBelowTitle": "Limit {name} to this page?",
+      "changeScope": "Change pages",
+      "changed": "Access of {name} changed",
+      "remove": "Remove {name} from the list",
+      "removeTitle": "Remove {name} from the access list?",
+      "removeConfirm": "Remove access",
+      "removed": "{name} removed from the list",
+      "viaLinkTitle": "Opened through a share link",
+      "viaLink": "Via link",
+      "lastOpened": "last opened {date}"
+    },
+    "guest": {
+      "toggle": "Invite a guest by e-mail",
+      "email": "E-mail address of the guest",
+      "hint": "The person gets an invitation as a guest of the organization and sees this page after accepting.",
+      "placeholder": "name@example.com",
+      "invalidEmail": "Enter a complete e-mail address, for example name@example.com.",
+      "send": "Send invitation",
+      "sent": "Invitation sent to {email}. They get access when they accept."
+    },
+    "restrict": {
+      "title": "Restrict access",
+      "viewLabel": "Who can view this page",
+      "viewSpace": "Everyone who can view the space",
+      "viewList": "Only the people and groups on the list",
+      "viewHint": "Restricting viewing also hides the pages below, and the page disappears from search, links and lists for everyone else.",
+      "editLabel": "Who can edit this page",
+      "editSpace": "Everyone who can edit in the space",
+      "editList": "Only entries on the list with \"Can edit\"",
+      "editHint": "Others can still read the page.",
+      "setBy": "Restricted by {name} on {date}",
+      "inheritedTitle": "A page above is restricted",
+      "inherited": "Viewing is restricted on {pages}. Only people on the list of that page can see this page, whatever you set here.",
+      "viewRestrictTitle": "Restrict viewing to the access list?",
+      "viewOpenTitle": "Let everyone who can view the space see this page again?",
+      "editRestrictTitle": "Restrict editing to the access list?",
+      "editOpenTitle": "Let everyone who can edit in the space edit this page again?",
+      "restrictConfirm": "Restrict",
+      "openConfirm": "Remove restriction",
+      "restricted": "Page restricted. You were added to the list so you keep access.",
+      "opened": "Restriction removed"
+    },
+    "why": {
+      "toggle": "Why does someone have access?",
+      "person": "Person",
+      "placeholder": "Search a person by name",
+      "loadFailed": "the access of this person",
+      "summary": "{name}: {role}",
+      "summaryNone": "{name} has no access to this page.",
+      "limitedTitle": "Why access is limited",
+      "spaceDirect": "{role} in the space, given to them directly",
+      "spaceGroup": "{role} in the space through the group {group}",
+      "spaceOrganization": "{role} in the space as a member of the organization",
+      "spaceInstance": "{role} in the space as a user of the instance",
+      "spaceVisibility": "{role} through the visibility of the space",
+      "share": "{role}: the page is shared with them",
+      "shareAbove": "{role}: shared with them on the page above \"{title}\"",
+      "shareAboveHidden": "{role}: shared with them on a page above",
+      "link": "Opened a share link ({scope})",
+      "other": "Another reason",
+      "hiddenPage": "a page you cannot see",
+      "restricted": "Viewing is restricted on {pages} and they are not on its list.",
+      "editRestricted": "Editing is restricted and they are not on the list with \"Can edit\".",
+      "unpublished": "The page is not published yet, so readers cannot see it.",
+      "inTrash": "The page is in the trash.",
+      "accountInactive": "Their account is not active.",
+      "noAccess": "No role in the space, share or link gives them access.",
+      "summaryNoneSpace": "{name} has no access to this space."
+    },
+    "links": {
+      "loadFailed": "the share links",
+      "disabledTitle": "Share links are turned off",
+      "disabled": "Administrators of the organization can turn them on. You can still share the page with people.",
+      "new": "Create link",
+      "createTitle": "New share link",
+      "scope": "Who can open it",
+      "scopes": {
+        "people": "Only the people and groups you choose",
+        "organization": "Signed-in members of the organization",
+        "organizationOf": "Signed-in members of {organization}",
+        "instance": "Everyone signed in to this instance",
+        "anyone": "Anyone with the link, without signing in"
+      },
+      "scopeHints": {
+        "people": "They sign in and open the page, even when they are not in the space.",
+        "organization": "Signed-in people who open the link appear here as \"via link\".",
+        "instance": "Includes people of other organizations on this instance.",
+        "anyone": "Visitors see only this page, without the tree, comments or other pages."
+      },
+      "anyoneOff": "Links for anyone without signing in are turned off in this organization.",
+      "restrictedOnlyPeople": "This page is restricted, so a link can only be for people who may see it.",
+      "people": "People and groups",
+      "peopleHint": "Only they can open the link after signing in.",
+      "peopleRequired": "Add at least one person or group.",
+      "removePerson": "Remove {name}",
+      "expiry": "Expires on",
+      "expiryHint": "Optional. The link stops working at the end of this day.",
+      "expiryHintAnyone": "Required, at most {days, plural, one {# day} other {# days}} from today. The link stops working at the end of this day.",
+      "expiryRequired": "Choose an end date. Links for anyone may last at most {days, plural, one {# day} other {# days}}.",
+      "expiryInvalid": "Enter a date, for example with the calendar of the field.",
+      "expiryPast": "The date has already passed. Choose today or a later date.",
+      "expiryTooLate": "Links for anyone may last at most {days, plural, one {# day} other {# days}}. Choose an earlier date.",
+      "password": "Password",
+      "newPassword": "New password",
+      "passwordHint": "Optional. Visitors enter it before the page opens. Tell it to them on another channel.",
+      "hasPassword": "The link asks for a password.",
+      "removePassword": "Remove password",
+      "passwordRemoved": "The password will be removed when you save.",
+      "create": "Create link",
+      "createFailed": "The link was not created",
+      "createdTitle": "Link created",
+      "createdHint": "{scope} can open the page with this address. You can copy it again later.",
+      "done": "Done",
+      "copy": "Copy link",
+      "listTitle": "Active links",
+      "passwordBadge": "Password",
+      "expires": "expires {date}",
+      "noExpiry": "no expiry date",
+      "visitors": "{count, plural, =0 {not opened by signed-in people yet} one {opened by # signed-in person} other {opened by # signed-in people}}",
+      "createdBy": "created by {name} on {date}",
+      "forPeople": "For {names}",
+      "change": "Change",
+      "save": "Save link",
+      "changed": "Link changed",
+      "changeFailed": "The link was not changed",
+      "revoke": "Revoke",
+      "revokeTitle": "Revoke this link?",
+      "revokeEffects": "{count, plural, =0 {The address stops working at once.} one {The address stops working at once, and # person who opened the page only through this link loses access.} other {The address stops working at once, and # people who opened the page only through this link lose access.}}",
+      "keep": "Keep link",
+      "revokeConfirm": "Revoke link",
+      "revoked": "Link revoked"
+    },
+    "note": {
+      "view": "Restricted: only people and groups on the access list can view this page and the pages below.",
+      "inherited": "Restricted by a page above: only people on its access list can view this page.",
+      "edit": "Only people on the access list with \"Can edit\" can edit this page.",
+      "manage": "Manage access"
+    },
+    "sharedPage": {
+      "shared": "Shared with you",
+      "sharedBy": "Shared with you by {name}"
+    },
+    "requests": {
+      "title": "Access request",
+      "oneFailed": "the access request",
+      "loadFailed": "the access requests",
+      "noAccessTitle": "This page does not exist or you have no access",
+      "noAccess": "If someone gave you this link, you can ask for access. The people who manage the page decide; you get a notification either way.",
+      "message": "Message (optional)",
+      "messageHint": "Say why you need access, up to {limit} characters.",
+      "messageTooLong": "The message is too long. Shorten it to {limit} characters.",
+      "requestPage": "Request access",
+      "requestSpace": "Ask to join {name}",
+      "sentTitle": "Request sent",
+      "sent": "You get a notification when someone decides.",
+      "mineLink": "Your access requests",
+      "mineTitle": "Your access requests",
+      "mineDescription": "Requests you sent for spaces and pages. Open requests close themselves when you get access another way.",
+      "mineEmptyTitle": "No access requests",
+      "mineEmpty": "When you ask for access to a space or page, the request appears here.",
+      "targetPage": "the page {title}",
+      "targetHiddenPage": "a page",
+      "targetSpace": "the space {name}",
+      "hiddenSpace": "a space",
+      "summary": "{name} asks for access to {target}",
+      "sentOn": "sent {date}",
+      "decidedBy": "Decided by {name} on {date}",
+      "role": "Access to give",
+      "approve": "Give {name} \"{role}\"",
+      "decline": "Decline",
+      "approved": "{name} now has access",
+      "declined": "Request of {name} declined",
+      "decideFailed": "The request was not decided",
+      "noneOpen": "No open access requests.",
+      "open": "Open",
+      "withdraw": "Withdraw",
+      "withdrawn": "Request withdrawn",
+      "withdrawFailed": "The request was not withdrawn",
+      "status": {
+        "open": "Open",
+        "approved": "Approved",
+        "declined": "Declined",
+        "withdrawn": "Withdrawn",
+        "satisfied": "Access given another way"
+      }
+    },
+    "give": {
+      "open": "Give access",
+      "continue": "Continue giving access",
+      "title": "Give access",
+      "description": "Choose who, what and where. You see the effect before you confirm.",
+      "progress": "Steps",
+      "stepLabel": "{number}. {name}",
+      "steps": {
+        "who": "Who",
+        "what": "What",
+        "where": "Where",
+        "check": "Check and confirm"
+      },
+      "who": "Person or group",
+      "whoHint": "Search by name. Groups give access to all their members.",
+      "chooseHolder": "Choose a person or group from the search results.",
+      "what": "What they may do",
+      "levels": {
+        "reader": "Read pages and attachments.",
+        "commenter": "Read and comment.",
+        "editor": "Create, edit, move and delete pages.",
+        "admin": "Everything editors do, and manage permissions and settings of the space."
+      },
+      "where": "Where",
+      "places": {
+        "space": "The whole space {space}",
+        "page": "One page",
+        "pageAndChildren": "One page and the pages below"
+      },
+      "placeHints": {
+        "space": "Includes all pages except restricted ones.",
+        "page": "Only this page, without the space and its tree.",
+        "pageAndChildren": "This page and everything below it."
+      },
+      "page": "Page",
+      "pagePlaceholder": "Search pages of this space",
+      "noPage": "No page matches. Check the spelling.",
+      "choosePage": "Choose the page.",
+      "adminSpaceOnly": "Space admins can only be appointed for the whole space.",
+      "previewFailed": "the effect of this access",
+      "effect": "{name} can then read {readable, plural, one {# page} other {# pages}} and edit {editable, plural, one {# of them} other {# of them}}.",
+      "restrictedTitle": "Restricted pages stay hidden",
+      "restricted": "{name} will still not see {count, plural, one {# restricted page} other {# restricted pages}}. Only the access list of a restricted page decides who sees it.",
+      "alreadyHas": "{name} already has \"{role}\" in this space.",
+      "spaceImpact": "{count, plural, one {# person gets access or more rights.} other {# people get access or more rights.}}",
+      "noChange": "Nobody gains access, for example because they already have it.",
+      "back": "Back",
+      "next": "Next",
+      "confirm": "Give {name} \"{role}\"",
+      "done": "Access given to {name}",
+      "failed": "The access was not given",
+      "cancel": "Cancel and discard",
+      "discardFailed": "The draft was not discarded. Try again.",
+      "saveFailedTitle": "Your progress is not saved yet",
+      "saveFailed": "{reason} You can continue; the assistant saves again with the next change."
+    },
+    "discoverable": {
+      "title": "Spaces you can ask to join",
+      "description": "Their space admins let people in. You see the name and description only.",
+      "ask": "Ask to join",
+      "requested": "Request sent"
+    },
+    "landing": {
+      "banner": "Someone shared this page with a link. You see only this page.",
+      "pageFailed": "the shared page",
+      "updated": "Published {date}",
+      "passwordTitle": "This link is protected",
+      "password": "Enter the password you got from the person who shared the link.",
+      "passwordMissing": "Enter the password.",
+      "open": "Open page",
+      "signInTitle": "Sign in to open this page",
+      "signIn": "Sign in",
+      "notForYouTitle": "This link is for other people",
+      "goneTitle": "This link no longer works",
+      "failed": "The link could not be opened",
+      "downloadFailed": "The file was not downloaded"
+    }
   }
 }

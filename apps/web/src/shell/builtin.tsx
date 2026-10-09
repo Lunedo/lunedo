@@ -20,6 +20,7 @@ import {
   Trash2,
   User,
   UserRound,
+  UserSearch,
   Users,
   UsersRound,
 } from "lucide-react";
@@ -184,6 +185,15 @@ navigationItems.register(
     labelKey: "navigation.templates",
     to: `${ORGANIZATION}/templates`,
     permission: "organization.templates.manage",
+  },
+  {
+    id: "organization.access",
+    order: 98,
+    section: "organization",
+    icon: UserSearch,
+    labelKey: "navigation.accessOverview",
+    to: `${ORGANIZATION}/access`,
+    permission: "organization.access.view",
   },
   {
     id: "organization.audit",

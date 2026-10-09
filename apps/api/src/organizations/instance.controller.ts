@@ -1049,7 +1049,7 @@ export class InstanceController {
     params: settingParams,
     body: settingUpdateSchema,
     bodyExample: { value: 30, locked: true },
-    errors: ["invalidSetting", "settingManagedElsewhere"],
+    errors: ["invalidSetting", "settingAboveMaximum", "settingManagedElsewhere"],
   })
   async updateSetting(
     @Param("key") key: string,

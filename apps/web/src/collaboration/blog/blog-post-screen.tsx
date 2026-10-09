@@ -35,6 +35,10 @@ import { request } from "../../api/request.js";
 import type { SaveState } from "../../editor/save-state.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
+import { AttachmentsSection, PageDropZone } from "../../files/attachments-section.js";
+import { CoverEditor, CoverImage } from "../../files/cover.js";
+import { AttachmentPreviewProvider } from "../../files/preview-host.js";
+import { UploadsProvider } from "../../files/uploads.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../../screens/settings/settings-page.js";
 import { useDeleteItem } from "../../spaces/content-actions.js";
@@ -253,6 +257,20 @@ function ExcerptField({ post }: { post: BlogPost }) {
 }
 
 function BlogPostView({ item, post }: { item: ItemDetails; post: BlogPost }) {
+  const { space, canEdit } = useSpace();
+  const writable = canEdit && !space.archived;
+  return (
+    <UploadsProvider pageId={item.id}>
+      <AttachmentPreviewProvider canEdit={writable}>
+        <PageDropZone enabled={writable} title={item.title}>
+          <BlogPostArticle item={item} post={post} />
+        </PageDropZone>
+      </AttachmentPreviewProvider>
+    </UploadsProvider>
+  );
+}
+
+function BlogPostArticle({ item, post }: { item: ItemDetails; post: BlogPost }) {
   const { t } = useTranslation();
   const format = useFormat();
   const { toast } = useToast();
@@ -442,6 +460,11 @@ function BlogPostView({ item, post }: { item: ItemDetails; post: BlogPost }) {
           )
         ) : null}
         {editing ? (
+          <CoverEditor postId={post.id} itemId={item.id} cover={post.cover} onChanged={refresh} />
+        ) : post.cover ? (
+          <CoverImage cover={post.cover} alt="" className="aspect-video w-full rounded-md" />
+        ) : null}
+        {editing ? (
           <ExcerptField post={post} />
         ) : post.excerpt ? (
           <p className="text-lg text-text-muted">{post.excerpt}</p>
@@ -467,6 +490,7 @@ function BlogPostView({ item, post }: { item: ItemDetails; post: BlogPost }) {
         ) : (
           <PageContent pageId={item.id} publishMode collaboration={collaboration.readView} />
         )}
+        <AttachmentsSection pageId={item.id} canEdit={writable} />
         <PageReactions itemId={item.id} canReact={!space.archived} />
         {scheduling ? <ScheduleDialog post={post} open={scheduling} onOpenChange={setScheduling} /> : null}
       </article>

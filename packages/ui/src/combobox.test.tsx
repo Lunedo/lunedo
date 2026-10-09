@@ -110,14 +110,28 @@ describe("Combobox", () => {
     renderUi(<Multi />);
     expect(screen.getByRole("button", { name: "Remove Anna Roth" })).toBeTruthy();
     const input = screen.getByRole("combobox", { name: "People" });
-    await userEvent.type(input, "lena{Enter}");
-    expect(screen.getByRole("button", { name: "Remove Lena Höfer" })).toBeTruthy();
+    await userEvent.type(input, "lena");
     expect(screen.getByRole("listbox").getAttribute("aria-multiselectable")).toBe("true");
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByRole("button", { name: "Remove Lena Höfer" })).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Remove Anna Roth" }));
     expect(screen.queryByRole("button", { name: "Remove Anna Roth" })).toBeNull();
     await userEvent.click(input);
     await userEvent.keyboard("{Backspace}");
     expect(screen.queryByRole("button", { name: "Remove Lena Höfer" })).toBeNull();
+  });
+
+  it("closes the list when an option is chosen in a field with several values", async () => {
+    renderUi(<Multi />);
+    const input = screen.getByRole("combobox", { name: "People" });
+    await userEvent.type(input, "jonas");
+    await userEvent.click(screen.getByRole("option", { name: /Jonas Weber/ }));
+    expect(screen.getByRole("button", { name: "Remove Jonas Weber" })).toBeTruthy();
+    expect(input.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(document.activeElement).toBe(input);
+    await userEvent.keyboard("tom");
+    expect(screen.getByRole("option", { name: /Tomas Kern/ })).toBeTruthy();
   });
 
   it("searches on the server and loads further pages", async () => {

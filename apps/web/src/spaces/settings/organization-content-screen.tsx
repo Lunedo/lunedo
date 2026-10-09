@@ -7,9 +7,16 @@ import { organizationQuery, organizationSettingsQuery } from "../../api/organiza
 import { request } from "../../api/request.js";
 import { OrganizationHomePage } from "../../collaboration/organization-home-page.js";
 import { SettingsList } from "../../components/settings-list.js";
+import { StorageUsage } from "../../files/storage-usage.js";
 import { SettingsPage } from "../../screens/settings/settings-page.js";
 import { useOrganizationSettingMutation } from "../../settings/setting-mutations.js";
-import { COLLABORATION_KEYS, PAGE_MODE_KEYS, TRASH_KEYS } from "../../settings/settings-index.js";
+import {
+  COLLABORATION_KEYS,
+  FILE_KEYS,
+  PAGE_MODE_KEYS,
+  SHARING_KEYS,
+  TRASH_KEYS,
+} from "../../settings/settings-index.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { contentKeys } from "../content-queries.js";
 import { DeletedContent } from "../trash/deleted-content.js";
@@ -63,6 +70,27 @@ export function OrganizationContentScreen() {
         <SettingsList
           settings={settings.data}
           keys={COLLABORATION_KEYS}
+          level="organization"
+          {...(name ? { organizationName: name } : {})}
+          canManage={() => state.can("organization.settings.manage")}
+          onChange={change}
+        />
+      </Panel>
+      <Panel title={t("content.sharingSection")}>
+        <SettingsList
+          settings={settings.data}
+          keys={SHARING_KEYS}
+          level="organization"
+          {...(name ? { organizationName: name } : {})}
+          canManage={() => state.can("organization.settings.manage")}
+          onChange={change}
+        />
+      </Panel>
+      <Panel title={t("content.filesSection")}>
+        <StorageUsage scope={{ organizationId }} />
+        <SettingsList
+          settings={settings.data}
+          keys={FILE_KEYS}
           level="organization"
           {...(name ? { organizationName: name } : {})}
           canManage={() => state.can("organization.settings.manage")}

@@ -30,6 +30,8 @@ export interface ServerConfig {
   logLevel: LogLevel;
   database: { url: Secret; poolSize: number };
   paths: { files: string; secrets: string; webRoot: string | undefined };
+  fileStorage: FileStorageConfig;
+  filesUrl: string | undefined;
   keys: {
     provider: "env" | "file";
     /** Set for the env provider. */
@@ -47,6 +49,19 @@ export interface ServerConfig {
   setupCode: Secret | undefined;
   instanceUrl: string | undefined;
 }
+
+export type FileStorageConfig =
+  | { kind: "local" }
+  | {
+      kind: "s3";
+      bucket: string;
+      endpoint: string | undefined;
+      region: string;
+      accessKeyId: Secret | undefined;
+      secretAccessKey: Secret | undefined;
+      forcePathStyle: boolean;
+      prefix: string;
+    };
 
 export interface ConfiguredSmtp {
   host: string;
@@ -158,6 +173,12 @@ export function loadConfig(env: Env): ServerConfig {
   if (provider === "file" && values.PAGEHALL_MASTER_KEYS) {
     problems.push("PAGEHALL_MASTER_KEYS: is only used by the env key provider");
   }
+  if (values.PAGEHALL_FILE_STORAGE === "s3" && !values.PAGEHALL_S3_BUCKET) {
+    problems.push("PAGEHALL_S3_BUCKET: is required when PAGEHALL_FILE_STORAGE is s3");
+  }
+  if (Boolean(values.PAGEHALL_S3_ACCESS_KEY_ID) !== Boolean(values.PAGEHALL_S3_SECRET_ACCESS_KEY)) {
+    problems.push("PAGEHALL_S3_ACCESS_KEY_ID and PAGEHALL_S3_SECRET_ACCESS_KEY: set both or neither");
+  }
   const setup = configuredSetup(values, problems);
   checkSetupCode(values.PAGEHALL_SETUP_CODE as string | undefined, problems);
   if (problems.length > 0) {
@@ -187,6 +208,20 @@ export function loadConfig(env: Env): ServerConfig {
       url: secret("PAGEHALL_DATABASE_URL") as Secret,
       poolSize: values.PAGEHALL_DATABASE_POOL_SIZE as number,
     },
+    fileStorage:
+      values.PAGEHALL_FILE_STORAGE === "s3"
+        ? {
+            kind: "s3" as const,
+            bucket: values.PAGEHALL_S3_BUCKET as string,
+            endpoint: values.PAGEHALL_S3_ENDPOINT as string | undefined,
+            region: values.PAGEHALL_S3_REGION as string,
+            accessKeyId: secret("PAGEHALL_S3_ACCESS_KEY_ID"),
+            secretAccessKey: secret("PAGEHALL_S3_SECRET_ACCESS_KEY"),
+            forcePathStyle: values.PAGEHALL_S3_FORCE_PATH_STYLE as boolean,
+            prefix: values.PAGEHALL_S3_PREFIX as string,
+          }
+        : { kind: "local" as const },
+    filesUrl: (values.PAGEHALL_FILES_URL as string | undefined)?.replace(/\/$/, ""),
     paths: {
       files: values.PAGEHALL_FILES_DIR as string,
       secrets: secretsDir,

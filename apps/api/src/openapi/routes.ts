@@ -9,6 +9,7 @@ import { CommentsController } from "../collaboration/comments.controller.js";
 import { HomeController } from "../collaboration/home.controller.js";
 import { TasksController } from "../collaboration/tasks.controller.js";
 import { DocsController } from "../docs/docs.controller.js";
+import { AttachmentsController } from "../files/attachments.controller.js";
 import { API_ROUTE, type ApiRouteDefinition } from "../http/api-route.js";
 import { IdentityProvidersController } from "../identity/identity-providers.controller.js";
 import { ProviderAuthController } from "../identity/provider-auth.controller.js";
@@ -19,6 +20,9 @@ import { GroupsController } from "../organizations/groups.controller.js";
 import { InstanceController } from "../organizations/instance.controller.js";
 import { OrganizationsController } from "../organizations/organizations.controller.js";
 import { SetupController } from "../setup/setup.controller.js";
+import { ShareLinksController } from "../sharing/links.controller.js";
+import { PageAccessController } from "../sharing/page-access.controller.js";
+import { AccessRequestsController } from "../sharing/requests.controller.js";
 import { ItemsController } from "../spaces/items.controller.js";
 import { OrganizationSpacesController } from "../spaces/organization-spaces.controller.js";
 import { PersonalSpacesController } from "../spaces/personal-spaces.controller.js";
@@ -56,6 +60,10 @@ export const apiControllers = (): Type[] => [
   TasksController,
   BlogController,
   HomeController,
+  AttachmentsController,
+  PageAccessController,
+  ShareLinksController,
+  AccessRequestsController,
 ];
 
 export interface ApiRouteInfo {

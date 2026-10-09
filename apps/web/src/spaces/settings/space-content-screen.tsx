@@ -9,8 +9,14 @@ import type { SettingEntry } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
 import { SettingsList } from "../../components/settings-list.js";
 import { problemMessage } from "../../errors/problem-message.js";
+import { StorageUsage } from "../../files/storage-usage.js";
 import type { SettingChange } from "../../settings/setting-mutations.js";
-import { COLLABORATION_KEYS, PAGE_MODE_KEYS, TRASH_KEYS } from "../../settings/settings-index.js";
+import {
+  COLLABORATION_KEYS,
+  PAGE_MODE_KEYS,
+  SPACE_FILE_KEYS,
+  TRASH_KEYS,
+} from "../../settings/settings-index.js";
 import { contentKeys } from "../content-queries.js";
 import { spaceDisplayName } from "../space-badge.js";
 import { useSpace } from "../space-context.js";
@@ -65,6 +71,17 @@ export function SpaceContentScreen() {
           <SettingsList
             settings={entries}
             keys={COLLABORATION_KEYS}
+            level="space"
+            organizationName={space.organizationName ?? undefined}
+            canManage={() => space.role === "admin"}
+            onChange={onChange}
+          />
+        </Panel>
+        <Panel title={t("content.filesSection")}>
+          {space.role === "admin" ? <StorageUsage scope={{ spaceId: space.id }} /> : null}
+          <SettingsList
+            settings={entries}
+            keys={SPACE_FILE_KEYS}
             level="space"
             organizationName={space.organizationName ?? undefined}
             canManage={() => space.role === "admin"}

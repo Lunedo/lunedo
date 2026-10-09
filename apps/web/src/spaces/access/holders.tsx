@@ -83,6 +83,9 @@ export function HolderPicker({
   value,
   onValueChange,
   label,
+  groups: includeGroups = true,
+  placeholder,
+  invalid,
 }: {
   organizationId: string | null;
   organizationName: string | null;
@@ -91,6 +94,9 @@ export function HolderPicker({
   value: string | null;
   onValueChange: (holder: (Holder & { name: string }) | null) => void;
   label: string;
+  groups?: boolean;
+  placeholder?: string;
+  invalid?: boolean;
 }) {
   const { t } = useTranslation();
   const everyone: ComboboxItem[] = personal
@@ -115,13 +121,14 @@ export function HolderPicker({
     const people = await request(() =>
       api.GET("/api/v1/people", { params: { query: { limit: 20, ...(query ? { q: query } : {}) } } }),
     );
-    const groups = organizationId
-      ? await request(() =>
-          api.GET("/api/v1/organizations/{organizationId}/groups", {
-            params: { path: { organizationId }, query: { limit: 20, ...(query ? { q: query } : {}) } },
-          }),
-        ).catch(() => ({ items: [] }))
-      : { items: [] };
+    const groups =
+      organizationId && includeGroups
+        ? await request(() =>
+            api.GET("/api/v1/organizations/{organizationId}/groups", {
+              params: { path: { organizationId }, query: { limit: 20, ...(query ? { q: query } : {}) } },
+            }),
+          ).catch(() => ({ items: [] }))
+        : { items: [] };
     const term = query.trim().toLowerCase();
     const items: ComboboxItem[] = [
       ...everyone.filter((item) => item.label.toLowerCase().includes(term)),
@@ -143,7 +150,8 @@ export function HolderPicker({
   return (
     <Combobox
       aria-label={label}
-      placeholder={t("spaces.holders.searchPlaceholder")}
+      placeholder={placeholder ?? t("spaces.holders.searchPlaceholder")}
+      {...(invalid ? { invalid } : {})}
       emptyText={t("spaces.holders.noMatch")}
       value={value}
       load={load}

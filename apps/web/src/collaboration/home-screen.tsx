@@ -1,17 +1,35 @@
 import { EmptyState, PageHeader, Section, Skeleton } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { AtSign, Clock, FileText, Folder, Layers, ListChecks, Newspaper, Star, Sun } from "lucide-react";
+import {
+  AtSign,
+  Clock,
+  FileText,
+  Folder,
+  Layers,
+  ListChecks,
+  Newspaper,
+  Share2,
+  Star,
+  Sun,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LoadError } from "../errors/failure.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
+import { sharedWithMeQuery } from "../sharing/sharing-api.js";
 import { useSession } from "../shell/shell-context.js";
 import { itemHref } from "../spaces/item-paths.js";
 import { postHref } from "./blog/blog-list.js";
 import { type ContentReference, homeQuery } from "./queries.js";
 
-function ReferenceLink({ item, meta }: { item: ContentReference; meta?: string }) {
+function ReferenceLink({
+  item,
+  meta,
+}: {
+  item: Pick<ContentReference, "id" | "kind" | "title" | "spaceKey" | "spaceName">;
+  meta?: string;
+}) {
   const href = itemHref({ id: item.id, kind: item.kind, title: item.title, link: null }, item.spaceKey);
   const Icon = item.kind === "blogPost" ? Newspaper : item.kind === "folder" ? Folder : FileText;
   if (!href) return null;
@@ -28,6 +46,42 @@ function ReferenceLink({ item, meta }: { item: ContentReference; meta?: string }
         {meta ?? item.spaceName}
       </span>
     </Link>
+  );
+}
+
+function SharedWithYou() {
+  const { t } = useTranslation();
+  const format = useFormat();
+  const shared = useQuery({ ...sharedWithMeQuery(), throwOnError: false });
+  return (
+    <Section title={t("home.shared")} icon={Share2}>
+      {shared.isPending ? <Skeleton className="h-12 w-full" /> : null}
+      {shared.isError ? (
+        <LoadError what={t("home.shared")} error={shared.error} onRetry={() => shared.refetch()} />
+      ) : null}
+      {shared.data?.length === 0 ? <Empty text={t("home.noShared")} /> : null}
+      {shared.data && shared.data.length > 0 ? (
+        <ul className="flex flex-col">
+          {shared.data.slice(0, 8).map((entry) => (
+            <li key={entry.itemId}>
+              <ReferenceLink
+                item={{
+                  id: entry.itemId,
+                  kind: entry.kind === "blogPost" ? "blogPost" : "page",
+                  title: entry.title,
+                  spaceKey: entry.spaceKey,
+                  spaceName: entry.spaceName,
+                }}
+                meta={t("home.sharedMeta", {
+                  name: entry.sharedBy?.name ?? t("files.someone"),
+                  when: format.relative(entry.sharedAt),
+                })}
+              />
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </Section>
   );
 }
 
@@ -163,6 +217,7 @@ export function HomeScreen() {
                 </ul>
               )}
             </Section>
+            <SharedWithYou />
             <div className="md:col-span-2">
               <Section title={t("home.posts")} icon={Newspaper}>
                 <div className="flex flex-col gap-2">

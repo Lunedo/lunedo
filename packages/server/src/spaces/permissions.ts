@@ -11,7 +11,7 @@ import {
   type SpaceAccessState,
   type SpaceGrantRow,
 } from "../authorization/space-access.js";
-import type { Database, Transaction } from "../database/database.js";
+import type { Database, Executor, Transaction } from "../database/database.js";
 import type { PrincipalKind } from "../organizations/access-schema.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "./common.js";
 import type { PeopleService } from "./people.js";
@@ -148,6 +148,7 @@ export class SpacePermissionService {
   readonly #spaces: SpaceService;
   readonly #holders: HolderValidation;
   readonly #people: PeopleService;
+  readonly #listeners: ((tx: Transaction, spaceId: string) => Promise<void>)[] = [];
 
   constructor(options: {
     database: Database;
@@ -167,8 +168,8 @@ export class SpacePermissionService {
     return this.#holders;
   }
 
-  async list(spaceId: string): Promise<SpacePermissionEntry[]> {
-    const result = await this.#database.execute<{
+  async list(spaceId: string, executor: Executor = this.#database): Promise<SpacePermissionEntry[]> {
+    const result = await executor.execute<{
       id: string;
       principal_kind: PrincipalKind;
       principal_id: string | null;
@@ -231,8 +232,17 @@ export class SpacePermissionService {
     );
   }
 
-  async apply(actor: Principal, spaceId: string, change: PermissionChange): Promise<SpacePermissionEntry[]> {
-    await this.#database.transaction(async (tx) => {
+  onAccessChange(listener: (tx: Transaction, spaceId: string) => Promise<void>): void {
+    this.#listeners.push(listener);
+  }
+
+  async apply(
+    actor: Principal,
+    spaceId: string,
+    change: PermissionChange,
+    options: { tx?: Transaction } = {},
+  ): Promise<SpacePermissionEntry[]> {
+    await (options.tx ?? this.#database).transaction(async (tx) => {
       const space = await this.#spaces.lock(tx, spaceId);
       const { current, before, after } = await this.#states(space, change, tx);
       if (change.action === "grant") await this.#validateGrant(tx, space, change, actor);
@@ -302,7 +312,8 @@ export class SpacePermissionService {
         }
       }
       await signalSpaceChange(tx, { spaceId, kind: "access", itemId: null });
+      for (const listener of this.#listeners) await listener(tx, spaceId);
     });
-    return this.list(spaceId);
+    return this.list(spaceId, options.tx);
   }
 }

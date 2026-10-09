@@ -10,7 +10,7 @@ export function itemHref(
   spaceKey: string,
 ): string | null {
   if (item.kind === "page") return pagePath(spaceKey, item.id, itemSlug(item.title));
-  if (item.kind === "folder") return folderPath(spaceKey, item.id, itemSlug(item.title));
+  if (item.kind === "folder") return spaceKey ? folderPath(spaceKey, item.id, itemSlug(item.title)) : null;
   if (item.kind === "blogPost") return blogPostPath(spaceKey, item.id, itemSlug(item.title));
   if (item.kind !== "link") return null;
   const link = item.link;
@@ -20,7 +20,8 @@ export function itemHref(
   if (!target || !link.itemId) return null;
   const slug = itemSlug(target.title);
   if (target.kind === "page") return pagePath(target.spaceKey, link.itemId, slug);
-  if (target.kind === "folder") return folderPath(target.spaceKey, link.itemId, slug);
+  if (target.kind === "folder")
+    return target.spaceKey ? folderPath(target.spaceKey, link.itemId, slug) : null;
   if (target.kind === "blogPost") return blogPostPath(target.spaceKey, link.itemId, slug);
   return null;
 }

@@ -6,6 +6,7 @@ export interface EditorActions {
   openFind(): void;
   focusToolbar(): void;
   comment?(): void;
+  pickFiles?(): void;
 }
 
 const registry = new WeakMap<Editor, EditorActions>();

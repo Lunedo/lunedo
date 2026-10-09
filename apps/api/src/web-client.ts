@@ -4,6 +4,17 @@ import type { FastifyInstance } from "fastify";
 
 const SERVER_PREFIXES = ["/api/", "/health/"];
 
+export const PREVIEW_CONTENT_SECURITY_POLICY = [
+  "sandbox allow-scripts",
+  "default-src 'none'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src blob: data:",
+  "font-src 'self' data:",
+  "connect-src 'none'",
+  "frame-ancestors 'self'",
+].join("; ");
+
 /**
  * Serves the built web client. Unknown paths outside the API return the
  * single-page application so that client-side routes can be reloaded.
@@ -16,8 +27,15 @@ export async function registerWebClient(fastify: FastifyInstance, root: string):
     immutable: true,
     maxAge: "1y",
     setHeaders: (response, filePath) => {
-      if (!filePath.includes(`${path.sep}assets${path.sep}`)) {
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        response.header("access-control-allow-origin", "*");
+      } else {
         response.header("cache-control", "no-cache");
+      }
+      if (path.basename(filePath) === "preview.html") {
+        response.header("content-security-policy", PREVIEW_CONTENT_SECURITY_POLICY);
+        response.header("x-content-type-options", "nosniff");
+        response.header("referrer-policy", "no-referrer");
       }
     },
   });

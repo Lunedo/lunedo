@@ -9,7 +9,7 @@ import { lockSpaces } from "./items.js";
 import type { TreeItemKind } from "./schema.js";
 import { signalSpaceChange } from "./signals.js";
 import { placeBack } from "./trash.js";
-import { publishedFor, refreshReaderVisibility } from "./visibility.js";
+import { refreshReaderVisibility, visibleItem } from "./visibility.js";
 
 export interface ArchivedItem {
   id: string;
@@ -49,11 +49,11 @@ export class ArchiveService {
       archived_by_name: string | null;
     }>(sql`
       select t.id, t.kind, t.title, t.archived_at, t.archived_by, a.name as archived_by_name,
-        exists (select 1 from tree_items c where c.parent_id = t.id and c.trash_entry_id is null
-          and ${publishedFor(this.#authorization, viewer, sql`c`, sql`s`)}) as has_children
+        exists (select 1 from tree_items c where c.parent_id = t.id
+          and ${visibleItem(this.#authorization, viewer, sql`c`, sql`s`)}) as has_children
       from tree_items t join spaces s on s.id = t.space_id left join accounts a on a.id = t.archived_by
-      where t.space_id = ${spaceId} and t.archived_root_id = t.id and t.trash_entry_id is null
-        and ${publishedFor(this.#authorization, viewer, sql`t`, sql`s`)}
+      where t.space_id = ${spaceId} and t.archived_root_id = t.id
+        and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
       order by lower(t.title), t.id limit 1000`);
     return result.rows.map((row) => ({
       id: row.id,

@@ -1,4 +1,12 @@
-import { Combobox, DurationSelect, Input, SettingSelect, Switch, TimeZoneCombobox } from "@pagehall/ui";
+import {
+  Checkbox,
+  Combobox,
+  DurationSelect,
+  Input,
+  SettingSelect,
+  Switch,
+  TimeZoneCombobox,
+} from "@pagehall/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -17,6 +25,7 @@ export interface SettingControlProps {
   disabled: boolean;
   disabledReason?: string | undefined;
   inheritedLabel: string;
+  maximum?: unknown;
   onSave: (value: unknown) => Promise<void>;
   onFollowDefault: () => Promise<void>;
 }
@@ -137,14 +146,20 @@ function TextControl({
   value,
   inherited,
   inheritedLabel,
+  maximum,
   disabled,
   onSave,
   onFollowDefault,
 }: SettingControlProps) {
   const { t } = useTranslation();
-  const [draft, setDraft] = useState(inherited ? "" : String(value ?? ""));
+  const unlimitedValue = !inherited && value === "unlimited";
+  const [draft, setDraft] = useState(inherited || unlimitedValue ? "" : String(value ?? ""));
   const [error, setError] = useState<string | null>(null);
   const type = field.type;
+  const ceiling =
+    type.kind === "number" && typeof maximum === "number" ? Math.min(type.max, maximum) : undefined;
+  const offerUnlimited =
+    type.kind === "number" && type.unlimited === true && (maximum === "unlimited" || maximum === null);
 
   const commit = async () => {
     setError(null);
@@ -153,9 +168,19 @@ function TextControl({
       return;
     }
     if (type.kind === "number") {
-      const parsed = z.coerce.number().int().min(type.min).max(type.max).safeParse(draft);
+      const highest = ceiling ?? type.max;
+      const parsed = z.coerce
+        .number()
+        .int()
+        .min(type.min)
+        .max(highest)
+        .safeParse(draft.replace(/[\s.,']/g, ""));
       if (!parsed.success) {
-        setError(t("validation.range", { minimum: type.min, maximum: type.max }));
+        setError(
+          ceiling !== undefined && ceiling < type.max
+            ? t("settings.aboveMaximum", { minimum: type.min, maximum: ceiling })
+            : t("validation.range", { minimum: type.min, maximum: type.max }),
+        );
         return;
       }
       if (inherited || parsed.data !== value) await onSave(parsed.data);
@@ -170,8 +195,8 @@ function TextControl({
         aria-label={label}
         aria-invalid={error !== null}
         value={draft}
-        placeholder={inherited ? inheritedLabel : undefined}
-        disabled={disabled}
+        placeholder={inherited ? inheritedLabel : unlimitedValue ? t("settings.noLimit") : undefined}
+        disabled={disabled || unlimitedValue}
         inputMode={type.kind === "number" ? "numeric" : undefined}
         type={type.kind === "text" && type.inputType === "url" ? "url" : "text"}
         onChange={(event) => setDraft(event.target.value)}
@@ -187,6 +212,18 @@ function TextControl({
         <span role="alert" className="text-danger text-sm">
           {error}
         </span>
+      ) : null}
+      {offerUnlimited ? (
+        <Checkbox
+          label={t("settings.noLimit")}
+          checked={unlimitedValue}
+          {...(disabled ? { disabled } : {})}
+          onCheckedChange={(checked) => {
+            setError(null);
+            if (checked) void onSave("unlimited");
+            else void onFollowDefault();
+          }}
+        />
       ) : null}
     </div>
   );

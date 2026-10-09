@@ -23,14 +23,19 @@ import {
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
-import { request } from "../api/request.js";
+import { ApiError, request } from "../api/request.js";
 import { StarButton, useContentCollaboration } from "../collaboration/content-collaboration.js";
 import { PageReactions } from "../collaboration/reaction-bar.js";
 import { PageReadView, type ReadViewCollaboration } from "../editor/read-view.js";
 import type { SaveState } from "../editor/save-state.js";
 import { LoadError } from "../errors/failure.js";
+import { AttachmentsSection, PageDropZone } from "../files/attachments-section.js";
+import { AttachmentPreviewProvider } from "../files/preview-host.js";
+import { UploadsProvider } from "../files/uploads.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
+import { NoPageAccess } from "../sharing/access-requests.js";
+import { type PageSharing, usePageSharing } from "../sharing/page-sharing.js";
 import { EDIT_PAGE_EVENT } from "../shell/builtin.js";
 import { useArchiveItem, useDeleteItem, useDiscardDraft } from "./content-actions.js";
 import { draftQuery } from "./content-queries.js";
@@ -80,6 +85,7 @@ export function PageScreen() {
     );
   }
   if (item.isError) {
+    if (item.error instanceof ApiError && item.error.status === 404) return <NoPageAccess pageId={itemId} />;
     return (
       <div className="p-6">
         <LoadError what={t("page.loadFailed")} error={item.error} onRetry={() => item.refetch()} />
@@ -95,6 +101,32 @@ export function PageScreen() {
 }
 
 function PageView({ page }: { page: ItemDetails }) {
+  const { space, canEdit } = useSpace();
+  const sharing = usePageSharing(
+    {
+      id: page.id,
+      title: page.title,
+      spaceId: space.id,
+      organizationId: space.organizationId,
+      organizationName: space.organizationName,
+      viewRestriction: page.viewRestriction,
+      editRestricted: page.editRestricted,
+    },
+    true,
+  );
+  const writable = canEdit && sharing.canEditPage !== false && !page.archived && !space.archived;
+  return (
+    <UploadsProvider pageId={page.id}>
+      <AttachmentPreviewProvider canEdit={writable}>
+        <PageDropZone enabled={writable} title={page.title}>
+          <PageArticle page={page} sharing={sharing} />
+        </PageDropZone>
+      </AttachmentPreviewProvider>
+    </UploadsProvider>
+  );
+}
+
+function PageArticle({ page, sharing }: { page: ItemDetails; sharing: PageSharing }) {
   const { t } = useTranslation();
   const { space, canEdit, openMove, openCreate } = useSpace();
   const search = route.useSearch();
@@ -104,7 +136,7 @@ function PageView({ page }: { page: ItemDetails }) {
   const deleteItem = useDeleteItem(space);
   const { archive, unarchive } = useArchiveItem();
   const discard = useDiscardDraft();
-  const writable = canEdit && !page.archived && !space.archived;
+  const writable = canEdit && sharing.canEditPage !== false && !page.archived && !space.archived;
   const editing = writable && search.edit === true;
   const publishMode = page.mode === "publish";
   const draft = useQuery({ ...draftQuery(page.id), enabled: writable && publishMode, throwOnError: false });
@@ -273,6 +305,7 @@ function PageView({ page }: { page: ItemDetails }) {
                   </Button>
                 )
               ) : null}
+              {sharing.shareButton}
               <StarButton target={{ itemId: page.id }} title={title} />
               {collaboration.commentsButton}
               <IconButton label={t("versions.history")} icon={History} onClick={openHistory} />
@@ -280,6 +313,7 @@ function PageView({ page }: { page: ItemDetails }) {
             </>
           }
         />
+        {sharing.restrictionNote}
         {page.archived || space.archived ? (
           <Notice
             variant="warning"
@@ -324,6 +358,7 @@ function PageView({ page }: { page: ItemDetails }) {
         ) : writable && publishMode && !page.published ? null : (
           <PageContent pageId={page.id} publishMode={publishMode} collaboration={collaboration.readView} />
         )}
+        <AttachmentsSection pageId={page.id} canEdit={writable} />
         <PageReactions itemId={page.id} canReact={!page.archived && !space.archived} />
         <Backlinks pageId={page.id} />
         <ModeSwitchDialog
@@ -332,6 +367,7 @@ function PageView({ page }: { page: ItemDetails }) {
           open={confirmingLive}
           onOpenChange={setConfirmingLive}
         />
+        {sharing.dialog}
         <SaveTemplateDialog
           spaceId={space.id}
           page={{ id: page.id, title }}

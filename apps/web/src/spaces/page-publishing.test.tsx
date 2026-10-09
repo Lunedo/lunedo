@@ -20,6 +20,8 @@ const page = (ancestors: ItemDetails["ancestors"]): ItemDetails => ({
   archived: false,
   position: "a0",
   hasChildren: false,
+  viewRestriction: "none",
+  editRestricted: false,
   link: null,
   creatorId: null,
   ownerId: null,
@@ -28,6 +30,7 @@ const page = (ancestors: ItemDetails["ancestors"]): ItemDetails => ({
   contentUpdatedAt: "2026-10-05T08:00:00.000Z",
   spaceKey: "ITOPS",
   spaceName: "IT Operations",
+  spaceAccess: true,
   ancestors,
 });
 

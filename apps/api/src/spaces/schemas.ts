@@ -38,6 +38,11 @@ export const spaceSchema = z
     name: z.string().describe("Name of the space. Empty for a personal space that has no name of its own."),
     description: z.string().describe("Short description, up to 1000 characters."),
     visibility: visibilitySchema,
+    discoverable: z
+      .boolean()
+      .describe(
+        "Whether members of the organization can find the space and ask for access without reading it.",
+      ),
     organizationId: uuid("Organization the space belongs to, or null for a personal space.").nullable(),
     organizationName: z
       .string()
@@ -63,6 +68,7 @@ export const exampleSpace = {
   name: "IT Operations",
   description: "Runbooks and how-tos of the IT team",
   visibility: "organization",
+  discoverable: false,
   organizationId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a6b",
   organizationName: "Example Inc.",
   personal: false,
@@ -241,6 +247,12 @@ export const treeItemSchema = z
     archived: z.boolean().describe("Whether the item is archived. Archived items are read-only."),
     position: z.string().describe("Sort key among the siblings. Items sort by it in binary order."),
     hasChildren: z.boolean().describe("Whether the item has children."),
+    viewRestriction: z
+      .enum(["none", "own", "inherited"])
+      .describe(
+        "Whether only an access list may view the item: set on the item itself, on a page above, or not at all.",
+      ),
+    editRestricted: z.boolean().describe("Whether only an access list may edit the item."),
     link: linkSchema.nullable().describe("Target of a link, or null for pages and folders."),
     creatorId: uuid("Account that created the item, or null.").nullable(),
     ownerId: uuid("Account responsible for the item, or null.").nullable(),
@@ -263,6 +275,8 @@ export const exampleItem = {
   archived: false,
   position: "a1",
   hasChildren: false,
+  viewRestriction: "none",
+  editRestricted: false,
   link: null,
   creatorId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
   ownerId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
@@ -273,8 +287,17 @@ export const exampleItem = {
 
 export const itemDetailsSchema = treeItemSchema
   .extend({
-    spaceKey: z.string().describe("Key of the space."),
-    spaceName: z.string().describe("Name of the space."),
+    spaceKey: z
+      .string()
+      .describe("Key of the space. Empty when the caller sees the item only through a share or link."),
+    spaceName: z
+      .string()
+      .describe("Name of the space. Empty when the caller sees the item only through a share or link."),
+    spaceAccess: z
+      .boolean()
+      .describe(
+        "Whether the caller has access to the space; false when the item is visible only through a share or link.",
+      ),
     ancestors: z
       .array(
         z

@@ -50,7 +50,10 @@ function groupMembership(group: SQL, account: SQL): SQL {
 }
 
 export function spaceRoleCondition(accountId: string, space: SQL, minimum: SpaceRole): SQL {
-  const account = sql`${accountId}::uuid`;
+  return spaceRoleConditionFor(sql`${accountId}::uuid`, space, minimum);
+}
+
+export function spaceRoleConditionFor(account: SQL, space: SQL, minimum: SpaceRole): SQL {
   const roles = spaceRoles.filter((role) => spaceRoleRank(role) >= spaceRoleRank(minimum));
   const internal = sql`exists (select 1 from accounts ia where ia.id = ${account} and ia.type = 'standard')`;
   const member = activeMembership(sql`${space}.organization_id`, account);

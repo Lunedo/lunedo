@@ -185,11 +185,10 @@ export { ConfigError, type Env, loadConfig, type ServerConfig } from "./config/l
 export { Secret } from "./config/secret.js";
 export { secretsEqual } from "./crypto/constant-time.js";
 export { type EncryptedColumn, encrypted, encryptedColumns } from "./crypto/encrypted-column.js";
-export {
-  type EncryptedStream,
-  type EncryptedStreamContext,
-  type EncryptedStreamOwner,
-  encryptedStreamOwners,
+export type {
+  EncryptedStream,
+  EncryptedStreamContext,
+  EncryptedStreamOwner,
 } from "./crypto/encrypted-stream.js";
 export { DecryptionError, Encryption } from "./crypto/envelope.js";
 export {
@@ -229,6 +228,26 @@ export {
 } from "./database/migrate.js";
 export { NotificationListener, notify } from "./database/notifications.js";
 export { createDatabasePool, type DatabasePool, pingDatabase } from "./database/pool.js";
+export {
+  type Attachment,
+  type AttachmentContent,
+  AttachmentError,
+  AttachmentService,
+  type AttachmentVersion,
+  previewOf,
+} from "./files/attachments.js";
+export { FileService, FileTooLargeError, fileStreamOwner } from "./files/files.js";
+export { contentDisposition, FILE_NAME_MAX_LENGTH } from "./files/names.js";
+export { encryptedStreamOwnersOf, fileStoreOf } from "./files/owners.js";
+export * from "./files/settings.js";
+export { type PreviewKind, previewAllowed } from "./files/sniff.js";
+export {
+  type ByteRange,
+  createFileStore,
+  type FileStore,
+  LocalFileStore,
+  S3FileStore,
+} from "./files/store.js";
 export { handleOperationsRequest, type OperationsEndpoints, operationsPaths } from "./health/health-http.js";
 export { readinessChecks } from "./health/readiness.js";
 export {
@@ -376,15 +395,19 @@ export { type AccountServices, createAccountServices } from "./services.js";
 export { builtinSettings, languageSetting, supportedLanguages, timeZoneSetting } from "./settings/builtin.js";
 export {
   defineSetting,
+  type Limit,
+  limitOf,
   type SettingDefinition,
   type SettingLevel,
   SettingsRegistry,
+  UNLIMITED,
 } from "./settings/definition.js";
 export * from "./settings/preferences.js";
 export {
   INSTANCE_SCOPE_ID,
   type Scope,
   type ScopeChain,
+  SettingAboveMaximumError,
   SettingBelowMinimumError,
   type SettingChangeSignal,
   SettingError,
@@ -394,6 +417,47 @@ export {
 } from "./settings/service.js";
 export { applyConfiguredSetup } from "./setup/configured.js";
 export { SetupNotFoundError, type SetupStatus, SetupStepError } from "./setup/setup-service.js";
+export {
+  type AccessExplanation,
+  AccessExplanationService,
+  type AccessReason,
+  type GiveAccessEffect,
+  type GiveAccessLevel,
+  type GiveAccessScope,
+  type PersonAccess,
+  type PersonAccessEntry,
+} from "./sharing/explain.js";
+export {
+  type GiveAccessDraft,
+  GiveAccessDraftService,
+  giveAccessDraftSchema,
+} from "./sharing/give-access-drafts.js";
+export { GuestShareService } from "./sharing/guests.js";
+export {
+  type OpenResult,
+  type ShareLink,
+  ShareLinkError,
+  type ShareLinkInput,
+  type ShareLinkOptions,
+  ShareLinkRateLimitedError,
+  ShareLinkService,
+} from "./sharing/links.js";
+export {
+  type AccessChange,
+  type PageAccess,
+  type PageAccessImpact,
+  PageAccessService,
+  type RestrictedPage,
+  type SharedWithMe,
+} from "./sharing/page-access.js";
+export {
+  ACCESS_REQUEST_MESSAGE_MAX_LENGTH,
+  type AccessRequest,
+  AccessRequestService,
+} from "./sharing/requests.js";
+export { accessRequestStatuses, restrictionKinds, shareLinkScopes, shareRoles } from "./sharing/schema.js";
+export * from "./sharing/settings.js";
+export { ValueSigner } from "./sharing/signer.js";
 export { type ArchivedItem, ArchiveService } from "./spaces/archive.js";
 export { auditScopeOf, SpaceError } from "./spaces/common.js";
 export {

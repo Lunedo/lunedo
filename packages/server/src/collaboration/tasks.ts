@@ -10,7 +10,7 @@ import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, SpaceError } from "../spaces/common.js";
 import type { PeopleService } from "../spaces/people.js";
 import { signalSpaceChange } from "../spaces/signals.js";
-import { visibleItem } from "../spaces/visibility.js";
+import { spaceKeyFor, spaceNameFor, visibleItem } from "../spaces/visibility.js";
 
 export const MAX_TASK_PAGE = 200;
 
@@ -232,7 +232,8 @@ export class TaskService {
       space_name: string;
     }>(sql`
       select k.id, k.text, k.done, k.due_date::text as due_date, ${sortDate}::text as sort_date, k.assignee_id,
-        ${this.#people.visibleName(viewer, sql`a`)} as assignee_name, t.id as item_id, t.kind, t.title, t.space_id, s.key, s.name as space_name
+        ${this.#people.visibleName(viewer, sql`a`)} as assignee_name, t.id as item_id, t.kind, t.title, t.space_id,
+        ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key, ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name
       ${base} ${statusCondition}
         ${filter.after ? sql`and (${sortDate}, k.id) > (${filter.after[0]}::date, ${filter.after[1]}::uuid)` : sql``}
       order by ${sortDate}, k.id
