@@ -12,7 +12,7 @@ Pagehall is in development and not ready for use. There are no releases yet.
 
 Requirements:
 
-- Node.js 24 (see `.nvmrc`)
+- Node.js 24, at least 24.20 (see `.nvmrc`)
 - pnpm, through `corepack enable` or a separate installation
 - Docker with Docker Compose
 

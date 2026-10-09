@@ -6,7 +6,7 @@ Questions and ideas belong in GitHub Discussions. Bugs are reported as issues. S
 
 ## Setup
 
-Requirements: Node.js 24 (see `.nvmrc`), pnpm through `corepack enable`, Docker with Docker Compose.
+Requirements: Node.js 24, at least 24.20 (see `.nvmrc`), pnpm through `corepack enable`, Docker with Docker Compose.
 
 ```sh
 pnpm install
