@@ -215,7 +215,10 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
       const before = await snapshot(itemId);
       client.doc.getXmlFragment("default").push([new Y.XmlElement("script")]);
       await waitFor(() => client.closeReasons.includes("updateRejected"));
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const server = first.server.hocuspocus;
+      await waitFor(
+        () => !server.documents.has(`page:${itemId}`) && !server.unloadingDocuments.has(`page:${itemId}`),
+      );
       expect(await snapshot(itemId)).toBe(before);
       const [event] = await rejections(itemId);
       expect(event).toMatchObject({ reason: "invalidDocument", problems: ["unknownNode"] });
