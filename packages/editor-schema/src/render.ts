@@ -22,6 +22,8 @@ export const defaultLabels: RenderLabels = {
   unknownPerson: "Unknown person",
   unsupportedMacro: "Unsupported macro: {name}",
   taskReport: "Task report",
+  decision: "Decision",
+  unknownTopic: "Topic",
   tableOfContents: "Table of contents",
   file: "File",
   image: "Image",
@@ -90,6 +92,10 @@ abstract class Renderer {
 
   mentionName(id: string): string {
     return this.context.mention?.(id)?.name ?? this.label("unknownPerson");
+  }
+
+  topicTitle(id: string): string {
+    return this.context.topic?.(id)?.title ?? this.label("unknownTopic");
   }
 
   pageLink(link: PageLinkTarget): ResolvedPageLink | null {

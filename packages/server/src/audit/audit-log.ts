@@ -138,6 +138,39 @@ export interface AuditVerification {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const CONTENT_FIELDS = ["name", "title", "fileName", "note", "description"] as const;
+const CONTENT_SETTINGS = new Set(["name", "description"]);
+const CONTENT_TARGETS = new Set<AuditTargetType>(["space", "page"]);
+
+async function concernsConfidentialSpace(
+  tx: Transaction,
+  targetType: AuditTargetType,
+  targetId: string | null,
+  fields: Record<string, unknown>,
+): Promise<boolean> {
+  const ids = [
+    ...(CONTENT_TARGETS.has(targetType) ? [targetId] : []),
+    fields.spaceId,
+    fields.itemId,
+    fields.pageId,
+  ].filter((id): id is string => typeof id === "string" && UUID.test(id));
+  if (ids.length === 0) return false;
+  const result = await tx.execute<{ confidential: boolean }>(sql`
+    select exists (select 1 from spaces s where s.confidential and (s.id = any(${sql.param(ids)}::uuid[])
+      or s.id in (select space_id from tree_items where id = any(${sql.param(ids)}::uuid[])))) as confidential`);
+  return result.rows[0]?.confidential === true;
+}
+
+function withoutContent(fields: Record<string, unknown>): Record<string, unknown> {
+  const redacted = { ...fields };
+  for (const field of CONTENT_FIELDS) if (typeof redacted[field] === "string") redacted[field] = "";
+  if (typeof redacted.setting === "string" && CONTENT_SETTINGS.has(redacted.setting)) {
+    redacted.value = "";
+    redacted.previousValue = "";
+  }
+  return redacted;
+}
+
 function subjectOf(id: string | null): string | null {
   return id && UUID.test(id) ? id.toLowerCase() : null;
 }
@@ -159,7 +192,9 @@ export class AuditLog {
 
   async record<TName extends AuditEventName>(tx: Transaction, input: AuditEventInput<TName>): Promise<void> {
     const definition = auditCatalog[input.name];
-    const fields: unknown = definition.fields.strict().parse(input.fields);
+    const parsed = definition.fields.strict().parse(input.fields) as Record<string, unknown>;
+    const confidential = await concernsConfidentialSpace(tx, definition.target, input.targetId, parsed);
+    const fields: unknown = confidential ? withoutContent(parsed) : parsed;
     const context = currentRequestContext();
     const actor = input.actor ?? context?.actor ?? SYSTEM;
     if (!(definition.actor as readonly string[]).includes(actor.type)) {
@@ -173,6 +208,9 @@ export class AuditLog {
       fields,
       scope,
     });
+    if (confidential && resolved.labels && CONTENT_TARGETS.has(definition.target)) {
+      delete resolved.labels.target;
+    }
     const chain = and(eq(auditChains.scopeType, scope.type), eq(auditChains.scopeId, scope.id));
 
     await tx.insert(auditChains).values({ scopeType: scope.type, scopeId: scope.id }).onConflictDoNothing();

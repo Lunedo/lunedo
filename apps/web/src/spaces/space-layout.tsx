@@ -8,11 +8,13 @@ import {
   LayoutTemplate,
   Link2,
   ListTree,
+  Lock,
   MoreVertical,
   Newspaper,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
+  Repeat,
   Settings,
   Shield,
   Trash2,
@@ -22,6 +24,8 @@ import { useTranslation } from "react-i18next";
 import { isApiError } from "../api/request.js";
 import { StarButton } from "../collaboration/content-collaboration.js";
 import { LoadError } from "../errors/failure.js";
+import { CreateSeriesDialog } from "../meetings/create-series-dialog.js";
+import { seriesPath, spaceSeriesQuery } from "../meetings/queries.js";
 import { NoPageAccess } from "../sharing/access-requests.js";
 import { useShell } from "../shell/shell.js";
 import { ArchiveSection } from "./archive/archive-section.js";
@@ -139,6 +143,7 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
   const [creating, setCreating] = useState<{ kind: "folder" | "link"; parentId: string | null } | null>(null);
   const [treeOpen, setTreeOpen] = useState(false);
   const [galleryParent, setGalleryParent] = useState<string | null | undefined>(undefined);
+  const [seriesTemplate, setSeriesTemplate] = useState<string | null>(null);
   const context = useMemo<SpaceContextValue>(
     () => ({
       space,
@@ -205,7 +210,16 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
         space={space}
         parentId={galleryParent}
         onOpenChange={(open) => !open && setGalleryParent(undefined)}
+        onSeriesTemplate={setSeriesTemplate}
       />
+      {seriesTemplate ? (
+        <CreateSeriesDialog
+          space={space}
+          open
+          initialTemplateId={seriesTemplate}
+          onOpenChange={(open) => !open && setSeriesTemplate(null)}
+        />
+      ) : null}
     </SpaceContext>
   );
 }
@@ -234,6 +248,9 @@ function SpaceNavigation({
   const settingsActive = location.pathname.startsWith(`/spaces/${space.key}/settings`);
   const trashActive = location.pathname === `/spaces/${space.key}/trash`;
   const blogActive = location.pathname.startsWith(`/spaces/${space.key}/blog`);
+  const meetingsActive = location.pathname === `/spaces/${space.key}/meetings`;
+  const series = useQuery({ ...spaceSeriesQuery(space.id), throwOnError: false });
+  const runningSeries = (series.data ?? []).filter((entry) => !entry.archived);
   return (
     <div
       className="flex flex-col gap-1 px-2 py-4"
@@ -291,6 +308,14 @@ function SpaceNavigation({
           onClick={shell.toggleSidebar}
         />
       </div>
+      {space.confidential ? (
+        <p className="mx-2 mb-2 flex items-start gap-2 rounded-sm bg-accent-soft px-2 py-1 text-xs">
+          <Lock aria-hidden="true" className="size-icon-sm shrink-0" />
+          <span>
+            <span className="font-semibold">{t("confidential.badge")}</span> · {t("confidential.headerNote")}
+          </span>
+        </p>
+      ) : null}
       <ul className="flex flex-col gap-px">
         {overviewHref ? (
           <li>
@@ -313,6 +338,37 @@ function SpaceNavigation({
             <Newspaper aria-hidden="true" className="size-icon text-text-muted" />
             {t("blog.title")}
           </Link>
+        </li>
+        <li>
+          <Link
+            to="/spaces/$spaceKey/meetings"
+            params={{ spaceKey: space.key }}
+            aria-current={meetingsActive ? "page" : undefined}
+            className={`flex h-row items-center gap-2 rounded-sm px-2 focus-visible:focus-ring ${meetingsActive ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
+          >
+            <Repeat aria-hidden="true" className="size-icon text-text-muted" />
+            {t("meetings.title")}
+          </Link>
+          {runningSeries.length > 0 ? (
+            <ul aria-label={t("meetings.sidebar.series")} className="flex flex-col gap-px pl-6">
+              {runningSeries.map((entry) => {
+                const href = seriesPath(space.key, entry.id);
+                const active = location.pathname === href;
+                return (
+                  <li key={entry.id}>
+                    <Link
+                      to={href}
+                      aria-current={active ? "page" : undefined}
+                      title={entry.title}
+                      className={`flex h-row items-center rounded-sm px-2 text-sm focus-visible:focus-ring ${active ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
+                    >
+                      <span className="truncate">{entry.title}</span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
         </li>
         {canEdit ? (
           <li>

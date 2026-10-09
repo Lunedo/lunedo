@@ -35,7 +35,7 @@ export function PageHeader({
       <div className="flex min-w-0 flex-1 basis-field flex-col gap-2">
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav aria-label={labels.breadcrumbs}>
-            <ol className="flex flex-wrap items-center gap-1 text-sm text-text-muted">
+            <ol className="flex flex-wrap items-center gap-x-1 gap-y-2 text-sm text-text-muted">
               {breadcrumbs.map((crumb, index) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: a breadcrumb is identified by its position in the path
                 <li key={index} className="inline-flex items-center gap-1">

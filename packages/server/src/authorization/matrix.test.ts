@@ -119,11 +119,13 @@ type Rule =
   | "selfService"
   | "membersCreateGroups"
   | "membersCreateSpaces"
+  | "membersCreateConfidentialSpaces"
   | "personalSpace"
   | "activeAccount"
   | "homeOrganizationAdministrator"
   | "manager"
   | "memberOrManager"
+  | "formerAdministrator"
   | "self";
 
 interface Expectation {
@@ -188,6 +190,11 @@ const EXPECTED: Record<string, Expectation> = {
   "organization.spaces.view": organization("spaces", "view"),
   "organization.spaces.manage": organization("spaces", "manage"),
   "organization.spaces.create": organization("spaces", "manage", "membersCreateSpaces"),
+  "organization.spaces.createConfidential": organization(
+    "spaces",
+    "manage",
+    "membersCreateConfidentialSpaces",
+  ),
   "organization.trash.manage": organization("spaces", "manage"),
   "organization.templates.manage": organization("settings", "manage"),
   "organization.blog.pin": organization("spaces", "manage"),
@@ -215,6 +222,7 @@ const EXPECTED: Record<string, Expectation> = {
   "space.manage": { scope: "space" },
   "space.trash": { scope: "space" },
   "space.delete": { scope: "space" },
+  "deletedSpace.restore": { scope: "instance", rule: "formerAdministrator" },
   "item.view": { scope: "space" },
   "item.edit": { scope: "space" },
   "item.delete": { scope: "space" },
@@ -249,12 +257,14 @@ function expectedAllowed(held: Held, actionName: string): boolean {
     selfService: () => false,
     membersCreateGroups: () => false,
     membersCreateSpaces: () => facts.membership === "member",
+    membersCreateConfidentialSpaces: () => facts.membership === "member",
     personalSpace: () => facts.type === "standard",
     activeAccount: () => true,
     homeOrganizationAdministrator: () => grantsLevel(organizationAreas.membersAndGroups, "manage"),
     self: () => false,
     manager: () => false,
     memberOrManager: () => facts.membership !== null && held.via === "group",
+    formerAdministrator: () => false,
   };
   if (expectation.rule && rules[expectation.rule]()) return true;
   if (expectation.scope === "space") return false;
@@ -280,6 +290,7 @@ interface Fixture {
   commentId: string;
   taskId: string;
   attachmentId: string;
+  deletedSpaceEntryId: string;
 }
 
 describe.skipIf(!baseUrl)("permission matrix", () => {
@@ -336,6 +347,22 @@ describe.skipIf(!baseUrl)("permission matrix", () => {
       test.services.spacePermissions.holders,
     );
     const itemId = space.overviewItemId ?? "";
+    const deletedSpace = await test.services.spaces.create(
+      { type: "account", id: owner },
+      created.id,
+      {
+        name: "Deleted matrix space",
+        key: `D${randomUUID().slice(0, 8).replace(/-/g, "").toUpperCase()}`,
+        visibility: "private",
+        grants: [],
+      },
+      test.services.spacePermissions.holders,
+    );
+    const deleted = await test.services.trash.deleteSpace(
+      { type: "account", id: owner },
+      deletedSpace.id,
+      deletedSpace.name,
+    );
     const comment = await test.pool.query<{ id: string }>(
       "insert into comments (id, item_id, author_id, body) values ($1, $2, $3, $4) returning id",
       [randomUUID(), itemId, owner, { type: "doc", content: [{ type: "paragraph" }] }],
@@ -365,6 +392,7 @@ describe.skipIf(!baseUrl)("permission matrix", () => {
       commentId: comment.rows[0]?.id ?? "",
       taskId: task.rows[0]?.id ?? "",
       attachmentId: attachment.rows[0]?.id ?? "",
+      deletedSpaceEntryId: deleted.id,
     };
   }
 
@@ -416,6 +444,8 @@ describe.skipIf(!baseUrl)("permission matrix", () => {
         return { type: "task", id: target.taskId };
       case "attachment":
         return { type: "attachment", id: target.attachmentId };
+      case "deletedSpace":
+        return { type: "deletedSpace", id: target.deletedSpaceEntryId };
       default:
         throw new Error(`The matrix has no resource for ${action.resourceType.type}`);
     }

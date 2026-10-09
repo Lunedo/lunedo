@@ -43,6 +43,12 @@ export const spaceSchema = z
       .describe(
         "Whether members of the organization can find the space and ask for access without reading it.",
       ),
+    confidential: z
+      .boolean()
+      .describe(
+        "Whether the space is confidential: only its members can read it, and administrators cannot give themselves or others access. Chosen at creation.",
+      ),
+    oneOnOne: z.boolean().describe("Whether the space holds a one-on-one."),
     organizationId: uuid("Organization the space belongs to, or null for a personal space.").nullable(),
     organizationName: z
       .string()
@@ -69,6 +75,8 @@ export const exampleSpace = {
   description: "Runbooks and how-tos of the IT team",
   visibility: "organization",
   discoverable: false,
+  confidential: false,
+  oneOnOne: false,
   organizationId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a6b",
   organizationName: "Example Inc.",
   personal: false,
@@ -99,6 +107,12 @@ export const createSpaceSchema = z
       .optional()
       .describe("Short description, up to 1000 characters."),
     visibility: visibilitySchema,
+    confidential: z
+      .boolean()
+      .default(false)
+      .describe(
+        "Create a confidential space. It must be private, and only individual people can hold roles. This cannot be changed later.",
+      ),
     grants: z
       .array(spaceGrantSchema)
       .max(100)
@@ -144,6 +158,16 @@ export const exampleImpact = {
     { accountId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger", before: null, after: "reader" },
   ],
 };
+
+export const moveImpactSchema = impactSchema
+  .extend({
+    leavesConfidential: z
+      .boolean()
+      .describe("True when the content leaves a confidential space and loses its protection."),
+  })
+  .describe("Who gains, loses or changes access through the move.");
+
+export const exampleMoveImpact = { ...exampleImpact, leavesConfidential: false };
 
 export const permissionSchema = z
   .object({
@@ -435,6 +459,19 @@ export const pageContentSchema = z
               .describe("A linked page."),
           )
           .describe("Linked pages by ID."),
+        topics: z
+          .record(
+            z.string(),
+            z
+              .object({
+                title: z.string().describe("Title of the running topic."),
+                status: extensibleEnum(["open", "closed"], "Whether the topic is still open."),
+              })
+              .describe("A running topic."),
+          )
+          .describe(
+            "Running topics that topic updates and decisions in the document refer to, by ID, as far as the caller may see them.",
+          ),
       })
       .describe("What mentions and page links in the document point to, as far as the caller may see it."),
   })
@@ -445,11 +482,11 @@ export const examplePageContent = {
   title: exampleItem.title,
   version: 7,
   document: exampleDocument,
-  schemaVersion: 2,
+  schemaVersion: 4,
   revision: 4,
   updatedAt: "2026-10-05T08:10:00.000Z",
   updatedBy: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
-  references: { people: {}, pages: {} },
+  references: { people: {}, pages: {}, topics: {} },
 };
 
 export const labelsSchema = z

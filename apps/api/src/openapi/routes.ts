@@ -14,6 +14,8 @@ import { API_ROUTE, type ApiRouteDefinition } from "../http/api-route.js";
 import { IdentityProvidersController } from "../identity/identity-providers.controller.js";
 import { ProviderAuthController } from "../identity/provider-auth.controller.js";
 import { ProviderGroupsController } from "../identity/provider-groups.controller.js";
+import { MeetingsController } from "../meetings/meetings.controller.js";
+import { OneOnOnesController } from "../meetings/one-on-ones.controller.js";
 import { NotificationsController } from "../notifications/notifications.controller.js";
 import { AccountsController } from "../organizations/accounts.controller.js";
 import { GroupsController } from "../organizations/groups.controller.js";
@@ -23,6 +25,7 @@ import { SetupController } from "../setup/setup.controller.js";
 import { ShareLinksController } from "../sharing/links.controller.js";
 import { PageAccessController } from "../sharing/page-access.controller.js";
 import { AccessRequestsController } from "../sharing/requests.controller.js";
+import { ConfidentialSpacesController } from "../spaces/confidential-spaces.controller.js";
 import { ItemsController } from "../spaces/items.controller.js";
 import { OrganizationSpacesController } from "../spaces/organization-spaces.controller.js";
 import { PersonalSpacesController } from "../spaces/personal-spaces.controller.js";
@@ -51,11 +54,14 @@ export const apiControllers = (): Type[] => [
   DocsController,
   SpacesController,
   OrganizationSpacesController,
+  ConfidentialSpacesController,
   ItemsController,
   PersonalSpacesController,
   VersionsController,
   TrashController,
   TemplatesController,
+  MeetingsController,
+  OneOnOnesController,
   CommentsController,
   TasksController,
   BlogController,

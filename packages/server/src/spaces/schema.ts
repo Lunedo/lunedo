@@ -34,7 +34,7 @@ export const spaceRoles = ["reader", "commenter", "editor", "admin"] as const;
 export type SpaceRole = (typeof spaceRoles)[number];
 export const spaceRole = pgEnum("space_role", spaceRoles);
 
-export const treeItemKinds = ["page", "folder", "link", "blogPost"] as const;
+export const treeItemKinds = ["page", "folder", "link", "blogPost", "meetingSeries", "meetingTopic"] as const;
 export type TreeItemKind = (typeof treeItemKinds)[number];
 export const treeItemKind = pgEnum("tree_item_kind", treeItemKinds);
 
@@ -70,6 +70,8 @@ export const spaces = pgTable(
     description: text().notNull().default(""),
     visibility: spaceVisibility().notNull().default("private"),
     discoverable: boolean().notNull().default(false),
+    confidential: boolean().notNull().default(false),
+    oneOnOne: boolean().notNull().default(false),
     overviewItemId: uuid().references((): AnyPgColumn => treeItems.id, { onDelete: "set null" }),
     createdBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     archivedAt: timestampColumn(),
@@ -91,6 +93,11 @@ export const spaces = pgTable(
       sql`(${table.personalOf} is null) <> (${table.organizationId} is null)`,
     ),
     check("spaces_personal_private", sql`${table.personalOf} is null or ${table.visibility} = 'private'`),
+    check(
+      "spaces_confidential_private",
+      sql`not ${table.confidential} or (${table.visibility} = 'private' and not ${table.discoverable} and ${table.personalOf} is null)`,
+    ),
+    check("spaces_one_on_one_confidential", sql`not ${table.oneOnOne} or ${table.confidential}`),
   ],
 );
 
@@ -273,6 +280,19 @@ export const trashEntries = pgTable(
     check("trash_entries_stage", sql`${table.stage} in (1, 2)`),
     check("trash_entries_root", sql`(${table.kind} = 'items') = (${table.rootItemId} is not null)`),
   ],
+);
+
+export const deletedSpaceAdministrators = pgTable(
+  "deleted_space_administrators",
+  {
+    trashEntryId: uuid()
+      .notNull()
+      .references(() => trashEntries.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+  },
+  (table) => [primaryKey({ columns: [table.trashEntryId, table.accountId] }), index().on(table.accountId)],
 );
 
 export const collaborationPresence = pgTable(

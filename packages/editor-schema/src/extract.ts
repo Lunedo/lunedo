@@ -87,15 +87,80 @@ export function extractInlineCommentThreads(doc: DocumentJson): Map<string, stri
   return threads;
 }
 
-export function normalizeTaskIds(
+export interface ExtractedTopicUpdate {
+  topicId: string;
+  content: NodeJson[];
+  text: string;
+  position: number;
+}
+
+export function extractTopicUpdates(doc: DocumentJson): ExtractedTopicUpdate[] {
+  const updates = new Map<string, ExtractedTopicUpdate>();
+  visit(doc, (node) => {
+    if (node.type !== "topicUpdate") return;
+    const topicId = stringOrNull(node.attrs?.topicId);
+    if (!topicId) return;
+    const content = node.content ?? [];
+    const existing = updates.get(topicId);
+    if (existing) {
+      existing.content = [...existing.content, ...content];
+      existing.text = `${existing.text} ${content.map(blockText).join(" ")}`.trim().slice(0, 2000);
+      return;
+    }
+    updates.set(topicId, {
+      topicId,
+      content,
+      text: content.map(blockText).join(" ").replace(/\s+/g, " ").trim().slice(0, 2000),
+      position: updates.size,
+    });
+  });
+  return [...updates.values()];
+}
+
+export interface ExtractedDecision {
+  id: string;
+  topicId: string | null;
+  statement: NodeJson[];
+  text: string;
+  position: number;
+}
+
+export function extractDecisions(doc: DocumentJson): ExtractedDecision[] {
+  const decisions: ExtractedDecision[] = [];
+  const seen = new Set<string>();
+  visit(doc, (node) => {
+    if (node.type !== "decision") return;
+    const id = stringOrNull(node.attrs?.id);
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    const statement = node.content ?? [];
+    decisions.push({
+      id,
+      topicId: stringOrNull(node.attrs?.topicId),
+      statement,
+      text: statement.map(blockText).join(" ").replace(/\s+/g, " ").trim().slice(0, 2000),
+      position: decisions.length,
+    });
+  });
+  return decisions;
+}
+
+function blockText(node: NodeJson): string {
+  if (node.type === "text") return node.text ?? "";
+  if (node.type === "hardBreak") return " ";
+  return (node.content ?? []).map(blockText).join(" ");
+}
+
+function normalizeIds(
   doc: DocumentJson,
+  type: string,
   options: { newId: () => string; taken?: (id: string) => boolean },
 ): DocumentJson | null {
   const used = new Set<string>();
   let changed = false;
   const rewrite = (node: NodeJson): NodeJson => {
     let result = node;
-    if (node.type === "taskItem") {
+    if (node.type === type) {
       const id = stringOrNull(node.attrs?.id);
       if (!id || used.has(id) || options.taken?.(id)) {
         const next = options.newId();
@@ -110,4 +175,18 @@ export function normalizeTaskIds(
   };
   const document = rewrite(doc) as DocumentJson;
   return changed ? document : null;
+}
+
+export function normalizeTaskIds(
+  doc: DocumentJson,
+  options: { newId: () => string; taken?: (id: string) => boolean },
+): DocumentJson | null {
+  return normalizeIds(doc, "taskItem", options);
+}
+
+export function normalizeDecisionIds(
+  doc: DocumentJson,
+  options: { newId: () => string; taken?: (id: string) => boolean },
+): DocumentJson | null {
+  return normalizeIds(doc, "decision", options);
 }

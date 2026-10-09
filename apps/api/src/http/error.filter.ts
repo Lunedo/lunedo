@@ -54,7 +54,15 @@ export function problemForStatus(status: number): ProblemCode {
   return STATUS_CODES[status] ?? (status >= 500 ? "internalError" : "invalidInput");
 }
 
-const NOT_FOUND_CODES = new Set(["spaceNotFound", "itemNotFound", "commentNotFound", "taskNotFound"]);
+const NOT_FOUND_CODES = new Set([
+  "spaceNotFound",
+  "itemNotFound",
+  "commentNotFound",
+  "taskNotFound",
+  "seriesNotFound",
+  "meetingNotFound",
+  "topicNotFound",
+]);
 
 function codeOf(code: string, fallback: ProblemCode): ProblemCode {
   return isProblemCode(code) ? code : fallback;

@@ -393,6 +393,14 @@ export class PageAccessService {
       }
       return row.name;
     }
+    const confidential = await tx.execute<{ confidential: boolean }>(sql`
+      select s.confidential from tree_items t join spaces s on s.id = t.space_id where t.id = ${item.id}`);
+    if (confidential.rows[0]?.confidential) {
+      throw new SpaceError(
+        "invalidHolder",
+        "In a confidential space, pages are shared with individual people only",
+      );
+    }
     const group = await tx.execute<{ name: string; organization_id: string }>(
       sql`select name, organization_id from groups where id = ${id}`,
     );

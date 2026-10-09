@@ -18,6 +18,8 @@ const expectedOrder = [
   "incident-postmortem",
   "onboarding-checklist",
   "team-home",
+  "team-meeting",
+  "one-on-one",
 ];
 
 const supportFiles = new Set(["index.ts", "nodes.ts", "types.ts", "builtin.test.ts"]);

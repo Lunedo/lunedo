@@ -396,6 +396,8 @@ export function schemaExtensions(): AnyExtension[] {
     containerNode("expand"),
     containerNode("columns"),
     containerNode("column", { width: dataAttribute("width", "number") }),
+    containerNode("topicUpdate"),
+    containerNode("decision", { id: dataAttribute("decisionId") }),
     Bold.extend(markFields("bold")),
     Italic.extend(markFields("italic")),
     Underline.extend(markFields("underline")),

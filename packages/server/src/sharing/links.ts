@@ -66,6 +66,7 @@ export interface ShareLinkOptions {
   enabled: boolean;
   anyone: boolean;
   anyoneMaxDays: number;
+  peopleOnly: boolean;
 }
 
 export type OpenResult =
@@ -138,14 +139,20 @@ export class ShareLinkService {
   }
 
   async options(itemId: string): Promise<ShareLinkOptions> {
-    const result = await this.#database.execute<{ organization_id: string | null }>(sql`
-      select s.organization_id from tree_items t join spaces s on s.id = t.space_id where t.id = ${itemId}`);
+    const result = await this.#database.execute<{
+      organization_id: string | null;
+      confidential: boolean;
+    }>(sql`
+      select s.organization_id, s.confidential from tree_items t join spaces s on s.id = t.space_id
+      where t.id = ${itemId}`);
     const organizationId = result.rows[0]?.organization_id ?? null;
+    const peopleOnly = result.rows[0]?.confidential === true;
     const chain = organizationId ? { organization: organizationId } : {};
     return {
       enabled: await this.#settings.get(shareLinksSetting, chain),
-      anyone: await this.#settings.get(anyoneLinksSetting, chain),
+      anyone: !peopleOnly && (await this.#settings.get(anyoneLinksSetting, chain)),
       anyoneMaxDays: await this.#settings.get(anyoneLinkMaxDaysSetting, chain),
+      peopleOnly,
     };
   }
 
@@ -218,8 +225,9 @@ export class ShareLinkService {
       organization_id: string | null;
       title: string;
       view_restricted: boolean;
+      confidential: boolean;
     }>(sql`
-      select t.space_id, s.organization_id, t.title,
+      select t.space_id, s.organization_id, t.title, s.confidential,
         exists (select 1 from page_restrictions r where r.item_id = any(t.path) and r.kind = 'view') as view_restricted
       from tree_items t join spaces s on s.id = t.space_id where t.id = ${itemId}`);
     const row = result.rows[0];
@@ -237,6 +245,15 @@ export class ShareLinkService {
     const item = await this.#item(tx, itemId);
     if (!options.enabled) {
       throw new ShareLinkError("shareLinksDisabled", "Share links are turned off for this organization");
+    }
+    if (item.confidential && input.scope !== "people") {
+      throw new ShareLinkError(
+        "confidentialScope",
+        "In a confidential space, links can only be shared with specific people",
+      );
+    }
+    if (item.confidential && (input.people ?? []).some((person) => person.kind !== "account")) {
+      throw new SpaceError("invalidHolder", "In a confidential space, links name individual people only");
     }
     const expiresAt = input.expiresAt ?? null;
     if (expiresAt && expiresAt.getTime() <= Date.now()) {

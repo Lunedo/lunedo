@@ -411,6 +411,12 @@ export const personAccessSchema = z
           .describe("An access of the person."),
       )
       .describe("All access of the person in the organization."),
+    confidentialSpaceCount: z
+      .number()
+      .int()
+      .describe(
+        "Number of confidential spaces the person belongs to and the caller does not. They are not listed in `entries`, and their names and keys stay hidden.",
+      ),
   })
   .describe("What a person can do.");
 

@@ -7,6 +7,7 @@ import type { ContentActivity } from "../collaboration/content.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "./common.js";
+import { formerAdministratorCondition } from "./former-administrators.js";
 import { positionBetween } from "./fractional-index.js";
 import { lockSpaces } from "./items.js";
 import type { PeopleService } from "./people.js";
@@ -43,6 +44,7 @@ type EntryRow = {
   space_name: string;
   organization_id: string | null;
   personal: boolean;
+  confidential: boolean;
   kind: TrashEntryKind;
   root_item_id: string | null;
   item_kind: TreeItemKind | null;
@@ -56,7 +58,7 @@ type EntryRow = {
 };
 
 const ENTRY_COLUMNS = sql`e.id, e.space_id, s.key as space_key, s.name as space_name, s.organization_id,
-  s.personal_of is not null as personal, e.kind, e.root_item_id, e.item_kind, e.title, e.descendants, e.stage,
+  s.personal_of is not null as personal, s.confidential, e.kind, e.root_item_id, e.item_kind, e.title, e.descendants, e.stage,
   e.purging, e.deleted_at, e.deleted_by, e.stage_two_at`;
 
 export interface PurgeOptions {
@@ -160,20 +162,33 @@ export class TrashService {
     return result.rows[0]?.accessible === true;
   }
 
-  async spaceOf(
-    entryId: string,
-  ): Promise<{ spaceId: string; organizationId: string | null; personal: boolean } | null> {
+  async spaceOf(entryId: string): Promise<{
+    spaceId: string;
+    organizationId: string | null;
+    personal: boolean;
+    confidential: boolean;
+  } | null> {
     const row = await this.#entry(this.#database, entryId);
     return row
-      ? { spaceId: row.space_id, organizationId: row.organization_id, personal: row.personal }
+      ? {
+          spaceId: row.space_id,
+          organizationId: row.organization_id,
+          personal: row.personal,
+          confidential: row.confidential,
+        }
       : null;
   }
 
-  async listSpace(viewer: Principal, spaceId: string): Promise<TrashEntry[]> {
+  async listSpace(
+    viewer: Principal,
+    spaceId: string,
+    options: { secondStage?: boolean } = {},
+  ): Promise<TrashEntry[]> {
     const result = await this.#database.execute<EntryRow>(sql`
       select ${ENTRY_COLUMNS} from trash_entries e join spaces s on s.id = e.space_id
       left join tree_items rt on rt.id = e.root_item_id
-      where e.space_id = ${spaceId} and e.kind = 'items' and e.stage = 1 and not e.purging
+      where e.space_id = ${spaceId} and e.kind = 'items' and not e.purging
+        and ${options.secondStage ? sql`e.stage = 2 and s.confidential` : sql`e.stage = 1`}
         and (rt.id is null or ${this.#authorization.itemFilter(viewer, sql`rt`, sql`s`, "editor")})
       order by e.deleted_at desc, e.id limit 1000`);
     return this.#toEntries(result.rows);
@@ -182,7 +197,7 @@ export class TrashService {
   async listOrganization(organizationId: string): Promise<TrashEntry[]> {
     const result = await this.#database.execute<EntryRow>(sql`
       select ${ENTRY_COLUMNS} from trash_entries e join spaces s on s.id = e.space_id
-      where s.organization_id = ${organizationId} and not e.purging
+      where s.organization_id = ${organizationId} and not e.purging and not s.confidential
         and (e.kind = 'space' or s.deleted_at is null)
       order by e.stage desc, e.deleted_at desc, e.id limit 1000`);
     return this.#toEntries(result.rows);
@@ -195,6 +210,22 @@ export class TrashService {
         and not e.purging
       order by e.deleted_at desc, e.id limit 1000`);
     return this.#toEntries(result.rows);
+  }
+
+  async listDeletedSpaces(viewer: Principal): Promise<TrashEntry[]> {
+    if (viewer.type !== "account") return [];
+    const result = await this.#database.execute<EntryRow>(sql`
+      select ${ENTRY_COLUMNS} from trash_entries e join spaces s on s.id = e.space_id
+      where e.kind = 'space' and ${formerAdministratorCondition(sql`e.id`, sql`${viewer.id}::uuid`)}
+      order by e.deleted_at desc, e.id limit 1000`);
+    return this.#toEntries(result.rows);
+  }
+
+  async countDeletedConfidential(organizationId: string): Promise<number> {
+    const result = await this.#database.execute<{ count: string }>(sql`
+      select count(*) as count from trash_entries e join spaces s on s.id = e.space_id
+      where s.organization_id = ${organizationId} and s.confidential and e.kind = 'space' and not e.purging`);
+    return Number(result.rows[0]?.count ?? 0);
   }
 
   async deleteItem(actor: Principal, itemId: string): Promise<TrashEntry> {
@@ -295,6 +326,7 @@ export class TrashService {
           scope,
         });
         await signalSpaceChange(tx, { spaceId: entry.space_id, kind: "space", itemId: null });
+        await signalSpaceChange(tx, { spaceId: entry.space_id, kind: "access", itemId: null });
         return { itemId: null, parentId: null };
       }
       const rootId = entry.root_item_id;
@@ -408,6 +440,19 @@ export class TrashService {
       await tx.execute(sql`
         insert into trash_entries (id, space_id, kind, title, stage, deleted_by, stage_two_at)
         values (${id}, ${spaceId}, 'space', ${expected}, 2, ${actorIdOf(actor)}, now())`);
+      await tx.execute(sql`
+        insert into deleted_space_administrators (trash_entry_id, account_id)
+        select ${id}, a.id from accounts a join spaces s on s.id = ${spaceId}
+        where (s.personal_of = a.id and a.id = ${actorIdOf(actor)}) or (s.personal_of is null and exists (
+          select 1 from space_permissions g where g.space_id = s.id and g.role = 'admin' and (
+            (g.principal_kind = 'account' and g.principal_id = a.id)
+            or (g.principal_kind = 'group' and exists (select 1 from group_members gm
+              where gm.group_id = g.principal_id and gm.account_id = a.id
+                and (gm.expires_at is null or gm.expires_at > now())))
+            or (g.principal_kind = 'organizationMembers' and exists (select 1 from memberships m
+              where m.organization_id = s.organization_id and m.account_id = a.id and m.kind = 'member'
+                and (m.expires_at is null or m.expires_at > now())))
+            or (g.principal_kind = 'instanceUsers' and a.type = 'standard'))))`);
       await tx.execute(sql`update spaces set deleted_at = now(), updated_at = now() where id = ${spaceId}`);
       await this.#audit.record(tx, {
         name: "space.deleted",
@@ -554,7 +599,7 @@ export class TrashService {
           targetId: entryId,
           fields: {
             spaceId: start.space_id,
-            title: start.title,
+            title: start.confidential ? "" : start.title,
             kind: start.kind,
             itemKind: start.item_kind,
             descendants: Number(start.descendants),

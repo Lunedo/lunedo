@@ -91,6 +91,7 @@ function PeoplePicker({
           organizationId={page.organizationId}
           organizationName={page.organizationName}
           personal
+          groups={!page.confidential}
           exclude={people.map((person) => `${person.kind}:${person.id}`)}
           value={null}
           onValueChange={(next) => {
@@ -141,15 +142,16 @@ function CreateLink({
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const anyoneAllowed = options.anyone && !restricted;
-  const [scope, setScope] = useState<ShareLinkScope>(restricted ? "people" : "organization");
+  const peopleOnly = restricted || options.peopleOnly;
+  const anyoneAllowed = options.anyone && !peopleOnly;
+  const [scope, setScope] = useState<ShareLinkScope>(peopleOnly ? "people" : "organization");
   const [people, setPeople] = useState<Person[]>([]);
   const [expiry, setExpiry] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ people?: string; expiry?: string; form?: string }>({});
   const [busy, setBusy] = useState(false);
   const form = useRef<HTMLFormElement>(null);
-  const scopes: ShareLinkScope[] = restricted
+  const scopes: ShareLinkScope[] = peopleOnly
     ? ["people"]
     : ["people", "organization", "instance", ...(anyoneAllowed ? (["anyone"] as const) : [])];
   const submit = async (event: FormEvent) => {

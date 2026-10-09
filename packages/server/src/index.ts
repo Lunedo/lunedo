@@ -334,6 +334,51 @@ export {
   smtpSetting,
 } from "./mail/mail-service.js";
 export type { MailMessage, MailTransport, SmtpOptions } from "./mail/transport.js";
+export { type DecisionEntry, type DecisionFilter, DecisionService } from "./meetings/decisions.js";
+export {
+  type CreateSeriesInput,
+  DEFAULT_TEMPLATE_ID,
+  MAX_ATTENDEES,
+  MAX_SERIES_MEMBERS,
+  type MeetingAttendee,
+  type MeetingDetails,
+  MeetingService,
+  type MeetingSummary,
+  ONE_ON_ONE_TEMPLATE_ID,
+  SERIES_NAME_MAX_LENGTH,
+  type SeriesDetails,
+  type SeriesScheduleInput,
+  type UpcomingMeeting,
+} from "./meetings/meetings.js";
+export { type OneOnOneOrganization, OneOnOneService, type OneOnOneSummary } from "./meetings/one-on-ones.js";
+export {
+  MAX_PRIVATE_NOTES_BYTES,
+  type PrivateNotes,
+  type PrivateNotesEntry,
+  PrivateNotesService,
+} from "./meetings/private-notes.js";
+export { MAX_INTERVAL, type Rhythm, rhythmFrequencies, rhythmSchema, weekdays } from "./meetings/schedule.js";
+export {
+  type Attendance,
+  attendanceValues,
+  type MeetingState,
+  meetingStates,
+  type ScheduleSource,
+  scheduleSources,
+  type TopicOutcome,
+  type TopicStatus,
+  topicOutcomes,
+  topicStatuses,
+} from "./meetings/schema.js";
+export {
+  MAX_STATEMENT_LENGTH,
+  MAX_TOPIC_LABELS,
+  TOPIC_TITLE_MAX_LENGTH,
+  type TopicDetails,
+  type TopicFilter,
+  TopicService,
+  type TopicSummary,
+} from "./meetings/topics.js";
 export { NotificationHub } from "./notifications/hub.js";
 export {
   defineNotificationType,
@@ -460,6 +505,7 @@ export * from "./sharing/settings.js";
 export { ValueSigner } from "./sharing/signer.js";
 export { type ArchivedItem, ArchiveService } from "./spaces/archive.js";
 export { auditScopeOf, SpaceError } from "./spaces/common.js";
+export { ConfidentialSpaceService, type ConfidentialSpaceSummary } from "./spaces/confidential.js";
 export {
   API_ORIGIN,
   type Backlink,
@@ -516,6 +562,7 @@ export {
   defaultSpacePermissionsSchema,
   defaultSpacePermissionsSetting,
   liveVersionIdleMinutesSetting,
+  membersCreateConfidentialSpacesSetting,
   membersCreateSpacesSetting,
   personalSpacesSetting,
   type SpaceGrant,

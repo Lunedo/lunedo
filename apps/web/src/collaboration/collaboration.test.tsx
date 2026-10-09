@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App, createQueryClient } from "../app.js";
@@ -488,5 +488,35 @@ describe("For you", () => {
     expect(screen.getByText(/Lukas Hofer/)).toBeTruthy();
     expect(screen.getAllByRole("link", { name: /VPN access/ }).length).toBe(3);
     expect(screen.getByText("No blog posts were published in your spaces in the last 30 days.")).toBeTruthy();
+  });
+
+  it("welcomes people only while nothing at all is there, upcoming meetings included", async () => {
+    const empty = { recent: [], starred: { items: [], spaces: [] }, tasks: [], mentions: [], posts: [] };
+    const meeting = {
+      id: VPN,
+      title: "Jour fixe",
+      startsAt: "2030-03-18T08:30:00.000Z",
+      durationMinutes: 45,
+      seriesId: SPACE_ID,
+      seriesTitle: "Jour fixe IT",
+      spaceId: SPACE_ID,
+      spaceKey: "ITOPS",
+      oneOnOne: false,
+    };
+    const upcoming: unknown[] = [];
+    mockApi(
+      routes("reader", {
+        "GET /api/v1/home": () => ({ body: empty }),
+        "GET /api/v1/meetings/upcoming": () => ({ body: upcoming }),
+        "GET /api/v1/one-on-ones": () => ({ body: [] }),
+      }),
+    );
+    await renderAt("/home");
+    expect(await screen.findByText("Welcome to Pagehall")).toBeTruthy();
+    cleanup();
+    upcoming.push(meeting);
+    await renderAt("/home");
+    expect(await screen.findByText("Jour fixe IT")).toBeTruthy();
+    expect(screen.queryByText("Welcome to Pagehall")).toBeNull();
   });
 });

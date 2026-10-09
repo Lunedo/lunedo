@@ -31,6 +31,7 @@ import {
   TemplateFieldView,
 } from "../nodes/inline-views.js";
 import { MathView } from "../nodes/math-view.js";
+import { DecisionView, TopicUpdateView } from "../nodes/meeting-views.js";
 import { TaskItemView } from "../nodes/task-item-view.js";
 import { TaskReportView } from "../nodes/task-report-view.js";
 import { hiddenCaret, type PresenceUser, selectionAttributes } from "../presence.js";
@@ -72,6 +73,8 @@ const BLOCK_VIEWS: Record<string, ComponentType<ReactNodeViewProps>> = {
   image: AttachmentView,
   file: AttachmentView,
   taskReport: TaskReportView,
+  topicUpdate: TopicUpdateView,
+  decision: DecisionView,
 };
 
 export interface EditorExtensionOptions {

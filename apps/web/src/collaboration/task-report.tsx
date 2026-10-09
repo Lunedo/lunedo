@@ -16,6 +16,7 @@ import { TaskTable } from "./task-table.js";
 
 export interface TaskReportFilters {
   spaceId: string | null;
+  seriesId: string | null;
   assignee: string | null;
   assignedToViewer: boolean;
   due: TaskReportDue;
@@ -27,6 +28,7 @@ export function reportFilters(attrs: Record<string, unknown>): TaskReportFilters
   const status = String(attrs.status ?? "open");
   return {
     spaceId: typeof attrs.spaceId === "string" ? attrs.spaceId : null,
+    seriesId: typeof attrs.seriesId === "string" ? attrs.seriesId : null,
     assignee: typeof attrs.assignee === "string" ? attrs.assignee : null,
     assignedToViewer: attrs.assignedToViewer === true || attrs.assignedToViewer === "true",
     due: (taskReportDueWindows as readonly string[]).includes(due) ? (due as TaskReportDue) : "any",
@@ -42,6 +44,7 @@ export function reportQuery(filters: TaskReportFilters): TaskQuery {
     due: filters.due,
     limit: 50,
     ...(filters.spaceId ? { spaceId: filters.spaceId } : {}),
+    ...(filters.seriesId ? { seriesId: filters.seriesId } : {}),
     ...(filters.assignedToViewer
       ? { assignee: "me" }
       : filters.assignee
@@ -73,18 +76,21 @@ export function TaskReport({
         <ListChecks aria-hidden="true" className="size-icon-md" />
         {t("tasks.report.title")}
       </h3>
+      {filters.seriesId ? <p className="text-sm text-text-muted">{t("tasks.report.seriesScope")}</p> : null}
       {onChange ? (
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label={t("tasks.report.scope")}>
-            <Select
-              value={filters.spaceId ? "space" : "all"}
-              onValueChange={(value) => onChange({ spaceId: value === "space" ? currentSpaceId : null })}
-              options={[
-                ...(currentSpaceId ? [{ value: "space", label: t("tasks.report.thisSpace") }] : []),
-                { value: "all", label: t("tasks.report.allSpaces") },
-              ]}
-            />
-          </Field>
+          {filters.seriesId ? null : (
+            <Field label={t("tasks.report.scope")}>
+              <Select
+                value={filters.spaceId ? "space" : "all"}
+                onValueChange={(value) => onChange({ spaceId: value === "space" ? currentSpaceId : null })}
+                options={[
+                  ...(currentSpaceId ? [{ value: "space", label: t("tasks.report.thisSpace") }] : []),
+                  { value: "all", label: t("tasks.report.allSpaces") },
+                ]}
+              />
+            </Field>
+          )}
           <Field label={t("tasks.report.assignee")}>
             <Select
               value={assigneeMode}

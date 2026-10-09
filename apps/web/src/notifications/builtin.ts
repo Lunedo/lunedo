@@ -8,12 +8,14 @@ import {
   ListChecks,
   Lock,
   Mail,
+  NotebookPen,
   Share2,
   ShieldAlert,
   ShieldCheck,
   UserPlus,
   UserRound,
   UserRoundX,
+  Users,
 } from "lucide-react";
 import { blogPostPath, pagePath } from "../spaces/space-queries.js";
 import { notificationTypes } from "./notification-types.js";
@@ -123,5 +125,21 @@ notificationTypes.register(
       const spaceKey = (item.params as { spaceKey?: string }).spaceKey;
       return spaceKey ? { to: `/spaces/${encodeURIComponent(spaceKey)}/settings/access` } : null;
     },
+  },
+  { id: "meeting.notesAvailable", icon: NotebookPen, link: contentLink },
+  {
+    id: "oneOnOne.started",
+    icon: Users,
+    link: (item) => {
+      const spaceKey = (item.params as { spaceKey?: string }).spaceKey;
+      return spaceKey && item.target.id
+        ? { to: `/spaces/${encodeURIComponent(spaceKey)}/meetings/${item.target.id}` }
+        : null;
+    },
+  },
+  {
+    id: "space.confidentialWithoutAdministrator",
+    icon: Lock,
+    link: (item) => inOrganization(item, "/spaces"),
   },
 );

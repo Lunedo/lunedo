@@ -521,6 +521,7 @@ export class AccountLifecycleService {
       await tx.delete(signInFailures).where(eq(signInFailures.key, `client:${ip}`));
     }
     await tx.execute(sql`delete from service_account_responsibles where account_id = ${id}`);
+    await tx.execute(sql`delete from meeting_private_notes where account_id = ${id}`);
     await tx
       .update(accounts)
       .set({

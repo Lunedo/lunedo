@@ -128,6 +128,7 @@ const SPACE_CHANGE_KINDS = [
   "reactions",
   "tasks",
   "blog",
+  "meetings",
 ] as const;
 
 export interface SpaceChangeEvent {
@@ -199,6 +200,8 @@ export function spacesChanged(queryClient: QueryClient, events: SpaceChangeEvent
       add(["home"]);
       if (event.itemId) add(["blogPosts", event.itemId]);
     }
+    if (event.kind === "meetings") add(["meetings"]);
+    if (event.kind === "page" || event.kind === "tree" || event.kind === "tasks") add(["meetings"]);
     if (event.kind === "access") add(["items"]);
   }
   for (const key of keys.values()) void queryClient.invalidateQueries({ queryKey: key });

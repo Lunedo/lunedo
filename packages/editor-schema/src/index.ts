@@ -22,12 +22,17 @@ export {
 } from "./comments.js";
 export {
   documentSize,
+  type ExtractedDecision,
   type ExtractedTask,
+  type ExtractedTopicUpdate,
   emptyDocument,
+  extractDecisions,
   extractInlineCommentThreads,
   extractMentions,
   extractPageLinks,
   extractTasks,
+  extractTopicUpdates,
+  normalizeDecisionIds,
   normalizeTaskIds,
 } from "./extract.js";
 export type { DocumentJson, MarkJson, NodeJson, ValidMark, ValidNode } from "./json.js";

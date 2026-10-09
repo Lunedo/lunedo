@@ -2038,6 +2038,10 @@
       "files_keepVersionsMaximum": {
         "label": "Most versions organizations and spaces may keep",
         "description": "Organizations and spaces can choose any number up to this maximum. Only here can it be set to no limit."
+      },
+      "spaces_membersCreateConfidentialSpaces": {
+        "label": "Members create confidential spaces",
+        "description": "Members may create confidential spaces and one-on-ones that administrators cannot read. Administrators always can."
       }
     },
     "disabled": {
@@ -2273,6 +2277,15 @@
       },
       "restriction": {
         "orphaned": "Nobody on the access list of the restricted page {itemTitle} in {spaceName} has an active account anymore. Review the restriction in the space settings."
+      },
+      "meeting": {
+        "notesAvailable": "{actor} closed {itemTitle}. The notes are available."
+      },
+      "oneOnOne": {
+        "started": "{actor} started a one-on-one with you: {itemTitle}."
+      },
+      "space": {
+        "confidentialWithoutAdministrator": "The confidential space {spaceKey} has no space admin anymore. You can appoint one of its remaining members."
       }
     }
   },
@@ -2471,7 +2484,8 @@
       "wholeSpace": "whole space",
       "withPagesBelow": "and the pages below",
       "restrictedPages": "{count, plural, one {# shared restricted page you cannot read} other {# shared restricted pages you cannot read}}",
-      "why": "Why?"
+      "why": "Why?",
+      "confidentialSpaces": "{count, plural, one {Member of # confidential space} other {Member of # confidential spaces}}"
     }
   },
   "members": {
@@ -3116,7 +3130,9 @@
         "deleted": "Space deleted",
         "restored": "Space restored",
         "archived": "Space archived",
-        "unarchived": "Space brought back from the archive"
+        "unarchived": "Space brought back from the archive",
+        "confidentialAdministratorAppointed": "Space admin of a confidential space appointed",
+        "confidentialDeleted": "Confidential space deleted"
       },
       "page": {
         "updateRejected": "Page change rejected",
@@ -3682,7 +3698,9 @@
       "taskReport": "Task report",
       "taskReportDescription": "Table of tasks with filters and counts",
       "file": "Image or file",
-      "fileDescription": "Upload and insert an image or file"
+      "fileDescription": "Upload and insert an image or file",
+      "decision": "Decision",
+      "decisionDescription": "Record a decision so it appears in the decision log"
     },
     "mention": {
       "unknown": "Unknown person"
@@ -3944,6 +3962,13 @@
     },
     "templateField": {
       "hint": "Input field {field}: filled in when a page is created from the template."
+    },
+    "decision": {
+      "label": "Decision"
+    },
+    "topicUpdate": {
+      "closed": "Closed",
+      "unknown": "Topic"
     }
   },
   "spaces": {
@@ -4025,7 +4050,21 @@
       "more": "Show more spaces",
       "archiveFilter": "Show active or archived spaces",
       "activeSpaces": "Active spaces",
-      "archivedSpaces": "Archived spaces"
+      "archivedSpaces": "Archived spaces",
+      "oneOnOnes": "One-on-ones",
+      "deletedSpaces": "Deleted spaces"
+    },
+    "deleted": {
+      "title": "Deleted spaces",
+      "description": "Spaces you were space admin of when they were deleted. You can restore them with their content and permissions until second-stage recovery ends.",
+      "none": "No deleted spaces",
+      "noneDescription": "When a space you are space admin of is deleted, you can restore it here for a while.",
+      "noMatchDescription": "Try another name or key.",
+      "loadFailed": "The deleted spaces could not be loaded",
+      "restored": "“{name}” is back with its content and permissions",
+      "restoreFailed": "The space could not be restored",
+      "restoreNamed": "Restore {name}",
+      "showActive": "Show active spaces"
     },
     "create": {
       "action": "Create space",
@@ -4355,10 +4394,10 @@
     "minimumHint": "The shortest times apply to every organization and space; a longer time can always be set.",
     "dangerZone": "Danger zone",
     "deleteSpace": "Delete space",
-    "deleteSpaceDescription": "Moves the space with all its pages to second-stage recovery. Only organization administrators can restore it until that period ends.",
+    "deleteSpaceDescription": "Moves the space with all its pages to second-stage recovery. Its space admins can restore it from the list of deleted spaces until that period ends; organization administrators can too, unless the space is confidential.",
     "deleteSpaceTitle": "Delete {name}?",
-    "deleteSpaceConsequences": "Nobody can open the space or its pages anymore. Links to its pages stop working. Organization administrators can restore it during second-stage recovery; after that it is deleted for good.",
-    "deletePersonalSpaceConsequences": "Nobody can open the personal space or its pages anymore. Instance administrators can restore it during second-stage recovery; after that it is deleted for good.",
+    "deleteSpaceConsequences": "Nobody can open the space or its pages anymore. Links to its pages stop working. The people who are space admins now can restore it during second-stage recovery, and organization administrators unless the space is confidential; after that it is deleted for good.",
+    "deletePersonalSpaceConsequences": "Nobody can open the personal space or its pages anymore. Its owner and instance administrators can restore it during second-stage recovery; after that it is deleted for good.",
     "keepSpace": "Keep space",
     "typeName": "Type {name} to confirm",
     "nameMismatch": "The name does not match. Type it exactly as shown.",
@@ -4419,7 +4458,9 @@
       "folder": "Folder",
       "link": "Link",
       "blogPost": "Blog post",
-      "other": "Item"
+      "other": "Item",
+      "meetingSeries": "Meeting series",
+      "meetingTopic": "Running topic"
     },
     "unknownPerson": "Unknown person",
     "stageOne": "Space trash",
@@ -4674,7 +4715,9 @@
     "choose": "Choose",
     "searchPerson": "Search a person",
     "createFrom": "Create from {name}",
-    "createBlank": "Create blank page"
+    "createBlank": "Create blank page",
+    "createSeriesFrom": "Set up series with {name}",
+    "seriesTemplate": "This is a template for meeting series. Next you choose the name, members and rhythm; each meeting page then starts from it."
   },
   "home": {
     "title": "For you",
@@ -4848,7 +4891,8 @@
       "due": "Due date",
       "status": "Status",
       "emptyTitle": "No tasks match",
-      "emptyDescription": "Change the filters, or add tasks with assignees to published pages."
+      "emptyDescription": "Change the filters, or add tasks with assignees to published pages.",
+      "seriesScope": "Open tasks from the meetings of this series."
     },
     "checkOnPages": "Tasks are checked on the pages made from this template."
   },
@@ -5341,6 +5385,415 @@
       "goneTitle": "This link no longer works",
       "failed": "The link could not be opened",
       "downloadFailed": "The file was not downloaded"
+    }
+  },
+  "meetings": {
+    "title": "Meetings",
+    "ended": "Ended",
+    "notScheduled": "Not scheduled yet",
+    "notScheduledChoice": "Not scheduled yet",
+    "notScheduledHint": "Set the date later by moving the meeting.",
+    "unknownPerson": "Unknown person",
+    "sidebar": {
+      "series": "Meeting series"
+    },
+    "state": {
+      "upcoming": "Next",
+      "closed": "Held",
+      "reopened": "Reopened",
+      "skipped": "Skipped"
+    },
+    "list": {
+      "documentTitle": "Meetings · {space}",
+      "description": "Recurring meetings of this space with their topics, tasks and decisions.",
+      "create": "New series",
+      "loadFailed": "The meeting series could not be loaded",
+      "emptyTitle": "No meeting series yet",
+      "emptyEditor": "A series plans recurring meetings and creates each meeting's notes page for you.",
+      "emptyReader": "Meeting series of this space will appear here.",
+      "next": "Next: {date}"
+    },
+    "create": {
+      "title": "New meeting series in {space}",
+      "description": "Choose who takes part and when. The first meeting is created right away.",
+      "name": "Name",
+      "nameExample": "Jour fixe IT",
+      "nameInvalid": "Enter a name with up to {max} characters.",
+      "template": "Template",
+      "templateHint": "Each meeting page starts from this template.",
+      "templateLoading": "Loading templates",
+      "members": "Members",
+      "membersHint": "Members are invited to every meeting. Access to the notes comes from the roles in this space.",
+      "membersPlaceholder": "Search people by name",
+      "submit": "Create series",
+      "created": "{name} created. The first meeting is ready.",
+      "failed": "The series could not be created"
+    },
+    "schedule": {
+      "rhythm": "Rhythm",
+      "interval": "Every how many weeks",
+      "intervalInvalid": "Enter a number from 2 to 52.",
+      "weekdays": "Weekdays",
+      "firstDate": "First meeting",
+      "date": "Date",
+      "time": "Start time",
+      "duration": "Duration in minutes",
+      "durationHint": "Between 5 minutes and 24 hours.",
+      "durationInvalid": "Enter a duration from 5 to 1440 minutes.",
+      "timeZone": "Time zone",
+      "timeZoneHint": "Meetings keep their local time when daylight saving time changes.",
+      "timeZoneRequired": "Choose a time zone.",
+      "dateRequired": "Enter a date.",
+      "timeRequired": "Enter a time such as 09:30."
+    },
+    "rhythm": {
+      "custom": "Rhythm from a calendar",
+      "presets": {
+        "weekly": "Weekly",
+        "everyNWeeks": "Every few weeks",
+        "weekdays": "On chosen weekdays",
+        "daily": "Daily",
+        "monthlyByDate": "Monthly on the same date",
+        "monthlyByWeekday": "Monthly on the same weekday",
+        "quarterly": "Quarterly",
+        "yearly": "Yearly",
+        "none": "No fixed rhythm"
+      },
+      "position": {
+        "1": "first",
+        "2": "second",
+        "3": "third",
+        "4": "fourth",
+        "last": "last"
+      },
+      "describe": {
+        "none": "No fixed rhythm",
+        "daily": "{count, plural, one {Every day} other {Every # days}}",
+        "weekly": "{count, plural, one {Every {days}} other {Every # weeks on {days}}}",
+        "monthlyByDate": "{count, plural, one {Monthly on day {day}} other {Every # months on day {day}}}",
+        "monthlyByWeekday": "{count, plural, one {Monthly on the {position} {day}} other {Every # months on the {position} {day}}}",
+        "yearly": "{count, plural, one {Every year} other {Every # years}}"
+      }
+    },
+    "series": {
+      "loadFailed": "The meeting series could not be loaded",
+      "notFoundTitle": "This meeting series is not available",
+      "notFoundDescription": "It was deleted, or you do not have access. Ask a space admin if you need it.",
+      "members": "{count, plural, one {# member} other {# members}}",
+      "membersLabel": "Members of the series",
+      "template": "Template: {name}",
+      "settings": "Series settings",
+      "more": "More actions for the series",
+      "noAccess": "No access",
+      "withoutAccessTitle": "{count, plural, one {A member cannot read the meetings} other {# members cannot read the meetings}}",
+      "withoutAccess": "{names} has no role in this space. Ask a space admin to give access.",
+      "withoutAccessAdmin": "{names} has no role in this space. Give access so the notes can be read.",
+      "endedTitle": "This series has ended",
+      "endedDescription": "Its meetings are read-only and no next meeting is planned. Continue the series to plan meetings again.",
+      "end": "End series",
+      "continue": "Continue series",
+      "endedToast": "Series ended. Its meetings stay readable.",
+      "continuedToast": "Series continued.",
+      "endFailed": "The series could not be changed",
+      "delete": "Move series to trash",
+      "nextAt": "Next meeting · {date}",
+      "nextUnscheduled": "Next meeting · not scheduled yet",
+      "openTopics": "{count, plural, one {# open topic} other {# open topics}}",
+      "invited": "{count, plural, one {# attendee} other {# attendees}}",
+      "attended": "{count} of {total} attended",
+      "nextActions": "Plan",
+      "openAgenda": "Open agenda",
+      "meetingsTitle": "Meetings",
+      "meetingsFailed": "The meetings could not be loaded",
+      "loadOlder": "Show older meetings",
+      "openTasks": "Open tasks",
+      "noTasksTitle": "No open tasks",
+      "noTasksDescription": "Tasks written in the meetings of this series appear here until they are done."
+    },
+    "settings": {
+      "title": "Settings of {name}",
+      "description": "Changes apply to the upcoming meeting and all later ones.",
+      "templateHint": "Used for meetings created from now on.",
+      "templateMissing": "Deleted template",
+      "fromDate": "Rhythm starts on",
+      "scheduleNote": "A new rhythm moves the upcoming meeting and drops earlier moves and skipped dates.",
+      "save": "Save settings",
+      "saved": "Series settings saved.",
+      "failed": "The settings could not be saved"
+    },
+    "meeting": {
+      "label": "Meeting details",
+      "loadFailed": "The meeting details could not be loaded",
+      "when": "{start} to {end}",
+      "state": {
+        "upcoming": "This is the next meeting of the series.",
+        "closed": "This meeting is closed. The notes are available to all attendees.",
+        "reopened": "This meeting was reopened. Close it again when the notes are complete.",
+        "skipped": "This meeting was skipped. Its agenda moved to the following meeting."
+      },
+      "noAccessTitle": "{count, plural, one {An attendee cannot read this page} other {# attendees cannot read this page}}",
+      "noAccess": "{names} has no access. Share the page so the notes reach everyone.",
+      "share": "Share page"
+    },
+    "attendance": {
+      "title": "Attendees",
+      "present": "Present",
+      "excused": "Excused",
+      "absent": "Absent",
+      "unset": "Not recorded",
+      "clear": "Clear attendance",
+      "change": "{name}: {state}. Change attendance",
+      "failed": "The attendance could not be saved",
+      "add": "Add attendee",
+      "person": "Person to add",
+      "addConfirm": "Add to this meeting",
+      "addFailed": "The person could not be added",
+      "personRequired": "Choose a person first."
+    },
+    "close": {
+      "action": "Close meeting",
+      "title": "Close the meeting",
+      "description": "The series has no fixed rhythm. Choose when the next meeting takes place, in {timeZone}.",
+      "descriptionWithRhythm": "The attendees are told that the notes are available, and the next meeting is created.",
+      "confirm": "Close and plan the next",
+      "done": "{title} closed",
+      "doneDescription": "Attendees were told that the notes are available. The next meeting is ready.",
+      "failed": "The meeting could not be closed",
+      "undoFailed": "Closing could not be undone"
+    },
+    "reopen": {
+      "action": "Reopen meeting",
+      "done": "{title} reopened. The next meeting stays.",
+      "failed": "The meeting could not be reopened"
+    },
+    "skip": {
+      "action": "Skip meeting",
+      "title": "Skip the meeting",
+      "description": "The agenda moves to the next meeting. Choose when it takes place, in {timeZone}.",
+      "descriptionWithRhythm": "The meeting is marked as skipped and its agenda moves to the next date of the rhythm. This cannot be undone.",
+      "confirm": "Skip meeting",
+      "done": "{title} skipped. The agenda moved to the next meeting.",
+      "failed": "The meeting could not be skipped"
+    },
+    "move": {
+      "action": "Move meeting",
+      "title": "Move the meeting",
+      "description": "Choose the new date and time, in {timeZone}. The rhythm of the series stays.",
+      "descriptionWithRhythm": "Choose the new date and time, in {timeZone}. The rhythm of the series stays.",
+      "confirm": "Move meeting",
+      "done": "Meeting moved.",
+      "failed": "The meeting could not be moved"
+    },
+    "topics": {
+      "title": "Running topics",
+      "filter": "Filter topics",
+      "add": "Add topic",
+      "addTitle": "Add a running topic",
+      "addDescription": "The topic is added to the next meeting and stays open until someone closes it.",
+      "titleLabel": "Title",
+      "titleExample": "Storage migration to the new NAS",
+      "titleInvalid": "Enter a title with up to {max} characters.",
+      "owner": "Owner",
+      "anyone": "Anyone",
+      "noOwner": "No owner",
+      "labels": "Labels",
+      "labelsHint": "Separate labels with commas.",
+      "labelsExample": "infrastructure, budget",
+      "label": "Label",
+      "text": "Title contains",
+      "textExample": "migration",
+      "from": "Updated from",
+      "to": "Updated until",
+      "status": "Status",
+      "statusFilter": {
+        "open": "Open",
+        "closed": "Closed",
+        "all": "All"
+      },
+      "clearFilters": "Clear filters",
+      "noMatch": "No topic matches the filters",
+      "empty": "No open topics. Add one to carry it from meeting to meeting.",
+      "loadFailed": "The topics could not be loaded",
+      "updated": "updated {date}",
+      "since": "since {date}",
+      "updates": "{count, plural, =0 {no updates} one {# update} other {# updates}}",
+      "outcome": {
+        "resolved": "Resolved",
+        "decided": "Decided",
+        "dropped": "Dropped"
+      },
+      "added": "{title} added to the next meeting.",
+      "addFailed": "The topic could not be added"
+    },
+    "topic": {
+      "loadFailed": "The topic could not be loaded",
+      "notFoundTitle": "This topic is not available",
+      "notFoundDescription": "It was deleted, or you do not have access.",
+      "status": "Status",
+      "open": "Open",
+      "raised": "Raised in",
+      "noLabels": "No labels",
+      "decision": "Decision",
+      "timeline": "Updates",
+      "noUpdates": "No updates yet. Updates are written in the meeting pages.",
+      "decide": "Close as decision",
+      "decideTitle": "Close {title} as a decision",
+      "decideDescription": "The decision is added to the current meeting, linked to this topic, and appears in the decision log. The topic keeps its history.",
+      "statement": "Decision",
+      "statementHint": "State what was decided in one or two sentences.",
+      "statementInvalid": "Enter the decision with up to {max} characters.",
+      "decideConfirm": "Record decision",
+      "decided": "Decision recorded and topic closed.",
+      "decideFailed": "The decision could not be recorded",
+      "close": "Close topic",
+      "closeResolved": "Close as resolved",
+      "closeDropped": "Close as dropped",
+      "closed": {
+        "resolved": "Topic closed as resolved. It leaves later meetings.",
+        "dropped": "Topic closed as dropped. It leaves later meetings."
+      },
+      "closeFailed": "The topic could not be closed",
+      "reopen": "Reopen topic",
+      "reopened": "Topic reopened and added to the next meeting.",
+      "reopenFailed": "The topic could not be reopened",
+      "edit": "Edit topic",
+      "editTitle": "Edit the topic",
+      "save": "Save topic",
+      "saved": "Topic saved.",
+      "saveFailed": "The topic could not be saved"
+    },
+    "decisions": {
+      "title": "Decision log",
+      "filter": "Filter decisions",
+      "topic": "Topic",
+      "anyTopic": "Any topic",
+      "text": "Text contains",
+      "textExample": "BitLocker",
+      "from": "Meetings from",
+      "to": "Meetings until",
+      "loadFailed": "The decision log could not be loaded",
+      "noMatch": "No decision matches the filters",
+      "clearFilters": "Clear filters",
+      "empty": "No decisions yet. Record one in a meeting with /decision.",
+      "noStatement": "Decision without text"
+    },
+    "notes": {
+      "title": "Your private notes",
+      "toggle": "Private notes",
+      "close": "Close private notes",
+      "onlyYou": "Only you can read these notes. Neither the other attendees nor space admins nor administrators can see them.",
+      "editorLabel": "Private notes",
+      "loadFailed": "Your private notes could not be loaded",
+      "saveFailed": "Your private notes could not be saved",
+      "conflictTitle": "Your notes changed in another window",
+      "conflictDescription": "Load the newer notes before you continue. What you typed here since then is not saved.",
+      "loadNewer": "Load newer notes",
+      "copy": "Copy to meeting notes",
+      "nothingSelected": "Your notes are empty. Write something first.",
+      "copied": "{count, plural, one {# block copied to the meeting notes} other {# blocks copied to the meeting notes}}",
+      "copyFailed": "The blocks could not be copied",
+      "ownTitle": "Your private notes",
+      "ownDescription": "Only you can see this list.",
+      "savedAt": "saved {date}"
+    },
+    "home": {
+      "upcoming": "Upcoming meetings",
+      "noUpcoming": "No upcoming meetings.",
+      "oneOnOnes": "One-on-ones",
+      "noOneOnOnes": "No one-on-ones yet. Start one to meet regularly with one person.",
+      "next": "next {date}",
+      "alone": "No other person yet"
+    },
+    "oneOnOne": {
+      "new": "New one-on-one",
+      "newTitle": "Start a one-on-one",
+      "newDescription": "A one-on-one gets a confidential space that only the two of you can open.",
+      "person": "With",
+      "personHint": "Search by name among the people you can see.",
+      "personPlaceholder": "Search a person",
+      "personRequired": "Choose the other person.",
+      "organization": "Organization",
+      "organizationHint": "The confidential space belongs to this organization.",
+      "noOrganization": "You and this person share no organization.",
+      "noOrganizationTitle": "A one-on-one is not possible with this person",
+      "noOrganizationDescription": "You and {name} are not both members of the same organization. Guests and collaborators cannot hold a one-on-one; ask an administrator to add the membership you need.",
+      "privacyTitle": "Private between the two of you",
+      "privacyDescription": "Space and organization administrators cannot open it or give anyone access. Server administrators with access to the database or backups are not restricted by this.",
+      "create": "Start one-on-one",
+      "created": "One-on-one with {name} started. They were notified.",
+      "failed": "The one-on-one could not be started",
+      "privateTitle": "Private between the people of this one-on-one",
+      "privateDescription": "Space and organization administrators cannot open it or give anyone access."
+    },
+    "successor": {
+      "action": "Change person",
+      "title": "Change a person of this one-on-one",
+      "description": "Add the successor of the person who leaves, for example when your manager changes.",
+      "previous": "Person who leaves",
+      "successor": "Successor",
+      "chooseSuccessor": "Choose the successor.",
+      "how": "How to continue",
+      "add": "Add to this one-on-one",
+      "addDescription": "The successor sees all earlier meetings. {name} loses access to this one-on-one.",
+      "new": "Start a new one-on-one",
+      "newDescription": "The successor sees none of the earlier meetings. This one-on-one stays as it is.",
+      "confirmAdd": "Add successor",
+      "confirmNew": "Start new one-on-one",
+      "added": "{name} was added to this one-on-one.",
+      "started": "New one-on-one with {name} started.",
+      "failed": "The person could not be changed"
+    }
+  },
+  "confidential": {
+    "badge": "Confidential",
+    "oneOnOneBadge": "One-on-one",
+    "headerNote": "Only its members can read it; administrators cannot give themselves access.",
+    "explanation": "Only the members of this space can read it. Organization and instance administrators cannot open it, give anyone access or appoint its space admins.",
+    "settingsTitle": "Confidential space",
+    "limitTitle": "What this protection does not cover",
+    "limit": "The protection applies to roles in Pagehall. Administrators of the server with access to the database or backups are not restricted by it. An administrator can reset the sign-in of a member; every such reset is recorded in the audit log.",
+    "createLabel": "Confidential space",
+    "createDescription": "For one-on-ones, a works council or management. Only people you add can read it, administrators cannot give themselves access. This cannot be changed later.",
+    "createNoticeTitle": "Private, for individual people only",
+    "moveOutTitle": "The content leaves the confidential space",
+    "moveOut": "After the move it is no longer protected from administrators, and the people above gain access.",
+    "deletedCountTitle": "{count, plural, one {# deleted confidential space} other {# deleted confidential spaces}}",
+    "deletedCount": "Deleted confidential spaces are not listed here. Only the people who were their space admins can restore them until second-stage recovery ends.",
+    "organization": {
+      "title": "Confidential spaces",
+      "description": "Confidential spaces are listed by key only. Their names, members and content stay hidden from administrators.",
+      "loadFailed": "The confidential spaces could not be loaded",
+      "none": "No confidential spaces",
+      "noneDescription": "When members create confidential spaces or one-on-ones, they appear here as a key with a few numbers.",
+      "noAdmin": "No space admin",
+      "noMembers": "No active members",
+      "created": "created {date}",
+      "members": "{count, plural, one {# member} other {# members}}",
+      "pages": "{count, plural, one {# page} other {# pages}}",
+      "changed": "changed {date}",
+      "appoint": "Appoint space admin",
+      "appointTitle": "Appoint a space admin for {key}",
+      "appointDescription": "Choose one of the remaining members. You cannot appoint yourself or anyone who is not a member.",
+      "remaining": "Remaining members",
+      "remainingFailed": "The remaining members could not be loaded",
+      "noRemaining": "No other member remains. The space can be deleted once no active member is left.",
+      "choosePerson": "Choose a member.",
+      "appointNoticeTitle": "Written to the audit log",
+      "appointNotice": "The new space admin manages the space from then on. You still cannot read it.",
+      "appointConfirm": "Appoint as space admin",
+      "appointed": "{person} is now space admin of {key}.",
+      "appointFailed": "The space admin could not be appointed",
+      "delete": "Delete space",
+      "deleteTitle": "Delete the confidential space {key}",
+      "deleteDescription": "{count, plural, one {The space and its # page are deleted for good, without anyone reading them. This cannot be undone.} other {The space and its # pages are deleted for good, without anyone reading them. This cannot be undone.}}",
+      "reason": "Reason",
+      "reasonHint": "Goes into the audit log, for example why no member remains.",
+      "reasonRequired": "Name the reason with up to {max} characters.",
+      "typeKey": "Type {key} to confirm",
+      "keyMismatch": "The key does not match.",
+      "deleteConfirm": "Delete space permanently",
+      "deleted": "{key} was deleted.",
+      "deleteFailed": "The space could not be deleted"
     }
   }
 }

@@ -6,13 +6,19 @@ import {
   selfServiceOrganizationsSetting,
 } from "../organizations/settings.js";
 import type { SettingsService } from "../settings/service.js";
+import { isFormerSpaceAdministrator } from "../spaces/former-administrators.js";
 import { grantsSpaceRole } from "../spaces/roles.js";
 import type { SpaceRole } from "../spaces/schema.js";
-import { membersCreateSpacesSetting, personalSpacesSetting } from "../spaces/settings.js";
+import {
+  membersCreateConfidentialSpacesSetting,
+  membersCreateSpacesSetting,
+  personalSpacesSetting,
+} from "../spaces/settings.js";
 import { grantsLevel } from "./areas.js";
 import type { ActionDefinition, ResourceType, RestrictionResult, RuleContext } from "./registry.js";
 
 const ALL_MEMBERSHIPS = ["member", "collaborator", "guest"] as const;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function instanceArea(area: ActionDefinition["area"], level: ActionDefinition["level"]): ActionDefinition {
   return { scope: "instance", area, level };
@@ -108,6 +114,10 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "organization.spaces.view": organizationArea("spaces", "view"),
       "organization.spaces.manage": organizationArea("spaces", "manage"),
       "organization.spaces.create": { ...organizationArea("spaces", "manage"), rule: "membersCreateSpaces" },
+      "organization.spaces.createConfidential": {
+        ...organizationArea("spaces", "manage"),
+        rule: "membersCreateConfidentialSpaces",
+      },
       "organization.trash.manage": organizationArea("spaces", "manage"),
       "organization.templates.manage": organizationArea("settings", "manage"),
       "organization.blog.pin": organizationArea("spaces", "manage"),
@@ -130,6 +140,16 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
         const facts = await context.organizationFacts(context.organizationId);
         if (facts.membership?.kind !== "member") return false;
         return settings.get(membersCreateSpacesSetting, organizationSettingsChain(context.organizationId));
+      },
+      membersCreateConfidentialSpaces: async (context) => {
+        if (!context.organizationId) return false;
+        const facts = await context.organizationFacts(context.organizationId);
+        if (facts.membership?.kind !== "member") return false;
+        const chain = organizationSettingsChain(context.organizationId);
+        return (
+          (await settings.get(membersCreateSpacesSetting, chain)) &&
+          settings.get(membersCreateConfidentialSpacesSetting, chain)
+        );
       },
     },
   };
@@ -237,6 +257,20 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
         const state = await spaceState(executor, id);
         if (state?.deleted) return { denial: "inTrash" };
         return state?.archived ? { denial: "archived" } : null;
+      },
+    },
+  };
+
+  const deletedSpace: ResourceType = {
+    type: "deletedSpace",
+    actions: {
+      "deletedSpace.restore": { scope: "instance", rule: "formerAdministrator" },
+    },
+    rules: {
+      formerAdministrator: async (context) => {
+        const id = context.resource.id;
+        if (!id || !UUID.test(id)) return false;
+        return isFormerSpaceAdministrator(context.executor, id.toLowerCase(), context.accountId);
       },
     },
   };
@@ -431,7 +465,19 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     },
   };
 
-  return [instance, organization, group, account, serviceAccount, space, item, comment, task, attachment];
+  return [
+    instance,
+    organization,
+    group,
+    account,
+    serviceAccount,
+    space,
+    deletedSpace,
+    item,
+    comment,
+    task,
+    attachment,
+  ];
 }
 
 function interactiveItem(state: Awaited<ReturnType<typeof itemState>>): RestrictionResult | null {

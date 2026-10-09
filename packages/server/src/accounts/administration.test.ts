@@ -153,6 +153,45 @@ describe.skipIf(!baseUrl)("resetting another account's second factor", () => {
     expect(mails[0]?.text).toContain("Lost phone, confirmed by video call");
   });
 
+  it.each([
+    {
+      factor: "an authenticator app",
+      table: "totp_credentials",
+      fields: { authenticatorApp: true, passkeys: 0, recoveryLeft: 0 },
+    },
+    {
+      factor: "a passkey",
+      table: "webauthn_credentials",
+      fields: { authenticatorApp: false, passkeys: 1, recoveryLeft: 0 },
+    },
+    {
+      factor: "recovery codes",
+      table: "recovery_codes",
+      fields: { authenticatorApp: false, passkeys: 0, recoveryLeft: 10 },
+    },
+  ])("audits a reset of $factor by an administrator", async ({ table, fields }) => {
+    const org = await organization();
+    const admin = await standard(org.id);
+    await role(admin, "organization", "administrator", org.id);
+    const person = await standard(org.id);
+    await withFactors(person);
+    for (const other of ["totp_credentials", "webauthn_credentials", "recovery_codes"]) {
+      if (other !== table) await test.pool.query(`delete from ${other} where account_id = $1`, [person]);
+    }
+    expect(await count(table, person)).toBeGreaterThan(0);
+
+    await test.services.administration.resetSecondFactor(accountPrincipal(admin), person, "Reset by request");
+
+    expect(await count(table, person)).toBe(0);
+    const audit = await test.pool.query(
+      "select actor_id, fields from audit_events where name = 'account.secondFactorReset' and target_id = $1",
+      [person],
+    );
+    expect(audit.rows).toEqual([
+      { actor_id: admin, fields: expect.objectContaining({ reason: "Reset by request", ...fields }) },
+    ]);
+  });
+
   it("refuses to reset the own second factor", async () => {
     const org = await organization();
     await expect(

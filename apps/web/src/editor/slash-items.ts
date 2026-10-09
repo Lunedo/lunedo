@@ -1,3 +1,4 @@
+import { uuidv7 } from "@pagehall/shared";
 import type { Editor, Range } from "@tiptap/core";
 import type { TFunction } from "i18next";
 import {
@@ -10,6 +11,7 @@ import {
   Columns3,
   Columns4,
   FileText,
+  Flag,
   Heading1,
   Heading2,
   Heading3,
@@ -215,6 +217,25 @@ export const slashCommands: SlashCommandDefinition[] = [
         .focus()
         .deleteRange(range)
         .insertContent({ type: "taskReport", attrs: { spaceId: pageScopeOf(editor) } })
+        .run(),
+  },
+  {
+    id: "decision",
+    group: "blocks",
+    icon: Flag,
+    labelKey: "editor.blocks.decision",
+    descriptionKey: "editor.blocks.decisionDescription",
+    keywords: ["decision", "decided", "entscheidung", "beschluss"],
+    run: (editor, range) =>
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: "decision",
+          attrs: { id: uuidv7(), topicId: null },
+          content: [{ type: "paragraph" }],
+        })
         .run(),
   },
   {

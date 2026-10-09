@@ -35,6 +35,7 @@ import {
   RoleSelect,
 } from "../access/holders.js";
 import { type SpaceRole, type SpaceVisibility, spaceDefaultsQuery, spaceKeys } from "../space-queries.js";
+import { ConfidentialSpaces } from "./confidential-spaces.js";
 import { Panel } from "./panel.js";
 
 const route = getRouteApi("/app/settings/organizations/$organizationId/spaces");
@@ -58,7 +59,7 @@ export function OrganizationSpacesScreen() {
       <Panel title={t("spaces.organization.creating")}>
         <SettingsList
           settings={settings.data}
-          keys={["spaces.membersCreateSpaces"]}
+          keys={["spaces.membersCreateSpaces", "spaces.membersCreateConfidentialSpaces"]}
           level="organization"
           {...(organization.data ? { organizationName: organization.data.name } : {})}
           canManage={() => canManage}
@@ -74,6 +75,12 @@ export function OrganizationSpacesScreen() {
       />
       {state.can("organization.spaces.view") ? (
         <WithoutAdministrator organizationId={organizationId} />
+      ) : null}
+      {state.can("organization.spaces.view") ? (
+        <ConfidentialSpaces
+          organizationId={organizationId}
+          canManage={state.can("organization.spaces.manage")}
+        />
       ) : null}
     </SettingsPage>
   );

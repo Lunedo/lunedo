@@ -1,4 +1,7 @@
 import { Module } from "@nestjs/common";
+import { MeetingsController } from "../meetings/meetings.controller.js";
+import { OneOnOnesController } from "../meetings/one-on-ones.controller.js";
+import { ConfidentialSpacesController } from "./confidential-spaces.controller.js";
 import { ItemsController } from "./items.controller.js";
 import { OrganizationSpacesController } from "./organization-spaces.controller.js";
 import { PersonalSpacesController } from "./personal-spaces.controller.js";
@@ -11,11 +14,14 @@ import { VersionsController } from "./versions.controller.js";
   controllers: [
     SpacesController,
     OrganizationSpacesController,
+    ConfidentialSpacesController,
     ItemsController,
     PersonalSpacesController,
     VersionsController,
     TrashController,
     TemplatesController,
+    MeetingsController,
+    OneOnOnesController,
   ],
 })
 export class SpacesModule {}

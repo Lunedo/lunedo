@@ -32,6 +32,7 @@ export function readViewContext(
       const name = references.people[id];
       return name ? { name } : null;
     },
+    topic: (id) => references.topics?.[id] ?? null,
     pageLink: (link) => {
       if (link.pageId) {
         const page = references.pages[link.pageId];
@@ -54,6 +55,8 @@ export function readViewContext(
       unknownPerson: t("editor.mention.unknown"),
       unsupportedMacro: t("editor.readView.unsupportedMacro"),
       taskReport: t("tasks.report.title"),
+      decision: t("editor.decision.label"),
+      unknownTopic: t("editor.topicUpdate.unknown"),
       tableOfContents: t("editor.toc.title"),
       file: t("editor.readView.file"),
       image: t("editor.readView.image"),

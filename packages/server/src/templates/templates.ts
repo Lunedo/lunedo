@@ -6,10 +6,12 @@ import {
 } from "@pagehall/editor-schema";
 import { isUuid, uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
+import { z } from "zod";
 import type { Principal } from "../accounts/principal.js";
 import { accountScopeChain } from "../accounts/scope.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Executor } from "../database/database.js";
+import { rhythmSchema } from "../meetings/schedule.js";
 import { languageSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "../spaces/common.js";
@@ -18,7 +20,7 @@ import type { Placement, TreeItem, TreeService } from "../spaces/items.js";
 import type { PeopleService } from "../spaces/people.js";
 import type { PageMode } from "../spaces/schema.js";
 import { builtInTemplates } from "./builtin/index.js";
-import { type TemplateLanguage, templateLanguages } from "./builtin/types.js";
+import { type SeriesDefaults, type TemplateLanguage, templateLanguages } from "./builtin/types.js";
 import { type TemplateField, templateFieldsSchema } from "./fields.js";
 import type { TemplateCategory, TemplateLevel } from "./schema.js";
 
@@ -42,6 +44,7 @@ export interface PageTemplate {
   title: string;
   fields: TemplateField[];
   document: DocumentJson;
+  series: SeriesDefaults | null;
   updatedAt: Date | null;
 }
 
@@ -52,7 +55,12 @@ export interface TemplateInput {
   title: string;
   fields: TemplateField[];
   document: unknown;
+  series?: SeriesDefaults | null | undefined;
 }
+
+export const seriesDefaultsSchema = z
+  .object({ rhythm: rhythmSchema, durationMinutes: z.number().int().min(5).max(1440) })
+  .strict();
 
 export type TemplateScope =
   | { level: "instance" }
@@ -71,6 +79,7 @@ type TemplateRow = {
   fields: unknown;
   document: unknown;
   schema_version: number;
+  series: unknown;
   updated_at: Date | string;
 };
 
@@ -86,6 +95,7 @@ function toTemplate(row: TemplateRow): PageTemplate {
     title: row.title,
     fields: templateFieldsSchema.parse(row.fields),
     document: migrated(row.document, row.schema_version),
+    series: row.series === null ? null : (seriesDefaultsSchema.safeParse(row.series).data ?? null),
     updatedAt: new Date(row.updated_at),
   };
 }
@@ -114,7 +124,7 @@ function cleanText(value: string, max: number, code: string, label: string, requ
 
 export function cleanTemplate(
   input: TemplateInput,
-): Omit<TemplateInput, "document"> & { document: DocumentJson } {
+): Omit<TemplateInput, "document" | "series"> & { document: DocumentJson; series: SeriesDefaults | null } {
   const name = cleanText(input.name, TEMPLATE_NAME_MAX_LENGTH, "invalidTemplateName", "The name", true);
   const description = cleanText(
     input.description,
@@ -141,6 +151,10 @@ export function cleanTemplate(
       },
     );
   }
+  const series = input.series ? seriesDefaultsSchema.safeParse(input.series) : null;
+  if (series && !series.success) {
+    throw new SpaceError("invalidSeriesDefaults", "Choose a rhythm and a duration of 5 to 1440 minutes");
+  }
   return {
     name,
     description,
@@ -148,6 +162,7 @@ export function cleanTemplate(
     title,
     fields: fields.data,
     document: validation.document,
+    series: series?.data ?? null,
   };
 }
 
@@ -232,6 +247,7 @@ export class TemplateService {
         title: text.title,
         fields: text.fields,
         document: text.document,
+        series: template.series ?? null,
         updatedAt: null,
       };
     });
@@ -243,7 +259,7 @@ export class TemplateService {
   ): Promise<PageTemplate[]> {
     const result = await executor.execute<TemplateRow>(sql`
       select id, level, organization_id, space_id, name, description, category, title, fields, document,
-        schema_version, updated_at
+        schema_version, series, updated_at
       from page_templates where ${condition}
       order by lower(name), id limit 1000`);
     return result.rows.map(toTemplate);
@@ -295,11 +311,12 @@ export class TemplateService {
     await this.#database.transaction(async (tx) => {
       await tx.execute(sql`
         insert into page_templates (id, level, organization_id, space_id, name, description, category, title,
-          document, schema_version, fields, created_by, updated_by)
+          document, schema_version, fields, series, created_by, updated_by)
         values (${id}, ${scope.level}, ${scope.level === "organization" ? scope.organizationId : null},
           ${scope.level === "space" ? scope.spaceId : null}, ${clean.name}, ${clean.description}, ${clean.category},
           ${clean.title}, ${JSON.stringify(clean.document)}::jsonb, ${editorSchemaVersion},
-          ${JSON.stringify(clean.fields)}::jsonb, ${actorIdOf(actor)}, ${actorIdOf(actor)})`);
+          ${JSON.stringify(clean.fields)}::jsonb, ${clean.series === null ? null : JSON.stringify(clean.series)}::jsonb,
+          ${actorIdOf(actor)}, ${actorIdOf(actor)})`);
       if (scope.level !== "space") {
         const organizationId = scope.level === "organization" ? scope.organizationId : null;
         await this.#audit.record(tx, {
@@ -343,6 +360,7 @@ export class TemplateService {
         update page_templates set name = ${clean.name}, description = ${clean.description},
           category = ${clean.category}, title = ${clean.title}, document = ${JSON.stringify(clean.document)}::jsonb,
           schema_version = ${editorSchemaVersion}, fields = ${JSON.stringify(clean.fields)}::jsonb,
+          series = ${clean.series === null ? null : JSON.stringify(clean.series)}::jsonb,
           updated_by = ${actorIdOf(actor)}, updated_at = now()
         where id = ${templateId}`);
       if (scope.level !== "space") {
@@ -351,6 +369,7 @@ export class TemplateService {
         ) as string[];
         if (JSON.stringify(clean.fields) !== JSON.stringify(current.fields)) changes.push("fields");
         if (JSON.stringify(clean.document) !== JSON.stringify(current.document)) changes.push("content");
+        if (JSON.stringify(clean.series) !== JSON.stringify(current.series)) changes.push("series");
         await this.#audit.record(tx, {
           name: "template.updated",
           actor,
@@ -450,6 +469,24 @@ export class TemplateService {
       });
     }
     return resolved;
+  }
+
+  async prepare(
+    actor: Principal,
+    template: PageTemplate,
+    values: TemplateValues,
+    language?: TemplateLanguage,
+  ): Promise<{ title: string; document: DocumentJson }> {
+    const lang = language ?? (await this.language(actor));
+    const resolved = await this.#resolve(actor, template.fields, values, lang);
+    const title = template.title
+      .replace(TITLE_FIELD, (_match, key: string) => resolved.get(key)?.text ?? "")
+      .replace(/\s+/g, " ")
+      .trim();
+    return {
+      title,
+      document: { ...template.document, content: fill(template.document.content, resolved) ?? [] },
+    };
   }
 
   async instantiate(

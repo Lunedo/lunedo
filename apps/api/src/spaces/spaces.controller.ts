@@ -47,6 +47,10 @@ const listQuery = z
         "`true` lists only archived spaces. Without it, only spaces that are not archived are listed.",
       ),
     organizationId: uuid("Only spaces of this organization.").optional(),
+    oneOnOne: z
+      .enum(["true", "false"])
+      .optional()
+      .describe("`true` lists only the caller's one-on-ones. Without it, one-on-ones are left out."),
   })
   .strict();
 
@@ -113,6 +117,7 @@ export class SpacesController {
       await this.#services.spaces.list(actorOf(request), {
         organizationId: query.organizationId,
         archived: query.archived === "true",
+        oneOnOne: query.oneOnOne === "true",
         page: pageRequest(query, nameCursor),
       }),
     );

@@ -184,7 +184,10 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
   ],
   "organization.notifications": [section("notifications.eventTypes", notificationEvents())],
   "organization.spaces": [
-    section("spaces.organization.creating", [setting("spaces.membersCreateSpaces")]),
+    section("spaces.organization.creating", [
+      setting("spaces.membersCreateSpaces"),
+      setting("spaces.membersCreateConfidentialSpaces"),
+    ]),
     section("spaces.organization.defaults", [
       row("spaceDefaults", "spaces.organization.defaults", "spaces.organization.defaultsDescription"),
     ]),

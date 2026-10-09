@@ -10,6 +10,7 @@ import {
   Link2,
   Lock,
   MoreHorizontal,
+  Repeat,
 } from "lucide-react";
 import {
   createContext,
@@ -354,7 +355,15 @@ function TreeNode({
   const title = item.kind === "link" && !item.link?.accessible ? t("tree.noAccess") : item.title;
   const target = tree.dropTarget?.id === item.id ? tree.dropTarget.zone : null;
   const Glyph =
-    item.kind === "folder" ? Folder : item.kind === "link" ? (external ? ExternalLink : Link2) : FileText;
+    item.kind === "folder"
+      ? Folder
+      : item.kind === "meetingSeries"
+        ? Repeat
+        : item.kind === "link"
+          ? external
+            ? ExternalLink
+            : Link2
+          : FileText;
 
   const onDragStart = (event: DragEvent<HTMLElement>) => {
     tree.dragged.current = { item, previousId, nextId };

@@ -234,6 +234,7 @@ export function SpacePermissionsScreen() {
                   organizationId={space.organizationId}
                   organizationName={space.organizationName}
                   personal={space.personal}
+                  peopleOnly={space.confidential}
                   exclude={entries.map(holderValue)}
                   value={adding ? holderValue(adding) : null}
                   onValueChange={setAdding}

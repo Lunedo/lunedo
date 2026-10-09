@@ -12,6 +12,7 @@ import {
   unsupportedMacroModule,
 } from "./macros.js";
 import { colorsModule, formattingModule, inlineCommentModule, linkModule } from "./marks.js";
+import { decisionModule, topicUpdateModule } from "./meetings.js";
 import { dateModule, emojiModule, mentionModule, pageLinkModule } from "./references.js";
 import { taskReportModule } from "./reports.js";
 import { fileModule, imageModule, sectionModule } from "./structure.js";
@@ -25,6 +26,7 @@ export {
   columnsModule,
   coreModule,
   dateModule,
+  decisionModule,
   emojiModule,
   expandModule,
   fileModule,
@@ -43,6 +45,7 @@ export {
   taskReportModule,
   tasksModule,
   templatesModule,
+  topicUpdateModule,
   unsupportedMacroModule,
 };
 
@@ -71,6 +74,8 @@ export const defaultModules = [
   columnsModule,
   mathModule,
   templatesModule,
+  topicUpdateModule,
+  decisionModule,
   unsupportedMacroModule,
 ] as const;
 

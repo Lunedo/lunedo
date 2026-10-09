@@ -240,6 +240,6 @@ describe("stored collaborative state of schema version 2", () => {
     expect(validateDocument(documentFromYDoc(ydoc)).ok).toBe(false);
     expect(migrateYDoc(ydoc, 2)).toBe(true);
     expect(validateDocument(documentFromYDoc(ydoc)).ok).toBe(true);
-    expect(migrateYDoc(ydoc, 3)).toBe(false);
+    expect(migrateYDoc(ydoc, 4)).toBe(false);
   });
 });

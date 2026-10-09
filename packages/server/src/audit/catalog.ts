@@ -77,7 +77,7 @@ const mappingRuleFields = z.object({
 
 const spaceRoleNames = ["reader", "commenter", "editor", "admin"] as const;
 const pageModeNames = ["publish", "live"] as const;
-const itemKindNames = ["page", "folder", "link", "blogPost"] as const;
+const itemKindNames = ["page", "folder", "link", "blogPost", "meetingSeries", "meetingTopic"] as const;
 const pageFields = z.object({ spaceId: z.uuid(), title: z.string() });
 const attachmentVersionFields = pageFields.extend({
   attachmentId: z.uuid(),
@@ -976,6 +976,7 @@ export const auditCatalog = {
       visibility: z.enum(["private", "organization", "instance"]),
       personal: z.boolean(),
       ownerId: z.uuid().nullable(),
+      confidential: z.literal(true).optional(),
     }),
     visibility: "organization",
   }),
@@ -1012,6 +1013,18 @@ export const auditCatalog = {
     actor: ["account"],
     target: "space",
     fields: z.object({ name: z.string(), accountId: z.uuid() }),
+    visibility: "organization",
+  }),
+  "space.confidentialAdministratorAppointed": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({ key: z.string(), accountId: z.uuid() }),
+    visibility: "organization",
+  }),
+  "space.confidentialDeleted": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({ key: z.string(), reason: z.string() }),
     visibility: "organization",
   }),
   "space.personalTransferred": event({

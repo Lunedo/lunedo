@@ -254,6 +254,9 @@ export const taskQuerySchema = z
       .optional()
       .describe("`me` for the caller's tasks, or an account ID. Leave it out for everyone."),
     spaceId: uuid("Only tasks in this space.").optional(),
+    seriesId: uuid(
+      "Only tasks written in the meetings of this meeting series. Meetings that were skipped are left out.",
+    ).optional(),
     status: z.enum(taskReportStatuses).default("open").describe("`open` (default), `done` or `all`."),
     due: z
       .enum(taskReportDueWindows)

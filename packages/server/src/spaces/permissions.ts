@@ -120,6 +120,17 @@ export class SpaceHolders implements HolderValidation {
       }
       invalid("Personal spaces can be shared with people and groups only");
     }
+    if (space.confidential) {
+      if (grant.principalKind !== "account" || !grant.principalId) {
+        invalid("Confidential spaces give roles to individual people only");
+      }
+      const person = await tx.execute<{ id: string }>(sql`
+        select a.id from accounts a join memberships m on m.account_id = a.id
+        where a.id = ${grant.principalId} and a.type = 'standard' and a.state in ('active', 'invited')
+          and m.organization_id = ${space.organizationId} and (m.expires_at is null or m.expires_at > now())`);
+      if (!person.rows[0]) invalid("Only people of the organization can get a role in a confidential space");
+      return;
+    }
     if (grant.principalKind === "account" && grant.principalId) {
       const account = await tx.execute<{ id: string }>(sql`
         select a.id from accounts a
@@ -226,7 +237,12 @@ export class SpacePermissionService {
   ): Promise<void> {
     await this.#holders.validate(
       tx,
-      { id: space.id, organizationId: space.organizationId, ownerId: space.ownerId },
+      {
+        id: space.id,
+        organizationId: space.organizationId,
+        ownerId: space.ownerId,
+        confidential: space.confidential,
+      },
       { principalKind: change.principalKind, principalId: change.principalId, role: change.role },
       actor,
     );

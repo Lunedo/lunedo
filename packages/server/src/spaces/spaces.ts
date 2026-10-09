@@ -37,6 +37,8 @@ export interface Space {
   description: string;
   visibility: SpaceVisibility;
   discoverable: boolean;
+  confidential: boolean;
+  oneOnOne: boolean;
   organizationId: string | null;
   organizationName: string | null;
   personal: boolean;
@@ -59,6 +61,8 @@ type SpaceRow = {
   description: string;
   visibility: SpaceVisibility;
   discoverable: boolean;
+  confidential: boolean;
+  one_on_one: boolean;
   organization_id: string | null;
   organization_name: string | null;
   personal_of: string | null;
@@ -70,7 +74,8 @@ type SpaceRow = {
   updated_at: Date | string;
 };
 
-const SPACE_COLUMNS = sql`s.id, s.key, s.name, s.description, s.visibility, s.discoverable, s.organization_id,
+const SPACE_COLUMNS = sql`s.id, s.key, s.name, s.description, s.visibility, s.discoverable,
+  s.confidential, s.one_on_one, s.organization_id,
   o.name as organization_name, s.personal_of, s.owner_account_id, owner.name as owner_name,
   s.overview_item_id, s.archived_at is not null as archived, s.created_at, s.updated_at`;
 
@@ -86,6 +91,8 @@ function toSpace(row: SpaceRow): Space {
     description: row.description,
     visibility: row.visibility,
     discoverable: row.discoverable,
+    confidential: row.confidential,
+    oneOnOne: row.one_on_one,
     organizationId: row.organization_id,
     organizationName: row.organization_name,
     personal: row.personal_of !== null,
@@ -131,6 +138,7 @@ export interface CreateSpaceInput {
   description?: string;
   visibility: SpaceVisibility;
   grants: SpaceGrant[];
+  confidential?: boolean | undefined;
 }
 
 export interface HolderValidation {
@@ -141,6 +149,7 @@ export interface SpaceTarget {
   id: string;
   organizationId: string | null;
   ownerId: string | null;
+  confidential?: boolean;
 }
 
 export class SpaceService {
@@ -211,7 +220,12 @@ export class SpaceService {
 
   async list(
     viewer: Principal,
-    options: { organizationId?: string | undefined; page?: PageRequest; archived?: boolean | undefined } = {},
+    options: {
+      organizationId?: string | undefined;
+      page?: PageRequest;
+      archived?: boolean | undefined;
+      oneOnOne?: boolean | undefined;
+    } = {},
   ): Promise<Page<Space>> {
     const page = options.page ?? FIRST_PAGE;
     const term = page.search?.trim() ?? "";
@@ -222,6 +236,7 @@ export class SpaceService {
       where ${this.#authorization.spaceFilter(viewer, sql`s`)}
         ${options.organizationId ? sql`and s.organization_id = ${options.organizationId}` : sql``}
         and (s.archived_at is not null) = ${options.archived ?? false}
+        and s.one_on_one = ${options.oneOnOne ?? false}
         ${term ? sql`and (s.name ilike ${pattern} or s.key ilike ${pattern} or s.description ilike ${pattern})` : sql``}
         ${page.after ? sql`and ${afterKey([sortName, sql`s.id`], page.after)}` : sql``}
       order by ${sortName}, s.id
@@ -274,49 +289,70 @@ export class SpaceService {
     organizationId: string,
     input: CreateSpaceInput,
     holders: HolderValidation,
+    options: { tx?: Transaction; oneOnOne?: boolean } = {},
   ): Promise<Space> {
     const name = cleanName(input.name, true);
     const key = cleanKey(input.key);
     const description = cleanDescription(input.description ?? "");
     const creatorId = actorIdOf(actor);
-    try {
-      return await this.#database.transaction(async (tx) => {
-        await tx.execute(sql`delete from space_key_aliases where key = ${key}`);
-        const [space] = (
-          await tx.execute<{ id: string }>(sql`
-            insert into spaces (id, organization_id, key, name, description, visibility, created_by)
-            values (${uuidv7()}, ${organizationId}, ${key}, ${name}, ${description}, ${input.visibility}, ${creatorId})
-            returning id`)
-        ).rows;
-        if (!space) throw new Error("The space was not created");
-        const target: SpaceTarget = { id: space.id, organizationId, ownerId: null };
-        const grants = mergeGrants(
-          input.grants,
-          creatorId ? [{ principalKind: "account", principalId: creatorId, role: "admin" }] : [],
-        );
-        for (const grant of grants) await holders.validate(tx, target, grant, actor);
-        const scope = auditScopeOf(target);
-        await this.#audit.record(tx, {
-          name: "space.created",
-          actor,
-          targetId: space.id,
-          fields: { name, key, visibility: input.visibility, personal: false, ownerId: null },
-          scope,
-        });
-        await insertGrants(tx, this.#audit, actor, { ...target, name }, grants);
-        const mode = await defaultPageMode(this.#settings, { id: space.id, organizationId });
-        const overview = await insertPage(tx, {
-          spaceId: space.id,
-          parentId: null,
-          title: name,
-          actorId: creatorId,
-          mode,
-          published: mode === "publish",
-        });
-        await tx.execute(sql`update spaces set overview_item_id = ${overview} where id = ${space.id}`);
-        await signalSpaceChange(tx, { spaceId: space.id, kind: "space", itemId: null });
-        return this.require(space.id, tx);
+    const confidential = input.confidential === true || options.oneOnOne === true;
+    if (confidential) {
+      await this.#authorization.require(actor, "organization.spaces.createConfidential", {
+        type: "organization",
+        id: organizationId,
       });
+      if (input.visibility !== "private") {
+        throw new SpaceError("confidentialVisibility", "A confidential space is always private");
+      }
+    }
+    const run = async (tx: Transaction) => {
+      await tx.execute(sql`delete from space_key_aliases where key = ${key}`);
+      const [space] = (
+        await tx.execute<{ id: string }>(sql`
+          insert into spaces (id, organization_id, key, name, description, visibility, confidential, one_on_one,
+            created_by)
+          values (${uuidv7()}, ${organizationId}, ${key}, ${name}, ${description}, ${input.visibility},
+            ${confidential}, ${options.oneOnOne === true}, ${creatorId})
+          returning id`)
+      ).rows;
+      if (!space) throw new Error("The space was not created");
+      const target: SpaceTarget = { id: space.id, organizationId, ownerId: null, confidential };
+      const grants = mergeGrants(
+        input.grants,
+        creatorId ? [{ principalKind: "account", principalId: creatorId, role: "admin" }] : [],
+      );
+      for (const grant of grants) await holders.validate(tx, target, grant, actor);
+      const scope = auditScopeOf(target);
+      await this.#audit.record(tx, {
+        name: "space.created",
+        actor,
+        targetId: space.id,
+        fields: {
+          name,
+          key,
+          visibility: input.visibility,
+          personal: false,
+          ownerId: null,
+          ...(confidential ? { confidential: true } : {}),
+        },
+        scope,
+      });
+      await insertGrants(tx, this.#audit, actor, { ...target, name }, grants);
+      const mode = await defaultPageMode(this.#settings, { id: space.id, organizationId });
+      const overview = await insertPage(tx, {
+        spaceId: space.id,
+        parentId: null,
+        title: name,
+        actorId: creatorId,
+        mode,
+        published: mode === "publish",
+      });
+      await tx.execute(sql`update spaces set overview_item_id = ${overview} where id = ${space.id}`);
+      await signalSpaceChange(tx, { spaceId: space.id, kind: "space", itemId: null });
+      return this.require(space.id, tx);
+    };
+    try {
+      return options.tx ? await run(options.tx) : await this.#database.transaction(run);
     } catch (error) {
       if (isUniqueViolation(error, "spaces_key_unique")) {
         throw new SpaceError("keyTaken", "Another space uses this key");
@@ -339,6 +375,12 @@ export class SpaceService {
       if (changes.discoverable !== undefined && changes.discoverable !== space.discoverable) {
         if (space.personal) {
           throw new SpaceError("personalSpaceVisibility", "Personal spaces cannot be found by others");
+        }
+        if (space.confidential && changes.discoverable) {
+          throw new SpaceError(
+            "confidentialVisibility",
+            "A confidential space cannot be found by people who are not its members",
+          );
         }
         await tx.execute(sql`update spaces set discoverable = ${changes.discoverable}, updated_at = now()
           where id = ${spaceId}`);
@@ -433,6 +475,9 @@ export class SpaceService {
       if (space.personal && visibility !== "private") {
         throw new SpaceError("personalSpaceVisibility", "Personal spaces are always private");
       }
+      if (space.confidential && visibility !== "private") {
+        throw new SpaceError("confidentialVisibility", "A confidential space is always private");
+      }
       if (space.visibility === visibility) return space;
       await tx.execute(
         sql`update spaces set visibility = ${visibility}, updated_at = now() where id = ${spaceId}`,
@@ -458,7 +503,7 @@ export class SpaceService {
     const sortName = sql`lower(s.name)`;
     const result = await this.#database.execute<SpaceRow & { sort_name: string }>(sql`
       select ${SPACE_COLUMNS}, ${sortName} as sort_name from ${SPACE_FROM}
-      where s.organization_id = ${organizationId}
+      where s.organization_id = ${organizationId} and not s.confidential
         and not ${activeAdministratorCondition(storedGrants(sql`s.id`), sql`s.organization_id`)}
         ${page.after ? sql`and ${afterKey([sortName, sql`s.id`], page.after)}` : sql``}
       order by ${sortName}, s.id
@@ -478,6 +523,12 @@ export class SpaceService {
       if (!space.organizationId) throw new SpaceError("spaceNotFound", "The space does not exist");
       const hasAdministrator = await tx.execute<{ present: boolean }>(sql`
         select ${activeAdministratorCondition(storedGrants(sql`${spaceId}::uuid`), sql`${space.organizationId}::uuid`)} as present`);
+      if (space.confidential) {
+        throw new SpaceError(
+          "spaceNotFound",
+          "Confidential spaces get a space admin only from their remaining members",
+        );
+      }
       if (hasAdministrator.rows[0]?.present) {
         throw new SpaceError(
           "spaceHasAdministrator",

@@ -57,6 +57,7 @@ export interface PersonAccess {
   name: string | null;
   email: string | null;
   entries: PersonAccessEntry[];
+  confidentialSpaceCount: number;
 }
 
 export type GiveAccessLevel = "reader" | "commenter" | "editor" | "admin";
@@ -283,7 +284,13 @@ export class AccessExplanationService {
       throw new SpaceError("personNotFound", "The person does not exist");
     }
     const limit = options.spaceIds ? sql`s.id = any(${sql.param(options.spaceIds)}::uuid[])` : sql`true`;
-    const scope = sql`${this.#spaceScope(options.organizationId)} and ${limit} and s.deleted_at is null and s.personal_of is null`;
+    const base = sql`${this.#spaceScope(options.organizationId)} and ${limit} and s.deleted_at is null and s.personal_of is null`;
+    const scope = sql`${base} and (not s.confidential or ${this.#authorization.spaceFilter(viewer, sql`s`)})`;
+    const confidential = await this.#database.execute<{ count: string }>(sql`
+      select count(*) as count from spaces s
+      where ${base} and s.confidential and not ${this.#authorization.spaceFilter(viewer, sql`s`)}
+        and exists (select 1 from space_permissions sp where sp.space_id = s.id
+          and sp.principal_kind = 'account' and sp.principal_id = ${accountId})`);
     const spaces = await this.#database.execute<{ id: string; name: string; key: string }>(sql`
       select s.id, s.name, s.key from spaces s where ${scope} order by lower(s.name), s.id limit 2000`);
     const entries: PersonAccessEntry[] = [];
@@ -412,7 +419,13 @@ export class AccessExplanationService {
       });
     }
     entries.push(...hidden.values());
-    return { accountId, name: person.name, email: person.email, entries };
+    return {
+      accountId,
+      name: person.name,
+      email: person.email,
+      entries,
+      confidentialSpaceCount: Number(confidential.rows[0]?.count ?? 0),
+    };
   }
 
   async overviewCsv(viewer: Principal, organizationId: string, accountId: string | null): Promise<string> {
@@ -441,6 +454,13 @@ export class AccessExplanationService {
             entry.count,
             entry.reasons.map((reason) => describeReason(reason)).join("; "),
           ]
+            .map(csvCell)
+            .join(","),
+        );
+      }
+      if (access.confidentialSpaceCount > 0) {
+        lines.push(
+          [access.name, access.email, "confidentialSpaces", "", "", "", access.confidentialSpaceCount, ""]
             .map(csvCell)
             .join(","),
         );

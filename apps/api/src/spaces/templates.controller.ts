@@ -19,8 +19,9 @@ import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { notFound, type ProblemCode } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
-import { timestamp, uuid } from "../http/schemas.js";
+import { extensibleEnum, timestamp, uuid } from "../http/schemas.js";
 import { definitionFor, listSettings, settingUpdateSchema, updateSetting } from "../http/settings.js";
+import { rhythmSchema } from "../meetings/schemas.js";
 import { documentSchema, exampleDocument } from "./schemas.js";
 
 const TAG = "Templates";
@@ -71,6 +72,22 @@ const fieldSchema = z
   .strict()
   .describe("An input field asked for when a page is created from the template.");
 
+const seriesDefaultsResponse = z
+  .object({
+    rhythm: z
+      .object({
+        frequency: extensibleEnum(["none", "daily", "weekly", "monthly", "yearly"], "How often."),
+        interval: z.number().int().describe("Every how many units."),
+        weekdays: z.array(z.string()).optional().describe("Weekdays."),
+        monthDay: z.number().int().optional().describe("Day of the month."),
+        weekOfMonth: z.number().int().optional().describe("Week of the month."),
+        weekday: z.string().optional().describe("Weekday."),
+      })
+      .describe("Default rhythm."),
+    durationMinutes: z.number().int().describe("Default duration in minutes."),
+  })
+  .describe("Defaults of a series template.");
+
 const templateSchema = z
   .object({
     id: z.string().describe("ID of the template. Built-in templates have IDs starting with `builtin:`."),
@@ -87,6 +104,11 @@ const templateSchema = z
     title: z.string().describe("Title of new pages; `{key}` inserts the value of an input field."),
     fields: z.array(fieldSchema).describe("Input fields."),
     document: documentSchema,
+    series: seriesDefaultsResponse
+      .nullable()
+      .describe(
+        "For a series template: defaults for rhythm and duration of new meeting series; otherwise null.",
+      ),
     updatedAt: timestamp("When the template last changed, or null for built-in templates.").nullable(),
   })
   .describe("A page template.");
@@ -102,6 +124,7 @@ const exampleTemplate = {
   title: "Change {name}",
   fields: [{ key: "name", label: "Name of the change", type: "text", required: true }],
   document: exampleDocument,
+  series: null,
   updatedAt: "2026-10-05T08:00:00.000Z",
 };
 
@@ -129,6 +152,17 @@ const templateInputSchema = z
       .max(MAX_TEMPLATE_FIELDS)
       .describe(`Up to ${MAX_TEMPLATE_FIELDS} input fields.`),
     document: documentSchema,
+    series: z
+      .object({
+        rhythm: rhythmSchema,
+        durationMinutes: z.number().int().min(5).max(1440).describe("Minutes."),
+      })
+      .strict()
+      .nullable()
+      .optional()
+      .describe(
+        "Makes the template a series template with these defaults; null or left out for a page template.",
+      ),
   })
   .strict()
   .describe("A template.");

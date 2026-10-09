@@ -310,7 +310,7 @@ export class TreeService {
     return sql`select t.id, t.space_id, t.parent_id, t.kind, t.title, t.description, t.width, t.mode,
         (t.kind not in ('page', 'blogPost') or t.mode = 'live' or t.published_version_id is not null) as published,
         (t.archived_root_id is not null) as archived, t.position,
-        exists (select 1 from tree_items c where c.parent_id = t.id
+        exists (select 1 from tree_items c where c.parent_id = t.id and c.kind <> 'meetingTopic'
           and ${visibleItem(this.#authorization, viewer, sql`c`, sql`ts`)}) as has_children,
         case when exists (select 1 from page_restrictions r where r.item_id = t.id and r.kind = 'view') then 'own'
           when exists (select 1 from page_restrictions r where r.item_id = any(t.path) and r.kind = 'view') then 'inherited'
@@ -340,7 +340,7 @@ export class TreeService {
       where t.space_id = ${spaceId}
         and coalesce(t.parent_id, '00000000-0000-0000-0000-000000000000'::uuid)
           = coalesce(${parentId}::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
-        and t.kind <> 'blogPost'
+        and t.kind not in ('blogPost', 'meetingTopic')
         and ${
           parentId === null
             ? sql`t.archived_root_id is null`
@@ -483,8 +483,14 @@ export class TreeService {
     if (!row || row.space_id !== spaceId || !row.in_tree) {
       throw new SpaceError("invalidPlacement", "The parent is not in the target space");
     }
-    if (row.kind === "link" || row.kind === "blogPost") {
+    if (row.kind !== "page" && row.kind !== "folder") {
       throw new SpaceError("invalidPlacement", "Only pages and folders can contain items");
+    }
+    const meeting = await tx.execute<{ item_id: string }>(
+      sql`select item_id from meetings where item_id = ${parentId}`,
+    );
+    if (meeting.rows[0]) {
+      throw new SpaceError("invalidPlacement", "Meetings keep their notes on one page and contain no items");
     }
   }
 
@@ -504,6 +510,12 @@ export class TreeService {
     if (input.kind === "blogPost") {
       throw new SpaceError("invalidKind", "Blog posts are created in the blog of a space");
     }
+    if (input.kind === "meetingSeries" || input.kind === "meetingTopic") {
+      throw new SpaceError(
+        "invalidKind",
+        "Meeting series and their topics are created in the meetings of a space",
+      );
+    }
     const title = cleanTitle(input.title);
     const description = cleanDescription(input.description ?? "");
     let linkItemId: string | null = null;
@@ -520,7 +532,7 @@ export class TreeService {
         const kind = await this.#database.execute<{ kind: TreeItemKind }>(
           sql`select kind from tree_items where id = ${linkItemId}`,
         );
-        if (kind.rows[0]?.kind === "link" || kind.rows[0]?.kind === "blogPost") {
+        if (kind.rows[0]?.kind !== "page" && kind.rows[0]?.kind !== "folder") {
           throw new SpaceError("invalidLinkTarget", "Links can point to pages and folders only");
         }
       } else throw new SpaceError("invalidLinkTarget", "A link needs a page, a folder or an address");
@@ -580,7 +592,11 @@ export class TreeService {
     return item;
   }
 
-  async moveImpact(actor: Principal, itemId: string, targetSpaceId: string): Promise<AccessImpact> {
+  async moveImpact(
+    actor: Principal,
+    itemId: string,
+    targetSpaceId: string,
+  ): Promise<AccessImpact & { leavesConfidential: boolean }> {
     const source = await this.#database.execute<{ space_id: string }>(
       sql`select space_id from tree_items where id = ${itemId}`,
     );
@@ -601,9 +617,19 @@ export class TreeService {
         grants: await currentGrants(this.#database, spaceId),
       };
     };
-    return accessImpact(this.#database, await state(sourceSpaceId), await state(targetSpaceId), (account) =>
-      this.#people.visibleCondition(actor, account),
+    const confidential = await this.#database.execute<{ id: string; confidential: boolean }>(sql`
+      select id, confidential from spaces where id in (${sourceSpaceId}, ${targetSpaceId})`);
+    const isConfidential = (id: string) => confidential.rows.some((row) => row.id === id && row.confidential);
+    const impact = await accessImpact(
+      this.#database,
+      await state(sourceSpaceId),
+      await state(targetSpaceId),
+      (account) => this.#people.visibleCondition(actor, account),
     );
+    return {
+      ...impact,
+      leavesConfidential: isConfidential(sourceSpaceId) && !isConfidential(targetSpaceId),
+    };
   }
 
   async move(
@@ -636,6 +662,14 @@ export class TreeService {
       if (row.kind === "blogPost") {
         throw new SpaceError("invalidPlacement", "Blog posts are not part of the page tree");
       }
+      const meetingPart = await tx.execute<{ part: boolean }>(sql`
+        select (${row.kind} = 'meetingTopic' or exists (select 1 from meetings where item_id = ${itemId})) as part`);
+      if (meetingPart.rows[0]?.part) {
+        throw new SpaceError(
+          "invalidPlacement",
+          "Meetings and topics stay in their series; move the series instead",
+        );
+      }
       if (row.space_id !== sourceSpaceId) {
         throw new SpaceError("itemMoved", "Someone else moved the item at the same moment; try again");
       }
@@ -662,6 +696,22 @@ export class TreeService {
         );
         if (overview.rows[0]) {
           throw new SpaceError("overviewPage", "The overview page of a space stays in its space");
+        }
+        const broad = await tx.execute<{ found: boolean }>(sql`
+          with recursive down as (
+            select id from tree_items where id = ${itemId}
+            union all
+            select t.id from tree_items t join down on t.parent_id = down.id
+          )
+          select (select confidential from spaces where id = ${targetSpaceId}) and (
+            exists (select 1 from page_shares ps where ps.item_id in (select id from down) and ps.principal_kind <> 'account')
+            or exists (select 1 from share_links sl where sl.item_id in (select id from down)
+              and sl.scope <> 'people' and sl.revoked_at is null)) as found`);
+        if (broad.rows[0]?.found) {
+          throw new SpaceError(
+            "confidentialSharing",
+            "The content is shared with groups or through broad links. Remove these shares before moving it into a confidential space.",
+          );
         }
       }
       const position = await this.#placementPosition(tx, targetSpaceId, target, itemId);
@@ -707,7 +757,10 @@ export class TreeService {
       if (row.space_id !== spaceId) {
         throw new SpaceError("itemMoved", "Someone else moved the item at the same moment; try again");
       }
-      if (row.kind === "link" || row.kind === "blogPost") {
+      const meeting = await tx.execute<{ item_id: string }>(
+        sql`select item_id from meetings where item_id = ${itemId}`,
+      );
+      if ((row.kind !== "page" && row.kind !== "folder") || meeting.rows[0]) {
         throw new SpaceError("invalidConversion", "Only pages and folders can be converted");
       }
       if (row.kind === kind) return;
