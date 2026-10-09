@@ -17,6 +17,7 @@ export const taskReportModule = defineModule({
       spec: { group: "block", atom: true, selectable: true, draggable: true },
       attrs: {
         spaceId: optional(uuidValue.nullable(), null),
+        seriesId: optional(uuidValue.nullable(), null),
         assignee: optional(uuidValue.nullable(), null),
         assignedToViewer: optional(z.boolean(), false),
         due: optional(z.enum(taskReportDueWindows), "any"),
@@ -32,6 +33,7 @@ export const taskReportModule = defineModule({
           {
             class: "ph-task-report",
             "data-space-id": attrOf<string | null>(node, "spaceId"),
+            "data-series-id": attrOf<string | null>(node, "seriesId"),
             "data-assignee": attrOf<string | null>(node, "assignee"),
             "data-assigned-to-viewer": attrOf<boolean>(node, "assignedToViewer") ? "true" : null,
             "data-due": attrOf<string>(node, "due"),

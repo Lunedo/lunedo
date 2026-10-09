@@ -47,6 +47,8 @@ export interface RenderLabels {
   unknownPerson: string;
   unsupportedMacro: string;
   taskReport: string;
+  decision: string;
+  unknownTopic: string;
   tableOfContents: string;
   file: string;
   image: string;
@@ -61,6 +63,7 @@ export interface RenderContext {
   labels?: Partial<RenderLabels>;
   showPlaceholders?: boolean;
   taskStatus?: (id: string) => boolean | null;
+  topic?: (id: string) => { title: string } | null;
 }
 
 interface BaseRenderer {
@@ -71,6 +74,7 @@ interface BaseRenderer {
   nextHeadingId(): string;
   formatDate(iso: string): string;
   mentionName(id: string): string;
+  topicTitle(id: string): string;
   pageLink(link: PageLinkTarget): ResolvedPageLink | null;
 }
 

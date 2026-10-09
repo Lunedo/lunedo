@@ -1,0 +1,48 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "unsupportedMacro",
+      "attrs": {
+        "name": "jira",
+        "data": {
+          "parameters": {
+            "key": "DEV-1"
+          },
+          "body": "<p>x</p>"
+        }
+      }
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "After the macro."
+        }
+      ]
+    },
+    {
+      "type": "taskReport",
+      "attrs": {
+        "spaceId": "01929b1e-0000-7000-8000-000000000003",
+        "assignee": "01929b1e-0000-7000-8000-000000000001",
+        "assignedToViewer": false,
+        "due": "next7Days",
+        "status": "open",
+        "seriesId": "01929b1e-0000-7000-8000-000000000020"
+      }
+    },
+    {
+      "type": "taskReport",
+      "attrs": {
+        "spaceId": null,
+        "assignee": null,
+        "assignedToViewer": true,
+        "due": "overdue",
+        "status": "all",
+        "seriesId": null
+      }
+    }
+  ]
+}
