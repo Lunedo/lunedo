@@ -589,4 +589,51 @@ describe("sharing and access", () => {
     );
     expect(await screen.findByText("Approved")).toBeTruthy();
   });
+
+  it("tells a person who loses the edit permission while editing why the page became read-only", async () => {
+    const sources: { listeners: Map<string, (event: MessageEvent<string>) => void> }[] = [];
+    vi.stubGlobal(
+      "EventSource",
+      class {
+        listeners = new Map<string, (event: MessageEvent<string>) => void>();
+        constructor() {
+          sources.push(this);
+        }
+        addEventListener(name: string, listener: (event: MessageEvent<string>) => void) {
+          this.listeners.set(name, listener);
+        }
+        removeEventListener() {}
+        close() {}
+      },
+    );
+    let role: Role = "editor";
+    mockApi(
+      routes("editor", {
+        "GET /api/v1/space-keys/ITOPS": () => ({ body: { space: space(role), redirected: false } }),
+        [`GET /api/v1/items/${VPN}`]: () => ({
+          body: {
+            ...page(VPN, "VPN access", { mode: "live" }),
+            spaceKey: "ITOPS",
+            spaceName: "IT Operations",
+            spaceAccess: true,
+            ancestors: [],
+          },
+        }),
+        [`GET /api/v1/pages/${VPN}/access/mine`]: () => mine(role)(),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access?edit=true`);
+    expect(await screen.findByRole("textbox", { name: "Page content" })).toBeTruthy();
+    role = "reader";
+    for (const source of sources) {
+      source.listeners.get("spaces")?.(
+        new MessageEvent("spaces", {
+          data: JSON.stringify({ spaceId: SPACE_ID, kind: "access", itemId: null }),
+        }),
+      );
+    }
+    expect(await screen.findByText("You can no longer edit this page")).toBeTruthy();
+    expect(await screen.findByText("Published text")).toBeTruthy();
+    expect(screen.queryByRole("textbox", { name: "Page content" })).toBeNull();
+  });
 });

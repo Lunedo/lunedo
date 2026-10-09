@@ -32,6 +32,7 @@ import { lazy, Suspense, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
+import { CollaborationProblemNotice } from "../../editor/save-indicator.js";
 import type { SaveState } from "../../editor/save-state.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
@@ -47,7 +48,7 @@ import { InlineTitle } from "../../spaces/inline-title.js";
 import { itemSlug } from "../../spaces/item-paths.js";
 import { PageLabels } from "../../spaces/page-labels.js";
 import { DraftBanner, DraftStatusLine, PublishButton } from "../../spaces/page-publishing.js";
-import { PageContent } from "../../spaces/page-screen.js";
+import { PageContent, useLostEditPermission } from "../../spaces/page-screen.js";
 import { Redirect } from "../../spaces/redirect.js";
 import { spaceDisplayName } from "../../spaces/space-badge.js";
 import { useSpace } from "../../spaces/space-context.js";
@@ -258,19 +259,21 @@ function ExcerptField({ post }: { post: BlogPost }) {
 
 function BlogPostView({ item, post }: { item: ItemDetails; post: BlogPost }) {
   const { space, canEdit } = useSpace();
+  const search = route.useSearch();
+  const lostEdit = useLostEditPermission(canEdit, search.edit === true);
   const writable = canEdit && !space.archived;
   return (
     <UploadsProvider pageId={item.id}>
       <AttachmentPreviewProvider canEdit={writable}>
         <PageDropZone enabled={writable} title={item.title}>
-          <BlogPostArticle item={item} post={post} />
+          <BlogPostArticle item={item} post={post} lostEdit={lostEdit} />
         </PageDropZone>
       </AttachmentPreviewProvider>
     </UploadsProvider>
   );
 }
 
-function BlogPostArticle({ item, post }: { item: ItemDetails; post: BlogPost }) {
+function BlogPostArticle({ item, post, lostEdit }: { item: ItemDetails; post: BlogPost; lostEdit: boolean }) {
   const { t } = useTranslation();
   const format = useFormat();
   const { toast } = useToast();
@@ -470,6 +473,7 @@ function BlogPostArticle({ item, post }: { item: ItemDetails; post: BlogPost }) 
           <p className="text-lg text-text-muted">{post.excerpt}</p>
         ) : null}
         <PageLabels pageId={item.id} />
+        {lostEdit ? <CollaborationProblemNotice problem="permissionRevoked" /> : null}
         {editing ? (
           <Suspense fallback={<Skeleton className="h-field w-full" />}>
             <PageEditor

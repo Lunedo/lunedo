@@ -6,6 +6,7 @@ import { lazy, Suspense, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError } from "../api/request.js";
 import { useContentCollaboration } from "../collaboration/content-collaboration.js";
+import { CollaborationProblemNotice } from "../editor/save-indicator.js";
 import type { SaveState } from "../editor/save-state.js";
 import { LoadError } from "../errors/failure.js";
 import { AttachmentsSection, PageDropZone } from "../files/attachments-section.js";
@@ -15,7 +16,7 @@ import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { draftQuery } from "../spaces/content-queries.js";
 import { itemHref, itemSlug } from "../spaces/item-paths.js";
 import { DraftStatusLine, PublishButton } from "../spaces/page-publishing.js";
-import { PageContent } from "../spaces/page-screen.js";
+import { PageContent, useLostEditPermission } from "../spaces/page-screen.js";
 import { Redirect } from "../spaces/redirect.js";
 import { type ItemDetails, itemQuery, sharedPath } from "../spaces/space-queries.js";
 import { NoPageAccess } from "./access-requests.js";
@@ -49,7 +50,8 @@ function SharedPage({ page }: { page: ItemDetails }) {
   const search = route.useSearch();
   const mine = useQuery({ ...myAccessQuery(page.id), throwOnError: false });
   const role = mine.data?.role ?? null;
-  const canEdit = role !== null && EDITING.has(role) && !page.archived;
+  const mayEdit = role !== null && EDITING.has(role);
+  const canEdit = mayEdit && !page.archived;
   const collaboration = useContentCollaboration({
     itemId: page.id,
     spaceId: page.spaceId,
@@ -58,6 +60,7 @@ function SharedPage({ page }: { page: ItemDetails }) {
     writable: canEdit,
   });
   const editing = canEdit && search.edit === true;
+  const lostEdit = useLostEditPermission(mayEdit, search.edit === true);
   const publishMode = page.mode === "publish";
   const saveState = useRef<SaveState>("saved");
   const draft = useQuery({ ...draftQuery(page.id), enabled: canEdit && publishMode, throwOnError: false });
@@ -110,6 +113,7 @@ function SharedPage({ page }: { page: ItemDetails }) {
                 }
               />
               {editing && publishMode ? <DraftStatusLine draft={draft.data} /> : null}
+              {lostEdit ? <CollaborationProblemNotice problem="permissionRevoked" /> : null}
               {editing ? (
                 <Suspense fallback={<Skeleton className="h-field w-full" />}>
                   <PageEditor
