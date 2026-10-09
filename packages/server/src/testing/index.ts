@@ -1,4 +1,9 @@
-export { createTemporaryDatabase, type TemporaryDatabase, testDatabaseBaseUrl } from "./database.js";
+export {
+  createMigratedDatabase,
+  createTemporaryDatabase,
+  type TemporaryDatabase,
+  testDatabaseBaseUrl,
+} from "./database.js";
 export { type FakeOidcProvider, startFakeOidcProvider, type TokenOverrides } from "./fake-oidc.js";
 export * from "./fakes/index.js";
 export { FakeLdapDirectory, type FakeLdapEntry } from "./fakes/ldap-directory.js";

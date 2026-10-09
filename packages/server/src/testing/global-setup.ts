@@ -1,8 +1,5 @@
 import type { TestProject } from "vitest/node";
-import { runMigrations } from "../database/migrate.js";
-import { createDatabasePool } from "../database/pool.js";
-import { createLogger } from "../logging/logger.js";
-import { createTemporaryDatabase, testDatabaseBaseUrl } from "./database.js";
+import { createMigratedDatabase, testDatabaseBaseUrl } from "./database.js";
 
 declare module "vitest" {
   export interface ProvidedContext {
@@ -11,20 +8,14 @@ declare module "vitest" {
   }
 }
 
-/** Creates and migrates one database per test run and drops it afterwards. */
+/** Creates one migrated database per test run and drops it afterwards. */
 export default async function setup(project: TestProject) {
   const baseUrl = testDatabaseBaseUrl();
   if (!baseUrl) {
     project.provide("databaseUrl", "");
     return;
   }
-  const database = await createTemporaryDatabase(baseUrl);
-  const pool = createDatabasePool({ connectionString: database.url, applicationName: "pagehall-test-setup" });
-  try {
-    await runMigrations(pool, { logger: createLogger({ service: "test", level: "silent" }) });
-  } finally {
-    await pool.end();
-  }
+  const database = await createMigratedDatabase(baseUrl);
   project.provide("databaseUrl", database.url);
   return () => database.drop();
 }

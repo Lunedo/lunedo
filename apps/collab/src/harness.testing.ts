@@ -4,7 +4,7 @@ import path from "node:path";
 import { HocuspocusProvider, HocuspocusProviderWebsocket } from "@hocuspocus/provider";
 import type { Server } from "@hocuspocus/server";
 import { createServerRuntime, Metrics, SESSION_COOKIE, type ServerRuntime } from "@pagehall/server";
-import { createTemporaryDatabase, spaceFixtures, type TemporaryDatabase } from "@pagehall/server/testing";
+import { createMigratedDatabase, spaceFixtures, type TemporaryDatabase } from "@pagehall/server/testing";
 import WebSocket from "ws";
 import * as Y from "yjs";
 import { type CollabContext, createCollabServer } from "./server.js";
@@ -38,7 +38,7 @@ export interface Cluster {
 const CLOSE_WAIT_MS = 5000;
 
 export async function createCluster(baseUrl: string, runtimes = 2): Promise<Cluster> {
-  const database = await createTemporaryDatabase(baseUrl, "pagehall_collab_test");
+  const database = await createMigratedDatabase(baseUrl, "pagehall_collab_test");
   const dataDir = mkdtempSync(path.join(tmpdir(), "pagehall-collab-"));
   const env = {
     PAGEHALL_DATABASE_URL: database.url,
