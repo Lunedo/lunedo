@@ -68,6 +68,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   await admin.query(`create database ${database}`);
   await admin.end();
 
+  writeState({ databaseUrl: databaseUrl(database) });
   const dataDir = mkdtempSync(path.join(STATE_DIR, "data-"));
   const env: NodeJS.ProcessEnv = {
     ...process.env,

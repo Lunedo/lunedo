@@ -8,6 +8,7 @@ import {
   signInWithPassword,
   waitForMail,
 } from "../support/helpers.js";
+import { publishScheduledPostNow } from "../support/jobs.js";
 
 test.describe.configure({ mode: "serial" });
 test.use({ storageState: OWNER_STORAGE });
@@ -277,7 +278,6 @@ test("one task status in the editor, the read view, My tasks, the task report an
 test("schedules a blog post that the job publishes, and pins it in the organization overview", async ({
   page,
 }) => {
-  test.setTimeout(240_000);
   await page.goto(`/spaces/${spaceKey}/blog`);
   await page.getByRole("button", { name: "Write a post" }).first().click();
   const dialog = page.getByRole("dialog");
@@ -293,19 +293,20 @@ test("schedules a blog post that the job publishes, and pins it in the organizat
     timeout: 20_000,
   });
   await callApi(page, "PUT", `/api/v1/blog-posts/${postId}/schedule`, {
-    at: new Date(Date.now() + 65_000).toISOString(),
+    at: new Date(Date.now() + 60 * 60_000).toISOString(),
     timeZone: "Europe/Vienna",
   });
   await page.goto(`/spaces/${spaceKey}/blog`);
   await expect(
     page.getByRole("region", { name: "Scheduled" }).getByRole("link", { name: "New VPN client from Monday" }),
   ).toBeVisible();
+  await publishScheduledPostNow(postId);
   await expect
     .poll(
       async () =>
         ((await (await page.request.get(`/api/v1/blog-posts/${postId}`)).json()) as { published: boolean })
           .published,
-      { timeout: 180_000, intervals: [5_000] },
+      { timeout: 30_000, intervals: [500] },
     )
     .toBe(true);
 

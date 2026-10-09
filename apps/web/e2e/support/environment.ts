@@ -14,6 +14,7 @@ export const STATE_DIR = process.env.PAGEHALL_E2E_STATE_DIR ?? path.join(tmpdir(
 
 export interface E2EState {
   setupCode?: string;
+  databaseUrl?: string;
   ownerSecret?: string;
   ownerRecoveryCodes?: string[];
   organizationId?: string;
