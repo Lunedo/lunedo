@@ -9,6 +9,7 @@
     "./tsconfig/node.json": "./tsconfig/node.json",
     "./tsconfig/react.json": "./tsconfig/react.json",
     "./vitest": "./vitest.ts",
+    "./parallelism": "./src/parallelism.ts",
     "./test-report": "./src/test-report.ts",
     "./vitest-report": "./src/vitest-report.ts"
   },
