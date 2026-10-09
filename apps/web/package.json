@@ -59,7 +59,7 @@
     "@tiptap/pm": "^3.31.4",
     "@tiptap/react": "^3.31.4",
     "@tiptap/suggestion": "^3.31.4",
-    "@tiptap/y-tiptap": "^3.0.9",
+    "@tiptap/y-tiptap": "3.0.9",
     "dompurify": "^3.4.16",
     "emojibase-data": "^17.0.0",
     "i18next": "^26.4.2",
