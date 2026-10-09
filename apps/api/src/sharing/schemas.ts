@@ -391,12 +391,12 @@ export const personAccessSchema = z
         z
           .object({
             kind: extensibleEnum(
-              ["space", "share", "link", "restrictedPages", "confidentialSpaces"],
-              "`restrictedPages` counts shared pages the caller cannot read, without titles. `confidentialSpaces` counts confidential spaces the person belongs to and the caller does not, without names or keys.",
+              ["space", "share", "link", "restrictedPages"],
+              "`restrictedPages` counts shared pages the caller cannot read, without titles.",
             ),
-            spaceId: uuid("The space, or null for `confidentialSpaces`.").nullable(),
-            spaceName: z.string().describe("Name of the space, empty for `confidentialSpaces`."),
-            spaceKey: z.string().describe("Key of the space, empty for `confidentialSpaces`."),
+            spaceId: uuid("The space."),
+            spaceName: z.string().describe("Name of the space."),
+            spaceKey: z.string().describe("Key of the space."),
             itemId: uuid("The page, for shares and links.").nullable(),
             itemTitle: z.string().nullable().describe("Title of the page."),
             role: z.enum(spaceRoleValues).nullable().describe("What the person may do."),
@@ -404,13 +404,19 @@ export const personAccessSchema = z
               .number()
               .int()
               .describe(
-                "Number of pages for `restrictedPages`, number of spaces for `confidentialSpaces`; otherwise 1, or 2 for a share with the pages below.",
+                "Number of pages for `restrictedPages`; otherwise 1, or 2 for a share with the pages below.",
               ),
             reasons: z.array(accessReasonSchema).describe("Why."),
           })
           .describe("An access of the person."),
       )
       .describe("All access of the person in the organization."),
+    confidentialSpaceCount: z
+      .number()
+      .int()
+      .describe(
+        "Number of confidential spaces the person belongs to and the caller does not. They are not listed in `entries`, and their names and keys stay hidden.",
+      ),
   })
   .describe("What a person can do.");
 

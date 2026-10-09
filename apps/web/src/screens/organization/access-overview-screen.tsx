@@ -27,16 +27,6 @@ function exportHref(organizationId: string, accountId?: string): string {
 function EntryRow({ entry }: { entry: Entry }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  if (entry.kind === "confidentialSpaces") {
-    return (
-      <li className="flex flex-wrap items-center gap-2 py-3">
-        <Lock aria-hidden="true" className="size-icon-sm text-text-muted" />
-        <span className="min-w-0 flex-1">
-          {t("organization.access.confidentialSpaces", { count: entry.count })}
-        </span>
-      </li>
-    );
-  }
   const where =
     entry.kind === "restrictedPages"
       ? t("organization.access.restrictedPages", { count: entry.count })
@@ -130,13 +120,23 @@ function PersonOverview({ organizationId, accountId }: { organizationId: string;
           {t("organization.access.exportPerson")}
         </a>
       </div>
-      {access.data.entries.length === 0 ? (
+      {access.data.entries.length === 0 && access.data.confidentialSpaceCount === 0 ? (
         <p className="text-sm text-text-muted">{t("organization.access.nothing", { name })}</p>
       ) : (
         <ul className="flex flex-col divide-y divide-border">
           {access.data.entries.map((entry) => (
             <EntryRow key={`${entry.kind}-${entry.spaceId}-${entry.itemId ?? ""}`} entry={entry} />
           ))}
+          {access.data.confidentialSpaceCount > 0 ? (
+            <li className="flex flex-wrap items-center gap-2 py-3">
+              <Lock aria-hidden="true" className="size-icon-sm text-text-muted" />
+              <span className="min-w-0 flex-1">
+                {t("organization.access.confidentialSpaces", {
+                  count: access.data.confidentialSpaceCount,
+                })}
+              </span>
+            </li>
+          ) : null}
         </ul>
       )}
     </section>

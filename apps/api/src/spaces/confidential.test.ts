@@ -284,9 +284,8 @@ describe.skipIf(!databaseBaseUrl)("confidential spaces through the API", () => {
     const space = await confidentialSpace(admin);
     const overview = await owner.get(`/api/v1/organizations/${organizationId}/people/${admin.id}/access`);
     expect(overview.statusCode, overview.body).toBe(200);
-    expect(overview.json().entries).toEqual([
-      expect.objectContaining({ kind: "confidentialSpaces", spaceId: null, count: 1 }),
-    ]);
+    expect(overview.json().entries).toEqual([]);
+    expect(overview.json().confidentialSpaceCount).toBe(1);
     expectHidden(overview.body, space, "overview");
     expect(overview.body).not.toContain(space.key);
     const csv = await owner.get(

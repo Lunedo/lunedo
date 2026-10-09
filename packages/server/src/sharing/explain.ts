@@ -41,8 +41,8 @@ export interface AccessExplanation {
 }
 
 export interface PersonAccessEntry {
-  kind: "space" | "share" | "link" | "restrictedPages" | "confidentialSpaces";
-  spaceId: string | null;
+  kind: "space" | "share" | "link" | "restrictedPages";
+  spaceId: string;
   spaceName: string;
   spaceKey: string;
   itemId: string | null;
@@ -57,6 +57,7 @@ export interface PersonAccess {
   name: string | null;
   email: string | null;
   entries: PersonAccessEntry[];
+  confidentialSpaceCount: number;
 }
 
 export type GiveAccessLevel = "reader" | "commenter" | "editor" | "admin";
@@ -418,21 +419,13 @@ export class AccessExplanationService {
       });
     }
     entries.push(...hidden.values());
-    const confidentialCount = Number(confidential.rows[0]?.count ?? 0);
-    if (confidentialCount > 0) {
-      entries.push({
-        kind: "confidentialSpaces",
-        spaceId: null,
-        spaceName: "",
-        spaceKey: "",
-        itemId: null,
-        itemTitle: null,
-        role: null,
-        count: confidentialCount,
-        reasons: [],
-      });
-    }
-    return { accountId, name: person.name, email: person.email, entries };
+    return {
+      accountId,
+      name: person.name,
+      email: person.email,
+      entries,
+      confidentialSpaceCount: Number(confidential.rows[0]?.count ?? 0),
+    };
   }
 
   async overviewCsv(viewer: Principal, organizationId: string, accountId: string | null): Promise<string> {
@@ -461,6 +454,13 @@ export class AccessExplanationService {
             entry.count,
             entry.reasons.map((reason) => describeReason(reason)).join("; "),
           ]
+            .map(csvCell)
+            .join(","),
+        );
+      }
+      if (access.confidentialSpaceCount > 0) {
+        lines.push(
+          [access.name, access.email, "confidentialSpaces", "", "", "", access.confidentialSpaceCount, ""]
             .map(csvCell)
             .join(","),
         );

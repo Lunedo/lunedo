@@ -254,7 +254,7 @@ export class AccessRequestsController {
   @ApiRoute({
     summary: "What can a person do?",
     description:
-      "Lists all access of a person in the organization with the reason for each entry: role in a space, group, share or link. Shared pages the caller cannot read are only counted per space.",
+      "Lists all access of a person in the organization with the reason for each entry: role in a space, group, share or link. Shared pages the caller cannot read are only counted per space; confidential spaces the caller does not belong to are only counted.",
     tags: [ACCESS],
     params: personParams,
     response: {
@@ -277,6 +277,7 @@ export class AccessRequestsController {
             reasons: exampleExplanation.reasons,
           },
         ],
+        confidentialSpaceCount: 0,
       },
     },
     errors: ["personNotFound"],

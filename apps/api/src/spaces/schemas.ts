@@ -132,10 +132,6 @@ export const impactSchema = z
       .int()
       .describe("Number of affected people the caller may not see; they are counted but not listed."),
     truncated: z.boolean().describe("Whether `changes` lists only the first 100 people."),
-    leavesConfidential: z
-      .boolean()
-      .optional()
-      .describe("For moves: true when the content leaves a confidential space and loses its protection."),
     changes: z
       .array(
         z
@@ -162,6 +158,16 @@ export const exampleImpact = {
     { accountId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger", before: null, after: "reader" },
   ],
 };
+
+export const moveImpactSchema = impactSchema
+  .extend({
+    leavesConfidential: z
+      .boolean()
+      .describe("True when the content leaves a confidential space and loses its protection."),
+  })
+  .describe("Who gains, loses or changes access through the move.");
+
+export const exampleMoveImpact = { ...exampleImpact, leavesConfidential: false };
 
 export const permissionSchema = z
   .object({
