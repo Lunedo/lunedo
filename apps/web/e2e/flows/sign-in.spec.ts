@@ -1,8 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import { OWNER, OWNER_STORAGE, readState, writeState } from "../support/environment.js";
 import { addVirtualAuthenticator, freshTotp, signInWithPassword } from "../support/helpers.js";
-
-test.describe.configure({ mode: "serial" });
+import { unique } from "../support/people.js";
 
 async function enterPassword(page: Page) {
   await page.goto("/sign-in");
@@ -27,12 +26,12 @@ test("signs in with password and authenticator app", async ({ page }) => {
 
 test("signs in with password and a recovery code", async ({ page }) => {
   const [code, ...rest] = readState().ownerRecoveryCodes ?? [];
+  writeState({ ownerRecoveryCodes: rest });
   await enterPassword(page);
   await page.getByRole("button", { name: "Use a recovery code" }).click();
   await page.getByLabel("Recovery code").fill(code ?? "");
   await page.getByRole("button", { name: "Verify" }).click();
   await expect(page.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
-  writeState({ ownerRecoveryCodes: rest });
 });
 
 test("adds a passkey and uses it as second factor and for sign-in", async ({ browser }) => {
@@ -42,14 +41,17 @@ test("adds a passkey and uses it as second factor and for sign-in", async ({ bro
   const removeAuthenticator = await addVirtualAuthenticator(context, page);
 
   await page.getByRole("button", { name: "Add passkey" }).first().click();
-  await page.getByLabel("Name", { exact: true }).fill("Test key");
+  const keyName = `Test key ${unique()}`;
+  await page.getByLabel("Name", { exact: true }).fill(keyName);
   await page.getByRole("dialog").getByRole("button", { name: "Add passkey" }).click();
   const confirm = page.getByRole("dialog", { name: "Confirm your identity" });
-  if (await confirm.isVisible().catch(() => false)) {
-    await confirm.getByLabel("Password").fill(OWNER.password);
+  const added = page.getByText(keyName, { exact: true });
+  await expect(confirm.or(added)).toBeVisible();
+  if (await confirm.isVisible()) {
+    await confirm.getByLabel("Password", { exact: true }).fill(OWNER.password);
     await confirm.getByRole("button", { name: "Confirm" }).click();
   }
-  await expect(page.getByText("Test key")).toBeVisible();
+  await expect(added).toBeVisible();
 
   await page.getByRole("button", { name: "Account" }).click();
   await page.getByRole("menuitem", { name: "Sign out" }).click();
