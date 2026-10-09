@@ -54,7 +54,7 @@ export interface AttachmentContent {
   preview: PreviewKind;
   inline: boolean;
   version: number;
-  digest: string;
+  versionId: string;
 }
 
 const INLINE_TYPES = new Set([
@@ -219,7 +219,6 @@ export class AttachmentService {
       throw new FileTooLargeError(limit);
     }
     const stored = await this.#files.write(input.body, { name, maxBytes: limit });
-    let fileId = stored.id;
     try {
       const attachmentId = await this.#database.transaction(async (tx) => {
         const location = await this.#location(tx, itemId);
@@ -234,13 +233,12 @@ export class AttachmentService {
             insert into attachments (id, item_id, name, name_key, created_by)
             values (${id}, ${itemId}, ${name}, ${key}, ${actorIdOf(actor)})`);
         }
-        fileId = await this.#files.reuse(tx, stored);
+        const fileId = await this.#files.reuse(tx, stored, location.space_id);
         await this.#addVersion(tx, actor, id, fileId, name, null);
         await this.#prune(tx, id, location);
         await signalSpaceChange(tx, { spaceId: location.space_id, kind: "page", itemId });
         return id;
       });
-      if (fileId !== stored.id) await this.#files.discard(stored.id);
       const attachment = await this.get(actor, attachmentId);
       if (!attachment) throw new Error("The attachment was not stored");
       return attachment;
@@ -452,9 +450,9 @@ export class AttachmentService {
       size: string | number;
       content_type: string;
       number: number;
-      content_digest: Buffer | null;
+      version_id: string;
     }>(sql`
-      select a.id, v.file_id, v.name, f.size, f.content_type, v.number, f.content_digest
+      select a.id, v.file_id, v.name, f.size, f.content_type, v.number, v.id as version_id
       from attachments a join attachment_versions v
         on v.attachment_id = a.id and ${number === undefined ? sql`v.id = a.current_version_id` : sql`v.number = ${number}`}
       join stored_files f on f.id = v.file_id and f.state <> 'pending'
@@ -469,7 +467,7 @@ export class AttachmentService {
       contentType: row.content_type,
       ...previewOf(row.content_type, row.name),
       version: row.number,
-      digest: row.content_digest?.toString("hex") ?? "",
+      versionId: row.version_id,
     };
   }
 
@@ -481,11 +479,13 @@ export class AttachmentService {
         ? sql`t.space_id = ${scope.spaceId}`
         : sql`s.organization_id = ${scope.organizationId}`;
     const result = await this.#database.execute<{ bytes: string | null; files: string }>(sql`
-      select coalesce(sum(f.size), 0) as bytes, count(*) as files from stored_files f
-      where f.id in (
-        select v.file_id from attachment_versions v join attachments a on a.id = v.attachment_id
+      select coalesce(sum(f.size), 0) as bytes, count(*) as files
+      from (
+        select distinct v.attachment_id, v.file_id from attachment_versions v
+        join attachments a on a.id = v.attachment_id
         join tree_items t on t.id = a.item_id join spaces s on s.id = t.space_id
-        where ${filter})`);
+        where ${filter}) used
+      join stored_files f on f.id = used.file_id`);
     return { bytes: Number(result.rows[0]?.bytes ?? 0), files: Number(result.rows[0]?.files ?? 0) };
   }
 }

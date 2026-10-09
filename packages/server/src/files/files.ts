@@ -145,31 +145,24 @@ export class FileService {
     return { id, size: inspector.size, digest: digest.toString("hex"), type };
   }
 
-  async reuse(tx: Executor, file: StoredFile): Promise<string> {
+  async reuse(tx: Executor, file: StoredFile, spaceId: string): Promise<string> {
     const result = await tx.execute<{ id: string }>(sql`
-      select id from stored_files
-      where content_digest = ${Buffer.from(file.digest, "hex")} and size = ${file.size}
-        and content_type = ${file.type.contentType} and state = 'ready' and id <> ${file.id}
-      order by id limit 1
-      for update`);
-    return result.rows[0]?.id ?? file.id;
-  }
-
-  async discard(fileId: string): Promise<void> {
-    const claimed = await this.#database.execute<{ storage_key: string }>(sql`
-      update stored_files set state = 'orphaned', updated_at = now()
-      where id = ${fileId} and not exists (select 1 from attachment_versions v where v.file_id = ${fileId})
-      returning storage_key`);
-    const row = claimed.rows[0];
-    if (!row) return;
-    try {
-      await this.#store.delete(row.storage_key);
-      await this.#database.execute(sql`
-        delete from stored_files where id = ${fileId} and state = 'orphaned'
-          and not exists (select 1 from attachment_versions v where v.file_id = ${fileId})`);
-    } catch (error) {
-      this.#logger.warn({ err: error, fileId }, "Removing a duplicate upload failed");
-    }
+      select f.id from stored_files f
+      where f.content_digest = ${Buffer.from(file.digest, "hex")} and f.size = ${file.size}
+        and f.content_type = ${file.type.contentType} and f.state = 'ready' and f.id <> ${file.id}
+        and exists (
+          select 1 from attachment_versions v join attachments a on a.id = v.attachment_id
+          join tree_items t on t.id = a.item_id
+          where v.file_id = f.id and t.space_id = ${spaceId})
+      order by f.id limit 1
+      for update of f`);
+    const used = result.rows[0]?.id ?? file.id;
+    await tx.execute(sql`
+      update stored_files
+      set state = case when id = ${used} then 'ready'::stored_file_state else 'orphaned'::stored_file_state end,
+        updated_at = now()
+      where id = ${file.id}`);
+    return used;
   }
 
   async #discard(id: string, key: string): Promise<void> {

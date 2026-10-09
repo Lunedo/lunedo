@@ -1,7 +1,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
 import { buffer } from "node:stream/consumers";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import { SettingAboveMaximumError, SettingLockedError } from "../settings/service.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
@@ -241,19 +241,18 @@ describe.skipIf(!baseUrl)("attachments", () => {
     expect(audit.rows).toHaveLength(1);
   });
 
-  it("stores identical content once, encrypted, and keeps it while any version uses it", async () => {
+  it("stores identical content of one space once, encrypted, and keeps it while any version uses it", async () => {
     const context = await setup();
     const content = randomBytes(5000).toString("base64");
-    const count = async () =>
-      Number(
-        (await test.pool.query<{ count: string }>("select count(*) as count from stored_files")).rows[0]
-          ?.count,
-      );
-    const before = await count();
     const first = await upload(context, "report.txt", content);
     const second = await upload(context, "copy of report.txt", content);
     await upload(context, "report.txt", content);
-    expect(await count()).toBe(before + 1);
+    const used = await test.pool.query<{ count: string }>(
+      `select count(distinct v.file_id) as count from attachment_versions v
+       where v.attachment_id = any($1::uuid[])`,
+      [[first.id, second.id]],
+    );
+    expect(Number(used.rows[0]?.count)).toBe(1);
     const firstContent = await test.services.attachments.content(first.id);
     const secondContent = await test.services.attachments.content(second.id);
     expect(secondContent?.fileId).toBe(firstContent?.fileId);
@@ -274,6 +273,64 @@ describe.skipIf(!baseUrl)("attachments", () => {
     expect(await versionNumbers(context, first.id)).toEqual([3]);
     await test.services.files.deleteOrphaned();
     expect(await read(second.id)).toBe(content);
+  });
+
+  it("never shares stored content between spaces, not even within one organization", async () => {
+    const context = await setup();
+    const other = await space(context.org.id, context.editorId);
+    const otherPage = await test.services.tree.create(context.editor, other.id, {
+      kind: "page",
+      title: "Elsewhere",
+      mode: "live",
+      placement: { parentId: null },
+    });
+    const content = randomBytes(4000);
+    const here = await upload(context, "secret.bin", content);
+    const there = await test.services.attachments.upload(context.editor, otherPage.id, {
+      name: "secret.bin",
+      body: Readable.from([content]),
+    });
+    expect((await test.services.attachments.content(there.id))?.fileId).not.toBe(
+      (await test.services.attachments.content(here.id))?.fileId,
+    );
+  });
+
+  it("handles an upload of existing content exactly like new content", async () => {
+    const context = await setup();
+    const existing = randomBytes(3000);
+    await upload(context, "hidden.bin", existing);
+    const trace = async (name: string, content: Buffer) => {
+      const deletes = vi.spyOn(test.services.files.store, "delete");
+      const rows = async () =>
+        Number(
+          (await test.pool.query<{ count: string }>("select count(*) as count from stored_files")).rows[0]
+            ?.count,
+        );
+      const before = {
+        rows: await rows(),
+        usage: await test.services.attachments.usage({ spaceId: context.space.id }),
+      };
+      const created = await upload(context, name, content);
+      const after = {
+        rows: await rows(),
+        usage: await test.services.attachments.usage({ spaceId: context.space.id }),
+      };
+      const removed = deletes.mock.calls.length;
+      deletes.mockRestore();
+      const { id: _id, uploadedAt: _uploadedAt, createdAt: _createdAt, name: _name, ...shape } = created;
+      return {
+        shape,
+        rows: after.rows - before.rows,
+        bytes: after.usage.bytes - before.usage.bytes,
+        files: after.usage.files - before.usage.files,
+        removed,
+      };
+    };
+    const fresh = await trace("fresh.bin", randomBytes(3000));
+    const duplicate = await trace("probe.bin", existing);
+    expect(duplicate).toEqual(fresh);
+    expect(duplicate).toMatchObject({ rows: 1, bytes: 3000, files: 1, removed: 0 });
+    expect(await test.services.files.deleteOrphaned()).toBeGreaterThanOrEqual(1);
   });
 
   it("does not reuse stored content of another type or size", async () => {

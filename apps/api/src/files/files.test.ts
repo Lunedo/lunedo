@@ -291,4 +291,22 @@ describe.skipIf(!databaseBaseUrl)("attachments through the API", () => {
     ).items.find((setting) => setting.key === "files.keepVersions");
     expect(entry).toMatchObject({ value: 50, maximum: 500 });
   });
+
+  it("give every file version its own ETag, unrelated to the content", async () => {
+    const { pageId } = await page();
+    const content = randomBytes(64);
+    const first = await uploaded(pageId, "a.bin", content);
+    const second = await uploaded(pageId, "b.bin", content);
+    const etag = async (path: string) => (await owner.get(path)).headers.etag as string;
+    const firstTag = await etag(`/api/v1/attachments/${first.id}/content`);
+    const secondTag = await etag(`/api/v1/attachments/${second.id}/content`);
+    expect(firstTag).toMatch(/^"[0-9a-f-]{36}"$/);
+    expect(secondTag).not.toBe(firstTag);
+    await uploaded(pageId, "a.bin", content);
+    const newer = await etag(`/api/v1/attachments/${first.id}/content`);
+    expect(newer).not.toBe(firstTag);
+    expect(await etag(`/api/v1/attachments/${first.id}/content?version=1`)).toBe(firstTag);
+    const cached = await owner.get(`/api/v1/attachments/${first.id}/content`, { "if-none-match": newer });
+    expect(cached.statusCode).toBe(304);
+  });
 });
