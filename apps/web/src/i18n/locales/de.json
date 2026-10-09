@@ -2038,6 +2038,10 @@
       "files_keepVersionsMaximum": {
         "label": "Höchstens behaltene Versionen für Organisationen und Spaces",
         "description": "Organisationen und Spaces können jede Zahl bis zu diesem Höchstwert wählen. Nur hier lässt sich „Kein Limit“ einstellen."
+      },
+      "spaces_membersCreateConfidentialSpaces": {
+        "label": "Mitglieder legen vertrauliche Spaces an",
+        "description": "Mitglieder dürfen vertrauliche Spaces und 1:1-Gespräche anlegen, die Admins nicht lesen können. Admins dürfen das immer."
       }
     },
     "disabled": {
@@ -2273,6 +2277,15 @@
       },
       "restriction": {
         "orphaned": "Niemand auf der Zugriffsliste der beschränkten Seite {itemTitle} in {spaceName} hat noch ein aktives Konto. Prüfe die Beschränkung in den Space-Einstellungen."
+      },
+      "meeting": {
+        "notesAvailable": "{actor} hat {itemTitle} geschlossen. Die Notizen sind verfügbar."
+      },
+      "oneOnOne": {
+        "started": "{actor} hat ein 1:1 mit dir gestartet: {itemTitle}."
+      },
+      "space": {
+        "confidentialWithoutAdministrator": "Der vertrauliche Space {spaceKey} hat keinen Space-Admin mehr. Du kannst eines der verbliebenen Mitglieder ernennen."
       }
     }
   },
@@ -2471,7 +2484,8 @@
       "wholeSpace": "ganzer Space",
       "withPagesBelow": "und die Seiten darunter",
       "restrictedPages": "{count, plural, one {# freigegebene eingeschränkte Seite, die du nicht lesen kannst} other {# freigegebene eingeschränkte Seiten, die du nicht lesen kannst}}",
-      "why": "Warum?"
+      "why": "Warum?",
+      "confidentialSpaces": "{count, plural, one {Mitglied in # vertraulichen Space} other {Mitglied in # vertraulichen Spaces}}"
     }
   },
   "members": {
@@ -3684,7 +3698,9 @@
       "taskReport": "Aufgabenbericht",
       "taskReportDescription": "Tabelle mit Aufgaben, Filtern und Zählern",
       "file": "Bild oder Datei",
-      "fileDescription": "Ein Bild oder eine Datei hochladen und einfügen"
+      "fileDescription": "Ein Bild oder eine Datei hochladen und einfügen",
+      "decision": "Entscheidung",
+      "decisionDescription": "Eine Entscheidung festhalten, damit sie im Entscheidungsprotokoll erscheint"
     },
     "mention": {
       "unknown": "Unbekannte Person"
@@ -3946,6 +3962,13 @@
     },
     "templateField": {
       "hint": "Eingabefeld {field}: wird beim Anlegen einer Seite aus der Vorlage ausgefüllt."
+    },
+    "decision": {
+      "label": "Entscheidung"
+    },
+    "topicUpdate": {
+      "closed": "Geschlossen",
+      "unknown": "Thema"
     }
   },
   "spaces": {
@@ -4027,7 +4050,8 @@
       "more": "Weitere Spaces zeigen",
       "archiveFilter": "Aktive oder archivierte Spaces zeigen",
       "activeSpaces": "Aktive Spaces",
-      "archivedSpaces": "Archivierte Spaces"
+      "archivedSpaces": "Archivierte Spaces",
+      "oneOnOnes": "1:1-Gespräche"
     },
     "create": {
       "action": "Space erstellen",
@@ -4421,7 +4445,9 @@
       "folder": "Ordner",
       "link": "Link",
       "blogPost": "Blogbeitrag",
-      "other": "Element"
+      "other": "Element",
+      "meetingSeries": "Besprechungsserie",
+      "meetingTopic": "Laufendes Thema"
     },
     "unknownPerson": "Unbekannte Person",
     "stageOne": "Papierkorb",
@@ -4676,7 +4702,9 @@
     "choose": "Auswählen",
     "searchPerson": "Person suchen",
     "createFrom": "Mit {name} erstellen",
-    "createBlank": "Leere Seite erstellen"
+    "createBlank": "Leere Seite erstellen",
+    "createSeriesFrom": "Serie mit {name} einrichten",
+    "seriesTemplate": "Das ist eine Vorlage für Besprechungsserien. Als Nächstes wählst du Name, Mitglieder und Rhythmus; jede Besprechungsseite beginnt dann mit ihr."
   },
   "home": {
     "title": "Für dich",
@@ -4850,7 +4878,8 @@
       "due": "Fälligkeitsdatum",
       "status": "Status",
       "emptyTitle": "Keine passenden Aufgaben",
-      "emptyDescription": "Ändere die Filter oder füge veröffentlichten Seiten Aufgaben mit Zuständigen hinzu."
+      "emptyDescription": "Ändere die Filter oder füge veröffentlichten Seiten Aufgaben mit Zuständigen hinzu.",
+      "seriesScope": "Offene Aufgaben aus den Besprechungen dieser Serie."
     },
     "checkOnPages": "Aufgaben werden auf den Seiten abgehakt, die aus dieser Vorlage entstehen."
   },
@@ -5343,6 +5372,414 @@
       "goneTitle": "Dieser Link funktioniert nicht mehr",
       "failed": "Der Link konnte nicht geöffnet werden",
       "downloadFailed": "Die Datei wurde nicht heruntergeladen"
+    }
+  },
+  "meetings": {
+    "title": "Besprechungen",
+    "ended": "Beendet",
+    "notScheduled": "Noch nicht geplant",
+    "notScheduledChoice": "Noch nicht geplant",
+    "notScheduledHint": "Lege das Datum später fest, indem du die Besprechung verschiebst.",
+    "unknownPerson": "Unbekannte Person",
+    "sidebar": {
+      "series": "Besprechungsserien"
+    },
+    "state": {
+      "upcoming": "Nächste",
+      "closed": "Abgehalten",
+      "reopened": "Wieder geöffnet",
+      "skipped": "Ausgelassen"
+    },
+    "list": {
+      "documentTitle": "Besprechungen · {space}",
+      "description": "Regelmäßige Besprechungen dieses Space mit Themen, Aufgaben und Entscheidungen.",
+      "create": "Neue Serie",
+      "loadFailed": "Die Besprechungsserien konnten nicht geladen werden",
+      "emptyTitle": "Noch keine Besprechungsserie",
+      "emptyEditor": "Eine Serie plant regelmäßige Besprechungen und legt für jede Besprechung die Notizseite an.",
+      "emptyReader": "Hier erscheinen die Besprechungsserien dieses Space.",
+      "next": "Nächste: {date}"
+    },
+    "create": {
+      "title": "Neue Besprechungsserie in {space}",
+      "description": "Wähle, wer teilnimmt und wann. Die erste Besprechung wird sofort angelegt.",
+      "name": "Name",
+      "nameExample": "Jour fixe IT",
+      "nameInvalid": "Gib einen Namen mit bis zu {max} Zeichen ein.",
+      "template": "Vorlage",
+      "templateHint": "Jede Besprechungsseite beginnt mit dieser Vorlage.",
+      "templateLoading": "Vorlagen werden geladen",
+      "members": "Mitglieder",
+      "membersHint": "Mitglieder werden zu jeder Besprechung eingeladen. Zugriff auf die Notizen ergibt sich aus den Rollen in diesem Space.",
+      "membersPlaceholder": "Personen nach Namen suchen",
+      "submit": "Serie anlegen",
+      "created": "{name} angelegt. Die erste Besprechung ist bereit.",
+      "failed": "Die Serie konnte nicht angelegt werden"
+    },
+    "schedule": {
+      "rhythm": "Rhythmus",
+      "interval": "Alle wie viele Wochen",
+      "intervalInvalid": "Gib eine Zahl von 2 bis 52 ein.",
+      "weekdays": "Wochentage",
+      "firstDate": "Erste Besprechung",
+      "date": "Datum",
+      "time": "Beginn",
+      "duration": "Dauer in Minuten",
+      "durationHint": "Zwischen 5 Minuten und 24 Stunden.",
+      "durationInvalid": "Gib eine Dauer von 5 bis 1440 Minuten ein.",
+      "timeZone": "Zeitzone",
+      "timeZoneHint": "Besprechungen behalten ihre Ortszeit, wenn die Sommerzeit wechselt.",
+      "timeZoneRequired": "Wähle eine Zeitzone.",
+      "dateRequired": "Gib ein Datum ein.",
+      "timeRequired": "Gib eine Uhrzeit wie 09:30 ein."
+    },
+    "rhythm": {
+      "custom": "Rhythmus aus einem Kalender",
+      "presets": {
+        "weekly": "Wöchentlich",
+        "everyNWeeks": "Alle paar Wochen",
+        "weekdays": "An ausgewählten Wochentagen",
+        "daily": "Täglich",
+        "monthlyByDate": "Monatlich am selben Tag",
+        "monthlyByWeekday": "Monatlich am selben Wochentag",
+        "quarterly": "Quartalsweise",
+        "yearly": "Jährlich",
+        "none": "Kein fester Rhythmus"
+      },
+      "position": {
+        "1": "ersten",
+        "2": "zweiten",
+        "3": "dritten",
+        "4": "vierten",
+        "last": "letzten"
+      },
+      "describe": {
+        "none": "Kein fester Rhythmus",
+        "daily": "{count, plural, one {Jeden Tag} other {Alle # Tage}}",
+        "weekly": "{count, plural, one {Jeden {days}} other {Alle # Wochen am {days}}}",
+        "monthlyByDate": "{count, plural, one {Monatlich am {day}.} other {Alle # Monate am {day}.}}",
+        "monthlyByWeekday": "{count, plural, one {Monatlich am {position} {day}} other {Alle # Monate am {position} {day}}}",
+        "yearly": "{count, plural, one {Jedes Jahr} other {Alle # Jahre}}"
+      }
+    },
+    "series": {
+      "loadFailed": "Die Besprechungsserie konnte nicht geladen werden",
+      "notFoundTitle": "Diese Besprechungsserie ist nicht verfügbar",
+      "notFoundDescription": "Sie wurde gelöscht oder du hast keinen Zugriff. Frag einen Space-Admin, wenn du sie brauchst.",
+      "members": "{count, plural, one {# Mitglied} other {# Mitglieder}}",
+      "membersLabel": "Mitglieder der Serie",
+      "template": "Vorlage: {name}",
+      "settings": "Serieneinstellungen",
+      "more": "Weitere Aktionen für die Serie",
+      "noAccess": "Kein Zugriff",
+      "withoutAccessTitle": "{count, plural, one {Ein Mitglied kann die Besprechungen nicht lesen} other {# Mitglieder können die Besprechungen nicht lesen}}",
+      "withoutAccess": "{names} hat keine Rolle in diesem Space. Bitte einen Space-Admin, Zugriff zu geben.",
+      "withoutAccessAdmin": "{names} hat keine Rolle in diesem Space. Gib Zugriff, damit die Notizen gelesen werden können.",
+      "endedTitle": "Diese Serie ist beendet",
+      "endedDescription": "Ihre Besprechungen sind schreibgeschützt und es ist keine nächste Besprechung geplant. Setze die Serie fort, um wieder Besprechungen zu planen.",
+      "end": "Serie beenden",
+      "continue": "Serie fortsetzen",
+      "endedToast": "Serie beendet. Ihre Besprechungen bleiben lesbar.",
+      "continuedToast": "Serie fortgesetzt.",
+      "endFailed": "Die Serie konnte nicht geändert werden",
+      "delete": "Serie in den Papierkorb verschieben",
+      "nextAt": "Nächste Besprechung · {date}",
+      "nextUnscheduled": "Nächste Besprechung · noch nicht geplant",
+      "openTopics": "{count, plural, one {# offenes Thema} other {# offene Themen}}",
+      "invited": "{count, plural, one {# teilnehmende Person} other {# Teilnehmende}}",
+      "attended": "{count} von {total} anwesend",
+      "nextActions": "Planen",
+      "openAgenda": "Agenda öffnen",
+      "meetingsTitle": "Besprechungen",
+      "meetingsFailed": "Die Besprechungen konnten nicht geladen werden",
+      "loadOlder": "Ältere Besprechungen zeigen",
+      "openTasks": "Offene Aufgaben",
+      "noTasksTitle": "Keine offenen Aufgaben",
+      "noTasksDescription": "Aufgaben aus den Besprechungen dieser Serie erscheinen hier, bis sie erledigt sind."
+    },
+    "settings": {
+      "title": "Einstellungen von {name}",
+      "description": "Änderungen gelten für die nächste Besprechung und alle späteren.",
+      "templateHint": "Wird für Besprechungen verwendet, die ab jetzt angelegt werden.",
+      "templateMissing": "Gelöschte Vorlage",
+      "fromDate": "Rhythmus beginnt am",
+      "scheduleNote": "Ein neuer Rhythmus verschiebt die nächste Besprechung und verwirft frühere Verschiebungen und ausgelassene Termine.",
+      "save": "Einstellungen speichern",
+      "saved": "Serieneinstellungen gespeichert.",
+      "failed": "Die Einstellungen konnten nicht gespeichert werden"
+    },
+    "meeting": {
+      "label": "Besprechungsdetails",
+      "loadFailed": "Die Besprechungsdetails konnten nicht geladen werden",
+      "when": "{start} bis {end}",
+      "state": {
+        "upcoming": "Das ist die nächste Besprechung der Serie.",
+        "closed": "Diese Besprechung ist abgeschlossen. Die Notizen stehen allen Teilnehmenden zur Verfügung.",
+        "reopened": "Diese Besprechung wurde wieder geöffnet. Schließe sie erneut, wenn die Notizen vollständig sind.",
+        "skipped": "Diese Besprechung wurde ausgelassen. Ihre Agenda ist in die folgende Besprechung gewandert."
+      },
+      "noAccessTitle": "{count, plural, one {Eine teilnehmende Person kann diese Seite nicht lesen} other {# Teilnehmende können diese Seite nicht lesen}}",
+      "noAccess": "{names} hat keinen Zugriff. Teile die Seite, damit die Notizen alle erreichen.",
+      "share": "Seite teilen"
+    },
+    "attendance": {
+      "title": "Teilnehmende",
+      "present": "Anwesend",
+      "excused": "Entschuldigt",
+      "absent": "Abwesend",
+      "unset": "Nicht erfasst",
+      "clear": "Anwesenheit zurücksetzen",
+      "change": "{name}: {state}. Anwesenheit ändern",
+      "failed": "Die Anwesenheit konnte nicht gespeichert werden",
+      "add": "Teilnehmende Person hinzufügen",
+      "person": "Hinzuzufügende Person",
+      "addConfirm": "Zu dieser Besprechung hinzufügen",
+      "addFailed": "Die Person konnte nicht hinzugefügt werden",
+      "personRequired": "Wähle zuerst eine Person."
+    },
+    "close": {
+      "action": "Besprechung schließen",
+      "title": "Besprechung schließen",
+      "description": "Die Serie hat keinen festen Rhythmus. Wähle, wann die nächste Besprechung stattfindet, in {timeZone}.",
+      "descriptionWithRhythm": "Die Teilnehmenden erfahren, dass die Notizen verfügbar sind, und die nächste Besprechung wird angelegt.",
+      "confirm": "Schließen und nächste planen",
+      "done": "{title} geschlossen",
+      "doneDescription": "Die Teilnehmenden wissen, dass die Notizen verfügbar sind. Die nächste Besprechung ist bereit.",
+      "failed": "Die Besprechung konnte nicht geschlossen werden",
+      "undoFailed": "Das Schließen konnte nicht rückgängig gemacht werden"
+    },
+    "reopen": {
+      "action": "Besprechung wieder öffnen",
+      "done": "{title} wieder geöffnet. Die nächste Besprechung bleibt.",
+      "failed": "Die Besprechung konnte nicht wieder geöffnet werden"
+    },
+    "skip": {
+      "action": "Besprechung auslassen",
+      "title": "Besprechung auslassen",
+      "description": "Die Agenda wandert in die nächste Besprechung. Wähle, wann sie stattfindet, in {timeZone}.",
+      "descriptionWithRhythm": "Die Besprechung wird als ausgelassen markiert und ihre Agenda wandert zum nächsten Termin des Rhythmus. Das lässt sich nicht rückgängig machen.",
+      "confirm": "Besprechung auslassen",
+      "done": "{title} ausgelassen. Die Agenda ist in die nächste Besprechung gewandert.",
+      "failed": "Die Besprechung konnte nicht ausgelassen werden"
+    },
+    "move": {
+      "action": "Besprechung verschieben",
+      "title": "Besprechung verschieben",
+      "description": "Wähle das neue Datum und die Uhrzeit, in {timeZone}. Der Rhythmus der Serie bleibt.",
+      "descriptionWithRhythm": "Wähle das neue Datum und die Uhrzeit, in {timeZone}. Der Rhythmus der Serie bleibt.",
+      "confirm": "Besprechung verschieben",
+      "done": "Besprechung verschoben.",
+      "failed": "Die Besprechung konnte nicht verschoben werden"
+    },
+    "topics": {
+      "title": "Laufende Themen",
+      "filter": "Themen filtern",
+      "add": "Thema hinzufügen",
+      "addTitle": "Laufendes Thema hinzufügen",
+      "addDescription": "Das Thema kommt in die nächste Besprechung und bleibt offen, bis es jemand schließt.",
+      "titleLabel": "Titel",
+      "titleExample": "Speichermigration auf das neue NAS",
+      "titleInvalid": "Gib einen Titel mit bis zu {max} Zeichen ein.",
+      "owner": "Verantwortlich",
+      "anyone": "Alle",
+      "noOwner": "Niemand verantwortlich",
+      "labels": "Labels",
+      "labelsHint": "Trenne Labels mit Kommas.",
+      "labelsExample": "Infrastruktur, Budget",
+      "label": "Label",
+      "text": "Titel enthält",
+      "textExample": "Migration",
+      "from": "Aktualisiert ab",
+      "to": "Aktualisiert bis",
+      "status": "Status",
+      "statusFilter": {
+        "open": "Offen",
+        "closed": "Geschlossen",
+        "all": "Alle"
+      },
+      "clearFilters": "Filter zurücksetzen",
+      "noMatch": "Kein Thema passt zu den Filtern",
+      "empty": "Keine offenen Themen. Füge eines hinzu, um es von Besprechung zu Besprechung mitzunehmen.",
+      "loadFailed": "Die Themen konnten nicht geladen werden",
+      "updated": "aktualisiert am {date}",
+      "since": "seit {date}",
+      "updates": "{count, plural, =0 {keine Updates} one {# Update} other {# Updates}}",
+      "outcome": {
+        "resolved": "Erledigt",
+        "decided": "Entschieden",
+        "dropped": "Verworfen"
+      },
+      "added": "{title} in die nächste Besprechung aufgenommen.",
+      "addFailed": "Das Thema konnte nicht hinzugefügt werden"
+    },
+    "topic": {
+      "loadFailed": "Das Thema konnte nicht geladen werden",
+      "notFoundTitle": "Dieses Thema ist nicht verfügbar",
+      "notFoundDescription": "Es wurde gelöscht oder du hast keinen Zugriff.",
+      "series": "Serie",
+      "status": "Status",
+      "open": "Offen",
+      "raised": "Eingebracht in",
+      "noLabels": "Keine Labels",
+      "decision": "Entscheidung",
+      "timeline": "Updates",
+      "noUpdates": "Noch keine Updates. Updates werden in den Besprechungsseiten geschrieben.",
+      "decide": "Als Entscheidung schließen",
+      "decideTitle": "{title} als Entscheidung schließen",
+      "decideDescription": "Die Entscheidung kommt in die aktuelle Besprechung, ist mit diesem Thema verknüpft und erscheint im Entscheidungsprotokoll. Das Thema behält seinen Verlauf.",
+      "statement": "Entscheidung",
+      "statementHint": "Halte in ein oder zwei Sätzen fest, was entschieden wurde.",
+      "statementInvalid": "Gib die Entscheidung mit bis zu {max} Zeichen ein.",
+      "decideConfirm": "Entscheidung festhalten",
+      "decided": "Entscheidung festgehalten und Thema geschlossen.",
+      "decideFailed": "Die Entscheidung konnte nicht festgehalten werden",
+      "close": "Thema schließen",
+      "closeResolved": "Als erledigt schließen",
+      "closeDropped": "Als verworfen schließen",
+      "closed": {
+        "resolved": "Thema als erledigt geschlossen. Es verschwindet aus späteren Besprechungen.",
+        "dropped": "Thema als verworfen geschlossen. Es verschwindet aus späteren Besprechungen."
+      },
+      "closeFailed": "Das Thema konnte nicht geschlossen werden",
+      "reopen": "Thema wieder öffnen",
+      "reopened": "Thema wieder geöffnet und in die nächste Besprechung aufgenommen.",
+      "reopenFailed": "Das Thema konnte nicht wieder geöffnet werden",
+      "edit": "Thema bearbeiten",
+      "editTitle": "Thema bearbeiten",
+      "save": "Thema speichern",
+      "saved": "Thema gespeichert.",
+      "saveFailed": "Das Thema konnte nicht gespeichert werden"
+    },
+    "decisions": {
+      "title": "Entscheidungsprotokoll",
+      "filter": "Entscheidungen filtern",
+      "topic": "Thema",
+      "anyTopic": "Alle Themen",
+      "text": "Text enthält",
+      "textExample": "BitLocker",
+      "from": "Besprechungen ab",
+      "to": "Besprechungen bis",
+      "loadFailed": "Das Entscheidungsprotokoll konnte nicht geladen werden",
+      "noMatch": "Keine Entscheidung passt zu den Filtern",
+      "clearFilters": "Filter zurücksetzen",
+      "empty": "Noch keine Entscheidungen. Halte eine in einer Besprechung mit /Entscheidung fest.",
+      "noStatement": "Entscheidung ohne Text"
+    },
+    "notes": {
+      "title": "Deine privaten Notizen",
+      "toggle": "Private Notizen",
+      "close": "Private Notizen schließen",
+      "onlyYou": "Nur du kannst diese Notizen lesen. Weder die anderen Teilnehmenden noch Space-Admins noch Administrierende sehen sie.",
+      "editorLabel": "Private Notizen",
+      "loadFailed": "Deine privaten Notizen konnten nicht geladen werden",
+      "saveFailed": "Deine privaten Notizen konnten nicht gespeichert werden",
+      "conflictTitle": "Deine Notizen wurden in einem anderen Fenster geändert",
+      "conflictDescription": "Lade die neueren Notizen, bevor du weiterschreibst. Was du hier seitdem getippt hast, ist nicht gespeichert.",
+      "loadNewer": "Neuere Notizen laden",
+      "copy": "In die Besprechungsnotizen kopieren",
+      "nothingSelected": "Deine Notizen sind leer. Schreib zuerst etwas.",
+      "copied": "{count, plural, one {# Block in die Besprechungsnotizen kopiert} other {# Blöcke in die Besprechungsnotizen kopiert}}",
+      "copyFailed": "Die Blöcke konnten nicht kopiert werden",
+      "ownTitle": "Deine privaten Notizen",
+      "ownDescription": "Nur du siehst diese Liste.",
+      "savedAt": "gespeichert {date}"
+    },
+    "home": {
+      "upcoming": "Nächste Besprechungen",
+      "noUpcoming": "Keine anstehenden Besprechungen.",
+      "oneOnOnes": "1:1-Gespräche",
+      "noOneOnOnes": "Noch keine 1:1-Gespräche. Starte eines, um dich regelmäßig mit einer Person zu treffen.",
+      "next": "nächstes am {date}",
+      "alone": "Noch keine andere Person"
+    },
+    "oneOnOne": {
+      "new": "Neues 1:1",
+      "newTitle": "1:1 starten",
+      "newDescription": "Ein 1:1 bekommt einen vertraulichen Space, den nur ihr beide öffnen könnt.",
+      "person": "Mit",
+      "personHint": "Suche nach Namen unter den Personen, die du sehen kannst.",
+      "personPlaceholder": "Person suchen",
+      "personRequired": "Wähle die andere Person.",
+      "organization": "Organisation",
+      "organizationHint": "Der vertrauliche Space gehört zu dieser Organisation.",
+      "noOrganization": "Du und diese Person habt keine gemeinsame Organisation.",
+      "noOrganizationTitle": "Ein 1:1 mit dieser Person ist nicht möglich",
+      "noOrganizationDescription": "Du und {name} seid nicht beide Mitglieder derselben Organisation. Gäste und externe Mitarbeitende können kein 1:1 führen; bitte die Organisationsverwaltung um die nötige Mitgliedschaft.",
+      "privacyTitle": "Privat zwischen euch beiden",
+      "privacyDescription": "Space- und Organisations-Admins können es nicht öffnen und niemandem Zugriff geben. Server-Administrierende mit Zugriff auf die Datenbank oder Backups schränkt das nicht ein.",
+      "create": "1:1 starten",
+      "created": "1:1 mit {name} gestartet. Die Person wurde benachrichtigt.",
+      "failed": "Das 1:1 konnte nicht gestartet werden",
+      "privateTitle": "Privat zwischen den Personen dieses 1:1",
+      "privateDescription": "Space- und Organisations-Admins können es nicht öffnen und niemandem Zugriff geben."
+    },
+    "successor": {
+      "action": "Person wechseln",
+      "title": "Person dieses 1:1 wechseln",
+      "description": "Füge die Nachfolge der Person hinzu, die geht, zum Beispiel wenn sich deine Führungskraft ändert.",
+      "previous": "Person, die geht",
+      "successor": "Nachfolge",
+      "chooseSuccessor": "Wähle die Nachfolge.",
+      "how": "Wie es weitergeht",
+      "add": "Zu diesem 1:1 hinzufügen",
+      "addDescription": "Die Nachfolge sieht alle früheren Besprechungen. {name} verliert den Zugriff auf dieses 1:1.",
+      "new": "Neues 1:1 starten",
+      "newDescription": "Die Nachfolge sieht keine der früheren Besprechungen. Dieses 1:1 bleibt, wie es ist.",
+      "confirmAdd": "Nachfolge hinzufügen",
+      "confirmNew": "Neues 1:1 starten",
+      "added": "{name} wurde zu diesem 1:1 hinzugefügt.",
+      "started": "Neues 1:1 mit {name} gestartet.",
+      "failed": "Die Person konnte nicht gewechselt werden"
+    }
+  },
+  "confidential": {
+    "badge": "Vertraulich",
+    "oneOnOneBadge": "1:1",
+    "headerNote": "Nur seine Mitglieder können ihn lesen; Admins können sich keinen Zugriff geben.",
+    "explanation": "Nur die Mitglieder dieses Space können ihn lesen. Organisations- und Instanz-Admins können ihn nicht öffnen, niemandem Zugriff geben und keine Space-Admins ernennen.",
+    "settingsTitle": "Vertraulicher Space",
+    "limitTitle": "Was dieser Schutz nicht abdeckt",
+    "limit": "Der Schutz gilt für Rollen in Pagehall. Administrierende des Servers mit Zugriff auf die Datenbank oder Backups schränkt er nicht ein.",
+    "createLabel": "Vertraulicher Space",
+    "createDescription": "Für 1:1-Gespräche, einen Betriebsrat oder die Geschäftsführung. Nur Personen, die du hinzufügst, können ihn lesen; Admins können sich keinen Zugriff geben. Das lässt sich später nicht ändern.",
+    "createNoticeTitle": "Privat, nur für einzelne Personen",
+    "moveOutTitle": "Der Inhalt verlässt den vertraulichen Space",
+    "moveOut": "Nach dem Verschieben ist er nicht mehr vor Admins geschützt und die oben genannten Personen erhalten Zugriff.",
+    "organization": {
+      "title": "Vertrauliche Spaces",
+      "description": "Vertrauliche Spaces erscheinen nur mit ihrem Schlüssel. Namen, Mitglieder und Inhalte bleiben vor Admins verborgen.",
+      "loadFailed": "Die vertraulichen Spaces konnten nicht geladen werden",
+      "none": "Keine vertraulichen Spaces",
+      "noneDescription": "Wenn Mitglieder vertrauliche Spaces oder 1:1-Gespräche anlegen, erscheinen sie hier als Schlüssel mit einigen Zahlen.",
+      "noAdmin": "Kein Space-Admin",
+      "noMembers": "Keine aktiven Mitglieder",
+      "created": "angelegt am {date}",
+      "members": "{count, plural, one {# Mitglied} other {# Mitglieder}}",
+      "pages": "{count, plural, one {# Seite} other {# Seiten}}",
+      "changed": "geändert am {date}",
+      "appoint": "Space-Admin ernennen",
+      "appointTitle": "Space-Admin für {key} ernennen",
+      "appointDescription": "Wähle eines der verbliebenen Mitglieder. Du kannst weder dich selbst noch Personen außerhalb des Space ernennen.",
+      "remaining": "Verbliebene Mitglieder",
+      "remainingFailed": "Die verbliebenen Mitglieder konnten nicht geladen werden",
+      "noRemaining": "Kein anderes Mitglied ist übrig. Der Space kann gelöscht werden, sobald kein aktives Mitglied mehr übrig ist.",
+      "choosePerson": "Wähle ein Mitglied.",
+      "appointNoticeTitle": "Wird im Audit-Log festgehalten",
+      "appointNotice": "Die neue Person verwaltet den Space ab dann. Du kannst ihn weiterhin nicht lesen.",
+      "appointConfirm": "Als Space-Admin ernennen",
+      "appointed": "{person} ist jetzt Space-Admin von {key}.",
+      "appointFailed": "Der Space-Admin konnte nicht ernannt werden",
+      "delete": "Space löschen",
+      "deleteTitle": "Vertraulichen Space {key} löschen",
+      "deleteDescription": "{count, plural, one {Der Space und seine # Seite werden endgültig gelöscht, ohne dass jemand sie liest. Das lässt sich nicht rückgängig machen.} other {Der Space und seine # Seiten werden endgültig gelöscht, ohne dass jemand sie liest. Das lässt sich nicht rückgängig machen.}}",
+      "reason": "Grund",
+      "reasonHint": "Kommt ins Audit-Log, zum Beispiel warum kein Mitglied mehr übrig ist.",
+      "reasonRequired": "Nenne den Grund mit bis zu {max} Zeichen.",
+      "typeKey": "Tippe {key} zur Bestätigung",
+      "keyMismatch": "Der Schlüssel stimmt nicht überein.",
+      "deleteConfirm": "Space endgültig löschen",
+      "deleted": "{key} wurde gelöscht.",
+      "deleteFailed": "Der Space konnte nicht gelöscht werden"
     }
   }
 }

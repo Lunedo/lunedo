@@ -12,6 +12,10 @@ export function itemHref(
   if (item.kind === "page") return pagePath(spaceKey, item.id, itemSlug(item.title));
   if (item.kind === "folder") return spaceKey ? folderPath(spaceKey, item.id, itemSlug(item.title)) : null;
   if (item.kind === "blogPost") return blogPostPath(spaceKey, item.id, itemSlug(item.title));
+  if (item.kind === "meetingSeries")
+    return spaceKey ? `/spaces/${encodeURIComponent(spaceKey)}/meetings/${item.id}` : null;
+  if (item.kind === "meetingTopic")
+    return spaceKey ? `/spaces/${encodeURIComponent(spaceKey)}/topics/${item.id}` : null;
   if (item.kind !== "link") return null;
   const link = item.link;
   if (!link?.accessible) return null;

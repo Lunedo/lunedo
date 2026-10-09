@@ -83,7 +83,8 @@ export function HolderPicker({
   value,
   onValueChange,
   label,
-  groups: includeGroups = true,
+  groups: groupsAllowed = true,
+  peopleOnly = false,
   placeholder,
   invalid,
 }: {
@@ -95,28 +96,31 @@ export function HolderPicker({
   onValueChange: (holder: (Holder & { name: string }) | null) => void;
   label: string;
   groups?: boolean;
+  peopleOnly?: boolean;
   placeholder?: string;
   invalid?: boolean;
 }) {
   const { t } = useTranslation();
-  const everyone: ComboboxItem[] = personal
-    ? []
-    : [
-        {
-          value: "organizationMembers",
-          label: holderLabel(
-            t,
-            { principalKind: "organizationMembers", principalId: null },
-            organizationName,
-          ),
-          group: t("spaces.holders.everyoneGroup"),
-        },
-        {
-          value: "instanceUsers",
-          label: t("spaces.holders.instanceUsers"),
-          group: t("spaces.holders.everyoneGroup"),
-        },
-      ];
+  const includeGroups = groupsAllowed && !peopleOnly;
+  const everyone: ComboboxItem[] =
+    personal || peopleOnly
+      ? []
+      : [
+          {
+            value: "organizationMembers",
+            label: holderLabel(
+              t,
+              { principalKind: "organizationMembers", principalId: null },
+              organizationName,
+            ),
+            group: t("spaces.holders.everyoneGroup"),
+          },
+          {
+            value: "instanceUsers",
+            label: t("spaces.holders.instanceUsers"),
+            group: t("spaces.holders.everyoneGroup"),
+          },
+        ];
   const load = async (query: string) => {
     const people = await request(() =>
       api.GET("/api/v1/people", { params: { query: { limit: 20, ...(query ? { q: query } : {}) } } }),

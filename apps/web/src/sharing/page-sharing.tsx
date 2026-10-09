@@ -13,6 +13,7 @@ export interface PageSharing {
   shareButton: ReactNode;
   restrictionNote: ReactNode;
   dialog: ReactNode;
+  open?: () => void;
 }
 
 export function usePageSharing(
@@ -56,5 +57,6 @@ export function usePageSharing(
     shareButton,
     restrictionNote,
     dialog: canShare ? <ShareDialog page={page} open={open} onOpenChange={setOpen} /> : null,
+    ...(canShare ? { open: () => setOpen(true) } : {}),
   };
 }

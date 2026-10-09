@@ -45,6 +45,7 @@ export interface SharedPage {
   spaceId: string;
   organizationId: string | null;
   organizationName: string | null;
+  confidential?: boolean;
 }
 
 interface Pending {
@@ -225,6 +226,7 @@ function AddPeople({
             organizationId={page.organizationId}
             organizationName={page.organizationName}
             personal
+            groups={!page.confidential}
             exclude={exclude}
             value={holder?.principalId ? `${holder.principalKind}:${holder.principalId}` : null}
             onValueChange={(next) => {

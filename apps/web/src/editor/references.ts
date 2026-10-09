@@ -11,12 +11,19 @@ export interface PageReference {
   inTrash?: boolean;
 }
 
+export interface TopicReference {
+  title: string;
+  status: string;
+}
+
 export interface References {
   people: Record<string, string>;
   pages: Record<string, PageReference>;
+  topics?: Record<string, TopicReference>;
 }
 
 const people = new Map<string, string>();
+const topics = new Map<string, TopicReference>();
 const pages = new Map<string, PageReference>();
 const pending = new Set<string>();
 const listeners = new Set<() => void>();
@@ -47,7 +54,23 @@ export function rememberReferences(references: Partial<References>): void {
       changed = true;
     }
   }
+  for (const [id, topic] of Object.entries(references.topics ?? {})) {
+    const known = topics.get(id);
+    if (!known || known.title !== topic.title || known.status !== topic.status) {
+      topics.set(id, topic);
+      changed = true;
+    }
+  }
   if (changed) emit();
+}
+
+export function topicReference(id: string): TopicReference | null {
+  return topics.get(id) ?? null;
+}
+
+export function useTopicReference(id: string | null): TopicReference | null {
+  useSyncExternalStore(subscribe, () => version);
+  return id ? (topics.get(id) ?? null) : null;
 }
 
 export function personName(id: string): string | null {

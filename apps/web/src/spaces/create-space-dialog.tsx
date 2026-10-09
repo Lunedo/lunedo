@@ -1,5 +1,6 @@
 import {
   Button,
+  Checkbox,
   Dialog,
   Field,
   focusFirstInvalidSoon,
@@ -83,7 +84,10 @@ function CreateSpaceForm({
   const [keyEdited, setKeyEdited] = useState(false);
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<SpaceVisibility>("organization");
+  const [confidential, setConfidential] = useState(false);
+  const canCreateConfidential = state.can("organization.spaces.createConfidential");
   const [grants, setGrants] = useState<Grant[]>([]);
+  const visibleGrants = confidential ? grants.filter((grant) => grant.principalKind === "account") : grants;
   const [initialized, setInitialized] = useState(false);
   const [adding, setAdding] = useState<(Holder & { name: string }) | null>(null);
   const [addingRole, setAddingRole] = useState<SpaceRole>("reader");
@@ -150,8 +154,9 @@ function CreateSpaceForm({
             name: name.trim(),
             key: key.trim().toUpperCase(),
             description: description.trim(),
-            visibility,
-            grants: grants
+            visibility: confidential ? "private" : visibility,
+            confidential,
+            grants: visibleGrants
               .filter((grant) => !(grant.principalKind === "account" && grant.principalId === ownId))
               .map(({ principalKind, principalId, role }) => ({ principalKind, principalId, role })),
           },
@@ -246,22 +251,39 @@ function CreateSpaceForm({
           onChange={(event) => setDescription(event.target.value)}
         />
       </Field>
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 font-semibold">{t("spaces.create.visibility")}</legend>
-        <RadioGroup
-          label={t("spaces.create.visibility")}
-          variant="card"
-          value={visibility}
-          onValueChange={(value) => setVisibility(value as SpaceVisibility)}
-          options={VISIBILITIES.map((value) => ({
-            value,
-            label: t(`spaces.visibility.${value}.label`),
-            description: t(`spaces.visibility.${value}.description`, {
-              organization: organization?.name ?? "",
-            }),
-          }))}
-        />
-      </fieldset>
+      {canCreateConfidential ? (
+        <div className="flex flex-col gap-2">
+          <Checkbox
+            label={t("confidential.createLabel")}
+            description={t("confidential.createDescription")}
+            checked={confidential}
+            onCheckedChange={setConfidential}
+          />
+          {confidential ? (
+            <Notice variant="info" title={t("confidential.createNoticeTitle")}>
+              {t("confidential.limit")}
+            </Notice>
+          ) : null}
+        </div>
+      ) : null}
+      {confidential ? null : (
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-1 font-semibold">{t("spaces.create.visibility")}</legend>
+          <RadioGroup
+            label={t("spaces.create.visibility")}
+            variant="card"
+            value={visibility}
+            onValueChange={(value) => setVisibility(value as SpaceVisibility)}
+            options={VISIBILITIES.map((value) => ({
+              value,
+              label: t(`spaces.visibility.${value}.label`),
+              description: t(`spaces.visibility.${value}.description`, {
+                organization: organization?.name ?? "",
+              }),
+            }))}
+          />
+        </fieldset>
+      )}
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-1 font-semibold">{t("spaces.create.permissions")}</legend>
         <p className="text-sm text-text-muted">{t("spaces.create.permissionsHint")}</p>
@@ -270,7 +292,7 @@ function CreateSpaceForm({
             <span className="min-w-0 flex-1 truncate">{t("spaces.create.you")}</span>
             <span className="text-sm text-text-muted">{roleLabel(t, "admin")}</span>
           </li>
-          {grants
+          {visibleGrants
             .filter((grant) => !(grant.principalKind === "account" && grant.principalId === ownId))
             .map((grant) => {
               const label = holderLabel(t, grant, organization?.name);
@@ -313,6 +335,7 @@ function CreateSpaceForm({
                 organizationId={organizationId}
                 organizationName={organization?.name ?? null}
                 personal={false}
+                peopleOnly={confidential}
                 exclude={[...grants.map(holderValue), `account:${ownId}`]}
                 value={adding ? holderValue(adding) : null}
                 onValueChange={setAdding}
@@ -330,12 +353,12 @@ function CreateSpaceForm({
       <Notice variant="info" title={t("spaces.create.whoGetsAccess")}>
         <ul className="list-disc ps-5">
           <li>{t("spaces.create.accessYou")}</li>
-          {visibility !== "private" ? (
+          {visibility !== "private" && !confidential ? (
             <li>
               {t(`spaces.visibility.${visibility}.summary`, { organization: organization?.name ?? "" })}
             </li>
           ) : null}
-          {grants
+          {visibleGrants
             .filter((grant) => !(grant.principalKind === "account" && grant.principalId === ownId))
             .map((grant) => (
               <li key={holderValue(grant)}>

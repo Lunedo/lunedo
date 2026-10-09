@@ -62,7 +62,8 @@ export function useItemActions(
   const href = itemHref(item, space.key);
   const overview = space.overviewItemId === item.id;
   const items: MenuItem[] = [];
-  if (context.canEdit && item.kind !== "link") {
+  const container = item.kind === "page" || item.kind === "folder";
+  if (context.canEdit && container) {
     items.push(
       { label: t("tree.newPageInside"), icon: FilePlus, onSelect: () => context.openCreate("page", item.id) },
       {
@@ -75,7 +76,7 @@ export function useItemActions(
   }
   if (context.canEdit) {
     items.push({ label: t("tree.move"), icon: Move, onSelect: () => context.openMove(item) });
-    if (item.kind !== "link" && !overview) {
+    if (container && !overview) {
       items.push(
         item.kind === "page"
           ? {

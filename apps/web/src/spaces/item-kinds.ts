@@ -1,6 +1,13 @@
 import type { TFunction } from "i18next";
 
-export const knownItemKinds = ["page", "folder", "link", "blogPost"] as const;
+export const knownItemKinds = [
+  "page",
+  "folder",
+  "link",
+  "blogPost",
+  "meetingSeries",
+  "meetingTopic",
+] as const;
 export type KnownItemKind = (typeof knownItemKinds)[number];
 
 export function knownItemKind(kind: string | null | undefined): KnownItemKind | null {

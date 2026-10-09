@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LoadError } from "../errors/failure.js";
+import { OneOnOnes, UpcomingMeetings } from "../meetings/home-sections.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { sharedWithMeQuery } from "../sharing/sharing-api.js";
@@ -111,6 +112,8 @@ export function HomeScreen() {
         ) : null}
         {home.data ? (
           <div className="grid gap-6 md:grid-cols-2">
+            <UpcomingMeetings />
+            <OneOnOnes />
             <Section title={t("home.tasks")} icon={ListChecks}>
               <div className="flex flex-col gap-2">
                 {home.data.tasks.length === 0 ? (

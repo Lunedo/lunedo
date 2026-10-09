@@ -214,6 +214,11 @@ function MoveForm({
             <LoadError what={t("move.impactFailed")} error={impact.error} onRetry={() => impact.refetch()} />
           ) : null}
           {impact.data ? <ImpactSummary impact={impact.data} /> : null}
+          {impact.data?.leavesConfidential ? (
+            <Notice variant="warning" title={t("confidential.moveOutTitle")}>
+              {t("confidential.moveOut")}
+            </Notice>
+          ) : null}
         </section>
       ) : null}
       <div className="flex justify-end gap-2">

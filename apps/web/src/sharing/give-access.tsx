@@ -337,6 +337,7 @@ function Assistant({ initial, onClose }: { initial: Draft; onClose: () => void }
               organizationId={space.organizationId}
               organizationName={space.organizationName}
               personal
+              groups={!space.confidential}
               exclude={[]}
               value={draft.holder ? `${draft.holder.kind}:${draft.holder.id}` : null}
               onValueChange={(holder) => {

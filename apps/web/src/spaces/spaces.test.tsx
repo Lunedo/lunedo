@@ -223,6 +223,7 @@ describe("spaces", () => {
         key: "CS",
         description: "",
         visibility: "organization",
+        confidential: false,
         grants: [{ principalKind: "organizationMembers", principalId: null, role: "editor" }],
       }),
     );

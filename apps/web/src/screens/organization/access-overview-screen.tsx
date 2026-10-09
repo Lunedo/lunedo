@@ -27,6 +27,16 @@ function exportHref(organizationId: string, accountId?: string): string {
 function EntryRow({ entry }: { entry: Entry }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  if (entry.kind === "confidentialSpaces") {
+    return (
+      <li className="flex flex-wrap items-center gap-2 py-3">
+        <Lock aria-hidden="true" className="size-icon-sm text-text-muted" />
+        <span className="min-w-0 flex-1">
+          {t("organization.access.confidentialSpaces", { count: entry.count })}
+        </span>
+      </li>
+    );
+  }
   const where =
     entry.kind === "restrictedPages"
       ? t("organization.access.restrictedPages", { count: entry.count })

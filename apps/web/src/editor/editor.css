@@ -12,6 +12,8 @@
 }
 
 .ph-callout-content > * + *,
+.ph-decision-content > * + *,
+.ph-topic-update-content > * + *,
 .ph-expand-content > * + *,
 .ph-column > * + *,
 .ph-section > * + * {
@@ -758,4 +760,31 @@ details.ph-expand > summary {
 .ph-content .ph-task-report-block,
 .ph-content .ph-task-report {
   @apply my-4 rounded-md border border-border bg-surface p-4;
+}
+
+.ph-decision {
+  @apply flex flex-col gap-1 rounded-md border-l-4 px-4 py-3;
+  border-color: var(--ph-color-success);
+  background-color: var(--ph-color-success-soft);
+}
+
+.ph-decision-label {
+  @apply inline-flex items-center gap-1 text-sm font-semibold text-text;
+}
+
+.ph-topic-update {
+  @apply flex flex-col gap-2 rounded-md border border-border px-4 py-3;
+}
+
+.ph-topic-update + .ph-topic-update {
+  @apply mt-3;
+}
+
+.ph-topic-update-title {
+  @apply inline-flex items-center gap-2 font-semibold;
+}
+
+.ph-topic-update-closed {
+  @apply rounded-sm px-2 text-sm font-normal text-text-muted;
+  background-color: var(--ph-color-surface-sunken);
 }

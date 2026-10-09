@@ -60,8 +60,15 @@ export function SpaceGeneralScreen() {
             />
           </div>
         </Panel>
+        {space.confidential ? (
+          <Panel title={t("confidential.settingsTitle")} description={t("confidential.explanation")}>
+            <Notice variant="info" title={t("confidential.limitTitle")}>
+              {t("confidential.limit")}
+            </Notice>
+          </Panel>
+        ) : null}
         <KeySection />
-        <VisibilitySection />
+        {space.confidential ? null : <VisibilitySection />}
       </div>
     </SpaceSettingsPage>
   );

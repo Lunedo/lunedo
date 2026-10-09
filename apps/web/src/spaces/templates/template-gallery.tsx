@@ -42,10 +42,12 @@ export function TemplateGallery({
   space,
   parentId,
   onOpenChange,
+  onSeriesTemplate,
 }: {
   space: SpaceWithRole;
   parentId: string | null | undefined;
   onOpenChange: (open: boolean) => void;
+  onSeriesTemplate?: (templateId: string) => void;
 }) {
   const { t } = useTranslation();
   const name = space.personal && !space.name ? t("spaces.personal.label") : space.name;
@@ -57,7 +59,12 @@ export function TemplateGallery({
       size="lg"
     >
       {parentId !== undefined ? (
-        <GalleryContent space={space} parentId={parentId} onDone={() => onOpenChange(false)} />
+        <GalleryContent
+          space={space}
+          parentId={parentId}
+          onDone={() => onOpenChange(false)}
+          {...(onSeriesTemplate ? { onSeriesTemplate } : {})}
+        />
       ) : null}
     </Dialog>
   );
@@ -67,10 +74,12 @@ function GalleryContent({
   space,
   parentId,
   onDone,
+  onSeriesTemplate,
 }: {
   space: SpaceWithRole;
   parentId: string | null;
   onDone: () => void;
+  onSeriesTemplate?: (templateId: string) => void;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -108,6 +117,11 @@ function GalleryContent({
   };
 
   const create = async () => {
+    if (template?.series && onSeriesTemplate) {
+      onDone();
+      onSeriesTemplate(template.id);
+      return;
+    }
     if (template) {
       const found: Record<string, string> = {};
       for (const field of template.fields) {
@@ -233,7 +247,10 @@ function GalleryContent({
         <div className="grid min-w-0 gap-4 md:grid-cols-2">
           <TemplatePreview template={template} />
           <div className="flex flex-col gap-3">
-            {template.fields.length === 0 ? (
+            {template.series ? (
+              <p className="text-sm text-text-muted">{t("gallery.seriesTemplate")}</p>
+            ) : null}
+            {template.series ? null : template.fields.length === 0 ? (
               <p className="text-sm text-text-muted">{t("gallery.noInput")}</p>
             ) : (
               template.fields.map((field) => (
@@ -262,7 +279,11 @@ function GalleryContent({
           {t("common.cancel")}
         </Button>
         <Button type="submit" variant="primary" loading={creating}>
-          {template ? t("gallery.createFrom", { name: template.name }) : t("gallery.createBlank")}
+          {template?.series && onSeriesTemplate
+            ? t("gallery.createSeriesFrom", { name: template.name })
+            : template
+              ? t("gallery.createFrom", { name: template.name })
+              : t("gallery.createBlank")}
         </Button>
       </div>
     </form>

@@ -214,6 +214,7 @@ const spacesRoute = createRoute({
     q: z.string().max(200).optional().catch(undefined),
     organization: idSchema.optional().catch(undefined),
     archived: z.boolean().optional().catch(undefined),
+    oneOnOnes: z.boolean().optional().catch(undefined),
   }),
   component: lazyRouteComponent(() => import("./spaces/spaces-screen.js"), "SpacesScreen"),
 });
@@ -257,7 +258,10 @@ const spaceIndexRoute = createRoute({
   component: lazyRouteComponent(() => import("./spaces/space-layout.js"), "SpaceOverviewRedirect"),
 });
 
-const itemSearch = z.object({ edit: z.boolean().optional().catch(undefined) });
+const itemSearch = z.object({
+  edit: z.boolean().optional().catch(undefined),
+  notes: z.boolean().optional().catch(undefined),
+});
 
 const pageRoute = createRoute({
   getParentRoute: () => spaceRoute,
@@ -312,6 +316,26 @@ const folderRoute = createRoute({
   path: "/folders/$itemId/{-$slug}",
   params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
   component: lazyRouteComponent(() => import("./spaces/folder-screen.js"), "FolderScreen"),
+});
+
+const meetingsRoute = createRoute({
+  getParentRoute: () => spaceRoute,
+  path: "/meetings",
+  component: lazyRouteComponent(() => import("./meetings/series-list-screen.js"), "SeriesListScreen"),
+});
+
+const seriesRoute = createRoute({
+  getParentRoute: () => spaceRoute,
+  path: "/meetings/$seriesId",
+  params: { parse: (params) => ({ ...params, seriesId: z.uuid().parse(params.seriesId) }) },
+  component: lazyRouteComponent(() => import("./meetings/series-screen.js"), "SeriesScreen"),
+});
+
+const topicRoute = createRoute({
+  getParentRoute: () => spaceRoute,
+  path: "/topics/$topicId",
+  params: { parse: (params) => ({ ...params, topicId: z.uuid().parse(params.topicId) }) },
+  component: lazyRouteComponent(() => import("./meetings/topic-screen.js"), "TopicScreen"),
 });
 
 const labelRoute = createRoute({
@@ -672,6 +696,9 @@ const routeTree = rootRoute.addChildren([
       historyRoute,
       pageRoute,
       folderRoute,
+      meetingsRoute,
+      seriesRoute,
+      topicRoute,
       labelRoute,
       trashRoute,
       spaceSettingsRoute.addChildren([

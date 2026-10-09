@@ -1,13 +1,14 @@
 import { Badge, Button, EmptyState, Input, PageHeader, Select, Skeleton } from "@pagehall/ui";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
-import { Layers, Plus, Search, User } from "lucide-react";
+import { Layers, Lock, Plus, Search, User, Users } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
 import { useDebounced } from "../components/table-state.js";
 import { LoadError } from "../errors/failure.js";
+import { OneOnOneDialog } from "../meetings/one-on-one-dialog.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { DiscoverableSpaces } from "../sharing/discoverable-spaces.js";
 import { useOrganizationState } from "../shell/shell-context.js";
@@ -26,10 +27,12 @@ export function SpacesScreen() {
   const [text, setText] = useState(search.q ?? "");
   const query = useDebounced(text.trim(), 250);
   const organizationFilter = search.organization ?? null;
-  const archived = search.archived === true;
+  const oneOnOnes = search.oneOnOnes === true;
+  const archived = search.archived === true && !oneOnOnes;
   const [creating, setCreating] = useState(false);
+  const [creatingOneOnOne, setCreatingOneOnOne] = useState(false);
   const spaces = useInfiniteQuery({
-    queryKey: [...spaceKeys.list({ search: query, organizationId: organizationFilter }), archived],
+    queryKey: [...spaceKeys.list({ search: query, organizationId: organizationFilter }), archived, oneOnOnes],
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) =>
       request(() =>
@@ -40,6 +43,7 @@ export function SpacesScreen() {
               ...(query ? { q: query } : {}),
               ...(organizationFilter ? { organizationId: organizationFilter } : {}),
               ...(archived ? { archived: "true" as const } : {}),
+              ...(oneOnOnes ? { oneOnOne: "true" as const } : {}),
               ...(pageParam ? { cursor: pageParam } : {}),
             },
           },
@@ -48,16 +52,22 @@ export function SpacesScreen() {
     getNextPageParam: (page) => page.nextCursor ?? undefined,
   });
   const items = spaces.data?.pages.flatMap((page) => page.items) ?? [];
-  const filtered = query !== "" || organizationFilter !== null || archived;
+  const filtered = query !== "" || organizationFilter !== null || archived || oneOnOnes;
   const canCreate = state.can("organization.spaces.create");
 
-  const setFilter = (next: { q?: string; organization?: string | null; archived?: boolean }) => {
+  const setFilter = (next: {
+    q?: string;
+    organization?: string | null;
+    archived?: boolean;
+    oneOnOnes?: boolean;
+  }) => {
     void navigate({
       search: (previous) => ({
         ...previous,
         ...("q" in next ? { q: next.q || undefined } : {}),
         ...("organization" in next ? { organization: next.organization ?? undefined } : {}),
         ...("archived" in next ? { archived: next.archived || undefined } : {}),
+        ...("oneOnOnes" in next ? { oneOnOnes: next.oneOnOnes || undefined } : {}),
       }),
       replace: true,
     });
@@ -78,6 +88,9 @@ export function SpacesScreen() {
                 onClick={() => void navigate({ to: "/personal-space" })}
               >
                 {t("spaces.personal.open")}
+              </Button>
+              <Button variant="secondary" icon={Users} onClick={() => setCreatingOneOnOne(true)}>
+                {t("meetings.oneOnOne.new")}
               </Button>
               {canCreate ? (
                 <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
@@ -108,11 +121,14 @@ export function SpacesScreen() {
           <div className="sm:w-field">
             <Select
               aria-label={t("spaces.list.archiveFilter")}
-              value={archived ? "archived" : "active"}
-              onValueChange={(value) => setFilter({ archived: value === "archived" })}
+              value={oneOnOnes ? "oneOnOnes" : archived ? "archived" : "active"}
+              onValueChange={(value) =>
+                setFilter({ archived: value === "archived", oneOnOnes: value === "oneOnOnes" })
+              }
               options={[
                 { value: "active", label: t("spaces.list.activeSpaces") },
                 { value: "archived", label: t("spaces.list.archivedSpaces") },
+                { value: "oneOnOnes", label: t("spaces.list.oneOnOnes") },
               ]}
             />
           </div>
@@ -158,7 +174,7 @@ export function SpacesScreen() {
                   variant="secondary"
                   onClick={() => {
                     setText("");
-                    setFilter({ q: "", organization: null });
+                    setFilter({ q: "", organization: null, archived: false, oneOnOnes: false });
                   }}
                 >
                   {t("spaces.list.clearFilters")}
@@ -203,6 +219,7 @@ export function SpacesScreen() {
         ) : null}
       </div>
       <CreateSpaceDialog open={creating} onOpenChange={setCreating} />
+      <OneOnOneDialog open={creatingOneOnOne} onOpenChange={setCreatingOneOnOne} />
     </main>
   );
 }
@@ -237,6 +254,11 @@ function SpaceCard({ space, showOrganization }: { space: Space; showOrganization
         ) : null}
         <div className="mt-auto flex flex-wrap gap-2 pt-1">
           <Badge variant="neutral">{t(`spaces.visibility.${space.visibility}.short`)}</Badge>
+          {space.confidential ? (
+            <Badge variant="accent" icon={Lock}>
+              {space.oneOnOne ? t("confidential.oneOnOneBadge") : t("confidential.badge")}
+            </Badge>
+          ) : null}
         </div>
       </Link>
     </li>

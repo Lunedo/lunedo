@@ -15,6 +15,7 @@ import {
   Minimize2,
   MoreHorizontal,
   Move,
+  NotebookPen,
   Pencil,
   Radio,
   Trash2,
@@ -32,6 +33,8 @@ import { LoadError } from "../errors/failure.js";
 import { AttachmentsSection, PageDropZone } from "../files/attachments-section.js";
 import { AttachmentPreviewProvider } from "../files/preview-host.js";
 import { UploadsProvider } from "../files/uploads.js";
+import { MeetingHeader } from "../meetings/meeting-header.js";
+import { PrivateNotesPanel } from "../meetings/private-notes-panel.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { NoPageAccess } from "../sharing/access-requests.js";
@@ -109,6 +112,7 @@ function PageView({ page }: { page: ItemDetails }) {
       spaceId: space.id,
       organizationId: space.organizationId,
       organizationName: space.organizationName,
+      confidential: space.confidential,
       viewRestriction: page.viewRestriction,
       editRestricted: page.editRestricted,
     },
@@ -138,6 +142,8 @@ function PageArticle({ page, sharing }: { page: ItemDetails; sharing: PageSharin
   const discard = useDiscardDraft();
   const writable = canEdit && sharing.canEditPage !== false && !page.archived && !space.archived;
   const editing = writable && search.edit === true;
+  const meeting = page.ancestors.at(-1)?.kind === "meetingSeries";
+  const [notesOpen, setNotesOpen] = useState(meeting && search.notes === true);
   const publishMode = page.mode === "publish";
   const draft = useQuery({ ...draftQuery(page.id), enabled: writable && publishMode, throwOnError: false });
   const saveState = useRef<SaveState>("saved");
@@ -195,9 +201,13 @@ function PageArticle({ page, sharing }: { page: ItemDetails; sharing: PageSharin
   const menuItems: MenuItem[] = [];
   if (writable) {
     menuItems.push(
-      { label: t("tree.newPageInside"), icon: FilePlus, onSelect: () => openCreate("page", page.id) },
-      { label: t("tree.move"), icon: Move, onSelect: () => openMove(page) },
-      ...(overview
+      ...(meeting
+        ? []
+        : [
+            { label: t("tree.newPageInside"), icon: FilePlus, onSelect: () => openCreate("page", page.id) },
+            { label: t("tree.move"), icon: Move, onSelect: () => openMove(page) },
+          ]),
+      ...(overview || meeting
         ? []
         : [
             {
@@ -308,12 +318,29 @@ function PageArticle({ page, sharing }: { page: ItemDetails; sharing: PageSharin
               {sharing.shareButton}
               <StarButton target={{ itemId: page.id }} title={title} />
               {collaboration.commentsButton}
+              {meeting ? (
+                <IconButton
+                  label={t("meetings.notes.toggle")}
+                  icon={NotebookPen}
+                  aria-pressed={notesOpen}
+                  aria-expanded={notesOpen}
+                  onClick={() => setNotesOpen(!notesOpen)}
+                />
+              ) : null}
               <IconButton label={t("versions.history")} icon={History} onClick={openHistory} />
               <Menu trigger={<IconButton label={t("page.more")} icon={MoreHorizontal} />} items={menuItems} />
             </>
           }
         />
         {sharing.restrictionNote}
+        {meeting ? (
+          <MeetingHeader
+            meetingId={page.id}
+            spaceKey={space.key}
+            writable={writable}
+            onShare={sharing.open}
+          />
+        ) : null}
         {page.archived || space.archived ? (
           <Notice
             variant="warning"
@@ -375,7 +402,13 @@ function PageArticle({ page, sharing }: { page: ItemDetails; sharing: PageSharin
           onOpenChange={setSavingTemplate}
         />
       </article>
-      {collaboration.panel}
+      {notesOpen ? (
+        <div className="fixed inset-0 z-40 flex bg-surface md:sticky md:top-0 md:inset-auto md:z-auto md:h-dvh md:self-start">
+          <PrivateNotesPanel meetingId={page.id} canCopy={writable} onClose={() => setNotesOpen(false)} />
+        </div>
+      ) : (
+        collaboration.panel
+      )}
     </div>
   );
 }
