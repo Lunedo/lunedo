@@ -452,6 +452,36 @@ describe.skipIf(!databaseBaseUrl)("brute-force protection", () => {
       await proxied.close();
     }
   });
+
+  it("ignores forwarding headers when no proxy is trusted", async () => {
+    const unproxied = await createAuthTestApp(configuredSetupEnv);
+    try {
+      await completeConfiguredSetup(unproxied);
+      const account = await createAccount(unproxied, "unproxied@example.org");
+      for (let attempt = 0; attempt < 31; attempt++) {
+        const client = new TestClient(unproxied.app, { remoteAddress: "127.0.0.1" });
+        const response = await client.post(
+          "/api/v1/auth/sign-in",
+          { email: `nobody-${attempt}@example.org`, password: "not a password of anyone" },
+          { "x-forwarded-for": `203.0.113.${attempt + 1}` },
+        );
+        if (attempt === 30) expect(response.statusCode).toBe(429);
+      }
+      const signedIn = await new TestClient(unproxied.app, { remoteAddress: "198.51.100.7" }).post(
+        "/api/v1/auth/sign-in",
+        { email: account.email, password: account.password },
+        { "x-forwarded-for": "203.0.113.99" },
+      );
+      expect(signedIn.statusCode).toBe(200);
+      const addresses = await unproxied.runtime.pool.query<{ client_ip: string }>(
+        "select client_ip from sessions where account_id = $1",
+        [account.id],
+      );
+      expect(addresses.rows.map((row) => row.client_ip)).toEqual(["198.51.100.7"]);
+    } finally {
+      await unproxied.close();
+    }
+  });
 });
 
 describe.skipIf(!databaseBaseUrl)("CSRF protection", () => {
