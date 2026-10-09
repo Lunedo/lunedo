@@ -558,6 +558,17 @@ describe.skipIf(!baseUrl)("meeting series", () => {
       );
       expect(await test.services.decisions.log(context.lead, created.id)).toHaveLength(1);
     });
+
+    it("hide a topic and the name of its series when the series is restricted", async () => {
+      const context = await setup();
+      const created = await series(context);
+      const topicId = await test.services.topics.create(context.lead, created.id, { title: "Budget" });
+      await test.services.pageAccess.change(context.lead, created.id, [{ action: "restrict", kind: "view" }]);
+      await expect(test.services.topics.get(context.reader, topicId)).rejects.toMatchObject({
+        code: "topicNotFound",
+      });
+      expect((await test.services.topics.get(context.lead, topicId)).seriesTitle).toBe("Jour fixe IT");
+    });
   });
 
   describe("private notes", () => {

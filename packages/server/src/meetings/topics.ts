@@ -229,13 +229,15 @@ export class TopicService {
             and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}`)
       : null;
     const found = decision?.rows[0];
-    const series = await this.#database.execute<{ title: string }>(
-      sql`select title from tree_items where id = ${row.series_id}`,
-    );
+    const series = await this.#database.execute<{ title: string }>(sql`
+      select t.title from tree_items t join spaces s on s.id = t.space_id
+      where t.id = ${row.series_id} and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}`);
+    const seriesRow = series.rows[0];
+    if (!seriesRow) throw new SpaceError("topicNotFound", "The topic does not exist");
     return {
       ...this.#summary(row),
       spaceId: row.space_id,
-      seriesTitle: series.rows[0]?.title ?? "",
+      seriesTitle: seriesRow.title,
       timeline: timeline.rows.map((entry) => ({
         meetingId: entry.item_id,
         meetingTitle: entry.title,
