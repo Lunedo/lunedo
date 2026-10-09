@@ -6,6 +6,7 @@ import { SYSTEM } from "../accounts/principal.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { RateLimitedError } from "./errors.js";
+import { TotpService } from "./two-factor.js";
 
 const baseUrl = testDatabaseBaseUrl();
 
@@ -45,6 +46,34 @@ describe.skipIf(!baseUrl)("SignInService", () => {
     const codes = await services.recoveryCodes.generate(database, account.id);
     return { account, codes };
   }
+
+  it("accepts authenticator codes of one step around now, each only once and never an older one", async () => {
+    const { services, database, encryption } = test;
+    const now = new Date("2030-01-01T12:00:10Z");
+    const totp = new TotpService({ database, encryption, clock: () => now });
+    const account = await database.transaction((tx) =>
+      services.accounts.createStandard(tx, {
+        email: "totp.window@example.org",
+        name: "Window",
+        password: "a long window passphrase",
+        homeOrganizationId: null,
+      }),
+    );
+    const setup = await totp.begin(account.id, { issuer: "Test", account: "totp.window@example.org" });
+    if (!setup) throw new Error("TOTP was not started");
+    const secret = Secret.fromBase32(setup.secret);
+    const at = (steps: number) => TOTP.generate({ secret, timestamp: now.getTime() + steps * 30_000 });
+
+    expect(await totp.verify(database, account.id, at(-1), { confirming: true })).toBe(true);
+    expect(await totp.verify(database, account.id, at(-1))).toBe(false);
+    expect(await totp.verify(database, account.id, at(-2))).toBe(false);
+    expect(await totp.verify(database, account.id, at(2))).toBe(false);
+    expect(await totp.verify(database, account.id, at(0))).toBe(true);
+    expect(await totp.verify(database, account.id, at(0))).toBe(false);
+    expect(await totp.verify(database, account.id, at(-1))).toBe(false);
+    expect(await totp.verify(database, account.id, at(1))).toBe(true);
+    expect(await totp.verify(database, account.id, at(1))).toBe(false);
+  });
 
   it("takes the account lock before the audit lock when a recovery code is used", async () => {
     const { services, database } = test;
