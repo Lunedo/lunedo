@@ -177,7 +177,10 @@ test("a team holds a quarterly and a biweekly series with attendance, topics, ta
   await decide.getByRole("button", { name: "Record decision" }).click();
   await expect(page.getByText("Decided", { exact: true })).toBeVisible();
 
-  await page.getByRole("link", { name: "Series" }).click();
+  await page
+    .getByRole("navigation", { name: "Breadcrumbs" })
+    .getByRole("link", { name: "Jour fixe IT" })
+    .click();
   await expect(page.getByText("Positions are kept in AD and synchronized nightly.")).toBeVisible();
 
   await page.goto(meetingUrl);
