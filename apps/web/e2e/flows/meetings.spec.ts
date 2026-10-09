@@ -1,15 +1,7 @@
-import { type Browser, type BrowserContext, expect, type Page, test } from "@playwright/test";
-import { BASE_URL, OWNER_STORAGE, readState } from "../support/environment.js";
-import {
-  callApi,
-  expectAccessible,
-  linkFrom,
-  setAppearance,
-  signInWithPassword,
-  waitForMail,
-} from "../support/helpers.js";
-
-test.use({ storageState: OWNER_STORAGE });
+import type { Page } from "@playwright/test";
+import { expect, type Organization, test } from "../support/fixtures.js";
+import { callApi, expectAccessible, setAppearance } from "../support/helpers.js";
+import { type Person, unique } from "../support/people.js";
 
 const VARIANTS = [
   { colorMode: "light", language: "en" },
@@ -17,24 +9,10 @@ const VARIANTS = [
 ] as const;
 const WIDTHS = [1440, 390] as const;
 
-interface Person {
-  id: string;
-  name: string;
-  email: string;
-  password: string;
-}
-
 interface Series {
   id: string;
   title: string;
   upcoming: { id: string; title: string };
-}
-
-function unique(): string {
-  const random = Math.floor(Math.random() * 1296)
-    .toString(36)
-    .padStart(2, "0");
-  return `${Date.now().toString(36).slice(-5)}${random}`.toUpperCase();
 }
 
 function slug(title: string): string {
@@ -47,50 +25,10 @@ function slug(title: string): string {
     .join("-");
 }
 
-async function organizationId(page: Page): Promise<string> {
-  const stored = readState().organizationId;
-  if (stored) return stored;
-  const response = await page.request.get("/api/v1/organizations?limit=10");
-  return ((await response.json()) as { items: { id: string }[] }).items[0]?.id ?? "";
-}
-
-async function invite(page: Page, browser: Browser, first: string): Promise<Person> {
-  const name = `${first} ${unique()}`;
-  const email = `${name.toLowerCase().split(" ").join(".")}@pagehall.test`;
-  const password = `${first} passphrase for meetings`;
-  if (!page.url().startsWith(BASE_URL)) await page.goto("/home");
-  await callApi(page, "POST", `/api/v1/organizations/${await organizationId(page)}/invitations`, {
-    email,
-    kind: "member",
-  });
-  const token = /#token=([\w-]+)/.exec(linkFrom((await waitForMail(email, /invit/i)).text))?.[1] ?? "";
-  const anonymous = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-  try {
-    const response = await anonymous.request.post(`${BASE_URL}/api/v1/invitations/accept`, {
-      data: { token, name, password },
-      headers: { "X-Pagehall-Request": "1", origin: BASE_URL },
-    });
-    expect(response.status(), await response.text()).toBeLessThan(300);
-    const { accountId } = (await response.json()) as { accountId: string };
-    return { id: accountId, name, email, password };
-  } finally {
-    await anonymous.close();
-  }
-}
-
-async function signedIn(browser: Browser, person: Person): Promise<{ context: BrowserContext; page: Page }> {
-  const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-  const page = await context.newPage();
-  await page.goto("/sign-in");
-  await signInWithPassword(page, person.email, person.password);
-  await expect(page.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
-  return { context, page };
-}
-
-async function teamSpace(page: Page, members: Person[]) {
+async function teamSpace(page: Page, organization: Organization, members: Person[]) {
   await page.goto("/spaces");
   const key = `M${unique()}`;
-  const space = (await callApi(page, "POST", `/api/v1/organizations/${await organizationId(page)}/spaces`, {
+  const space = (await callApi(page, "POST", `/api/v1/organizations/${organization.id}/spaces`, {
     name: `Meetings ${key}`,
     key,
     visibility: "private",
@@ -128,10 +66,10 @@ async function capture(page: Page, name: string, open: () => Promise<void>) {
 
 test("a team holds a quarterly and a biweekly series with attendance, topics, tasks and decisions", async ({
   page,
-  browser,
+  organization,
 }) => {
-  const colleague = await invite(page, browser, "Lena");
-  const space = await teamSpace(page, [colleague]);
+  const colleague = await organization.invite("Lena");
+  const space = await teamSpace(page, organization, [colleague]);
   await page.goto(`/spaces/${space.key}/meetings`);
   await page.getByRole("button", { name: "New series" }).first().click();
   const dialog = page.getByRole("dialog", { name: /New meeting series/ });
@@ -191,9 +129,9 @@ test("a team holds a quarterly and a biweekly series with attendance, topics, ta
   await expect(page.getByRole("link", { name: /Jour fixe IT/ }).first()).toBeVisible();
 });
 
-test("meeting screens pass the review in both languages and themes", async ({ page, browser }) => {
-  const colleague = await invite(page, browser, "Noah");
-  const space = await teamSpace(page, [colleague]);
+test("meeting screens pass the review in both languages and themes", async ({ page, organization }) => {
+  const colleague = await organization.invite("Noah");
+  const space = await teamSpace(page, organization, [colleague]);
   const created = await series(page, space.id, {
     name: "Jour fixe Ops",
     members: [colleague.id],
@@ -242,12 +180,12 @@ test("meeting screens pass the review in both languages and themes", async ({ pa
 
 test("two people hold a one-on-one that administrators cannot read, with private notes and a successor", async ({
   page,
-  browser,
+  organization,
 }) => {
-  const anna = await invite(page, browser, "Anna");
-  const ben = await invite(page, browser, "Ben");
-  const clara = await invite(page, browser, "Clara");
-  const first = await signedIn(browser, anna);
+  const anna = await organization.invite("Anna");
+  const ben = await organization.invite("Ben");
+  const clara = await organization.invite("Clara");
+  const first = await organization.signIn(anna);
   try {
     await first.page.goto("/home");
     await first.page.getByRole("button", { name: "New one-on-one" }).click();
@@ -274,15 +212,15 @@ test("two people hold a one-on-one that administrators cannot read, with private
     await expect(page.getByText(/not available|no access|keinen Zugriff/i).first()).toBeVisible();
     const response = await page.request.get(`/api/v1/meetings/${seriesData.upcoming.id}/private-notes`);
     expect(response.status()).toBeGreaterThanOrEqual(400);
-    await page.goto(`/settings/organizations/${await organizationId(page)}/spaces`);
+    await page.goto(`/settings/organizations/${organization.id}/spaces`);
     await expect(page.getByText(spaceKey ?? "").first()).toBeVisible();
     await expect(page.getByText(anna.name)).toHaveCount(0);
     await capture(page, "confidential-spaces-organization", async () => {
-      await page.goto(`/settings/organizations/${await organizationId(page)}/spaces`);
+      await page.goto(`/settings/organizations/${organization.id}/spaces`);
       await expect(page.getByText(spaceKey ?? "").first()).toBeVisible();
     });
 
-    const second = await signedIn(browser, ben);
+    const second = await organization.signIn(ben);
     try {
       const notes = (await (
         await second.page.request.get(`/api/v1/meetings/${seriesData.upcoming.id}/private-notes`)
@@ -306,7 +244,7 @@ test("two people hold a one-on-one that administrators cannot read, with private
     await change.getByRole("button", { name: "Add successor" }).click();
     await expect(first.page.getByText(new RegExp(`${clara.name}.*added`)).first()).toBeVisible();
 
-    const third = await signedIn(browser, clara);
+    const third = await organization.signIn(clara);
     try {
       await third.page.goto(seriesUrl);
       await expect(third.page.getByRole("heading", { level: 1 })).toBeVisible();

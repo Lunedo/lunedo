@@ -1,17 +1,8 @@
-import { type Browser, type BrowserContext, expect, type Page, test } from "@playwright/test";
-import { BASE_URL, OWNER_STORAGE, readState } from "../support/environment.js";
-import {
-  callApi,
-  expectAccessible,
-  linkFrom,
-  setAppearance,
-  signInWithPassword,
-  waitForMail,
-} from "../support/helpers.js";
+import type { Page } from "@playwright/test";
+import { expect, type Organization, test } from "../support/fixtures.js";
+import { callApi, expectAccessible, setAppearance } from "../support/helpers.js";
 import { publishScheduledPostNow } from "../support/jobs.js";
-
-test.describe.configure({ mode: "serial" });
-test.use({ storageState: OWNER_STORAGE });
+import { type Person, unique } from "../support/people.js";
 
 const VARIANTS = [
   { colorMode: "light", language: "en" },
@@ -19,52 +10,76 @@ const VARIANTS = [
 ] as const;
 const WIDTHS = [1440, 390] as const;
 
-let spaceKey = "CO";
-let spaceId = "";
-let pageId = "";
-let pagePath = "";
-let colleague = { id: "", email: "", password: "" };
-let colleagueContext: BrowserContext | null = null;
-
-async function organizationId(page: Page): Promise<string> {
-  const stored = readState().organizationId;
-  if (stored) return stored;
-  const response = await page.request.get("/api/v1/organizations?limit=10");
-  return ((await response.json()) as { items: { id: string }[] }).items[0]?.id ?? "";
+interface Space {
+  id: string;
+  key: string;
+  colleague: Person;
 }
 
-async function invite(page: Page, browser: Browser, name: string) {
-  const email = `${name.toLowerCase().replace(/\s+/g, ".")}.${Date.now()}@pagehall.test`;
-  const password = `${name} passphrase for commenting`;
-  await callApi(page, "POST", `/api/v1/organizations/${await organizationId(page)}/invitations`, {
-    email,
-    kind: "member",
+function paragraph(text: string) {
+  return { type: "paragraph", content: [{ type: "text", text }] };
+}
+
+async function collaborationSpace(page: Page, organization: Organization): Promise<Space> {
+  await page.goto("/spaces");
+  const colleague = await organization.invite("Carla");
+  const key = `CO${unique()}`;
+  const space = (await callApi(page, "POST", `/api/v1/organizations/${organization.id}/spaces`, {
+    name: "Collaboration",
+    key,
+    visibility: "private",
+    grants: [{ principalKind: "account", principalId: colleague.id, role: "commenter" }],
+  })) as { id: string };
+  return { id: space.id, key, colleague };
+}
+
+async function vpnPage(page: Page, space: Space): Promise<{ id: string; path: string }> {
+  const created = (await callApi(page, "POST", `/api/v1/spaces/${space.id}/items`, {
+    kind: "page",
+    title: "VPN access",
+    parentId: null,
+    mode: "publish",
+  })) as { id: string };
+  await callApi(page, "PUT", `/api/v1/pages/${created.id}/content`, {
+    document: {
+      type: "doc",
+      content: [
+        paragraph("Hotel Wi-Fi blocks UDP on port 51820."),
+        {
+          type: "taskList",
+          content: [
+            {
+              type: "taskItem",
+              attrs: { assignee: space.colleague.id, dueDate: "2026-12-01" },
+              content: [paragraph("Test the TCP fallback")],
+            },
+          ],
+        },
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "Ask " },
+            { type: "mention", attrs: { id: space.colleague.id } },
+            { type: "text", text: " about hotels." },
+          ],
+        },
+      ],
+    },
   });
-  const token = /#token=([\w-]+)/.exec(linkFrom((await waitForMail(email, /invit/i)).text))?.[1] ?? "";
-  const anonymous = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-  try {
-    const response = await anonymous.request.post(`${BASE_URL}/api/v1/invitations/accept`, {
-      data: { token, name, password },
-      headers: { "X-Pagehall-Request": "1", origin: BASE_URL },
-    });
-    expect(response.status(), await response.text()).toBeLessThan(300);
-    const { accountId } = (await response.json()) as { accountId: string };
-    return { id: accountId, email, password };
-  } finally {
-    await anonymous.close();
-  }
+  await callApi(page, "POST", `/api/v1/pages/${created.id}/publish`, {});
+  return { id: created.id, path: `/spaces/${space.key}/pages/${created.id}/vpn-access` };
 }
 
-async function colleaguePage(browser: Browser): Promise<Page> {
-  if (!colleagueContext) {
-    colleagueContext = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-    const page = await colleagueContext.newPage();
-    await page.goto("/sign-in");
-    await signInWithPassword(page, colleague.email, colleague.password);
-    await expect(page.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
-    return page;
-  }
-  return colleagueContext.pages()[0] ?? colleagueContext.newPage();
+async function publishedPost(page: Page, space: Space): Promise<string> {
+  const post = (await callApi(page, "POST", `/api/v1/spaces/${space.id}/blog`, {
+    title: "New VPN client from Monday",
+    excerpt: "Existing tunnels keep working.",
+  })) as { id: string };
+  await callApi(page, "PUT", `/api/v1/pages/${post.id}/content`, {
+    document: { type: "doc", content: [paragraph("The company portal ships the new client on Monday.")] },
+  });
+  await callApi(page, "POST", `/api/v1/pages/${post.id}/publish`, {});
+  return post.id;
 }
 
 async function captureScreens(page: Page, name: string, path: string) {
@@ -86,61 +101,14 @@ async function captureScreens(page: Page, name: string, path: string) {
   await page.setViewportSize({ width: 1280, height: 900 });
 }
 
-test.afterAll(async () => {
-  await colleagueContext?.close();
-});
-
 test("two people discuss a page with comments, reactions, a mention and a task", async ({
   page,
-  browser,
+  organization,
 }) => {
-  spaceKey = `CO${test.info().retry || ""}`;
-  await page.goto("/spaces");
-  colleague = await invite(page, browser, "Carla Colleague");
-  const space = (await callApi(page, "POST", `/api/v1/organizations/${await organizationId(page)}/spaces`, {
-    name: "Collaboration",
-    key: spaceKey,
-    visibility: "private",
-    grants: [{ principalKind: "account", principalId: colleague.id, role: "commenter" }],
-  })) as { id: string };
-  spaceId = space.id;
-  const created = (await callApi(page, "POST", `/api/v1/spaces/${spaceId}/items`, {
-    kind: "page",
-    title: "VPN access",
-    parentId: null,
-    mode: "publish",
-  })) as { id: string };
-  pageId = created.id;
-  await callApi(page, "PUT", `/api/v1/pages/${pageId}/content`, {
-    document: {
-      type: "doc",
-      content: [
-        { type: "paragraph", content: [{ type: "text", text: "Hotel Wi-Fi blocks UDP on port 51820." }] },
-        {
-          type: "taskList",
-          content: [
-            {
-              type: "taskItem",
-              attrs: { assignee: colleague.id, dueDate: "2026-12-01" },
-              content: [{ type: "paragraph", content: [{ type: "text", text: "Test the TCP fallback" }] }],
-            },
-          ],
-        },
-        {
-          type: "paragraph",
-          content: [
-            { type: "text", text: "Ask " },
-            { type: "mention", attrs: { id: colleague.id } },
-            { type: "text", text: " about hotels." },
-          ],
-        },
-      ],
-    },
-  });
-  await callApi(page, "POST", `/api/v1/pages/${pageId}/publish`, {});
-  pagePath = `/spaces/${spaceKey}/pages/${pageId}/vpn-access`;
+  const space = await collaborationSpace(page, organization);
+  const { path: pagePath } = await vpnPage(page, space);
 
-  const other = await colleaguePage(browser);
+  const { page: other } = await organization.signIn(space.colleague);
   await other.getByRole("button", { name: /Notifications, \d unread/ }).click();
   await expect(other.getByText(/mentioned you in VPN access/)).toBeVisible();
   await expect(other.getByText(/assigned a task in VPN access/)).toBeVisible();
@@ -189,11 +157,11 @@ test("two people discuss a page with comments, reactions, a mention and a task",
 
 test("one task status in the editor, the read view, My tasks, the task report and pasted Markdown", async ({
   page,
-  browser,
+  organization,
 }) => {
   test.setTimeout(180_000);
-  await page.goto("/spaces");
-  const checklist = (await callApi(page, "POST", `/api/v1/spaces/${spaceId}/items`, {
+  const space = await collaborationSpace(page, organization);
+  const checklist = (await callApi(page, "POST", `/api/v1/spaces/${space.id}/items`, {
     kind: "page",
     title: "Rollout checklist",
     parentId: null,
@@ -209,7 +177,7 @@ test("one task status in the editor, the read view, My tasks, the task report an
           content: [
             {
               type: "taskItem",
-              attrs: { assignee: colleague.id },
+              attrs: { assignee: space.colleague.id },
               content: [
                 { type: "paragraph", content: [{ type: "text", text: "Update the firewall rules" }] },
               ],
@@ -220,19 +188,19 @@ test("one task status in the editor, the read view, My tasks, the task report an
     },
   });
   await callApi(page, "POST", `/api/v1/pages/${checklist.id}/publish`, {});
-  const report = (await callApi(page, "POST", `/api/v1/spaces/${spaceId}/items`, {
+  const report = (await callApi(page, "POST", `/api/v1/spaces/${space.id}/items`, {
     kind: "page",
     title: "Rollout report",
     parentId: null,
     mode: "live",
   })) as { id: string };
   await callApi(page, "PUT", `/api/v1/pages/${report.id}/content`, {
-    document: { type: "doc", content: [{ type: "taskReport", attrs: { spaceId, status: "all" } }] },
+    document: { type: "doc", content: [{ type: "taskReport", attrs: { spaceId: space.id, status: "all" } }] },
   });
-  const checklistPath = `/spaces/${spaceKey}/pages/${checklist.id}/rollout-checklist`;
+  const checklistPath = `/spaces/${space.key}/pages/${checklist.id}/rollout-checklist`;
   const task = { name: /Update the firewall rules/ };
 
-  const other = await colleaguePage(browser);
+  const { page: other } = await organization.signIn(space.colleague);
   await other.goto(checklistPath);
   const readView = other.getByRole("checkbox", task);
   await page.goto(`${checklistPath}?edit=true`);
@@ -252,7 +220,7 @@ test("one task status in the editor, the read view, My tasks, the task report an
   await expect(editorView).toBeChecked();
 
   const reportView = await page.context().newPage();
-  await reportView.goto(`/spaces/${spaceKey}/pages/${report.id}/rollout-report`);
+  await reportView.goto(`/spaces/${space.key}/pages/${report.id}/rollout-report`);
   await reportView.getByRole("checkbox", task).click();
   await expect(readView).not.toBeChecked();
   await expect(editorView).not.toBeChecked();
@@ -277,8 +245,10 @@ test("one task status in the editor, the read view, My tasks, the task report an
 
 test("schedules a blog post that the job publishes, and pins it in the organization overview", async ({
   page,
+  organization,
 }) => {
-  await page.goto(`/spaces/${spaceKey}/blog`);
+  const space = await collaborationSpace(page, organization);
+  await page.goto(`/spaces/${space.key}/blog`);
   await page.getByRole("button", { name: "Write a post" }).first().click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox", { name: "Title" }).fill("New VPN client from Monday");
@@ -286,6 +256,10 @@ test("schedules a blog post that the job publishes, and pins it in the organizat
   await expectAccessible(page, "new blog post dialog");
   await dialog.getByRole("button", { name: "Create post" }).click();
   await expect(page.getByRole("textbox", { name: "Page content" })).toBeEditable();
+  await expect(page.getByRole("textbox", { name: "Page content" })).toHaveAttribute(
+    "contenteditable",
+    "true",
+  );
   const postId = /\/blog\/([0-9a-f-]{36})/.exec(page.url())?.[1] ?? "";
   await page.getByRole("textbox", { name: "Page content" }).click();
   await page.keyboard.type("The company portal ships the new client on Monday.");
@@ -296,7 +270,7 @@ test("schedules a blog post that the job publishes, and pins it in the organizat
     at: new Date(Date.now() + 60 * 60_000).toISOString(),
     timeZone: "Europe/Vienna",
   });
-  await page.goto(`/spaces/${spaceKey}/blog`);
+  await page.goto(`/spaces/${space.key}/blog`);
   await expect(
     page.getByRole("region", { name: "Scheduled" }).getByRole("link", { name: "New VPN client from Monday" }),
   ).toBeVisible();
@@ -316,8 +290,14 @@ test("schedules a blog post that the job publishes, and pins it in the organizat
   await expect(post.getByText("Pinned", { exact: true })).toBeVisible();
 });
 
-test("shows recent pages, starred items, tasks, mentions and new posts on For you", async ({ browser }) => {
-  const other = await colleaguePage(browser);
+test("shows recent pages, starred items, tasks, mentions and new posts on For you", async ({
+  page,
+  organization,
+}) => {
+  const space = await collaborationSpace(page, organization);
+  const { path: pagePath } = await vpnPage(page, space);
+  await publishedPost(page, space);
+  const { page: other } = await organization.signIn(space.colleague);
   await other.goto(pagePath);
   await other.getByRole("button", { name: "Star VPN access" }).click();
   await other.goto("/home");
@@ -332,10 +312,21 @@ test("shows recent pages, starred items, tasks, mentions and new posts on For yo
 
 test("new screens pass the accessibility check in English and German, light and dark, wide and narrow", async ({
   page,
+  organization,
 }) => {
   test.setTimeout(300_000);
+  const space = await collaborationSpace(page, organization);
+  const { id: pageId, path: pagePath } = await vpnPage(page, space);
+  await callApi(page, "POST", `/api/v1/pages/${pageId}/comments`, {
+    body: { type: "doc", content: [paragraph("Happened twice this week.")] },
+    anchor: { exact: "Hotel Wi-Fi blocks UDP on port 51820.", prefix: "", suffix: "" },
+  });
+  const postId = await publishedPost(page, space);
+  await callApi(page, "PUT", `/api/v1/organizations/${organization.id}/blog/pinned/${postId}`, {
+    pinned: true,
+  });
   await captureScreens(page, "page-with-comments", pagePath);
-  await captureScreens(page, "space-blog", `/spaces/${spaceKey}/blog`);
+  await captureScreens(page, "space-blog", `/spaces/${space.key}/blog`);
   await captureScreens(page, "organization-blog", "/blog");
   await captureScreens(page, "my-tasks", "/tasks");
   await captureScreens(page, "for-you", "/home");

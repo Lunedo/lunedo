@@ -1,15 +1,12 @@
-import { expect, test } from "@playwright/test";
-import { OWNER_STORAGE, writeState } from "../support/environment.js";
+import { expect, test } from "../support/fixtures.js";
 import { expectAccessible, linkFrom, signInWithPassword, waitForMail } from "../support/helpers.js";
-import { inviteMember, organizationId, unique } from "../support/people.js";
-
-test.use({ storageState: OWNER_STORAGE });
+import { forwardFrom, unique } from "../support/people.js";
 
 function pattern(text: string): RegExp {
   return new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
 }
 
-test("invites a member who accepts and signs in", async ({ page, browser }) => {
+test("invites a member who accepts and signs in", async ({ page, browser, organization }) => {
   const suffix = unique();
   const member = {
     name: `Max Member ${suffix}`,
@@ -17,10 +14,8 @@ test("invites a member who accepts and signs in", async ({ page, browser }) => {
     password: "member passphrase for testing",
   };
   await page.goto("/settings/preferences");
-  await page.getByRole("list", { name: "Platform Team" }).getByRole("link", { name: "Members" }).click();
+  await page.getByRole("list", { name: organization.name }).getByRole("link", { name: "Members" }).click();
   await expect(page.getByRole("heading", { name: "Members" })).toBeVisible();
-  const organization = /organizations\/([0-9a-f-]{36})/.exec(page.url())?.[1];
-  writeState({ organizationId: organization ?? "" });
   await expectAccessible(page, "members");
 
   await page.getByRole("button", { name: "Invite people" }).click();
@@ -35,7 +30,7 @@ test("invites a member who accepts and signs in", async ({ page, browser }) => {
 
   const mail = await waitForMail(member.email, /invit/i);
   const link = linkFrom(mail.text);
-  const invited = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  const invited = await forwardFrom(await browser.newContext({ storageState: { cookies: [], origins: [] } }));
   const invitee = await invited.newPage();
   await invitee.goto(link.replace(/^https?:\/\/[^/]+/, ""));
   await invitee.getByRole("button", { name: "Accept invitation" }).click();
@@ -49,21 +44,20 @@ test("invites a member who accepts and signs in", async ({ page, browser }) => {
   await expect(invitee.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
   await expect(invitee.getByRole("link", { name: "Audit log" })).toHaveCount(0);
   await invited.close();
-  writeState({ memberEmail: member.email, memberPassword: member.password });
 
   await page.reload();
   await page.getByRole("tab", { name: /All/ }).click();
   await expect(page.getByRole("cell", { name: pattern(member.name) }).first()).toBeVisible();
 });
 
-test("creates a group, adds a member and gives the group a custom role", async ({ page, browser }) => {
+test("creates a group, adds a member and gives the group a custom role", async ({ page, organization }) => {
   const suffix = unique();
   const groupName = `Auditors ${suffix}`;
   const roleName = `Audit readers ${suffix}`;
   await page.goto("/settings/preferences");
-  const member = await inviteMember(page, browser, "Greta");
+  const member = await organization.invite("Greta");
 
-  await page.getByRole("list", { name: "Platform Team" }).getByRole("link", { name: "Groups" }).click();
+  await page.getByRole("list", { name: organization.name }).getByRole("link", { name: "Groups" }).click();
   await page.getByRole("button", { name: "Create group" }).click();
   const create = page.getByRole("dialog", { name: "Create group" });
   await create.getByLabel("Name", { exact: true }).fill(groupName);
@@ -79,7 +73,7 @@ test("creates a group, adds a member and gives the group a custom role", async (
   await add.getByRole("button", { name: "Add" }).click();
   await expect(page.getByText("The member was added.").first()).toBeVisible();
 
-  await page.getByRole("list", { name: "Platform Team" }).getByRole("link", { name: "Roles" }).click();
+  await page.getByRole("list", { name: organization.name }).getByRole("link", { name: "Roles" }).click();
   await page.getByRole("button", { name: "Create role" }).click();
   const role = page.getByRole("dialog", { name: "Create role" });
   await role.getByLabel("Name", { exact: true }).fill(roleName);
@@ -101,7 +95,7 @@ test("creates a group, adds a member and gives the group a custom role", async (
   await expect(page.getByRole("cell", { name: `Group ${groupName}`, exact: true })).toBeVisible();
 });
 
-test("creates a personal API token and revokes it", async ({ page }) => {
+test("creates a personal API token and revokes it", async ({ page, organization }) => {
   const tokenName = `Reporting export ${unique()}`;
   await page.goto("/settings/security");
   await page.getByRole("button", { name: "Create token" }).click();
@@ -119,8 +113,7 @@ test("creates a personal API token and revokes it", async ({ page }) => {
   const row = page.getByRole("listitem").filter({ hasText: tokenName });
   await expect(row).toBeVisible();
 
-  const organization = await organizationId(page);
-  const allowed = await page.request.fetch(`/api/v1/organizations/${organization}/members`, {
+  const allowed = await page.request.fetch(`/api/v1/organizations/${organization.id}/members`, {
     headers: { authorization: `Bearer ${secret}`, cookie: "" },
   });
   expect(allowed.status()).toBe(200);
@@ -130,7 +123,7 @@ test("creates a personal API token and revokes it", async ({ page }) => {
   await expect(confirm.getByText("Who loses access")).toBeVisible();
   await confirm.getByRole("button", { name: "Revoke" }).click();
   await expect(page.getByText(tokenName)).toHaveCount(0);
-  const refused = await page.request.fetch(`/api/v1/organizations/${organization}/members`, {
+  const refused = await page.request.fetch(`/api/v1/organizations/${organization.id}/members`, {
     headers: { authorization: `Bearer ${secret}`, cookie: "" },
   });
   expect(refused.status()).toBe(401);

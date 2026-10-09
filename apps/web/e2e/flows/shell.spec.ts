@@ -1,5 +1,4 @@
-import { expect, test } from "@playwright/test";
-import { OWNER, OWNER_STORAGE, readState } from "../support/environment.js";
+import { expect, test } from "../support/fixtures.js";
 import {
   callApi,
   expectAccessible,
@@ -7,26 +6,27 @@ import {
   setAppearance,
   signInWithPassword,
 } from "../support/helpers.js";
+import { addAuthenticator, forwardFrom, SIGNED_OUT } from "../support/people.js";
 
-test.describe.configure({ mode: "serial" });
-test.use({ storageState: OWNER_STORAGE });
+test.use({ instanceAdministrator: true });
 
-test("delivers a notification live to an open page", async ({ page, browser }) => {
+test("delivers a notification live to an open page", async ({ page, browser, organization }) => {
+  const { secret } = await addAuthenticator(browser, organization.adminState);
   await page.goto("/settings/preferences");
   await callApi(page, "POST", "/api/v1/notifications/read-all", {});
   await expect(page.getByRole("button", { name: "Notifications", exact: true })).toBeVisible();
   const before = await page.getByRole("button", { name: /^Notifications/ }).getAttribute("aria-label");
 
-  const elsewhere = await browser.newContext({
-    storageState: { cookies: [], origins: [] },
-    userAgent: "Mozilla/5.0 (X11; Linux x86_64) Firefox/140.0",
-  });
+  const elsewhere = await forwardFrom(
+    await browser.newContext({
+      storageState: SIGNED_OUT,
+      userAgent: "Mozilla/5.0 (X11; Linux x86_64) Firefox/140.0",
+    }),
+  );
   const other = await elsewhere.newPage();
   await other.goto("/sign-in");
-  await signInWithPassword(other, OWNER.email, OWNER.password);
-  await other
-    .getByLabel("Code from your authenticator app")
-    .fill(await freshTotp(readState().ownerSecret ?? ""));
+  await signInWithPassword(other, organization.admin.email, organization.admin.password);
+  await other.getByLabel("Code from your authenticator app").fill(await freshTotp(secret));
   await other.getByRole("button", { name: "Verify" }).click();
   await expect(other.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
   await elsewhere.close();
@@ -144,7 +144,7 @@ for (const appearance of [
     language: "de" as const,
   },
 ]) {
-  test(`has no accessibility violations in ${appearance.name}`, async ({ page }) => {
+  test(`has no accessibility violations in ${appearance.name}`, async ({ page, organization }) => {
     await page.goto("/settings/preferences");
     await setAppearance(page, appearance);
     for (const path of ["/settings/preferences", "/settings/security", "/settings/notifications"]) {
@@ -152,7 +152,7 @@ for (const appearance of [
       await expect(page.locator("#main h1")).toBeVisible();
       await expectAccessible(page, `${path} in ${appearance.name}`);
     }
-    const organizationId = readState().organizationId;
+    const organizationId = organization.id;
     for (const screen of ["members", "groups", "roles", "security", "audit-log"]) {
       await page.goto(`/settings/organizations/${organizationId}/${screen}`);
       await expect(page.locator("#main h1")).toBeVisible();
@@ -168,11 +168,11 @@ for (const appearance of [
 }
 
 for (const language of ["en", "de"] as const) {
-  test(`works on a phone without horizontal scrolling in ${language}`, async ({ page }) => {
+  test(`works on a phone without horizontal scrolling in ${language}`, async ({ page, organization }) => {
     await page.goto("/settings/preferences");
     await setAppearance(page, { language, textSize: 1.25 });
     await page.setViewportSize({ width: 375, height: 740 });
-    const organizationId = readState().organizationId;
+    const organizationId = organization.id;
     for (const path of [
       "/settings/preferences",
       "/settings/security",
@@ -225,11 +225,11 @@ for (const language of ["en", "de"] as const) {
   });
 }
 
-test("keeps long German labels inside the layout at desktop width", async ({ page }) => {
+test("keeps long German labels inside the layout at desktop width", async ({ page, organization }) => {
   await page.goto("/settings/preferences");
   await setAppearance(page, { language: "de", textSize: 1.25 });
   await page.setViewportSize({ width: 1280, height: 900 });
-  const organizationId = readState().organizationId;
+  const organizationId = organization.id;
   for (const path of [
     "/settings/preferences",
     `/settings/organizations/${organizationId}/general`,

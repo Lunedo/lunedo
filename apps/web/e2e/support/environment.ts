@@ -16,11 +16,7 @@ export interface E2EState {
   setupCode?: string;
   databaseUrl?: string;
   ownerSecret?: string;
-  ownerRecoveryCodes?: string[];
-  organizationId?: string;
-  memberEmail?: string;
-  memberPassword?: string;
-  lastTotpStep?: number;
+  totpSteps?: Record<string, number>;
 }
 
 export const OWNER = {

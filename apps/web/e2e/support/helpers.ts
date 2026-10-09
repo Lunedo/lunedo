@@ -3,19 +3,26 @@ import { type BrowserContext, expect, type Page } from "@playwright/test";
 import { Secret, TOTP } from "otpauth";
 import { MAILPIT_URL, readState, writeState } from "./environment.js";
 
-export function totp(secret: string): string {
-  return TOTP.generate({ secret: Secret.fromBase32(secret.replace(/\s/g, "")) });
-}
+const TOTP_PERIOD_MS = 30_000;
 
 export async function freshTotp(secret: string): Promise<string> {
-  const used = readState().lastTotpStep ?? 0;
-  let step = Math.floor(Date.now() / 30_000);
-  while (step <= used || 30 - (Math.floor(Date.now() / 1000) % 30) < 3) {
+  for (;;) {
+    const now = Date.now();
+    const current = Math.floor(now / TOTP_PERIOD_MS);
+    const used = readState().totpSteps?.[secret] ?? Number.NEGATIVE_INFINITY;
+    const secondsLeft = (TOTP_PERIOD_MS - (now % TOTP_PERIOD_MS)) / 1000;
+    const step = [current - 1, current, current + 1].find(
+      (candidate) => candidate > used && (candidate >= current || secondsLeft >= 3),
+    );
+    if (step !== undefined) {
+      writeState({ totpSteps: { ...readState().totpSteps, [secret]: step } });
+      return TOTP.generate({
+        secret: Secret.fromBase32(secret.replace(/\s/g, "")),
+        timestamp: step * TOTP_PERIOD_MS,
+      });
+    }
     await new Promise((resolve) => setTimeout(resolve, 500));
-    step = Math.floor(Date.now() / 30_000);
   }
-  writeState({ lastTotpStep: step });
-  return totp(secret);
 }
 
 interface MailpitMessage {

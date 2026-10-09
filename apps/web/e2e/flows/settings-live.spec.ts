@@ -1,74 +1,23 @@
-import { type Browser, type BrowserContext, expect, type Page, test } from "@playwright/test";
-import { OWNER_STORAGE, readState } from "../support/environment.js";
-import { liveUpdatesConnected, signInWithPassword } from "../support/helpers.js";
+import { expect, test } from "../support/fixtures.js";
+import {
+  appliesFormats,
+  appliesLockedValues,
+  change,
+  preferences,
+  switchesOpenSessions,
+} from "../support/live-settings.js";
 
-test.describe.configure({ mode: "serial" });
-
-type Level = "instance" | "organization" | "user";
-
-function isLock(value: unknown): value is { locked: boolean } {
-  return typeof value === "object" && value !== null && "locked" in value;
-}
-
-async function change(page: Page, level: Level, key: string, value: unknown): Promise<void> {
-  const organizationId = readState().organizationId ?? "";
-  const path =
-    level === "user"
-      ? `/api/v1/account/preferences/${key}`
-      : level === "instance"
-        ? `/api/v1/instance/settings/${key}`
-        : `/api/v1/organizations/${organizationId}/settings/${key}`;
-  const response = await page.request.put(path, {
-    data: value === undefined ? { clear: true } : isLock(value) ? value : { value },
-    headers: { "X-Pagehall-Request": "1", origin: new URL(page.url()).origin },
-  });
-  expect(response.status(), `${level} ${key}`).toBeLessThan(300);
-}
-
-async function setting(page: Page, level: "organization", key: string): Promise<unknown> {
-  const organizationId = readState().organizationId ?? "";
-  const response = await page.request.get(`/api/v1/organizations/${organizationId}/settings?limit=200`);
-  const { items } = (await response.json()) as { items: { key: string; value: unknown; source: string }[] };
-  const entry = items.find((item) => item.key === key);
-  return entry?.source === level ? entry.value : undefined;
-}
-
-async function ownerPage(browser: Browser): Promise<{ context: BrowserContext; page: Page }> {
-  const context = await browser.newContext({ storageState: OWNER_STORAGE });
-  const page = await context.newPage();
-  const connected = liveUpdatesConnected(page);
-  await page.goto("/settings/preferences");
-  await expect(page.getByRole("heading", { name: "Preferences", level: 1 })).toBeVisible();
-  await connected;
-  return { context, page };
-}
-
-async function memberPage(browser: Browser): Promise<{ context: BrowserContext; page: Page }> {
-  const { memberEmail, memberPassword } = readState();
-  const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-  const page = await context.newPage();
-  await page.goto("/sign-in");
-  await signInWithPassword(page, memberEmail ?? "", memberPassword ?? "");
-  await expect(page.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
-  const connected = liveUpdatesConnected(page);
-  await page.goto("/settings/preferences");
-  await expect(page.getByRole("heading", { name: "Preferences", level: 1 })).toBeVisible();
-  await connected;
-  return { context, page };
-}
-
-function combobox(page: Page, name: string) {
-  return page.getByRole("combobox", { name, exact: true });
-}
-
-test("switches the whole interface at once when the own language changes", async ({ browser }) => {
-  const { context, page } = await ownerPage(browser);
+test("switches the whole interface at once when the own language changes", async ({
+  browser,
+  organization,
+}) => {
+  const { context, page } = await preferences(browser, organization.adminState);
   const settings = page.getByRole("navigation", { name: "Settings" });
   await expect(settings.getByRole("link", { name: "Security" }).first()).toBeVisible();
-  const englishDate = await combobox(page, "Date format").textContent();
+  const englishDate = await page.getByRole("combobox", { name: "Date format", exact: true }).textContent();
   await expect(page.getByRole("group", { name: "Text size" })).toContainText("100%");
 
-  await combobox(page, "Language").click();
+  await page.getByRole("combobox", { name: "Language", exact: true }).click();
   await page.getByRole("option", { name: "Deutsch" }).click();
 
   await expect(page.getByRole("heading", { name: "Darstellung und Sprache", level: 1 })).toBeVisible();
@@ -77,187 +26,52 @@ test("switches the whole interface at once when the own language changes", async
   ).toBeVisible();
   await expect(page.getByRole("group", { name: "Textgröße" })).toContainText("100%");
   const sample = /\d{2}[./-]\d{2}[./-]\d{4}/.exec(englishDate ?? "")?.[0] ?? "missing";
-  await expect(combobox(page, "Datumsformat")).toContainText(sample);
+  await expect(page.getByRole("combobox", { name: "Datumsformat", exact: true })).toContainText(sample);
   await expect(page.locator("html")).toHaveAttribute("lang", "de");
 
-  await combobox(page, "Sprache").click();
+  await page.getByRole("combobox", { name: "Sprache", exact: true }).click();
   await page.getByRole("option", { name: /Standard/ }).click();
   await expect(page.getByRole("heading", { name: "Preferences", level: 1 })).toBeVisible();
   await expect(settings.getByRole("link", { name: "Security" }).first()).toBeVisible();
   await context.close();
 });
 
-for (const level of ["instance", "organization"] as const) {
-  test(`switches open sessions when the ${level} language changes`, async ({ browser }) => {
-    const owner = await ownerPage(browser);
-    await change(owner.page, "user", "locale.language", "en");
-    const organizationLanguage = await setting(owner.page, "organization", "locale.language");
-    if (level === "instance") await change(owner.page, "organization", "locale.language", undefined);
-    const member = await memberPage(browser);
-    try {
-      await change(owner.page, level, "locale.language", "de");
-      await expect(
-        member.page.getByRole("heading", { name: "Darstellung und Sprache", level: 1 }),
-      ).toBeVisible();
-      await expect(member.page.locator("html")).toHaveAttribute("lang", "de");
-      await expect(member.page.getByRole("navigation", { name: "Einstellungen" })).toBeVisible();
-      await expect(owner.page.getByRole("heading", { name: "Preferences", level: 1 })).toBeVisible();
-      await expect(owner.page.locator("html")).toHaveAttribute("lang", "en");
+test("switches open sessions when the organization language changes", async ({ browser, organization }) => {
+  await switchesOpenSessions(browser, organization, "organization");
+});
 
-      await change(owner.page, level, "locale.language", undefined);
-      await expect(member.page.getByRole("heading", { name: "Preferences", level: 1 })).toBeVisible();
-    } finally {
-      await change(owner.page, level, "locale.language", undefined);
-      await change(owner.page, "user", "locale.language", undefined);
-      await change(owner.page, "organization", "locale.language", organizationLanguage);
-      await member.context.close();
-      await owner.context.close();
-    }
-  });
-}
+test("applies a locked organization language and time zone to people with their own values", async ({
+  browser,
+  organization,
+}) => {
+  await appliesLockedValues(browser, organization, "organization");
+});
 
-for (const level of ["instance", "organization"] as const) {
-  test(`applies a locked ${level} language and time zone to people with their own values`, async ({
-    browser,
-  }) => {
-    const owner = await ownerPage(browser);
-    const member = await memberPage(browser);
-    try {
-      await change(owner.page, "user", "locale.language", "en");
-      await change(member.page, "user", "locale.language", "en");
-      await change(member.page, "user", "locale.timeZone", "Europe/Vienna");
-      await change(owner.page, level, "locale.language", "de");
-      await change(owner.page, level, "locale.timeZone", "Pacific/Auckland");
-      await expect(member.page.getByRole("heading", { name: "Preferences", level: 1 })).toBeVisible();
+test("applies organization formats, time zone and accent color to open sessions", async ({
+  browser,
+  organization,
+}) => {
+  await appliesFormats(browser, organization, "organization");
+});
 
-      await change(owner.page, level, "locale.language", { locked: true });
-      await change(owner.page, level, "locale.timeZone", { locked: true });
-      await expect(
-        member.page.getByRole("heading", { name: "Darstellung und Sprache", level: 1 }),
-      ).toBeVisible();
-      await expect(combobox(member.page, "Zeitzone")).toHaveValue(/Auckland/);
-      await expect(
-        owner.page.getByRole("heading", { name: "Darstellung und Sprache", level: 1 }),
-      ).toBeVisible();
-
-      await change(owner.page, level, "locale.language", "en");
-      await expect(member.page.getByRole("heading", { name: "Preferences", level: 1 })).toBeVisible();
-      await change(owner.page, level, "locale.language", "de");
-      await expect(
-        member.page.getByRole("heading", { name: "Darstellung und Sprache", level: 1 }),
-      ).toBeVisible();
-    } finally {
-      for (const key of ["locale.language", "locale.timeZone"]) {
-        await change(owner.page, level, key, { locked: false });
-        await change(owner.page, level, key, undefined);
-        await change(member.page, "user", key, undefined);
-      }
-      await change(owner.page, "user", "locale.language", undefined);
-      await member.context.close();
-      await owner.context.close();
-    }
-  });
-}
-
-const FORMATS: { key: string; field: string; choices: [string, RegExp][] }[] = [
-  {
-    key: "locale.dateFormat",
-    field: "Date format",
-    choices: [
-      ["YYYY-MM-DD", /\d{4}-\d{2}-\d{2}/],
-      ["DD.MM.YYYY", /\d{2}\.\d{2}\.\d{4}/],
-    ],
-  },
-  {
-    key: "locale.timeFormat",
-    field: "Time format",
-    choices: [
-      ["24h", /24-hour/],
-      ["12h", /12-hour/],
-    ],
-  },
-  {
-    key: "locale.numberFormat",
-    field: "Number format",
-    choices: [
-      ["de-CH", /1'234'567/],
-      ["fr-FR", /567,89/],
-    ],
-  },
-  {
-    key: "locale.firstDayOfWeek",
-    field: "First day of the week",
-    choices: [
-      ["saturday", /Saturday/],
-      ["sunday", /Sunday/],
-    ],
-  },
-  {
-    key: "locale.timeZone",
-    field: "Time zone",
-    choices: [
-      ["Pacific/Auckland", /Auckland/],
-      ["Asia/Tokyo", /Tokyo/],
-    ],
-  },
-];
-
-for (const level of ["instance", "organization"] as const) {
-  test(`applies ${level} formats, time zone and accent color to open sessions`, async ({ browser }) => {
-    const owner = await ownerPage(browser);
-    const organizationValues = new Map<string, unknown>();
-    for (const format of FORMATS) {
-      organizationValues.set(format.key, await setting(owner.page, "organization", format.key));
-      if (level === "instance") await change(owner.page, "organization", format.key, undefined);
-    }
-    const member = await memberPage(browser);
-    try {
-      for (const format of FORMATS) {
-        const control = combobox(member.page, format.field);
-        const shown =
-          (await control.evaluate((element) =>
-            element instanceof HTMLInputElement ? element.value : (element.textContent ?? ""),
-          )) ?? "";
-        const [value, expected] = format.choices.find(([, pattern]) => !pattern.test(shown)) ?? [];
-        await change(owner.page, level, format.key, value);
-        await expect
-          .poll(
-            () =>
-              control.evaluate((element) =>
-                element instanceof HTMLInputElement ? element.value : (element.textContent ?? ""),
-              ),
-            { message: format.key },
-          )
-          .toMatch(expected ?? /.^/);
-      }
-      await change(owner.page, level, "branding.accentColor", "violet");
-      await expect(member.page.locator("html")).toHaveAttribute("data-accent", "violet");
-    } finally {
-      for (const format of FORMATS) {
-        if (level === "instance") await change(owner.page, level, format.key, undefined);
-        await change(owner.page, "organization", format.key, organizationValues.get(format.key));
-      }
-      await change(owner.page, level, "branding.accentColor", undefined);
-      await member.context.close();
-      await owner.context.close();
-    }
-  });
-}
-
-test("applies appearance changes to the other open sessions of the same person", async ({ browser }) => {
-  const first = await ownerPage(browser);
-  const second = await ownerPage(browser);
+test("applies appearance changes to the other open sessions of the same person", async ({
+  browser,
+  organization,
+}) => {
+  const first = await preferences(browser, organization.adminState);
+  const second = await preferences(browser, organization.adminState);
+  const set = (key: string, value: unknown) => change(first.page, organization.id, "user", key, value);
   const html = second.page.locator("html");
   try {
-    await change(first.page, "user", "appearance.colorMode", "dark");
+    await set("appearance.colorMode", "dark");
     await expect(html).toHaveAttribute("data-theme", "dark");
-    await change(first.page, "user", "appearance.highContrast", true);
+    await set("appearance.highContrast", true);
     await expect(html).toHaveAttribute("data-contrast", "high");
-    await change(first.page, "user", "appearance.density", "compact");
+    await set("appearance.density", "compact");
     await expect(html).toHaveAttribute("data-density", "compact");
-    await change(first.page, "user", "appearance.font", "readable");
+    await set("appearance.font", "readable");
     await expect(html).toHaveAttribute("data-font", "readable");
-    await change(first.page, "user", "appearance.textSize", 1.125);
+    await set("appearance.textSize", 1.125);
     await expect
       .poll(() =>
         second.page.evaluate(() =>
@@ -265,7 +79,7 @@ test("applies appearance changes to the other open sessions of the same person",
         ),
       )
       .toBe("1.125");
-    await change(first.page, "user", "locale.language", "de");
+    await set("locale.language", "de");
     await expect(
       second.page.getByRole("heading", { name: "Darstellung und Sprache", level: 1 }),
     ).toBeVisible();
@@ -278,7 +92,7 @@ test("applies appearance changes to the other open sessions of the same person",
       "appearance.textSize",
       "locale.language",
     ]) {
-      await change(first.page, "user", key, undefined);
+      await set(key, undefined);
     }
     await first.context.close();
     await second.context.close();

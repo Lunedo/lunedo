@@ -62,7 +62,7 @@ test("sets up a fresh instance and signs in the owner with a second factor", asy
     .getByRole("listitem")
     .allTextContents();
   expect(codes.length).toBeGreaterThanOrEqual(8);
-  writeState({ ownerSecret: secret, ownerRecoveryCodes: codes });
+  writeState({ ownerSecret: secret });
   await page.getByRole("button", { name: "Continue" }).click();
 
   await expect(page.getByRole("heading", { name: "Back up your keys" })).toBeVisible();
