@@ -5738,7 +5738,7 @@
     "explanation": "Only the members of this space can read it. Organization and instance administrators cannot open it, give anyone access or appoint its space admins.",
     "settingsTitle": "Confidential space",
     "limitTitle": "What this protection does not cover",
-    "limit": "The protection applies to roles in Pagehall. Administrators of the server with access to the database or backups are not restricted by it.",
+    "limit": "The protection applies to roles in Pagehall. Administrators of the server with access to the database or backups are not restricted by it. An administrator can reset the sign-in of a member; every such reset is recorded in the audit log.",
     "createLabel": "Confidential space",
     "createDescription": "For one-on-ones, a works council or management. Only people you add can read it, administrators cannot give themselves access. This cannot be changed later.",
     "createNoticeTitle": "Private, for individual people only",

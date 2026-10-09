@@ -5738,7 +5738,7 @@
     "explanation": "Nur die Mitglieder dieses Space können ihn lesen. Organisations- und Instanz-Admins können ihn nicht öffnen, niemandem Zugriff geben und keine Space-Admins ernennen.",
     "settingsTitle": "Vertraulicher Space",
     "limitTitle": "Was dieser Schutz nicht abdeckt",
-    "limit": "Der Schutz gilt für Rollen in Pagehall. Administrierende des Servers mit Zugriff auf die Datenbank oder Backups schränkt er nicht ein.",
+    "limit": "Der Schutz gilt für Rollen in Pagehall. Administrierende des Servers mit Zugriff auf die Datenbank oder Backups schränkt er nicht ein. Ein Admin kann die Anmeldung eines Mitglieds zurücksetzen; jedes solche Zurücksetzen steht im Audit-Log.",
     "createLabel": "Vertraulicher Space",
     "createDescription": "Für 1:1-Gespräche, einen Betriebsrat oder die Geschäftsführung. Nur Personen, die du hinzufügst, können ihn lesen; Admins können sich keinen Zugriff geben. Das lässt sich später nicht ändern.",
     "createNoticeTitle": "Privat, nur für einzelne Personen",
