@@ -785,6 +785,6 @@ details.ph-expand > summary {
 }
 
 .ph-topic-update-closed {
-  @apply rounded-sm px-2 text-sm font-normal text-text-muted;
+  @apply rounded-sm px-2 text-sm font-regular text-text-muted;
   background-color: var(--ph-color-surface-sunken);
 }
