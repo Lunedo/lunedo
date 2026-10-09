@@ -123,6 +123,7 @@ export function PageTree({
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
   const dragged = useRef<Dragged | null>(null);
   const container = useRef<HTMLDivElement>(null);
+  const root = useChildren(space.id, null);
 
   useEffect(() => {
     setExpanded((current) => {
@@ -264,16 +265,40 @@ export function PageTree({
 
   return (
     <TreeContext value={state}>
+      {root.isPending ? <LevelLoading depth={1} /> : null}
+      {root.isError ? <LevelLoadFailed onRetry={() => void root.refetch()} /> : null}
       <div
         ref={container}
         role="tree"
         aria-label={t("tree.label")}
+        aria-busy={root.isPending || undefined}
         onKeyDown={onKeyDown}
         className="flex flex-col"
       >
-        <TreeLevel parentId={null} depth={1} />
+        {root.isSuccess ? <TreeLevel parentId={null} depth={1} /> : null}
       </div>
     </TreeContext>
+  );
+}
+
+function LevelLoading({ depth }: { depth: number }) {
+  const { t } = useTranslation();
+  return (
+    <div role="none" className="flex h-row items-center" style={{ paddingInlineStart: indent(depth + 1) }}>
+      <Spinner label={t("tree.loading")} />
+    </div>
+  );
+}
+
+function LevelLoadFailed({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div role="none" className="px-2 py-1 text-sm text-danger">
+      {t("tree.loadFailed")}{" "}
+      <button type="button" className="text-accent underline" onClick={onRetry}>
+        {t("ui.retry")}
+      </button>
+    </div>
   );
 }
 
@@ -282,23 +307,8 @@ function TreeLevel({ parentId, depth }: { parentId: string | null; depth: number
   const tree = useTree();
   const children = useChildren(tree.space.id, parentId);
   const items = children.data?.pages.flatMap((page) => page.items) ?? [];
-  if (children.isPending) {
-    return (
-      <div role="none" className="flex h-row items-center" style={{ paddingInlineStart: indent(depth + 1) }}>
-        <Spinner label={t("tree.loading")} />
-      </div>
-    );
-  }
-  if (children.isError) {
-    return (
-      <div role="none" className="px-2 py-1 text-sm text-danger">
-        {t("tree.loadFailed")}{" "}
-        <button type="button" className="text-accent underline" onClick={() => void children.refetch()}>
-          {t("ui.retry")}
-        </button>
-      </div>
-    );
-  }
+  if (children.isPending) return <LevelLoading depth={depth} />;
+  if (children.isError) return <LevelLoadFailed onRetry={() => void children.refetch()} />;
   return (
     <>
       {items.map((item, index) => (

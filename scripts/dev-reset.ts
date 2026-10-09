@@ -1,4 +1,5 @@
-const TEST_DATABASE = /^pagehall_(?:[a-z]+_)*(?:test|e2e)_\d+(?:_[0-9a-f]+)?$/;
+const TEST_DATABASE =
+  /^pagehall_(?:(?:[a-z]+_)*(?:test|e2e)_\d+(?:_[0-9a-f]+)?|template_[0-9a-f]{16}(?:_building)?)$/;
 
 export const DEV_DATABASE = "pagehall";
 export const CONFIRMATION = "reset";

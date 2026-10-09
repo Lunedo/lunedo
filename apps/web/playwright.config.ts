@@ -1,16 +1,19 @@
+import { endToEndWorkers } from "@pagehall/config/parallelism";
 import { retriesFromEnv } from "@pagehall/config/test-report";
 import { defineConfig, devices } from "@playwright/test";
 import { BASE_URL } from "./e2e/support/environment.js";
 
 const ci = Boolean(process.env.CI);
 const identityProviders = process.env.PAGEHALL_E2E_IDP === "1";
+const chrome = { ...devices["Desktop Chrome"] };
+const afterSetup = identityProviders ? ["idp"] : ["setup"];
 
 export default defineConfig({
   testDir: "e2e",
   forbidOnly: ci,
   retries: retriesFromEnv(),
-  workers: 1,
-  fullyParallel: false,
+  workers: endToEndWorkers(),
+  fullyParallel: true,
   timeout: 120_000,
   expect: { timeout: 10_000, toHaveScreenshot: { maxDiffPixelRatio: 0.002, animations: "disabled" } },
   reporter: ci ? [["list"], ["html", { open: "never" }], ["./e2e/support/flaky-reporter.ts"]] : "list",
@@ -27,18 +30,29 @@ export default defineConfig({
     {
       name: "setup",
       testMatch: /setup\/.*\.spec\.ts/,
-      use: { ...devices["Desktop Chrome"] },
+      fullyParallel: false,
+      ...(identityProviders ? {} : { teardown: "instance" }),
+      use: chrome,
     },
     {
       name: "flows",
       testMatch: /flows\/.*\.spec\.ts/,
-      dependencies: ["setup"],
-      use: { ...devices["Desktop Chrome"] },
+      dependencies: afterSetup,
+      use: chrome,
     },
     {
       name: "components",
       testMatch: /components\/.*\.spec\.ts/,
-      use: { ...devices["Desktop Chrome"] },
+      dependencies: afterSetup,
+      use: chrome,
+    },
+    {
+      name: "instance",
+      testMatch: /instance\/.*\.spec\.ts/,
+      workers: 1,
+      fullyParallel: false,
+      ...(identityProviders ? { dependencies: ["flows", "components"] } : {}),
+      use: chrome,
     },
     ...(identityProviders
       ? [
@@ -46,8 +60,10 @@ export default defineConfig({
             name: "idp",
             testMatch: /idp\/.*\.spec\.ts/,
             dependencies: ["setup"],
+            workers: 1,
+            fullyParallel: false,
             use: {
-              ...devices["Desktop Chrome"],
+              ...chrome,
               launchOptions: { args: ["--host-resolver-rules=MAP *.localhost 127.0.0.1"] },
             },
           },

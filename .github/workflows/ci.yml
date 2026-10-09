@@ -185,7 +185,7 @@ jobs:
           PAGEHALL_TEST_REDIS_URL: redis://localhost:${{ job.services.valkey.ports['6379'] }}
           PAGEHALL_TEST_S3_ENDPOINT: http://localhost:${{ job.services.minio.ports['9000'] }}
         run: |
-          args=(run test)
+          args=(run test --continue)
           if [ "$LANE" = "fast" ]; then args+=(--affected); fi
           if [ "$FORCE" = "true" ]; then args+=(--force); fi
           pnpm exec turbo "${args[@]}" -- "--shard=${SHARD}/3" --passWithNoTests \n            --reporter=default "--reporter=${GITHUB_WORKSPACE}/packages/config/src/vitest-report.ts"

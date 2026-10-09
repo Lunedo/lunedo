@@ -13,6 +13,9 @@ describe("testDatabases", () => {
         "pagehall_api_test_1790862646122_e72cdee4",
         "pagehall_services_test_1790871327809_816f9b54",
         "pagehall_e2e_1790871327809",
+        "pagehall_template_0123456789abcdef",
+        "pagehall_template_0123456789abcdef_building",
+        "pagehall_template",
         "pagehall_production",
         "pagehall_test",
         "other_test_1790859955345_f5c37fd5",
@@ -21,6 +24,8 @@ describe("testDatabases", () => {
         "pagehall_api_test_1790862646122_e72cdee4",
         "pagehall_e2e_1790871327809",
         "pagehall_services_test_1790871327809_816f9b54",
+        "pagehall_template_0123456789abcdef",
+        "pagehall_template_0123456789abcdef_building",
         "pagehall_test_1790859955345_f5c37fd5",
       ],
     );

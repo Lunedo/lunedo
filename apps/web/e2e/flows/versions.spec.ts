@@ -1,66 +1,66 @@
-import { type Browser, expect, type Page, test } from "@playwright/test";
-import { BASE_URL, OWNER_STORAGE, readState } from "../support/environment.js";
-import { callApi, expectAccessible, linkFrom, signInWithPassword, waitForMail } from "../support/helpers.js";
+import type { Page } from "@playwright/test";
+import { expect, type Organization, test } from "../support/fixtures.js";
+import { callApi, expectAccessible } from "../support/helpers.js";
+import { type Person, unique } from "../support/people.js";
 
-test.describe.configure({ mode: "serial" });
-test.use({ storageState: OWNER_STORAGE });
+test.use({ instanceAdministrator: true });
 
-let spaceKey = "RN";
-let spaceId = "";
-let pagePath = "";
-let reader = { email: "", password: "" };
-
-async function organizationId(page: Page): Promise<string> {
-  const stored = readState().organizationId;
-  if (stored) return stored;
-  const response = await page.request.get("/api/v1/organizations?limit=10");
-  return ((await response.json()) as { items: { id: string }[] }).items[0]?.id ?? "";
-}
-
-async function invite(page: Page, browser: Browser, name: string) {
-  const email = `${name.toLowerCase().replace(/\s+/g, ".")}.${Date.now()}@pagehall.test`;
-  const password = `${name} passphrase for reading`;
-  await callApi(page, "POST", `/api/v1/organizations/${await organizationId(page)}/invitations`, {
-    email,
-    kind: "member",
-  });
-  const token = /#token=([\w-]+)/.exec(linkFrom((await waitForMail(email, /invit/i)).text))?.[1] ?? "";
-  const anonymous = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-  try {
-    const response = await anonymous.request.post(`${BASE_URL}/api/v1/invitations/accept`, {
-      data: { token, name, password },
-      headers: { "X-Pagehall-Request": "1", origin: BASE_URL },
-    });
-    expect(response.status(), await response.text()).toBeLessThan(300);
-    const { accountId } = (await response.json()) as { accountId: string };
-    return { id: accountId, email, password };
-  } finally {
-    await anonymous.close();
-  }
+interface Space {
+  id: string;
+  key: string;
 }
 
 function editor(page: Page) {
   return page.getByRole("textbox", { name: "Page content" });
 }
 
+function paragraphs(...texts: string[]) {
+  return {
+    type: "doc",
+    content: texts.map((text) => ({ type: "paragraph", content: [{ type: "text", text }] })),
+  };
+}
+
+async function releaseNotes(page: Page, organization: Organization, readers: Person[] = []): Promise<Space> {
+  const key = `RN${unique()}`;
+  await page.goto("/spaces");
+  const created = (await callApi(page, "POST", `/api/v1/organizations/${organization.id}/spaces`, {
+    name: "Release Notes",
+    key,
+    visibility: "private",
+    grants: readers.map((reader) => ({ principalKind: "account", principalId: reader.id, role: "reader" })),
+  })) as { id: string };
+  await callApi(page, "PUT", `/api/v1/spaces/${created.id}/settings/pages.defaultMode`, { value: "publish" });
+  return { id: created.id, key };
+}
+
+async function publishedPage(page: Page, space: Space, draft?: string): Promise<string> {
+  const created = (await callApi(page, "POST", `/api/v1/spaces/${space.id}/items`, {
+    kind: "page",
+    title: "Meeting notes",
+    parentId: null,
+    mode: "publish",
+  })) as { id: string };
+  await callApi(page, "PUT", `/api/v1/pages/${created.id}/content`, {
+    document: paragraphs("First published sentence."),
+  });
+  await callApi(page, "POST", `/api/v1/pages/${created.id}/publish`, {});
+  if (draft) {
+    await callApi(page, "PUT", `/api/v1/pages/${created.id}/content`, {
+      document: paragraphs("First published sentence.", draft),
+    });
+  }
+  return `/spaces/${space.key}/pages/${created.id}/meeting-notes`;
+}
+
 test("creates a page from a template and publishes it while readers keep the published version", async ({
   page,
-  browser,
+  organization,
 }) => {
-  spaceKey = `RN${test.info().retry || ""}`;
-  await page.goto("/spaces");
-  const person = await invite(page, browser, "Rita Reader");
-  reader = person;
-  const created = (await callApi(page, "POST", `/api/v1/organizations/${await organizationId(page)}/spaces`, {
-    name: "Release Notes",
-    key: spaceKey,
-    visibility: "private",
-    grants: [{ principalKind: "account", principalId: person.id, role: "reader" }],
-  })) as { id: string };
-  spaceId = created.id;
-  await callApi(page, "PUT", `/api/v1/spaces/${spaceId}/settings/pages.defaultMode`, { value: "publish" });
+  const reader = await organization.invite("Rita");
+  const space = await releaseNotes(page, organization, [reader]);
 
-  await page.goto(`/spaces/${spaceKey}`);
+  await page.goto(`/spaces/${space.key}`);
   await page.getByRole("button", { name: "Create in this space" }).click();
   await page.getByRole("menuitem", { name: "New page" }).click();
   const gallery = page.getByRole("dialog", { name: "Create in Release Notes" });
@@ -69,8 +69,9 @@ test("creates a page from a template and publishes it while readers keep the pub
   await expectAccessible(page, "template gallery with a template");
   await gallery.getByRole("button", { name: "Create from Meeting notes" }).click();
   await expect(editor(page)).toBeEditable();
+  await expect(editor(page)).toHaveAttribute("contenteditable", "true");
   await expect(page.getByText("Not published yet").first()).toBeVisible();
-  pagePath = new URL(page.url()).pathname;
+  const pagePath = new URL(page.url()).pathname;
 
   await editor(page).click();
   await page.keyboard.press("Control+End");
@@ -86,6 +87,7 @@ test("creates a page from a template and publishes it while readers keep the pub
   await expect(page.getByText("Published as version 1. Readers see it now.").first()).toBeVisible();
 
   await expect(editor(page)).toBeEditable();
+  await expect(editor(page)).toHaveAttribute("contenteditable", "true");
   await editor(page).click();
   await page.keyboard.press("Control+End");
   await page.keyboard.press("Enter");
@@ -95,25 +97,23 @@ test("creates a page from a template and publishes it while readers keep the pub
   });
   await expect(page.getByText(/changes? since version 1/).first()).toBeVisible();
 
-  const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-  try {
-    const other = await context.newPage();
-    await other.goto("/sign-in");
-    await signInWithPassword(other, reader.email, reader.password);
-    await expect(other.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
-    await other.goto(pagePath);
-    await expect(other.getByText("First published sentence.")).toBeVisible();
-    await expect(other.getByText("Secret draft sentence.")).toHaveCount(0);
-    await expect(other.getByRole("button", { name: "Edit" })).toHaveCount(0);
-    await expectAccessible(other, "read view of a published page");
-  } finally {
-    await context.close();
-  }
+  const { page: other } = await organization.signIn(reader);
+  await other.goto(pagePath);
+  await expect(other.getByText("First published sentence.")).toBeVisible();
+  await expect(other.getByText("Secret draft sentence.")).toHaveCount(0);
+  await expect(other.getByRole("button", { name: "Edit" })).toHaveCount(0);
+  await expectAccessible(other, "read view of a published page");
 });
 
-test("compares versions and restores an earlier one into the draft", async ({ page }) => {
+test("compares versions and restores an earlier one into the draft", async ({ page, organization }) => {
+  const pagePath = await publishedPage(
+    page,
+    await releaseNotes(page, organization),
+    "Secret draft sentence.",
+  );
   await page.goto(`${pagePath}?edit=true`);
   await expect(editor(page)).toBeEditable();
+  await expect(editor(page)).toHaveAttribute("contenteditable", "true");
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await page.getByRole("button", { name: "Publish version 2" }).click();
   await expect(page.getByText("Published as version 2. Readers see it now.").first()).toBeVisible();
@@ -138,12 +138,14 @@ test("compares versions and restores an earlier one into the draft", async ({ pa
   await expect(editor(page)).not.toContainText("Secret draft sentence.");
 });
 
-test("deletes a page to the trash, restores it and archives it", async ({ page }) => {
+test("deletes a page to the trash, restores it and archives it", async ({ page, organization }) => {
+  const space = await releaseNotes(page, organization);
+  const pagePath = await publishedPage(page, space);
   await page.goto(pagePath);
   await page.getByRole("button", { name: "More actions" }).click();
   await page.getByRole("menuitem", { name: "Move to trash" }).click();
   await expect(page.getByText(/moved to the trash/).first()).toBeVisible();
-  await page.goto(`/spaces/${spaceKey}/trash`);
+  await page.goto(`/spaces/${space.key}/trash`);
   await expect(page.getByRole("heading", { name: "Trash", level: 1 })).toBeVisible();
   await expectAccessible(page, "trash");
   await page.getByRole("button", { name: "Restore" }).first().click();
@@ -159,21 +161,21 @@ test("deletes a page to the trash, restores it and archives it", async ({ page }
   await expect(page.getByRole("button", { name: "Edit" })).toBeVisible();
 });
 
-test("passes the accessibility check on the new settings screens", async ({ page }) => {
-  await page.goto(`/spaces/${spaceKey}/settings/content`);
+test("passes the accessibility check on the new settings screens", async ({ page, organization }) => {
+  const space = await releaseNotes(page, organization);
+  await page.goto(`/spaces/${space.key}/settings/content`);
   await expect(page.getByRole("heading", { name: "Pages and trash", level: 1 })).toBeVisible();
   await expectAccessible(page, "space pages and trash");
-  await page.goto(`/spaces/${spaceKey}/settings/templates`);
+  await page.goto(`/spaces/${space.key}/settings/templates`);
   await expect(page.getByRole("heading", { name: "Templates", level: 1 })).toBeVisible();
   await page.getByRole("button", { name: "Create template" }).first().click();
   await expect(page.getByRole("dialog", { name: "New template" })).toBeVisible();
   await expectAccessible(page, "template editor");
   await page.keyboard.press("Escape");
-  const organization = await organizationId(page);
-  await page.goto(`/settings/organizations/${organization}/content`);
+  await page.goto(`/settings/organizations/${organization.id}/content`);
   await expect(page.getByRole("heading", { name: "Pages and trash", level: 1 })).toBeVisible();
   await expectAccessible(page, "organization pages and trash");
-  await page.goto(`/settings/organizations/${organization}/templates`);
+  await page.goto(`/settings/organizations/${organization.id}/templates`);
   await expectAccessible(page, "organization templates");
   await page.goto("/settings/instance/content");
   await expectAccessible(page, "instance pages and trash");

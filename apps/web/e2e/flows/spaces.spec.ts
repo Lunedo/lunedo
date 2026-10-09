@@ -1,58 +1,52 @@
-import { type Browser, type BrowserContext, expect, type Page, test } from "@playwright/test";
-import { BASE_URL, OWNER_STORAGE, readState } from "../support/environment.js";
-import { callApi, expectAccessible, linkFrom, signInWithPassword, waitForMail } from "../support/helpers.js";
+import type { Page } from "@playwright/test";
+import { expect, type Organization, test } from "../support/fixtures.js";
+import { callApi, expectAccessible } from "../support/helpers.js";
+import { type Person, unique } from "../support/people.js";
 
-test.describe.configure({ mode: "serial" });
-test.use({ storageState: OWNER_STORAGE });
+test.use({ instanceAdministrator: true });
 
-interface Person {
-  id: string;
-  name: string;
-  email: string;
-  password: string;
+interface Handbook {
+  spaceId: string;
+  spaceKey: string;
+  pagePath: string;
 }
 
-const people: Person[] = [];
-let spaceId = "";
-let spaceKey = "";
-let sharedPage = "";
+const WRITTEN_PAGE = {
+  type: "doc",
+  content: [
+    { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Set up a new device" }] },
+    { type: "paragraph", content: [{ type: "text", text: "Install the client from the company portal." }] },
+  ],
+};
 
-async function organizationId(page: Page): Promise<string> {
-  const stored = readState().organizationId;
-  if (stored) return stored;
-  const response = await page.request.get("/api/v1/organizations?limit=10");
-  return ((await response.json()) as { items: { id: string }[] }).items[0]?.id ?? "";
+async function handbook(page: Page, organization: Organization, document?: unknown): Promise<Handbook> {
+  await page.goto("/spaces");
+  const spaceKey = `TH${unique()}`;
+  const space = (await callApi(page, "POST", `/api/v1/organizations/${organization.id}/spaces`, {
+    name: "Team Handbook",
+    key: spaceKey,
+    visibility: "organization",
+    grants: [{ principalKind: "organizationMembers", principalId: null, role: "editor" }],
+  })) as { id: string };
+  const created = (await callApi(page, "POST", `/api/v1/spaces/${space.id}/items`, {
+    kind: "page",
+    title: "VPN access",
+    parentId: null,
+    mode: "live",
+  })) as { id: string };
+  if (document) await callApi(page, "PUT", `/api/v1/pages/${created.id}/content`, { document });
+  return { spaceId: space.id, spaceKey, pagePath: `/spaces/${spaceKey}/pages/${created.id}/vpn-access` };
 }
 
-async function invite(page: Page, browser: Browser, name: string): Promise<Person> {
-  const email = `${name.toLowerCase().replace(/\s+/g, ".")}.${Date.now()}@pagehall.test`;
-  const password = `${name} passphrase for editing`;
-  await callApi(page, "POST", `/api/v1/organizations/${await organizationId(page)}/invitations`, {
-    email,
-    kind: "member",
-  });
-  const token = /#token=([\w-]+)/.exec(linkFrom((await waitForMail(email, /invit/i)).text))?.[1] ?? "";
-  const anonymous = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-  try {
-    const response = await anonymous.request.post(`${BASE_URL}/api/v1/invitations/accept`, {
-      data: { token, name, password },
-      headers: { "X-Pagehall-Request": "1", origin: BASE_URL },
+async function editors(page: Page, spaceId: string, people: Person[]): Promise<void> {
+  for (const person of people) {
+    await callApi(page, "POST", `/api/v1/spaces/${spaceId}/permissions`, {
+      action: "grant",
+      principalKind: "account",
+      principalId: person.id,
+      role: "editor",
     });
-    expect(response.status(), await response.text()).toBeLessThan(300);
-    const { accountId } = (await response.json()) as { accountId: string };
-    return { id: accountId, name, email, password };
-  } finally {
-    await anonymous.close();
   }
-}
-
-async function signedIn(browser: Browser, person: Person): Promise<{ context: BrowserContext; page: Page }> {
-  const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-  const page = await context.newPage();
-  await page.goto("/sign-in");
-  await signInWithPassword(page, person.email, person.password);
-  await expect(page.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
-  return { context, page };
 }
 
 function editor(page: Page) {
@@ -70,6 +64,7 @@ async function documentText(page: Page): Promise<string> {
 async function openEditor(page: Page, path: string) {
   await page.goto(`${path}?edit=true`);
   await expect(editor(page)).toBeEditable();
+  await expect(editor(page)).toHaveAttribute("contenteditable", "true");
   await expect(page.getByText("Saved").or(page.getByText("Editing")).first()).toBeVisible();
 }
 
@@ -77,31 +72,22 @@ async function waitSaved(page: Page) {
   await expect(page.getByRole("status").getByText("Saved", { exact: true })).toBeVisible({ timeout: 20_000 });
 }
 
-test("creates a space and arranges pages, folders and links", async ({ page }) => {
+test("creates a space and arranges pages, folders and links", async ({ page, organization }) => {
   await page.goto("/spaces");
-  await callApi(
-    page,
-    "PUT",
-    `/api/v1/organizations/${await organizationId(page)}/settings/pages.defaultMode`,
-    {
-      value: "live",
-    },
-  );
+  await callApi(page, "PUT", `/api/v1/organizations/${organization.id}/settings/pages.defaultMode`, {
+    value: "live",
+  });
   await expect(page.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
   await expectAccessible(page, "spaces list");
   await page.getByRole("button", { name: "Create space" }).first().click();
   const dialog = page.getByRole("dialog", { name: "Create a space" });
   await dialog.getByLabel("Name").fill("Team Handbook");
   await expect(dialog.getByLabel("Key")).toHaveValue(/^TH\d*$/);
-  spaceKey = await dialog.getByLabel("Key").inputValue();
+  const spaceKey = await dialog.getByLabel("Key").inputValue();
   await expect(dialog.getByText("Who gets access")).toBeVisible();
   await expectAccessible(page, "create space");
   await dialog.getByRole("button", { name: "Create space" }).click();
   await expect(page).toHaveURL(new RegExp(`/spaces/${spaceKey}/pages/`));
-  const resolved = (await (await page.request.get(`/api/v1/space-keys/${spaceKey}`)).json()) as {
-    space: { id: string };
-  };
-  spaceId = resolved.space.id;
   const tree = page.getByRole("tree", { name: "Page tree" });
   await expect(tree.getByRole("treeitem", { name: "Team Handbook" })).toBeVisible();
 
@@ -123,7 +109,6 @@ test("creates a space and arranges pages, folders and links", async ({ page }) =
   await title.fill("VPN access");
   await title.press("Enter");
   await expect(tree.getByRole("treeitem", { name: "VPN access" })).toBeVisible();
-  sharedPage = new URL(page.url()).pathname;
   await page.getByRole("button", { name: "Done" }).click();
 
   const vpn = tree.getByRole("treeitem", { name: "VPN access" });
@@ -157,8 +142,8 @@ test("creates a space and arranges pages, folders and links", async ({ page }) =
   await expect(tree.getByRole("treeitem", { name: "Status page" })).toBeVisible();
 });
 
-test("writes a page with blocks and shows it in the read view", async ({ page }) => {
-  await openEditor(page, sharedPage);
+test("writes a page with blocks and shows it in the read view", async ({ page, organization }) => {
+  await openEditor(page, (await handbook(page, organization)).pagePath);
   await expectAccessible(page, "editor");
   const content = editor(page);
   await content.click();
@@ -197,8 +182,8 @@ test("writes a page with blocks and shows it in the read view", async ({ page })
   await expectAccessible(page, "read view");
 });
 
-test("works the toolbar by keyboard alone", async ({ page }) => {
-  await openEditor(page, sharedPage);
+test("works the toolbar by keyboard alone", async ({ page, organization }) => {
+  await openEditor(page, (await handbook(page, organization, WRITTEN_PAGE)).pagePath);
   await editor(page).click();
   await page.keyboard.press("Alt+F10");
   const toolbar = page.getByRole("toolbar", { name: "Formatting" });
@@ -211,23 +196,16 @@ test("works the toolbar by keyboard alone", async ({ page }) => {
   await expect(editor(page)).toBeFocused();
 });
 
-test("lets three people edit one page at the same time without conflicts", async ({ page, browser }) => {
-  await page.goto("/spaces");
-  for (const name of ["Ada Editor", "Ben Editor"]) people.push(await invite(page, browser, name));
-  for (const person of people) {
-    await callApi(page, "POST", `/api/v1/spaces/${spaceId}/permissions`, {
-      action: "grant",
-      principalKind: "account",
-      principalId: person.id,
-      role: "editor",
-    });
-  }
+test("lets three people edit one page at the same time without conflicts", async ({ page, organization }) => {
+  const { spaceId, pagePath } = await handbook(page, organization, WRITTEN_PAGE);
+  const people = [await organization.invite("Ada"), await organization.invite("Ben")];
+  await editors(page, spaceId, people);
   const sessions = [
     { context: page.context(), page },
-    ...(await Promise.all(people.map((person) => signedIn(browser, person)))),
+    ...(await Promise.all(people.map((person) => organization.signIn(person)))),
   ];
   try {
-    await Promise.all(sessions.map((session) => openEditor(session.page, sharedPage)));
+    await Promise.all(sessions.map((session) => openEditor(session.page, pagePath)));
     for (const session of sessions) {
       await expect(session.page.getByRole("list", { name: "3 people on this page" })).toBeVisible({
         timeout: 15_000,
@@ -241,12 +219,16 @@ test("lets three people edit one page at the same time without conflicts", async
         for (let round = 0; round < 3; round++) {
           await session.page.keyboard.type(`Writer ${index + 1} line ${round + 1} `, { delay: 15 });
         }
-        if (index === 1) {
-          await session.page.keyboard.press("Shift+Home");
-          await session.page.keyboard.press("Control+i");
-        }
       }),
     );
+    for (const session of sessions) {
+      for (let index = 1; index <= 3; index++) {
+        await expect.poll(() => documentText(session.page)).toContain(`Writer ${index} line 3`);
+      }
+    }
+    const formatting = sessions[1]?.page ?? page;
+    await formatting.keyboard.press("Shift+Home");
+    await formatting.keyboard.press("Control+i");
     await Promise.all(sessions.map((session) => waitSaved(session.page)));
     const texts = await Promise.all(sessions.map((session) => documentText(session.page)));
     expect(texts[1]).toBe(texts[0]);
@@ -267,12 +249,15 @@ test("lets three people edit one page at the same time without conflicts", async
 
 test("keeps offline changes across leaving the page and brings them in when it reconnects", async ({
   page,
-  browser,
+  organization,
 }) => {
-  const other = await signedIn(browser, people[0] as Person);
+  const { spaceId, pagePath } = await handbook(page, organization, WRITTEN_PAGE);
+  const person = await organization.invite("Ada");
+  await editors(page, spaceId, [person]);
+  const other = await organization.signIn(person);
   try {
-    await openEditor(page, sharedPage);
-    await openEditor(other.page, sharedPage);
+    await openEditor(page, pagePath);
+    await openEditor(other.page, pagePath);
     await other.context.setOffline(true);
     await expect(other.page.getByText("Offline, changes are kept in this tab")).toBeVisible({
       timeout: 20_000,
@@ -281,6 +266,7 @@ test("keeps offline changes across leaving the page and brings them in when it r
     await other.page.keyboard.press("Control+End");
     await other.page.keyboard.type(" Written while offline.");
     await other.page.getByRole("link", { name: "Overview" }).click();
+    await expect(other.page).not.toHaveURL(new RegExp(pagePath));
     await expect(editor(other.page)).toBeHidden();
     await other.page.goBack();
     await expect(editor(other.page)).toContainText("Written while offline.");
@@ -300,11 +286,13 @@ test("keeps offline changes across leaving the page and brings them in when it r
   }
 });
 
-test("disconnects a person at once when they lose the edit permission", async ({ page, browser }) => {
-  const person = people[1] as Person;
-  const other = await signedIn(browser, person);
+test("disconnects a person at once when they lose the edit permission", async ({ page, organization }) => {
+  const { spaceId, pagePath } = await handbook(page, organization, WRITTEN_PAGE);
+  const person = await organization.invite("Ben");
+  await editors(page, spaceId, [person]);
+  const other = await organization.signIn(person);
   try {
-    await openEditor(other.page, sharedPage);
+    await openEditor(other.page, pagePath);
     await page.goto("/spaces");
     const permissions = (await (await page.request.get(`/api/v1/spaces/${spaceId}/permissions`)).json()) as {
       id: string;
@@ -330,8 +318,11 @@ test("disconnects a person at once when they lose the edit permission", async ({
   }
 });
 
-test("loads the organization settings for Spaces with the whole settings navigation", async ({ page }) => {
-  await page.goto(`/settings/organizations/${await organizationId(page)}/spaces`);
+test("loads the organization settings for Spaces with the whole settings navigation", async ({
+  page,
+  organization,
+}) => {
+  await page.goto(`/settings/organizations/${organization.id}/spaces`);
   await expect(page.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
   await expect(page.getByText("This page could not be loaded")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Default permissions for new spaces" })).toBeVisible();
@@ -345,14 +336,15 @@ test("loads the organization settings for Spaces with the whole settings navigat
   await expect(page.getByText("This page could not be loaded")).toHaveCount(0);
 });
 
-test("passes the accessibility check on the space settings", async ({ page }) => {
+test("passes the accessibility check on the space settings", async ({ page, organization }) => {
+  const { spaceKey } = await handbook(page, organization);
   await page.goto(`/spaces/${spaceKey}/settings/general`);
   await expect(page.getByRole("heading", { name: "General", level: 1 })).toBeVisible();
   await expectAccessible(page, "space general settings");
   await page.goto(`/spaces/${spaceKey}/settings/permissions`);
   await expect(page.getByRole("heading", { name: "Permissions", level: 1 })).toBeVisible();
   await expectAccessible(page, "space permissions");
-  await page.goto(`/settings/organizations/${await organizationId(page)}/spaces`);
+  await page.goto(`/settings/organizations/${organization.id}/spaces`);
   await expect(page.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
   await expectAccessible(page, "organization spaces settings");
   await page.goto("/settings/instance/personal-spaces");

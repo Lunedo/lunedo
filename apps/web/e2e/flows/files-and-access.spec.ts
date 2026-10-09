@@ -1,29 +1,15 @@
-import { type Browser, type BrowserContext, expect, type Page, test } from "@playwright/test";
-import { BASE_URL, OWNER_STORAGE, readState } from "../support/environment.js";
+import type { Page } from "@playwright/test";
+import { BASE_URL } from "../support/environment.js";
 import { docx, PNG, pdf, wav, xlsx } from "../support/files.js";
-import {
-  callApi,
-  expectAccessible,
-  linkFrom,
-  setAppearance,
-  signInWithPassword,
-  waitForMail,
-} from "../support/helpers.js";
-
-test.use({ storageState: OWNER_STORAGE });
+import { expect, type Organization, test } from "../support/fixtures.js";
+import { callApi, expectAccessible, setAppearance } from "../support/helpers.js";
+import { forwardFrom, SIGNED_OUT, unique } from "../support/people.js";
 
 const VARIANTS = [
   { colorMode: "light", language: "en" },
   { colorMode: "dark", language: "de" },
 ] as const;
 const WIDTHS = [1440, 390] as const;
-
-interface Person {
-  id: string;
-  name: string;
-  email: string;
-  password: string;
-}
 
 interface Place {
   spaceId: string;
@@ -32,54 +18,8 @@ interface Place {
   pagePath: string;
 }
 
-function unique(): string {
-  const random = Math.floor(Math.random() * 1296)
-    .toString(36)
-    .padStart(2, "0");
-  return `${Date.now().toString(36).slice(-5)}${random}`.toUpperCase();
-}
-
 function slug(title: string): string {
   return title.toLowerCase().split(" ").join("-");
-}
-
-async function organizationId(page: Page): Promise<string> {
-  const stored = readState().organizationId;
-  if (stored) return stored;
-  const response = await page.request.get("/api/v1/organizations?limit=10");
-  return ((await response.json()) as { items: { id: string }[] }).items[0]?.id ?? "";
-}
-
-async function invite(page: Page, browser: Browser, first: string): Promise<Person> {
-  const name = `${first} ${unique()}`;
-  const email = `${name.toLowerCase().split(" ").join(".")}@pagehall.test`;
-  const password = `${first} passphrase for sharing`;
-  await callApi(page, "POST", `/api/v1/organizations/${await organizationId(page)}/invitations`, {
-    email,
-    kind: "member",
-  });
-  const token = /#token=([\w-]+)/.exec(linkFrom((await waitForMail(email, /invit/i)).text))?.[1] ?? "";
-  const anonymous = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-  try {
-    const response = await anonymous.request.post(`${BASE_URL}/api/v1/invitations/accept`, {
-      data: { token, name, password },
-      headers: { "X-Pagehall-Request": "1", origin: BASE_URL },
-    });
-    expect(response.status(), await response.text()).toBeLessThan(300);
-    const { accountId } = (await response.json()) as { accountId: string };
-    return { id: accountId, name, email, password };
-  } finally {
-    await anonymous.close();
-  }
-}
-
-async function signedIn(browser: Browser, person: Person): Promise<{ context: BrowserContext; page: Page }> {
-  const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-  const page = await context.newPage();
-  await page.goto("/sign-in");
-  await signInWithPassword(page, person.email, person.password);
-  await expect(page.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
-  return { context, page };
 }
 
 async function createPage(page: Page, spaceId: string, spaceKey: string, title: string) {
@@ -92,10 +32,10 @@ async function createPage(page: Page, spaceId: string, spaceKey: string, title: 
   return { id: created.id, path: `/spaces/${spaceKey}/pages/${created.id}/${slug(title)}` };
 }
 
-async function place(page: Page, title = "Network plan"): Promise<Place> {
+async function place(page: Page, organization: Organization, title = "Network plan"): Promise<Place> {
   await page.goto("/spaces");
   const spaceKey = `F${unique()}`;
-  const space = (await callApi(page, "POST", `/api/v1/organizations/${await organizationId(page)}/spaces`, {
+  const space = (await callApi(page, "POST", `/api/v1/organizations/${organization.id}/spaces`, {
     name: `Files and access ${spaceKey}`,
     key: spaceKey,
     visibility: "private",
@@ -152,8 +92,9 @@ async function attachmentId(page: Page, pageId: string, name: string): Promise<s
 
 test("uploads files by picker, drop and paste, previews them in a sandbox and restores versions", async ({
   page,
+  organization,
 }) => {
-  const { pageId, pagePath } = await place(page);
+  const { pageId, pagePath } = await place(page, organization);
   await page.goto(pagePath);
   const section = attachments(page);
   await expect(section.getByText("No files yet. Upload files or drop them on the page.")).toBeVisible();
@@ -182,6 +123,8 @@ test("uploads files by picker, drop and paste, previews them in a sandbox and re
   }, pasted);
   await expect(row(page, "page.html")).toBeVisible();
   await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByRole("button", { name: "Done" })).toBeHidden();
+  await expect(page).not.toHaveURL(/edit=true/);
 
   await attachments(page)
     .locator('input[type="file"]')
@@ -247,8 +190,11 @@ test("uploads files by picker, drop and paste, previews them in a sandbox and re
   });
 });
 
-test("previews every supported type without running scripts inside the files", async ({ page }) => {
-  const { pagePath } = await place(page);
+test("previews every supported type without running scripts inside the files", async ({
+  page,
+  organization,
+}) => {
+  const { pagePath } = await place(page, organization);
   let alerted = false;
   page.on("dialog", (shown) => {
     alerted = true;
@@ -310,10 +256,13 @@ test("previews every supported type without running scripts inside the files", a
   expect(alerted).toBe(false);
 });
 
-test("restricts and shares a page, opens links and decides an access request", async ({ page, browser }) => {
-  const { spaceId, spaceKey, pagePath } = await place(page);
-  const colleague = await invite(page, browser, "Sven");
-  const { context, page: other } = await signedIn(browser, colleague);
+test("restricts and shares a page, opens links and decides an access request", async ({
+  page,
+  organization,
+}) => {
+  const { spaceId, spaceKey, pagePath } = await place(page, organization);
+  const colleague = await organization.invite("Sven");
+  const { context, page: other } = await organization.signIn(colleague);
   try {
     await page.goto(pagePath);
     await page.getByRole("button", { name: "Share", exact: true }).click();
@@ -351,7 +300,7 @@ test("restricts and shares a page, opens links and decides an access request", a
 
     await other.goto(new URL(address).pathname);
     await expect(other.getByRole("heading", { name: "Network plan" })).toBeVisible();
-    await expect(other.getByText("Shared with you by Olivia Owner")).toBeVisible();
+    await expect(other.getByText(`Shared with you by ${organization.admin.name}`)).toBeVisible();
 
     const hidden = await createPage(page, spaceId, spaceKey, "Budget");
     await other.goto(hidden.path);
@@ -406,10 +355,13 @@ test("restricts and shares a page, opens links and decides an access request", a
   }
 });
 
-test("opens a link for anyone with a password without an account", async ({ page, browser }) => {
-  const { spaceId, spaceKey } = await place(page, "Hidden plan");
-  const organization = await organizationId(page);
-  await callApi(page, "PUT", `/api/v1/organizations/${organization}/settings/sharing.anyoneLinks`, {
+test("opens a link for anyone with a password without an account", async ({
+  page,
+  browser,
+  organization,
+}) => {
+  const { spaceId, spaceKey } = await place(page, organization, "Hidden plan");
+  await callApi(page, "PUT", `/api/v1/organizations/${organization.id}/settings/sharing.anyoneLinks`, {
     value: true,
   });
   try {
@@ -419,7 +371,7 @@ test("opens a link for anyone with a password without an account", async ({ page
       expiresAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
       password: "harbour lantern",
     })) as { token: string };
-    const anonymous = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    const anonymous = await forwardFrom(await browser.newContext({ storageState: SIGNED_OUT }));
     try {
       const visitor = await anonymous.newPage();
       await visitor.goto(`/s/${made.token}`);
@@ -447,21 +399,20 @@ test("opens a link for anyone with a password without an account", async ({ page
       await anonymous.close();
     }
   } finally {
-    await callApi(page, "PUT", `/api/v1/organizations/${organization}/settings/sharing.anyoneLinks`, {
+    await callApi(page, "PUT", `/api/v1/organizations/${organization.id}/settings/sharing.anyoneLinks`, {
       clear: true,
     });
   }
 });
 
-test("shows what a person can do and exports the overview", async ({ page, browser }) => {
-  const { pageId } = await place(page);
-  const person = await invite(page, browser, "Anna");
+test("shows what a person can do and exports the overview", async ({ page, organization }) => {
+  const { pageId } = await place(page, organization);
+  const person = await organization.invite("Anna");
   await callApi(page, "POST", `/api/v1/pages/${pageId}/access`, {
     changes: [{ action: "share", holderKind: "account", holderId: person.id, role: "editor" }],
   });
-  const organization = await organizationId(page);
   const choose = async () => {
-    await page.goto(`/settings/organizations/${organization}/access`);
+    await page.goto(`/settings/organizations/${organization.id}/access`);
     await page.getByRole("combobox", { name: "Person" }).fill(person.name);
     await page.getByRole("option", { name: new RegExp(person.name) }).click();
   };
@@ -476,7 +427,7 @@ test("shows what a person can do and exports the overview", async ({ page, brows
     await expect(page.getByRole("button", { name: /^(Why\?|Warum\?)$/ }).first()).toBeVisible();
   });
   const csv = await page.request.get(
-    `/api/v1/organizations/${organization}/access-overview?accountId=${person.id}`,
+    `/api/v1/organizations/${organization.id}/access-overview?accountId=${person.id}`,
   );
   expect(csv.headers()["content-type"]).toContain("text/csv");
   const lines = (await csv.text()).split("\r\n");

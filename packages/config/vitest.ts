@@ -1,3 +1,4 @@
+import { vitestWorkers } from "@pagehall/config/parallelism";
 import { retriesFromEnv } from "@pagehall/config/test-report";
 import { defaultClientConditions, defaultServerConditions } from "vite";
 import { defineProject, type UserWorkspaceConfig } from "vitest/config";
@@ -10,11 +11,6 @@ export interface VitestPresetOptions {
   /** Modules run once per test run, e.g. to create a test database. */
   globalSetup?: string[];
   testTimeout?: number;
-}
-
-export function parallelismLimit(env: NodeJS.ProcessEnv = process.env): number | undefined {
-  const limit = Number(env.CI_PARALLELISM);
-  return Number.isInteger(limit) && limit > 0 ? limit : undefined;
 }
 
 export function createVitestConfig(options: VitestPresetOptions = {}): UserWorkspaceConfig {
@@ -35,7 +31,7 @@ export function createVitestConfig(options: VitestPresetOptions = {}): UserWorks
       setupFiles: options.setupFiles ?? [],
       globalSetup: options.globalSetup ?? [],
       testTimeout: options.testTimeout ?? 5000,
-      maxWorkers: parallelismLimit(),
+      maxWorkers: vitestWorkers(),
       retry: retriesFromEnv(),
       hookTimeout: 60_000,
       restoreMocks: true,

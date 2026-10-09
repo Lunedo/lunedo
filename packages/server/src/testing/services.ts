@@ -15,7 +15,7 @@ import type { DirectoryConnector } from "../identity/ldap-connection.js";
 import { createLogger } from "../logging/logger.js";
 import { type AccountServices, createAccountServices } from "../services.js";
 import { SettingsService } from "../settings/service.js";
-import { createTemporaryDatabase, type TemporaryDatabase } from "./database.js";
+import { createMigratedDatabase, createTemporaryDatabase, type TemporaryDatabase } from "./database.js";
 import { CapturingTransport } from "./jobs.js";
 
 export interface TestServices {
@@ -39,7 +39,9 @@ export async function createTestServices(
     beforeMigrations?: (url: string) => Promise<unknown>;
   } = {},
 ): Promise<TestServices> {
-  const temporary: TemporaryDatabase = await createTemporaryDatabase(baseUrl, "pagehall_services_test");
+  const temporary: TemporaryDatabase = options.beforeMigrations
+    ? await createTemporaryDatabase(baseUrl, "pagehall_services_test")
+    : await createMigratedDatabase(baseUrl, "pagehall_services_test");
   await options.beforeMigrations?.(temporary.url);
   const pool = createDatabasePool({ connectionString: temporary.url, applicationName: "pagehall-test" });
   const logger = createLogger({ service: "test", level: "silent" });

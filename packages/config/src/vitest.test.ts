@@ -1,22 +1,16 @@
-import { describe, expect, it } from "vitest";
-import { createVitestConfig, parallelismLimit } from "../vitest.ts";
+import { describe, expect, it, vi } from "vitest";
+import { createVitestConfig } from "../vitest.ts";
 
-describe("parallelismLimit", () => {
-  it("returns a positive whole number", () => {
-    expect(parallelismLimit({ CI_PARALLELISM: "3" })).toBe(3);
+describe("createVitestConfig", () => {
+  it("limits the Vitest workers to CI_PARALLELISM when it is set", () => {
+    vi.stubEnv("CI_PARALLELISM", "2");
+    expect(createVitestConfig().test?.maxWorkers).toBe(2);
   });
 
-  it.each([undefined, "", "0", "-2", "1.5", "many"])("ignores %j so the defaults apply", (value) => {
-    expect(parallelismLimit({ CI_PARALLELISM: value })).toBeUndefined();
-  });
-
-  it("limits the Vitest workers when CI_PARALLELISM is set", () => {
-    process.env.CI_PARALLELISM = "2";
-    try {
-      expect(createVitestConfig().test?.maxWorkers).toBe(2);
-    } finally {
-      delete process.env.CI_PARALLELISM;
-    }
-    expect(createVitestConfig().test?.maxWorkers).toBeUndefined();
+  it("uses the workers that the local budget gives each package", () => {
+    vi.stubEnv("CI", "");
+    vi.stubEnv("CI_PARALLELISM", "");
+    vi.stubEnv("PAGEHALL_TEST_WORKERS", "3");
+    expect(createVitestConfig().test?.maxWorkers).toBe(3);
   });
 });

@@ -5,7 +5,7 @@ import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { createServerRuntime, type Env, type ServerRuntime } from "@pagehall/server";
 import {
   CapturingTransport,
-  createTemporaryDatabase,
+  createMigratedDatabase,
   deliverPendingMail,
   type TemporaryDatabase,
   testDatabaseBaseUrl,
@@ -34,7 +34,7 @@ export async function createAuthTestApp(
   options: { captureMail?: boolean } = {},
 ): Promise<AuthTestApp> {
   if (!databaseBaseUrl) throw new Error("PAGEHALL_TEST_DATABASE_URL is not set");
-  const database: TemporaryDatabase = await createTemporaryDatabase(databaseBaseUrl, "pagehall_api_test");
+  const database: TemporaryDatabase = await createMigratedDatabase(databaseBaseUrl, "pagehall_api_test");
   const dataDir = mkdtempSync(path.join(tmpdir(), "pagehall-api-"));
   const mail = new CapturingTransport();
   const runtimeEnv: Env = {
