@@ -194,7 +194,7 @@ export function Combobox(props: ComboboxProps) {
         ? props.value.filter((value) => value !== item.value)
         : [...props.value, item.value];
       props.onValueChange(next, itemsOf(next));
-      setQuery("");
+      close();
       inputRef.current?.focus();
       return;
     }

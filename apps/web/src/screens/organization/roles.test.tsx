@@ -65,6 +65,8 @@ describe("AssignRoleDialog", () => {
     const principals = within(dialog).getByRole("combobox", { name: "People and groups" });
     await userEvent.click(principals);
     await userEvent.click(await screen.findByRole("option", { name: /Anna Roth/ }));
+    expect(principals.getAttribute("aria-expanded")).toBe("false");
+    await userEvent.click(principals);
     await userEvent.click(await screen.findByRole("option", { name: /Auditors/ }));
     await waitFor(() =>
       expect(within(dialog).getByRole("list", { name: "People who gain access" }).textContent).toContain(
