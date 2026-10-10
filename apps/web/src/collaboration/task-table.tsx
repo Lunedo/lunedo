@@ -37,7 +37,7 @@ function TaskRow({ task, showAssignee }: { task: TaskEntry; showAssignee: boolea
     task.item.spaceKey,
   );
   return (
-    <li className="flex items-start gap-3 px-4 py-3">
+    <li className="flex flex-wrap items-start gap-x-3 gap-y-1 px-4 py-3">
       <div className="pt-1">
         <Checkbox
           checked={task.done}
@@ -47,7 +47,7 @@ function TaskRow({ task, showAssignee }: { task: TaskEntry; showAssignee: boolea
           onCheckedChange={(checked) => setStatus.mutate({ taskId: task.id, done: checked })}
         />
       </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
+      <div className="flex min-w-0 flex-1 basis-field flex-col gap-1">
         <span className={task.done ? "text-text-muted line-through" : ""}>
           {task.text || t("tasks.untitled")}
         </span>
@@ -116,7 +116,7 @@ export function TaskTable({
       ) : (
         <ul
           aria-label={t("tasks.listLabel")}
-          className="flex flex-col divide-y divide-border rounded-md border border-border"
+          className="ph-task-table flex flex-col divide-y divide-border rounded-md border border-border"
         >
           {tasks.data.items.map((task) => (
             <TaskRow key={task.id} task={task} showAssignee={showAssignee} />
