@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { contentUrl } from "../../files/attachments-api.js";
 import { useAttachmentPreview } from "../../files/preview-host.js";
 import { translateKey } from "../../i18n/translate.js";
+import { useEditable } from "../context.js";
 
 export interface TocEntry {
   level: number;
@@ -46,6 +47,7 @@ function useHeadings(editor: Editor): TocEntry[] {
 }
 
 export function TableOfContentsView({ node, editor, updateAttributes, selected }: NodeViewProps) {
+  const editable = useEditable(editor);
   const { t } = useTranslation();
   const minLevel = Number(node.attrs.minLevel ?? 1);
   const maxLevel = Number(node.attrs.maxLevel);
@@ -58,7 +60,7 @@ export function TableOfContentsView({ node, editor, updateAttributes, selected }
           <ListTree aria-hidden="true" className="size-icon-md" />
           {t("editor.toc.title")}
         </span>
-        {editor.isEditable ? (
+        {editable ? (
           <span className="flex flex-wrap items-center gap-2">
             <Menu
               trigger={
@@ -107,12 +109,13 @@ export function TableOfContentsView({ node, editor, updateAttributes, selected }
 }
 
 export function CalloutView({ node, editor, updateAttributes }: NodeViewProps) {
+  const editable = useEditable(editor);
   const { t } = useTranslation();
   const variant = String(node.attrs.variant);
   return (
     <NodeViewWrapper as="aside" className="ph-callout" data-variant={variant} role="note">
       <div contentEditable={false} className="ph-callout-control">
-        {editor.isEditable ? (
+        {editable ? (
           <Menu
             align="start"
             trigger={
@@ -143,6 +146,7 @@ export function CalloutView({ node, editor, updateAttributes }: NodeViewProps) {
 }
 
 export function ExpandView({ node, editor, updateAttributes }: NodeViewProps) {
+  const editable = useEditable(editor);
   const { t } = useTranslation();
   const [open, setOpen] = useState(true);
   const Toggle = open ? ChevronDown : ChevronRight;
@@ -162,7 +166,7 @@ export function ExpandView({ node, editor, updateAttributes }: NodeViewProps) {
           className="ph-expand-title"
           value={String(node.attrs.title)}
           maxLength={500}
-          readOnly={!editor.isEditable}
+          readOnly={!editable}
           aria-label={t("editor.expand.titleLabel")}
           placeholder={t("editor.expand.titlePlaceholder")}
           onChange={(event) => updateAttributes({ title: event.target.value })}
@@ -187,6 +191,7 @@ export const COLUMN_LAYOUTS: Record<number, number[][]> = {
 };
 
 export function ColumnsView({ node, editor, getPos }: NodeViewProps) {
+  const editable = useEditable(editor);
   const { t } = useTranslation();
   const count = node.childCount;
   const layouts = COLUMN_LAYOUTS[count] ?? [];
@@ -207,7 +212,7 @@ export function ColumnsView({ node, editor, getPos }: NodeViewProps) {
   };
   return (
     <NodeViewWrapper className="ph-columns" data-count={count}>
-      {editor.isEditable && layouts.length > 1 ? (
+      {editable && layouts.length > 1 ? (
         <div contentEditable={false} className="ph-columns-control">
           <Menu
             align="start"
@@ -241,6 +246,7 @@ export function ColumnView({ node }: NodeViewProps) {
 }
 
 export function CodeBlockView({ node, editor, updateAttributes }: NodeViewProps) {
+  const editable = useEditable(editor);
   const { t } = useTranslation();
   const items = useMemo(
     () => [
@@ -253,7 +259,7 @@ export function CodeBlockView({ node, editor, updateAttributes }: NodeViewProps)
   return (
     <NodeViewWrapper className="ph-code-block" data-language={language || undefined}>
       <div contentEditable={false} className="ph-code-toolbar">
-        {editor.isEditable ? (
+        {editable ? (
           <div className="w-field max-w-full">
             <Combobox
               aria-label={t("editor.code.language")}

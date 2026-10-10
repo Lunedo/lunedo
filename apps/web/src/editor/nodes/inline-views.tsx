@@ -5,7 +5,7 @@ import { type FormEvent, type KeyboardEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { translateKey } from "../../i18n/translate.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
-import { useOpenPath, usePageContext } from "../context.js";
+import { useEditable, useOpenPath, usePageContext } from "../context.js";
 import { followTitleLink, pagePath, usePageReference, usePersonName } from "../references.js";
 
 export function MentionView({ node, selected }: NodeViewProps) {
@@ -82,6 +82,7 @@ export function PageLinkView({ node, selected }: NodeViewProps) {
 }
 
 export function StatusView({ node, updateAttributes, editor, selected }: NodeViewProps) {
+  const editable = useEditable(editor);
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(String(node.attrs.text));
@@ -94,7 +95,7 @@ export function StatusView({ node, updateAttributes, editor, selected }: NodeVie
       className="ph-status"
       data-color={color}
       aria-label={t("editor.status.edit", { text: node.attrs.text })}
-      disabled={!editor.isEditable}
+      disabled={!editable}
     >
       {String(node.attrs.text)}
     </button>
@@ -111,7 +112,7 @@ export function StatusView({ node, updateAttributes, editor, selected }: NodeVie
   };
   return (
     <NodeViewWrapper as="span" className={selected ? "ph-node-selected" : undefined}>
-      {editor.isEditable ? (
+      {editable ? (
         <Popover trigger={chip} open={open} onOpenChange={setOpen} label={t("editor.status.title")}>
           <form className="flex flex-col gap-3" onSubmit={save}>
             <Field
@@ -156,6 +157,7 @@ export function StatusView({ node, updateAttributes, editor, selected }: NodeVie
 }
 
 export function DateView({ node, updateAttributes, editor, selected }: NodeViewProps) {
+  const editable = useEditable(editor);
   const { t } = useTranslation();
   const format = useFormat();
   const [open, setOpen] = useState(false);
@@ -167,7 +169,7 @@ export function DateView({ node, updateAttributes, editor, selected }: NodeViewP
       contentEditable={false}
       className="ph-date"
       aria-label={t("editor.date.edit", { date: label })}
-      disabled={!editor.isEditable}
+      disabled={!editable}
     >
       <time dateTime={value}>{label}</time>
     </button>
@@ -180,7 +182,7 @@ export function DateView({ node, updateAttributes, editor, selected }: NodeViewP
   };
   return (
     <NodeViewWrapper as="span" className={selected ? "ph-node-selected" : undefined}>
-      {editor.isEditable ? (
+      {editable ? (
         <Popover trigger={chip} open={open} onOpenChange={setOpen} label={t("editor.date.title")}>
           <Field label={t("editor.date.label")}>
             <Input

@@ -8,7 +8,7 @@ import { checkMentionAccess, peopleLoader } from "../../collaboration/people.js"
 import { taskStatusesQuery } from "../../collaboration/queries.js";
 import { useSetTaskStatus } from "../../collaboration/task-actions.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
-import { usePageContext } from "../context.js";
+import { useEditable, usePageContext } from "../context.js";
 import { takeTaskStatus } from "../extensions/pasted-tasks.js";
 import { rememberReferences, usePersonName } from "../references.js";
 
@@ -22,7 +22,7 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
   const dueDate = (node.attrs.dueDate as string | null) ?? null;
   const assigneeName = usePersonName(assignee ?? "");
   const statuses = useQuery({ ...taskStatusesQuery(page?.pageId ?? ""), enabled: page !== null });
-  const editable = editor.isEditable;
+  const editable = useEditable(editor);
   const setStatus = useSetTaskStatus(page?.pageId ?? null, { onPage: editable });
   const hintId = useId();
   const status = id ? statuses.data?.find((entry) => entry.id === id) : undefined;

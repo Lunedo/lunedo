@@ -1,8 +1,12 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Editor } from "@tiptap/core";
+import { EditorContent } from "@tiptap/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { initI18n } from "../i18n/index.js";
 import { PreferencesProvider } from "../preferences/preferences-provider.js";
 import { mockApi, problem, renderWithProviders } from "../testing/render.js";
+import { createEditorExtensions } from "./extensions/index.js";
 import { childPagesFromAttrs, FileTypesField, parseFileTypes } from "./listings.js";
 import { PageReadView } from "./read-view.js";
 
@@ -176,5 +180,28 @@ describe("file types field after an error", () => {
     expect(await screen.findByText(/Enter up to 20 file extensions/)).toBeTruthy();
     await userEvent.type(input, "{Backspace}{Backspace}");
     expect(screen.queryByText(/Enter up to 20 file extensions/)).toBeNull();
+  });
+});
+
+describe("listing blocks in the editor", () => {
+  it("show their settings as soon as the editor becomes editable", async () => {
+    const i18n = await initI18n(["en"]);
+    const editor = new Editor({
+      editable: false,
+      extensions: createEditorExtensions({ t: i18n.t, spaceId: null, onFocusToolbar: () => {} }),
+      content: { type: "doc", content: [{ type: "childPages" }, { type: "attachmentList" }] },
+    });
+    await renderWithProviders(
+      <PreferencesProvider>
+        <EditorContent editor={editor} />
+      </PreferencesProvider>,
+    );
+    expect(await screen.findByRole("region", { name: "Child pages" })).toBeTruthy();
+    expect(screen.queryByText("Levels")).toBeNull();
+    expect(screen.queryByLabelText("File types")).toBeNull();
+    act(() => editor.setEditable(true));
+    expect(await screen.findByText("Levels")).toBeTruthy();
+    expect(screen.getByLabelText("File types")).toBeTruthy();
+    editor.destroy();
   });
 });

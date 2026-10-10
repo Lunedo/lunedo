@@ -4,6 +4,7 @@ import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import katex from "katex";
 import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useEditable } from "../context.js";
 
 export function renderFormula(latex: string, displayMode: boolean): { html: string; error: boolean } {
   try {
@@ -47,10 +48,11 @@ function Formula({
 }
 
 export function MathView({ node, updateAttributes, editor, selected, deleteNode }: NodeViewProps) {
+  const editable = useEditable(editor);
   const { t } = useTranslation();
   const displayMode = node.type.name === "blockMath";
   const latex = String(node.attrs.latex ?? "");
-  const [open, setOpen] = useState(latex.length === 0 && editor.isEditable);
+  const [open, setOpen] = useState(latex.length === 0 && editable);
   const [draft, setDraft] = useState(latex);
   useEffect(() => {
     if (!open) setDraft(latex);
@@ -88,7 +90,7 @@ export function MathView({ node, updateAttributes, editor, selected, deleteNode 
       className={selected ? "ph-node-selected" : undefined}
       data-latex={latex}
     >
-      {editor.isEditable ? (
+      {editable ? (
         <Popover
           trigger={trigger}
           open={open}

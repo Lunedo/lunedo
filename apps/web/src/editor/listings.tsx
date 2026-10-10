@@ -20,7 +20,7 @@ import { useAttachmentPreview } from "../files/preview-host.js";
 import { translateKey } from "../i18n/translate.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { childrenQuery, itemQuery, type TreeItem } from "../spaces/space-queries.js";
-import { useOpenPath, usePageContext } from "./context.js";
+import { useEditable, useOpenPath, usePageContext } from "./context.js";
 import { pagePath } from "./references.js";
 
 const pageLoader: ComboboxLoader = async (query) => {
@@ -355,6 +355,7 @@ export function FileTypesField({
 }
 
 export function ChildPagesView({ node, editor, updateAttributes, selected }: NodeViewProps) {
+  const editable = useEditable(editor);
   const { t } = useTranslation();
   const page = usePageContext();
   const request = childPagesFromAttrs(node.attrs);
@@ -369,7 +370,7 @@ export function ChildPagesView({ node, editor, updateAttributes, selected }: Nod
           <FolderTree aria-hidden="true" className="size-icon-md" />
           {t("editor.childPages.title")}
         </h3>
-        {editor.isEditable ? (
+        {editable ? (
           <ChildPagesSettings request={request} onChange={(changes) => updateAttributes(changes)} />
         ) : null}
         <ChildPagesList request={request} currentPageId={page?.pageId ?? null} />
@@ -379,6 +380,7 @@ export function ChildPagesView({ node, editor, updateAttributes, selected }: Nod
 }
 
 export function AttachmentListView({ node, editor, updateAttributes, selected }: NodeViewProps) {
+  const editable = useEditable(editor);
   const { t } = useTranslation();
   const page = usePageContext();
   const fileTypes = fileTypesOf(node.attrs.fileTypes);
@@ -396,7 +398,7 @@ export function AttachmentListView({ node, editor, updateAttributes, selected }:
           <Files aria-hidden="true" className="size-icon-md" />
           {t("editor.attachmentList.title")}
         </h3>
-        {editor.isEditable ? (
+        {editable ? (
           <FileTypesField fileTypes={fileTypes} onChange={(next) => updateAttributes({ fileTypes: next })} />
         ) : null}
         <AttachmentList pageId={page?.pageId ?? null} fileTypes={fileTypes} />
