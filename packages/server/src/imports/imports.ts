@@ -452,13 +452,15 @@ export class ImportService {
   async listFolder(
     actor: Principal,
     organizationId: string,
-  ): Promise<{ enabled: boolean; files: FolderFile[] }> {
+  ): Promise<{ enabled: boolean; files: FolderFile[]; maxUploadBytes: number }> {
     await this.#authorization.require(actor, "organization.imports.manage", {
       type: "organization",
       id: organizationId,
     });
-    if (!(await this.#settings.get(importFolderSetting, {}))) return { enabled: false, files: [] };
-    return { enabled: true, files: await this.#folder.list() };
+    const maxUploadBytes = await this.#uploads.maxBytes();
+    if (!(await this.#settings.get(importFolderSetting, {})))
+      return { enabled: false, files: [], maxUploadBytes };
+    return { enabled: true, files: await this.#folder.list(), maxUploadBytes };
   }
 
   async remove(actor: Principal, importId: string): Promise<void> {

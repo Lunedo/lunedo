@@ -49,7 +49,7 @@ export interface SyntheticExport {
 const DATE = "2024-03-01 10:20:30.123";
 
 function cdata(text: string): string {
-  return `<![CDATA[${text.replaceAll("]]>", "]]]]><![CDATA[>")}]]>`;
+  return `<![CDATA[${text.replaceAll("]]>", "]] >")}]]>`;
 }
 
 function property(name: string, value: string | number | null): string {

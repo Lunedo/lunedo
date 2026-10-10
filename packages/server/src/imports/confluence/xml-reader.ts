@@ -21,6 +21,12 @@ interface XmlObject {
   readonly references: Map<string, string>;
 }
 
+const NESTED_CDATA_END = "]] >";
+
+export function unescapeNestedCdata(body: string): string {
+  return body.includes(NESTED_CDATA_END) ? body.replaceAll(NESTED_CDATA_END, "]]>") : body;
+}
+
 const WANTED = new Set([
   "Space",
   "Page",
@@ -211,7 +217,7 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
           kind: kinds.body,
           sourceId: object.id,
           ref: content,
-          data: { body: property("body") ?? "" },
+          data: { body: unescapeNestedCdata(property("body") ?? "") },
         });
         return;
       }

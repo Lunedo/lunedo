@@ -317,20 +317,18 @@ export abstract class StagedConfluenceReader implements ImportReader {
   async resolvePeople(
     context: ReadContext,
     references: readonly PersonReference[],
-  ): Promise<readonly SourcePerson[]> {
+  ): Promise<readonly (SourcePerson | null)[]> {
     const keys = references
       .map((reference) => reference.userKey)
       .filter((key): key is string => key !== null);
     const users = await context.staging.get<StagedUser>(kinds.user, keys);
-    const result: SourcePerson[] = [];
-    for (const reference of references) {
+    return references.map((reference) => {
       const accountId =
         reference.accountId ??
         (reference.userKey ? (users.get(reference.userKey)?.data.accountId ?? null) : null);
       const sourceId = personId(accountId, reference.userKey);
-      if (sourceId) result.push({ sourceId, accountId, userKey: reference.userKey });
-    }
-    return result;
+      return sourceId ? { sourceId, accountId, userKey: reference.userKey } : null;
+    });
   }
 
   async labels(context: ReadContext, pageIds: readonly string[]): Promise<readonly SourceLabel[]> {

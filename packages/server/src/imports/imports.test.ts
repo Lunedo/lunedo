@@ -236,7 +236,8 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
       order by e.external_id`);
     expect(placeholders.rows.map((row) => row.state)).toEqual(["placeholder", "placeholder", "placeholder"]);
     const mentions = all.filter((node) => node.type === "mention").map((node) => node.attrs?.id);
-    expect(mentions).toHaveLength(2);
+    expect(mentions).toHaveLength(3);
+    expect(mentions[2]).toBe(mentions[0]);
     const tasks = await test.database.execute<{ done: boolean }>(
       sql`select done from tasks where item_id = ${alpha} and published order by position`,
     );

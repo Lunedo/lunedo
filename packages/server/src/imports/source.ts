@@ -96,7 +96,7 @@ export interface ImportReader {
   resolvePeople(
     context: ReadContext,
     references: readonly PersonReference[],
-  ): Promise<readonly SourcePerson[]>;
+  ): Promise<readonly (SourcePerson | null)[]>;
 }
 
 export interface PersonReference {

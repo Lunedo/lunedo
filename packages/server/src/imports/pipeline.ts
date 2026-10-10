@@ -513,19 +513,20 @@ export class ImportPipeline {
     });
     const attachments = await this.#mapped(run.importId, "attachmentName", attachmentKeys);
     const attachmentNames = await this.#attachmentNames([...attachments.values()]);
-    const people = await run.reader.resolvePeople(
-      context,
-      references.flatMap((list) => list.people),
-    );
+    const mentioned = references.flatMap((list) => list.people);
+    const people = await run.reader.resolvePeople(context, mentioned);
     const placeholders = await ensurePlaceholders(
       this.#database,
       this.#audit,
       { organizationId: run.organizationId, importId: run.importId },
-      people,
+      people.filter((person): person is SourcePerson => person !== null),
     );
-    const personKeys = new Map(
-      people.map((person) => [`${person.accountId ?? ""}\u0000${person.userKey ?? ""}`, person.sourceId]),
-    );
+    const personKeys = new Map<string, string>();
+    for (const [index, reference] of mentioned.entries()) {
+      const person = people[index];
+      if (person)
+        personKeys.set(`${reference.accountId ?? ""}\u0000${reference.userKey ?? ""}`, person.sourceId);
+    }
     const space = await this.#requireSpace(run.importId);
     const spacePath = `/spaces/${encodeURIComponent(run.spaceKey)}`;
     for (const page of open) {

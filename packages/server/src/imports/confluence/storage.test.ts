@@ -167,7 +167,7 @@ describe("storage format conversion", () => {
 
   it("turns mentions into placeholders keyed by the Atlassian ID", async () => {
     const page = await convert(richBody());
-    expect(ofType(page, "mention").map((node) => node.attrs?.id)).toEqual([BOB, STRANGER]);
+    expect(ofType(page, "mention").map((node) => node.attrs?.id)).toEqual([BOB, STRANGER, STRANGER]);
   });
 
   it("keeps every macro as an unsupported macro block with its original data and counts it", async () => {
@@ -246,6 +246,6 @@ describe("storage format conversion", () => {
       "missing.png",
       "report.pdf",
     ]);
-    expect(references.people).toHaveLength(2);
+    expect(references.people).toHaveLength(3);
   });
 });

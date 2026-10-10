@@ -1,4 +1,4 @@
-import { constants } from "node:fs";
+import { constants, createReadStream } from "node:fs";
 import { lstat, open, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
 import type { Readable } from "node:stream";
@@ -75,7 +75,7 @@ export class ImportFolder {
       size: stats.size,
       modifiedAt: stats.mtime.toISOString(),
       async read(start, end): Promise<Readable> {
-        return handle.createReadStream({ start, end: end - 1, autoClose: false, emitClose: true });
+        return createReadStream("", { fd: handle.fd, start, end: end - 1, autoClose: false });
       },
       async close() {
         await handle.close();
