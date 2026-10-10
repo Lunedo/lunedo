@@ -1,6 +1,14 @@
 export {
   ANCHOR_CONTEXT_LENGTH,
+  cleanLabel,
+  DEFAULT_PAGE_REPORT_LIMIT,
+  decisionReportOrders,
+  MAX_FILTER_LABELS,
+  MAX_FILTER_PAGES,
+  MAX_PAGE_REPORT_LIMIT,
   MAX_QUOTE_LENGTH,
+  MAX_TEMPLATE_TITLE_PATTERN,
+  pageReportSorts,
   taskReportDueWindows,
   taskReportStatuses,
 } from "@pagehall/editor-schema";
@@ -586,6 +594,13 @@ export { isValidSpaceKey, normalizeSpaceKey, SPACE_KEY_PATTERN, suggestSpaceKey 
 export type { Person } from "./spaces/people.js";
 export type { PermissionChange, SpacePermissionEntry } from "./spaces/permissions.js";
 export type { PersonalSpaceForReview } from "./spaces/personal.js";
+export {
+  type DecisionReportPage,
+  MAX_DECISION_REPORT_PAGE,
+  type ReportDecision,
+  type ReportPage,
+  ReportService,
+} from "./spaces/reports.js";
 export {
   type PageMode,
   type PageWidth,

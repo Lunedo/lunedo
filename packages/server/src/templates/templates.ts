@@ -497,6 +497,7 @@ export class TemplateService {
       values: TemplateValues;
       placement: Placement;
       title?: string | undefined;
+      titlePattern?: string | undefined;
       mode?: PageMode | undefined;
     },
   ): Promise<TreeItem> {
@@ -506,13 +507,14 @@ export class TemplateService {
     );
     if (!template) throw new SpaceError("templateNotFound", "The template does not exist");
     const values = await this.#resolve(actor, template.fields, input.values, language);
-    const title =
-      input.title?.trim() ||
-      template.title
+    const filled = (pattern: string) =>
+      pattern
         .replace(TITLE_FIELD, (_match, key: string) => values.get(key)?.text ?? "")
         .replace(/\s+/g, " ")
-        .trim() ||
-      template.name;
+        .trim()
+        .slice(0, TEMPLATE_TITLE_MAX_LENGTH);
+    const title =
+      input.title?.trim() || filled(input.titlePattern ?? "") || filled(template.title) || template.name;
     const document = { ...template.document, content: fill(template.document.content, values) ?? [] };
     return this.#tree.create(actor, spaceId, {
       kind: "page",

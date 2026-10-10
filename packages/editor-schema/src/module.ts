@@ -61,6 +61,40 @@ export interface ListedAttachment {
   size: number;
 }
 
+export const pageReportSorts = ["modified", "created", "title"] as const;
+export type PageReportSort = (typeof pageReportSorts)[number];
+
+export interface PageReportRequest {
+  spaceId: string | null;
+  labels: readonly string[];
+  sort: PageReportSort;
+  reverse: boolean;
+  limit: number;
+}
+
+export interface ReportedPage {
+  title: string;
+  href: string;
+  author: string | null;
+  updatedAt: string;
+}
+
+export const decisionReportOrders = ["newest", "oldest"] as const;
+export type DecisionReportOrder = (typeof decisionReportOrders)[number];
+
+export interface DecisionReportRequest {
+  spaceId: string | null;
+  labels: readonly string[];
+  parentId: string | null;
+  order: DecisionReportOrder;
+}
+
+export interface ReportedDecision {
+  text: string;
+  page: { title: string; href: string };
+  date: string;
+}
+
 export interface RenderLabels {
   noAccess: string;
   inTrash: string;
@@ -79,6 +113,14 @@ export interface RenderLabels {
   noChildPages: string;
   attachmentList: string;
   noAttachments: string;
+  pageReport: string;
+  noReportedPages: string;
+  decisionReport: string;
+  noReportedDecisions: string;
+  reportTitle: string;
+  reportAuthor: string;
+  reportUpdated: string;
+  templateButton: string;
   callout: Record<"info" | "tip" | "note" | "warning" | "error", string>;
 }
 
@@ -94,6 +136,8 @@ export interface RenderContext {
   childPages?: (request: ChildPagesRequest) => readonly ListedPage[] | null;
   attachmentList?: () => readonly ListedAttachment[] | null;
   formatSize?: (bytes: number) => string;
+  pageReport?: (request: PageReportRequest) => readonly ReportedPage[] | null;
+  decisionReport?: (request: DecisionReportRequest) => readonly ReportedDecision[] | null;
 }
 
 interface BaseRenderer {

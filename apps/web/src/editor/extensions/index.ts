@@ -37,8 +37,10 @@ import { TaskItemView } from "../nodes/task-item-view.js";
 import { TaskReportView } from "../nodes/task-report-view.js";
 import { hiddenCaret, type PresenceUser, selectionAttributes } from "../presence.js";
 import { searchPeople } from "../references.js";
+import { DecisionReportView, PageReportView } from "../reports.js";
 import { schemaExtensions } from "../schema/extensions.js";
 import { slashSuggestionItems } from "../slash-items.js";
+import { TemplateButtonView } from "../template-button.js";
 import { BlockFormatting } from "./block-formatting.js";
 import { DocumentEdges } from "./document-edges.js";
 import { FileDrop } from "./file-drop.js";
@@ -76,6 +78,9 @@ const BLOCK_VIEWS: Record<string, ComponentType<ReactNodeViewProps>> = {
   taskReport: TaskReportView,
   childPages: ChildPagesView,
   attachmentList: AttachmentListView,
+  pageReport: PageReportView,
+  decisionReport: DecisionReportView,
+  templateButton: TemplateButtonView,
   topicUpdate: TopicUpdateView,
   decision: DecisionView,
 };

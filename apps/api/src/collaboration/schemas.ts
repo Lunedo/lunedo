@@ -1,8 +1,16 @@
 import {
   ANCHOR_CONTEXT_LENGTH,
+  cleanLabel,
+  DEFAULT_PAGE_REPORT_LIMIT,
+  decisionReportOrders,
   EXCERPT_MAX_LENGTH,
   ITEM_TITLE_MAX_LENGTH,
+  MAX_DECISION_REPORT_PAGE,
+  MAX_FILTER_LABELS,
+  MAX_FILTER_PAGES,
+  MAX_PAGE_REPORT_LIMIT,
   MAX_QUOTE_LENGTH,
+  pageReportSorts,
   taskReportDueWindows,
   taskReportStatuses,
   treeItemKinds,
@@ -257,6 +265,8 @@ export const taskQuerySchema = z
     seriesId: uuid(
       "Only tasks written in the meetings of this meeting series. Meetings that were skipped are left out.",
     ).optional(),
+    pageIds: pageIdList("Only tasks on these pages and their descendants."),
+    labels: labelList("Only tasks on pages with at least one of these labels."),
     status: z.enum(taskReportStatuses).default("open").describe("`open` (default), `done` or `all`."),
     due: z
       .enum(taskReportDueWindows)
@@ -464,3 +474,124 @@ export const setHomePageSchema = z
   })
   .strict()
   .describe("The new organization home page.");
+
+export function pageIdList(description: string) {
+  return z
+    .string()
+    .max(800)
+    .transform((value) => value.split(",").filter(Boolean))
+    .pipe(z.array(uuid("Page ID.")).max(MAX_FILTER_PAGES))
+    .optional()
+    .describe(`${description} Up to ${MAX_FILTER_PAGES} page IDs, separated by commas.`);
+}
+
+export function labelList(description: string) {
+  return z
+    .string()
+    .max(2100)
+    .transform((value) => value.split(",").filter(Boolean))
+    .pipe(
+      z
+        .array(
+          z
+            .string()
+            .refine((label) => cleanLabel(label) === label, "Expected a lowercase label without spaces")
+            .describe("A label."),
+        )
+        .max(MAX_FILTER_LABELS),
+    )
+    .optional()
+    .describe(`${description} Up to ${MAX_FILTER_LABELS} labels, separated by commas.`);
+}
+
+export const pageReportQuerySchema = z
+  .object({
+    spaceId: uuid("Only pages in this space. Leave it out for every space the caller can read.").optional(),
+    labels: labelList("Only pages with at least one of these labels."),
+    sort: z
+      .enum(pageReportSorts)
+      .default("modified")
+      .describe("`modified` (default) or `created`, newest first, or `title` from A to Z."),
+    reverse: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true")
+      .describe("`true` reverses the order."),
+    limit: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(MAX_PAGE_REPORT_LIMIT)
+      .default(DEFAULT_PAGE_REPORT_LIMIT)
+      .describe(`Maximum number of pages, 1 to ${MAX_PAGE_REPORT_LIMIT}.`),
+  })
+  .strict();
+
+export const reportPageSchema = z
+  .object({
+    id: uuid("ID of the page."),
+    title: z.string().describe("Title of the page."),
+    path: z.string().describe("Path of the page in the web interface."),
+    spaceId: uuid("Space of the page."),
+    author: z
+      .object({ id: uuid("Account ID."), name: z.string().describe("Name as the caller may see it.") })
+      .nullable()
+      .describe("Who created the page, or null when the caller may not see that person."),
+    createdAt: timestamp("When the page was created."),
+    updatedAt: timestamp("When the content last changed."),
+  })
+  .describe("A page in a page report.");
+
+export const exampleReportPage = {
+  id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11",
+  title: "VPN access for remote staff",
+  path: "/spaces/ITOPS/pages/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11/vpn-access-for-remote-staff",
+  spaceId: exampleSpace.id,
+  author: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger" },
+  createdAt: "2026-09-01T08:00:00.000Z",
+  updatedAt: "2026-10-06T07:00:00.000Z",
+};
+
+export const decisionReportQuerySchema = z
+  .object({
+    spaceId: uuid(
+      "Only decisions in this space. Leave it out for every space the caller can read.",
+    ).optional(),
+    labels: labelList("Only decisions on pages with at least one of these labels."),
+    parentId: uuid("Only decisions on direct children of this page.").optional(),
+    order: z
+      .enum(decisionReportOrders)
+      .default("newest")
+      .describe("`newest` (default) or `oldest` first, by the date of the page."),
+    cursor: z.string().max(200).optional().describe("Cursor from `nextCursor` of the previous page."),
+    limit: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(MAX_DECISION_REPORT_PAGE)
+      .default(50)
+      .describe(`Maximum number of decisions, 1 to ${MAX_DECISION_REPORT_PAGE}.`),
+  })
+  .strict();
+
+export const reportDecisionSchema = z
+  .object({
+    id: uuid("ID of the decision."),
+    text: z.string().describe("The decision as plain text."),
+    page: z
+      .object({
+        id: uuid("ID of the page."),
+        title: z.string().describe("Title of the page."),
+        path: z.string().describe("Path of the page in the web interface."),
+      })
+      .describe("The page the decision was made on."),
+    date: timestamp("When that page was created."),
+  })
+  .describe("A decision in a decision report.");
+
+export const decisionReportSchema = z
+  .object({
+    items: z.array(reportDecisionSchema).describe("Decisions in the requested order."),
+    nextCursor: z.string().nullable().describe("Cursor for the next page, or null on the last page."),
+  })
+  .describe("Decisions.");

@@ -125,6 +125,26 @@ describe.skipIf(!baseUrl)("page templates", () => {
     expect(JSON.stringify((await test.services.documents.snapshot(page.id))?.document)).toContain(today);
   });
 
+  it("uses the title pattern of a template button instead of the template's title", async () => {
+    const context = await setup();
+    const template = await test.services.templates.create(
+      context.editor,
+      { level: "space", spaceId: context.space.id },
+      projectTemplate,
+    );
+    const create = (titlePattern: string) =>
+      test.services.templates.instantiate(context.editor, context.space.id, {
+        templateId: template.id,
+        values: { name: "Atlas", start: "2026-11-02", lead: context.editorId, size: "Large" },
+        placement: { parentId: null },
+        titlePattern,
+      });
+    expect((await create("{start}  {name} kick-off")).title).toBe("2 Nov 2026 Atlas kick-off");
+    expect((await create("{unknown} notes")).title).toBe("notes");
+    expect((await create("{unknown}")).title).toBe("Project Atlas on 2 Nov 2026");
+    expect((await create("")).title).toBe("Project Atlas on 2 Nov 2026");
+  });
+
   it("does not change pages created before the template changed", async () => {
     const context = await setup();
     const template = await test.services.templates.create(

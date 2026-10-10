@@ -1,6 +1,7 @@
 import {
   type ChildPagesRequest,
   childPagesRequest,
+  type DecisionReportRequest,
   type DocumentJson,
   editorSchemaVersion,
   emptyDocument,
@@ -14,6 +15,9 @@ import {
   MAX_CHILD_PAGE_DEPTH,
   migrateDocument,
   type NodeJson,
+  type PageReportRequest,
+  type ReportedDecision,
+  type ReportedPage,
   renderMarkdown,
   slugify,
   type ValidationProblem,
@@ -127,6 +131,12 @@ const childPagesDefaults = { pageId: null, depth: null, sort: "tree", reverse: f
 export interface PageListings {
   childPages: ReadonlyMap<string, readonly ListedPage[]>;
   attachments: readonly ListedAttachment[] | null;
+  pageReports?: ReadonlyMap<string, readonly ReportedPage[]>;
+  decisionReports?: ReadonlyMap<string, readonly ReportedDecision[]>;
+}
+
+export function reportKey(request: PageReportRequest | DecisionReportRequest): string {
+  return JSON.stringify(Object.entries(request).sort(([left], [right]) => left.localeCompare(right)));
 }
 
 interface MutablePage {
@@ -139,7 +149,7 @@ export function childPagesKey(request: ChildPagesRequest): string {
   return JSON.stringify([request.pageId, request.depth, request.sort, request.reverse]);
 }
 
-function blocksOfType(node: NodeJson, type: string): NodeJson[] {
+export function blocksOfType(node: NodeJson, type: string): NodeJson[] {
   return [
     ...(node.type === type ? [node] : []),
     ...(node.content ?? []).flatMap((child) => blocksOfType(child, type)),
@@ -161,6 +171,9 @@ export function renderPageMarkdown(
           childPages: (request: ChildPagesRequest) => listings.childPages.get(childPagesKey(request)) ?? [],
           attachmentList: () => listings.attachments,
           attachment: (id: string) => ({ href: `/api/v1/attachments/${id}/content` }),
+          pageReport: (request: PageReportRequest) => listings.pageReports?.get(reportKey(request)) ?? [],
+          decisionReport: (request: DecisionReportRequest) =>
+            listings.decisionReports?.get(reportKey(request)) ?? [],
         }
       : {}),
     mention: (id) => {

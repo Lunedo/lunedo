@@ -40,6 +40,7 @@ export type {
   ImportSource,
   MacroConverter,
   MacroImportContext,
+  MacroReferences,
   SourceContent,
   SourceElement,
 } from "./importing.js";
@@ -58,6 +59,9 @@ export {
   type ChildPageSort,
   type ChildPagesRequest,
   childPageSorts,
+  type DecisionReportOrder,
+  type DecisionReportRequest,
+  decisionReportOrders,
   defineModule,
   type EditorModule,
   type Heading,
@@ -70,8 +74,13 @@ export {
   type NodeDefinition,
   optional,
   type PageLinkTarget,
+  type PageReportRequest,
+  type PageReportSort,
+  pageReportSorts,
   type RenderContext,
   type RenderLabels,
+  type ReportedDecision,
+  type ReportedPage,
   type ResolvedPageLink,
   required,
 } from "./module.js";
@@ -85,12 +94,25 @@ export {
 } from "./modules/listings.js";
 export { MAX_LATEX_LENGTH, MAX_MACRO_DATA_BYTES } from "./modules/macros.js";
 export {
+  DEFAULT_PAGE_REPORT_LIMIT,
+  decisionReportRequest,
+  MAX_PAGE_REPORT_LIMIT,
+  pageReportRequest,
+  simpleCql,
   type TaskReportDue,
   type TaskReportStatus,
   taskReportDueWindows,
   taskReportStatuses,
 } from "./modules/reports.js";
-export { MAX_PLACEHOLDER_LENGTH, TEMPLATE_FIELD_KEY } from "./modules/templates.js";
+export {
+  MAX_PLACEHOLDER_LENGTH,
+  MAX_TEMPLATE_BUTTON_LABEL,
+  MAX_TEMPLATE_TITLE_PATTERN,
+  TEMPLATE_FIELD_KEY,
+  templateFieldKey,
+  templateTitlePattern,
+  titlePatternFields,
+} from "./modules/templates.js";
 export { defaultLabels, formatBytes, MAX_EXPENSIVE_RENDER_COST } from "./render.js";
 export { escapeHtml, slugify } from "./text.js";
 export {
@@ -107,11 +129,16 @@ export {
   type CalloutVariant,
   type ContentColor,
   calloutVariants,
+  cleanLabel,
   codeLanguages,
   contentColors,
   isAllowedHref,
   isIsoDate,
+  isTemplateId,
+  MAX_FILTER_LABELS,
+  MAX_FILTER_PAGES,
   MAX_HREF_LENGTH,
+  MAX_LABEL_LENGTH,
   type TextAlignment,
   textAlignments,
 } from "./values.js";

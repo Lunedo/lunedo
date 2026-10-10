@@ -2,6 +2,7 @@ import {
   ITEM_DESCRIPTION_MAX_LENGTH,
   ITEM_TITLE_MAX_LENGTH,
   LABEL_MAX_LENGTH,
+  MAX_TEMPLATE_TITLE_PATTERN,
   pageModes,
   pageWidths,
   SPACE_DESCRIPTION_MAX_LENGTH,
@@ -382,10 +383,19 @@ export const createItemSchema = z
           .describe(
             "Values of the template's input fields by key. Dates as `YYYY-MM-DD` (default today), people as account IDs, choices as one of the options.",
           ),
+        titlePattern: z
+          .string()
+          .max(MAX_TEMPLATE_TITLE_PATTERN)
+          .optional()
+          .describe(
+            "Title with `{key}` for input fields, used instead of the template's title, as a template button sets it. Unknown keys become empty.",
+          ),
       })
       .strict()
       .optional()
-      .describe("Create the page from a template. The title may be left empty to use the template's title."),
+      .describe(
+        "Create the page from a template. The title may be left empty to use the title pattern or the template's title.",
+      ),
     link: z
       .object({
         itemId: uuid("Page or folder to link to, in any space the caller can read.").nullable().optional(),

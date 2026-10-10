@@ -19,13 +19,22 @@ export interface MacroImportContext {
   blocks(content: readonly SourceContent[]): NodeJson[];
   inline(content: readonly SourceContent[]): NodeJson[];
   attachment(reference: SourceElement, page: SourceElement | null): ImportedAttachment | null;
-  page(reference: SourceElement): string | null;
+  page(reference: SourceElement, options?: { formerTitles?: boolean }): string | null;
+  pageById(sourceId: string): string | null;
+  space(key: string | null): string | null;
+  template(sourceId: string): string | null;
+}
+
+export interface MacroReferences {
+  readonly pageIds?: readonly string[];
+  readonly pageTitles?: readonly string[];
 }
 
 export interface MacroConverter {
   readonly source: ImportSource;
   readonly macros: readonly string[];
   readonly inline?: boolean;
+  references?(macro: SourceElement): MacroReferences;
   convert(macro: SourceElement, context: MacroImportContext): NodeJson[] | null;
 }
 
@@ -73,6 +82,33 @@ export function macroReference(macro: SourceElement, parameter: string, name: st
     return null;
   };
   return search(found);
+}
+
+export function macroReferences(macro: SourceElement, parameter: string, name: string): SourceElement[] {
+  const found = macroParameter(macro, parameter);
+  if (!found) return [];
+  const result: SourceElement[] = [];
+  const search = (node: SourceElement) => {
+    for (const child of sourceElements(node)) {
+      if (child.name === name) result.push(child);
+      else search(child);
+    }
+  };
+  search(found);
+  return result;
+}
+
+export function listValues(value: string | null): string[] {
+  return (value ?? "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+}
+
+export function macroSpaceKeys(macro: SourceElement, parameter: string): string[] {
+  const references = macroReferences(macro, parameter, "ri:space");
+  if (references.length > 0) return references.map((reference) => reference.attributes["ri:space-key"] ?? "");
+  return listValues(macroText(macro, parameter));
 }
 
 export function richBody(macro: SourceElement): SourceElement | null {

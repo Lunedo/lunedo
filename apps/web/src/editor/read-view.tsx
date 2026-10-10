@@ -15,6 +15,13 @@ import { useOpenPath } from "./context.js";
 import { anchorFromSelection } from "./dom-anchor.js";
 import { AttachmentList, ChildPagesList, childPagesFromAttrs, fileTypesOf } from "./listings.js";
 import { followTitleLink, pagePath, type References, rememberReferences } from "./references.js";
+import {
+  DecisionReportList,
+  decisionReportFromAttrs,
+  PageReportTable,
+  pageReportFromAttrs,
+} from "./reports.js";
+import { TemplateButton, templateButtonFromAttrs } from "./template-button.js";
 import "./editor.css";
 
 export const FOLLOW_PATH = "/follow-link";
@@ -63,6 +70,14 @@ export function readViewContext(
       noChildPages: t("editor.childPages.empty"),
       attachmentList: t("editor.attachmentList.title"),
       noAttachments: t("editor.attachmentList.empty"),
+      pageReport: t("editor.pageReport.title"),
+      noReportedPages: t("editor.pageReport.empty"),
+      decisionReport: t("editor.decisionReport.title"),
+      noReportedDecisions: t("editor.decisionReport.empty"),
+      reportTitle: t("editor.pageReport.page"),
+      reportAuthor: t("editor.pageReport.author"),
+      reportUpdated: t("editor.pageReport.updated"),
+      templateButton: t("editor.templateButton.defaultLabel"),
       callout: {
         info: t("editor.callout.info"),
         tip: t("editor.callout.tip"),
@@ -142,6 +157,9 @@ export function PageReadView({
   const [reports, setReports] = useState<HTMLElement[]>([]);
   const [childPages, setChildPages] = useState<HTMLElement[]>([]);
   const [attachmentLists, setAttachmentLists] = useState<HTMLElement[]>([]);
+  const [pageReports, setPageReports] = useState<HTMLElement[]>([]);
+  const [decisionReports, setDecisionReports] = useState<HTMLElement[]>([]);
+  const [templateButtons, setTemplateButtons] = useState<HTMLElement[]>([]);
   const [selection, setSelection] = useState<{ anchor: TextAnchor; top: number; left: number } | null>(null);
   const { taskStatuses, canToggleTask, onToggleTask, openThreads = [], activeThread = null } = collaboration;
   const html = useMemo(() => {
@@ -168,6 +186,9 @@ export function PageReadView({
     setReports(placeholders(".ph-task-report"));
     setChildPages(placeholders(".ph-child-pages"));
     setAttachmentLists(placeholders(".ph-attachment-list"));
+    setPageReports(placeholders(".ph-page-report"));
+    setDecisionReports(placeholders(".ph-decision-report"));
+    setTemplateButtons(placeholders(".ph-template-button"));
   }, [html]);
 
   useLayoutEffect(() => {
@@ -318,6 +339,18 @@ export function PageReadView({
       {attachmentLists.map((element) =>
         createPortal(
           <AttachmentList pageId={pageId} fileTypes={fileTypesOf(element.dataset.fileTypes ?? "")} />,
+          element,
+        ),
+      )}
+      {pageReports.map((element) =>
+        createPortal(<PageReportTable request={pageReportFromAttrs(element.dataset)} />, element),
+      )}
+      {decisionReports.map((element) =>
+        createPortal(<DecisionReportList request={decisionReportFromAttrs(element.dataset)} />, element),
+      )}
+      {templateButtons.map((element) =>
+        createPortal(
+          <TemplateButton button={templateButtonFromAttrs(element.dataset)} parentId={pageId} />,
           element,
         ),
       )}
