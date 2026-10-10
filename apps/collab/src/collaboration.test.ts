@@ -1,5 +1,12 @@
+import { randomUUID } from "node:crypto";
 import { documentFromYDoc } from "@pagehall/editor-schema/yjs";
-import { accountPrincipal, type ServerRuntime, SYSTEM } from "@pagehall/server";
+import {
+  AUDIT_CHANGES_CHANNEL,
+  accountPrincipal,
+  type ServerRuntime,
+  SPACE_CHANGES_CHANNEL,
+  SYSTEM,
+} from "@pagehall/server";
 import { testDatabaseBaseUrl, testRedisUrl } from "@pagehall/server/testing";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
@@ -19,6 +26,8 @@ import { MAX_UPDATE_BYTES, STORE_DEBOUNCE_MS } from "./limits.js";
 const baseUrl = testDatabaseBaseUrl();
 const redisUrl = testRedisUrl();
 
+const DELIVERED_CHANNEL = "pagehall_test_delivered";
+
 function textOf(doc: Y.Doc): string {
   return JSON.stringify(documentFromYDoc(doc));
 }
@@ -35,11 +44,13 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
   let first: Node;
   let second: Node;
   const clients: Client[] = [];
+  const delivered = new Set<string>();
 
   beforeAll(async () => {
     cluster = await createCluster(baseUrl ?? "");
     first = await cluster.node();
     second = await cluster.node();
+    await first.runtime.listener.listen(DELIVERED_CHANNEL, (payload) => delivered.add(payload));
   });
 
   afterAll(async () => {
@@ -98,6 +109,16 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
     );
     expect(org.id).toBeTruthy();
     return { ...target, account, token: await signIn(cluster.runtimes[0] as ServerRuntime, account) };
+  }
+
+  async function notify(channel: string, payload: object): Promise<void> {
+    await first.runtime.pool.query("select pg_notify($1, $2)", [channel, JSON.stringify(payload)]);
+  }
+
+  async function signalsDelivered(): Promise<void> {
+    const marker = randomUUID();
+    await notify(DELIVERED_CHANNEL, { marker });
+    await waitFor(() => delivered.has(JSON.stringify({ marker })));
   }
 
   async function snapshot(itemId: string) {
@@ -341,6 +362,7 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
 
   it("logs every recheck and revocation with page, account, node, reason, duration and result only", async () => {
     const target = await editor();
+    await signalsDelivered();
     const client = open(first.url, target.itemId, { token: target.token });
     await client.authenticated;
     const logged = vi.spyOn(first.runtime.logger, "info");
@@ -368,6 +390,56 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
       });
       expect(lines.slice(0, -1).every((fields) => fields.result === "kept")).toBe(true);
     } finally {
+      logged.mockRestore();
+    }
+  });
+
+  it("names the most specific signal when one recheck answers several", async () => {
+    const target = await editor();
+    const client = open(first.url, target.itemId, { token: target.token });
+    await client.authenticated;
+    const services = first.runtime.services;
+    const explain = services.authorization.explain.bind(services.authorization);
+    let holding: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      holding = resolve;
+    });
+    let release: () => void = () => undefined;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const checking = vi.spyOn(services.authorization, "explain").mockImplementation(async (...args) => {
+      if (args[2].id === target.itemId) {
+        holding();
+        await released;
+      }
+      return explain(...args);
+    });
+    const logged = vi.spyOn(first.runtime.logger, "info");
+    try {
+      await notify(SPACE_CHANGES_CHANNEL, { spaceId: target.space.id, kind: "tree", itemId: null });
+      await held;
+      logged.mockClear();
+      await notify(AUDIT_CHANGES_CHANNEL, {
+        scope: "organization",
+        organizationId: target.org.id,
+        target: "group",
+      });
+      await notify(SPACE_CHANGES_CHANNEL, { spaceId: target.space.id, kind: "access", itemId: null });
+      await signalsDelivered();
+      release();
+      await waitFor(() => rechecksOf(logged.mock.calls, target.itemId).length === 2);
+      expect(rechecksOf(logged.mock.calls, target.itemId)[1]).toEqual({
+        itemId: target.itemId,
+        accountId: target.account,
+        node: services.documents.origin,
+        reason: "access",
+        durationMs: expect.any(Number),
+        result: "kept",
+      });
+    } finally {
+      release();
+      checking.mockRestore();
       logged.mockRestore();
     }
   });

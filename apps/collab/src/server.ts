@@ -70,7 +70,8 @@ const RECHECKED_AUDIT_TARGETS = new Set(["group", "account", "organization", "ro
 const STORE_ORIGIN = { source: "local", skipStoreHooks: true } as const;
 const REJECTED_UPDATE_TYPES = new Set([1, 2]);
 
-type RecheckReason = "access" | "tree" | "audit" | "interval" | "reconnect" | "connected";
+const RECHECK_REASONS = ["access", "tree", "audit", "reconnect", "interval", "connected"] as const;
+type RecheckReason = (typeof RECHECK_REASONS)[number];
 type RecheckResult = "kept" | "sessionEnded" | "permissionRevoked" | "unavailable";
 
 const RECHECK_PRIORITY: Record<RecheckReason, number> = {
@@ -105,6 +106,10 @@ function auditAffected(signal: AuditChangeSignal): Affected {
 
 function priorityOf(recheck: Recheck): number {
   return Math.min(...[...recheck.reasons].map((reason) => RECHECK_PRIORITY[reason]));
+}
+
+function reasonOf(recheck: Recheck): RecheckReason {
+  return RECHECK_REASONS.find((reason) => recheck.reasons.has(reason)) ?? "connected";
 }
 
 class Refusal {
@@ -253,7 +258,7 @@ export async function createCollabServer(options: {
         itemId: context.itemId,
         accountId: context.accountId,
         node,
-        reason: [...recheck.reasons].join(","),
+        reason: reasonOf(recheck),
         durationMs: Date.now() - recheck.since,
         result,
       },
