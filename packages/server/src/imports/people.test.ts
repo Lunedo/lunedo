@@ -700,6 +700,52 @@ describe.skipIf(!baseUrl)("Confluence imports: people, comments, history and per
     ).rejects.toMatchObject({ code: "selfExtension" });
   });
 
+  it("never hands the access of an earlier placeholder to an account through an e-mail match", async () => {
+    const w = await world();
+    const first = await harness.imported(peopleExport(), {
+      organizationId: w.organizationId,
+      admin: w.admin,
+      key: `E${randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase()}`,
+    });
+    const carol = await person(first.id, CAROL.accountId);
+    const secret = await page(first.id, PEOPLE_PAGE.secret);
+    const list = ["User id,User name,email", `${CAROL.accountId},Carol,${await emailOf(w.admin)}`].join("\n");
+    const second = await run({ ...w, userList: list });
+    expect(await person(second.id, CAROL.accountId)).toBe(carol);
+    const merged = await test.database.execute<{ merged_into_id: string | null }>(
+      sql`select merged_into_id from accounts where id = ${carol}`,
+    );
+    expect(merged.rows[0]?.merged_into_id).toBeNull();
+    expect(
+      (await test.services.authorization.explain(as(w.admin), "item.view", { type: "item", id: secret }))
+        .allowed,
+    ).toBe(false);
+    const intruder = ["User id,User name,email", `${CAROL.accountId},Carol,intruder@elsewhere.example`].join(
+      "\n",
+    );
+    const third = await run({ ...w, userList: intruder });
+    await test.services.imports.resolution.uploadUserList(as(w.admin), third.id, intruder);
+    const email = await test.database.execute<{ email: string | null }>(
+      sql`select email from accounts where id = ${carol}`,
+    );
+    expect(email.rows[0]?.email).toBeNull();
+  });
+
+  it("refuses to map a group that opens restricted pages to a group of the administrator", async () => {
+    const w = await world();
+    const result = await run(w);
+    const own = await test.services.groups.create(SYSTEM, w.organizationId, { name: "Admins of HR" });
+    await test.services.groups.addMember(SYSTEM, own.id, w.admin);
+    await expect(
+      test.services.imports.resolution.mapGroup(as(w.admin), result.id, "hr-team", { groupId: own.id }),
+    ).rejects.toMatchObject({ code: "selfExtension" });
+    const secret = await page(result.id, PEOPLE_PAGE.secret);
+    expect(
+      (await test.services.authorization.explain(as(w.admin), "item.view", { type: "item", id: secret }))
+        .allowed,
+    ).toBe(false);
+  });
+
   it("resolves remaining placeholders with a user list uploaded after accepting", async () => {
     const w = await world();
     const result = await run(w);

@@ -11,7 +11,7 @@ import { signalSpaceChange } from "../spaces/signals.js";
 import { type HolderValidation, insertGrants } from "../spaces/spaces.js";
 import { visibleItem } from "../spaces/visibility.js";
 import { ImportError } from "./errors.js";
-import { holdsAccess, mapPlaceholder, memberByEmail } from "./mapping.js";
+import { holdsAccess, holdsAccessElsewhere, mapPlaceholder, memberByEmail } from "./mapping.js";
 import { signalImportChange } from "./signals.js";
 import { parseUserList } from "./user-list.js";
 
@@ -267,13 +267,14 @@ export class ImportResolutionService {
       for (const placeholder of open.rows) {
         const entry = entries.get(placeholder.source_id);
         if (!entry) continue;
+        const guarded = await holdsAccessElsewhere(tx, placeholder.id, importId);
         const member = entry.email ? await memberByEmail(tx, row.organization_id, entry.email) : null;
         const ownAccess =
           member !== null &&
           actor.type === "account" &&
           actor.id === member &&
           (await holdsAccess(tx, placeholder.id));
-        if (member && !ownAccess) {
+        if (member && !ownAccess && !guarded) {
           await mapPlaceholder(tx, this.#audit, actor, {
             organizationId: row.organization_id,
             importId,
@@ -292,7 +293,7 @@ export class ImportResolutionService {
           );
           named += 1;
         }
-        if (entry.email && !placeholder.email) {
+        if (entry.email && !placeholder.email && !guarded) {
           await tx.execute(sql`
             update accounts set email = ${entry.email}, updated_at = now() where id = ${placeholder.id}
               and not exists (select 1 from accounts o where lower(o.email) = lower(${entry.email}))`);
@@ -364,6 +365,18 @@ export class ImportResolutionService {
           select id from groups where id = ${input.groupId} and organization_id = ${row.organization_id}`);
         if (!group.rows[0]) throw new ImportError("groupNotFound", "Choose a group of this organization.");
         groupId = input.groupId;
+        const own = await tx.execute<{ own: boolean }>(sql`
+          select exists (select 1 from group_members
+            where group_id = ${groupId} and account_id = ${actorIdOf(actor)}
+              and (expires_at is null or expires_at > now()))
+            and exists (select 1 from import_grants where import_id = ${importId} and group_key = ${key}
+              and item_id is not null) as own`);
+        if (own.rows[0]?.own) {
+          throw new ImportError(
+            "selfExtension",
+            "You belong to this group, and it opens restricted pages. Ask another administrator to map it.",
+          );
+        }
       }
       await tx.execute(sql`
         update import_groups set group_id = ${groupId}, mapped_by = ${actorIdOf(actor)}, mapped_at = now()

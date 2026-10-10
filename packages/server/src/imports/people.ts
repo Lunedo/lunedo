@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { type Principal, SYSTEM } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Transaction } from "../database/database.js";
-import { mapPlaceholder, memberByEmail } from "./mapping.js";
+import { holdsAccessElsewhere, mapPlaceholder, memberByEmail } from "./mapping.js";
 import type { SourcePerson } from "./source.js";
 
 export const ATLASSIAN_ACCOUNT = "atlassian";
@@ -58,6 +58,7 @@ async function improvePlaceholder(
   placeholderId: string,
   externalId: string,
   entry: DirectoryEntry,
+  guarded: boolean,
 ): Promise<void> {
   const name = cleanName(entry.name);
   if (name) {
@@ -65,7 +66,7 @@ async function improvePlaceholder(
       update accounts set name = ${name}, updated_at = now()
       where id = ${placeholderId} and state = 'placeholder' and name = ${externalId}`);
   }
-  if (entry.email && (await emailIsFree(tx, entry.email))) {
+  if (!guarded && entry.email && (await emailIsFree(tx, entry.email))) {
     await tx.execute(sql`
       update accounts set email = ${entry.email}, updated_at = now()
       where id = ${placeholderId} and state = 'placeholder' and email is null`);
@@ -99,8 +100,9 @@ export async function resolvePerson(
   if (known) {
     const current = known.merged_into_id ?? known.account_id;
     if (known.state !== "placeholder" || known.merged_into_id !== null || !entry) return current;
+    const guarded = await holdsAccessElsewhere(tx, known.account_id, input.importId);
     const member = entry.email ? await memberByEmail(tx, input.organizationId, entry.email) : null;
-    if (member) {
+    if (member && !guarded) {
       await mapPlaceholder(tx, audit, input.actor ?? SYSTEM, {
         organizationId: input.organizationId,
         importId: input.importId,
@@ -111,7 +113,7 @@ export async function resolvePerson(
       });
       return member;
     }
-    await improvePlaceholder(tx, known.account_id, external.id, entry);
+    await improvePlaceholder(tx, known.account_id, external.id, entry, guarded);
     return known.account_id;
   }
   let accountId = entry?.email ? await memberByEmail(tx, input.organizationId, entry.email) : null;
