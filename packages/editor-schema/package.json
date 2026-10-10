@@ -34,7 +34,7 @@
   "dependencies": {
     "@tiptap/y-tiptap": "3.0.9",
     "hast-util-to-html": "^9.0.5",
-    "highlight.js": "~11.11.2",
+    "highlight.js": "~11.12.0",
     "katex": "^0.19.0",
     "lowlight": "^3.3.0",
     "prosemirror-model": "^1.25.12",
