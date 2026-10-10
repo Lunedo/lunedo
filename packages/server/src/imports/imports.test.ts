@@ -181,7 +181,7 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
       pages: 8,
       attachments: 3,
       people: 2,
-      macroKinds: 3,
+      macroKinds: 8,
       spaceKey: "SYN",
     });
     expect(ready.spaceName).toBe("Synthetic space");
@@ -255,14 +255,45 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
     const report = await test.services.imports.report(as(admin), result.id);
     const codes = Object.fromEntries(report.categories.map((row) => [row.code, row.count]));
     expect(codes).toMatchObject({
-      unsupportedMacro: 3,
+      unsupportedMacro: 1,
       externalPageLink: 1,
       missingAttachment: 1,
       attachmentFileMissing: 1,
       invalidLink: 1,
     });
     const macros = await test.services.imports.macros(as(admin), result.id);
-    expect(macros.map((macro) => macro.name).sort()).toEqual(["code", "info", "status"]);
+    expect(macros.map((macro) => macro.name)).toEqual(["roadmap"]);
+    const converted = all.filter((node) =>
+      [
+        "status",
+        "callout",
+        "codeBlock",
+        "tableOfContents",
+        "childPages",
+        "attachmentList",
+        "file",
+        "decision",
+      ].includes(node.type),
+    );
+    expect(converted.map((node) => node.type).sort()).toEqual([
+      "attachmentList",
+      "callout",
+      "childPages",
+      "codeBlock",
+      "codeBlock",
+      "decision",
+      "decision",
+      "file",
+      "status",
+      "tableOfContents",
+    ]);
+    const decisions = await test.database.execute<{ text: string; published: boolean }>(
+      sql`select text, published from decisions where item_id = ${alpha} order by published, text`,
+    );
+    expect(decisions.rows).toEqual([
+      { text: "", published: false },
+      { text: "Use the new VPN", published: true },
+    ]);
     const external = await test.services.imports.entries(as(admin), result.id, {
       code: "externalPageLink",
       limit: 10,

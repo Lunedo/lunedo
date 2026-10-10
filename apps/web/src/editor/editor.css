@@ -762,6 +762,25 @@ details.ph-expand > summary {
   @apply my-4 rounded-md border border-border bg-surface p-4;
 }
 
+.ph-content .ph-child-pages-block,
+.ph-content .ph-attachment-list-block {
+  @apply my-4 rounded-md border border-border bg-surface p-4;
+}
+
+.ph-content .ph-child-pages-block .ph-child-pages,
+.ph-content .ph-attachment-list-block .ph-attachment-list {
+  @apply my-0;
+}
+
+.ph-content .ph-child-pages,
+.ph-content .ph-attachment-list {
+  @apply my-4;
+}
+
+.ph-content .ph-child-pages ul ul {
+  @apply mt-1;
+}
+
 .ph-decision {
   @apply flex flex-col gap-1 rounded-md border-l-4 px-4 py-3;
   border-color: var(--ph-color-success);

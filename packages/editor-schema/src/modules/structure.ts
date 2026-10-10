@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { type MacroConverter, macroReference } from "../importing.js";
 import { attrOf, defineModule, optional, required } from "../module.js";
 import { element, htmlAttributes, markdownUrl } from "../text.js";
 import { imageAlignments, uuidValue } from "../values.js";
@@ -69,6 +70,18 @@ export const imageModule = defineModule({
   ],
 });
 
+const fileImporter: MacroConverter = {
+  source: "confluence",
+  macros: ["view-file", "viewpdf", "viewxls"],
+  convert: (macro, context) => {
+    const reference = macroReference(macro, "name", "ri:attachment");
+    if (!reference) return null;
+    const found = context.attachment(reference, macroReference(macro, "page", "ri:page"));
+    if (!found) return null;
+    return [{ type: "file", attrs: { attachmentId: found.attachmentId, name: found.name.slice(0, 255) } }];
+  },
+};
+
 export const fileModule = defineModule({
   name: "file",
   nodes: [
@@ -98,4 +111,5 @@ export const fileModule = defineModule({
       text: (node) => attrOf<string>(node, "name"),
     },
   ],
+  importers: [fileImporter],
 });

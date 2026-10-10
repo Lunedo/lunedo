@@ -3754,7 +3754,11 @@
       "file": "Image or file",
       "fileDescription": "Upload and insert an image or file",
       "decision": "Decision",
-      "decisionDescription": "Record a decision so it appears in the decision log"
+      "decisionDescription": "Record a decision so it appears in the decision log",
+      "childPages": "Child pages",
+      "childPagesDescription": "List of the pages below this page or another page",
+      "attachmentList": "Attachment list",
+      "attachmentListDescription": "List of the files attached to this page"
     },
     "mention": {
       "unknown": "Unknown person"
@@ -3809,7 +3813,8 @@
       "title": "Table of contents",
       "levels": "Up to level {level}",
       "empty": "Add headings to fill the table of contents.",
-      "untitled": "Untitled heading"
+      "untitled": "Untitled heading",
+      "fromLevel": "From level {level}"
     },
     "callout": {
       "change": "Change panel type",
@@ -4023,6 +4028,39 @@
     "topicUpdate": {
       "closed": "Closed",
       "unknown": "Topic"
+    },
+    "childPages": {
+      "title": "Child pages",
+      "empty": "No child pages you can see.",
+      "ofThisPageLater": "Pages created from this template list their own child pages here.",
+      "loadFailed": "The child pages could not be loaded.",
+      "scope": "Pages of",
+      "thisPage": "This page",
+      "otherPage": "Another page",
+      "page": "Page",
+      "searchPage": "Search for a page",
+      "depth": "Levels",
+      "levels": "{count, plural, one {# level} other {# levels}}",
+      "allLevels": "All levels",
+      "sort": "Order",
+      "sorts": {
+        "tree": "As in the page tree",
+        "title": "By title",
+        "created": "By creation date",
+        "modified": "By last change"
+      },
+      "reverse": "Reverse order"
+    },
+    "attachmentList": {
+      "title": "Attachments",
+      "empty": "No attachments on this page.",
+      "noneOfType": "No attachments of these file types.",
+      "ofThisPageLater": "Pages created from this template list their own attachments here.",
+      "loadFailed": "The attachments could not be loaded.",
+      "details": "{size}, version {version}",
+      "fileTypes": "File types",
+      "fileTypesHint": "File extensions separated by commas, for example pdf, docx. Leave empty to list every file.",
+      "fileTypesInvalid": "Enter up to {count} file extensions with letters and digits only, separated by commas, for example pdf, docx."
     }
   },
   "spaces": {

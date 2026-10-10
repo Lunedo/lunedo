@@ -134,6 +134,7 @@ export function extractDecisions(doc: DocumentJson): ExtractedDecision[] {
     if (!id || seen.has(id)) return;
     seen.add(id);
     const statement = node.content ?? [];
+    if (statement.every((block) => (block.content ?? []).length === 0)) return;
     decisions.push({
       id,
       topicId: stringOrNull(node.attrs?.topicId),

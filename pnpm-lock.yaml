@@ -450,6 +450,9 @@ importers:
       emojibase-data:
         specifier: ^17.0.0
         version: 17.0.0(emojibase@17.0.0)
+      highlight.js:
+        specifier: ~11.11.2
+        version: 11.11.2
       i18next:
         specifier: ^26.4.2
         version: 26.4.2(typescript@7.0.2)
@@ -614,6 +617,9 @@ importers:
       hast-util-to-html:
         specifier: ^9.0.5
         version: 9.0.5
+      highlight.js:
+        specifier: ~11.11.2
+        version: 11.11.2
       katex:
         specifier: ^0.19.0
         version: 0.19.0

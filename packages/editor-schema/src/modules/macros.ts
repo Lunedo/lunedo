@@ -1,5 +1,16 @@
 import katex from "katex";
 import { z } from "zod";
+import {
+  bodyBlocks,
+  boundedInteger,
+  type MacroConverter,
+  macroText,
+  richBody,
+  type SourceElement,
+  singleLine,
+  titleParagraph,
+} from "../importing.js";
+import type { NodeJson, ValidNode } from "../json.js";
 import type { Heading, HtmlRenderer } from "../module.js";
 import { attrOf, defineModule, optional, required } from "../module.js";
 import { element, escapeHtml, fenceFor, inlineCode, markdownUrl, prefixLines } from "../text.js";
@@ -40,6 +51,103 @@ function renderMath(latex: string, displayMode: boolean, renderer: HtmlRenderer)
   );
 }
 
+const CONFLUENCE_PANELS: Readonly<Record<string, string>> = {
+  info: "info",
+  tip: "tip",
+  note: "warning",
+  warning: "error",
+};
+
+const CONFLUENCE_STATUS_COLORS: Readonly<Record<string, string>> = {
+  grey: "gray",
+  gray: "gray",
+  red: "red",
+  yellow: "yellow",
+  green: "green",
+  blue: "blue",
+  purple: "purple",
+};
+
+const CONFLUENCE_DEFAULT_MAX_LEVEL = 6;
+
+const calloutImporter: MacroConverter = {
+  source: "confluence",
+  macros: Object.keys(CONFLUENCE_PANELS),
+  convert: (macro, context) => [
+    {
+      type: "callout",
+      attrs: { variant: CONFLUENCE_PANELS[macro.attributes["ac:name"] ?? ""] ?? "info" },
+      content: [...titleParagraph(macroText(macro, "title")), ...bodyBlocks(macro, context)],
+    },
+  ],
+};
+
+const expandImporter: MacroConverter = {
+  source: "confluence",
+  macros: ["expand"],
+  convert: (macro, context) => [
+    {
+      type: "expand",
+      attrs: { title: singleLine(macroText(macro, "title")).slice(0, 500) },
+      content: bodyBlocks(macro, context),
+    },
+  ],
+};
+
+const statusImporter: MacroConverter = {
+  source: "confluence",
+  macros: ["status"],
+  inline: true,
+  convert: (macro) => [
+    {
+      type: "status",
+      attrs: {
+        text: singleLine(macroText(macro, "title")),
+        color: CONFLUENCE_STATUS_COLORS[(macroText(macro, "colour") ?? "").toLowerCase()] ?? "gray",
+      },
+    },
+  ],
+};
+
+function levelOf(macro: SourceElement, name: string, fallback: number): number | null {
+  const value = macroText(macro, name);
+  if (value === null || value.length === 0) return fallback;
+  const level = boundedInteger(value, 1, 7);
+  return level === null ? null : Math.min(level, 6);
+}
+
+function tableOfContentsFrom(macro: SourceElement): NodeJson | null {
+  if ((macroText(macro, "include") ?? "").length > 0 || (macroText(macro, "exclude") ?? "").length > 0) {
+    return null;
+  }
+  const minLevel = levelOf(macro, "minLevel", 1);
+  const maxLevel = levelOf(macro, "maxLevel", CONFLUENCE_DEFAULT_MAX_LEVEL);
+  if (minLevel === null || maxLevel === null || minLevel > maxLevel) return null;
+  return { type: "tableOfContents", attrs: { minLevel, maxLevel } };
+}
+
+const tableOfContentsImporters: MacroConverter[] = [
+  {
+    source: "confluence",
+    macros: ["toc"],
+    convert: (macro) => {
+      const toc = tableOfContentsFrom(macro);
+      return toc ? [toc] : null;
+    },
+  },
+  {
+    source: "confluence",
+    macros: ["toc-zone"],
+    convert: (macro, context) => {
+      const toc = tableOfContentsFrom(macro);
+      if (!toc) return null;
+      const body = richBody(macro);
+      const content = body ? context.blocks(body.children) : [];
+      return macroText(macro, "location")?.toLowerCase() === "bottom" ? [...content, toc] : [toc, ...content];
+    },
+  },
+];
+
 export const calloutModule = defineModule({
   name: "callout",
   nodes: [
@@ -66,6 +174,7 @@ export const calloutModule = defineModule({
       },
     },
   ],
+  importers: [calloutImporter],
 });
 
 export const expandModule = defineModule({
@@ -86,6 +195,7 @@ export const expandModule = defineModule({
       text: (node) => attrOf<string>(node, "title"),
     },
   ],
+  importers: [expandImporter],
 });
 
 export const statusModule = defineModule({
@@ -113,10 +223,13 @@ export const statusModule = defineModule({
       text: (node) => attrOf<string>(node, "text"),
     },
   ],
+  importers: [statusImporter],
 });
 
-function tocTree(headings: readonly Heading[], maxLevel: number): Heading[] {
-  return headings.filter((heading) => heading.level <= maxLevel);
+function tocTree(headings: readonly Heading[], node: ValidNode): Heading[] {
+  const minLevel = attrOf<number>(node, "minLevel");
+  const maxLevel = attrOf<number>(node, "maxLevel");
+  return headings.filter((heading) => heading.level >= minLevel && heading.level <= maxLevel);
 }
 
 function tocHtml(headings: Heading[], escapeText: (text: string) => string): string {
@@ -154,15 +267,22 @@ export const tableOfContentsModule = defineModule({
     {
       name: "tableOfContents",
       spec: { group: "block", atom: true },
-      attrs: { maxLevel: optional(z.number().int().min(1).max(6), 3) },
+      attrs: {
+        minLevel: optional(z.number().int().min(1).max(6), 1),
+        maxLevel: optional(z.number().int().min(1).max(6), 3),
+      },
+      validate: (node) =>
+        attrOf<number>(node, "minLevel") > attrOf<number>(node, "maxLevel")
+          ? "The lowest heading level of a table of contents must not be above its highest"
+          : null,
       html: (node, renderer) =>
         element(
           "nav",
           { class: "ph-toc", "aria-label": renderer.label("tableOfContents") },
-          tocHtml(tocTree(renderer.headings, attrOf<number>(node, "maxLevel")), renderer.escape),
+          tocHtml(tocTree(renderer.headings, node), renderer.escape),
         ),
       markdown: (node, renderer) => {
-        const headings = tocTree(renderer.headings, attrOf<number>(node, "maxLevel"));
+        const headings = tocTree(renderer.headings, node);
         if (headings.length === 0) return "";
         const minimum = Math.min(...headings.map((heading) => heading.level));
         return headings
@@ -174,6 +294,7 @@ export const tableOfContentsModule = defineModule({
       },
     },
   ],
+  importers: tableOfContentsImporters,
 });
 
 export const columnsModule = defineModule({

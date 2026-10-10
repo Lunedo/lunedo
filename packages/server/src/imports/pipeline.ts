@@ -4,7 +4,7 @@ import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import * as Y from "yjs";
 import type { AuditLog } from "../audit/audit-log.js";
-import { claimTaskIds, publishTasks } from "../collaboration/content.js";
+import { claimTaskIds, publishTasks, syncDecisions } from "../collaboration/content.js";
 import { writeTaskStatus } from "../collaboration/tasks.js";
 import type { Database, Transaction } from "../database/database.js";
 import { type FileService, FileTooLargeError } from "../files/files.js";
@@ -933,6 +933,7 @@ export class ImportPipeline {
     }
     await recomputeLinks(tx, itemId, claimed);
     await publishTasks(tx, itemId, claimed);
+    await syncDecisions(tx, itemId, claimed);
     await tx.execute(sql`
       update tasks set notified_assignee_id = assignee_id where item_id = ${itemId} and assignee_id is not null`);
     await markMentionsNotified(tx, itemId, null, extractMentions(claimed), actorId);

@@ -22,7 +22,7 @@ export type TextAlignment = (typeof textAlignments)[number];
 
 export const imageAlignments = ["left", "center", "right"] as const;
 
-export const codeLanguages: readonly string[] = Object.keys(common).sort();
+export const codeLanguages: readonly string[] = [...Object.keys(common), "powershell"].sort();
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const ALLOWED_PROTOCOLS = new Set(["http:", "https:", "mailto:"]);

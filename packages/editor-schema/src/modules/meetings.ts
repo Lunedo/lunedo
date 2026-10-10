@@ -1,3 +1,4 @@
+import { firstSourceElement, type MacroConverter, sourceElements } from "../importing.js";
 import { attrOf, defineModule, optional, required } from "../module.js";
 import { element, prefixLines } from "../text.js";
 import { uuidValue } from "../values.js";
@@ -23,6 +24,27 @@ export const topicUpdateModule = defineModule({
     },
   ],
 });
+
+const decisionImporter: MacroConverter = {
+  source: "confluence",
+  macros: ["adf:decision-list"],
+  convert: (macro, context) => {
+    const list = macro.name === "ac:adf-node" ? macro : firstSourceElement(macro, "ac:adf-node");
+    if (list?.attributes.type !== "decision-list") return null;
+    const items = sourceElements(list, "ac:adf-node").filter(
+      (item) => item.attributes.type === "decision-item",
+    );
+    if (items.length === 0) return null;
+    return items.map((item) => {
+      const statement = firstSourceElement(item, "ac:adf-content");
+      const content = statement ? context.inline(statement.children) : [];
+      return {
+        type: "decision",
+        content: [{ type: "paragraph", ...(content.length > 0 ? { content } : {}) }],
+      };
+    });
+  },
+};
 
 export const decisionModule = defineModule({
   name: "decision",
@@ -54,4 +76,5 @@ export const decisionModule = defineModule({
         ),
     },
   ],
+  importers: [decisionImporter],
 });

@@ -35,6 +35,14 @@ export {
   normalizeDecisionIds,
   normalizeTaskIds,
 } from "./extract.js";
+export type {
+  ImportedAttachment,
+  ImportSource,
+  MacroConverter,
+  MacroImportContext,
+  SourceContent,
+  SourceElement,
+} from "./importing.js";
 export type { DocumentJson, MarkJson, NodeJson, ValidMark, ValidNode } from "./json.js";
 export { buildSchema, createEditorKit, type EditorKit } from "./kit.js";
 export {
@@ -47,10 +55,15 @@ export {
 export {
   type AttributeSpec,
   attrOf,
+  type ChildPageSort,
+  type ChildPagesRequest,
+  childPageSorts,
   defineModule,
   type EditorModule,
   type Heading,
   type HtmlRenderer,
+  type ListedAttachment,
+  type ListedPage,
   type MarkDefinition,
   type MarkdownRenderer,
   ModuleRegistry,
@@ -63,6 +76,13 @@ export {
   required,
 } from "./module.js";
 export { createDefaultRegistry, defaultModules } from "./modules/index.js";
+export {
+  childPagesRequest,
+  fileExtension,
+  MAX_CHILD_PAGE_DEPTH,
+  MAX_FILE_TYPES,
+  matchesFileTypes,
+} from "./modules/listings.js";
 export { MAX_LATEX_LENGTH, MAX_MACRO_DATA_BYTES } from "./modules/macros.js";
 export {
   type TaskReportDue,
@@ -71,7 +91,7 @@ export {
   taskReportStatuses,
 } from "./modules/reports.js";
 export { MAX_PLACEHOLDER_LENGTH, TEMPLATE_FIELD_KEY } from "./modules/templates.js";
-export { defaultLabels, MAX_EXPENSIVE_RENDER_COST } from "./render.js";
+export { defaultLabels, formatBytes, MAX_EXPENSIVE_RENDER_COST } from "./render.js";
 export { escapeHtml, slugify } from "./text.js";
 export {
   InvalidDocumentError,

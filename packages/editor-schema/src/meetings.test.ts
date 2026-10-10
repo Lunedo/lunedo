@@ -114,6 +114,25 @@ describe("decisions", () => {
     ]);
   });
 
+  it("are not extracted while their statement is empty, so reports and overviews leave them out", () => {
+    const empty = "01929b1e-0000-7000-8000-000000000202";
+    const document = doc(
+      { type: "decision", attrs: { id: empty }, content: [{ type: "paragraph" }, { type: "paragraph" }] },
+      decision(DECISION, "Laptops get BitLocker."),
+    );
+    expect(validateDocument(document).ok).toBe(true);
+    expect(extractDecisions(document).map((found) => [found.id, found.position])).toEqual([[DECISION, 0]]);
+    expect(
+      extractDecisions(
+        doc({
+          type: "decision",
+          attrs: { id: empty },
+          content: [{ type: "paragraph", content: [{ type: "mention", attrs: { id: TOPIC } }] }],
+        }),
+      ).map((found) => found.id),
+    ).toEqual([empty]);
+  });
+
   it("get new IDs when they have none, repeat another decision's ID or use an ID taken elsewhere", () => {
     const fresh = ["01929b1e-0000-7000-8000-000000000901", "01929b1e-0000-7000-8000-000000000902"];
     const taken = "01929b1e-0000-7000-8000-000000000301";

@@ -47,8 +47,9 @@ function useHeadings(editor: Editor): TocEntry[] {
 
 export function TableOfContentsView({ node, editor, updateAttributes, selected }: NodeViewProps) {
   const { t } = useTranslation();
+  const minLevel = Number(node.attrs.minLevel ?? 1);
   const maxLevel = Number(node.attrs.maxLevel);
-  const headings = useHeadings(editor).filter((entry) => entry.level <= maxLevel);
+  const headings = useHeadings(editor).filter((entry) => entry.level >= minLevel && entry.level <= maxLevel);
   const minimum = Math.min(...headings.map((entry) => entry.level), 6);
   return (
     <NodeViewWrapper className={`ph-toc${selected ? " ph-node-selected" : ""}`} contentEditable={false}>
@@ -58,18 +59,36 @@ export function TableOfContentsView({ node, editor, updateAttributes, selected }
           {t("editor.toc.title")}
         </span>
         {editor.isEditable ? (
-          <Menu
-            trigger={
-              <button type="button" className="ph-inline-button">
-                {t("editor.toc.levels", { level: maxLevel })}
-                <ChevronDown aria-hidden="true" className="size-icon-sm" />
-              </button>
-            }
-            items={[1, 2, 3, 4, 5, 6].map((level) => ({
-              label: t("editor.toc.levels", { level }),
-              onSelect: () => updateAttributes({ maxLevel: level }),
-            }))}
-          />
+          <span className="flex flex-wrap items-center gap-2">
+            <Menu
+              trigger={
+                <button type="button" className="ph-inline-button">
+                  {t("editor.toc.fromLevel", { level: minLevel })}
+                  <ChevronDown aria-hidden="true" className="size-icon-sm" />
+                </button>
+              }
+              items={[1, 2, 3, 4, 5, 6]
+                .filter((level) => level <= maxLevel)
+                .map((level) => ({
+                  label: t("editor.toc.fromLevel", { level }),
+                  onSelect: () => updateAttributes({ minLevel: level }),
+                }))}
+            />
+            <Menu
+              trigger={
+                <button type="button" className="ph-inline-button">
+                  {t("editor.toc.levels", { level: maxLevel })}
+                  <ChevronDown aria-hidden="true" className="size-icon-sm" />
+                </button>
+              }
+              items={[1, 2, 3, 4, 5, 6]
+                .filter((level) => level >= minLevel)
+                .map((level) => ({
+                  label: t("editor.toc.levels", { level }),
+                  onSelect: () => updateAttributes({ maxLevel: level }),
+                }))}
+            />
+          </span>
         ) : null}
       </div>
       {headings.length === 0 ? (

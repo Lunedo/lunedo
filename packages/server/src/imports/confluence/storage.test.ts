@@ -170,21 +170,54 @@ describe("storage format conversion", () => {
     expect(ofType(page, "mention").map((node) => node.attrs?.id)).toEqual([BOB, STRANGER, STRANGER]);
   });
 
-  it("keeps every macro as an unsupported macro block with its original data and counts it", async () => {
+  it("converts macros with a module and counts them apart from the unsupported ones", async () => {
     const page = await convert(richBody());
-    expect(Object.fromEntries(page.macros)).toEqual({ status: 1, info: 1, code: 1 });
-    const macros = ofType(page, "unsupportedMacro").filter(
-      (node) => node.attrs?.name !== "missing-attachment",
-    );
-    expect(macros.map((node) => node.attrs?.name)).toEqual(["status", "info", "code"]);
-    expect(macros[0]?.attrs?.data).toMatchObject({ parameters: { title: "Done", colour: "Green" } });
-    expect(macros[1]?.attrs?.data).toMatchObject({ body: "<p>Info panel</p>", bodyKind: "rich" });
-    expect(macros[2]?.attrs?.data).toMatchObject({ body: "const a = list[1 < 2]", bodyKind: "plain" });
+    expect(Object.fromEntries(page.converted)).toEqual({
+      status: 1,
+      info: 1,
+      code: 1,
+      toc: 1,
+      children: 1,
+      attachments: 1,
+      "view-file": 1,
+      "adf:decision-list": 1,
+    });
+    expect(Object.fromEntries(page.macros)).toEqual({ roadmap: 1 });
+    expect(ofType(page, "status")[0]?.attrs).toEqual({ text: "Done", color: "green" });
+    expect(ofType(page, "callout")[0]?.content?.[0]?.content).toEqual([{ type: "text", text: "Info panel" }]);
+    expect(ofType(page, "codeBlock").at(-1)).toEqual({
+      type: "codeBlock",
+      attrs: { language: "javascript" },
+      content: [{ type: "text", text: "const a = list[1 < 2]" }],
+    });
   });
 
-  it("keeps the text around an inline macro in order", async () => {
+  it("keeps macros without a module as unsupported macro blocks with their original data", async () => {
+    const page = await convert(
+      '<ac:structured-macro ac:name="roadmap"><ac:parameter ac:name="timeline">true</ac:parameter></ac:structured-macro><ac:structured-macro ac:name="details"><ac:rich-text-body><p>Owner</p></ac:rich-text-body></ac:structured-macro>',
+    );
+    expect(Object.fromEntries(page.macros)).toEqual({ roadmap: 1, details: 1 });
+    expect(Object.fromEntries(page.converted)).toEqual({});
+    const macros = ofType(page, "unsupportedMacro");
+    expect(macros[0]?.attrs?.data).toMatchObject({ parameters: { timeline: "true" } });
+    expect(macros[1]?.attrs?.data).toMatchObject({ body: "<p>Owner</p>", bodyKind: "rich" });
+  });
+
+  it("keeps an inline macro inside its paragraph", async () => {
     const page = await convert(
       '<p>Before <ac:structured-macro ac:name="status"><ac:parameter ac:name="title">X</ac:parameter></ac:structured-macro> after</p>',
+    );
+    expect(page.document.content).toHaveLength(1);
+    expect(page.document.content?.[0]?.content).toEqual([
+      { type: "text", text: "Before " },
+      { type: "status", attrs: { text: "X", color: "gray" } },
+      { type: "text", text: " after" },
+    ]);
+  });
+
+  it("keeps the text around an inline macro it cannot convert in order", async () => {
+    const page = await convert(
+      '<p>Before <ac:structured-macro ac:name="status"><ac:parameter ac:name="title"> </ac:parameter></ac:structured-macro> after</p>',
     );
     expect(
       page.document.content?.map((node) => [node.type, node.content?.[0]?.text ?? node.attrs?.name]),
@@ -193,6 +226,7 @@ describe("storage format conversion", () => {
       ["unsupportedMacro", "status"],
       ["paragraph", "after"],
     ]);
+    expect(Object.fromEntries(page.macros)).toEqual({ status: 1 });
   });
 
   it("replaces content that the schema refuses with an unsupported macro block holding the original", async () => {
@@ -213,11 +247,11 @@ describe("storage format conversion", () => {
   it("truncates macro data above the schema limit and reports it", async () => {
     const big = "x".repeat(400 * 1024);
     const page = await convert(
-      `<ac:structured-macro ac:name="info"><ac:rich-text-body><p>${big}</p></ac:rich-text-body></ac:structured-macro>`,
+      `<ac:structured-macro ac:name="details"><ac:rich-text-body><p>${big}</p></ac:rich-text-body></ac:structured-macro>`,
     );
     expect(validateDocument(page.document).ok).toBe(true);
     expect(ofType(page, "unsupportedMacro")[0]?.attrs?.data).toMatchObject({ truncated: true });
-    expect(page.notes).toContainEqual({ code: "macroDataTruncated", macro: "info" });
+    expect(page.notes).toContainEqual({ code: "macroDataTruncated", macro: "details" });
   });
 
   it("never produces script, event handlers or unsafe links from crafted content", async () => {
@@ -244,6 +278,7 @@ describe("storage format conversion", () => {
     expect(references.attachments.map((reference) => reference.fileName).sort()).toEqual([
       "diagram.png",
       "missing.png",
+      "report.pdf",
       "report.pdf",
     ]);
     expect(references.people).toHaveLength(3);

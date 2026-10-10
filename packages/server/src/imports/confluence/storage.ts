@@ -5,7 +5,10 @@ import {
   MAX_DOCUMENT_BYTES,
   MAX_MACRO_DATA_BYTES,
   MAX_NODES,
+  type MacroConverter,
+  type MacroImportContext,
   type MarkJson,
+  modules,
   type NodeJson,
   schema,
   validateDocument,
@@ -63,6 +66,7 @@ export interface ConvertedTask {
 export interface ConvertedPage {
   readonly document: DocumentJson;
   readonly macros: ReadonlyMap<string, number>;
+  readonly converted: ReadonlyMap<string, number>;
   readonly notes: readonly ConversionNote[];
   readonly tasks: readonly ConvertedTask[];
 }
@@ -224,9 +228,10 @@ export function storageReferences(root: XmlNode): {
   const pages: PageReference[] = [];
   const attachments: AttachmentReference[] = [];
   const people: PersonReference[] = [];
-  const visit = (node: XmlNode | string, insideMacro: boolean) => {
+  const visit = (node: XmlNode | string, insideMacro: boolean, macroPage: XmlNode | null) => {
     if (typeof node === "string") return;
-    const macro = insideMacro || isMacro(node.name);
+    const macro = insideMacro || (isMacro(node.name) && !importerOf(node));
+    const page = isMacro(node.name) ? macroPageOf(node) : macroPage;
     if (!macro) {
       if (node.name === "ri:page") {
         pages.push({
@@ -240,11 +245,11 @@ export function storageReferences(root: XmlNode): {
         if (sourceId) pages.push({ title: null, spaceKey: null, sourceId });
       }
       if (node.name === "ri:attachment" && node.attributes["ri:filename"]) {
-        const page = firstChild(node, "ri:page");
+        const target = firstChild(node, "ri:page") ?? page;
         attachments.push({
           fileName: node.attributes["ri:filename"],
-          pageTitle: page?.attributes["ri:content-title"] ?? null,
-          spaceKey: page?.attributes["ri:space-key"] ?? null,
+          pageTitle: target?.attributes["ri:content-title"] ?? null,
+          spaceKey: target?.attributes["ri:space-key"] ?? null,
         });
       }
       if (node.name === "ri:user") {
@@ -254,10 +259,22 @@ export function storageReferences(root: XmlNode): {
         });
       }
     }
-    for (const child of node.children) visit(child, macro);
+    for (const child of node.children) visit(child, macro, page);
   };
-  visit(root, false);
+  visit(root, false, null);
   return { pages, attachments, people };
+}
+
+function importerOf(node: XmlNode): MacroConverter | undefined {
+  return modules.importer("confluence", macroName(node));
+}
+
+function macroPageOf(node: XmlNode): XmlNode | null {
+  const parameter = childElements(node, "ac:parameter").find(
+    (child) => child.attributes["ac:name"] === "page",
+  );
+  const link = parameter ? firstChild(parameter, "ac:link") : undefined;
+  return (link ? firstChild(link, "ri:page") : undefined) ?? null;
 }
 
 function sourcePageId(href: string): string | null {
@@ -278,11 +295,39 @@ function isMacro(name: string): boolean {
 }
 
 class Converter {
-  readonly macros = new Map<string, number>();
-  readonly notes: ConversionNote[] = [];
+  macros = new Map<string, number>();
+  converted = new Map<string, number>();
+  notes: ConversionNote[] = [];
   tasks: ConvertedTask[] = [];
+  readonly context: MacroImportContext;
 
-  constructor(private readonly lookup: StorageLookup) {}
+  constructor(private readonly lookup: StorageLookup) {
+    this.context = {
+      blocks: (content) => this.blocks(content as (XmlNode | string)[]),
+      inline: (content) => {
+        const items = this.items(content as (XmlNode | string)[], []);
+        const inline = items.flatMap((item) => ("inline" in item ? [item.inline] : []));
+        if (inline.length !== items.length) throw new Error("Block content in an inline position");
+        return trimInline(inline);
+      },
+      attachment: (reference, page) => {
+        const target = page ?? firstChild(reference as XmlNode, "ri:page") ?? null;
+        return this.lookup.attachment({
+          fileName: reference.attributes["ri:filename"] ?? "",
+          pageTitle: target?.attributes["ri:content-title"] ?? null,
+          spaceKey: target?.attributes["ri:space-key"] ?? null,
+        });
+      },
+      page: (reference) => {
+        const resolved = this.lookup.page({
+          title: reference.attributes["ri:content-title"] ?? "",
+          spaceKey: reference.attributes["ri:space-key"] ?? null,
+          sourceId: null,
+        });
+        return resolved.kind === "page" ? resolved.pageId : null;
+      },
+    };
+  }
 
   note(note: ConversionNote): void {
     this.notes.push(note);
@@ -348,9 +393,12 @@ class Converter {
         return this.items(node.children, marks, preformatted);
       case "ri:user":
         return this.mention(node);
-      default:
+      default: {
+        const inline = isMacro(name) ? this.inlineMacro(node) : null;
+        if (inline) return inline.map((converted) => ({ inline: converted }));
         if (BLOCK_ELEMENTS.has(name)) return this.block(node).map((block) => ({ block }));
         return this.items(node.children, marks, preformatted);
+      }
     }
   }
 
@@ -558,7 +606,7 @@ class Converter {
       case "ac:layout-section":
         return this.layoutSection(node);
       default:
-        if (isMacro(name)) return [this.macro(node)];
+        if (isMacro(name)) return this.macro(node);
         return this.blocks(node.children);
     }
   }
@@ -713,9 +761,55 @@ class Converter {
     ];
   }
 
-  macro(node: XmlNode): NodeJson {
+  inlineMacro(node: XmlNode): NodeJson[] | null {
+    const importer = importerOf(node);
+    if (!importer?.inline) return null;
+    const converted = this.convertMacro(importer, node);
+    if (!converted) return null;
+    count(this.converted, macroName(node));
+    return converted;
+  }
+
+  macro(node: XmlNode): NodeJson[] {
+    const importer = importerOf(node);
+    const converted = importer ? this.convertMacro(importer, node) : null;
+    if (converted) {
+      count(this.converted, macroName(node));
+      return importer?.inline ? [paragraph(converted)] : converted;
+    }
+    return [this.unsupportedMacro(node)];
+  }
+
+  convertMacro(importer: MacroConverter, node: XmlNode): NodeJson[] | null {
+    const saved = {
+      macros: new Map(this.macros),
+      converted: new Map(this.converted),
+      notes: [...this.notes],
+      tasks: [...this.tasks],
+    };
+    let result: NodeJson[] | null = null;
+    try {
+      result = importer.convert(node, this.context);
+    } catch {
+      result = null;
+    }
+    const valid =
+      result !== null &&
+      result.length > 0 &&
+      (importer.inline
+        ? validateDocument({ type: "doc", content: [paragraph(result)] }).ok
+        : result.every(blockIsValid));
+    if (valid) return result;
+    this.macros = saved.macros;
+    this.converted = saved.converted;
+    this.notes = saved.notes;
+    this.tasks = saved.tasks;
+    return null;
+  }
+
+  unsupportedMacro(node: XmlNode): NodeJson {
     const name = macroName(node);
-    this.macros.set(name, (this.macros.get(name) ?? 0) + 1);
+    count(this.macros, name);
     const parameters: Record<string, string> = {};
     for (const parameter of childElements(node, "ac:parameter")) {
       const key = parameter.attributes["ac:name"] ?? "";
@@ -770,6 +864,10 @@ function macroName(node: XmlNode): string {
   if (node.name === "ac:adf-node") return `adf:${node.attributes.type ?? "node"}`.slice(0, 200);
   const name = (node.attributes["ac:name"] ?? "").trim();
   return (name.length > 0 ? name : "unknown").slice(0, 200);
+}
+
+function count(counts: Map<string, number>, name: string): void {
+  counts.set(name, (counts.get(name) ?? 0) + 1);
 }
 
 function macroBlock(name: string, data: Record<string, unknown>): NodeJson {
@@ -910,6 +1008,7 @@ export function convertStorage(root: XmlNode, lookup: StorageLookup): ConvertedP
     return {
       document: { type: "doc", content: [macroBlock(CONTENT_FALLBACK_MACRO, { truncated: true })] },
       macros: converter.macros,
+      converted: converter.converted,
       notes: converter.notes,
       tasks: [],
     };
@@ -918,6 +1017,7 @@ export function convertStorage(root: XmlNode, lookup: StorageLookup): ConvertedP
   return {
     document: validated.document,
     macros: converter.macros,
+    converted: converter.converted,
     notes: converter.notes,
     tasks: tasks.filter((task) => kept.has(task.id)),
   };

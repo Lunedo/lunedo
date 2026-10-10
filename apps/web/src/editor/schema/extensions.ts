@@ -21,6 +21,7 @@ import Superscript from "@tiptap/extension-superscript";
 import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table";
 import Text from "@tiptap/extension-text";
 import Underline from "@tiptap/extension-underline";
+import powershell from "highlight.js/lib/languages/powershell";
 import { common, createLowlight } from "lowlight";
 import {
   type AttributeCodec,
@@ -32,7 +33,7 @@ import {
   schemaAttributes,
 } from "./derive.js";
 
-export const lowlight = createLowlight(common);
+export const lowlight = createLowlight({ ...common, powershell });
 
 const knownLanguages = new Set<string>(codeLanguages);
 
@@ -62,6 +63,9 @@ const LANGUAGE_ALIASES: Record<string, string> = {
   pl: "perl",
   vb: "vbnet",
   console: "shell",
+  ps: "powershell",
+  ps1: "powershell",
+  pwsh: "powershell",
 };
 
 export function canonicalLanguage(value: string): string | null {
@@ -386,7 +390,16 @@ export function schemaExtensions(): AnyExtension[] {
     atomNode("templateField", "span"),
     atomNode("inlineMath", "span"),
     atomNode("blockMath", "div"),
-    atomNode("tableOfContents", "div", { maxLevel: dataAttribute("maxLevel", "number") }),
+    atomNode("tableOfContents", "div", {
+      minLevel: dataAttribute("minLevel", "number"),
+      maxLevel: dataAttribute("maxLevel", "number"),
+    }),
+    atomNode("childPages", "div", {
+      pageId: dataAttribute("pageId"),
+      depth: dataAttribute("depth", "number"),
+      reverse: dataAttribute("reverse", "boolean"),
+    }),
+    atomNode("attachmentList", "div", { fileTypes: dataAttribute("fileTypes", "json") }),
     atomNode("unsupportedMacro", "div", { data: dataAttribute("data", "json") }),
     atomNode("taskReport", "div", { assignedToViewer: dataAttribute("assignedToViewer", "boolean") }),
     atomNode("image", "div", { width: dataAttribute("width", "number") }),

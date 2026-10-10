@@ -13,6 +13,7 @@ import type { Formatter } from "../format/format.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useOpenPath } from "./context.js";
 import { anchorFromSelection } from "./dom-anchor.js";
+import { AttachmentList, ChildPagesList, childPagesFromAttrs, fileTypesOf } from "./listings.js";
 import { followTitleLink, pagePath, type References, rememberReferences } from "./references.js";
 import "./editor.css";
 
@@ -58,6 +59,10 @@ export function readViewContext(
       tableOfContents: t("editor.toc.title"),
       file: t("editor.readView.file"),
       image: t("editor.readView.image"),
+      childPages: t("editor.childPages.title"),
+      noChildPages: t("editor.childPages.empty"),
+      attachmentList: t("editor.attachmentList.title"),
+      noAttachments: t("editor.attachmentList.empty"),
       callout: {
         info: t("editor.callout.info"),
         tip: t("editor.callout.tip"),
@@ -135,6 +140,8 @@ export function PageReadView({
   const { toast } = useToast();
   const container = useRef<HTMLDivElement>(null);
   const [reports, setReports] = useState<HTMLElement[]>([]);
+  const [childPages, setChildPages] = useState<HTMLElement[]>([]);
+  const [attachmentLists, setAttachmentLists] = useState<HTMLElement[]>([]);
   const [selection, setSelection] = useState<{ anchor: TextAnchor; top: number; left: number } | null>(null);
   const { taskStatuses, canToggleTask, onToggleTask, openThreads = [], activeThread = null } = collaboration;
   const html = useMemo(() => {
@@ -153,9 +160,14 @@ export function PageReadView({
     const root = container.current;
     if (!root || html === null) return;
     applyWidths(root);
-    const found = Array.from(root.querySelectorAll<HTMLElement>(".ph-task-report"));
-    for (const element of found) element.replaceChildren();
-    setReports(found);
+    const placeholders = (selector: string) => {
+      const found = Array.from(root.querySelectorAll<HTMLElement>(selector));
+      for (const element of found) element.replaceChildren();
+      return found;
+    };
+    setReports(placeholders(".ph-task-report"));
+    setChildPages(placeholders(".ph-child-pages"));
+    setAttachmentLists(placeholders(".ph-attachment-list"));
   }, [html]);
 
   useLayoutEffect(() => {
@@ -294,6 +306,18 @@ export function PageReadView({
             filters={reportFilters(element.dataset)}
             currentSpaceId={collaboration.spaceId ?? null}
           />,
+          element,
+        ),
+      )}
+      {childPages.map((element) =>
+        createPortal(
+          <ChildPagesList request={childPagesFromAttrs(element.dataset)} currentPageId={pageId} />,
+          element,
+        ),
+      )}
+      {attachmentLists.map((element) =>
+        createPortal(
+          <AttachmentList pageId={pageId} fileTypes={fileTypesOf(element.dataset.fileTypes ?? "")} />,
           element,
         ),
       )}

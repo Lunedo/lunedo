@@ -130,7 +130,7 @@ export async function syncCommentAnchors(
   }
 }
 
-async function syncDecisions(tx: Transaction, itemId: string, document: DocumentJson): Promise<void> {
+export async function syncDecisions(tx: Transaction, itemId: string, document: DocumentJson): Promise<void> {
   const decisions = extractDecisions(document);
   const ids = decisions.map((decision) => decision.id);
   if (decisions.length > 0) {

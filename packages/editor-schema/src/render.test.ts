@@ -115,6 +115,17 @@ const context: RenderContext = {
         },
   attachment: (id) => ({ href: `/api/v1/attachments/${id}` }),
   formatDate: (iso) => `on ${iso}`,
+  childPages: () => [
+    {
+      title: "Network",
+      href: `/pages/${PAGE}`,
+      children: [{ title: "Firewall rules", href: "/pages/rules", children: [] }],
+    },
+  ],
+  attachmentList: () => [
+    { id: ID, name: "handbook.pdf", size: 2_621_440 },
+    { id: PAGE, name: "budget.xlsx", size: 512 },
+  ],
 };
 
 describe("callout", () => {
@@ -488,5 +499,134 @@ describe("task items", () => {
     );
     expect(html).toContain('<input type="checkbox" disabled aria-label="Erledigt" checked>');
     expect(html).toContain('<input type="checkbox" disabled aria-label="Offen">');
+  });
+});
+
+describe("table of contents", () => {
+  const headings = [
+    { type: "heading", attrs: { level: 1 }, content: [text("Title")] },
+    { type: "heading", attrs: { level: 2 }, content: [text("Setup")] },
+    { type: "heading", attrs: { level: 3 }, content: [text("Network")] },
+    { type: "heading", attrs: { level: 4 }, content: [text("Ports")] },
+  ];
+
+  it("lists only the headings between its lowest and highest level", () => {
+    const document = doc({ type: "tableOfContents", attrs: { minLevel: 2, maxLevel: 3 } }, ...headings);
+    const html = renderHtml(document);
+    const toc = html.slice(0, html.indexOf("</nav>"));
+    expect(toc).toContain("Setup");
+    expect(toc).toContain("Network");
+    expect(toc).not.toContain("Title");
+    expect(toc).not.toContain("Ports");
+    expect(renderMarkdown(document).split("\n\n")[0]).toBe("- [Setup](#setup)\n  - [Network](#network)");
+  });
+
+  it("starts at the first level when no lowest level is set", () => {
+    const html = renderHtml(doc({ type: "tableOfContents", attrs: { maxLevel: 1 } }, ...headings));
+    expect(html.slice(0, html.indexOf("</nav>"))).toContain("Title");
+  });
+
+  it("refuses a lowest level above the highest", () => {
+    expect(() => renderHtml(doc({ type: "tableOfContents", attrs: { minLevel: 4, maxLevel: 2 } }))).toThrow(
+      InvalidDocumentError,
+    );
+  });
+});
+
+describe("child pages", () => {
+  const block = { type: "childPages", attrs: { pageId: PAGE, depth: 2, sort: "title", reverse: true } };
+
+  it("show the label and the settings until the reader's pages are known", () => {
+    const html = renderHtml(doc(block));
+    expect(html).toBe(
+      `<nav class="ph-child-pages" aria-label="Child pages" data-page-id="${PAGE}" data-depth="2" data-sort="title" data-reverse="true"><p>Child pages</p></nav>`,
+    );
+    expect(renderMarkdown(doc(block))).toBe("*Child pages*\n");
+  });
+
+  it("ask for the pages with the block's settings and nest them", () => {
+    const requests: unknown[] = [];
+    const pages = {
+      childPages: (request: unknown) => {
+        requests.push(request);
+        return context.childPages?.(request as never) ?? null;
+      },
+    };
+    expect(renderHtml(doc(block), pages)).toContain(
+      '<ul><li><a href="/pages/01929b1e-0000-7000-8000-000000000002">Network</a><ul><li><a href="/pages/rules">Firewall rules</a></li></ul></li></ul>',
+    );
+    expect(renderMarkdown(doc(block), pages)).toBe(
+      `- [Network](/pages/${PAGE})\n  - [Firewall rules](/pages/rules)\n`,
+    );
+    expect(requests).toEqual([
+      { pageId: PAGE, depth: 2, sort: "title", reverse: true },
+      { pageId: PAGE, depth: 2, sort: "title", reverse: true },
+    ]);
+  });
+
+  it("default to the current page with all levels in tree order", () => {
+    const html = renderHtml(doc({ type: "childPages" }));
+    expect(html).toContain('data-depth="all" data-sort="tree"');
+    expect(html).not.toContain("data-page-id");
+  });
+
+  it("say when there is nothing to show and never link to unsafe addresses", () => {
+    expect(renderHtml(doc(block), { childPages: () => [] })).toContain(
+      '<p class="ph-listing-empty">No child pages</p>',
+    );
+    expect(renderMarkdown(doc(block), { childPages: () => [] })).toBe("*No child pages*\n");
+    const evil = { childPages: () => [{ title: "<b>x</b>", href: "javascript:alert(1)", children: [] }] };
+    expect(renderHtml(doc(block), evil)).toContain("<li>&lt;b&gt;x&lt;/b&gt;</li>");
+    expect(renderMarkdown(doc(block), evil)).toBe("- \\<b\\>x\\</b\\>\n");
+  });
+
+  it("refuse depths outside 1 to 10 and unknown sort orders", () => {
+    for (const attrs of [{ depth: 0 }, { depth: 11 }, { depth: 1.5 }, { sort: "random" }, { pageId: "x" }]) {
+      expect(() => renderHtml(doc({ type: "childPages", attrs }))).toThrow(InvalidDocumentError);
+    }
+  });
+});
+
+describe("attachment list", () => {
+  it("shows the label until the attachments are known", () => {
+    expect(renderHtml(doc({ type: "attachmentList" }))).toBe(
+      '<section class="ph-attachment-list" aria-label="Attachments"><p>Attachments</p></section>',
+    );
+    expect(renderMarkdown(doc({ type: "attachmentList" }))).toBe("*Attachments*\n");
+  });
+
+  it("lists the attachments with their size, filtered by file type", () => {
+    const block = { type: "attachmentList", attrs: { fileTypes: ["pdf"] } };
+    const html = renderHtml(doc(block), context);
+    expect(html).toContain('data-file-types="pdf"');
+    expect(html).toContain(
+      `<li data-attachment-id="${ID}"><a href="/api/v1/attachments/${ID}" rel="noopener noreferrer">handbook.pdf</a> <span class="ph-attachment-size">(2.5 MB)</span></li>`,
+    );
+    expect(html).not.toContain("budget.xlsx");
+    expect(renderMarkdown(doc(block), context)).toBe(
+      `- [handbook.pdf](/api/v1/attachments/${ID}) (2.5 MB)\n`,
+    );
+    expect(renderMarkdown(doc({ type: "attachmentList" }), { ...context, formatSize: () => "tiny" })).toBe(
+      `- [handbook.pdf](/api/v1/attachments/${ID}) (tiny)\n- [budget.xlsx](/api/v1/attachments/${PAGE}) (tiny)\n`,
+    );
+  });
+
+  it("says when no attachment matches", () => {
+    const block = { type: "attachmentList", attrs: { fileTypes: ["docx"] } };
+    expect(renderHtml(doc(block), context)).toContain('<p class="ph-listing-empty">No attachments</p>');
+    expect(renderMarkdown(doc(block), context)).toBe("*No attachments*\n");
+  });
+
+  it("refuses file types with dots, upper case, duplicates or too many entries", () => {
+    for (const fileTypes of [
+      [".pdf"],
+      ["PDF"],
+      ["pdf", "pdf"],
+      Array.from({ length: 21 }, (_, i) => `t${i}`),
+    ]) {
+      expect(() => renderHtml(doc({ type: "attachmentList", attrs: { fileTypes } }))).toThrow(
+        InvalidDocumentError,
+      );
+    }
   });
 });

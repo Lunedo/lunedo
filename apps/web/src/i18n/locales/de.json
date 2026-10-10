@@ -3754,7 +3754,11 @@
       "file": "Bild oder Datei",
       "fileDescription": "Ein Bild oder eine Datei hochladen und einfügen",
       "decision": "Entscheidung",
-      "decisionDescription": "Eine Entscheidung festhalten, damit sie im Entscheidungsprotokoll erscheint"
+      "decisionDescription": "Eine Entscheidung festhalten, damit sie im Entscheidungsprotokoll erscheint",
+      "childPages": "Unterseiten",
+      "childPagesDescription": "Liste der Seiten unter dieser oder einer anderen Seite",
+      "attachmentList": "Anhangliste",
+      "attachmentListDescription": "Liste der Dateien, die an dieser Seite hängen"
     },
     "mention": {
       "unknown": "Unbekannte Person"
@@ -3809,7 +3813,8 @@
       "title": "Inhaltsverzeichnis",
       "levels": "Bis Ebene {level}",
       "empty": "Füge Überschriften hinzu, um das Inhaltsverzeichnis zu füllen.",
-      "untitled": "Überschrift ohne Text"
+      "untitled": "Überschrift ohne Text",
+      "fromLevel": "Ab Ebene {level}"
     },
     "callout": {
       "change": "Art der Box ändern",
@@ -4023,6 +4028,39 @@
     "topicUpdate": {
       "closed": "Geschlossen",
       "unknown": "Thema"
+    },
+    "childPages": {
+      "title": "Unterseiten",
+      "empty": "Keine Unterseiten, die du sehen kannst.",
+      "ofThisPageLater": "Seiten aus dieser Vorlage zeigen hier ihre eigenen Unterseiten.",
+      "loadFailed": "Die Unterseiten konnten nicht geladen werden.",
+      "scope": "Seiten von",
+      "thisPage": "Dieser Seite",
+      "otherPage": "Einer anderen Seite",
+      "page": "Seite",
+      "searchPage": "Seite suchen",
+      "depth": "Ebenen",
+      "levels": "{count, plural, one {# Ebene} other {# Ebenen}}",
+      "allLevels": "Alle Ebenen",
+      "sort": "Reihenfolge",
+      "sorts": {
+        "tree": "Wie im Seitenbaum",
+        "title": "Nach Titel",
+        "created": "Nach Erstellungsdatum",
+        "modified": "Nach letzter Änderung"
+      },
+      "reverse": "Umgekehrte Reihenfolge"
+    },
+    "attachmentList": {
+      "title": "Anhänge",
+      "empty": "Diese Seite hat keine Anhänge.",
+      "noneOfType": "Keine Anhänge mit diesen Dateitypen.",
+      "ofThisPageLater": "Seiten aus dieser Vorlage zeigen hier ihre eigenen Anhänge.",
+      "loadFailed": "Die Anhänge konnten nicht geladen werden.",
+      "details": "{size}, Version {version}",
+      "fileTypes": "Dateitypen",
+      "fileTypesHint": "Dateiendungen, durch Kommas getrennt, zum Beispiel pdf, docx. Leer lassen, um alle Dateien zu zeigen.",
+      "fileTypesInvalid": "Gib bis zu {count} Dateiendungen nur mit Buchstaben und Ziffern ein, durch Kommas getrennt, zum Beispiel pdf, docx."
     }
   },
   "spaces": {
