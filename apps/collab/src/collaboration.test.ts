@@ -1,5 +1,12 @@
+import { randomUUID } from "node:crypto";
 import { documentFromYDoc } from "@pagehall/editor-schema/yjs";
-import { accountPrincipal, type ServerRuntime } from "@pagehall/server";
+import {
+  AUDIT_CHANGES_CHANNEL,
+  accountPrincipal,
+  type ServerRuntime,
+  SPACE_CHANGES_CHANNEL,
+  SYSTEM,
+} from "@pagehall/server";
 import { testDatabaseBaseUrl, testRedisUrl } from "@pagehall/server/testing";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
@@ -19,8 +26,17 @@ import { MAX_UPDATE_BYTES, STORE_DEBOUNCE_MS } from "./limits.js";
 const baseUrl = testDatabaseBaseUrl();
 const redisUrl = testRedisUrl();
 
+const DELIVERED_CHANNEL = "pagehall_test_delivered";
+
 function textOf(doc: Y.Doc): string {
   return JSON.stringify(documentFromYDoc(doc));
+}
+
+function rechecksOf(calls: unknown[][], itemId: string): Record<string, unknown>[] {
+  return calls
+    .filter(([, message]) => message === "Collaboration permission rechecked")
+    .map(([fields]) => fields as Record<string, unknown>)
+    .filter((fields) => fields.itemId === itemId);
 }
 
 describe.skipIf(!baseUrl)("collaboration server", () => {
@@ -28,11 +44,13 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
   let first: Node;
   let second: Node;
   const clients: Client[] = [];
+  const delivered = new Set<string>();
 
   beforeAll(async () => {
     cluster = await createCluster(baseUrl ?? "");
     first = await cluster.node();
     second = await cluster.node();
+    await first.runtime.listener.listen(DELIVERED_CHANNEL, (payload) => delivered.add(payload));
   });
 
   afterAll(async () => {
@@ -91,6 +109,16 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
     );
     expect(org.id).toBeTruthy();
     return { ...target, account, token: await signIn(cluster.runtimes[0] as ServerRuntime, account) };
+  }
+
+  async function notify(channel: string, payload: object): Promise<void> {
+    await first.runtime.pool.query("select pg_notify($1, $2)", [channel, JSON.stringify(payload)]);
+  }
+
+  async function signalsDelivered(): Promise<void> {
+    const marker = randomUUID();
+    await notify(DELIVERED_CHANNEL, { marker });
+    await waitFor(() => delivered.has(JSON.stringify({ marker })));
   }
 
   async function snapshot(itemId: string) {
@@ -284,8 +312,57 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
     await waitFor(() => client.closeReasons.includes("permissionRevoked"), 3000);
   });
 
+  it("disconnects a person who loses the edit permission in the space a page was moved to", async () => {
+    const target = await editor();
+    const runtime = cluster.runtimes[0] as ServerRuntime;
+    const destination = await cluster.fixtures.space(target.org.id, target.admin, {
+      grants: [{ principalKind: "account", principalId: target.account, role: "editor" }],
+    });
+    const client = open(first.url, target.itemId, { token: target.token });
+    await client.authenticated;
+    const logged = vi.spyOn(first.runtime.logger, "info");
+    try {
+      await runtime.services.tree.move(accountPrincipal(target.admin), target.itemId, {
+        spaceId: destination.id,
+        parentId: null,
+      });
+      await waitFor(() =>
+        rechecksOf(logged.mock.calls, target.itemId).some((fields) => fields.reason === "tree"),
+      );
+      const entry = (await runtime.services.spacePermissions.list(destination.id)).find(
+        (candidate) => candidate.principalId === target.account,
+      );
+      await runtime.services.spacePermissions.apply(accountPrincipal(target.admin), destination.id, {
+        action: "change",
+        permissionId: entry?.id ?? "",
+        role: "reader",
+      });
+      await waitFor(() => client.closeReasons.includes("permissionRevoked"), 3000);
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
+  it("disconnects a person who leaves the group that gave them the edit permission", async () => {
+    const target = await page();
+    const runtime = cluster.runtimes[0] as ServerRuntime;
+    const account = await cluster.fixtures.member(target.org.id);
+    const group = await cluster.fixtures.group(target.org.id, [account]);
+    await runtime.services.spacePermissions.apply(accountPrincipal(target.admin), target.space.id, {
+      action: "grant",
+      principalKind: "group",
+      principalId: group,
+      role: "editor",
+    });
+    const client = open(first.url, target.itemId, { token: await signIn(runtime, account) });
+    await client.authenticated;
+    await cluster.runtimes[1]?.services.groups.removeMember(SYSTEM, group, account);
+    await waitFor(() => client.closeReasons.includes("permissionRevoked"), 3000);
+  });
+
   it("logs every recheck and revocation with page, account, node, reason, duration and result only", async () => {
     const target = await editor();
+    await signalsDelivered();
     const client = open(first.url, target.itemId, { token: target.token });
     await client.authenticated;
     const logged = vi.spyOn(first.runtime.logger, "info");
@@ -302,10 +379,7 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
         role: "reader",
       });
       await waitFor(() => client.closeReasons.includes("permissionRevoked"), 3000);
-      const lines = logged.mock.calls
-        .filter(([, message]) => message === "Collaboration permission rechecked")
-        .map(([fields]) => fields as unknown as Record<string, unknown>)
-        .filter((fields) => fields.itemId === target.itemId);
+      const lines = rechecksOf(logged.mock.calls, target.itemId);
       expect(lines.at(-1)).toEqual({
         itemId: target.itemId,
         accountId: target.account,
@@ -316,6 +390,56 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
       });
       expect(lines.slice(0, -1).every((fields) => fields.result === "kept")).toBe(true);
     } finally {
+      logged.mockRestore();
+    }
+  });
+
+  it("names the most specific signal when one recheck answers several", async () => {
+    const target = await editor();
+    const client = open(first.url, target.itemId, { token: target.token });
+    await client.authenticated;
+    const services = first.runtime.services;
+    const explain = services.authorization.explain.bind(services.authorization);
+    let holding: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      holding = resolve;
+    });
+    let release: () => void = () => undefined;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const checking = vi.spyOn(services.authorization, "explain").mockImplementation(async (...args) => {
+      if (args[2].id === target.itemId) {
+        holding();
+        await released;
+      }
+      return explain(...args);
+    });
+    const logged = vi.spyOn(first.runtime.logger, "info");
+    try {
+      await notify(SPACE_CHANGES_CHANNEL, { spaceId: target.space.id, kind: "tree", itemId: null });
+      await held;
+      logged.mockClear();
+      await notify(AUDIT_CHANGES_CHANNEL, {
+        scope: "organization",
+        organizationId: target.org.id,
+        target: "group",
+      });
+      await notify(SPACE_CHANGES_CHANNEL, { spaceId: target.space.id, kind: "access", itemId: null });
+      await signalsDelivered();
+      release();
+      await waitFor(() => rechecksOf(logged.mock.calls, target.itemId).length === 2);
+      expect(rechecksOf(logged.mock.calls, target.itemId)[1]).toEqual({
+        itemId: target.itemId,
+        accountId: target.account,
+        node: services.documents.origin,
+        reason: "access",
+        durationMs: expect.any(Number),
+        result: "kept",
+      });
+    } finally {
+      release();
+      checking.mockRestore();
       logged.mockRestore();
     }
   });
@@ -387,6 +511,42 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
       await waitFor(() => client.closeReasons.includes("unavailable"), 3000);
     } finally {
       failing.mockRestore();
+    }
+  });
+
+  it("closes connections whose recheck fails unexpectedly and keeps rechecking the others", async () => {
+    const concurrency = Math.floor(first.runtime.config.database.poolSize / 2);
+    const failing = await editor();
+    const broken = Array.from({ length: concurrency }, () =>
+      open(first.url, failing.itemId, { token: failing.token }),
+    );
+    await Promise.all(broken.map((client) => client.authenticated));
+    const target = await editor();
+    const client = open(first.url, target.itemId, { token: target.token });
+    await client.authenticated;
+    const logger = first.runtime.logger;
+    const info = logger.info.bind(logger);
+    const logged = vi.spyOn(logger, "info").mockImplementation(((...args: unknown[]) => {
+      const [fields, message] = args as [Record<string, unknown>, string];
+      if (message === "Collaboration permission rechecked" && fields.itemId === failing.itemId) {
+        throw new Error("log sink failed");
+      }
+      return (info as (...rest: unknown[]) => void)(...args);
+    }) as typeof logger.info);
+    try {
+      await notify(SPACE_CHANGES_CHANNEL, { spaceId: failing.space.id, kind: "access", itemId: null });
+      await waitFor(() => broken.every((opened) => opened.closeReasons.includes("unavailable")), 3000);
+      const entry = (await first.runtime.services.spacePermissions.list(target.space.id)).find(
+        (candidate) => candidate.principalId === target.account,
+      );
+      await first.runtime.services.spacePermissions.apply(accountPrincipal(target.admin), target.space.id, {
+        action: "change",
+        permissionId: entry?.id ?? "",
+        role: "reader",
+      });
+      await waitFor(() => client.closeReasons.includes("permissionRevoked"), 3000);
+    } finally {
+      logged.mockRestore();
     }
   });
 
