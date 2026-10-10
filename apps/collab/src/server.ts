@@ -61,11 +61,22 @@ export interface CollabContext {
   itemId: string;
   spaceId: string;
   organizationId: string | null;
+  passesBeforeCheck: number;
+  checkedAt: number;
 }
 
 const RECHECKED_AUDIT_TARGETS = new Set(["group", "account", "organization", "roleAssignment"]);
 const STORE_ORIGIN = { source: "local", skipStoreHooks: true } as const;
 const REJECTED_UPDATE_TYPES = new Set([1, 2]);
+
+type RecheckReason = "access" | "tree" | "audit" | "interval" | "reconnect" | "connected";
+type RecheckResult = "kept" | "sessionEnded" | "permissionRevoked" | "unavailable";
+
+interface Recheck {
+  sessions: boolean;
+  reasons: Set<RecheckReason>;
+  since: number;
+}
 
 class Refusal {
   constructor(readonly reason: RefusalReason) {}
@@ -118,7 +129,8 @@ export async function createCollabServer(options: {
     : undefined;
   let destroyed = false;
   let recheckRunning: Promise<void> | undefined;
-  let recheckQueued: { sessions: boolean } | undefined;
+  let recheckQueued: Recheck | undefined;
+  let passes = 0;
 
   async function instanceOrigin(): Promise<string | null> {
     const stored = await runtime.settings.get(instanceUrlSetting, {});
@@ -164,38 +176,64 @@ export async function createCollabServer(options: {
     return decision.allowed;
   }
 
-  async function recheck(sessions: boolean): Promise<void> {
+  async function verdict(context: CollabContext, sessions: boolean): Promise<RecheckResult> {
+    if (sessions) {
+      const session = await services.sessions.resolve(context.sessionToken);
+      if (session?.id !== context.sessionId || session.kind !== "full") return "sessionEnded";
+    }
+    return (await may(context, "item.edit")) ? "kept" : "permissionRevoked";
+  }
+
+  async function check(connection: Connection<CollabContext>, pass: Recheck): Promise<void> {
+    const context = connection.context;
+    let result: RecheckResult;
+    try {
+      result = await verdict(context, pass.sessions);
+    } catch (error) {
+      logger.warn({ err: error }, "Checking a collaboration connection failed");
+      result = "unavailable";
+    }
+    logger.info(
+      {
+        itemId: context.itemId,
+        accountId: context.accountId,
+        node,
+        reason: [...pass.reasons].join(","),
+        durationMs: Date.now() - pass.since,
+        result,
+      },
+      "Collaboration permission rechecked",
+    );
+    if (result !== "kept") connection.close(closeReasons[result]);
+  }
+
+  async function recheck(pass: Recheck): Promise<void> {
     for (const document of instance.documents.values()) {
-      for (const connection of document.getConnections()) {
-        const context = connection.context as CollabContext;
-        try {
-          if (sessions) {
-            const session = await services.sessions.resolve(context.sessionToken);
-            if (session?.id !== context.sessionId || session.kind !== "full") {
-              connection.close(closeReasons.sessionEnded);
-              continue;
-            }
-          }
-          if (!(await may(context, "item.edit"))) connection.close(closeReasons.permissionRevoked);
-        } catch (error) {
-          logger.warn({ err: error }, "Checking a collaboration connection failed");
-          connection.close(closeReasons.unavailable);
-        }
-      }
+      for (const connection of document.getConnections()) await check(connection, pass);
     }
   }
 
-  function scheduleRecheck(sessions: boolean): void {
+  function scheduleRecheck(reason: RecheckReason): void {
     if (destroyed) return;
+    const sessions = reason === "interval" || reason === "reconnect";
     if (recheckRunning) {
-      recheckQueued = { sessions: sessions || (recheckQueued?.sessions ?? false) };
+      recheckQueued = {
+        sessions: sessions || (recheckQueued?.sessions ?? false),
+        reasons: new Set([...(recheckQueued?.reasons ?? []), reason]),
+        since: recheckQueued?.since ?? Date.now(),
+      };
       return;
     }
-    recheckRunning = recheck(sessions).finally(() => {
+    run({ sessions, reasons: new Set([reason]), since: Date.now() });
+  }
+
+  function run(pass: Recheck): void {
+    passes += 1;
+    recheckRunning = recheck(pass).finally(() => {
       recheckRunning = undefined;
       const queued = recheckQueued;
       recheckQueued = undefined;
-      if (queued) scheduleRecheck(queued.sessions);
+      if (queued && !destroyed) run(queued);
     });
   }
 
@@ -224,6 +262,8 @@ export async function createCollabServer(options: {
     },
     async onAuthenticate({ requestHeaders, documentName }): Promise<CollabContext> {
       try {
+        const passesBeforeCheck = passes;
+        const checkedAt = Date.now();
         const address = requestHeaders.get(CLIENT_ADDRESS_HEADER) ?? "unknown";
         if (!(await allowed(address, "address", CONNECTIONS_PER_ADDRESS_PER_MINUTE))) {
           throw new Refusal("tooManyConnections");
@@ -253,6 +293,8 @@ export async function createCollabServer(options: {
           itemId: itemId ?? "",
           spaceId: row?.space_id ?? "",
           organizationId: row?.organization_id ?? null,
+          passesBeforeCheck,
+          checkedAt,
         };
         if ((row?.kind !== "page" && row?.kind !== "blogPost") || !(await may(context, "item.view"))) {
           throw new Refusal("pageNotFound");
@@ -343,7 +385,11 @@ export async function createCollabServer(options: {
         throw error;
       }
     },
-    async connected({ documentName, instance: server }) {
+    async connected({ documentName, instance: server, connection }) {
+      const { passesBeforeCheck, checkedAt } = connection.context as CollabContext;
+      if (passesBeforeCheck !== passes) {
+        await check(connection, { sessions: true, reasons: new Set(["connected"]), since: checkedAt });
+      }
       const itemId = itemIdOf(documentName);
       const document = server.documents.get(documentName);
       if (!itemId || !document) return;
@@ -388,7 +434,7 @@ export async function createCollabServer(options: {
   const instance = server.hocuspocus;
 
   const timer = setInterval(() => {
-    scheduleRecheck(true);
+    scheduleRecheck("interval");
     const open = [...instance.documents.keys()].map(itemIdOf).filter((id): id is string => id !== null);
     services.versions
       .heartbeat(node, open)
@@ -409,13 +455,13 @@ export async function createCollabServer(options: {
     }),
     runtime.listener.listen(SPACE_CHANGES_CHANNEL, (raw) => {
       const signal = parseSpaceChangeSignal(raw);
-      if (signal && (signal.kind === "access" || signal.kind === "tree")) scheduleRecheck(false);
+      if (signal && (signal.kind === "access" || signal.kind === "tree")) scheduleRecheck(signal.kind);
     }),
     runtime.listener.listen(AUDIT_CHANGES_CHANNEL, (raw) => {
       const signal = parseAuditChangeSignal(raw);
-      if (signal && RECHECKED_AUDIT_TARGETS.has(signal.target)) scheduleRecheck(false);
+      if (signal && RECHECKED_AUDIT_TARGETS.has(signal.target)) scheduleRecheck("audit");
     }),
   ]);
-  runtime.listener.onReconnect(() => scheduleRecheck(true));
+  runtime.listener.onReconnect(() => scheduleRecheck("reconnect"));
   return server;
 }

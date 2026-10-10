@@ -1,0 +1,30 @@
+diff --git a/dist/y-tiptap.cjs b/dist/y-tiptap.cjs
+index 8b341de0dc9875e8840099b1309fff1ebb0c5db2..8299c5a73806e22f76c27169c72e1424c92e0a0e 100644
+--- a/dist/y-tiptap.cjs
++++ b/dist/y-tiptap.cjs
+@@ -394,10 +394,6 @@ const restoreRelativeSelection = (tr, relSel, binding, oldDoc) => {
+         relSel.head,
+         binding.mapping
+       );
+-      if (oldDoc != null) {
+-        anchor = recoverSelectionEndpoint(tr.doc, oldDoc, relSel.absAnchor, anchor);
+-        head = recoverSelectionEndpoint(tr.doc, oldDoc, relSel.absHead, head);
+-      }
+       // Collapse to the surviving endpoint instead of dropping the selection;
+       // an unset selection maps through the full-doc replace to the doc start.
+       if (anchor === null) {
+diff --git a/dist/y-tiptap.js b/dist/y-tiptap.js
+index c6fdfa42dc346d31a3b4af91e0b3993ac3735a09..be16d71bb3bdf328e9e00c8bad0867ceb97e92f3 100644
+--- a/dist/y-tiptap.js
++++ b/dist/y-tiptap.js
+@@ -360,10 +360,6 @@ const restoreRelativeSelection = (tr, relSel, binding, oldDoc) => {
+         relSel.head,
+         binding.mapping
+       );
+-      if (oldDoc != null) {
+-        anchor = recoverSelectionEndpoint(tr.doc, oldDoc, relSel.absAnchor, anchor);
+-        head = recoverSelectionEndpoint(tr.doc, oldDoc, relSel.absHead, head);
+-      }
+       // Collapse to the surviving endpoint instead of dropping the selection;
+       // an unset selection maps through the full-doc replace to the doc start.
+       if (anchor === null) {

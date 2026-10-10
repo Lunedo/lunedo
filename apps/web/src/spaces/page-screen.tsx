@@ -28,6 +28,7 @@ import { ApiError, request } from "../api/request.js";
 import { StarButton, useContentCollaboration } from "../collaboration/content-collaboration.js";
 import { PageReactions } from "../collaboration/reaction-bar.js";
 import { PageReadView, type ReadViewCollaboration } from "../editor/read-view.js";
+import { CollaborationProblemNotice } from "../editor/save-indicator.js";
 import type { SaveState } from "../editor/save-state.js";
 import { LoadError } from "../errors/failure.js";
 import { AttachmentsSection, PageDropZone } from "../files/attachments-section.js";
@@ -105,6 +106,7 @@ export function PageScreen() {
 
 function PageView({ page }: { page: ItemDetails }) {
   const { space, canEdit } = useSpace();
+  const search = route.useSearch();
   const sharing = usePageSharing(
     {
       id: page.id,
@@ -118,19 +120,29 @@ function PageView({ page }: { page: ItemDetails }) {
     },
     true,
   );
-  const writable = canEdit && sharing.canEditPage !== false && !page.archived && !space.archived;
+  const mayEdit = canEdit && sharing.canEditPage !== false;
+  const writable = mayEdit && !page.archived && !space.archived;
+  const lostEdit = useLostEditPermission(mayEdit, search.edit === true);
   return (
     <UploadsProvider pageId={page.id}>
       <AttachmentPreviewProvider canEdit={writable}>
         <PageDropZone enabled={writable} title={page.title}>
-          <PageArticle page={page} sharing={sharing} />
+          <PageArticle page={page} sharing={sharing} lostEdit={lostEdit} />
         </PageDropZone>
       </AttachmentPreviewProvider>
     </UploadsProvider>
   );
 }
 
-function PageArticle({ page, sharing }: { page: ItemDetails; sharing: PageSharing }) {
+function PageArticle({
+  page,
+  sharing,
+  lostEdit,
+}: {
+  page: ItemDetails;
+  sharing: PageSharing;
+  lostEdit: boolean;
+}) {
   const { t } = useTranslation();
   const { space, canEdit, openMove, openCreate } = useSpace();
   const search = route.useSearch();
@@ -369,6 +381,7 @@ function PageArticle({ page, sharing }: { page: ItemDetails; sharing: PageSharin
           )
         ) : null}
         <PageLabels pageId={page.id} />
+        {lostEdit ? <CollaborationProblemNotice problem="permissionRevoked" /> : null}
         {editing ? (
           <Suspense fallback={<Skeleton className="h-field w-full" />}>
             <PageEditor
@@ -411,6 +424,12 @@ function PageArticle({ page, sharing }: { page: ItemDetails; sharing: PageSharin
       )}
     </div>
   );
+}
+
+export function useLostEditPermission(mayEdit: boolean, editRequested: boolean): boolean {
+  const [held, setHeld] = useState(mayEdit);
+  if (mayEdit && !held) setHeld(true);
+  return held && !mayEdit && editRequested;
 }
 
 export function PageContent({

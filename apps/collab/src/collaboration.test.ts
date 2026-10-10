@@ -284,6 +284,95 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
     await waitFor(() => client.closeReasons.includes("permissionRevoked"), 3000);
   });
 
+  it("logs every recheck and revocation with page, account, node, reason, duration and result only", async () => {
+    const target = await editor();
+    const client = open(first.url, target.itemId, { token: target.token });
+    await client.authenticated;
+    const logged = vi.spyOn(first.runtime.logger, "info");
+    try {
+      await first.runtime.services.spaces.update(accountPrincipal(target.admin), target.space.id, {
+        description: "Changed",
+      });
+      const entry = (await first.runtime.services.spacePermissions.list(target.space.id)).find(
+        (candidate) => candidate.principalId === target.account,
+      );
+      await first.runtime.services.spacePermissions.apply(accountPrincipal(target.admin), target.space.id, {
+        action: "change",
+        permissionId: entry?.id ?? "",
+        role: "reader",
+      });
+      await waitFor(() => client.closeReasons.includes("permissionRevoked"), 3000);
+      const lines = logged.mock.calls
+        .filter(([, message]) => message === "Collaboration permission rechecked")
+        .map(([fields]) => fields as unknown as Record<string, unknown>)
+        .filter((fields) => fields.itemId === target.itemId);
+      expect(lines.at(-1)).toEqual({
+        itemId: target.itemId,
+        accountId: target.account,
+        node: first.runtime.services.documents.origin,
+        reason: "access",
+        durationMs: expect.any(Number),
+        result: "permissionRevoked",
+      });
+      expect(lines.slice(0, -1).every((fields) => fields.result === "kept")).toBe(true);
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
+  it("disconnects a person whose connection was being opened while they lost the edit permission", async () => {
+    const target = await editor();
+    const runtime = cluster.runtimes[0] as ServerRuntime;
+    const other = await runtime.services.tree.create(accountPrincipal(target.admin), target.space.id, {
+      kind: "page",
+      title: "Second page",
+      mode: "live",
+      placement: { parentId: null },
+    });
+    const editing = open(first.url, target.itemId, { token: target.token });
+    await editing.authenticated;
+    const documents = first.runtime.services.documents;
+    const stored = documents.stored.bind(documents);
+    let loading: () => void = () => undefined;
+    const loadingStarted = new Promise<void>((resolve) => {
+      loading = resolve;
+    });
+    let release: () => void = () => undefined;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const held = vi.spyOn(documents, "stored").mockImplementation(async (itemId) => {
+      if (itemId === other.id) {
+        loading();
+        await released;
+      }
+      return stored(itemId);
+    });
+    try {
+      const opening = open(first.url, other.id, { token: target.token });
+      await loadingStarted;
+      const entry = (await runtime.services.spacePermissions.list(target.space.id)).find(
+        (candidate) => candidate.principalId === target.account,
+      );
+      await cluster.runtimes[1]?.services.spacePermissions.apply(
+        accountPrincipal(target.admin),
+        target.space.id,
+        {
+          action: "change",
+          permissionId: entry?.id ?? "",
+          role: "reader",
+        },
+      );
+      await waitFor(() => editing.closeReasons.includes("permissionRevoked"), 3000);
+      release();
+      await opening.authenticated;
+      await waitFor(() => opening.closeReasons.includes("permissionRevoked"), 3000);
+    } finally {
+      release();
+      held.mockRestore();
+    }
+  });
+
   it("closes connections whose permission cannot be checked instead of keeping them", async () => {
     const target = await editor();
     const client = open(first.url, target.itemId, { token: target.token });

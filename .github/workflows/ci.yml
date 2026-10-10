@@ -80,6 +80,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm references:check
+      - run: pnpm patches:check
       - run: pnpm i18n:check
       - run: pnpm typecheck
       - name: Script tests

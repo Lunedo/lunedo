@@ -1,4 +1,6 @@
 import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { PreferencesProvider } from "../preferences/preferences-provider.js";
 import { mockApi, problem, renderWithProviders } from "../testing/render.js";
@@ -83,6 +85,86 @@ describe("page read view", () => {
     expect(container.querySelector("[onmouseover]")).toBeNull();
     const column = screen.getByText("Left").closest(".ph-column") as HTMLElement;
     expect(column.style.getPropertyValue("--column-width")).toBe("30%");
+  });
+
+  it("keeps the checkbox and its focus when a task changes its status", async () => {
+    const task = "01929b1e-0000-7000-8000-000000000005";
+    const checklist = {
+      type: "doc",
+      content: [
+        {
+          type: "taskList",
+          content: [
+            {
+              type: "taskItem",
+              attrs: { id: task, assignee: PERSON },
+              content: [{ type: "paragraph", content: [text("Renew the certificate")] }],
+            },
+          ],
+        },
+      ],
+    };
+    function Checklist() {
+      const [statuses, setStatuses] = useState<ReadonlyMap<string, boolean>>(new Map());
+      return (
+        <PageReadView
+          document={checklist}
+          references={references}
+          pageId={PAGE}
+          collaboration={{
+            taskStatuses: statuses,
+            canToggleTask: () => true,
+            onToggleTask: (id, done) => setStatuses(new Map([[id, done]])),
+          }}
+        />
+      );
+    }
+    await renderWithProviders(
+      <PreferencesProvider>
+        <Checklist />
+      </PreferencesProvider>,
+    );
+    const box = screen.getByRole("checkbox", { name: /^Mark as done: Renew the certificate/ });
+    await userEvent.click(box);
+    expect(screen.getByRole("checkbox", { name: /^Mark as open: Renew the certificate/ })).toBe(box);
+    expect((box as HTMLInputElement).checked).toBe(true);
+    expect(globalThis.document.activeElement).toBe(box);
+    expect(box.closest(".ph-task-item")?.getAttribute("data-checked")).toBe("true");
+    await userEvent.keyboard(" ");
+    expect(screen.getByRole("checkbox", { name: /^Mark as done: Renew the certificate/ })).toBe(box);
+    expect((box as HTMLInputElement).checked).toBe(false);
+    expect(box.closest(".ph-task-item")?.getAttribute("data-checked")).toBe("false");
+  });
+
+  it("shows the status of a task a person cannot change", async () => {
+    const task = "01929b1e-0000-7000-8000-000000000006";
+    await renderWithProviders(
+      <PreferencesProvider>
+        <PageReadView
+          document={{
+            type: "doc",
+            content: [
+              {
+                type: "taskList",
+                content: [
+                  {
+                    type: "taskItem",
+                    attrs: { id: task },
+                    content: [{ type: "paragraph", content: [text("Order the badges")] }],
+                  },
+                ],
+              },
+            ],
+          }}
+          references={references}
+          pageId={PAGE}
+          collaboration={{ taskStatuses: new Map([[task, true]]), canToggleTask: () => false }}
+        />
+      </PreferencesProvider>,
+    );
+    const box = screen.getByRole("checkbox", { name: "Done" });
+    expect((box as HTMLInputElement).checked).toBe(true);
+    expect((box as HTMLInputElement).disabled).toBe(true);
   });
 
   it("explains a stored document it cannot show", async () => {
