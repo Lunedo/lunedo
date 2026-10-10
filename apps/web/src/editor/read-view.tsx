@@ -22,12 +22,10 @@ export function readViewContext(
   references: References,
   t: TFunction,
   format: Formatter,
-  taskStatuses?: ReadonlyMap<string, boolean>,
   attachmentUrl: (id: string) => string = (id) => contentUrl(id),
 ): RenderContext {
   return {
     attachment: (id) => ({ href: attachmentUrl(id) }),
-    ...(taskStatuses ? { taskStatus: (id: string) => taskStatuses.get(id) ?? null } : {}),
     mention: (id) => {
       const name = references.people[id];
       return name ? { name } : null;
@@ -141,11 +139,11 @@ export function PageReadView({
   const { taskStatuses, canToggleTask, onToggleTask, openThreads = [], activeThread = null } = collaboration;
   const html = useMemo(() => {
     try {
-      return renderHtml(content, readViewContext(references, t, format, taskStatuses, attachmentUrl));
+      return renderHtml(content, readViewContext(references, t, format, attachmentUrl));
     } catch {
       return null;
     }
-  }, [content, references, t, format, taskStatuses, attachmentUrl]);
+  }, [content, references, t, format, attachmentUrl]);
 
   useLayoutEffect(() => {
     rememberReferences(references);
@@ -169,18 +167,21 @@ export function PageReadView({
       const item = input.parentElement as HTMLElement;
       const id = item.dataset.taskId ?? "";
       const text = item.querySelector(":scope > div")?.textContent?.trim() ?? "";
+      const done = taskStatuses?.get(id) ?? false;
       const allowed =
         onToggleTask !== undefined &&
         (canToggleTask?.({ id, assignee: item.dataset.assignee ?? null }) ?? false);
+      input.checked = done;
+      item.dataset.checked = done ? "true" : "false";
       input.disabled = !allowed;
-      if (allowed) {
-        input.setAttribute(
-          "aria-label",
-          input.checked ? t("tasks.markOpen", { task: text }) : t("tasks.markDone", { task: text }),
-        );
-      }
+      input.setAttribute(
+        "aria-label",
+        allowed
+          ? t(done ? "tasks.markOpen" : "tasks.markDone", { task: text })
+          : t(done ? "editor.readView.taskDone" : "editor.readView.taskOpen"),
+      );
     }
-  }, [html, canToggleTask, onToggleTask, t]);
+  }, [html, taskStatuses, canToggleTask, onToggleTask, t]);
 
   const onClick = async (event: MouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
