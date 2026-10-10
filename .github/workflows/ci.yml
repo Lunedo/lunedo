@@ -50,9 +50,18 @@ jobs:
       - id: scope
         run: node scripts/check-ci-scope.ts
 
+  browsers-first:
+    name: Give the end-to-end tests a runner first
+    needs: scope
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted'))
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
+    timeout-minutes: 5
+    steps:
+      - run: echo "The end-to-end job is queued before the other jobs."
+
   checks:
     name: Lint, typecheck and checks
-    needs: scope
+    needs: [scope, browsers-first]
     if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted'))
     runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 15
@@ -89,7 +98,7 @@ jobs:
 
   unit:
     name: Unit tests (${{ matrix.shard }} of 3)
-    needs: scope
+    needs: [scope, browsers-first]
     if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted'))
     runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 20
@@ -202,7 +211,7 @@ jobs:
 
   backup:
     name: Backup round trip
-    needs: scope
+    needs: [scope, browsers-first]
     if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted')) && needs.scope.outputs.backup == 'true'
     runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 30
@@ -289,6 +298,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Record the load of the machine
+        run: nohup node scripts/record-vm-load.ts record "$RUNNER_TEMP/vm-load.jsonl" > /dev/null 2>&1 &
       - run: corepack enable
       - name: Locate the pnpm store
         id: pnpm
@@ -315,6 +326,9 @@ jobs:
       - run: pnpm --filter @pagehall/web test:e2e
         env:
           PAGEHALL_E2E_SWEEPS: ${{ needs.scope.outputs.sweeps }}
+      - name: Show the load of the machine in the job summary
+        if: always()
+        run: node scripts/record-vm-load.ts summary "$RUNNER_TEMP/vm-load.jsonl" "the end-to-end tests"
       - if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -335,8 +349,8 @@ jobs:
 
   identity-providers:
     name: Sign-in through identity providers
-    needs: scope
-    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted')) && needs.scope.outputs.identity-providers == 'true'
+    needs: [scope, e2e]
+    if: ${{ !cancelled() && needs.scope.result == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted')) && needs.scope.outputs.identity-providers == 'true' }}
     runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 30
     env:
@@ -349,6 +363,8 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
+      - name: Record the load of the machine
+        run: nohup node scripts/record-vm-load.ts record "$RUNNER_TEMP/vm-load.jsonl" > /dev/null 2>&1 &
       - run: corepack enable
       - name: Locate the pnpm store
         id: pnpm
@@ -403,6 +419,9 @@ jobs:
           echo "PAGEHALL_TEST_REPORT_DIR=$GITHUB_WORKSPACE/.test-reports" >> "$GITHUB_ENV"
           echo "PAGEHALL_TEST_JOB=Identity provider tests" >> "$GITHUB_ENV"
       - run: pnpm --filter @pagehall/web exec playwright test --project=idp
+      - name: Show the load of the machine in the job summary
+        if: always()
+        run: node scripts/record-vm-load.ts summary "$RUNNER_TEMP/vm-load.jsonl" "the identity provider tests"
       - if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -439,7 +458,7 @@ jobs:
 
   quick-checks:
     name: Quick checks
-    needs: scope
+    needs: [scope, browsers-first]
     if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted'))
     runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 10
@@ -517,7 +536,7 @@ jobs:
 
   result:
     name: CI result
-    needs: [scope, checks, unit, backup, e2e, identity-providers, quick-checks]
+    needs: [scope, browsers-first, checks, unit, backup, e2e, identity-providers, quick-checks]
     if: always() && ((github.event.action != 'labeled' && github.event.action != 'unlabeled') || github.event.label.name == 'breaking-api-change')
     runs-on: ${{ fromJSON((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && contains(vars.RUNNER_LABELS, 'self-hosted')) && '"ubuntu-24.04"' || vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 5
