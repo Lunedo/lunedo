@@ -161,6 +161,14 @@ export const auditEventNames = [
   "template.created",
   "template.updated",
   "template.deleted",
+  "import.started",
+  "import.reviewersChanged",
+  "import.accepted",
+  "import.discarded",
+  "import.stopped",
+  "import.failed",
+  "import.takenOver",
+  "import.placeholderCreated",
 ] as const;
 
 export type AuditEventName = (typeof auditEventNames)[number];

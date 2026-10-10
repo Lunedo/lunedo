@@ -1,4 +1,12 @@
 export {
+  createCsvExport,
+  createXmlExport,
+  type SyntheticExport,
+  type SyntheticPage,
+} from "../imports/testing/confluence-export.js";
+export { largeExport, syntheticExport } from "../imports/testing/fixture.js";
+export { createZip, type ZipFileSpec } from "../imports/testing/zip-writer.js";
+export {
   createMigratedDatabase,
   createTemporaryDatabase,
   type TemporaryDatabase,

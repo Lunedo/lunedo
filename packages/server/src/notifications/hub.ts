@@ -2,6 +2,11 @@ import { AUDIT_CHANGES_CHANNEL, type AuditChangeSignal, parseAuditChangeSignal }
 import type { NotificationListener } from "../database/notifications.js";
 import { parseSyncRunSignal, SYNC_RUNS_CHANNEL, type SyncRunSignal } from "../identity/sync-signals.js";
 import {
+  IMPORT_CHANGES_CHANNEL,
+  type ImportChangeSignal,
+  parseImportChangeSignal,
+} from "../imports/signals.js";
+import {
   parseSettingChangeSignal,
   SETTING_CHANGES_CHANNEL,
   type SettingChangeSignal,
@@ -14,6 +19,7 @@ type SettingsHandler = (signal: SettingChangeSignal) => void;
 type SyncRunHandler = (signal: SyncRunSignal) => void;
 type ChangeHandler = (signal: AuditChangeSignal) => void;
 type SpaceHandler = (signal: SpaceChangeSignal) => void;
+type ImportHandler = (signal: ImportChangeSignal) => void;
 
 export class NotificationHub {
   readonly #listener: NotificationListener;
@@ -22,6 +28,7 @@ export class NotificationHub {
   readonly #syncRunHandlers = new Set<SyncRunHandler>();
   readonly #changeHandlers = new Set<ChangeHandler>();
   readonly #spaceHandlers = new Set<SpaceHandler>();
+  readonly #importHandlers = new Set<ImportHandler>();
   #listening: Promise<void> | undefined;
 
   constructor(listener: NotificationListener) {
@@ -65,6 +72,14 @@ export class NotificationHub {
     this.#spaceHandlers.add(handler);
     return () => {
       this.#spaceHandlers.delete(handler);
+    };
+  }
+
+  async subscribeImports(handler: ImportHandler): Promise<() => void> {
+    await this.#ready();
+    this.#importHandlers.add(handler);
+    return () => {
+      this.#importHandlers.delete(handler);
     };
   }
 
@@ -112,6 +127,11 @@ export class NotificationHub {
       const signal = parseSpaceChangeSignal(payload);
       if (!signal) return;
       for (const handler of this.#spaceHandlers) handler(signal);
+    });
+    await this.#listener.listen(IMPORT_CHANGES_CHANNEL, (payload) => {
+      const signal = parseImportChangeSignal(payload);
+      if (!signal) return;
+      for (const handler of this.#importHandlers) handler(signal);
     });
     this.#listener.onReconnect(() => {
       for (const handlers of this.#handlers.values()) for (const handler of handlers) handler();

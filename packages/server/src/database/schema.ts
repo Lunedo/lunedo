@@ -74,6 +74,17 @@ export {
   syncStatus,
   syncTrigger,
 } from "../identity/schema.js";
+export {
+  accountExternalIds,
+  importItems,
+  importProblems,
+  importRecords,
+  importReviewers,
+  importState,
+  imports,
+  importUploadParts,
+  importUploads,
+} from "../imports/schema.js";
 export { jobProgress } from "../jobs/schema.js";
 export {
   instanceSecrets,

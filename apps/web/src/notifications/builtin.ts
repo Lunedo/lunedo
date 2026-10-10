@@ -4,6 +4,7 @@ import {
   Bot,
   Building2,
   CalendarClock,
+  FileInput,
   KeyRound,
   ListChecks,
   Lock,
@@ -136,6 +137,24 @@ notificationTypes.register(
         ? { to: `/spaces/${encodeURIComponent(spaceKey)}/meetings/${item.target.id}` }
         : null;
     },
+  },
+  {
+    id: "import.finished",
+    icon: FileInput,
+    link: (item) =>
+      item.target.id ? inOrganization(item, "/imports/$importId", { importId: item.target.id }) : null,
+  },
+  {
+    id: "import.failed",
+    icon: FileInput,
+    link: (item) =>
+      item.target.id ? inOrganization(item, "/imports/$importId", { importId: item.target.id }) : null,
+  },
+  {
+    id: "import.held",
+    icon: FileInput,
+    link: (item) =>
+      item.target.id ? inOrganization(item, "/imports/$importId", { importId: item.target.id }) : null,
   },
   {
     id: "space.confidentialWithoutAdministrator",

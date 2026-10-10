@@ -154,6 +154,13 @@ export const contentNotificationParamSchemas = {
     spaceKey: z.string(),
     startsAt: z.iso.datetime().nullable(),
   }),
+  "import.finished": z.object({
+    spaceKey: z.string(),
+    spaceName: z.string(),
+    problems: z.number().int().nonnegative(),
+  }),
+  "import.failed": z.object({ spaceKey: z.string(), spaceName: z.string(), errorCode: z.string() }),
+  "import.held": z.object({ spaceKey: z.string() }),
   "oneOnOne.started": z.object({
     itemTitle: z.string(),
     spaceKey: z.string(),

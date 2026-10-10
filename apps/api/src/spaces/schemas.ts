@@ -49,6 +49,11 @@ export const spaceSchema = z
         "Whether the space is confidential: only its members can read it, and administrators cannot give themselves or others access. Chosen at creation.",
       ),
     oneOnOne: z.boolean().describe("Whether the space holds a one-on-one."),
+    quarantined: z
+      .boolean()
+      .describe(
+        "Whether the space holds an import that is not accepted yet. Only the importing administrator and the reviewers can read it.",
+      ),
     organizationId: uuid("Organization the space belongs to, or null for a personal space.").nullable(),
     organizationName: z
       .string()
@@ -77,6 +82,7 @@ export const exampleSpace = {
   discoverable: false,
   confidential: false,
   oneOnOne: false,
+  quarantined: false,
   organizationId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a6b",
   organizationName: "Example Inc.",
   personal: false,

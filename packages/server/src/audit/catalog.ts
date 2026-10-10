@@ -22,6 +22,7 @@ export const auditTargetTypes = [
   "template",
   "shareLink",
   "accessRequest",
+  "import",
 ] as const;
 export type AuditTargetType = (typeof auditTargetTypes)[number];
 
@@ -1303,6 +1304,66 @@ export const auditCatalog = {
       problems: z.array(z.string()).max(20),
       bytes: z.number().int().nonnegative(),
     }),
+    visibility: "organization",
+  }),
+  "import.started": event({
+    actor: ["account"],
+    target: "import",
+    fields: z.object({
+      source: z.string(),
+      spaceId: z.uuid(),
+      spaceKey: z.string(),
+      archived: z.boolean(),
+      reviewers: z.number().int().nonnegative(),
+      file: z.enum(["upload", "folder"]),
+    }),
+    visibility: "organization",
+  }),
+  "import.reviewersChanged": event({
+    actor: ["account"],
+    target: "import",
+    fields: z.object({ added: z.array(z.uuid()), removed: z.array(z.uuid()) }),
+    visibility: "organization",
+  }),
+  "import.accepted": event({
+    actor: ["account"],
+    target: "import",
+    fields: z.object({
+      spaceId: z.uuid(),
+      spaceKey: z.string(),
+      archived: z.boolean(),
+      grants: z.number().int().nonnegative(),
+    }),
+    visibility: "organization",
+  }),
+  "import.discarded": event({
+    actor: ["account"],
+    target: "import",
+    fields: z.object({ spaceId: z.uuid().nullable() }),
+    visibility: "organization",
+  }),
+  "import.stopped": event({
+    actor: ["account"],
+    target: "import",
+    fields: z.object({ spaceId: z.uuid().nullable(), phase: z.string().nullable() }),
+    visibility: "organization",
+  }),
+  "import.failed": event({
+    actor: ["system"],
+    target: "import",
+    fields: z.object({ phase: z.string().nullable(), reason: z.string() }),
+    visibility: "organization",
+  }),
+  "import.takenOver": event({
+    actor: ["account"],
+    target: "import",
+    fields: z.object({ previousImporterId: z.uuid() }),
+    visibility: "organization",
+  }),
+  "import.placeholderCreated": event({
+    actor: ["system"],
+    target: "account",
+    fields: z.object({ importId: z.uuid() }),
     visibility: "organization",
   }),
 } as const satisfies Record<string, AuditEventDefinition>;

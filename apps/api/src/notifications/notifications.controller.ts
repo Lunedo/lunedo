@@ -2,6 +2,7 @@ import { Body, Controller, Get, Inject, Param, Post, Query, Req, Res } from "@ne
 import {
   type AuditChangeSignal,
   accountPrincipal,
+  type ImportChangeSignal,
   type NotificationCursor,
   type SettingChangeSignal,
   type SpaceChangeSignal,
@@ -161,7 +162,7 @@ export class NotificationsController {
     raw: {
       contentTypes: ["text/event-stream"],
       description:
-        "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log. The event `changes` names the kind of object that changed in the instance or in an organization, as recorded in the audit log, sent only to callers who may view such objects there or the audit log of that level; reload lists that show such objects. The event `spaces` names a space whose settings, access, page tree or page content changed, with the kind of change and the affected item, sent only to callers who can read the space; reload what shows it.",
+        "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log. The event `changes` names the kind of object that changed in the instance or in an organization, as recorded in the audit log, sent only to callers who may view such objects there or the audit log of that level; reload lists that show such objects. The event `spaces` names a space whose settings, access, page tree or page content changed, with the kind of change and the affected item, sent only to callers who can read the space; reload what shows it. The event `imports` names an import whose state or progress changed, with its organization, sent only to callers who can see the import; reload it.",
       example:
         'event: notifications\ndata: {"unreadCount":2}\n\nevent: settings\ndata: {"key":"branding.accentColor","level":"instance","organizationId":null}\n\nevent: syncRuns\ndata: {"providerId":"01929b1e-0000-7000-8000-000000000001","runId":"01929b1e-0000-7000-8000-000000000002"}\n\nevent: changes\ndata: {"scope":"organization","organizationId":"01929b1e-0000-7000-8000-000000000003","target":"group"}\n\n',
     },
@@ -309,11 +310,33 @@ data: ${JSON.stringify(signal)}
         })
         .catch((error: unknown) => logger.warn({ err: error }, "Sending a space event failed"));
     };
+    const pendingImports = new Set<string>();
+    const sendImport = (signal: ImportChangeSignal) => {
+      if (pendingImports.has(signal.importId)) return;
+      pendingImports.add(signal.importId);
+      queue = queue
+        .then(async () => {
+          pendingImports.delete(signal.importId);
+          if (closed) return;
+          const principal = accountPrincipal(session.accountId);
+          const resource = { type: "import", id: signal.importId };
+          const allowed =
+            (await services.authorization.explain(principal, "import.view", resource)).allowed ||
+            (await services.authorization.explain(principal, "import.takeOver", resource)).allowed;
+          if (!allowed || closed) return;
+          raw.write(`event: imports
+data: ${JSON.stringify(signal)}
+
+`);
+        })
+        .catch((error: unknown) => logger.warn({ err: error }, "Sending an import event failed"));
+    };
     const unsubscribe = await hub.subscribe(session.accountId, send);
     const unsubscribeSettings = await hub.subscribeSettings(sendSetting);
     const unsubscribeSyncRuns = await hub.subscribeSyncRuns(sendSyncRun);
     const unsubscribeChanges = await hub.subscribeChanges(sendChange);
     const unsubscribeSpaces = await hub.subscribeSpaces(sendSpace);
+    const unsubscribeImports = await hub.subscribeImports(sendImport);
     const heartbeat = setInterval(() => {
       services.sessions.isActive(session.id).then(
         (active) => {
@@ -334,6 +357,7 @@ data: ${JSON.stringify(signal)}
       unsubscribeSyncRuns();
       unsubscribeChanges();
       unsubscribeSpaces();
+      unsubscribeImports();
       raw.end();
     };
     reply.hijack();

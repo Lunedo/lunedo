@@ -69,6 +69,13 @@ export const problems = {
   invalidTemplateValues: { status: 400, title: "Some input values are missing or not valid" },
   selfAppointment: { status: 400, title: "Nobody can give themselves access this way" },
   invalidFileName: { status: 400, title: "The file name is not valid" },
+  invalidUpload: { status: 400, title: "The upload is not valid" },
+  invalidUploadPart: { status: 400, title: "The part of the upload is not valid" },
+  uploadChecksumMismatch: { status: 400, title: "The uploaded data does not match its checksum" },
+  invalidSource: { status: 400, title: "The export format is not valid" },
+  invalidSourceUrl: { status: 400, title: "The address of the source site is not valid" },
+  invalidReviewer: { status: 400, title: "The reviewer is not valid" },
+  tooManyReviewers: { status: 400, title: "The import has too many reviewers" },
   invalidItem: { status: 400, title: "Files can only be attached to pages and blog posts" },
   invalidCover: { status: 400, title: "The cover must be an image attached to the post" },
   invalidFocus: { status: 400, title: "The focal point lies outside the image" },
@@ -105,6 +112,18 @@ export const problems = {
   emailInUse: { status: 409, title: "The e-mail address is in use" },
   slugTaken: { status: 409, title: "The slug is taken" },
   keyTaken: { status: 409, title: "The space key is taken" },
+  importStarted: { status: 409, title: "The import has started" },
+  importNotReady: { status: 409, title: "The export is still being read" },
+  importNotRunning: { status: 409, title: "The import is not running" },
+  importNotInReview: { status: 409, title: "The import is not waiting for a decision" },
+  importNotHeld: { status: 409, title: "The import is not waiting for an administrator" },
+  importFinished: { status: 409, title: "The import is finished" },
+  importFolderDisabled: { status: 409, title: "The import folder is turned off" },
+  importFolderUnavailable: { status: 409, title: "The import folder cannot be read" },
+  importFileUnavailable: { status: 409, title: "The file is not in the import folder" },
+  reportUnavailable: { status: 409, title: "The report is not available yet" },
+  uploadIncomplete: { status: 409, title: "The upload is not complete" },
+  uploadComplete: { status: 409, title: "The upload is already complete" },
   alreadyGranted: { status: 409, title: "The holder already has a role in the space" },
   permissionNotFound: { status: 404, title: "The permission does not exist" },
   lastSpaceAdmin: { status: 409, title: "A space needs at least one space admin" },
@@ -238,6 +257,7 @@ export const problems = {
   mailNotReady: { status: 409, title: "The sending method is not set up yet" },
   payloadTooLarge: { status: 413, title: "The request body is too large" },
   fileTooLarge: { status: 413, title: "The file is larger than allowed" },
+  uploadTooLarge: { status: 413, title: "The file is larger than uploads allow" },
   unsupportedMediaType: { status: 415, title: "The request body has an unsupported type" },
   rangeNotSatisfiable: { status: 416, title: "The requested range is not available" },
   locked: { status: 429, title: "Too many failed attempts" },
@@ -295,7 +315,12 @@ export const problemSchema = z
       .optional()
       .describe("Domains that belong to another identity provider, for `domainInUse`."),
     instanceUrl: z.string().optional().describe("The current address of the instance, for `instanceMoved`."),
-    maxBytes: z.number().int().optional().describe("Largest allowed file size in bytes, for `fileTooLarge`."),
+    maxBytes: z
+      .number()
+      .int()
+      .optional()
+      .describe("Largest allowed file size in bytes, for `fileTooLarge` and `uploadTooLarge`."),
+    missing: z.number().int().optional().describe("Number of parts still missing, for `uploadIncomplete`."),
     maxDays: z
       .number()
       .int()

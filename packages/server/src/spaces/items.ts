@@ -209,7 +209,11 @@ export async function defaultPageMode(
   });
 }
 
-async function endPosition(executor: Executor, spaceId: string, parentId: string | null): Promise<string> {
+export async function endPosition(
+  executor: Executor,
+  spaceId: string,
+  parentId: string | null,
+): Promise<string> {
   const result = await executor.execute<{ position: string | null }>(sql`
     select max(position) as position from tree_items
     where space_id = ${spaceId} and parent_id is not distinct from ${parentId}`);

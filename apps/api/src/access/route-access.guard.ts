@@ -213,6 +213,7 @@ export class RouteAccessGuard implements CanActivate {
       comment: "comment.view",
       task: "task.view",
       attachment: "attachment.view",
+      import: "import.view",
     };
     const view = views[resource.type];
     if (view) return !(await services.authorization.authorize(principal, view, resource));

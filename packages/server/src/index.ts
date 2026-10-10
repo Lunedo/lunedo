@@ -310,6 +310,35 @@ export {
 } from "./identity/sync.js";
 export { type SyncRunSignal, signalRun } from "./identity/sync-signals.js";
 export type { WithheldRole } from "./identity/withheld.js";
+export { ImportError } from "./imports/errors.js";
+export type { FolderFile } from "./imports/folder.js";
+export {
+  type ImportFound,
+  type ImportPerson,
+  type ImportService,
+  type ImportUpdate,
+  type ImportView,
+  MAX_REVIEWERS,
+  type MacroUsage,
+  type ReportEntry,
+  type ReportSummary,
+} from "./imports/imports.js";
+export { pipelinePhases } from "./imports/pipeline.js";
+export { problemCodes, reportCategoryNames } from "./imports/report.js";
+export { type ImportState, importStates } from "./imports/schema.js";
+export { importFolderSetting, importSettings, maxUploadSetting } from "./imports/settings.js";
+export {
+  IMPORT_CHANGES_CHANNEL,
+  type ImportChangeSignal,
+  parseImportChangeSignal,
+} from "./imports/signals.js";
+export { type ImportSource, importSources } from "./imports/source.js";
+export {
+  type ImportUpload,
+  UPLOAD_PART_BYTES,
+  type UploadPart,
+  UploadTooLargeError,
+} from "./imports/uploads.js";
 export {
   defineJob,
   type EnqueueOptions,

@@ -127,6 +127,9 @@ type Rule =
   | "manager"
   | "memberOrManager"
   | "formerAdministrator"
+  | "importerOrReviewer"
+  | "importer"
+  | "heldForAdministrator"
   | "self";
 
 interface Expectation {
@@ -205,6 +208,7 @@ const EXPECTED: Record<string, Expectation> = {
   "organization.integrations.manage": organization("integrationsAndApi", "manage"),
   "organization.audit.view": organization("auditLog", "view"),
   "organization.access.view": organization("spaces", "view"),
+  "organization.imports.manage": organization("spaces", "manage"),
   "group.view": organization("membersAndGroups", "view", "memberOrManager"),
   "group.manage": organization("membersAndGroups", "manage", "manager"),
   "group.delete": organization("membersAndGroups", "manage", "manager"),
@@ -244,6 +248,9 @@ const EXPECTED: Record<string, Expectation> = {
   "task.update": { scope: "space" },
   "attachment.view": { scope: "space" },
   "attachment.edit": { scope: "space" },
+  "import.view": { scope: "organization", rule: "importerOrReviewer" },
+  "import.manage": { scope: "organization", rule: "importer" },
+  "import.takeOver": { scope: "organization", rule: "heldForAdministrator" },
 };
 
 function expectedAllowed(held: Held, actionName: string): boolean {
@@ -266,6 +273,9 @@ function expectedAllowed(held: Held, actionName: string): boolean {
     manager: () => false,
     memberOrManager: () => facts.membership !== null && held.via === "group",
     formerAdministrator: () => false,
+    importerOrReviewer: () => false,
+    importer: () => false,
+    heldForAdministrator: () => false,
   };
   if (expectation.rule && rules[expectation.rule]()) return true;
   if (expectation.scope === "space") return false;
@@ -292,6 +302,7 @@ interface Fixture {
   taskId: string;
   attachmentId: string;
   deletedSpaceEntryId: string;
+  importId: string;
 }
 
 export function permissionMatrix(only: readonly Subject[], extras: boolean): void {
@@ -385,8 +396,13 @@ export function permissionMatrix(only: readonly Subject[], extras: boolean): voi
         "insert into attachment_versions (id, attachment_id, number, file_id, name) values ($1, $2, 1, $3, 'a.txt')",
         [randomUUID(), attachment.rows[0]?.id, file.rows[0]?.id],
       );
+      const importRow = await test.pool.query<{ id: string }>(
+        "insert into imports (id, organization_id, importer_id, source) values ($1, $2, $3, 'confluence-xml') returning id",
+        [randomUUID(), created.id, owner],
+      );
       return {
         organizationId: created.id,
+        importId: importRow.rows[0]?.id ?? "",
         groupId: group.rows[0]?.id ?? "",
         targetId,
         spaceId: space.id,
@@ -448,6 +464,8 @@ export function permissionMatrix(only: readonly Subject[], extras: boolean): voi
           return { type: "attachment", id: target.attachmentId };
         case "deletedSpace":
           return { type: "deletedSpace", id: target.deletedSpaceEntryId };
+        case "import":
+          return { type: "import", id: target.importId };
         default:
           throw new Error(`The matrix has no resource for ${action.resourceType.type}`);
       }

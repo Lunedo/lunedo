@@ -12,6 +12,7 @@ import { instanceKeys } from "../api/instance-queries.js";
 import { organizationKeys } from "../api/organization-queries.js";
 import { queryKeys } from "../api/queries.js";
 import { request } from "../api/request.js";
+import { importChanged, importKeys } from "../imports/imports-api.js";
 import { isSpaceChangeEvent, type SpaceChangeEvent, spacesChanged } from "../spaces/space-queries.js";
 
 export const notificationKeys = {
@@ -133,6 +134,7 @@ export function changeKeys(event: ChangeEvent): QueryKey[] {
   if (!event.organizationId) return keys;
   keys.push(organizationKeys.organization(event.organizationId), ["group"], ["serviceAccount"]);
   if (PROVIDER_TARGETS.has(event.target)) keys.push(...(INSTANCE_TARGET_KEYS[event.target] ?? []));
+  if (event.target === "organization") keys.push(importKeys.folder(event.organizationId));
   if (ORGANIZATION_WIDE_TARGETS.has(event.target)) {
     keys.push(instanceKeys.accounts, instanceKeys.organizations, queryKeys.organizations);
   }
@@ -228,7 +230,17 @@ export function useNotificationStream(enabled: boolean): void {
         spacesChanged(queryClient, events);
       }, CHANGE_BATCH_MS);
     };
+    const onImports = (event: MessageEvent<string>) => {
+      try {
+        const data = JSON.parse(event.data) as { importId?: unknown; organizationId?: unknown };
+        if (typeof data.importId !== "string" || typeof data.organizationId !== "string") return;
+        importChanged(queryClient, { importId: data.importId, organizationId: data.organizationId });
+      } catch {
+        return;
+      }
+    };
     source.addEventListener("notifications", onChange);
+    source.addEventListener("imports", onImports);
     source.addEventListener("spaces", onSpaces);
     source.addEventListener("changes", onObjects);
     source.addEventListener("settings", onSettings);
@@ -239,6 +251,7 @@ export function useNotificationStream(enabled: boolean): void {
       source.removeEventListener("syncRuns", onSyncRuns);
       source.removeEventListener("changes", onObjects);
       source.removeEventListener("spaces", onSpaces);
+      source.removeEventListener("imports", onImports);
       if (flush) clearTimeout(flush);
       if (flushSpaces) clearTimeout(flushSpaces);
       source.close();

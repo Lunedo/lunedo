@@ -1069,7 +1069,8 @@
     "personalSpaces": "Personal spaces",
     "pagesAndTrash": "Pages and trash",
     "templates": "Templates",
-    "accessOverview": "Access overview"
+    "accessOverview": "Access overview",
+    "imports": "Import"
   },
   "commands": {
     "label": "Command palette",
@@ -1111,7 +1112,8 @@
     "forbiddenTitle": "No access",
     "forbiddenDescription": "Your roles do not allow you to see this page. Ask an owner of the organization for access if you need it.",
     "failedTitle": "This page could not be loaded",
-    "retry": "Try again"
+    "retry": "Try again",
+    "uploadTooLarge": "The file is larger than uploads allow. Ask the instance administrators to raise the upload limit, or to place the file in your organization's import folder."
   },
   "validation": {
     "required": "This field is required.",
@@ -1322,7 +1324,27 @@
     "linkExpiryTooLate": "Links for anyone may last at most {days, plural, one {# day} other {# days}} in this organization. Choose an earlier date.",
     "versionNotFound": "This version was removed in the meantime. Reload the versions.",
     "settingAboveMaximum": "The value is above the maximum the instance allows. Choose a lower value.",
-    "settingAboveMaximumValue": "The instance allows at most {maximum}. Choose a value up to {maximum}."
+    "settingAboveMaximumValue": "The instance allows at most {maximum}. Choose a value up to {maximum}.",
+    "importStarted": "The import has already started, so its settings cannot change anymore. Stop or discard it instead.",
+    "importNotReady": "Pagehall is still reading the export. Start the import when that is done.",
+    "importNotRunning": "The import is not running anymore. Reload the page to see its current state.",
+    "importNotInReview": "The import is not waiting for a decision anymore. Reload the page to see its current state.",
+    "importNotHeld": "The import is not waiting for an administrator anymore. Reload the page to see its current state.",
+    "importFinished": "The import is finished, so its reviewers cannot change anymore.",
+    "importFolderDisabled": "Imports from the import folder are turned off for this instance. Upload the file instead.",
+    "importFolderUnavailable": "The import folder of the server cannot be read. Ask the person who runs the server to check it.",
+    "importFileUnavailable": "The file is not in the import folder anymore, or it is not a regular file. Ask the person who runs the server to place it there again.",
+    "reportUnavailable": "The report is available once the import has started.",
+    "uploadIncomplete": "Some parts of the file have not arrived yet. Continue the upload.",
+    "uploadComplete": "The upload is already complete. Choose the file again to upload a new one.",
+    "invalidUpload": "The file cannot be uploaded because it is empty. Choose the export file.",
+    "invalidUploadPart": "A part of the upload arrived in the wrong size. The upload retries it.",
+    "uploadChecksumMismatch": "The uploaded data does not match the file on your computer. Upload the file again.",
+    "invalidSource": "Choose one of the export formats.",
+    "invalidSourceUrl": "Enter the address of the Confluence site starting with https://.",
+    "invalidReviewer": "Reviewers must be active members of the organization. Choose someone else.",
+    "tooManyReviewers": "An import can have up to 50 reviewers. Remove some first.",
+    "uploadTooLarge": "The file is larger than uploads allow. Ask the person who runs the server to place it in the import folder."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -2042,6 +2064,14 @@
       "spaces_membersCreateConfidentialSpaces": {
         "label": "Members create confidential spaces",
         "description": "Members may create confidential spaces and one-on-ones that administrators cannot read. Administrators always can."
+      },
+      "imports_maxUploadMegabytes": {
+        "label": "Largest export to upload",
+        "description": "Exports above this size are refused before the upload starts, with a hint to raise this limit or to use the organization's import folder on the server."
+      },
+      "imports_folderEnabled": {
+        "label": "Import folder",
+        "description": "Organization administrators can import exports placed in their organization's subfolder of the import folder, named after the organization's short name. Files at the top level or in another organization's subfolder are never offered."
       }
     },
     "disabled": {
@@ -2286,6 +2316,11 @@
       },
       "space": {
         "confidentialWithoutAdministrator": "The confidential space {spaceKey} has no space admin anymore. You can appoint one of its remaining members."
+      },
+      "import": {
+        "finished": "The import into {spaceName} ({spaceKey}) is ready for review. {problems, plural, =0 {Nothing needs attention.} one {# item needs attention.} other {# items need attention.}}",
+        "failed": "The import into {spaceName} ({spaceKey}) failed. Open it to see why and what to do.",
+        "held": "The import into the space {spaceKey} paused because its administrator can no longer import. You can take it over."
       }
     }
   },
@@ -3188,6 +3223,16 @@
       "attachment": {
         "versionKept": "File version marked to keep",
         "versionReleased": "File version no longer kept"
+      },
+      "import": {
+        "started": "Import started",
+        "reviewersChanged": "Import reviewers changed",
+        "accepted": "Import accepted",
+        "discarded": "Import discarded",
+        "stopped": "Import stopped",
+        "failed": "Import failed",
+        "takenOver": "Import taken over",
+        "placeholderCreated": "Placeholder created by an import"
       }
     },
     "action": "Action",
@@ -3896,7 +3941,7 @@
     },
     "readView": {
       "untitledPage": "Untitled page",
-      "unsupportedMacro": "Unsupported macro: {name}",
+      "unsupportedMacro": "This content from Confluence is not shown yet.",
       "file": "File",
       "image": "Image",
       "invalid": "This page cannot be shown because its stored content is damaged. Ask a space admin to restore an earlier version.",
@@ -4405,7 +4450,9 @@
     "deleteFailed": "The space could not be deleted",
     "collaborationSection": "Collaboration",
     "sharingSection": "Sharing",
-    "filesSection": "Files"
+    "filesSection": "Files",
+    "importsSection": "Imports",
+    "importsSectionDescription": "Limits for imports from Confluence. The import folder itself is set by the person who runs the server."
   },
   "archive": {
     "archive": "Archive",
@@ -5794,6 +5841,489 @@
       "deleteConfirm": "Delete space permanently",
       "deleted": "{key} was deleted.",
       "deleteFailed": "The space could not be deleted"
+    }
+  },
+  "imports": {
+    "title": "Import",
+    "description": "Bring spaces from Confluence into Pagehall. Every import runs into a quarantine space first, which only you and the reviewers you add can see.",
+    "untitled": "New import",
+    "states": {
+      "draft": "Draft",
+      "analyzing": "Reading the export",
+      "ready": "Ready to start",
+      "running": "Running",
+      "held": "Waiting for an administrator",
+      "stopping": "Stopping",
+      "review": "In review",
+      "accepting": "Accepting",
+      "accepted": "Accepted",
+      "discarding": "Discarding",
+      "discarded": "Discarded",
+      "stopped": "Stopped",
+      "failed": "Failed"
+    },
+    "sources": {
+      "confluence-xml": {
+        "label": "XML space export",
+        "description": "Confluence Cloud or Data Center. Contains pages, blog posts, comments, attachments and page history."
+      },
+      "confluence-csv": {
+        "label": "CSV space export",
+        "description": "Confluence Cloud. Same content as the XML export, packed differently."
+      }
+    },
+    "phases": {
+      "read": "Read the export",
+      "space": "Quarantine space",
+      "people": "People",
+      "pages": "Pages and page tree",
+      "attachments": "Attachments",
+      "content": "Page content, links and labels",
+      "finish": "Report"
+    },
+    "list": {
+      "title": "Imports",
+      "new": "New import",
+      "createFailed": "The import could not be started",
+      "loadFailed": "The imports could not be loaded",
+      "empty": "No imports yet",
+      "emptyDescription": "Imports of Confluence spaces appear here, with their progress and report.",
+      "continue": "Continue",
+      "showProgress": "Show progress",
+      "openReport": "Open report",
+      "takeOverAction": "Take over",
+      "open": "Open",
+      "draft": "{source} · draft saved {when}",
+      "running": "{source} · {done} of {total} in the current step",
+      "review": "{source} · finished {when} · {pages, plural, one {# page} other {# pages}} · {problems, plural, =0 {nothing needs attention} one {# item needs attention} other {# items need attention}}",
+      "accepted": "{source} · accepted {when}",
+      "removed": "{source} · ended {when} · nothing was kept",
+      "held": "{source} · {name} can no longer import; another administrator can take over",
+      "failed": "{source} · failed {when}",
+      "largeTitle": "Large exports",
+      "largeFolder": "Exports above {size} cannot be uploaded from the browser. Ask the instance administrators to raise the upload limit, or to place the file in this organization's import folder on the server; you can then choose it in a new import.",
+      "largeNoFolder": "Exports above {size} cannot be uploaded from the browser. Ask the instance administrators to raise the upload limit, or to turn on the import folder and place the file in this organization's import folder on the server."
+    },
+    "wizard": {
+      "title": "New import",
+      "loadFailed": "The import could not be loaded",
+      "steps": "Steps of the import",
+      "stepNames": {
+        "source": "Source",
+        "space": "Space",
+        "check": "Check and start"
+      },
+      "progress": "New import · step {step} of {total}",
+      "close": "Close",
+      "back": "Back",
+      "continue": "Continue",
+      "saving": "Saving the draft…",
+      "saved": "Draft saved",
+      "saveFailed": "The draft could not be saved",
+      "reading": "Reading the export",
+      "readingDescription": "Pagehall checks the file and counts what it contains. You can continue with the next step meanwhile.",
+      "danger": "Danger zone",
+      "deleteDraft": "Delete draft",
+      "deleteDraftDescription": "Deletes this draft. An uploaded file is deleted after 7 days.",
+      "deleteDraftTitle": "Delete the draft?",
+      "deleteDraftConfirm": "The settings of this import are deleted. Nothing was imported yet.",
+      "keepDraft": "Keep draft",
+      "deleteFailed": "The draft could not be deleted",
+      "source": {
+        "formatTitle": "What did you export from Confluence?",
+        "whereToFind": "Where to find it: in Confluence open the space, then Space settings › Export space.",
+        "fileTitle": "Where is the file?",
+        "upload": "Upload from this computer",
+        "uploadDescription": "Up to {size}. The upload continues after a lost connection.",
+        "uploadDescriptionPlain": "The upload continues after a lost connection.",
+        "folder": "Server import folder",
+        "folderDescription": "For larger exports. The file must already be in this organization's import folder on the server.",
+        "fileRequired": "Choose the export file, and wait until the upload is finished.",
+        "folderFile": "File in the import folder",
+        "folderHint": "Pagehall reads only regular files directly inside this organization's import folder.",
+        "folderPlaceholder": "Choose a file",
+        "folderOption": "{name} · {size}",
+        "folderEmpty": "The import folder is empty",
+        "folderEmptyDescription": "Ask the instance administrators to place the export in the folder shown above. It appears here without a reload.",
+        "folderDisabled": "Imports from the import folder are turned off for this instance. Upload the file instead, or ask an instance administrator to turn the import folder on.",
+        "folderLoadFailed": "The import folder could not be read",
+        "folderFailed": "The file could not be chosen",
+        "readTitle": "Export read",
+        "read": "{pages, plural, one {# page} other {# pages}} of the space {space} found."
+      },
+      "space": {
+        "title": "New space",
+        "name": "Name",
+        "nameRequired": "Enter a name for the space.",
+        "key": "Key",
+        "keyHint": "Taken from Confluence. Appears in links.",
+        "keyInvalid": "Use 2 to 10 letters or digits.",
+        "keyTaken": "The key {key} is already used by another space. Choose another key.",
+        "sourceUrl": "Address of the Confluence site",
+        "sourceUrlHint": "Optional. Links to pages that are not part of this export point there. Without it, such links become plain text.",
+        "sourceUrlPlaceholder": "https://example.atlassian.net/wiki",
+        "sourceUrlInvalid": "Enter the address starting with https://, for example https://example.atlassian.net/wiki.",
+        "whatTitle": "What to import",
+        "archived": "Import as archived",
+        "archivedDescription": "Read-only and left out of search by default. For content you keep for reference, like old meeting notes.",
+        "reviewers": "Reviewers",
+        "reviewersHint": "They can read the quarantine space and the report, but not accept, discard or stop the import. Add the people who will own the space.",
+        "addReviewer": "Add a reviewer",
+        "removeReviewer": "Remove {name}",
+        "reviewersFailed": "The reviewers could not be changed"
+      },
+      "check": {
+        "intro": "Pagehall has read the export. Nothing is imported yet.",
+        "pages": "{count, plural, one {page} other {pages}}",
+        "attachments": "{count, plural, one {attachment} other {attachments}} · {size}",
+        "people": "{count, plural, one {person} other {people}}",
+        "macros": "{count, plural, one {kind of macro} other {kinds of macros}}",
+        "foundTitle": "Found in the export",
+        "peopleTitle": "{count, plural, one {# person} other {# people}}",
+        "peopleDescription": "They become placeholders named by their Atlassian ID. You can link them to accounts later.",
+        "macrosTitle": "{count, plural, one {# kind of macro} other {# kinds of macros}}",
+        "macrosDescription": "Kept as “not shown yet” with their original data. Readers see a notice; the report lists them.",
+        "spaceTitle": "Space “{name}” ({key})",
+        "archived": "Imported as archived · {count, plural, =0 {no reviewers} one {# reviewer} other {# reviewers}}",
+        "notArchived": "Not archived · {count, plural, =0 {no reviewers} one {# reviewer} other {# reviewers}}",
+        "quarantineTitle": "Quarantine space",
+        "quarantineWithReviewers": "The import runs into a quarantine space. Only you and {names} can see it until you accept it. You can leave this page; you get a notification when it is done.",
+        "quarantineAlone": "The import runs into a quarantine space. Only you can see it until you accept it. You can leave this page; you get a notification when it is done.",
+        "start": "Start import",
+        "startFailed": "The import could not be started",
+        "notReady": "Pagehall is still reading the export. Start the import when it is done.",
+        "notRead": "The export has not been read yet. Go back to the first step and choose the file."
+      }
+    },
+    "upload": {
+      "drop": "Drop the export here",
+      "choose": "Choose a file",
+      "hint": "ZIP file from Confluence, up to {size}.",
+      "progress": "{sent} of {total}",
+      "progressLabel": "Upload progress",
+      "waiting": "Connection lost. The upload continues as soon as the server can be reached again.",
+      "checking": "Checking the file…",
+      "pause": "Pause upload",
+      "resume": "Continue upload",
+      "interrupted": "The upload stopped before the end. Parts that already arrived are not sent again.",
+      "chooseAgain": "Choose the file again",
+      "uploaded": "{size} · uploaded and checked",
+      "done": "Uploaded",
+      "tooLarge": "{name} cannot be uploaded",
+      "tooLargeCause": "The file has {size}; uploads from the browser are limited to {limit}.",
+      "tooLargeAction": "Ask the instance administrators to raise the upload limit, or to place the file in the import folder {path}, then choose “Server import folder”.",
+      "failed": "{name} could not be uploaded",
+      "failedAction": "Retry the upload. Parts that already arrived are kept.",
+      "retry": "Retry upload",
+      "tooLargeActionNoFolder": "Ask the instance administrators to raise the upload limit, or to turn on the import folder and place the file in {path}."
+    },
+    "detail": {
+      "loadFailed": "The import could not be loaded",
+      "importing": "Importing",
+      "started": "Started {when} by {name}",
+      "quarantineWithReviewers": "The content is in a quarantine space. Only you and {names} can see it.",
+      "quarantineAlone": "The content is in a quarantine space. Only you can see it.",
+      "openSpace": "Open quarantine space",
+      "accept": "Accept import",
+      "heldTitle": "The import waits for an administrator",
+      "held": "{name} can no longer import into this organization, so the import paused. Another administrator can take it over and continue where it stopped.",
+      "takeOver": "Take over the import",
+      "takeOverFailed": "The import could not be taken over",
+      "failed": "The import failed: {what}",
+      "progressLabel": "Import progress",
+      "steps": "Steps",
+      "phaseProgress": "{done} of {total}",
+      "phaseDone": "Done",
+      "phaseActive": "In progress",
+      "phaseWaiting": "Not started",
+      "resumeNote": "If the server restarts, the import continues where it stopped. You can leave this page; you get a notification when it is done.",
+      "deletingTitle": "Deleting the quarantine space",
+      "deleting": "{count, plural, one {# item} other {# items}} deleted so far.",
+      "acceptedTitle": "Accepted",
+      "accepted": "The space became a regular space {when}.",
+      "stoppedTitle": "The import was stopped",
+      "discardedTitle": "The import was discarded",
+      "removedDescription": "The quarantine space and everything in it were deleted. An uploaded file is deleted on {when}.",
+      "danger": "Danger zone",
+      "stop": "Stop import",
+      "stopDescription": "Stops the import and deletes the quarantine space with everything imported so far. An uploaded file stays for 7 days.",
+      "stopTitle": "Stop the import?",
+      "stopConfirm": "The import stops and the quarantine space is deleted with everything imported so far. This cannot be undone.",
+      "keepRunning": "Keep importing",
+      "stopping": "The import is being stopped",
+      "stopFailed": "The import could not be stopped",
+      "discard": "Discard import",
+      "discardDescription": "Deletes the quarantine space and everything in it, and the report. Nothing reaches the organization.",
+      "discardTitle": "Discard the import?",
+      "discardConfirm": "The quarantine space “{name}” is deleted with {pages, plural, one {# page} other {# pages}}, {attachments, plural, one {# attachment} other {# attachments}} and the report. Nothing reaches the organization. This cannot be undone.",
+      "keepImport": "Keep import",
+      "discarding": "The import is being discarded",
+      "discardFailed": "The import could not be discarded",
+      "typeKey": "Type {key} to confirm",
+      "keyMismatch": "Type the key {key} exactly as shown."
+    },
+    "report": {
+      "tabs": "Report",
+      "summary": "Summary",
+      "macros": "Macros",
+      "attachments": "Attachments",
+      "loadFailed": "The report could not be loaded",
+      "entriesFailed": "The report entries could not be loaded",
+      "macrosFailed": "The macros could not be loaded",
+      "counts": {
+        "pages": "{count, plural, one {page} other {pages}}",
+        "attachments": "{count, plural, one {attachment} other {attachments}}",
+        "people": "{count, plural, one {person} other {people}}",
+        "problems": "{count, plural, one {item needs attention} other {items need attention}}"
+      },
+      "attention": "Needs attention",
+      "clean": "Nothing needs attention",
+      "cleanDescription": "Everything in the export was imported.",
+      "entries": "Report entries",
+      "wholeExport": "The export as a whole",
+      "openPage": "Open page",
+      "previous": "Previous",
+      "next": "Next",
+      "noAttachmentProblems": "All attachments were imported",
+      "noMacros": "The pages use no macros",
+      "macrosCaption": "Macros kept with their original data",
+      "macro": "Macro",
+      "usedOn": "Used on",
+      "result": "Result",
+      "pagesCount": "{count, plural, one {# page} other {# pages}}",
+      "notConverted": "Not shown yet · original data kept, readers see a notice",
+      "showPages": "Show the pages that use {name}",
+      "pagesWith": "Pages with {name}",
+      "macrosNote": "Macros are converted by a later version of the import. Their original data stays in the pages until then.",
+      "download": "Download the report as CSV",
+      "codes": {
+        "unsupportedMacro": {
+          "title": "{count, plural, one {# use of macros} other {# uses of macros}} not shown yet",
+          "hint": "The pages show a notice instead; the original data is kept.",
+          "entry": "Macro {name} is not shown yet ({count}×)."
+        },
+        "missingAttachment": {
+          "title": "{count, plural, one {# reference to a missing file} other {# references to missing files}}",
+          "hint": "The pages show a notice where the file was.",
+          "entry": "{fileName} is referenced but not part of the export. Export again with attachments, or upload it on the page."
+        },
+        "attachmentFileMissing": {
+          "title": "{count, plural, one {# attachment} other {# attachments}} missing in the export",
+          "hint": "Confluence listed them, but the file was not in the archive.",
+          "entry": "{fileName}, version {version}, is not in the export."
+        },
+        "attachmentTooLarge": {
+          "title": "{count, plural, one {# attachment is} other {# attachments are}} larger than allowed",
+          "hint": "They exceed the largest file size of the organization and were left out.",
+          "entry": "{fileName}, version {version}, is larger than the largest file size of the organization."
+        },
+        "attachmentUnreadable": {
+          "title": "{count, plural, one {# attachment} other {# attachments}} could not be read",
+          "hint": "The file in the archive is damaged.",
+          "entry": "{fileName}, version {version}, could not be read from the archive."
+        },
+        "externalPageLink": {
+          "title": "{count, plural, one {# link points} other {# links point}} to pages outside the export",
+          "hint": "They lead to the Confluence site, or stay as text when no address was entered.",
+          "entry": "Link to “{title}” leads outside the export."
+        },
+        "unsupportedLink": {
+          "title": "{count, plural, one {# link} other {# links}} to other kinds of Confluence content",
+          "hint": "Kept as text.",
+          "entry": "A link to a {kind} was kept as text."
+        },
+        "invalidLink": {
+          "title": "{count, plural, one {# link was} other {# links were}} removed",
+          "hint": "Their address was not a web address and could be unsafe.",
+          "entry": "A link with an address that is not a web address was kept as text."
+        },
+        "externalImage": {
+          "title": "{count, plural, one {# image} other {# images}} from other websites",
+          "hint": "Pagehall does not load images from other websites; they became links.",
+          "entry": "An image from another website became a link."
+        },
+        "invalidContent": {
+          "title": "{count, plural, one {# part of a page} other {# parts of pages}} could not be converted",
+          "hint": "They are kept with their original data and shown as a notice.",
+          "entry": "Content ({element}) could not be converted and is kept with its original data."
+        },
+        "contentTruncated": {
+          "title": "{count, plural, one {# page is} other {# pages are}} too long",
+          "hint": "The end of the page was not imported.",
+          "entry": "The page is longer than a page can be; the end is missing."
+        },
+        "macroDataTruncated": {
+          "title": "{count, plural, one {# macro has} other {# macros have}} too much data",
+          "hint": "Only the beginning of their original data was kept.",
+          "entry": "Macro {macro} has more data than can be kept."
+        },
+        "unresolvedPerson": {
+          "title": "{count, plural, one {# mention} other {# mentions}} without a person",
+          "hint": "The export names no account for them.",
+          "entry": "A mention without an account was left out."
+        },
+        "invalidLabel": {
+          "title": "{count, plural, one {# label} other {# labels}} could not be taken over",
+          "hint": "They contain no letters or digits.",
+          "entry": "The label “{label}” could not be taken over."
+        },
+        "duplicateEntry": {
+          "title": "{count, plural, one {# file name appears} other {# file names appear}} twice in the archive",
+          "hint": "Pagehall used the first file of each name.",
+          "entry": "{name} appears more than once; the first file was used."
+        },
+        "skippedEntry": {
+          "title": "{count, plural, one {# folder entry} other {# folder entries}} skipped",
+          "hint": "Folders in the archive carry no content.",
+          "entry": "{name} was skipped."
+        }
+      }
+    },
+    "accept": {
+      "title": "Accept “{name}”?",
+      "intro": "“{name}” becomes a regular space of {organization}. Choose who gets access then; the defaults of the organization for new spaces are filled in.",
+      "archived": "The space becomes archived: read-only and left out of search by default.",
+      "placeholders": "People of the export stay placeholders. They can be linked to accounts after accepting.",
+      "submit": "Accept import",
+      "failed": "The import could not be accepted",
+      "defaultsFailed": "The default permissions could not be loaded",
+      "done": "{name} is now a regular space."
+    },
+    "errors": {
+      "unknown": {
+        "what": "The export could not be read",
+        "cause": "An unexpected problem occurred.",
+        "action": "Try again. If it happens again, ask the person who runs the server to check the logs."
+      },
+      "notAnArchive": {
+        "what": "The file is not a ZIP archive",
+        "cause": "Confluence exports spaces as ZIP files. The file may be damaged or incomplete.",
+        "action": "Export the space again and upload the ZIP file."
+      },
+      "wrongFormat": {
+        "what": "The file has the other export format",
+        "cause": "The chosen format does not match the file.",
+        "action": "Choose the other export format above; the file is read again."
+      },
+      "notConfluenceExport": {
+        "what": "The file is not a Confluence space export",
+        "cause": "The archive contains none of the files of a Confluence export.",
+        "action": "In Confluence open the space, then Space settings › Export space, and upload that file."
+      },
+      "notSpaceExport": {
+        "what": "The file is an export of a whole site",
+        "cause": "Pagehall imports one space at a time.",
+        "action": "Export a single space in Confluence and upload that file."
+      },
+      "archiveTooLarge": {
+        "what": "The archive expands to more than allowed",
+        "cause": "Its content is larger than the limits for imports. Real exports stay below them; the file may be crafted.",
+        "action": "Export the space again. If it is really that large, split it into several spaces."
+      },
+      "tooManyEntries": {
+        "what": "The archive contains too many files",
+        "cause": "It has more files than the limit for imports.",
+        "action": "Export the space again, or split it into several spaces."
+      },
+      "compressionRatio": {
+        "what": "A file in the archive is compressed too strongly",
+        "cause": "Real exports are never compressed this much; the file may be crafted to fill the server.",
+        "action": "Export the space again from Confluence."
+      },
+      "unsafeEntryName": {
+        "what": "The archive contains unsafe file names",
+        "cause": "A name points outside the archive, has a drive letter or is a symbolic link. Confluence never creates such names.",
+        "action": "Export the space again from Confluence and do not change the archive."
+      },
+      "encryptedEntry": {
+        "what": "The archive is encrypted",
+        "cause": "Pagehall cannot read encrypted archives.",
+        "action": "Upload the export as Confluence created it, without a password."
+      },
+      "unsupportedCompression": {
+        "what": "The archive uses an unknown compression",
+        "cause": "The archive was probably repacked with another tool.",
+        "action": "Upload the export as Confluence created it."
+      },
+      "xmlDeclaration": {
+        "what": "The export contains document type declarations",
+        "cause": "Confluence exports contain none; such declarations can be used to attack the server.",
+        "action": "Export the space again from Confluence."
+      },
+      "xmlTooDeep": {
+        "what": "The export nests its content too deeply",
+        "cause": "The structure is deeper than the limit for imports.",
+        "action": "Export the space again from Confluence."
+      },
+      "xmlElementTooLarge": {
+        "what": "The export contains an entry that is too large",
+        "cause": "One entry is larger than the limit for imports.",
+        "action": "Export the space again. If a single page is that large, shorten it in Confluence first."
+      },
+      "csvFieldTooLarge": {
+        "what": "The export contains a value that is too large",
+        "cause": "A field of a table in the export is larger than the limit for imports.",
+        "action": "Export the space again. If a single page is that large, shorten it in Confluence first."
+      },
+      "csvRowTooLarge": {
+        "what": "The export contains a row that is too large",
+        "cause": "A row of a table in the export is larger than the limit for imports.",
+        "action": "Export the space again from Confluence."
+      },
+      "csvTooManyFields": {
+        "what": "A table in the export has too many columns",
+        "cause": "Real exports have far fewer columns; the file may be damaged.",
+        "action": "Export the space again from Confluence."
+      },
+      "csvUnterminatedQuote": {
+        "what": "A table in the export ends too early",
+        "cause": "The file is probably incomplete.",
+        "action": "Export the space again and upload the complete file."
+      },
+      "keyTaken": {
+        "what": "The space key is taken",
+        "cause": "Another space got the key after the import was set up.",
+        "action": "Start a new import with another key."
+      },
+      "fileChanged": {
+        "what": "The file in the import folder changed",
+        "cause": "It was replaced or changed after Pagehall read it.",
+        "action": "Choose the file again so that Pagehall reads the new version."
+      },
+      "fileMissing": {
+        "what": "No file is chosen",
+        "cause": "The import has no export file.",
+        "action": "Choose the export file in the first step."
+      },
+      "importFileUnavailable": {
+        "what": "The file is no longer in the import folder",
+        "cause": "It was moved or deleted, or it is not a regular file.",
+        "action": "Ask the person who runs the server to place the file there again, then choose it."
+      },
+      "importFolderUnavailable": {
+        "what": "The import folder cannot be read",
+        "cause": "The folder does not exist on the server or Pagehall has no access to it.",
+        "action": "Ask the person who runs the server to check the import folder."
+      },
+      "uploadIncomplete": {
+        "what": "The upload is not complete",
+        "cause": "Some parts of the file have not arrived.",
+        "action": "Continue the upload in the first step."
+      },
+      "internalError": {
+        "what": "The import stopped after several attempts",
+        "cause": "An unexpected problem occurred again and again.",
+        "action": "Discard the import and start it again. If it fails again, ask the person who runs the server to check the logs."
+      }
+    },
+    "quarantine": {
+      "title": "Import in quarantine",
+      "description": "This space holds an import that is not accepted yet. Only the importing administrator and the reviewers can see it, and nobody can change it.",
+      "open": "Open the imports"
+    },
+    "folder": {
+      "path": "Import folder of this organization",
+      "pathHint": "Pagehall offers only files directly inside this folder. The folder is named after the organization's short name; when the short name changes, the path changes too."
     }
   }
 }

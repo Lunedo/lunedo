@@ -1069,7 +1069,8 @@
     "personalSpaces": "Persönliche Spaces",
     "pagesAndTrash": "Seiten und Papierkorb",
     "templates": "Vorlagen",
-    "accessOverview": "Zugriffsübersicht"
+    "accessOverview": "Zugriffsübersicht",
+    "imports": "Import"
   },
   "commands": {
     "label": "Befehlspalette",
@@ -1111,7 +1112,8 @@
     "forbiddenTitle": "Kein Zugriff",
     "forbiddenDescription": "Deine Rollen erlauben dir diese Seite nicht. Bitte einen Owner der Organisation um Zugriff, wenn du ihn brauchst.",
     "failedTitle": "Diese Seite konnte nicht geladen werden",
-    "retry": "Erneut versuchen"
+    "retry": "Erneut versuchen",
+    "uploadTooLarge": "Die Datei ist größer als für Uploads erlaubt. Bitte die Instanz-Administration, das Upload-Limit zu erhöhen oder die Datei in den Import-Ordner deiner Organisation zu legen."
   },
   "validation": {
     "required": "Dieses Feld ist erforderlich.",
@@ -1322,7 +1324,27 @@
     "linkExpiryTooLate": "Links für alle dürfen in dieser Organisation höchstens {days, plural, one {# Tag} other {# Tage}} gelten. Wähle ein früheres Datum.",
     "versionNotFound": "Diese Version wurde inzwischen entfernt. Lade die Versionen neu.",
     "settingAboveMaximum": "Der Wert liegt über dem Höchstwert, den die Instanz erlaubt. Wähle einen niedrigeren Wert.",
-    "settingAboveMaximumValue": "Die Instanz erlaubt höchstens {maximum}. Wähle einen Wert bis {maximum}."
+    "settingAboveMaximumValue": "Die Instanz erlaubt höchstens {maximum}. Wähle einen Wert bis {maximum}.",
+    "importStarted": "Der Import hat schon begonnen, seine Einstellungen lassen sich nicht mehr ändern. Stoppe oder verwirf ihn stattdessen.",
+    "importNotReady": "Pagehall liest den Export noch. Starte den Import, wenn das erledigt ist.",
+    "importNotRunning": "Der Import läuft nicht mehr. Lade die Seite neu, um seinen aktuellen Stand zu sehen.",
+    "importNotInReview": "Der Import wartet nicht mehr auf eine Entscheidung. Lade die Seite neu, um seinen aktuellen Stand zu sehen.",
+    "importNotHeld": "Der Import wartet nicht mehr auf die Administration. Lade die Seite neu, um seinen aktuellen Stand zu sehen.",
+    "importFinished": "Der Import ist abgeschlossen, seine Import-Prüfer lassen sich nicht mehr ändern.",
+    "importFolderDisabled": "Importe aus dem Import-Ordner sind in dieser Instanz ausgeschaltet. Lade die Datei stattdessen hoch.",
+    "importFolderUnavailable": "Der Import-Ordner des Servers kann nicht gelesen werden. Bitte die Person, die den Server betreibt, ihn zu prüfen.",
+    "importFileUnavailable": "Die Datei liegt nicht mehr im Import-Ordner oder ist keine normale Datei. Bitte die Person, die den Server betreibt, sie wieder dort abzulegen.",
+    "reportUnavailable": "Der Bericht steht zur Verfügung, sobald der Import begonnen hat.",
+    "uploadIncomplete": "Einige Teile der Datei sind noch nicht angekommen. Setze den Upload fort.",
+    "uploadComplete": "Der Upload ist schon vollständig. Wähle die Datei erneut, um eine neue hochzuladen.",
+    "invalidUpload": "Die Datei kann nicht hochgeladen werden, weil sie leer ist. Wähle die Exportdatei.",
+    "invalidUploadPart": "Ein Teil des Uploads kam in der falschen Größe an. Der Upload versucht ihn erneut.",
+    "uploadChecksumMismatch": "Die hochgeladenen Daten passen nicht zur Datei auf deinem Computer. Lade die Datei erneut hoch.",
+    "invalidSource": "Wähle eines der Exportformate.",
+    "invalidSourceUrl": "Gib die Adresse der Confluence-Site mit https:// ein.",
+    "invalidReviewer": "Import-Prüfer müssen aktive Mitglieder der Organisation sein. Wähle eine andere Person.",
+    "tooManyReviewers": "Ein Import kann bis zu 50 Import-Prüfer haben. Entferne zuerst einige.",
+    "uploadTooLarge": "Die Datei ist größer als für Uploads erlaubt. Bitte die Person, die den Server betreibt, sie in den Import-Ordner zu legen."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -2042,6 +2064,14 @@
       "spaces_membersCreateConfidentialSpaces": {
         "label": "Mitglieder legen vertrauliche Spaces an",
         "description": "Mitglieder dürfen vertrauliche Spaces und 1:1-Gespräche anlegen, die Admins nicht lesen können. Admins dürfen das immer."
+      },
+      "imports_maxUploadMegabytes": {
+        "label": "Größter hochladbarer Export",
+        "description": "Exporte über dieser Größe werden vor dem Upload abgelehnt, mit dem Hinweis, dieses Limit zu erhöhen oder den Import-Ordner der Organisation auf dem Server zu verwenden."
+      },
+      "imports_folderEnabled": {
+        "label": "Import-Ordner",
+        "description": "Die Organisations-Administration kann Exporte importieren, die im Unterordner ihrer Organisation im Import-Ordner liegen; er heißt wie der Kurzname der Organisation. Dateien auf oberster Ebene oder im Unterordner einer anderen Organisation werden nie angeboten."
       }
     },
     "disabled": {
@@ -2286,6 +2316,11 @@
       },
       "space": {
         "confidentialWithoutAdministrator": "Der vertrauliche Space {spaceKey} hat keinen Space-Admin mehr. Du kannst eines der verbliebenen Mitglieder ernennen."
+      },
+      "import": {
+        "finished": "Der Import in {spaceName} ({spaceKey}) ist bereit zur Prüfung. {problems, plural, =0 {Nichts ist zu prüfen.} one {# Punkt ist zu prüfen.} other {# Punkte sind zu prüfen.}}",
+        "failed": "Der Import in {spaceName} ({spaceKey}) ist fehlgeschlagen. Öffne ihn, um Grund und nächste Schritte zu sehen.",
+        "held": "Der Import in den Space {spaceKey} ist angehalten, weil die Person, die ihn gestartet hat, nicht mehr importieren darf. Du kannst ihn übernehmen."
       }
     }
   },
@@ -3188,6 +3223,16 @@
       "attachment": {
         "versionKept": "Dateiversion zum Behalten markiert",
         "versionReleased": "Dateiversion wird nicht mehr behalten"
+      },
+      "import": {
+        "started": "Import gestartet",
+        "reviewersChanged": "Import-Prüfer geändert",
+        "accepted": "Import übernommen",
+        "discarded": "Import verworfen",
+        "stopped": "Import gestoppt",
+        "failed": "Import fehlgeschlagen",
+        "takenOver": "Import von anderer Administration fortgesetzt",
+        "placeholderCreated": "Platzhalter durch einen Import angelegt"
       }
     },
     "action": "Aktion",
@@ -3896,7 +3941,7 @@
     },
     "readView": {
       "untitledPage": "Seite ohne Titel",
-      "unsupportedMacro": "Nicht unterstütztes Makro: {name}",
+      "unsupportedMacro": "Dieser Inhalt aus Confluence wird noch nicht angezeigt.",
       "file": "Datei",
       "image": "Bild",
       "invalid": "Diese Seite kann nicht angezeigt werden, weil ihr gespeicherter Inhalt beschädigt ist. Bitte einen Space-Admin, eine frühere Version wiederherzustellen.",
@@ -4405,7 +4450,9 @@
     "deleteFailed": "Der Space konnte nicht gelöscht werden",
     "collaborationSection": "Zusammenarbeit",
     "sharingSection": "Freigabe",
-    "filesSection": "Dateien"
+    "filesSection": "Dateien",
+    "importsSection": "Importe",
+    "importsSectionDescription": "Grenzen für Importe aus Confluence. Den Import-Ordner selbst legt die Person fest, die den Server betreibt."
   },
   "archive": {
     "archive": "Archivieren",
@@ -5794,6 +5841,489 @@
       "deleteConfirm": "Space endgültig löschen",
       "deleted": "{key} wurde gelöscht.",
       "deleteFailed": "Der Space konnte nicht gelöscht werden"
+    }
+  },
+  "imports": {
+    "title": "Import",
+    "description": "Spaces aus Confluence nach Pagehall übernehmen. Jeder Import läuft zuerst in einen Quarantäne-Space, den nur du und die von dir hinzugefügten Import-Prüfer sehen.",
+    "untitled": "Neuer Import",
+    "states": {
+      "draft": "Entwurf",
+      "analyzing": "Export wird gelesen",
+      "ready": "Bereit zum Start",
+      "running": "Läuft",
+      "held": "Wartet auf die Administration",
+      "stopping": "Wird gestoppt",
+      "review": "In Prüfung",
+      "accepting": "Wird übernommen",
+      "accepted": "Übernommen",
+      "discarding": "Wird verworfen",
+      "discarded": "Verworfen",
+      "stopped": "Gestoppt",
+      "failed": "Fehlgeschlagen"
+    },
+    "sources": {
+      "confluence-xml": {
+        "label": "XML-Space-Export",
+        "description": "Confluence Cloud oder Data Center. Enthält Seiten, Blogbeiträge, Kommentare, Anhänge und den Seitenverlauf."
+      },
+      "confluence-csv": {
+        "label": "CSV-Space-Export",
+        "description": "Confluence Cloud. Gleicher Inhalt wie der XML-Export, anders verpackt."
+      }
+    },
+    "phases": {
+      "read": "Export lesen",
+      "space": "Quarantäne-Space",
+      "people": "Personen",
+      "pages": "Seiten und Seitenbaum",
+      "attachments": "Anhänge",
+      "content": "Seiteninhalt, Links und Labels",
+      "finish": "Bericht"
+    },
+    "list": {
+      "title": "Importe",
+      "new": "Neuer Import",
+      "createFailed": "Der Import konnte nicht angelegt werden",
+      "loadFailed": "Die Importe konnten nicht geladen werden",
+      "empty": "Noch keine Importe",
+      "emptyDescription": "Hier erscheinen Importe von Confluence-Spaces mit Fortschritt und Bericht.",
+      "continue": "Fortsetzen",
+      "showProgress": "Fortschritt anzeigen",
+      "openReport": "Bericht öffnen",
+      "takeOverAction": "Übernehmen",
+      "open": "Öffnen",
+      "draft": "{source} · Entwurf gespeichert {when}",
+      "running": "{source} · {done} von {total} im aktuellen Schritt",
+      "review": "{source} · fertig {when} · {pages, plural, one {# Seite} other {# Seiten}} · {problems, plural, =0 {nichts zu prüfen} one {# Punkt zu prüfen} other {# Punkte zu prüfen}}",
+      "accepted": "{source} · übernommen {when}",
+      "removed": "{source} · beendet {when} · nichts wurde behalten",
+      "held": "{source} · {name} darf nicht mehr importieren; eine andere Person aus der Administration kann übernehmen",
+      "failed": "{source} · fehlgeschlagen {when}",
+      "largeTitle": "Große Exporte",
+      "largeFolder": "Exporte über {size} lassen sich nicht im Browser hochladen. Bitte die Instanz-Administration, das Upload-Limit zu erhöhen oder die Datei in den Import-Ordner dieser Organisation auf dem Server zu legen; danach kannst du sie in einem neuen Import auswählen.",
+      "largeNoFolder": "Exporte über {size} lassen sich nicht im Browser hochladen. Bitte die Instanz-Administration, das Upload-Limit zu erhöhen oder den Import-Ordner einzuschalten und die Datei in den Import-Ordner dieser Organisation auf dem Server zu legen."
+    },
+    "wizard": {
+      "title": "Neuer Import",
+      "loadFailed": "Der Import konnte nicht geladen werden",
+      "steps": "Schritte des Imports",
+      "stepNames": {
+        "source": "Quelle",
+        "space": "Space",
+        "check": "Prüfen und starten"
+      },
+      "progress": "Neuer Import · Schritt {step} von {total}",
+      "close": "Schließen",
+      "back": "Zurück",
+      "continue": "Weiter",
+      "saving": "Entwurf wird gespeichert …",
+      "saved": "Entwurf gespeichert",
+      "saveFailed": "Der Entwurf konnte nicht gespeichert werden",
+      "reading": "Export wird gelesen",
+      "readingDescription": "Pagehall prüft die Datei und zählt, was sie enthält. Du kannst inzwischen mit dem nächsten Schritt weitermachen.",
+      "danger": "Gefahrenbereich",
+      "deleteDraft": "Entwurf löschen",
+      "deleteDraftDescription": "Löscht diesen Entwurf. Eine hochgeladene Datei wird nach 7 Tagen gelöscht.",
+      "deleteDraftTitle": "Entwurf löschen?",
+      "deleteDraftConfirm": "Die Einstellungen dieses Imports werden gelöscht. Es wurde noch nichts importiert.",
+      "keepDraft": "Entwurf behalten",
+      "deleteFailed": "Der Entwurf konnte nicht gelöscht werden",
+      "source": {
+        "formatTitle": "Was hast du aus Confluence exportiert?",
+        "whereToFind": "So findest du ihn: In Confluence den Space öffnen, dann Space-Einstellungen › Space exportieren.",
+        "fileTitle": "Wo liegt die Datei?",
+        "upload": "Von diesem Computer hochladen",
+        "uploadDescription": "Bis {size}. Der Upload läuft nach einem Verbindungsabbruch weiter.",
+        "uploadDescriptionPlain": "Der Upload läuft nach einem Verbindungsabbruch weiter.",
+        "folder": "Import-Ordner des Servers",
+        "folderDescription": "Für größere Exporte. Die Datei muss schon im Import-Ordner dieser Organisation auf dem Server liegen.",
+        "fileRequired": "Wähle die Exportdatei und warte, bis der Upload fertig ist.",
+        "folderFile": "Datei im Import-Ordner",
+        "folderHint": "Pagehall liest nur normale Dateien, die direkt im Import-Ordner dieser Organisation liegen.",
+        "folderPlaceholder": "Datei auswählen",
+        "folderOption": "{name} · {size}",
+        "folderEmpty": "Der Import-Ordner ist leer",
+        "folderEmptyDescription": "Bitte die Instanz-Administration, den Export in den oben gezeigten Ordner zu legen. Er erscheint hier ohne Neuladen.",
+        "folderDisabled": "Importe aus dem Import-Ordner sind in dieser Instanz ausgeschaltet. Lade die Datei stattdessen hoch oder bitte die Instanz-Administration, den Import-Ordner einzuschalten.",
+        "folderLoadFailed": "Der Import-Ordner konnte nicht gelesen werden",
+        "folderFailed": "Die Datei konnte nicht ausgewählt werden",
+        "readTitle": "Export gelesen",
+        "read": "{pages, plural, one {# Seite} other {# Seiten}} des Space {space} gefunden."
+      },
+      "space": {
+        "title": "Neuer Space",
+        "name": "Name",
+        "nameRequired": "Gib einen Namen für den Space ein.",
+        "key": "Schlüssel",
+        "keyHint": "Aus Confluence übernommen. Erscheint in Links.",
+        "keyInvalid": "Verwende 2 bis 10 Buchstaben oder Ziffern.",
+        "keyTaken": "Der Schlüssel {key} gehört schon einem anderen Space. Wähle einen anderen Schlüssel.",
+        "sourceUrl": "Adresse der Confluence-Site",
+        "sourceUrlHint": "Optional. Links auf Seiten, die nicht in diesem Export sind, zeigen dorthin. Ohne Adresse werden solche Links zu einfachem Text.",
+        "sourceUrlPlaceholder": "https://example.atlassian.net/wiki",
+        "sourceUrlInvalid": "Gib die Adresse mit https:// ein, zum Beispiel https://example.atlassian.net/wiki.",
+        "whatTitle": "Was importiert wird",
+        "archived": "Als archiviert importieren",
+        "archivedDescription": "Nur lesbar und standardmäßig nicht in der Suche. Für Inhalte, die du zum Nachschlagen aufbewahrst, etwa alte Besprechungsnotizen.",
+        "reviewers": "Import-Prüfer",
+        "reviewersHint": "Sie können den Quarantäne-Space und den Bericht lesen, den Import aber nicht übernehmen, verwerfen oder stoppen. Füge die Personen hinzu, denen der Space später gehören soll.",
+        "addReviewer": "Import-Prüfer hinzufügen",
+        "removeReviewer": "{name} entfernen",
+        "reviewersFailed": "Die Import-Prüfer konnten nicht geändert werden"
+      },
+      "check": {
+        "intro": "Pagehall hat den Export gelesen. Noch ist nichts importiert.",
+        "pages": "{count, plural, one {Seite} other {Seiten}}",
+        "attachments": "{count, plural, one {Anhang} other {Anhänge}} · {size}",
+        "people": "{count, plural, one {Person} other {Personen}}",
+        "macros": "{count, plural, one {Makroart} other {Makroarten}}",
+        "foundTitle": "Im Export gefunden",
+        "peopleTitle": "{count, plural, one {# Person} other {# Personen}}",
+        "peopleDescription": "Sie werden zu Platzhaltern mit ihrer Atlassian-ID als Namen. Du kannst sie später mit Konten verknüpfen.",
+        "macrosTitle": "{count, plural, one {# Makroart} other {# Makroarten}}",
+        "macrosDescription": "Bleiben mit ihren Originaldaten als „noch nicht angezeigt“ erhalten. Lesende sehen einen Hinweis; der Bericht listet sie auf.",
+        "spaceTitle": "Space „{name}“ ({key})",
+        "archived": "Als archiviert importiert · {count, plural, =0 {keine Import-Prüfer} one {# Import-Prüfer} other {# Import-Prüfer}}",
+        "notArchived": "Nicht archiviert · {count, plural, =0 {keine Import-Prüfer} one {# Import-Prüfer} other {# Import-Prüfer}}",
+        "quarantineTitle": "Quarantäne-Space",
+        "quarantineWithReviewers": "Der Import läuft in einen Quarantäne-Space. Bis du ihn übernimmst, sehen ihn nur du und {names}. Du kannst diese Seite verlassen; du wirst benachrichtigt, wenn er fertig ist.",
+        "quarantineAlone": "Der Import läuft in einen Quarantäne-Space. Bis du ihn übernimmst, siehst nur du ihn. Du kannst diese Seite verlassen; du wirst benachrichtigt, wenn er fertig ist.",
+        "start": "Import starten",
+        "startFailed": "Der Import konnte nicht gestartet werden",
+        "notReady": "Pagehall liest den Export noch. Starte den Import, wenn das erledigt ist.",
+        "notRead": "Der Export wurde noch nicht gelesen. Geh zurück zum ersten Schritt und wähle die Datei."
+      }
+    },
+    "upload": {
+      "drop": "Export hier ablegen",
+      "choose": "Datei auswählen",
+      "hint": "ZIP-Datei aus Confluence, bis {size}.",
+      "progress": "{sent} von {total}",
+      "progressLabel": "Fortschritt des Uploads",
+      "waiting": "Verbindung unterbrochen. Der Upload läuft weiter, sobald der Server wieder erreichbar ist.",
+      "checking": "Datei wird geprüft …",
+      "pause": "Upload anhalten",
+      "resume": "Upload fortsetzen",
+      "interrupted": "Der Upload hat vor dem Ende aufgehört. Bereits angekommene Teile werden nicht noch einmal gesendet.",
+      "chooseAgain": "Datei erneut auswählen",
+      "uploaded": "{size} · hochgeladen und geprüft",
+      "done": "Hochgeladen",
+      "tooLarge": "{name} kann nicht hochgeladen werden",
+      "tooLargeCause": "Die Datei hat {size}; Uploads aus dem Browser sind auf {limit} begrenzt.",
+      "tooLargeAction": "Bitte die Instanz-Administration, das Upload-Limit zu erhöhen oder die Datei in den Import-Ordner {path} zu legen, und wähle dann „Import-Ordner des Servers“.",
+      "failed": "{name} konnte nicht hochgeladen werden",
+      "failedAction": "Versuche den Upload erneut. Bereits angekommene Teile bleiben erhalten.",
+      "retry": "Upload erneut versuchen",
+      "tooLargeActionNoFolder": "Bitte die Instanz-Administration, das Upload-Limit zu erhöhen oder den Import-Ordner einzuschalten und die Datei in {path} zu legen."
+    },
+    "detail": {
+      "loadFailed": "Der Import konnte nicht geladen werden",
+      "importing": "Import läuft",
+      "started": "Gestartet {when} von {name}",
+      "quarantineWithReviewers": "Der Inhalt liegt in einem Quarantäne-Space. Nur du und {names} sehen ihn.",
+      "quarantineAlone": "Der Inhalt liegt in einem Quarantäne-Space. Nur du siehst ihn.",
+      "openSpace": "Quarantäne-Space öffnen",
+      "accept": "Import übernehmen",
+      "heldTitle": "Der Import wartet auf die Administration",
+      "held": "{name} darf in dieser Organisation nicht mehr importieren, deshalb ist der Import angehalten. Eine andere Person aus der Administration kann ihn übernehmen und dort weitermachen, wo er stehen geblieben ist.",
+      "takeOver": "Import übernehmen und fortsetzen",
+      "takeOverFailed": "Der Import konnte nicht übernommen werden",
+      "failed": "Der Import ist fehlgeschlagen: {what}",
+      "progressLabel": "Fortschritt des Imports",
+      "steps": "Schritte",
+      "phaseProgress": "{done} von {total}",
+      "phaseDone": "Erledigt",
+      "phaseActive": "Läuft",
+      "phaseWaiting": "Noch nicht begonnen",
+      "resumeNote": "Startet der Server neu, macht der Import dort weiter, wo er stehen geblieben ist. Du kannst diese Seite verlassen; du wirst benachrichtigt, wenn er fertig ist.",
+      "deletingTitle": "Quarantäne-Space wird gelöscht",
+      "deleting": "Bisher {count, plural, one {# Eintrag} other {# Einträge}} gelöscht.",
+      "acceptedTitle": "Übernommen",
+      "accepted": "Der Space ist seit {when} ein regulärer Space.",
+      "stoppedTitle": "Der Import wurde gestoppt",
+      "discardedTitle": "Der Import wurde verworfen",
+      "removedDescription": "Der Quarantäne-Space und alles darin wurden gelöscht. Eine hochgeladene Datei wird am {when} gelöscht.",
+      "danger": "Gefahrenbereich",
+      "stop": "Import stoppen",
+      "stopDescription": "Stoppt den Import und löscht den Quarantäne-Space mit allem, was bisher importiert wurde. Eine hochgeladene Datei bleibt 7 Tage erhalten.",
+      "stopTitle": "Import stoppen?",
+      "stopConfirm": "Der Import stoppt, und der Quarantäne-Space wird mit allem gelöscht, was bisher importiert wurde. Das lässt sich nicht rückgängig machen.",
+      "keepRunning": "Weiter importieren",
+      "stopping": "Der Import wird gestoppt",
+      "stopFailed": "Der Import konnte nicht gestoppt werden",
+      "discard": "Import verwerfen",
+      "discardDescription": "Löscht den Quarantäne-Space mit allem darin und den Bericht. Nichts gelangt in die Organisation.",
+      "discardTitle": "Import verwerfen?",
+      "discardConfirm": "Der Quarantäne-Space „{name}“ wird mit {pages, plural, one {# Seite} other {# Seiten}}, {attachments, plural, one {# Anhang} other {# Anhängen}} und dem Bericht gelöscht. Nichts gelangt in die Organisation. Das lässt sich nicht rückgängig machen.",
+      "keepImport": "Import behalten",
+      "discarding": "Der Import wird verworfen",
+      "discardFailed": "Der Import konnte nicht verworfen werden",
+      "typeKey": "Gib {key} zur Bestätigung ein",
+      "keyMismatch": "Gib den Schlüssel {key} genau so ein, wie er angezeigt wird."
+    },
+    "report": {
+      "tabs": "Bericht",
+      "summary": "Übersicht",
+      "macros": "Makros",
+      "attachments": "Anhänge",
+      "loadFailed": "Der Bericht konnte nicht geladen werden",
+      "entriesFailed": "Die Einträge des Berichts konnten nicht geladen werden",
+      "macrosFailed": "Die Makros konnten nicht geladen werden",
+      "counts": {
+        "pages": "{count, plural, one {Seite} other {Seiten}}",
+        "attachments": "{count, plural, one {Anhang} other {Anhänge}}",
+        "people": "{count, plural, one {Person} other {Personen}}",
+        "problems": "{count, plural, one {Punkt zu prüfen} other {Punkte zu prüfen}}"
+      },
+      "attention": "Zu prüfen",
+      "clean": "Nichts zu prüfen",
+      "cleanDescription": "Alles aus dem Export wurde importiert.",
+      "entries": "Einträge des Berichts",
+      "wholeExport": "Der Export als Ganzes",
+      "openPage": "Seite öffnen",
+      "previous": "Zurück",
+      "next": "Weiter",
+      "noAttachmentProblems": "Alle Anhänge wurden importiert",
+      "noMacros": "Die Seiten verwenden keine Makros",
+      "macrosCaption": "Makros, die mit ihren Originaldaten erhalten bleiben",
+      "macro": "Makro",
+      "usedOn": "Verwendet auf",
+      "result": "Ergebnis",
+      "pagesCount": "{count, plural, one {# Seite} other {# Seiten}}",
+      "notConverted": "Noch nicht angezeigt · Originaldaten erhalten, Lesende sehen einen Hinweis",
+      "showPages": "Seiten mit {name} anzeigen",
+      "pagesWith": "Seiten mit {name}",
+      "macrosNote": "Makros werden von einer späteren Version des Imports umgewandelt. Bis dahin bleiben ihre Originaldaten in den Seiten erhalten.",
+      "download": "Bericht als CSV herunterladen",
+      "codes": {
+        "unsupportedMacro": {
+          "title": "{count, plural, one {# Makroverwendung wird} other {# Makroverwendungen werden}} noch nicht angezeigt",
+          "hint": "Die Seiten zeigen stattdessen einen Hinweis; die Originaldaten bleiben erhalten.",
+          "entry": "Makro {name} wird noch nicht angezeigt ({count}×)."
+        },
+        "missingAttachment": {
+          "title": "{count, plural, one {# Verweis auf eine fehlende Datei} other {# Verweise auf fehlende Dateien}}",
+          "hint": "Die Seiten zeigen einen Hinweis, wo die Datei war.",
+          "entry": "{fileName} wird verwendet, ist aber nicht im Export. Exportiere erneut mit Anhängen oder lade die Datei auf der Seite hoch."
+        },
+        "attachmentFileMissing": {
+          "title": "{count, plural, one {# Anhang fehlt} other {# Anhänge fehlen}} im Export",
+          "hint": "Confluence hat sie aufgeführt, die Datei war aber nicht im Archiv.",
+          "entry": "{fileName}, Version {version}, ist nicht im Export."
+        },
+        "attachmentTooLarge": {
+          "title": "{count, plural, one {# Anhang ist} other {# Anhänge sind}} größer als erlaubt",
+          "hint": "Sie überschreiten die größte Dateigröße der Organisation und wurden ausgelassen.",
+          "entry": "{fileName}, Version {version}, ist größer als die größte Dateigröße der Organisation."
+        },
+        "attachmentUnreadable": {
+          "title": "{count, plural, one {# Anhang konnte} other {# Anhänge konnten}} nicht gelesen werden",
+          "hint": "Die Datei im Archiv ist beschädigt.",
+          "entry": "{fileName}, Version {version}, konnte nicht aus dem Archiv gelesen werden."
+        },
+        "externalPageLink": {
+          "title": "{count, plural, one {# Link zeigt} other {# Links zeigen}} auf Seiten außerhalb des Exports",
+          "hint": "Sie führen zur Confluence-Site oder bleiben Text, wenn keine Adresse eingegeben wurde.",
+          "entry": "Link auf „{title}“ führt aus dem Export hinaus."
+        },
+        "unsupportedLink": {
+          "title": "{count, plural, one {# Link} other {# Links}} auf andere Arten von Confluence-Inhalten",
+          "hint": "Als Text erhalten.",
+          "entry": "Ein Link auf {kind} wurde als Text erhalten."
+        },
+        "invalidLink": {
+          "title": "{count, plural, one {# Link wurde} other {# Links wurden}} entfernt",
+          "hint": "Ihre Adresse war keine Webadresse und hätte unsicher sein können.",
+          "entry": "Ein Link mit einer Adresse, die keine Webadresse ist, wurde als Text erhalten."
+        },
+        "externalImage": {
+          "title": "{count, plural, one {# Bild} other {# Bilder}} von anderen Websites",
+          "hint": "Pagehall lädt keine Bilder von anderen Websites; sie wurden zu Links.",
+          "entry": "Ein Bild von einer anderen Website wurde zu einem Link."
+        },
+        "invalidContent": {
+          "title": "{count, plural, one {# Teil einer Seite konnte} other {# Teile von Seiten konnten}} nicht umgewandelt werden",
+          "hint": "Sie bleiben mit ihren Originaldaten erhalten und werden als Hinweis angezeigt.",
+          "entry": "Inhalt ({element}) konnte nicht umgewandelt werden und bleibt mit seinen Originaldaten erhalten."
+        },
+        "contentTruncated": {
+          "title": "{count, plural, one {# Seite ist} other {# Seiten sind}} zu lang",
+          "hint": "Das Ende der Seite wurde nicht importiert.",
+          "entry": "Die Seite ist länger, als eine Seite sein darf; das Ende fehlt."
+        },
+        "macroDataTruncated": {
+          "title": "{count, plural, one {# Makro hat} other {# Makros haben}} zu viele Daten",
+          "hint": "Nur der Anfang ihrer Originaldaten blieb erhalten.",
+          "entry": "Makro {macro} hat mehr Daten, als erhalten bleiben können."
+        },
+        "unresolvedPerson": {
+          "title": "{count, plural, one {# Erwähnung} other {# Erwähnungen}} ohne Person",
+          "hint": "Der Export nennt kein Konto dafür.",
+          "entry": "Eine Erwähnung ohne Konto wurde ausgelassen."
+        },
+        "invalidLabel": {
+          "title": "{count, plural, one {# Label konnte} other {# Labels konnten}} nicht übernommen werden",
+          "hint": "Sie enthalten keine Buchstaben oder Ziffern.",
+          "entry": "Das Label „{label}“ konnte nicht übernommen werden."
+        },
+        "duplicateEntry": {
+          "title": "{count, plural, one {# Dateiname kommt} other {# Dateinamen kommen}} doppelt im Archiv vor",
+          "hint": "Pagehall hat jeweils die erste Datei verwendet.",
+          "entry": "{name} kommt mehrfach vor; die erste Datei wurde verwendet."
+        },
+        "skippedEntry": {
+          "title": "{count, plural, one {# Ordnereintrag} other {# Ordnereinträge}} übersprungen",
+          "hint": "Ordner im Archiv enthalten keinen Inhalt.",
+          "entry": "{name} wurde übersprungen."
+        }
+      }
+    },
+    "accept": {
+      "title": "„{name}“ übernehmen?",
+      "intro": "„{name}“ wird ein regulärer Space von {organization}. Lege fest, wer dann Zugriff bekommt; die Standardberechtigungen der Organisation für neue Spaces sind eingetragen.",
+      "archived": "Der Space wird archiviert: nur lesbar und standardmäßig nicht in der Suche.",
+      "placeholders": "Personen aus dem Export bleiben Platzhalter. Sie lassen sich nach der Übernahme mit Konten verknüpfen.",
+      "submit": "Import übernehmen",
+      "failed": "Der Import konnte nicht übernommen werden",
+      "defaultsFailed": "Die Standardberechtigungen konnten nicht geladen werden",
+      "done": "{name} ist jetzt ein regulärer Space."
+    },
+    "errors": {
+      "unknown": {
+        "what": "Der Export konnte nicht gelesen werden",
+        "cause": "Ein unerwartetes Problem ist aufgetreten.",
+        "action": "Versuche es erneut. Passiert es wieder, bitte die Person, die den Server betreibt, die Logs zu prüfen."
+      },
+      "notAnArchive": {
+        "what": "Die Datei ist kein ZIP-Archiv",
+        "cause": "Confluence exportiert Spaces als ZIP-Dateien. Die Datei ist vielleicht beschädigt oder unvollständig.",
+        "action": "Exportiere den Space erneut und lade die ZIP-Datei hoch."
+      },
+      "wrongFormat": {
+        "what": "Die Datei hat das andere Exportformat",
+        "cause": "Das gewählte Format passt nicht zur Datei.",
+        "action": "Wähle oben das andere Exportformat; die Datei wird dann erneut gelesen."
+      },
+      "notConfluenceExport": {
+        "what": "Die Datei ist kein Confluence-Space-Export",
+        "cause": "Das Archiv enthält keine der Dateien eines Confluence-Exports.",
+        "action": "Öffne in Confluence den Space, dann Space-Einstellungen › Space exportieren, und lade diese Datei hoch."
+      },
+      "notSpaceExport": {
+        "what": "Die Datei ist ein Export einer ganzen Site",
+        "cause": "Pagehall importiert jeweils einen Space.",
+        "action": "Exportiere in Confluence einen einzelnen Space und lade diese Datei hoch."
+      },
+      "archiveTooLarge": {
+        "what": "Das Archiv wird größer als erlaubt",
+        "cause": "Sein Inhalt überschreitet die Grenzen für Importe. Echte Exporte bleiben darunter; die Datei ist vielleicht manipuliert.",
+        "action": "Exportiere den Space erneut. Ist er wirklich so groß, teile ihn in mehrere Spaces auf."
+      },
+      "tooManyEntries": {
+        "what": "Das Archiv enthält zu viele Dateien",
+        "cause": "Es hat mehr Dateien als die Grenze für Importe.",
+        "action": "Exportiere den Space erneut oder teile ihn in mehrere Spaces auf."
+      },
+      "compressionRatio": {
+        "what": "Eine Datei im Archiv ist zu stark komprimiert",
+        "cause": "Echte Exporte sind nie so stark komprimiert; die Datei soll vielleicht den Server füllen.",
+        "action": "Exportiere den Space erneut aus Confluence."
+      },
+      "unsafeEntryName": {
+        "what": "Das Archiv enthält unsichere Dateinamen",
+        "cause": "Ein Name zeigt aus dem Archiv hinaus, hat einen Laufwerksbuchstaben oder ist ein symbolischer Link. Confluence erzeugt solche Namen nie.",
+        "action": "Exportiere den Space erneut aus Confluence und verändere das Archiv nicht."
+      },
+      "encryptedEntry": {
+        "what": "Das Archiv ist verschlüsselt",
+        "cause": "Pagehall kann verschlüsselte Archive nicht lesen.",
+        "action": "Lade den Export so hoch, wie Confluence ihn erzeugt hat, ohne Passwort."
+      },
+      "unsupportedCompression": {
+        "what": "Das Archiv verwendet eine unbekannte Komprimierung",
+        "cause": "Das Archiv wurde wahrscheinlich mit einem anderen Programm neu gepackt.",
+        "action": "Lade den Export so hoch, wie Confluence ihn erzeugt hat."
+      },
+      "xmlDeclaration": {
+        "what": "Der Export enthält Dokumenttyp-Deklarationen",
+        "cause": "Confluence-Exporte enthalten keine; solche Deklarationen können für Angriffe auf den Server verwendet werden.",
+        "action": "Exportiere den Space erneut aus Confluence."
+      },
+      "xmlTooDeep": {
+        "what": "Der Export verschachtelt seinen Inhalt zu tief",
+        "cause": "Die Struktur ist tiefer als die Grenze für Importe.",
+        "action": "Exportiere den Space erneut aus Confluence."
+      },
+      "xmlElementTooLarge": {
+        "what": "Der Export enthält einen zu großen Eintrag",
+        "cause": "Ein Eintrag ist größer als die Grenze für Importe.",
+        "action": "Exportiere den Space erneut. Ist eine einzelne Seite so groß, kürze sie zuerst in Confluence."
+      },
+      "csvFieldTooLarge": {
+        "what": "Der Export enthält einen zu großen Wert",
+        "cause": "Ein Feld einer Tabelle im Export ist größer als die Grenze für Importe.",
+        "action": "Exportiere den Space erneut. Ist eine einzelne Seite so groß, kürze sie zuerst in Confluence."
+      },
+      "csvRowTooLarge": {
+        "what": "Der Export enthält eine zu große Zeile",
+        "cause": "Eine Zeile einer Tabelle im Export ist größer als die Grenze für Importe.",
+        "action": "Exportiere den Space erneut aus Confluence."
+      },
+      "csvTooManyFields": {
+        "what": "Eine Tabelle im Export hat zu viele Spalten",
+        "cause": "Echte Exporte haben weit weniger Spalten; die Datei ist vielleicht beschädigt.",
+        "action": "Exportiere den Space erneut aus Confluence."
+      },
+      "csvUnterminatedQuote": {
+        "what": "Eine Tabelle im Export endet zu früh",
+        "cause": "Die Datei ist wahrscheinlich unvollständig.",
+        "action": "Exportiere den Space erneut und lade die vollständige Datei hoch."
+      },
+      "keyTaken": {
+        "what": "Der Space-Schlüssel ist vergeben",
+        "cause": "Ein anderer Space hat den Schlüssel bekommen, nachdem der Import eingerichtet wurde.",
+        "action": "Starte einen neuen Import mit einem anderen Schlüssel."
+      },
+      "fileChanged": {
+        "what": "Die Datei im Import-Ordner hat sich geändert",
+        "cause": "Sie wurde ersetzt oder verändert, nachdem Pagehall sie gelesen hatte.",
+        "action": "Wähle die Datei erneut, damit Pagehall die neue Fassung liest."
+      },
+      "fileMissing": {
+        "what": "Keine Datei ausgewählt",
+        "cause": "Der Import hat keine Exportdatei.",
+        "action": "Wähle im ersten Schritt die Exportdatei."
+      },
+      "importFileUnavailable": {
+        "what": "Die Datei liegt nicht mehr im Import-Ordner",
+        "cause": "Sie wurde verschoben oder gelöscht, oder sie ist keine normale Datei.",
+        "action": "Bitte die Person, die den Server betreibt, die Datei wieder dort abzulegen, und wähle sie dann."
+      },
+      "importFolderUnavailable": {
+        "what": "Der Import-Ordner kann nicht gelesen werden",
+        "cause": "Der Ordner existiert auf dem Server nicht, oder Pagehall hat keinen Zugriff darauf.",
+        "action": "Bitte die Person, die den Server betreibt, den Import-Ordner zu prüfen."
+      },
+      "uploadIncomplete": {
+        "what": "Der Upload ist nicht vollständig",
+        "cause": "Einige Teile der Datei sind nicht angekommen.",
+        "action": "Setze den Upload im ersten Schritt fort."
+      },
+      "internalError": {
+        "what": "Der Import hat nach mehreren Versuchen aufgehört",
+        "cause": "Ein unerwartetes Problem ist wiederholt aufgetreten.",
+        "action": "Verwirf den Import und starte ihn neu. Schlägt er wieder fehl, bitte die Person, die den Server betreibt, die Logs zu prüfen."
+      }
+    },
+    "quarantine": {
+      "title": "Import in Quarantäne",
+      "description": "Dieser Space enthält einen Import, der noch nicht übernommen wurde. Nur die importierende Administration und die Import-Prüfer sehen ihn, und niemand kann ihn ändern.",
+      "open": "Importe öffnen"
+    },
+    "folder": {
+      "path": "Import-Ordner dieser Organisation",
+      "pathHint": "Pagehall bietet nur Dateien an, die direkt in diesem Ordner liegen. Der Ordner heißt wie der Kurzname der Organisation; ändert sich der Kurzname, ändert sich auch der Pfad."
     }
   }
 }
