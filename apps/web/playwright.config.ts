@@ -5,6 +5,7 @@ import { BASE_URL } from "./e2e/support/environment.js";
 
 const ci = Boolean(process.env.CI);
 const identityProviders = process.env.PAGEHALL_E2E_IDP === "1";
+const sweeps = process.env.PAGEHALL_E2E_SWEEPS !== "false";
 const chrome = { ...devices["Desktop Chrome"] };
 const afterSetup = identityProviders ? ["idp"] : ["setup"];
 
@@ -48,6 +49,16 @@ export default defineConfig({
       dependencies: afterSetup,
       use: chrome,
     },
+    ...(sweeps
+      ? [
+          {
+            name: "sweeps",
+            testMatch: /sweeps\/.*\.spec\.ts/,
+            dependencies: [...afterSetup, "flows", "components"],
+            use: chrome,
+          },
+        ]
+      : []),
     {
       name: "instance",
       testMatch: /instance\/.*\.spec\.ts/,
