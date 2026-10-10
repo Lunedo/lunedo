@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  foreignKey,
   index,
   jsonb,
   pgEnum,
@@ -70,6 +71,26 @@ export const pageRestrictions = pgTable(
     ...timestamps(),
   },
   (table) => [primaryKey({ columns: [table.itemId, table.kind] }), index().on(table.setBy)],
+);
+
+export const pageRestrictionHolders = pgTable(
+  "page_restriction_holders",
+  {
+    itemId: uuid().notNull(),
+    kind: restrictionKind().notNull(),
+    principalKind: principalKind().notNull(),
+    principalId: uuid().notNull(),
+    ...timestamps(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.itemId, table.kind, table.principalKind, table.principalId] }),
+    foreignKey({
+      columns: [table.itemId, table.kind],
+      foreignColumns: [pageRestrictions.itemId, pageRestrictions.kind],
+    }).onDelete("cascade"),
+    index().on(table.principalKind, table.principalId),
+    check("page_restriction_holders_principal", sql`${table.principalKind} in ('account', 'group')`),
+  ],
 );
 
 export const shareLinks = pgTable(

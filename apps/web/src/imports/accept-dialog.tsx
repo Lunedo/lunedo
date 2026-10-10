@@ -9,7 +9,7 @@ import type { Grant } from "../spaces/access/holders.js";
 import { GrantsField, VisibilityField, WhoGetsAccess } from "../spaces/access/space-access-fields.js";
 import { type SpaceVisibility, spaceDefaultsQuery } from "../spaces/space-queries.js";
 import { importTitle } from "./import-labels.js";
-import { acceptImport, type ImportView, importKeys } from "./imports-api.js";
+import { acceptImport, type ImportView, importKeys, proposalQuery, reportQuery } from "./imports-api.js";
 
 export function AcceptDialog({
   open,
@@ -61,7 +61,15 @@ function AcceptForm({
   const session = useSession();
   const ownId = session.account?.id ?? "";
   const organization = state.organizations.find((candidate) => candidate.id === organizationId) ?? null;
-  const defaults = useQuery({ ...spaceDefaultsQuery(organizationId), throwOnError: false });
+  const proposal = useQuery({ ...proposalQuery(entry.id), throwOnError: false });
+  const imported = proposal.data ? proposal.data.grants.length > 0 || proposal.data.pending > 0 : null;
+  const organizationDefaults = useQuery({
+    ...spaceDefaultsQuery(organizationId),
+    enabled: imported === false,
+    throwOnError: false,
+  });
+  const defaults = imported === false ? organizationDefaults : proposal;
+  const report = useQuery({ ...reportQuery(entry.id), throwOnError: false });
   const [visibility, setVisibility] = useState<SpaceVisibility>("organization");
   const [grants, setGrants] = useState<Grant[]>([]);
   const [initialized, setInitialized] = useState(false);
@@ -77,9 +85,14 @@ function AcceptForm({
       role: "admin",
       name: reviewer.name,
     }));
-    const others = defaults.data.grants
+    const others: Grant[] = (defaults.data.grants as Grant[])
       .filter((grant) => !reviewers.some((reviewer) => reviewer.principalId === grant.principalId))
-      .map((grant) => ({ ...grant }));
+      .map((grant) => ({
+        principalKind: grant.principalKind,
+        principalId: grant.principalId,
+        role: grant.role,
+        ...(grant.name ? { name: grant.name } : {}),
+      }));
     setGrants([...others, ...reviewers]);
   }
 
@@ -87,7 +100,7 @@ function AcceptForm({
   if (defaults.isError) {
     return (
       <LoadError
-        what={t("imports.accept.defaultsFailed")}
+        what={t("imports.accept.proposalFailed")}
         error={defaults.error}
         onRetry={defaults.refetch}
       />
@@ -142,6 +155,7 @@ function AcceptForm({
         grants={grants}
         onChange={setGrants}
         ownId={ownId}
+        hint={t(imported === false ? "imports.accept.defaultsHint" : "imports.accept.importedHint")}
       />
       <WhoGetsAccess
         visibility={visibility}
@@ -151,7 +165,13 @@ function AcceptForm({
       />
       <ul className="flex list-disc flex-col gap-1 ps-5 text-sm text-text-muted">
         {entry.archived ? <li>{t("imports.accept.archived")}</li> : null}
-        <li>{t("imports.accept.placeholders")}</li>
+        {imported === false ? <li>{t("imports.accept.defaultsUsed")}</li> : null}
+        {(proposal.data?.pending ?? 0) > 0 ? (
+          <li>{t("imports.accept.pending", { count: proposal.data?.pending ?? 0 })}</li>
+        ) : null}
+        {(report.data?.placeholders ?? 0) > 0 ? (
+          <li>{t("imports.accept.placeholders", { count: report.data?.placeholders ?? 0 })}</li>
+        ) : null}
       </ul>
       <div className="flex justify-end gap-2">
         <Button variant="secondary" onClick={onDone}>

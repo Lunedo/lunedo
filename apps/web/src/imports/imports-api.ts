@@ -177,3 +177,121 @@ export async function refreshImport(queryClient: QueryClient, importId: string, 
 export function importChanged(queryClient: QueryClient, event: { importId: string; organizationId: string }) {
   void refreshImport(queryClient, event.importId, event.organizationId);
 }
+
+export type PeopleSourceBody =
+  paths["/api/v1/imports/{importId}/people-source"]["put"]["requestBody"]["content"]["application/json"];
+export type PlaceholderPage = Awaited<ReturnType<typeof fetchPeople>>;
+export type Placeholder = PlaceholderPage["items"][number];
+export type ImportGroup = Awaited<ReturnType<typeof fetchGroups>>[number];
+export type PermissionPage = Awaited<ReturnType<typeof fetchPermissions>>;
+export type PermissionEntry = PermissionPage["items"][number];
+export type ProposedAccess = Awaited<ReturnType<typeof fetchProposal>>;
+
+export const resolutionKeys = {
+  people: (importId: string, q: string, cursor: string | null) =>
+    ["imports", "report", importId, "people", q, cursor] as const,
+  groups: (importId: string) => ["imports", "report", importId, "groups"] as const,
+  permissions: (importId: string, cursor: string | null) =>
+    ["imports", "report", importId, "permissions", cursor] as const,
+  proposal: (importId: string) => ["imports", "report", importId, "proposal"] as const,
+};
+
+function fetchPeople(importId: string, q: string, cursor: string | null) {
+  return request(() =>
+    api.GET("/api/v1/imports/{importId}/people", {
+      params: {
+        path: { importId },
+        query: { limit: 25, ...(q ? { q } : {}), ...(cursor ? { cursor } : {}) },
+      },
+    }),
+  );
+}
+
+function fetchGroups(importId: string) {
+  return request(() => api.GET("/api/v1/imports/{importId}/groups", { params: { path: { importId } } }));
+}
+
+function fetchPermissions(importId: string, cursor: string | null) {
+  return request(() =>
+    api.GET("/api/v1/imports/{importId}/permissions", {
+      params: { path: { importId }, query: { limit: 50, ...(cursor ? { cursor } : {}) } },
+    }),
+  );
+}
+
+function fetchProposal(importId: string) {
+  return request(() =>
+    api.GET("/api/v1/imports/{importId}/proposed-access", { params: { path: { importId } } }),
+  );
+}
+
+export function peopleQuery(importId: string, q: string, cursor: string | null) {
+  return queryOptions({
+    queryKey: resolutionKeys.people(importId, q, cursor),
+    queryFn: () => fetchPeople(importId, q, cursor),
+  });
+}
+
+export function groupsQuery(importId: string) {
+  return queryOptions({ queryKey: resolutionKeys.groups(importId), queryFn: () => fetchGroups(importId) });
+}
+
+export function permissionsQuery(importId: string, cursor: string | null) {
+  return queryOptions({
+    queryKey: resolutionKeys.permissions(importId, cursor),
+    queryFn: () => fetchPermissions(importId, cursor),
+  });
+}
+
+export function proposalQuery(importId: string) {
+  return queryOptions({
+    queryKey: resolutionKeys.proposal(importId),
+    queryFn: () => fetchProposal(importId),
+  });
+}
+
+export function setPeopleSource(importId: string, body: PeopleSourceBody) {
+  return request(() =>
+    api.PUT("/api/v1/imports/{importId}/people-source", { params: { path: { importId } }, body }),
+  );
+}
+
+export function setUserList(importId: string, csv: string) {
+  return request(() =>
+    api.PUT("/api/v1/imports/{importId}/people-source/user-list", {
+      params: { path: { importId } },
+      body: csv as never,
+      bodySerializer: (body: unknown) => body as string,
+      headers: { "content-type": "text/csv" },
+    }),
+  );
+}
+
+export function uploadUserList(importId: string, csv: string) {
+  return request(() =>
+    api.POST("/api/v1/imports/{importId}/people/user-list", {
+      params: { path: { importId } },
+      body: csv as never,
+      bodySerializer: (body: unknown) => body as string,
+      headers: { "content-type": "text/csv" },
+    }),
+  );
+}
+
+export function mapPeople(importId: string, mappings: { placeholderId: string; accountId: string }[]) {
+  return request(() =>
+    api.POST("/api/v1/imports/{importId}/people/mappings", {
+      params: { path: { importId } },
+      body: { mappings },
+    }),
+  );
+}
+
+export function mapGroup(importId: string, groupKey: string, body: { groupId: string } | { create: true }) {
+  return request(() =>
+    api.PUT("/api/v1/imports/{importId}/groups/{groupKey}", {
+      params: { path: { importId, groupKey } },
+      body,
+    }),
+  );
+}

@@ -49,18 +49,42 @@ function linkCondition(account: SQL, item: SQL, space: SQL): SQL {
       and ${linkScopeCondition(sql`l`, account, space)})`;
 }
 
+export function restrictionListedBy(restriction: SQL, covers: (kind: SQL, id: SQL) => SQL): SQL {
+  return sql`(exists (select 1 from page_shares rs where rs.item_id = ${restriction}.item_id
+      and (${restriction}.kind = 'view' or rs.role = 'editor')
+      and ${covers(sql`rs.principal_kind`, sql`rs.principal_id`)})
+    or exists (select 1 from page_restriction_holders rh where rh.item_id = ${restriction}.item_id
+      and rh.kind = ${restriction}.kind
+      and ${covers(sql`rh.principal_kind`, sql`rh.principal_id`)}))`;
+}
+
+export function restrictionListedCondition(restriction: SQL, account: SQL): SQL {
+  return restrictionListedBy(restriction, (kind, id) => holderCovers(kind, id, account));
+}
+
+export function restrictionHasActiveHolder(restriction: SQL): SQL {
+  const active = (kind: SQL, id: SQL) => sql`((${kind} = 'account' and exists (select 1 from accounts a
+      where a.id = ${id} and a.state = 'active'))
+    or (${kind} = 'group' and exists (select 1 from group_members gm join accounts a on a.id = gm.account_id
+      where gm.group_id = ${id} and a.state = 'active'
+        and (gm.expires_at is null or gm.expires_at > now()))))`;
+  return sql`(exists (select 1 from page_shares ps where ps.item_id = ${restriction}.item_id
+      and (${restriction}.kind = 'view' or ps.role = 'editor')
+      and ${active(sql`ps.principal_kind`, sql`ps.principal_id`)})
+    or exists (select 1 from page_restriction_holders rh where rh.item_id = ${restriction}.item_id
+      and rh.kind = ${restriction}.kind and ${active(sql`rh.principal_kind`, sql`rh.principal_id`)}))`;
+}
+
 export function viewRestrictionCondition(account: SQL, item: SQL): SQL {
   return sql`not exists (select 1 from page_restrictions r
     where r.item_id = any(${item}.path) and r.kind = 'view'
-      and not exists (select 1 from page_shares rs where rs.item_id = r.item_id
-        and ${holderCovers(sql`rs.principal_kind`, sql`rs.principal_id`, account)}))`;
+      and not ${restrictionListedCondition(sql`r`, account)})`;
 }
 
 function editRestrictionCondition(account: SQL, item: SQL): SQL {
   return sql`not exists (select 1 from page_restrictions r
     where r.item_id = ${item}.id and r.kind = 'edit'
-      and not exists (select 1 from page_shares rs where rs.item_id = r.item_id and rs.role = 'editor'
-        and ${holderCovers(sql`rs.principal_kind`, sql`rs.principal_id`, account)}))`;
+      and not ${restrictionListedCondition(sql`r`, account)})`;
 }
 
 export function itemRoleCondition(
@@ -163,9 +187,7 @@ export async function itemFacts(
         kind: "view" | "edit";
         listed: boolean;
       }>(sql`
-        select r.item_id, r.kind, exists (select 1 from page_shares rs where rs.item_id = r.item_id
-          and (r.kind = 'view' or rs.role = 'editor')
-          and ${holderCovers(sql`rs.principal_kind`, sql`rs.principal_id`, account)}) as listed
+        select r.item_id, r.kind, ${restrictionListedCondition(sql`r`, account)} as listed
         from page_restrictions r
         where (r.kind = 'view' and r.item_id = any(${sql.param(path)}::uuid[])) or (r.kind = 'edit' and r.item_id = ${itemId})
         order by array_position(${sql.param(path)}::uuid[], r.item_id)`);

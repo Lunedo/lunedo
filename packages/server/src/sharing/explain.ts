@@ -1,7 +1,7 @@
 import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
-import { holderCovers } from "../authorization/item-access.js";
+import { holderCovers, restrictionListedBy } from "../authorization/item-access.js";
 import type { AuthorizationService, Decision, Grant } from "../authorization/service.js";
 import type { Database, Executor } from "../database/database.js";
 import { SpaceError } from "../spaces/common.js";
@@ -485,10 +485,10 @@ export class AccessExplanationService {
     level: GiveAccessLevel,
     executor: Executor = this.#database,
   ): Promise<GiveAccessEffect> {
-    const covers =
+    const covers = (kind: SQL, id: SQL) =>
       holder.kind === "account"
-        ? holderCovers(sql`rs.principal_kind`, sql`rs.principal_id`, sql`${holder.id}::uuid`)
-        : sql`(rs.principal_kind = 'group' and rs.principal_id = ${holder.id}::uuid)`;
+        ? holderCovers(kind, id, sql`${holder.id}::uuid`)
+        : sql`(${kind} = 'group' and ${id} = ${holder.id}::uuid)`;
     const inScope =
       target.scope === "space" || !target.itemId
         ? sql`t.space_id = ${target.spaceId}`
@@ -503,10 +503,10 @@ export class AccessExplanationService {
     }>(sql`
       select count(*) as pages,
         count(*) filter (where exists (select 1 from page_restrictions r where r.item_id = any(t.path) and r.kind = 'view'
-          and not exists (select 1 from page_shares rs where rs.item_id = r.item_id and ${covers}))) as restricted,
+          and not ${restrictionListedBy(sql`r`, covers)})) as restricted,
         count(*) filter (where not t.reader_visible) as unpublished,
         count(*) filter (where exists (select 1 from page_restrictions r where r.item_id = t.id and r.kind = 'edit'
-          and not exists (select 1 from page_shares rs where rs.item_id = r.item_id and rs.role = 'editor' and ${covers}))) as edit_restricted
+          and not ${restrictionListedBy(sql`r`, covers)})) as edit_restricted
       from tree_items t
       where ${inScope} and t.kind in ('page', 'blogPost') and t.trash_entry_id is null and t.archived_root_id is null`);
     const row = result.rows[0];

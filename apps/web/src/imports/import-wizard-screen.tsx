@@ -42,10 +42,11 @@ import {
   startImport,
   updateImport,
 } from "./imports-api.js";
+import { type PeopleChoice, PeopleStep } from "./people-step.js";
 import { UploadField } from "./upload-field.js";
 
 const route = getRouteApi("/app/settings/organizations/$organizationId/imports/$importId/setup");
-const STEPS = ["source", "space", "check"] as const;
+const STEPS = ["source", "people", "space", "check"] as const;
 const SAVE_DELAY_MS = 600;
 const KEY_PATTERN = /^[A-Z0-9]{2,10}$/;
 
@@ -53,11 +54,16 @@ interface Form {
   spaceName: string;
   spaceKey: string;
   archived: boolean;
+  history: boolean;
   sourceUrl: string;
 }
 
 function formBody(form: Form): ImportUpdate {
-  const body: ImportUpdate = { archived: form.archived, sourceUrl: form.sourceUrl.trim() || null };
+  const body: ImportUpdate = {
+    archived: form.archived,
+    history: form.history,
+    sourceUrl: form.sourceUrl.trim() || null,
+  };
   if (form.spaceName.trim()) body.spaceName = form.spaceName.trim();
   if (KEY_PATTERN.test(form.spaceKey)) body.spaceKey = form.spaceKey;
   return body;
@@ -72,6 +78,7 @@ function formOf(entry: ImportView): Form {
     spaceName: entry.spaceName ?? "",
     spaceKey: entry.spaceKey ?? "",
     archived: entry.archived,
+    history: entry.history,
     sourceUrl: entry.sourceUrl ?? "",
   };
 }
@@ -109,7 +116,10 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
   const [form, setForm] = useState<Form>(() => formOf(entry));
   const [saveError, setSaveError] = useState<unknown>(null);
   const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof Form | "file" | "start", string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof Form | "file" | "people" | "start", string>>>({});
+  const [peopleChoice, setPeopleChoice] = useState<PeopleChoice>(
+    (entry.peopleSource?.kind as PeopleChoice | undefined) ?? "token",
+  );
   const [starting, setStarting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const failed = useFailureToast();
@@ -213,21 +223,43 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
       goTo(1);
       return;
     }
+    if (step === "people") {
+      const problem = peopleProblem();
+      if (problem) {
+        setErrors({ people: problem });
+        focusFirstInvalidSoon();
+        return;
+      }
+      setErrors({});
+      goTo(2);
+      return;
+    }
     if (step === "space") {
       if (!(await validateSpace())) {
         focusFirstInvalidSoon();
         return;
       }
-      goTo(2);
+      goTo(3);
     }
   };
+
+  function peopleProblem(): string | null {
+    if (entry.peopleSource?.kind === peopleChoice) return null;
+    return t(`imports.people.${peopleChoice}.missing`);
+  }
 
   const start = async () => {
     setStarting(true);
     setErrors({});
     try {
-      if (!(await validateSpace())) {
+      if (!entry.peopleSource) {
         goTo(1);
+        setErrors({ people: t(`imports.people.${peopleChoice}.missing`) });
+        focusFirstInvalidSoon();
+        return;
+      }
+      if (!(await validateSpace())) {
+        goTo(2);
         focusFirstInvalidSoon();
         return;
       }
@@ -239,6 +271,7 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
         spaceName: form.spaceName.trim(),
         spaceKey: form.spaceKey,
         archived: form.archived,
+        history: form.history,
         sourceUrl: form.sourceUrl.trim() || null,
       });
       await startImport(entry.id);
@@ -324,6 +357,17 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
       ) : null}
       {step === "source" ? (
         <SourceStep organizationId={organizationId} entry={entry} patch={patch} fileError={errors.file} />
+      ) : null}
+      {step === "people" ? (
+        <PeopleStep
+          entry={entry}
+          choice={peopleChoice}
+          onChoice={(choice) => {
+            setPeopleChoice(choice);
+            setErrors({});
+          }}
+          error={errors.people}
+        />
       ) : null}
       {step === "space" ? (
         <SpaceStep
@@ -671,7 +715,20 @@ function SpaceStep({
         </div>
       </Section>
       <Section title={t("imports.wizard.space.whatTitle")}>
-        <div className="flex flex-wrap items-center gap-3 p-4">
+        <div className="flex flex-col gap-3 p-4">
+          <RadioGroup
+            label={t("imports.wizard.space.whatTitle")}
+            variant="card"
+            value={form.history ? "full" : "current"}
+            onValueChange={(value) => setForm((current) => ({ ...current, history: value === "full" }))}
+            options={(["current", "full"] as const).map((value) => ({
+              value,
+              label: t(`imports.wizard.space.history.${value}`),
+              description: t(`imports.wizard.space.history.${value}Description`),
+            }))}
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-3 border-t border-border p-4">
           <div className="flex min-w-0 flex-1 basis-field flex-col">
             <span className="font-medium">{t("imports.wizard.space.archived")}</span>
             <span className="text-sm text-text-muted">{t("imports.wizard.space.archivedDescription")}</span>
@@ -746,14 +803,17 @@ function CheckStep({ entry, form }: { entry: ImportView; form: Form }) {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {stat(format.number(found.pages), t("imports.wizard.check.pages", { count: found.pages }))}
         {stat(
+          format.number(found.blogPosts),
+          t("imports.wizard.check.blogPosts", { count: found.blogPosts }),
+        )}
+        {stat(
           format.number(found.attachments),
           t("imports.wizard.check.attachments", {
             count: found.attachments,
             size: format.bytes(found.attachmentBytes),
           }),
         )}
-        {stat(format.number(found.people), t("imports.wizard.check.people", { count: found.people }))}
-        {stat(format.number(found.macroKinds), t("imports.wizard.check.macros", { count: found.macroKinds }))}
+        {stat(format.number(found.comments), t("imports.wizard.check.comments", { count: found.comments }))}
       </div>
       <Section title={t("imports.wizard.check.foundTitle")}>
         <ul className="flex flex-col divide-y divide-border">
@@ -761,7 +821,27 @@ function CheckStep({ entry, form }: { entry: ImportView; form: Form }) {
             <span className="font-medium">
               {t("imports.wizard.check.peopleTitle", { count: found.people })}
             </span>
-            <span className="text-sm text-text-muted">{t("imports.wizard.check.peopleDescription")}</span>
+            <span className="text-sm text-text-muted">
+              {t(
+                `imports.wizard.check.peopleBy.${(entry.peopleSource?.kind as "token" | "list" | "skip" | undefined) ?? "skip"}`,
+              )}
+            </span>
+          </li>
+          <li className="flex flex-col gap-1 px-4 py-3">
+            <span className="font-medium">
+              {t(form.history ? "imports.wizard.check.historyFull" : "imports.wizard.check.historyCurrent", {
+                count: found.versions,
+              })}
+            </span>
+            <span className="text-sm text-text-muted">
+              {t("imports.wizard.check.extras", { likes: found.likes, watchers: found.watchers })}
+            </span>
+          </li>
+          <li className="flex flex-col gap-1 px-4 py-3">
+            <span className="font-medium">{t("imports.wizard.check.permissionsTitle")}</span>
+            <span className="text-sm text-text-muted">
+              {t("imports.wizard.check.permissionsDescription")}
+            </span>
           </li>
           <li className="flex flex-col gap-1 px-4 py-3">
             <span className="font-medium">

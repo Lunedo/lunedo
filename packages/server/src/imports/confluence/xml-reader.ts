@@ -3,6 +3,7 @@ import type { ByteSource } from "../formats/bytes.js";
 import { parseXml } from "../formats/xml.js";
 import type { ScanContext } from "../source.js";
 import {
+  COMMENT_PROPERTIES,
   confluenceDate,
   isCurrentStatus,
   kinds,
@@ -10,8 +11,10 @@ import {
   STORAGE_BODY_TYPE,
   StagedConfluenceReader,
   scanArchive,
+  stageRestrictions,
   titleKey,
   toNumber,
+  versionSort,
 } from "./staged.js";
 
 interface XmlObject {
@@ -19,7 +22,10 @@ interface XmlObject {
   id: string;
   readonly properties: Map<string, string>;
   readonly references: Map<string, string>;
+  readonly elements: string[];
 }
+
+const LINKED_COLLECTION = "contentProperties";
 
 const NESTED_CDATA_END = "]] >";
 
@@ -30,6 +36,14 @@ export function unescapeNestedCdata(body: string): string {
 const WANTED = new Set([
   "Space",
   "Page",
+  "BlogPost",
+  "Comment",
+  "ContentProperty",
+  "LikeEntity",
+  "Notification",
+  "SpacePermission",
+  "ContentPermissionSet",
+  "ContentPermission",
   "BodyContent",
   "Attachment",
   "Label",
@@ -41,8 +55,9 @@ const PROGRESS_STEP = 500;
 class ObjectReader {
   object: XmlObject | null = null;
   #property: { name: string; reference: boolean; text: string } | null = null;
-  #idTarget: "object" | "reference" | null = null;
+  #idTarget: "object" | "reference" | "element" | null = null;
   #idText = "";
+  #collection = false;
 
   constructor(private readonly onObject: (object: XmlObject) => void) {}
 
@@ -50,13 +65,22 @@ class ObjectReader {
     if (depth === 2 && name === "object") {
       const className = attributes.class ?? "";
       this.object = WANTED.has(className)
-        ? { className, id: "", properties: new Map(), references: new Map() }
+        ? { className, id: "", properties: new Map(), references: new Map(), elements: [] }
         : null;
       return;
     }
     if (!this.object) return;
     if (depth === 3 && name === "id") {
       this.#idTarget = "object";
+      this.#idText = "";
+      return;
+    }
+    if (depth === 3 && name === "collection") {
+      this.#collection = this.object.className === "Comment" && attributes.name === LINKED_COLLECTION;
+      return;
+    }
+    if (depth === 5 && name === "id" && this.#collection) {
+      this.#idTarget = "element";
       this.#idText = "";
       return;
     }
@@ -82,6 +106,16 @@ class ObjectReader {
     if (name === "id" && this.#idTarget === "object" && depth === 3) {
       object.id = this.#idText.trim();
       this.#idTarget = null;
+      return;
+    }
+    if (name === "id" && this.#idTarget === "element" && depth === 5) {
+      const id = this.#idText.trim();
+      if (id) object.elements.push(id);
+      this.#idTarget = null;
+      return;
+    }
+    if (name === "collection" && depth === 3) {
+      this.#collection = false;
       return;
     }
     if (name === "id" && this.#idTarget === "reference" && depth === 4 && this.#property) {
@@ -180,6 +214,7 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
     await context.staging.flush();
     await context.staging.removeOtherThan(kinds.page, "spaceId", space.id);
     await context.staging.orderTree(kinds.page);
+    await stageRestrictions(context.staging);
     await context.saveCheckpoint({ objects });
   }
 
@@ -188,23 +223,143 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
     const reference = (name: string) => object.references.get(name) ?? null;
     const status = property("contentStatus") ?? "current";
     switch (object.className) {
-      case "Page": {
-        if (!isCurrentStatus(status) || reference("originalVersion")) return;
+      case "Page":
+      case "BlogPost": {
+        if (!isCurrentStatus(status)) return;
         const title = (property("title") ?? "").trim();
+        const original = reference("originalVersion");
+        const version = toNumber(property("version")) ?? 1;
+        if (original) {
+          await context.staging.put({
+            kind: kinds.version,
+            sourceId: object.id,
+            ref: original,
+            sort: versionSort(version),
+            data: {
+              title,
+              version,
+              authorKey: reference("lastModifier") ?? reference("creator"),
+              created:
+                confluenceDate(property("lastModificationDate")) ?? confluenceDate(property("creationDate")),
+            },
+          });
+          return;
+        }
+        const blog = object.className === "BlogPost";
         await context.staging.put({
           kind: kinds.page,
           sourceId: object.id,
           ref: titleKey(title),
-          parentId: reference("parent"),
-          sort: pageSort(toNumber(property("position")), title),
+          parentId: blog ? null : reference("parent"),
+          sort: blog
+            ? `2${confluenceDate(property("creationDate")) ?? ""}`
+            : pageSort(toNumber(property("position")), title),
           data: {
+            ...(blog ? { type: "blogPost" } : {}),
             title,
-            version: toNumber(property("version")) ?? 1,
+            version,
             creatorKey: reference("creator"),
             created: confluenceDate(property("creationDate")),
             modifierKey: reference("lastModifier"),
             modified: confluenceDate(property("lastModificationDate")),
             spaceId: reference("space"),
+          },
+        });
+        return;
+      }
+      case "Comment": {
+        if (!isCurrentStatus(status) || reference("originalVersion")) return;
+        const container = reference("containerContent");
+        if (!container) return;
+        const created = confluenceDate(property("creationDate"));
+        await context.staging.put({
+          kind: kinds.comment,
+          sourceId: object.id,
+          ref: container,
+          parentId: reference("parent"),
+          sort: created ?? "",
+          data: {
+            creatorKey: reference("creator"),
+            created,
+            modified: confluenceDate(property("lastModificationDate")),
+          },
+        });
+        for (const element of object.elements) {
+          await context.staging.put({
+            kind: kinds.propertyLink,
+            sourceId: element,
+            ref: object.id,
+            data: {},
+          });
+        }
+        return;
+      }
+      case "ContentProperty": {
+        const name = (property("name") ?? "").trim();
+        if (!COMMENT_PROPERTIES.has(name)) return;
+        const content = reference("content");
+        const value = property("stringValue") || property("longValue") || property("dateValue") || "";
+        await context.staging.put({
+          kind: content ? kinds.property : kinds.propertyValue,
+          sourceId: object.id,
+          ref: content,
+          data: { name, value: value.slice(0, 2000) },
+        });
+        return;
+      }
+      case "LikeEntity": {
+        const content = reference("content");
+        if (!content || (property("liked") ?? "true").trim().toLowerCase() === "false") return;
+        await context.staging.put({
+          kind: kinds.like,
+          sourceId: object.id,
+          ref: content,
+          data: { userKey: reference("user"), created: confluenceDate(property("creationDate")) },
+        });
+        return;
+      }
+      case "Notification":
+        await context.staging.put({ kind: kinds.watch, sourceId: object.id, data: {} });
+        return;
+      case "SpacePermission": {
+        if ((property("active") ?? "true").trim().toLowerCase() === "false") return;
+        const group = (property("group") ?? "").trim();
+        await context.staging.put({
+          kind: kinds.spacePermission,
+          sourceId: object.id,
+          data: {
+            spaceId: (property("spaceId") ?? "").trim() || reference("space"),
+            type: (property("type") ?? "").trim().toUpperCase(),
+            group: group.length > 0 ? group : null,
+            userKey: reference("userSubject"),
+            allUsers: (property("allUsersSubject") ?? "").trim().length > 0,
+          },
+        });
+        return;
+      }
+      case "ContentPermissionSet": {
+        const content = reference("owningContent");
+        if (!content) return;
+        await context.staging.put({
+          kind: kinds.permissionSet,
+          sourceId: object.id,
+          data: { contentId: content, type: (property("type") ?? "").trim() },
+        });
+        return;
+      }
+      case "ContentPermission": {
+        const set = reference("owningSet");
+        if (!set) return;
+        const group = (property("groupName") ?? "").trim();
+        await context.staging.put({
+          kind: kinds.contentPermission,
+          sourceId: object.id,
+          ref: set,
+          data: {
+            type: (property("type") ?? "").trim(),
+            userKey: reference("userSubject"),
+            accountId: null,
+            group: group.length > 0 ? group : null,
           },
         });
         return;

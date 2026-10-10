@@ -3,24 +3,31 @@ import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { AuthorizationService } from "../authorization/service.js";
+import type { Encryption } from "../crypto/envelope.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { JobQueue } from "../jobs/job-queue.js";
+import type { GroupService } from "../organizations/groups.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, auditScopeOf, mergeGrants } from "../spaces/common.js";
 import type { SpaceGrant } from "../spaces/settings.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { cleanKey, type HolderValidation, insertGrants, SPACE_NAME_MAX_LENGTH } from "../spaces/spaces.js";
+import { visibleItem } from "../spaces/visibility.js";
+import { type AtlassianDirectory, atlassianHostsSetting, atlassianSite } from "./atlassian.js";
+import { deleteCredentials, tokenContext } from "./credentials.js";
 import { ImportError } from "./errors.js";
 import { type FolderFile, ImportFolder, isSafeFolderName } from "./folder.js";
 import { spreadsheetCell } from "./formats/csv.js";
 import { importWorkJob } from "./jobs.js";
 import { createQuarantineSpace, setQuarantineReaders } from "./quarantine.js";
 import { type ReportCategory, reportCategoryNames } from "./report.js";
+import { ImportResolutionService } from "./resolution.js";
 import type { ImportState } from "./schema.js";
 import { importFolderSetting } from "./settings.js";
 import { signalImportChange } from "./signals.js";
 import { type ImportSource, importSources } from "./source.js";
 import type { UploadService } from "./uploads.js";
+import { parseUserList } from "./user-list.js";
 
 export const MAX_REVIEWERS = 50;
 export const FILE_RETENTION_DAYS = 7;
@@ -45,6 +52,11 @@ export interface ImportFileView {
 
 export interface ImportFound {
   readonly pages: number;
+  readonly blogPosts: number;
+  readonly versions: number;
+  readonly comments: number;
+  readonly likes: number;
+  readonly watchers: number;
   readonly attachments: number;
   readonly attachmentBytes: number;
   readonly people: number;
@@ -64,6 +76,9 @@ export interface ImportView {
   readonly spaceName: string | null;
   readonly spaceKey: string | null;
   readonly archived: boolean;
+  readonly history: boolean;
+  readonly peopleSource: PeopleSourceView | null;
+  readonly tokenDeletedAt: Date | null;
   readonly sourceUrl: string | null;
   readonly reviewers: readonly ImportPerson[];
   readonly phase: string | null;
@@ -73,6 +88,7 @@ export interface ImportView {
   readonly errorCode: string | null;
   readonly quarantineSpace: { readonly id: string; readonly key: string } | null;
   readonly canManage: boolean;
+  readonly canResolve: boolean;
   readonly canTakeOver: boolean;
   readonly startedAt: Date | null;
   readonly finishedAt: Date | null;
@@ -82,6 +98,19 @@ export interface ImportView {
   readonly updatedAt: Date;
 }
 
+export interface PeopleSourceView {
+  readonly kind: "token" | "list" | "skip";
+  readonly site: string | null;
+  readonly email: string | null;
+  readonly people: number | null;
+  readonly withEmail: number | null;
+}
+
+export type PeopleSourceInput =
+  | { kind: "token"; site: string; email: string; token: string }
+  | { kind: "list"; userList: string }
+  | { kind: "skip"; confirmed: boolean };
+
 export interface ImportUpdate {
   readonly source?: ImportSource | undefined;
   readonly draftStep?: number | undefined;
@@ -89,6 +118,7 @@ export interface ImportUpdate {
   readonly spaceName?: string | undefined;
   readonly spaceKey?: string | undefined;
   readonly archived?: boolean | undefined;
+  readonly history?: boolean | undefined;
   readonly sourceUrl?: string | null | undefined;
 }
 
@@ -99,13 +129,17 @@ export interface ReportSummary {
     readonly count: number;
   }[];
   readonly total: number;
+  readonly placeholders: number;
+  readonly mapped: number;
+  readonly permissionsToCheck: number;
+  readonly groupsMissing: number;
 }
 
 export interface ReportEntry {
   readonly id: string;
   readonly category: string;
   readonly code: string;
-  readonly item: { readonly id: string; readonly title: string } | null;
+  readonly item: { readonly id: string; readonly title: string | null } | null;
   readonly details: Readonly<Record<string, unknown>>;
 }
 
@@ -132,6 +166,15 @@ type ImportRow = Record<string, unknown> & {
   space_name: string | null;
   space_key: string | null;
   archived: boolean;
+  history: boolean;
+  people_source: "token" | "list" | "skip" | null;
+  token_deleted_at: Date | string | null;
+  credential_site: string | null;
+  credential_email: string | null;
+  credential_people: number | null;
+  credential_with_email: number | null;
+  directory_people: number | null;
+  directory_with_email: number | null;
   source_url: string | null;
   phase: string | null;
   progress_done: number;
@@ -151,10 +194,14 @@ type ImportRow = Record<string, unknown> & {
 
 const SELECT = sql`
   select i.*, a.name as importer_name, u.name as upload_name, u.size as upload_size, u.complete as upload_complete,
-    s.key as quarantine_key
+    s.key as quarantine_key, c.site as credential_site, c.email as credential_email,
+    c.people as credential_people, c.with_email as credential_with_email,
+    (select count(*)::int from import_directory d where d.import_id = i.id) as directory_people,
+    (select count(d.email)::int from import_directory d where d.import_id = i.id) as directory_with_email
   from imports i join accounts a on a.id = i.importer_id
   left join import_uploads u on u.id = i.upload_id
-  left join spaces s on s.id = i.quarantine_space_id`;
+  left join spaces s on s.id = i.quarantine_space_id
+  left join import_credentials c on c.import_id = i.id`;
 
 function date(value: Date | string | null): Date | null {
   return value === null ? null : new Date(value);
@@ -201,12 +248,18 @@ export class ImportService {
   readonly #jobs: JobQueue | undefined;
   readonly #folder: ImportFolder;
   readonly #holders: HolderValidation;
+  readonly #encryption: Encryption;
+  readonly #atlassian: AtlassianDirectory;
+  readonly resolution: ImportResolutionService;
 
   constructor(options: {
     database: Database;
     authorization: AuthorizationService;
     audit: AuditLog;
     settings: SettingsService;
+    encryption: Encryption;
+    atlassian: AtlassianDirectory;
+    groups: GroupService;
     uploads: UploadService;
     jobs: JobQueue | undefined;
     importDir: string;
@@ -220,6 +273,15 @@ export class ImportService {
     this.#jobs = options.jobs;
     this.#folder = new ImportFolder(options.importDir);
     this.#holders = options.holders;
+    this.#encryption = options.encryption;
+    this.#atlassian = options.atlassian;
+    this.resolution = new ImportResolutionService({
+      database: options.database,
+      authorization: options.authorization,
+      audit: options.audit,
+      groups: options.groups,
+      holders: options.holders,
+    });
   }
 
   get folder(): ImportFolder {
@@ -259,6 +321,7 @@ export class ImportService {
   async #view(viewer: Principal, row: ImportRow, reviewers: readonly ImportPerson[]): Promise<ImportView> {
     const resource = { type: "import", id: row.id };
     const canManage = (await this.#authorization.explain(viewer, "import.manage", resource)).allowed;
+    const canResolve = (await this.#authorization.explain(viewer, "import.resolve", resource)).allowed;
     const canTakeOver = (await this.#authorization.explain(viewer, "import.takeOver", resource)).allowed;
     const file: ImportFileView | null =
       row.file_kind === "upload" && row.upload_id
@@ -283,6 +346,27 @@ export class ImportService {
       spaceName: row.space_name,
       spaceKey: row.space_key,
       archived: row.archived,
+      history: row.history,
+      peopleSource: row.people_source
+        ? {
+            kind: row.people_source,
+            site: row.people_source === "token" ? row.credential_site : null,
+            email: row.people_source === "token" ? row.credential_email : null,
+            people:
+              row.people_source === "token"
+                ? row.credential_people
+                : row.people_source === "list"
+                  ? row.directory_people
+                  : null,
+            withEmail:
+              row.people_source === "token"
+                ? row.credential_with_email
+                : row.people_source === "list"
+                  ? row.directory_with_email
+                  : null,
+          }
+        : null,
+      tokenDeletedAt: date(row.token_deleted_at),
       sourceUrl: row.source_url,
       reviewers,
       phase: row.phase,
@@ -295,6 +379,7 @@ export class ImportService {
           ? { id: row.quarantine_space_id, key: row.quarantine_key }
           : null,
       canManage,
+      canResolve,
       canTakeOver,
       startedAt: date(row.started_at),
       finishedAt: date(row.finished_at),
@@ -316,7 +401,7 @@ export class ImportService {
     const result = await this.#database.execute<ImportRow>(sql`
       ${SELECT}
       where i.organization_id = ${organizationId}
-        and (i.importer_id = ${viewerId} or i.state = 'held'
+        and (i.importer_id = ${viewerId} or i.state in ('held', 'accepted')
           or (exists (select 1 from import_reviewers r where r.import_id = i.id and r.account_id = ${viewerId})
             and i.state not in ('draft', 'analyzing', 'ready')))
       order by i.created_at desc, i.id
@@ -407,6 +492,7 @@ export class ImportService {
         changes.push(sql`space_key = ${key}`);
       }
       if (input.archived !== undefined) changes.push(sql`archived = ${input.archived}`);
+      if (input.history !== undefined) changes.push(sql`history = ${input.history}`);
       if (input.sourceUrl !== undefined) changes.push(sql`source_url = ${cleanSourceUrl(input.sourceUrl)}`);
       if (fileChanged) {
         changes.push(
@@ -476,6 +562,100 @@ export class ImportService {
     return { enabled: true, path: folderPath, files: await this.#folder.list(slug), maxUploadBytes };
   }
 
+  async setPeopleSource(actor: Principal, importId: string, input: PeopleSourceInput): Promise<ImportView> {
+    await this.#authorization.require(actor, "import.manage", { type: "import", id: importId });
+    const current = await this.#row(this.#database, importId);
+    if (!EDITABLE.includes(current.state)) {
+      throw new ImportError("importStarted", "The import has started; its settings cannot change anymore.");
+    }
+    if (input.kind === "token") {
+      const site = atlassianSite(input.site, await this.#settings.get(atlassianHostsSetting, {}));
+      const email = input.email.trim();
+      const token = input.token.trim();
+      if (!/^[^\s@]+@[^\s@]+$/.test(email) || email.length > 320) {
+        throw new ImportError("invalidAtlassianEmail", "Enter the e-mail address of your Atlassian account.");
+      }
+      if (token.length === 0 || token.length > 1000 || /\s/.test(token)) {
+        throw new ImportError("invalidAtlassianToken", "Paste the API token exactly as Atlassian showed it.");
+      }
+      const credentials = { site, email, token };
+      await this.#atlassian.check(credentials);
+      const ids = await this.#database.execute<{ account_id: string }>(sql`
+        select distinct data ->> 'accountId' as account_id from import_records
+        where import_id = ${importId} and kind = 'user' and data ->> 'accountId' is not null`);
+      const found =
+        ids.rows.length > 0
+          ? await this.#atlassian.people(
+              credentials,
+              ids.rows.map((row) => row.account_id),
+            )
+          : null;
+      await this.#database.transaction(async (tx) => {
+        const row = await this.#locked(tx, importId);
+        if (!EDITABLE.includes(row.state)) {
+          throw new ImportError(
+            "importStarted",
+            "The import has started; its settings cannot change anymore.",
+          );
+        }
+        await tx.execute(sql`delete from import_directory where import_id = ${importId}`);
+        await tx.execute(sql`
+          insert into import_credentials (import_id, site, email, token, people, with_email)
+          values (${importId}, ${site}, ${email}, ${this.#encryption.encrypt(token, tokenContext(importId))},
+            ${found ? found.length : null}, ${found ? found.filter((person) => person.email).length : null})
+          on conflict (import_id) do update set site = excluded.site, email = excluded.email, token = excluded.token,
+            people = excluded.people, with_email = excluded.with_email, created_at = now()`);
+        await tx.execute(sql`
+          update imports set people_source = 'token', token_deleted_at = null, updated_at = now() where id = ${importId}`);
+        await this.#audit.record(tx, {
+          name: "import.tokenUsed",
+          actor,
+          targetId: importId,
+          fields: { site, purpose: "check" },
+          scope: { type: "organization", id: row.organization_id },
+        });
+        await signalImportChange(tx, { importId, organizationId: row.organization_id });
+      });
+      return this.get(actor, importId);
+    }
+    if (input.kind === "skip" && !input.confirmed) {
+      throw new ImportError(
+        "skipNotConfirmed",
+        "Confirm that every author becomes a placeholder until you upload a user list.",
+      );
+    }
+    const entries = input.kind === "list" ? await parseUserList(input.userList) : [];
+    await this.#database.transaction(async (tx) => {
+      const row = await this.#locked(tx, importId);
+      if (!EDITABLE.includes(row.state)) {
+        throw new ImportError("importStarted", "The import has started; its settings cannot change anymore.");
+      }
+      await deleteCredentials(tx, this.#audit, {
+        importId,
+        organizationId: row.organization_id,
+        reason: "replaced",
+        actor,
+      });
+      for (let start = 0; start < entries.length; start += 1000) {
+        const chunk = entries.slice(start, start + 1000).map((entry) => ({
+          external_id: entry.externalId,
+          name: entry.name,
+          email: entry.email,
+        }));
+        await tx.execute(sql`
+          insert into import_directory (import_id, external_id, name, email)
+          select ${importId}, r.external_id, r.name, r.email
+          from jsonb_to_recordset(${JSON.stringify(chunk)}::jsonb) as r(external_id text, name text, email text)
+          on conflict do nothing`);
+      }
+      await tx.execute(
+        sql`update imports set people_source = ${input.kind}, updated_at = now() where id = ${importId}`,
+      );
+      await signalImportChange(tx, { importId, organizationId: row.organization_id });
+    });
+    return this.get(actor, importId);
+  }
+
   async remove(actor: Principal, importId: string): Promise<void> {
     await this.#authorization.require(actor, "import.manage", { type: "import", id: importId });
     await this.#database.transaction(async (tx) => {
@@ -486,6 +666,12 @@ export class ImportService {
           "A started import is stopped or discarded instead of removed.",
         );
       }
+      await deleteCredentials(tx, this.#audit, {
+        importId,
+        organizationId: row.organization_id,
+        reason: "removed",
+        actor,
+      });
       await tx.execute(sql`delete from imports where id = ${importId}`);
       if (row.upload_id) {
         await tx.execute(sql`
@@ -566,6 +752,12 @@ export class ImportService {
           row.state === "analyzing"
             ? "Pagehall is still reading the export. Start the import when it is done."
             : "The import cannot be started in its current state.",
+        );
+      }
+      if (!row.people_source) {
+        throw new ImportError(
+          "peopleSourceMissing",
+          "Choose how Pagehall recognizes people: an API token, a user list, or skip with confirmation.",
         );
       }
       const name = cleanSpaceName(row.space_name ?? "");
@@ -726,6 +918,17 @@ export class ImportService {
         where id = ${importId}`);
       await this.#releaseFile(tx, row);
       await tx.execute(sql`delete from import_records where import_id = ${importId}`);
+      await this.resolution.markAccepted(tx, actor, {
+        importId,
+        organizationId: row.organization_id,
+        spaceId,
+        granted: grants,
+      });
+      await deleteCredentials(tx, this.#audit, {
+        importId,
+        organizationId: row.organization_id,
+        reason: "accepted",
+      });
       await this.#audit.record(tx, {
         name: "import.accepted",
         actor,
@@ -798,7 +1001,11 @@ export class ImportService {
     const categories = result.rows
       .filter((row) => (reportCategoryNames as string[]).includes(row.category))
       .map((row) => ({ category: row.category as ReportCategory, code: row.code, count: row.count }));
-    return { categories, total: categories.reduce((sum, row) => sum + row.count, 0) };
+    return {
+      categories,
+      total: categories.reduce((sum, row) => sum + row.count, 0),
+      ...(await this.resolution.summary(this.#database, importId)),
+    };
   }
 
   async entries(
@@ -821,8 +1028,11 @@ export class ImportService {
       title: string | null;
       details: Record<string, unknown>;
     }>(sql`
-      select p.id, p.category, p.code, p.item_id, t.title, p.details from import_problems p
+      select p.id, p.category, p.code, p.item_id,
+        case when ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)} then t.title end as title, p.details
+      from import_problems p
       left join tree_items t on t.id = p.item_id
+      left join spaces s on s.id = t.space_id
       where p.import_id = ${importId}
         ${filter.category ? sql`and p.category = ${filter.category}` : sql``}
         ${filter.code ? sql`and p.code = ${filter.code}` : sql``}
@@ -834,7 +1044,7 @@ export class ImportService {
       id: row.id,
       category: row.category,
       code: row.code,
-      item: row.item_id && row.title !== null ? { id: row.item_id, title: row.title } : null,
+      item: row.item_id ? { id: row.item_id, title: row.title } : null,
       details: row.details,
     }));
     return { entries, next: result.rows.length > filter.limit ? (rows.at(-1)?.id ?? null) : null };

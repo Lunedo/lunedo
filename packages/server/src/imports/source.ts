@@ -23,8 +23,11 @@ export interface SourceBody {
   readonly content: string;
 }
 
+export type SourceContentType = "page" | "blogPost";
+
 export interface SourcePage {
   readonly sourceId: string;
+  readonly type: SourceContentType;
   readonly parentId: string | null;
   readonly title: string;
   readonly creatorId: string | null;
@@ -54,6 +57,53 @@ export interface SourceLabel {
   readonly name: string;
 }
 
+export interface SourceVersion {
+  readonly sourceId: string;
+  readonly pageId: string;
+  readonly version: number;
+  readonly title: string;
+  readonly authorId: string | null;
+  readonly createdAt: string | null;
+}
+
+export type SourceCommentStatus = "open" | "resolved" | "dangling";
+
+export interface SourceComment {
+  readonly sourceId: string;
+  readonly pageId: string;
+  readonly parentId: string | null;
+  readonly authorId: string | null;
+  readonly createdAt: string | null;
+  readonly modifiedAt: string | null;
+  readonly inline: { readonly markerRef: string | null; readonly selection: string | null } | null;
+  readonly status: SourceCommentStatus;
+  readonly resolvedById: string | null;
+  readonly resolvedAt: string | null;
+}
+
+export interface SourceLike {
+  readonly sourceId: string;
+  readonly contentId: string;
+  readonly personId: string | null;
+  readonly createdAt: string | null;
+}
+
+export interface SourceSpacePermission {
+  readonly sourceId: string;
+  readonly type: string;
+  readonly group: string | null;
+  readonly personId: string | null;
+  readonly allUsers: boolean;
+}
+
+export interface SourceRestriction {
+  readonly sourceId: string;
+  readonly contentId: string;
+  readonly kind: "view" | "edit";
+  readonly personId: string | null;
+  readonly group: string | null;
+}
+
 export interface ScanProgress {
   readonly done: number;
   readonly total: number;
@@ -70,6 +120,11 @@ export interface ScanContext {
 
 export interface ExportSummary {
   readonly pages: number;
+  readonly blogPosts: number;
+  readonly versions: number;
+  readonly comments: number;
+  readonly likes: number;
+  readonly watchers: number;
   readonly attachments: number;
   readonly attachmentBytes: number;
   readonly people: number;
@@ -88,7 +143,12 @@ export interface ImportReader {
   space(context: ReadContext): Promise<SourceSpace>;
   people(context: ReadContext): AsyncIterable<SourcePerson>;
   pages(context: ReadContext): AsyncIterable<SourcePage>;
-  bodies(context: ReadContext, pageIds: readonly string[]): Promise<ReadonlyMap<string, SourceBody>>;
+  bodies(context: ReadContext, contentIds: readonly string[]): Promise<ReadonlyMap<string, SourceBody>>;
+  versions(context: ReadContext, pageId: string): AsyncIterable<SourceVersion>;
+  comments(context: ReadContext, contentIds: readonly string[]): Promise<readonly SourceComment[]>;
+  likes(context: ReadContext): AsyncIterable<SourceLike>;
+  spacePermissions(context: ReadContext): AsyncIterable<SourceSpacePermission>;
+  restrictions(context: ReadContext, contentIds: readonly string[]): Promise<readonly SourceRestriction[]>;
   attachments(context: ReadContext): AsyncIterable<SourceAttachment>;
   openFile(file: ByteSource, context: ReadContext, path: string): Promise<Readable | null>;
   labels(context: ReadContext, pageIds: readonly string[]): Promise<readonly SourceLabel[]>;

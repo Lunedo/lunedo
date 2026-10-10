@@ -440,8 +440,10 @@ export class PageDocumentService {
         ? []
         : (
             await this.#database.execute<{ id: string; name: string }>(
-              sql`select a.id, a.name from accounts a
-                where a.id = any(${sql.param(mentions)}::uuid[]) and ${this.#people.visibleCondition(viewer, sql`a.id`)}`,
+              sql`select a.id, coalesce(m.name, a.name) as name from accounts a
+                left join accounts m on m.id = a.merged_into_id
+                where a.id = any(${sql.param(mentions)}::uuid[])
+                  and ${this.#people.visibleCondition(viewer, sql`coalesce(m.id, a.id)`)}`,
             )
           ).rows;
     const pages =

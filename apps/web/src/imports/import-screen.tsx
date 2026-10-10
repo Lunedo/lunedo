@@ -54,10 +54,22 @@ import {
   stopImport,
   takeOverImport,
 } from "./imports-api.js";
+import { PeopleTab, PermissionsTab } from "./resolution-tabs.js";
 
 const route = getRouteApi("/app/settings/organizations/$organizationId/imports/$importId");
-const PHASES = ["read", "space", "people", "pages", "attachments", "content", "finish"] as const;
-const TABS = ["summary", "macros", "attachments"] as const;
+const PHASES = [
+  "read",
+  "space",
+  "people",
+  "pages",
+  "attachments",
+  "content",
+  "comments",
+  "reactions",
+  "permissions",
+  "finish",
+] as const;
+const TABS = ["summary", "macros", "people", "comments", "attachments", "permissions"] as const;
 type Tab = (typeof TABS)[number];
 
 export function ImportScreen() {
@@ -175,7 +187,18 @@ function ImportDetail({ organizationId, entry }: { organizationId: string; entry
       ) : null}
       {entry.state === "failed" && entry.errorCode ? <FailedNotice code={entry.errorCode} /> : null}
       {running || deleting ? <Progress entry={entry} /> : null}
-      {entry.state === "review" || entry.state === "accepted" ? <Report entry={entry} /> : null}
+      {entry.state === "review" || entry.state === "accepted" ? (
+        <Report organizationId={organizationId} entry={entry} />
+      ) : null}
+      {entry.tokenDeletedAt ? (
+        <Notice variant="info" title={t("imports.detail.tokenDeletedTitle")}>
+          {t("imports.detail.tokenDeleted", { when: format.dateTime(entry.tokenDeletedAt) })}
+        </Notice>
+      ) : entry.peopleSource?.kind === "token" && (entry.state === "review" || running) ? (
+        <Notice variant="info" title={t("imports.detail.tokenKeptTitle")}>
+          {t("imports.detail.tokenKept")}
+        </Notice>
+      ) : null}
       {entry.state === "accepted" && entry.quarantineSpace ? (
         <Notice variant="success" title={t("imports.detail.acceptedTitle")}>
           {t("imports.detail.accepted", { when: format.relative(entry.decidedAt ?? entry.updatedAt) })}
@@ -370,7 +393,7 @@ function Progress({ entry }: { entry: ImportView }) {
   );
 }
 
-function Report({ entry }: { entry: ImportView }) {
+function Report({ organizationId, entry }: { organizationId: string; entry: ImportView }) {
   const { t } = useTranslation();
   const format = useFormat();
   const search = route.useSearch();
@@ -386,7 +409,7 @@ function Report({ entry }: { entry: ImportView }) {
   return (
     <>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {(["pages", "attachments", "people", "problems"] as const).map((name) => (
+        {(["pages", "blogPosts", "attachments", "comments"] as const).map((name) => (
           <div key={name} className="flex flex-col gap-1 rounded-md border border-border p-4">
             <span className="text-xl font-semibold tabular-nums">
               {format.number(entry.counts[name] ?? 0)}
@@ -404,7 +427,14 @@ function Report({ entry }: { entry: ImportView }) {
         tabs={[
           { value: "summary", label: t("imports.report.summary") },
           { value: "macros", label: t("imports.report.macros"), count: macros.data?.length ?? 0 },
+          { value: "people", label: t("imports.report.people"), count: report.data?.placeholders ?? 0 },
+          { value: "comments", label: t("imports.report.comments"), count: count("comments") },
           { value: "attachments", label: t("imports.report.attachments"), count: count("attachments") },
+          {
+            value: "permissions",
+            label: t("imports.report.permissions"),
+            count: report.data?.permissionsToCheck ?? 0,
+          },
         ]}
       >
         {report.isPending ? (
@@ -415,6 +445,12 @@ function Report({ entry }: { entry: ImportView }) {
           <Summary entry={entry} report={report.data} onOpen={setTab} />
         ) : tab === "macros" ? (
           <MacrosTab entry={entry} />
+        ) : tab === "people" ? (
+          <PeopleTab organizationId={organizationId} entry={entry} />
+        ) : tab === "permissions" ? (
+          <PermissionsTab organizationId={organizationId} entry={entry} />
+        ) : tab === "comments" ? (
+          <EntriesList entry={entry} category="comments" empty={t("imports.report.noCommentProblems")} />
         ) : (
           <EntriesList
             entry={entry}
@@ -443,12 +479,33 @@ function Summary({
   onOpen,
 }: {
   entry: ImportView;
-  report: { categories: { category: string; code: string; count: number }[]; total: number };
+  report: {
+    categories: { category: string; code: string; count: number }[];
+    total: number;
+    placeholders: number;
+    permissionsToCheck: number;
+  };
   onOpen: (tab: string) => void;
 }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState<string | null>(null);
-  if (report.total === 0) {
+  const extra = [
+    report.placeholders > 0
+      ? {
+          key: "people",
+          title: t("imports.report.placeholdersTitle", { count: report.placeholders }),
+          hint: t("imports.report.placeholdersHint"),
+        }
+      : null,
+    report.permissionsToCheck > 0
+      ? {
+          key: "permissions",
+          title: t("imports.report.permissionsTitle", { count: report.permissionsToCheck }),
+          hint: t("imports.report.permissionsHint"),
+        }
+      : null,
+  ].filter((row): row is { key: string; title: string; hint: string } => row !== null);
+  if (report.total === 0 && extra.length === 0) {
     return (
       <EmptyState
         icon={CheckCircle2}
@@ -460,9 +517,27 @@ function Summary({
   return (
     <Section title={t("imports.report.attention")}>
       <ul className="flex flex-col divide-y divide-border">
+        {extra.map((row) => (
+          <li key={row.key}>
+            <button
+              type="button"
+              onClick={() => onOpen(row.key)}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-hover focus-visible:focus-ring"
+            >
+              <Icon icon={AlertTriangle} className="text-warning" />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="font-medium">{row.title}</span>
+                <span className="text-sm text-text-muted">{row.hint}</span>
+              </span>
+              <Icon icon={ChevronRight} className="text-text-muted" />
+            </button>
+          </li>
+        ))}
         {report.categories.map((row) => {
           const target =
-            row.category === "macros" ? "macros" : row.category === "attachments" ? "attachments" : null;
+            row.category === "macros" || row.category === "attachments" || row.category === "comments"
+              ? row.category
+              : null;
           const label = translateKey(t, `imports.report.codes.${row.code}.title`, {
             count: row.count,
             defaultValue: row.code,
@@ -537,9 +612,15 @@ function EntriesList({
           <ListRow
             key={item.id}
             icon={FileWarning}
-            title={item.item?.title ?? t("imports.report.wholeExport")}
+            title={
+              item.item
+                ? item.item.title
+                : item.restricted
+                  ? t("imports.report.restrictedPage")
+                  : t("imports.report.wholeExport")
+            }
             description={entryText(t, item)}
-            {...(item.item && spaceKey
+            {...(item.item?.title && spaceKey
               ? {
                   actions: (
                     <Link
@@ -638,7 +719,7 @@ function MacroPages({ entry, name }: { entry: ImportView; name: string }) {
   return (
     <List label={t("imports.report.pagesWith", { name })}>
       {items.map((item) =>
-        item.item ? (
+        item.item?.title ? (
           <ListRow
             key={item.id}
             title={item.item.title}

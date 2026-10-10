@@ -43,12 +43,20 @@ function importView(overrides: Record<string, unknown> = {}) {
     spaceName: "IT Operations",
     spaceKey: "ITOPS",
     archived: false,
+    history: false,
+    peopleSource: null,
+    tokenDeletedAt: null,
     sourceUrl: null,
     reviewers: [{ id: "01929b1e-0000-7000-8000-0000000000c4", name: "Lukas Hofer" }],
     phase: null,
     progress: { done: 0, total: 0 },
     found: {
       pages: 12,
+      blogPosts: 1,
+      versions: 4,
+      comments: 5,
+      likes: 2,
+      watchers: 3,
       attachments: 3,
       attachmentBytes: 4096,
       people: 2,
@@ -60,6 +68,7 @@ function importView(overrides: Record<string, unknown> = {}) {
     errorCode: null,
     quarantineSpace: { id: SPACE_ID, key: "ITOPS" },
     canManage: true,
+    canResolve: true,
     canTakeOver: false,
     startedAt: "2026-10-10T08:00:00.000Z",
     finishedAt: "2026-10-10T08:05:00.000Z",
@@ -256,7 +265,9 @@ describe("import report", () => {
   it("shows reviewers the report without accept, discard or stop", async () => {
     setup(
       {
-        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: importView({ canManage: false }) }),
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({
+          body: importView({ canManage: false, canResolve: false }),
+        }),
         [`GET /api/v1/imports/${IMPORT_ID}/report`]: () => ({ body: { categories: [], total: 0 } }),
         [`GET /api/v1/imports/${IMPORT_ID}/report/macros`]: () => ({ body: [] }),
       },
@@ -266,6 +277,41 @@ describe("import report", () => {
     expect(await screen.findByText("Nothing needs attention")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Accept import" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Discard import" })).toBeNull();
+  });
+  it("names pages the viewer cannot read as restricted and keeps problems of the export apart", async () => {
+    const entry = (id: string, item: { id: string; title: string } | null, restricted: boolean) => ({
+      id,
+      category: "attachments",
+      code: "missingAttachment",
+      item,
+      restricted,
+      details: { fileName: `${id}.png` },
+    });
+    setup(
+      {
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: importView() }),
+        [`GET /api/v1/imports/${IMPORT_ID}/report`]: () => ({
+          body: { categories: [{ category: "attachments", code: "missingAttachment", count: 3 }], total: 3 },
+        }),
+        [`GET /api/v1/imports/${IMPORT_ID}/report/macros`]: () => ({ body: [] }),
+        [`GET /api/v1/imports/${IMPORT_ID}/report/entries`]: () => ({
+          body: {
+            items: [
+              entry("readable", { id: SPACE_ID, title: "Network overview" }, false),
+              entry("hidden", null, true),
+              entry("export", null, false),
+            ],
+            nextCursor: null,
+          },
+        }),
+      },
+      ["organization.imports.manage"],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}?tab=attachments`);
+    expect(await screen.findByText("Network overview")).toBeTruthy();
+    expect(screen.getByText("A restricted page you cannot open")).toBeTruthy();
+    expect(screen.getByText("The export as a whole")).toBeTruthy();
+    expect(screen.getAllByRole("link", { name: "Open page" })).toHaveLength(1);
   });
 });
 
@@ -344,5 +390,298 @@ describe("uploads in parts", () => {
     const complete = api.requests.find((request) => request.path.endsWith("/complete"));
     expect(complete?.body).toEqual({ sha256: await combinedSha256(digests) });
     expect(progress.at(-1)).toBe(10);
+  });
+});
+
+const PLACEHOLDER = "01929b1e-0000-7000-8000-0000000000d1";
+const JANA = "01929b1e-0000-7000-8000-0000000000d2";
+const GROUP = "01929b1e-0000-7000-8000-0000000000d3";
+
+function emptyReport(overrides: Record<string, unknown> = {}) {
+  return {
+    categories: [],
+    total: 0,
+    placeholders: 1,
+    mapped: 0,
+    permissionsToCheck: 1,
+    groupsMissing: 1,
+    ...overrides,
+  };
+}
+
+describe("people in the import wizard", () => {
+  const draft = (overrides: Record<string, unknown> = {}) =>
+    importView({ state: "ready", draftStep: 1, quarantineSpace: null, ...overrides });
+
+  it("checks the API token only when asked, shows field errors first and never shows the token again", async () => {
+    let current = draft();
+    const api = setup(
+      {
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: current }),
+        [`PATCH /api/v1/imports/${IMPORT_ID}`]: () => ({ body: current }),
+        [`PUT /api/v1/imports/${IMPORT_ID}/people-source`]: () => {
+          current = draft({
+            peopleSource: {
+              kind: "token",
+              site: "example.atlassian.net",
+              email: "olivia@example.org",
+              people: 2,
+              withEmail: 1,
+            },
+          });
+          return { body: current };
+        },
+      },
+      ["organization.imports.manage"],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}/setup?step=1`);
+    await userEvent.click(await screen.findByRole("button", { name: "Continue" }));
+    expect(
+      await screen.findByText("Check and save the API token first, or choose another way."),
+    ).toBeTruthy();
+    await userEvent.type(screen.getByLabelText("Confluence site"), "example.atlassian.net");
+    await userEvent.type(screen.getByLabelText("Your Atlassian e-mail address"), "olivia@example.org");
+    await userEvent.click(screen.getByRole("button", { name: "Check and save token" }));
+    expect(await screen.findByText("Paste the API token.")).toBeTruthy();
+    expect(api.requests.some((request) => request.path.endsWith("/people-source"))).toBe(false);
+    await userEvent.type(screen.getByLabelText("API token"), "secret-token");
+    await userEvent.click(screen.getByRole("button", { name: "Check and save token" }));
+    expect(await screen.findByText("Connected to example.atlassian.net")).toBeTruthy();
+    expect(screen.getByText("2 people of the export found, 1 with a visible e-mail address.")).toBeTruthy();
+    expect(api.requests.find((request) => request.path.endsWith("/people-source"))?.body).toEqual({
+      kind: "token",
+      site: "example.atlassian.net",
+      email: "olivia@example.org",
+      token: "secret-token",
+    });
+    expect(screen.queryByDisplayValue("secret-token")).toBeNull();
+  });
+
+  it("skips people only after the confirmation", async () => {
+    let current = draft();
+    const api = setup(
+      {
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: current }),
+        [`PATCH /api/v1/imports/${IMPORT_ID}`]: () => ({ body: current }),
+        [`PUT /api/v1/imports/${IMPORT_ID}/people-source`]: () => {
+          current = draft({
+            peopleSource: { kind: "skip", site: null, email: null, people: null, withEmail: null },
+          });
+          return { body: current };
+        },
+      },
+      ["organization.imports.manage"],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}/setup?step=1`);
+    await userEvent.click(await screen.findByRole("radio", { name: /Skip for now/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByText("Confirm that every author becomes a placeholder.")).toBeTruthy();
+    await userEvent.click(screen.getByRole("checkbox", { name: /every author becomes a placeholder/ }));
+    await waitFor(() =>
+      expect(api.requests.find((request) => request.path.endsWith("/people-source"))?.body).toEqual({
+        kind: "skip",
+        confirmed: true,
+      }),
+    );
+  });
+
+  it("reads a user list as CSV", async () => {
+    let current = draft();
+    const api = setup(
+      {
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: current }),
+        [`PATCH /api/v1/imports/${IMPORT_ID}`]: () => ({ body: current }),
+        [`PUT /api/v1/imports/${IMPORT_ID}/people-source/user-list`]: () => {
+          current = draft({
+            peopleSource: { kind: "list", site: null, email: null, people: 3, withEmail: 2 },
+          });
+          return { body: current };
+        },
+      },
+      ["organization.imports.manage"],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}/setup?step=1`);
+    await userEvent.click(
+      await screen.findByRole("radio", { name: /User list from the Atlassian administration/ }),
+    );
+    const file = new File(["User id,User name,email\na,Anna,anna@example.org"], "users.csv", {
+      type: "text/csv",
+    });
+    await userEvent.upload(screen.getByLabelText(/Drop the user list here/), file);
+    expect(await screen.findByText("3 people in the list, 2 with an e-mail address.")).toBeTruthy();
+    const sent = api.requests.find((request) => request.path.endsWith("/people-source/user-list"));
+    expect(sent?.body).toBe("User id,User name,email\na,Anna,anna@example.org");
+    expect(sent?.headers.get("content-type")).toBe("text/csv");
+  });
+});
+
+describe("people and permissions in the report", () => {
+  function reportRoutes(extra: Record<string, () => { status?: number; body?: unknown }> = {}) {
+    return {
+      [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: importView() }),
+      [`GET /api/v1/imports/${IMPORT_ID}/report`]: () => ({ body: emptyReport() }),
+      [`GET /api/v1/imports/${IMPORT_ID}/report/macros`]: () => ({ body: [] }),
+      [`GET /api/v1/imports/${IMPORT_ID}/people`]: () => ({
+        body: {
+          items: [
+            {
+              id: PLACEHOLDER,
+              name: "J. Weber",
+              externalId: "557058:4f1c",
+              email: null,
+              named: true,
+              items: 14,
+              comments: 31,
+              restrictedPages: 2,
+              spaceRole: "editor",
+              mappedTo: null,
+              candidates: [{ id: JANA, name: "Jana Weber" }],
+            },
+          ],
+          total: 1,
+          mapped: 0,
+          nextCursor: null,
+        },
+      }),
+      [`GET /api/v1/imports/${IMPORT_ID}/groups`]: () => ({
+        body: [
+          { key: "contractors", name: "contractors", group: null, spaceRole: "reader", restrictedPages: 1 },
+        ],
+      }),
+      [`GET /api/v1/imports/${IMPORT_ID}/permissions`]: () => ({
+        body: {
+          items: [
+            {
+              id: "01929b1e-0000-7000-8000-0000000000e1",
+              scope: "space",
+              item: null,
+              restriction: null,
+              holder: { kind: "anonymous", id: null, name: null, sourceName: null },
+              role: null,
+              permissions: ["VIEWSPACE"],
+              status: "notTaken",
+              code: "anonymous",
+            },
+          ],
+          nextCursor: null,
+        },
+      }),
+      ...extra,
+    };
+  }
+
+  it("lists placeholders, offers similar names for confirmation and maps the chosen ones together", async () => {
+    const api = setup(
+      reportRoutes({
+        [`POST /api/v1/imports/${IMPORT_ID}/people/mappings`]: () => ({ body: { mapped: 1 } }),
+      }),
+      ["organization.imports.manage"],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}?tab=people`);
+    expect(await screen.findByText("J. Weber")).toBeTruthy();
+    expect(screen.getByText("No e-mail address visible")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Choose Jana Weber" }));
+    expect(screen.getByText("1 person chosen")).toBeTruthy();
+    expect(api.requests.some((request) => request.path.endsWith("/mappings"))).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: "Map 1 person" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("J. Weber becomes Jana Weber")).toBeTruthy();
+    expect(within(dialog).getByText(/also takes a place on restricted pages/)).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Map 1 person" }));
+    await waitFor(() =>
+      expect(api.requests.find((request) => request.path.endsWith("/mappings"))?.body).toEqual({
+        mappings: [{ placeholderId: PLACEHOLDER, accountId: JANA }],
+      }),
+    );
+  });
+
+  it("lists unmatched groups with the choice to create a local group, after a confirmation", async () => {
+    const api = setup(
+      reportRoutes({
+        [`PUT /api/v1/imports/${IMPORT_ID}/groups/contractors`]: () => ({
+          body: {
+            key: "contractors",
+            name: "contractors",
+            group: { id: GROUP, name: "contractors" },
+            spaceRole: "reader",
+            restrictedPages: 1,
+          },
+        }),
+      }),
+      ["organization.imports.manage"],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}?tab=permissions`);
+    expect(await screen.findByText("Anonymous visitors")).toBeTruthy();
+    expect(screen.getByText("Public access is not available for this space.")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Create group “contractors”" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/named on 1 restricted page at once/)).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create group “contractors”" }));
+    await waitFor(() =>
+      expect(api.requests.find((request) => request.path.endsWith("/groups/contractors"))?.body).toEqual({
+        create: true,
+      }),
+    );
+  });
+
+  it("shows reviewers the people without the means to map them", async () => {
+    setup(
+      {
+        ...reportRoutes(),
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({
+          body: importView({ canManage: false, canResolve: false }),
+        }),
+      },
+      [],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}?tab=people`);
+    expect(await screen.findByText("J. Weber")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Choose Jana Weber" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Upload user list" })).toBeNull();
+  });
+
+  it("lets another administrator map the people of an accepted import", async () => {
+    setup(
+      {
+        ...reportRoutes(),
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({
+          body: importView({ state: "accepted", canManage: false, canResolve: true }),
+        }),
+      },
+      [],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}?tab=people`);
+    expect(await screen.findByRole("button", { name: "Choose Jana Weber" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Accept import" })).toBeNull();
+  });
+
+  it("fills the accept dialog with the imported permissions instead of the defaults", async () => {
+    const api = setup(
+      reportRoutes({
+        [`GET /api/v1/imports/${IMPORT_ID}/proposed-access`]: () => ({
+          body: {
+            visibility: "private",
+            grants: [{ principalKind: "group", principalId: GROUP, role: "editor", name: "IT Admins" }],
+            pending: 2,
+          },
+        }),
+        [`POST /api/v1/imports/${IMPORT_ID}/accept`]: () => ({ body: importView({ state: "accepted" }) }),
+      }),
+      ["organization.imports.manage"],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}`);
+    await userEvent.click(await screen.findByRole("button", { name: "Accept import" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(await within(dialog).findByText(/2 imported roles wait/)).toBeTruthy();
+    expect(within(dialog).getAllByText(/IT Admins/).length).toBeGreaterThan(0);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Accept import" }));
+    await waitFor(() => {
+      const body = api.requests.find((request) => request.path.endsWith("/accept"))?.body as {
+        visibility: string;
+        grants: unknown[];
+      };
+      expect(body.visibility).toBe("private");
+      expect(body.grants).toContainEqual({ principalKind: "group", principalId: GROUP, role: "editor" });
+    });
   });
 });

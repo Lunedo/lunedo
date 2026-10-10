@@ -127,8 +127,9 @@ type Rule =
   | "manager"
   | "memberOrManager"
   | "formerAdministrator"
-  | "importerOrReviewer"
+  | "importViewer"
   | "importer"
+  | "importResolver"
   | "heldForAdministrator"
   | "self";
 
@@ -248,8 +249,9 @@ const EXPECTED: Record<string, Expectation> = {
   "task.update": { scope: "space" },
   "attachment.view": { scope: "space" },
   "attachment.edit": { scope: "space" },
-  "import.view": { scope: "organization", rule: "importerOrReviewer" },
+  "import.view": { scope: "organization", rule: "importViewer" },
   "import.manage": { scope: "organization", rule: "importer" },
+  "import.resolve": { scope: "organization", rule: "importResolver" },
   "import.takeOver": { scope: "organization", rule: "heldForAdministrator" },
 };
 
@@ -273,8 +275,9 @@ function expectedAllowed(held: Held, actionName: string): boolean {
     manager: () => false,
     memberOrManager: () => facts.membership !== null && held.via === "group",
     formerAdministrator: () => false,
-    importerOrReviewer: () => false,
+    importViewer: () => false,
     importer: () => false,
+    importResolver: () => false,
     heldForAdministrator: () => false,
   };
   if (expectation.rule && rules[expectation.rule]()) return true;

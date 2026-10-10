@@ -1,9 +1,18 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { accountAttemptLimitSetting, clientAttemptLimitSetting, maxUploadSetting } from "@pagehall/server";
-import { createXmlExport, syntheticExport, testJobContext } from "@pagehall/server/testing";
+import {
+  ALICE,
+  BOB,
+  CAROL,
+  createXmlExport,
+  PEOPLE_PAGE,
+  peopleExport,
+  syntheticExport,
+  testJobContext,
+} from "@pagehall/server/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -59,7 +68,7 @@ describe.skipIf(!databaseBaseUrl)("imports through the API", () => {
     counter += 1;
     const email = `imports${counter}@pagehall.test`;
     const account = await createAccount(test, email);
-    return { id: account.id, client: await signedInClient(test, email, account.password) };
+    return { id: account.id, email, client: await signedInClient(test, email, account.password) };
   }
 
   async function work(importId: string) {
@@ -117,6 +126,8 @@ describe.skipIf(!databaseBaseUrl)("imports through the API", () => {
     expect(named.json()).toMatchObject({ state: "ready", found: { pages: 8 } });
     const reviewed = await owner.put(`/api/v1/imports/${id}/reviewers`, { accountIds: reviewers });
     expect(reviewed.statusCode, reviewed.body).toBe(200);
+    const people = await owner.put(`/api/v1/imports/${id}/people-source`, { kind: "skip", confirmed: true });
+    expect(people.statusCode, people.body).toBe(200);
     const started = await owner.post(`/api/v1/imports/${id}/start`);
     expect(started.statusCode, started.body).toBe(200);
     await work(id);
@@ -322,5 +333,171 @@ describe.skipIf(!databaseBaseUrl)("imports through the API", () => {
     expect(renamed.statusCode, renamed.body).toBe(200);
     const listing = (await owner.get(`/api/v1/organizations/${otherId}/import-folder`)).json();
     expect(listing).toMatchObject({ path: path.join(importDir, `${otherSlug}-renamed`), files: [] });
+  });
+
+  it("lets the importer resolve people, groups and permissions, and never returns the token", async () => {
+    const reviewer = await member();
+    const outsider = await member();
+    const alice = await member();
+    const bob = await member();
+    const created = await owner.post(`/api/v1/organizations/${organizationId}/imports`, {
+      source: "confluence-xml",
+    });
+    const id = (created.json() as { id: string }).id;
+    const uploadId = await uploadExport(createXmlExport(peopleExport()));
+    await owner.patch(`/api/v1/imports/${id}`, { file: { kind: "upload", uploadId } });
+    await work(id);
+    await owner.patch(`/api/v1/imports/${id}`, { spaceName: "People", spaceKey: "APIP", history: true });
+    await owner.put(`/api/v1/imports/${id}/reviewers`, { accountIds: [reviewer.id] });
+    const secretToken = "never-echo-this-token";
+    const refused = await owner.put(`/api/v1/imports/${id}/people-source`, {
+      kind: "token",
+      site: "http://example.atlassian.net",
+      email: "alex@example.com",
+      token: secretToken,
+    });
+    expect(refused.statusCode, refused.body).toBe(400);
+    expect(refused.json()).toMatchObject({ code: "invalidAtlassianSite" });
+    expect(refused.body).not.toContain(secretToken);
+    const skipped = await owner.put(`/api/v1/imports/${id}/people-source`, {
+      kind: "skip",
+      confirmed: false,
+    });
+    expect(skipped.json()).toMatchObject({ code: "skipNotConfirmed" });
+    expect(
+      (await reviewer.client.put(`/api/v1/imports/${id}/people-source`, { kind: "skip", confirmed: true }))
+        .statusCode,
+    ).toBe(403);
+    const list = [
+      "User id,User name,email",
+      `${ALICE.accountId},Alice,${alice.email}`,
+      `${BOB.accountId},Bob,bob@elsewhere.example`,
+      `${CAROL.accountId},Carol,`,
+    ].join("\n");
+    const asJson = await owner.put(`/api/v1/imports/${id}/people-source/user-list`, { userList: list });
+    expect(asJson.statusCode).toBe(415);
+    const listed = await owner.put(`/api/v1/imports/${id}/people-source/user-list`, list, {
+      "content-type": "text/csv",
+    });
+    expect(listed.statusCode, listed.body).toBe(200);
+    expect(listed.json()).toMatchObject({
+      peopleSource: { kind: "list", people: 3, withEmail: 2 },
+      history: true,
+    });
+    expect((await owner.post(`/api/v1/imports/${id}/start`)).statusCode).toBe(200);
+    await work(id);
+
+    const people = await reviewer.client.get(`/api/v1/imports/${id}/people`);
+    expect(people.statusCode, people.body).toBe(200);
+    const placeholders = (people.json() as { items: { id: string; name: string }[]; total: number }).items;
+    const bobPlaceholder = placeholders.find((entry) => entry.name === "Bob")?.id ?? "";
+    expect(bobPlaceholder).not.toBe("");
+    for (const path of [
+      `/api/v1/imports/${id}/people`,
+      `/api/v1/imports/${id}/groups`,
+      `/api/v1/imports/${id}/permissions`,
+      `/api/v1/imports/${id}/proposed-access`,
+    ]) {
+      expect((await outsider.client.get(path)).statusCode, path).toBe(404);
+      expect((await reviewer.client.get(path)).statusCode, path).toBe(200);
+    }
+    const mapping = { mappings: [{ placeholderId: bobPlaceholder, accountId: bob.id }] };
+    expect((await reviewer.client.post(`/api/v1/imports/${id}/people/mappings`, mapping)).statusCode).toBe(
+      403,
+    );
+    const mapped = await owner.post(`/api/v1/imports/${id}/people/mappings`, mapping);
+    expect(mapped.statusCode, mapped.body).toBe(200);
+    const again = await owner.post(`/api/v1/imports/${id}/people/mappings`, mapping);
+    expect(again.json()).toMatchObject({ code: "notPlaceholder" });
+
+    const groups = (await owner.get(`/api/v1/imports/${id}/groups`)).json() as {
+      key: string;
+      group: unknown;
+    }[];
+    expect(groups.map((group) => group.key)).toEqual(expect.arrayContaining(["hr-team", "contractors"]));
+    expect(
+      (await reviewer.client.put(`/api/v1/imports/${id}/groups/contractors`, { create: true })).statusCode,
+    ).toBe(403);
+    const createdGroup = await owner.put(`/api/v1/imports/${id}/groups/contractors`, { create: true });
+    expect(createdGroup.statusCode, createdGroup.body).toBe(200);
+    expect(createdGroup.json()).toMatchObject({ key: "contractors", group: { name: "contractors" } });
+
+    const permissions = (await owner.get(`/api/v1/imports/${id}/permissions?limit=100`)).json() as {
+      items: { scope: string; item: { id: string; title: string | null } | null }[];
+    };
+    const secret = await test.runtime.pool.query<{ target_id: string }>(
+      "select target_id from import_items where import_id = $1 and kind = 'page' and source_id = $2",
+      [id, PEOPLE_PAGE.secret],
+    );
+    const restricted = permissions.items.find((entry) => entry.item?.id === secret.rows[0]?.target_id);
+    expect(restricted?.item?.title).toBeNull();
+    await test.runtime.pool.query(
+      "insert into import_problems (id, import_id, category, code, key, item_id) values ($1, $2, 'links', 'brokenLink', 'secret', $3)",
+      [randomUUID(), id, secret.rows[0]?.target_id],
+    );
+    const entries = (await owner.get(`/api/v1/imports/${id}/report/entries?limit=100`)).json() as {
+      items: { item: { id: string; title: string } | null; restricted: boolean }[];
+    };
+    expect(entries.items.some((entry) => entry.restricted && entry.item === null)).toBe(true);
+    expect(entries.items.some((entry) => entry.item?.id === secret.rows[0]?.target_id)).toBe(false);
+    expect(entries.items.some((entry) => !entry.restricted && entry.item !== null)).toBe(true);
+    expect((await owner.get(`/api/v1/items/${secret.rows[0]?.target_id}`)).statusCode).toBe(404);
+
+    const proposal = (await owner.get(`/api/v1/imports/${id}/proposed-access`)).json() as {
+      visibility: string;
+      grants: { principalKind: string; principalId: string | null; role: string; name: string | null }[];
+    };
+    expect(proposal.grants).toContainEqual(
+      expect.objectContaining({ principalKind: "account", principalId: alice.id, role: "admin" }),
+    );
+    const accepted = await owner.post(`/api/v1/imports/${id}/accept`, {
+      visibility: proposal.visibility,
+      grants: proposal.grants.map(({ name: _name, ...grant }) => grant),
+    });
+    expect(accepted.statusCode, accepted.body).toBe(200);
+    const afterwards = await owner.post(
+      `/api/v1/imports/${id}/people/user-list`,
+      ["User id,User name,email", `${CAROL.accountId},Carol,${reviewer.id}@nowhere.example`].join("\n"),
+      { "content-type": "text/csv" },
+    );
+    expect(afterwards.statusCode, afterwards.body).toBe(200);
+    expect(afterwards.json()).toMatchObject({ matched: 0 });
+    const view = await owner.get(`/api/v1/imports/${id}`);
+    expect(view.body).not.toContain(secretToken);
+
+    const second = await member();
+    const carolAccount = await member();
+    const assigned = await owner.post(`/api/v1/organizations/${organizationId}/role-assignments/batch`, {
+      role: { builtIn: "administrator" },
+      principals: [{ kind: "account", id: second.id }],
+    });
+    expect(assigned.statusCode, assigned.body).toBe(201);
+    const remaining = (await second.client.get(`/api/v1/imports/${id}/people`)).json() as {
+      items: { id: string; name: string; mappedTo: unknown }[];
+    };
+    const carolPlaceholder = remaining.items.find((entry) => entry.name === "Carol")?.id ?? "";
+    expect(carolPlaceholder).not.toBe("");
+    const carolMapping = { mappings: [{ placeholderId: carolPlaceholder, accountId: carolAccount.id }] };
+    for (const client of [outsider.client, reviewer.client]) {
+      expect([403, 404]).toContain(
+        (await client.post(`/api/v1/imports/${id}/people/mappings`, carolMapping)).statusCode,
+      );
+      expect([403, 404]).toContain(
+        (
+          await client.post(`/api/v1/imports/${id}/people/user-list`, "User id,User name,email", {
+            "content-type": "text/csv",
+          })
+        ).statusCode,
+      );
+      expect([403, 404]).toContain(
+        (await client.put(`/api/v1/imports/${id}/groups/hr-team`, { create: true })).statusCode,
+      );
+    }
+    const byOther = await second.client.post(`/api/v1/imports/${id}/people/mappings`, carolMapping);
+    expect(byOther.statusCode, byOther.body).toBe(200);
+    expect((await second.client.get(`/api/v1/imports/${id}`)).json()).toMatchObject({
+      canResolve: true,
+      canManage: false,
+    });
   });
 });

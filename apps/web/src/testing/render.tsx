@@ -87,6 +87,14 @@ export interface RecordedRequest {
 
 type Handler = (request: RecordedRequest) => { status?: number; body?: unknown };
 
+function parseBody(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
 export function mockApi(routes: Record<string, Handler>) {
   const requests: RecordedRequest[] = [];
   const fetch = vi.fn(async (resource: Request | string, init?: RequestInit) => {
@@ -97,7 +105,7 @@ export function mockApi(routes: Record<string, Handler>) {
     const recorded: RecordedRequest = {
       method: input.method,
       path: url.pathname + url.search,
-      body: text ? JSON.parse(text) : undefined,
+      body: text ? parseBody(text) : undefined,
       headers: input.headers,
     };
     requests.push(recorded);

@@ -190,7 +190,7 @@ export async function publishTasks(tx: Transaction, itemId: string, document: Do
       insert into tasks (id, item_id) select unnest(${sql.param(ids)}::uuid[]), ${itemId}
       on conflict (id) do nothing`);
     await tx.execute(sql`
-      update tasks k set published = true, assignee_id = a.id, due_date = s."dueDate"::date, text = s.text,
+      update tasks k set published = true, assignee_id = coalesce(a.merged_into_id, a.id), due_date = s."dueDate"::date, text = s.text,
         position = s.position, updated_at = now()
       from jsonb_to_recordset(${JSON.stringify(tasks)}::jsonb)
         as s(id uuid, assignee uuid, "dueDate" text, text text, position int)
@@ -248,14 +248,15 @@ export class ContentActivity {
     if (mentioned.length > 0) {
       await tx.execute(sql`
         insert into content_mentions (id, item_id, account_id, actor_id)
-        select m.id, ${itemId}, a.id, ${actorId}
+        select m.id, ${itemId}, coalesce(a.merged_into_id, a.id), ${actorId}
         from unnest(${sql.param(mentioned.map(() => uuidv7()))}::uuid[], ${sql.param(mentioned)}::uuid[]) as m(id, account_id)
         join accounts a on a.id = m.account_id
         on conflict do nothing`);
     }
     await tx.execute(sql`
       delete from content_mentions where item_id = ${itemId} and comment_id is null and notified_at is null
-        and not (account_id = any(${sql.param(mentioned)}::uuid[]))`);
+        and not (account_id = any(select coalesce(a.merged_into_id, a.id) from accounts a
+          where a.id = any(${sql.param(mentioned)}::uuid[])))`);
     await this.deliver(tx, [itemId]);
   }
 
@@ -270,14 +271,15 @@ export class ContentActivity {
     if (mentioned.length > 0) {
       await tx.execute(sql`
         insert into content_mentions (id, item_id, comment_id, account_id, actor_id)
-        select m.id, ${itemId}, ${commentId}, a.id, ${actorId}
+        select m.id, ${itemId}, ${commentId}, coalesce(a.merged_into_id, a.id), ${actorId}
         from unnest(${sql.param(mentioned.map(() => uuidv7()))}::uuid[], ${sql.param(mentioned)}::uuid[]) as m(id, account_id)
         join accounts a on a.id = m.account_id
         on conflict do nothing`);
     }
     await tx.execute(sql`
       delete from content_mentions where comment_id = ${commentId} and notified_at is null
-        and not (account_id = any(${sql.param(mentioned)}::uuid[]))`);
+        and not (account_id = any(select coalesce(a.merged_into_id, a.id) from accounts a
+          where a.id = any(${sql.param(mentioned)}::uuid[])))`);
     await this.deliver(tx, [itemId]);
   }
 

@@ -200,10 +200,11 @@ export class GroupService {
     actor: Principal,
     organizationId: string,
     input: { name: string; description?: string },
+    options: { tx?: Transaction } = {},
   ): Promise<Group> {
     const name = groupNameSchema.parse(input.name);
     const description = groupDescriptionSchema.parse(input.description ?? "");
-    return this.#database.transaction(async (tx) => {
+    const create = async (tx: Transaction) => {
       await lockOrganization(tx, organizationId);
       let group: Group | undefined;
       try {
@@ -244,7 +245,8 @@ export class GroupService {
       }
       await this.#audit.recordMany(tx, events);
       return group;
-    });
+    };
+    return options.tx ? create(options.tx) : this.#database.transaction(create);
   }
 
   async update(actor: Principal, id: string, input: { name?: string; description?: string }): Promise<Group> {

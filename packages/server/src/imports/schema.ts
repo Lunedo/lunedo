@@ -16,10 +16,12 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { accounts } from "../accounts/schema.js";
+import { encrypted } from "../crypto/encrypted-column.js";
 import { primaryId, timestamps } from "../database/columns.js";
 import { storedFiles } from "../files/schema.js";
+import { groups } from "../organizations/access-schema.js";
 import { organizations } from "../organizations/schema.js";
-import { spaces, treeItems } from "../spaces/schema.js";
+import { spaceRole, spaces, treeItems } from "../spaces/schema.js";
 
 const timestampColumn = () => timestamp({ withTimezone: true, mode: "date" });
 
@@ -102,6 +104,9 @@ export const imports = pgTable(
     spaceName: text(),
     spaceKey: text(),
     archived: boolean().notNull().default(false),
+    history: boolean().notNull().default(false),
+    peopleSource: text(),
+    tokenDeletedAt: timestampColumn(),
     sourceUrl: text(),
     phase: text(),
     progressDone: integer().notNull().default(0),
@@ -129,6 +134,90 @@ export const imports = pgTable(
     uniqueIndex("imports_quarantine_space_unique").on(table.quarantineSpaceId),
     check("imports_file_kind", sql`${table.fileKind} is null or ${table.fileKind} in ('upload', 'folder')`),
     check("imports_draft_step", sql`${table.draftStep} between 0 and 10`),
+    check(
+      "imports_people_source",
+      sql`${table.peopleSource} is null or ${table.peopleSource} in ('token', 'list', 'skip')`,
+    ),
+  ],
+);
+
+export const importCredentials = pgTable("import_credentials", {
+  importId: uuid()
+    .primaryKey()
+    .references(() => imports.id, { onDelete: "cascade" }),
+  site: text().notNull(),
+  email: text().notNull(),
+  token: encrypted().notNull(),
+  people: integer(),
+  withEmail: integer(),
+  createdAt: timestampColumn().notNull().defaultNow(),
+});
+
+export const importDirectory = pgTable(
+  "import_directory",
+  {
+    importId: uuid()
+      .notNull()
+      .references(() => imports.id, { onDelete: "cascade" }),
+    externalId: text().notNull(),
+    name: text(),
+    email: text(),
+  },
+  (table) => [primaryKey({ columns: [table.importId, table.externalId] })],
+);
+
+export const importGroups = pgTable(
+  "import_groups",
+  {
+    importId: uuid()
+      .notNull()
+      .references(() => imports.id, { onDelete: "cascade" }),
+    nameKey: text().notNull(),
+    name: text().notNull(),
+    groupId: uuid().references(() => groups.id, { onDelete: "set null" }),
+    mappedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    mappedAt: timestampColumn(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.importId, table.nameKey] }),
+    index().on(table.groupId),
+    index().on(table.mappedBy),
+  ],
+);
+
+export const importGrants = pgTable(
+  "import_grants",
+  {
+    id: primaryId(),
+    importId: uuid()
+      .notNull()
+      .references(() => imports.id, { onDelete: "cascade" }),
+    sourceKey: text().notNull(),
+    itemId: uuid().references(() => treeItems.id, { onDelete: "cascade" }),
+    restriction: text(),
+    holderKind: text().notNull(),
+    accountId: uuid().references(() => accounts.id, { onDelete: "cascade" }),
+    groupKey: text(),
+    role: spaceRole(),
+    permissions: text().array().notNull().default(sql`'{}'::text[]`),
+    status: text().notNull(),
+    code: text(),
+    appliedAt: timestampColumn(),
+  },
+  (table) => [
+    uniqueIndex("import_grants_source_unique").on(table.importId, table.sourceKey),
+    index().on(table.importId, table.groupKey),
+    index().on(table.accountId),
+    index().on(table.itemId),
+    check(
+      "import_grants_restriction",
+      sql`${table.restriction} is null or ${table.restriction} in ('view', 'edit')`,
+    ),
+    check(
+      "import_grants_holder_kind",
+      sql`${table.holderKind} in ('account', 'group', 'organizationMembers', 'anonymous')`,
+    ),
+    check("import_grants_status", sql`${table.status} in ('mapped', 'check', 'missing', 'notTaken')`),
   ],
 );
 

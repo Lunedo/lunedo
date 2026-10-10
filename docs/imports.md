@@ -5,10 +5,11 @@ Organization administrators import a Confluence space export into a new space. B
 ## Flow
 
 1. Choose the file: upload it in the browser or pick it from the import folder.
-2. Name the new space, choose its key, whether it is archived after accepting, and the reviewers.
-3. Check the analysis and start the import.
+2. Choose how people are recognized: a read-only Atlassian API token, a user list exported from the Atlassian administration, or skip with a confirmation.
+3. Name the new space, choose its key, whether the full page history is imported, whether it is archived after accepting, and the reviewers.
+4. Check the analysis and start the import.
 
-The import runs as a background job in the phases space, people, pages, attachments, content and finish. It is resumable: after a restart or a node failure, another worker continues from the last checkpoint. Every imported object is mapped by its source ID, so repeating a phase never creates duplicates. Only one worker runs an import at a time.
+The import runs as a background job in the phases space, people, pages, attachments, content, comments, reactions, permissions and finish. It is resumable: after a restart or a node failure, another worker continues from the last checkpoint. Every imported object is mapped by its source ID, so repeating a phase never creates duplicates. Only one worker runs an import at a time.
 
 Unfinished setups are kept as drafts and can be continued.
 
@@ -16,7 +17,7 @@ Unfinished setups are kept as drafts and can be continued.
 
 Imported content lands in a quarantined space. Only the importer and the chosen reviewers can see it, and it is read-only. The importer then:
 
-- accepts the import: the space leaves quarantine with the organization's default permissions, which can be changed before accepting;
+- accepts the import: the space leaves quarantine with the permissions taken from Confluence, which can be changed before accepting;
 - discards it: the space and everything imported is deleted;
 - or stops a running import.
 
@@ -28,8 +29,41 @@ The report lists problems by category: macros, attachments, links, content and a
 
 - Confluence macros are kept as unsupported-macro blocks. Readers see a neutral notice; editors see the macro name. The report counts each macro by name.
 - Links to pages inside the export are rewritten. Links to other pages keep their original address and are reported.
-- Mentions of people become placeholder accounts that are not able to sign in.
-- Only the current version of each page is imported. Attachments keep all versions.
+- Only the current version of each page is imported, unless the full page history was chosen. Attachments keep all versions.
+
+## People
+
+Confluence exports name people only by an Atlassian account ID. The people step adds names and e-mail addresses:
+
+- **API token.** The importer enters the Confluence Cloud site, their Atlassian e-mail address and a read-only API token. Pagehall checks it at once against that site only, stores it with envelope encryption, uses it only while the import runs and deletes it when the import is accepted, discarded, stopped or fails. The token never appears in responses, logs, job payloads or audit entries. Sites must be `https` hosts under `atlassian.net`; instance administrators can allow further host names in the instance setting for imports.
+- **User list.** A CSV file from admin.atlassian.com › Directory › Users › Export users, up to 10 MB.
+- **Skip.** Every author becomes a placeholder named by the Atlassian ID.
+
+People are matched to accounts of the organization only by e-mail address. Everyone else becomes a placeholder with the best name known. Placeholders with an e-mail address are taken over when the person signs in with that verified address. A placeholder that already holds access in another space never gets an e-mail address or a match from an import; it can only be mapped by hand.
+
+The report lists the placeholders with the content they own and members with a similar name as suggestions. Nobody is mapped by name automatically. Mapping moves authorship, comments, mentions, tasks, reactions and places on page restrictions to the account in one transaction; it cannot be undone and is audited. Administrators cannot map a placeholder that holds access to their own account. A user list can also be uploaded in the report, before and after accepting.
+
+Before accepting, only the person who started the import maps people and groups. After accepting, every organization administrator who manages imports can, so open mappings never depend on one person. The target is always an active member of the organization.
+
+## Comments, likes, blog posts and history
+
+- Page comments keep their replies, authors and times. Replies to replies are attached to the thread.
+- Inline comments are anchored to their text. Resolved ones arrive resolved. When the text no longer exists, the comment becomes a page comment that starts with the quoted text, and the report lists it.
+- Likes become 👍 reactions by the same person. Watchers are counted in the report.
+- Blog posts keep their title, content, labels, attachments, author and date and are published at that date.
+- With the full page history, every Confluence version becomes a Pagehall version with its author and date; the current version stays the published one. Versions are read in small batches.
+
+## Permissions
+
+- Each person or group gets the highest space role that fits its Confluence permissions: administer the space becomes space admin, add or edit pages becomes editor, comment becomes commenter, view becomes reader. Combinations that do not fit are marked for review. Anonymous access is never taken over. "All licensed users" becomes all members of the organization.
+- Groups are matched by name to groups of the organization, including synchronized groups. Unmatched groups are listed in the report, where an existing group is mapped or a local group is created. Nothing is created automatically. Administrators cannot map a group that is named in page restrictions to a group they belong to.
+- Page restrictions become view and edit restrictions as soon as the page exists in the quarantine space, also when they name only placeholders or unmatched groups. Such pages stay closed until the people and groups are mapped.
+- As in Confluence, restrictions only narrow access. People and groups named in a restriction are listed on it, but they get no access from it: they still need a role in the space. The import never shares a page. The report marks everyone named in a restriction without a role in the space.
+- The accept dialog fills in the imported permissions. Roles of people and groups that are not mapped yet apply when they are mapped, also after accepting.
+
+## Notifications
+
+An import never notifies anyone: not for mentions, tasks, comments, reactions or blog posts, neither while it runs nor when it is accepted or people are mapped. Imported mentions and task assignments are marked as delivered, so a later edit does not notify for them either.
 
 ## Large exports
 

@@ -38,6 +38,9 @@ export class PeopleService {
     if (viewer.type === "system") return sql`true`;
     if (viewer.type === "anonymous") return sql`false`;
     return sql`(${this.colleagueCondition(viewer, account)}
+      or exists (select 1 from accounts pa join memberships pm on pm.organization_id = pa.home_organization_id
+        where pa.id = ${account} and pa.state = 'placeholder' and pm.account_id = ${viewer.id}::uuid
+          and pm.kind = 'member' and (pm.expires_at is null or pm.expires_at > now()))
       or exists (select 1 from space_permissions sp join spaces vs on vs.id = sp.space_id
         where sp.principal_kind = 'account' and sp.principal_id = ${account}
           and ${this.#authorization.spaceFilter(viewer, sql`vs`)}))`;
@@ -84,15 +87,17 @@ export class PeopleService {
   async visibleNames(viewer: Principal, ids: readonly string[]): Promise<Map<string, string>> {
     if (ids.length === 0) return new Map();
     const result = await this.#database.execute<{ id: string; name: string }>(sql`
-      select a.id, a.name from accounts a
-      where a.id = any(${sql.param([...new Set(ids)])}::uuid[]) and ${this.visibleCondition(viewer, sql`a.id`)}`);
+      select a.id, coalesce(m.name, a.name) as name from accounts a left join accounts m on m.id = a.merged_into_id
+      where a.id = any(${sql.param([...new Set(ids)])}::uuid[])
+        and ${this.visibleCondition(viewer, sql`coalesce(m.id, a.id)`)}`);
     return new Map(result.rows.map((row) => [row.id, row.name]));
   }
 
   async names(ids: readonly string[], executor: Executor = this.#database): Promise<Map<string, string>> {
     if (ids.length === 0) return new Map();
     const result = await executor.execute<{ id: string; name: string }>(
-      sql`select id, name from accounts where id = any(${sql.param([...new Set(ids)])}::uuid[])`,
+      sql`select a.id, coalesce(m.name, a.name) as name from accounts a left join accounts m on m.id = a.merged_into_id
+        where a.id = any(${sql.param([...new Set(ids)])}::uuid[])`,
     );
     return new Map(result.rows.map((row) => [row.id, row.name]));
   }

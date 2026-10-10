@@ -482,23 +482,39 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       return result.rows[0]?.organization_id ?? null;
     },
     actions: {
-      "import.view": { scope: "organization", rule: "importerOrReviewer" },
+      "import.view": { scope: "organization", rule: "importViewer" },
       "import.manage": { scope: "organization", rule: "importer" },
+      "import.resolve": { scope: "organization", rule: "importResolver" },
       "import.takeOver": { scope: "organization", rule: "heldForAdministrator" },
     },
     rules: {
-      importerOrReviewer: async (context) => {
+      importViewer: async (context) => {
         if (!context.organizationId || !context.resource.id) return false;
         const facts = await context.organizationFacts(context.organizationId);
         if (facts.membership?.kind !== "member") return false;
-        const result = await context.executor.execute<{ importer: boolean; reviewer: boolean }>(sql`
+        const result = await context.executor.execute<{
+          importer: boolean;
+          reviewer: boolean;
+          accepted: boolean;
+        }>(sql`
           select i.importer_id = ${context.accountId} as importer,
             exists (select 1 from import_reviewers r where r.import_id = i.id and r.account_id = ${context.accountId})
-              as reviewer
+              as reviewer, i.state = 'accepted' as accepted
           from imports i where i.id = ${context.resource.id.toLowerCase()}`);
         const row = result.rows[0];
         if (!row) return false;
-        return row.reviewer || (row.importer && (await importingAdministrator(context)));
+        return row.reviewer || ((row.importer || row.accepted) && (await importingAdministrator(context)));
+      },
+      importResolver: async (context) => {
+        if (!context.organizationId || !context.resource.id) return false;
+        const facts = await context.organizationFacts(context.organizationId);
+        if (facts.membership?.kind !== "member") return false;
+        const result = await context.executor.execute<{ importer: boolean; accepted: boolean }>(sql`
+          select i.importer_id = ${context.accountId} as importer, i.state = 'accepted' as accepted
+          from imports i where i.id = ${context.resource.id.toLowerCase()}`);
+        const row = result.rows[0];
+        if (!row || !(row.importer || row.accepted)) return false;
+        return importingAdministrator(context);
       },
       importer: async (context) => {
         if (!context.organizationId || !context.resource.id) return false;

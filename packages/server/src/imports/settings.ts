@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { defineSetting } from "../settings/definition.js";
+import { atlassianHostsSetting } from "./atlassian.js";
 
 export const maxUploadSetting = defineSetting({
   key: "imports.maxUploadMegabytes",
@@ -17,4 +18,4 @@ export const importFolderSetting = defineSetting({
   lockable: false,
 });
 
-export const importSettings = [maxUploadSetting, importFolderSetting];
+export const importSettings = [maxUploadSetting, importFolderSetting, atlassianHostsSetting];

@@ -50,6 +50,7 @@ export function GrantsField({
   onChange,
   ownId,
   peopleOnly = false,
+  hint,
 }: {
   organizationId: string;
   organizationName: string | null;
@@ -57,6 +58,7 @@ export function GrantsField({
   onChange: (update: (current: Grant[]) => Grant[]) => void;
   ownId: string;
   peopleOnly?: boolean;
+  hint?: string;
 }) {
   const { t } = useTranslation();
   const [adding, setAdding] = useState<(Holder & { name: string }) | null>(null);
@@ -83,7 +85,7 @@ export function GrantsField({
   return (
     <fieldset className="flex flex-col gap-3">
       <legend className="mb-1 font-semibold">{t("spaces.create.permissions")}</legend>
-      <p className="text-sm text-text-muted">{t("spaces.create.permissionsHint")}</p>
+      <p className="text-sm text-text-muted">{hint ?? t("spaces.create.permissionsHint")}</p>
       <ul className="flex flex-col gap-2">
         <li className="flex flex-wrap items-center gap-2">
           <span className="min-w-0 flex-1 truncate">{t("spaces.create.you")}</span>

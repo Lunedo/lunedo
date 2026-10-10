@@ -66,6 +66,7 @@ import {
   providerSyncRetentionJob,
   providerSyncScheduleJob,
 } from "./identity/sync.js";
+import { AtlassianDirectory } from "./imports/atlassian.js";
 import { ConfluenceCsvReader } from "./imports/confluence/csv-reader.js";
 import { ConfluenceXmlReader } from "./imports/confluence/xml-reader.js";
 import { ImportService } from "./imports/imports.js";
@@ -244,6 +245,7 @@ export function createAccountServices(options: {
   directoryConnector?: DirectoryConnector;
   mailTransport?: (options: SmtpOptions) => MailTransport;
   mailFetch?: typeof fetch;
+  atlassianFetch?: typeof fetch;
   nodeId?: string;
 }): AccountServices {
   const { database, settings, audit, encryption, jobs, logger } = options;
@@ -574,11 +576,15 @@ export function createAccountServices(options: {
     notifications,
   });
   const importUploads = new UploadService({ database, files, settings, authorization });
+  const atlassian = new AtlassianDirectory(options.atlassianFetch ? { fetch: options.atlassianFetch } : {});
   const imports = new ImportService({
     database,
     authorization,
     audit,
     settings,
+    encryption,
+    atlassian,
+    groups,
     uploads: importUploads,
     jobs,
     importDir: options.importDir ?? "/data/import",
@@ -590,6 +596,8 @@ export function createAccountServices(options: {
     audit,
     authorization,
     notifications,
+    encryption,
+    atlassian,
     uploads: importUploads,
     readers: new ImportReaderRegistry().register(new ConfluenceXmlReader(), new ConfluenceCsvReader()),
     pipeline: new ImportPipeline({ database, files, settings, audit }),

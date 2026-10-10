@@ -13,17 +13,22 @@ const serverRoot = fileURLToPath(new URL("../../../../packages/server", import.m
 export const IMPORT_DIR = path.join(STATE_DIR, "import");
 export const FOLDER_EXPORT = "space-export.zip";
 export const FOLDER_EXPORT_TEMPLATE = path.join(STATE_DIR, FOLDER_EXPORT);
+export const PEOPLE_EXPORT_TEMPLATE = path.join(STATE_DIR, "people-export.zip");
 
 const WRITE_EXPORT = `
 const { writeFileSync } = await import("node:fs");
-const { createCsvExport, createXmlExport, syntheticExport } = await import("@pagehall/server/testing");
-const [format, target] = process.argv.slice(1);
-const model = syntheticExport();
+const { createCsvExport, createXmlExport, peopleExport, syntheticExport } = await import("@pagehall/server/testing");
+const [format, target, kind] = process.argv.slice(1);
+const model = kind === "people" ? peopleExport() : syntheticExport();
 writeFileSync(target, format === "csv" ? createCsvExport(model) : createXmlExport(model));
 `;
 
-export async function writeSyntheticExport(format: "xml" | "csv", target: string): Promise<void> {
-  await run(process.execPath, ["--input-type=module", "-e", WRITE_EXPORT, format, target], {
+export async function writeSyntheticExport(
+  format: "xml" | "csv",
+  target: string,
+  kind: "synthetic" | "people" = "synthetic",
+): Promise<void> {
+  await run(process.execPath, ["--input-type=module", "-e", WRITE_EXPORT, format, target, kind], {
     cwd: serverRoot,
     timeout: 30_000,
   });
@@ -57,10 +62,13 @@ export async function organizationImportFolder(organizationId: string): Promise<
   }
 }
 
-export async function placeFolderExport(organizationId: string): Promise<string> {
+export async function placeFolderExport(
+  organizationId: string,
+  template: string = FOLDER_EXPORT_TEMPLATE,
+): Promise<string> {
   const directory = await organizationImportFolder(organizationId);
   mkdirSync(directory, { recursive: true });
-  copyFileSync(FOLDER_EXPORT_TEMPLATE, path.join(directory, FOLDER_EXPORT));
+  copyFileSync(template, path.join(directory, FOLDER_EXPORT));
   return directory;
 }
 

@@ -2072,6 +2072,10 @@
       "imports_folderEnabled": {
         "label": "Import folder",
         "description": "Organization administrators can import exports placed in their organization's subfolder of the import folder, named after the organization's short name. Files at the top level or in another organization's subfolder are never offered."
+      },
+      "imports_atlassianHosts": {
+        "label": "Further Atlassian sites",
+        "description": "Host names Pagehall may contact with an import's API token besides sites under atlassian.net, separated by commas, such as wiki.example.com."
       }
     },
     "disabled": {
@@ -3232,7 +3236,12 @@
         "stopped": "Import stopped",
         "failed": "Import failed",
         "takenOver": "Import taken over",
-        "placeholderCreated": "Placeholder created by an import"
+        "placeholderCreated": "Placeholder created by an import",
+        "placeholderMapped": "Placeholder of an import mapped to an account",
+        "tokenUsed": "Atlassian API token of an import used",
+        "tokenDeleted": "Atlassian API token of an import deleted",
+        "groupMapped": "Group from an import mapped",
+        "permissionsApplied": "Imported permissions applied"
       }
     },
     "action": "Action",
@@ -5210,7 +5219,11 @@
       "restrictConfirm": "Restrict",
       "openConfirm": "Remove restriction",
       "restricted": "Page restricted. You were added to the list so you keep access.",
-      "opened": "Restriction removed"
+      "opened": "Restriction removed",
+      "holdersTitle": "Also named in the restrictions",
+      "holdersHint": "Taken over from an import. They pass the restriction but get no access from it; to open the page they need a role in the space.",
+      "holderView": "Can view",
+      "holderEdit": "Can edit"
     },
     "why": {
       "toggle": "Why does someone have access?",
@@ -5879,7 +5892,10 @@
       "pages": "Pages and page tree",
       "attachments": "Attachments",
       "content": "Page content, links and labels",
-      "finish": "Report"
+      "finish": "Report",
+      "comments": "Comments and inline comments",
+      "reactions": "Likes",
+      "permissions": "Permissions"
     },
     "list": {
       "title": "Imports",
@@ -5911,7 +5927,8 @@
       "stepNames": {
         "source": "Source",
         "space": "Space",
-        "check": "Check and start"
+        "check": "Check and start",
+        "people": "People"
       },
       "progress": "New import · step {step} of {total}",
       "close": "Close",
@@ -5970,7 +5987,13 @@
         "reviewersHint": "They can read the quarantine space and the report, but not accept, discard or stop the import. Add the people who will own the space.",
         "addReviewer": "Add a reviewer",
         "removeReviewer": "Remove {name}",
-        "reviewersFailed": "The reviewers could not be changed"
+        "reviewersFailed": "The reviewers could not be changed",
+        "history": {
+          "current": "Current state only",
+          "currentDescription": "Fastest. Each page starts with one version.",
+          "full": "Full page history",
+          "fullDescription": "Every Confluence version becomes a Pagehall version with its author and date. Takes noticeably longer."
+        }
       },
       "check": {
         "intro": "Pagehall has read the export. Nothing is imported yet.",
@@ -5980,7 +6003,6 @@
         "macros": "{count, plural, one {kind of macro} other {kinds of macros}}",
         "foundTitle": "Found in the export",
         "peopleTitle": "{count, plural, one {# person} other {# people}}",
-        "peopleDescription": "They become placeholders named by their Atlassian ID. You can link them to accounts later.",
         "macrosTitle": "{count, plural, one {# kind of macro} other {# kinds of macros}}",
         "macrosDescription": "Kept as “not shown yet” with their original data. Readers see a notice; the report lists them.",
         "spaceTitle": "Space “{name}” ({key})",
@@ -5992,7 +6014,19 @@
         "start": "Start import",
         "startFailed": "The import could not be started",
         "notReady": "Pagehall is still reading the export. Start the import when it is done.",
-        "notRead": "The export has not been read yet. Go back to the first step and choose the file."
+        "notRead": "The export has not been read yet. Go back to the first step and choose the file.",
+        "blogPosts": "{count, plural, one {blog post} other {blog posts}}",
+        "comments": "{count, plural, one {comment} other {comments}}",
+        "peopleBy": {
+          "token": "Names and e-mail addresses come from the API token. People are matched to accounts by e-mail address; everyone else becomes a placeholder you can map in the report.",
+          "list": "Names and e-mail addresses come from the user list. People are matched to accounts by e-mail address; everyone else becomes a placeholder you can map in the report.",
+          "skip": "They become placeholders named by their Atlassian ID. You can resolve them later with a user list or map them in the report."
+        },
+        "historyFull": "{count, plural, one {# earlier version} other {# earlier versions}} imported with author and date",
+        "historyCurrent": "Current state only · {count, plural, one {# earlier version} other {# earlier versions}} left out",
+        "extras": "{likes, plural, one {# like becomes a 👍 reaction} other {# likes become 👍 reactions}}. {watchers, plural, one {# watcher is} other {# watchers are}} only counted.",
+        "permissionsTitle": "Permissions",
+        "permissionsDescription": "Taken over as far as they map to Pagehall roles and marked for review in the report. Anonymous access is not taken over."
       }
     },
     "upload": {
@@ -6060,7 +6094,11 @@
       "discarding": "The import is being discarded",
       "discardFailed": "The import could not be discarded",
       "typeKey": "Type {key} to confirm",
-      "keyMismatch": "Type the key {key} exactly as shown."
+      "keyMismatch": "Type the key {key} exactly as shown.",
+      "tokenDeletedTitle": "API token deleted",
+      "tokenDeleted": "Pagehall deleted the Atlassian API token on {when}.",
+      "tokenKeptTitle": "API token",
+      "tokenKept": "The Atlassian API token stays encrypted until you accept or discard the import, and is deleted then."
     },
     "report": {
       "tabs": "Report",
@@ -6073,14 +6111,15 @@
       "counts": {
         "pages": "{count, plural, one {page} other {pages}}",
         "attachments": "{count, plural, one {attachment} other {attachments}}",
-        "people": "{count, plural, one {person} other {people}}",
-        "problems": "{count, plural, one {item needs attention} other {items need attention}}"
+        "blogPosts": "{count, plural, one {blog post} other {blog posts}}",
+        "comments": "{count, plural, one {comment} other {comments}}"
       },
       "attention": "Needs attention",
       "clean": "Nothing needs attention",
       "cleanDescription": "Everything in the export was imported.",
       "entries": "Report entries",
       "wholeExport": "The export as a whole",
+      "restrictedPage": "A restricted page you cannot open",
       "openPage": "Open page",
       "previous": "Previous",
       "next": "Next",
@@ -6176,18 +6215,40 @@
           "title": "{count, plural, one {# folder entry} other {# folder entries}} skipped",
           "hint": "Folders in the archive carry no content.",
           "entry": "{name} was skipped."
+        },
+        "inlineCommentMoved": {
+          "title": "{count, plural, one {# inline comment lost its text} other {# inline comments lost their text}}",
+          "hint": "They are now page comments with the quoted text.",
+          "entry": "Inline comment moved to the page comments: the quoted text “{quote}” no longer exists in the page."
+        },
+        "tooManyComments": {
+          "title": "{count, plural, one {# comment over the limit} other {# comments over the limit}}",
+          "hint": "A page keeps up to 2,000 comments; the rest were left out.",
+          "entry": "Comment left out: the page already has 2,000 comments."
         }
-      }
+      },
+      "people": "People",
+      "comments": "Comments",
+      "permissions": "Permissions",
+      "noCommentProblems": "All comments arrived where they belong",
+      "placeholdersTitle": "{count, plural, one {# person without an account} other {# people without an account}}",
+      "placeholdersHint": "They are placeholders now; map them to accounts.",
+      "permissionsTitle": "{count, plural, one {# permission entry to check} other {# permission entries to check}}",
+      "permissionsHint": "Taken over as far as they map to Pagehall roles."
     },
     "accept": {
       "title": "Accept “{name}”?",
-      "intro": "“{name}” becomes a regular space of {organization}. Choose who gets access then; the defaults of the organization for new spaces are filled in.",
+      "intro": "“{name}” becomes a regular space of {organization}. The permissions from Confluence are filled in; change them before accepting if needed.",
       "archived": "The space becomes archived: read-only and left out of search by default.",
-      "placeholders": "People of the export stay placeholders. They can be linked to accounts after accepting.",
+      "placeholders": "{count, plural, one {# person stays a placeholder} other {# people stay placeholders}}. You can map them after accepting.",
       "submit": "Accept import",
       "failed": "The import could not be accepted",
-      "defaultsFailed": "The default permissions could not be loaded",
-      "done": "{name} is now a regular space."
+      "done": "{name} is now a regular space.",
+      "proposalFailed": "The imported permissions could not be loaded",
+      "pending": "{count, plural, one {# imported role waits for a person or group to be mapped and applies then.} other {# imported roles wait for people or groups to be mapped and apply then.}}",
+      "defaultsUsed": "The export contains no space permissions, so the organization's defaults for new spaces are filled in.",
+      "importedHint": "Roles taken from Confluence. Change them as needed.",
+      "defaultsHint": "Your organization suggests these roles for new spaces. Change them as needed."
     },
     "errors": {
       "unknown": {
@@ -6324,6 +6385,145 @@
     "folder": {
       "path": "Import folder of this organization",
       "pathHint": "Pagehall offers only files directly inside this folder. The folder is named after the organization's short name; when the short name changes, the path changes too."
+    },
+    "people": {
+      "intro": "Confluence exports name people only by an Atlassian ID, without name or e-mail address. Pagehall needs one of these sources to recognize who wrote what. People are matched to accounts by e-mail address only.",
+      "title": "How should Pagehall recognize people?",
+      "token": {
+        "label": "Read-only API token",
+        "description": "Most complete: names and, where visible, e-mail addresses.",
+        "missing": "Check and save the API token first, or choose another way.",
+        "site": "Confluence site",
+        "siteHint": "Your Confluence Cloud address, such as example.atlassian.net. Pagehall contacts only this site.",
+        "sitePlaceholder": "example.atlassian.net",
+        "email": "Your Atlassian e-mail address",
+        "emailPlaceholder": "name@example.com",
+        "token": "API token",
+        "tokenHint": "Create it at id.atlassian.com › Security › API tokens. Read access is enough. Pagehall keeps it encrypted, uses it only during this import and deletes it afterwards.",
+        "siteRequired": "Enter the address of your Confluence site, such as example.atlassian.net.",
+        "emailInvalid": "Enter the e-mail address of your Atlassian account.",
+        "tokenRequired": "Paste the API token.",
+        "check": "Check and save token",
+        "checkFailed": "The token could not be checked",
+        "checkFailedAction": "Check the site, the e-mail address and the token, then try again.",
+        "connected": "Connected to {site}",
+        "connectedPlain": "The token works. Pagehall reads the people when the import runs.",
+        "found": "{people, plural, one {# person} other {# people}} of the export found, {withEmail} with a visible e-mail address.",
+        "replace": "Replace token"
+      },
+      "list": {
+        "label": "User list from the Atlassian administration",
+        "description": "When you cannot create a token, or for Data Center.",
+        "missing": "Upload the user list first, or choose another way."
+      },
+      "skip": {
+        "label": "Skip for now",
+        "description": "Authors become placeholders until you resolve them.",
+        "missing": "Confirm that every author becomes a placeholder.",
+        "confirm": "I understand that every author becomes a placeholder named by an Atlassian ID. I can still upload a user list later and resolve them."
+      },
+      "saveFailed": "The choice could not be saved",
+      "listDrop": "Drop the user list here or choose a file",
+      "listHint": "CSV from admin.atlassian.com › Directory › Users › Export users, up to 10 MB.",
+      "listChoose": "Choose file",
+      "listReading": "Reading…",
+      "listFailed": "The user list {name} could not be read",
+      "listTooLarge": "The file has {size}; a user list can have up to 10 MB.",
+      "listFailedAction": "Export the list again from the Atlassian administration and choose the CSV file.",
+      "listRetry": "Try again",
+      "listRead": "Read",
+      "listResult": "{people, plural, one {# person} other {# people}} in the list, {withEmail} with an e-mail address.",
+      "unknown": "Unknown person",
+      "noEmail": "No e-mail address visible",
+      "inConfluence": "In Confluence",
+      "content": "Content",
+      "account": "Pagehall account",
+      "owns": "{items, plural, one {# page} other {# pages}}, {comments, plural, one {# comment} other {# comments}}",
+      "spaceRole": "Space role: {role}",
+      "restricted": "{count, plural, one {Named on # restricted page} other {Named on # restricted pages}}",
+      "mappedTo": "Mapped to {name}",
+      "placeholder": "Placeholder",
+      "filter": "Filter people",
+      "filterPlaceholder": "Name, e-mail address or ID",
+      "mappedCount": "{mapped} of {total} mapped",
+      "uploadList": "Upload user list",
+      "uploadListHint": "Remaining placeholders are mapped to members with the same e-mail address. People without a match get the name from the list.",
+      "listApplied": "{matched} mapped by e-mail address, {named} named, {remaining} placeholders remain.",
+      "loadFailed": "The people could not be loaded",
+      "none": "Everyone has an account",
+      "noneDescription": "All people of the export were matched by e-mail address.",
+      "noMatch": "Nobody matches the filter",
+      "noMatchDescription": "Try another part of the name, the e-mail address or the Atlassian ID.",
+      "clearFilter": "Clear filter",
+      "caption": "People of the export without an account",
+      "chosenRegion": "Chosen mappings",
+      "chosen": "{count, plural, one {# person chosen} other {# people chosen}}",
+      "clearChoices": "Clear choices",
+      "map": "{count, plural, one {Map # person} other {Map # people}}",
+      "confirmTitle": "{count, plural, one {Map # person?} other {Map # people?}}",
+      "confirmDescription": "Pages, comments, mentions, tasks, reactions and restrictions move to the chosen accounts at once. Nobody is notified. A mapping cannot be undone.",
+      "confirmRow": "{from} becomes {to}",
+      "confirmAccess": "{count, plural, one {{names} also takes a place on restricted pages or a role in the space.} other {{names} also take places on restricted pages or roles in the space.}}",
+      "keepPlaceholders": "Keep placeholders",
+      "mapped": "{count, plural, one {# person mapped} other {# people mapped}}",
+      "mapFailed": "The people could not be mapped",
+      "accountFor": "Account for {name}",
+      "keepPlaceholder": "Search a member",
+      "similar": "Similar name:",
+      "useCandidate": "Choose {name}"
+    },
+    "permissions": {
+      "allUsers": "All signed-in users",
+      "anonymous": "Anonymous visitors",
+      "group": "Group “{name}”",
+      "restriction": {
+        "view": "{holder} may view “{title}”",
+        "edit": "{holder} may edit “{title}”"
+      },
+      "notTaken": "Not taken over",
+      "allMembers": "All members",
+      "pageRole": {
+        "reader": "{who} may view the page",
+        "editor": "{who} may edit the page"
+      },
+      "spaceRole": "{who}: {role}",
+      "groupsFailed": "The groups could not be loaded",
+      "groups": "Groups from Confluence",
+      "loadFailed": "The permissions could not be loaded",
+      "none": "No permissions in the export",
+      "noneDescription": "The export contains no space permissions or page restrictions. Choose who gets access when you accept the import.",
+      "caption": "Permissions taken from Confluence",
+      "inConfluence": "In Confluence",
+      "inPagehall": "In Pagehall",
+      "status": "Status",
+      "statuses": {
+        "mapped": "Mapped",
+        "check": "Check",
+        "waiting": "Waits for a person",
+        "missing": "Missing group",
+        "notTaken": "Not taken over"
+      },
+      "codes": {
+        "widened": "Pagehall allows more than Confluence did, such as deleting pages or setting restrictions.",
+        "narrowed": "Confluence allowed more than this role, such as deleting pages or attachments; that part is not taken over.",
+        "withoutView": "Without permission to view the space nothing is taken over.",
+        "anonymous": "Public access is not available for this space.",
+        "groupMissing": "No group with this name. Map an existing group or create one.",
+        "placeholder": "Map the person to an account in the People tab.",
+        "withoutSpaceRole": "Named in a restriction, but without access to the space, as in Confluence. Restrictions only narrow access; give a role in the space if the page should open."
+      },
+      "groupMapped": "“{name}” is mapped",
+      "groupFailed": "“{name}” could not be mapped",
+      "chooseGroup": "Group for “{name}”",
+      "searchGroup": "Search a group",
+      "mapGroup": "Map group",
+      "createGroup": "Create group “{name}”",
+      "createTitle": "Create the group “{name}”?",
+      "mapTitle": "Map “{from}” to “{to}”?",
+      "mapDescription": "Members of the group get the role {role} in the space when the import is accepted. {count, plural, =0 {The group is named on no restricted page.} one {The group is named on # restricted page at once; members still need a role in the space to read it.} other {The group is named on # restricted pages at once; members still need a role in the space to read them.}} Nobody is notified. This cannot be undone.",
+      "noRole": "none",
+      "keepUnmapped": "Keep unmapped",
+      "chooseGroupFirst": "Choose a group first, or create one with this name."
     }
   }
 }

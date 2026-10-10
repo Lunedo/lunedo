@@ -46,7 +46,7 @@ function access(extra: Record<string, unknown> = {}) {
     itemId: PAGE,
     title: "VPN access",
     shares: [lukasShare],
-    restrictions: { view: null, edit: null, inherited: [] },
+    restrictions: { view: null, edit: null, inherited: [], holders: [] },
     linkVisitors: [],
     canInviteGuests: false,
     ...extra,
@@ -244,10 +244,31 @@ describe("sharing a page with people", () => {
 
   it("says when a page above restricts viewing", async () => {
     pageAccess = access({
-      restrictions: { view: null, edit: null, inherited: [{ itemId: SHARE, title: "Contracts" }] },
+      restrictions: {
+        view: null,
+        edit: null,
+        inherited: [{ itemId: SHARE, title: "Contracts" }],
+        holders: [],
+      },
     });
     const dialog = await openDialog();
     expect(await within(dialog).findByText(/Viewing is restricted on Contracts/)).toBeTruthy();
+  });
+
+  it("lists people named on a restriction apart from the access list", async () => {
+    pageAccess = access({
+      shares: [],
+      restrictions: {
+        view: { setBy: null, setAt: "2026-10-01T09:30:00.000Z" },
+        edit: null,
+        inherited: [],
+        holders: [{ kind: "view", holder: { ...lukasShare.holder } }],
+      },
+    });
+    const dialog = await openDialog();
+    expect(await within(dialog).findByText("Also named in the restrictions")).toBeTruthy();
+    expect(within(dialog).getByText("Lukas Hofer")).toBeTruthy();
+    expect(within(dialog).getByText(/need a role in the space/)).toBeTruthy();
   });
 
   it("explains why someone has access", async () => {
@@ -358,7 +379,12 @@ describe("share links", () => {
   it("offers only links for named people on a restricted page", async () => {
     options = { enabled: true, anyone: true, anyoneMaxDays: 7 };
     pageAccess = access({
-      restrictions: { view: { setBy: null, setAt: "2026-10-01T09:30:00.000Z" }, edit: null, inherited: [] },
+      restrictions: {
+        view: { setBy: null, setAt: "2026-10-01T09:30:00.000Z" },
+        edit: null,
+        inherited: [],
+        holders: [],
+      },
     });
     const dialog = await openLinks();
     expect(await within(dialog).findByText(/This page is restricted/)).toBeTruthy();

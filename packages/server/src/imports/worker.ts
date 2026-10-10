@@ -3,12 +3,15 @@ import { sql } from "drizzle-orm";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { AuthorizationService } from "../authorization/service.js";
+import type { Encryption } from "../crypto/envelope.js";
 import type { Database } from "../database/database.js";
 import type { DatabasePool } from "../database/pool.js";
 import type { JobContext, JobQueue } from "../jobs/job-queue.js";
 import type { Logger } from "../logging/logger.js";
 import type { NotificationService } from "../notifications/service.js";
 import { isValidSpaceKey, normalizeSpaceKey, spaceKeyCandidates, suggestSpaceKey } from "../spaces/keys.js";
+import type { AtlassianDirectory } from "./atlassian.js";
+import { deleteCredentials, directoryFor } from "./credentials.js";
 import {
   ImportError,
   ImportFormatError,
@@ -50,6 +53,8 @@ interface WorkRow {
   space_name: string | null;
   space_key: string | null;
   source_url: string | null;
+  history: boolean;
+  people_source: string | null;
   checkpoint: Record<string, unknown>;
   found: Record<string, unknown> | null;
   quarantine_space_id: string | null;
@@ -62,6 +67,8 @@ export interface ImportWorkerOptions {
   audit: AuditLog;
   authorization: AuthorizationService;
   notifications: NotificationService;
+  encryption: Encryption;
+  atlassian: AtlassianDirectory;
   uploads: UploadService;
   readers: ImportReaderRegistry;
   pipeline: ImportPipeline;
@@ -300,6 +307,15 @@ export class ImportWorker {
         sql`select account_id from import_reviewers where import_id = ${row.id}`,
       )
     ).rows.map((reviewer) => reviewer.account_id);
+    const directory = directoryFor({
+      database: this.#database,
+      encryption: this.#options.encryption,
+      atlassian: this.#options.atlassian,
+      audit: this.#options.audit,
+      importId: row.id,
+      organizationId: row.organization_id,
+      peopleSource: row.people_source,
+    });
     let lastBeat = 0;
     let lastPermission = Date.now();
     let lastProgress = 0;
@@ -336,6 +352,8 @@ export class ImportWorker {
           spaceName: row.space_name ?? "",
           spaceKey: row.space_key ?? "",
           sourceUrl: row.source_url,
+          history: row.history,
+          directory,
           reader,
           file,
           staging,
@@ -439,6 +457,11 @@ export class ImportWorker {
       if (!row) return;
       await signalImportChange(tx, { importId, organizationId: row.organization_id });
       if (row.state !== "failed") return;
+      await deleteCredentials(tx, this.#options.audit, {
+        importId,
+        organizationId: row.organization_id,
+        reason: "failed",
+      });
       await this.#options.audit.record(tx, {
         name: "import.failed",
         actor: SYSTEM,
@@ -470,6 +493,13 @@ export class ImportWorker {
       await tx.execute(sql`delete from import_records where import_id = ${row.id}`);
       await tx.execute(sql`delete from import_items where import_id = ${row.id}`);
       await tx.execute(sql`delete from import_problems where import_id = ${row.id}`);
+      await tx.execute(sql`delete from import_grants where import_id = ${row.id}`);
+      await tx.execute(sql`delete from import_groups where import_id = ${row.id}`);
+      await deleteCredentials(tx, this.#options.audit, {
+        importId: row.id,
+        organizationId: row.organization_id,
+        reason: final,
+      });
       await tx.execute(sql`
         update imports set state = ${final}, phase = null, quarantine_space_id = null,
           decided_at = coalesce(decided_at, now()),

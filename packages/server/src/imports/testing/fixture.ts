@@ -225,3 +225,233 @@ export function largeExport(pageCount: number, attachmentCount: number): Synthet
     attachments,
   };
 }
+
+export const CAROL = { key: "8a7f0003", accountId: "557058:dddddddd-0004" };
+export const DAVE = { key: "8a7f0004", accountId: "557058:eeeeeeee-0005" };
+export const EVE = { key: "8a7f0005", accountId: "557058:ffffffff-0006" };
+
+export const PEOPLE_PAGE = {
+  home: "7001",
+  plan: "7002",
+  secret: "7003",
+  editors: "7004",
+  history: "7005",
+  tasks: "7006",
+  blog: "7101",
+} as const;
+
+export const PEOPLE_COMMENT = {
+  root: "7201",
+  reply: "7202",
+  replyToReply: "7203",
+  inlineFound: "7204",
+  inlineMissing: "7205",
+  inlineResolved: "7206",
+  inlineDangling: "7207",
+  onBlog: "7208",
+} as const;
+
+export const OLD_DATE = "2021-06-15 09:00:00.000";
+export const OLDER_DATE = "2020-01-10 08:30:00.000";
+
+export function peopleExport(): SyntheticExport {
+  return {
+    space: { id: "8001", key: "PPL", name: "People space", homePageId: PEOPLE_PAGE.home },
+    users: [ALICE, BOB, CAROL, DAVE, EVE],
+    pages: [
+      {
+        id: PEOPLE_PAGE.home,
+        title: "People home",
+        parentId: null,
+        position: null,
+        body: "<p>Home</p>",
+        creatorKey: ALICE.key,
+      },
+      {
+        id: PEOPLE_PAGE.plan,
+        title: "Plan",
+        parentId: PEOPLE_PAGE.home,
+        position: 1,
+        body: [
+          '<p>The <ac:inline-comment-marker ac:ref="marker-found">rollout window</ac:inline-comment-marker> is fixed.</p>',
+          '<p>Next <ac:inline-comment-marker ac:ref="marker-resolved">backup check</ac:inline-comment-marker> is done.</p>',
+        ].join(""),
+        creatorKey: CAROL.key,
+        modifierKey: CAROL.key,
+        created: OLDER_DATE,
+        modified: OLD_DATE,
+      },
+      {
+        id: PEOPLE_PAGE.secret,
+        title: "Salary bands",
+        parentId: PEOPLE_PAGE.home,
+        position: 2,
+        body: "<p>Confidential numbers</p>",
+        creatorKey: ALICE.key,
+      },
+      {
+        id: PEOPLE_PAGE.editors,
+        title: "Editors only",
+        parentId: PEOPLE_PAGE.home,
+        position: 3,
+        body: "<p>Editors may change this</p>",
+        creatorKey: ALICE.key,
+      },
+      {
+        id: PEOPLE_PAGE.history,
+        title: "Release notes",
+        parentId: PEOPLE_PAGE.home,
+        position: 4,
+        body: "<p>Version three</p>",
+        creatorKey: ALICE.key,
+        modifierKey: BOB.key,
+        modified: "2023-03-03 03:03:03.000",
+        history: [
+          {
+            id: "7051",
+            body: "<p>Version one</p>",
+            title: "Notes",
+            authorKey: ALICE.key,
+            modified: "2023-01-01 01:01:01.000",
+          },
+          {
+            id: "7052",
+            body: "<p>Version two</p>",
+            authorKey: CAROL.key,
+            modified: "2023-02-02 02:02:02.000",
+          },
+        ],
+      },
+      {
+        id: PEOPLE_PAGE.tasks,
+        title: "Tasks and mentions",
+        parentId: PEOPLE_PAGE.home,
+        position: 5,
+        body: [
+          `<p>Hello <ac:link><ri:user ri:account-id="${BOB.accountId}" /></ac:link> and `,
+          `<ac:link><ri:user ri:account-id="${ALICE.accountId}" /></ac:link></p>`,
+          "<ac:task-list><ac:task><ac:task-id>1</ac:task-id><ac:task-status>incomplete</ac:task-status>",
+          `<ac:task-body>Check <ac:link><ri:user ri:account-id="${BOB.accountId}" /></ac:link></ac:task-body></ac:task>`,
+          "<ac:task><ac:task-id>2</ac:task-id><ac:task-status>incomplete</ac:task-status>",
+          `<ac:task-body><ac:link><ri:user ri:account-id="${ALICE.accountId}" /></ac:link> reviews `,
+          '<time datetime="2024-07-01" /></ac:task-body></ac:task></ac:task-list>',
+        ].join(""),
+        creatorKey: ALICE.key,
+        modifierKey: DAVE.key,
+      },
+    ],
+    blogPosts: [
+      {
+        id: PEOPLE_PAGE.blog,
+        title: "Quarterly update",
+        parentId: null,
+        position: null,
+        body: "<p>We shipped it</p>",
+        creatorKey: CAROL.key,
+        created: OLD_DATE,
+        modified: OLD_DATE,
+        labels: ["news"],
+      },
+    ],
+    attachments: [
+      { pageId: PEOPLE_PAGE.blog, fileName: "chart.png", versions: [{ id: "7301", version: 1, data: PNG }] },
+    ],
+    comments: [
+      {
+        id: PEOPLE_COMMENT.root,
+        pageId: PEOPLE_PAGE.plan,
+        creatorKey: BOB.key,
+        body: "<p>Looks good</p>",
+        created: OLDER_DATE,
+      },
+      {
+        id: PEOPLE_COMMENT.reply,
+        pageId: PEOPLE_PAGE.plan,
+        parentId: PEOPLE_COMMENT.root,
+        creatorKey: CAROL.key,
+        body: `<p>Thanks <ac:link><ri:user ri:account-id="${BOB.accountId}" /></ac:link></p>`,
+        created: OLD_DATE,
+      },
+      {
+        id: PEOPLE_COMMENT.replyToReply,
+        pageId: PEOPLE_PAGE.plan,
+        parentId: PEOPLE_COMMENT.reply,
+        creatorKey: BOB.key,
+        body: "<h2>Heading</h2><table><tbody><tr><td>cell</td></tr></tbody></table>",
+        created: "2021-06-16 09:00:00.000",
+      },
+      {
+        id: PEOPLE_COMMENT.inlineFound,
+        pageId: PEOPLE_PAGE.plan,
+        creatorKey: BOB.key,
+        body: "<p>Which window?</p>",
+        inline: { markerRef: "marker-found", selection: "rollout window" },
+        status: "open",
+      },
+      {
+        id: PEOPLE_COMMENT.inlineMissing,
+        pageId: PEOPLE_PAGE.plan,
+        creatorKey: BOB.key,
+        body: "<p>This text is gone</p>",
+        inline: { markerRef: "marker-gone", selection: "removed sentence" },
+        status: "open",
+      },
+      {
+        id: PEOPLE_COMMENT.inlineResolved,
+        pageId: PEOPLE_PAGE.plan,
+        creatorKey: CAROL.key,
+        body: "<p>Done already</p>",
+        inline: { markerRef: "marker-resolved", selection: "backup check" },
+        status: "resolved",
+        resolverKey: ALICE.key,
+      },
+      {
+        id: PEOPLE_COMMENT.inlineDangling,
+        pageId: PEOPLE_PAGE.plan,
+        creatorKey: CAROL.key,
+        body: "<p>Old remark</p>",
+        inline: { markerRef: "marker-dangling", selection: "older wording" },
+        status: "dangling",
+      },
+      {
+        id: PEOPLE_COMMENT.onBlog,
+        pageId: PEOPLE_PAGE.blog,
+        creatorKey: BOB.key,
+        body: `<p>Great news, <ac:link><ri:user ri:account-id="${ALICE.accountId}" /></ac:link></p>`,
+      },
+    ],
+    likes: [
+      { id: "7401", contentId: PEOPLE_PAGE.plan, userKey: BOB.key },
+      { id: "7402", contentId: PEOPLE_COMMENT.root, userKey: CAROL.key },
+      { id: "7403", contentId: PEOPLE_PAGE.blog, userKey: ALICE.key },
+      { id: "7404", contentId: PEOPLE_PAGE.blog, userKey: BOB.key },
+    ],
+    watchers: 3,
+    spacePermissions: [
+      ...["VIEWSPACE", "COMMENT"].map((type, index) => ({
+        id: `81${index}`,
+        type,
+        group: "confluence-users",
+      })),
+      ...["VIEWSPACE", "EDITSPACE", "REMOVEPAGE", "SETPAGEPERMISSIONS", "COMMENT"].map((type, index) => ({
+        id: `82${index}`,
+        type,
+        group: "Editors",
+      })),
+      ...["VIEWSPACE", "EDITSPACE", "COMMENT", "SETSPACEPERMISSIONS", "REMOVEPAGE", "SETPAGEPERMISSIONS"].map(
+        (type, index) => ({ id: `83${index}`, type, userKey: ALICE.key }),
+      ),
+      ...["VIEWSPACE", "EDITSPACE"].map((type, index) => ({ id: `84${index}`, type, userKey: BOB.key })),
+      { id: "850", type: "VIEWSPACE", userKey: CAROL.key },
+      ...["VIEWSPACE", "REMOVEPAGE"].map((type, index) => ({ id: `86${index}`, type, group: "contractors" })),
+      { id: "870", type: "EXPORTSPACE", group: "auditors" },
+      { id: "880", type: "VIEWSPACE", allUsers: true },
+      { id: "890", type: "VIEWSPACE" },
+    ],
+    restrictions: [
+      { id: "7501", contentId: PEOPLE_PAGE.secret, kind: "View", userKey: CAROL.key },
+      { id: "7502", contentId: PEOPLE_PAGE.secret, kind: "View", group: "hr-team" },
+      { id: "7503", contentId: PEOPLE_PAGE.editors, kind: "Edit", group: "Editors" },
+    ],
+  };
+}

@@ -4,7 +4,15 @@ export {
   type SyntheticExport,
   type SyntheticPage,
 } from "../imports/testing/confluence-export.js";
-export { largeExport, syntheticExport } from "../imports/testing/fixture.js";
+export {
+  ALICE,
+  BOB,
+  CAROL,
+  largeExport,
+  PEOPLE_PAGE,
+  peopleExport,
+  syntheticExport,
+} from "../imports/testing/fixture.js";
 export { createZip, type ZipFileSpec } from "../imports/testing/zip-writer.js";
 export {
   createMigratedDatabase,

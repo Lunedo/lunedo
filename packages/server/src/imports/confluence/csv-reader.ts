@@ -4,6 +4,7 @@ import { readCsvRecords } from "../formats/csv.js";
 import type { ZipEntryLocation } from "../formats/zip.js";
 import type { ScanContext } from "../source.js";
 import {
+  COMMENT_PROPERTIES,
   confluenceDate,
   isCurrentStatus,
   kinds,
@@ -12,15 +13,31 @@ import {
   STORAGE_BODY_TYPE,
   StagedConfluenceReader,
   scanArchive,
+  stageRestrictions,
   titleKey,
   toNumber,
+  versionSort,
 } from "./staged.js";
 
 type Row = Record<string, string>;
 
 const MAX_EXPANDED_BYTES = 64 * 1024 ** 3;
 const PROGRESS_STEP = 1000;
-const TABLES = ["user_mapping", "spaces", "content", "bodycontent", "label", "content_label"] as const;
+const TABLES = [
+  "user_mapping",
+  "spaces",
+  "content",
+  "bodycontent",
+  "label",
+  "content_label",
+  "contentproperties",
+  "likes",
+  "notifications",
+  "spacepermissions",
+  "content_permissions",
+  "content_perm_set",
+  "content_perm",
+] as const;
 type Table = (typeof TABLES)[number];
 
 function value(row: Row, column: string): string {
@@ -91,6 +108,7 @@ export class ConfluenceCsvReader extends StagedConfluenceReader {
     await context.staging.flush();
     await context.staging.removeOtherThan(kinds.page, "spaceId", spaceId);
     await context.staging.orderTree(kinds.page);
+    await stageRestrictions(context.staging);
   }
 
   #location(scanned: ScannedArchive, table: Table): ZipEntryLocation | undefined {
@@ -131,6 +149,98 @@ export class ConfluenceCsvReader extends StagedConfluenceReader {
           data: { name: value(row, "name"), namespace: value(row, "namespace") || "global" },
         });
         return;
+      case "contentproperties": {
+        const name = value(row, "propertyname");
+        const content = optional(row, "contentid");
+        if (!content || !COMMENT_PROPERTIES.has(name)) return;
+        const text = optional(row, "stringval") ?? optional(row, "longval") ?? optional(row, "dateval");
+        await context.staging.put({
+          kind: kinds.property,
+          sourceId: value(row, "propertyid"),
+          ref: content,
+          data: { name, value: (text ?? "").slice(0, 2000) },
+        });
+        return;
+      }
+      case "likes": {
+        const content = optional(row, "contentid");
+        if (!content || value(row, "liked").toLowerCase() === "false") return;
+        await context.staging.put({
+          kind: kinds.like,
+          sourceId: value(row, "id"),
+          ref: content,
+          data: { userKey: optional(row, "username"), created: confluenceDate(row.creationdate) },
+        });
+        return;
+      }
+      case "notifications": {
+        const id = optional(row, "notificationid");
+        if (id) await context.staging.put({ kind: kinds.watch, sourceId: id, data: {} });
+        return;
+      }
+      case "spacepermissions": {
+        if (value(row, "active").toLowerCase() === "false") return;
+        await context.staging.put({
+          kind: kinds.spacePermission,
+          sourceId: value(row, "permid"),
+          data: {
+            spaceId: optional(row, "spaceid"),
+            type: value(row, "permtype").toUpperCase(),
+            group: optional(row, "permgroupname"),
+            userKey: optional(row, "permusername"),
+            allUsers: optional(row, "permalluserssubject") !== null,
+          },
+        });
+        return;
+      }
+      case "content_permissions": {
+        const content = optional(row, "content_id");
+        const kind = value(row, "permission_type").toLowerCase();
+        if (!content || optional(row, "deleted_id") || (kind !== "view" && kind !== "edit")) return;
+        const group = value(row, "principal_type").toUpperCase() === "GROUP";
+        const principal = optional(row, "principal_id");
+        const groupName = optional(row, "groupname");
+        if (group ? !groupName : !principal) return;
+        await context.staging.put({
+          kind: kinds.restriction,
+          sourceId: `${content}:${kind}:${group ? `group:${groupName}` : `user:${principal}`}`,
+          ref: content,
+          data: {
+            kind,
+            origin: "table",
+            userKey: null,
+            accountId: group ? null : principal,
+            group: group ? groupName : null,
+          },
+        });
+        return;
+      }
+      case "content_perm_set": {
+        const content = optional(row, "content_id");
+        if (!content) return;
+        await context.staging.put({
+          kind: kinds.permissionSet,
+          sourceId: value(row, "id"),
+          data: { contentId: content, type: value(row, "cont_perm_type") },
+        });
+        return;
+      }
+      case "content_perm": {
+        const set = optional(row, "cps_id");
+        if (!set) return;
+        await context.staging.put({
+          kind: kinds.contentPermission,
+          sourceId: value(row, "id"),
+          ref: set,
+          data: {
+            type: value(row, "cp_type"),
+            userKey: optional(row, "username"),
+            accountId: null,
+            group: optional(row, "groupname"),
+          },
+        });
+        return;
+      }
       case "content_label": {
         const content = optional(row, "contentid");
         const label = optional(row, "labelid");
@@ -153,24 +263,58 @@ export class ConfluenceCsvReader extends StagedConfluenceReader {
     if (!isCurrentStatus(value(row, "content_status"))) return;
     const id = value(row, "contentid");
     if (!id) return;
-    if (type === "PAGE") {
-      if (optional(row, "prevver")) return;
+    if (type === "PAGE" || type === "BLOGPOST") {
       const title = value(row, "title");
+      const version = toNumber(row.version) ?? 1;
+      const original = optional(row, "prevver");
+      if (original) {
+        await context.staging.put({
+          kind: kinds.version,
+          sourceId: id,
+          ref: original,
+          sort: versionSort(version),
+          data: {
+            title,
+            version,
+            authorKey: optional(row, "lastmodifier") ?? optional(row, "creator"),
+            created: confluenceDate(row.lastmoddate) ?? confluenceDate(row.creationdate),
+          },
+        });
+        return;
+      }
+      const blog = type === "BLOGPOST";
+      const created = confluenceDate(row.creationdate);
       await context.staging.put({
         kind: kinds.page,
         sourceId: id,
         ref: titleKey(title),
-        parentId: optional(row, "parentid"),
-        sort: pageSort(toNumber(row.child_position), title),
+        parentId: blog ? null : optional(row, "parentid"),
+        sort: blog ? `2${created ?? ""}` : pageSort(toNumber(row.child_position), title),
         data: {
+          ...(blog ? { type: "blogPost" } : {}),
           title,
-          version: toNumber(row.version) ?? 1,
+          version,
           creatorKey: optional(row, "creator"),
-          created: confluenceDate(row.creationdate),
+          created,
           modifierKey: optional(row, "lastmodifier"),
           modified: confluenceDate(row.lastmoddate),
           spaceId: optional(row, "spaceid"),
         },
+      });
+      return;
+    }
+    if (type === "COMMENT") {
+      if (optional(row, "prevver")) return;
+      const container = optional(row, "pageid");
+      if (!container) return;
+      const created = confluenceDate(row.creationdate);
+      await context.staging.put({
+        kind: kinds.comment,
+        sourceId: id,
+        ref: container,
+        parentId: optional(row, "parentcommentid"),
+        sort: created ?? "",
+        data: { creatorKey: optional(row, "creator"), created, modified: confluenceDate(row.lastmoddate) },
       });
       return;
     }

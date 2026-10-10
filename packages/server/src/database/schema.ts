@@ -76,6 +76,10 @@ export {
 } from "../identity/schema.js";
 export {
   accountExternalIds,
+  importCredentials,
+  importDirectory,
+  importGrants,
+  importGroups,
   importItems,
   importProblems,
   importRecords,
@@ -133,6 +137,7 @@ export {
   accessRequests,
   giveAccessDrafts,
   invitationShares,
+  pageRestrictionHolders,
   pageRestrictions,
   pageShares,
   restrictionKind,

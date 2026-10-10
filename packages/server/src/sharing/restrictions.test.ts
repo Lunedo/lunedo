@@ -421,6 +421,43 @@ describe.skipIf(!baseUrl)("page restrictions", () => {
     expect(notifications.items.map((item) => item.type)).toContain("restriction.orphaned");
   });
 
+  it("lets people named on a restriction pass it without giving them access, and counts them as its list", async () => {
+    const context = await setup();
+    const newcomerId = await member(context.org.id, "member", "Newcomer");
+    for (const holder of [context.outsiderId, newcomerId]) {
+      await test.pool.query(
+        "insert into page_restriction_holders (item_id, kind, principal_kind, principal_id) values ($1, 'view', 'account', $2)",
+        [context.parent.id, holder],
+      );
+    }
+    expect(await can(context.outsider, "item.view", { type: "item", id: context.child.id })).toBe(true);
+    expect(await can(context.outsider, "item.edit", { type: "item", id: context.parent.id })).toBe(true);
+    const newcomer = accountPrincipal(newcomerId);
+    expect(await can(newcomer, "item.view", { type: "item", id: context.parent.id })).toBe(false);
+    const access = await test.services.pageAccess.get(context.owner, context.parent.id);
+    expect(access.restrictions.holders.map((entry) => entry.holder.id).sort()).toEqual(
+      [context.outsiderId, newcomerId].sort(),
+    );
+    await test.services.memberships.deactivate({ type: "system" }, context.insiderId);
+    await test.services.memberships.deactivate({ type: "system" }, context.ownerId);
+    await test.services.memberships.deactivate({ type: "system" }, newcomerId);
+    let listed = await test.services.pageAccess.restrictedPages(context.space.id);
+    expect(listed[0]?.orphaned).toBe(false);
+    await test.services.memberships.deactivate({ type: "system" }, context.outsiderId);
+    listed = await test.services.pageAccess.restrictedPages(context.space.id);
+    expect(listed[0]?.orphaned).toBe(true);
+    await test.services.pageAccess.removeRestrictionAsAdministrator(
+      context.admin,
+      context.space.id,
+      context.parent.id,
+      "view",
+    );
+    const left = await test.pool.query("select 1 from page_restriction_holders where item_id = $1", [
+      context.parent.id,
+    ]);
+    expect(left.rows).toEqual([]);
+  });
+
   it("does not react to time but to the deactivation itself", async () => {
     const context = await setup();
     await deactivate(context.insiderId);

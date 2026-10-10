@@ -40,6 +40,7 @@ export interface StorageLookup {
   attachment(reference: AttachmentReference): { readonly attachmentId: string; readonly name: string } | null;
   person(reference: PersonReference): string | null;
   space(spaceKey: string): string | null;
+  inlineComment?(ref: string): string | null;
   newId(): string;
 }
 
@@ -333,7 +334,15 @@ class Converter {
         return this.link(node, marks);
       case "ac:placeholder":
         return [];
-      case "ac:inline-comment-marker":
+      case "ac:inline-comment-marker": {
+        const ref = (node.attributes["ac:ref"] ?? "").trim();
+        const threadId = ref ? (this.lookup.inlineComment?.(ref) ?? null) : null;
+        return this.items(
+          node.children,
+          threadId ? addMark(marks, { type: "inlineComment", attrs: { threadId } }) : marks,
+          preformatted,
+        );
+      }
       case "ac:link-body":
       case "ac:plain-text-link-body":
         return this.items(node.children, marks, preformatted);
@@ -580,10 +589,23 @@ class Converter {
       const body = firstChild(task, "ac:task-body");
       const id = this.lookup.newId();
       this.tasks.push({ id, done: status === "complete" });
+      const content = leadingParagraph(body ? this.blocks(body.children) : []);
+      const found = (type: string, attribute: string): string | null => {
+        const walk = (nodes: readonly NodeJson[]): string | null => {
+          for (const candidate of nodes) {
+            const value = candidate.type === type ? candidate.attrs?.[attribute] : undefined;
+            if (typeof value === "string") return value;
+            const nested = walk(candidate.content ?? []);
+            if (nested) return nested;
+          }
+          return null;
+        };
+        return walk(content);
+      };
       items.push({
         type: "taskItem",
-        attrs: { id },
-        content: leadingParagraph(body ? this.blocks(body.children) : []),
+        attrs: { id, assignee: found("mention", "id"), dueDate: found("date", "date") },
+        content,
       });
     }
     return items.length > 0 ? [{ type: "taskList", content: items }] : [];
