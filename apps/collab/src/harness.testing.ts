@@ -37,6 +37,13 @@ export interface Cluster {
 
 const CLOSE_WAIT_MS = 5000;
 
+let clientsConnected = 0;
+
+function nextClientAddress(): string {
+  clientsConnected += 1;
+  return `10.${(clientsConnected >> 16) & 255}.${(clientsConnected >> 8) & 255}.${clientsConnected & 255}`;
+}
+
 export async function createCluster(baseUrl: string, runtimes = 2): Promise<Cluster> {
   const database = await createMigratedDatabase(baseUrl, "pagehall_collab_test");
   const dataDir = mkdtempSync(path.join(tmpdir(), "pagehall-collab-"));
@@ -115,7 +122,7 @@ export function connect(
   itemId: string,
   options: { token?: string; origin?: string | null; headers?: Record<string, string>; doc?: Y.Doc } = {},
 ): Client {
-  const headers: Record<string, string> = { ...options.headers };
+  const headers: Record<string, string> = { "x-forwarded-for": nextClientAddress(), ...options.headers };
   if (options.origin !== null) headers.origin = options.origin ?? ORIGIN;
   if (options.token) headers.cookie = `${SESSION_COOKIE}=${options.token}`;
   class HeaderWebSocket extends WebSocket {
