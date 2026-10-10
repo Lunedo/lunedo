@@ -207,7 +207,7 @@ export function AttachmentList({
   return (
     <ul>
       {listed.map((attachment) => (
-        <li key={attachment.id} className="flex flex-wrap items-baseline gap-x-2">
+        <li key={attachment.id}>
           <a
             href={contentUrl(attachment.id)}
             className="min-w-0 wrap-anywhere"
@@ -220,7 +220,7 @@ export function AttachmentList({
           >
             {attachment.name}
           </a>
-          <span className="text-sm text-text-muted">
+          <span className="ml-2 text-sm text-text-muted">
             {t("editor.attachmentList.details", {
               size: format.bytes(attachment.size),
               version: attachment.version,
@@ -299,11 +299,13 @@ export function ChildPagesSettings({
           }))}
         />
       </Field>
-      <Checkbox
-        checked={request.reverse}
-        onCheckedChange={(reverse) => onChange({ reverse })}
-        label={t("editor.childPages.reverse")}
-      />
+      <div className="sm:col-span-2">
+        <Checkbox
+          checked={request.reverse}
+          onCheckedChange={(reverse) => onChange({ reverse })}
+          label={t("editor.childPages.reverse")}
+        />
+      </div>
     </div>
   );
 }

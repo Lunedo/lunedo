@@ -767,18 +767,30 @@ details.ph-expand > summary {
   @apply my-4 rounded-md border border-border bg-surface p-4;
 }
 
-.ph-content .ph-child-pages-block .ph-child-pages,
-.ph-content .ph-attachment-list-block .ph-attachment-list {
-  @apply my-0;
-}
-
 .ph-content .ph-child-pages,
 .ph-content .ph-attachment-list {
   @apply my-4;
 }
 
+.ph-content .ph-child-pages-block .ph-child-pages,
+.ph-content .ph-attachment-list-block .ph-attachment-list {
+  @apply my-0;
+}
+
 .ph-content .ph-child-pages ul ul {
   @apply mt-1;
+}
+
+.ph-content :is(.ph-child-pages-block, .ph-attachment-list-block) h3 {
+  @apply mt-0;
+}
+
+.ph-content :is(.ph-child-pages, .ph-attachment-list) a {
+  @apply inline-flex min-h-6 items-center;
+}
+
+.ph-content .ph-child-pages-block button[role="checkbox"] {
+  @apply mt-0 size-6;
 }
 
 .ph-decision {
