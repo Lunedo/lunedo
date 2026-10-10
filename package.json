@@ -26,7 +26,8 @@
     "lint:fix": "biome check --write .",
     "references:check": "node scripts/check-private-references.ts",
     "patches:check": "node scripts/check-patches.ts",
-    "i18n:check": "node scripts/check-i18n.ts"
+    "i18n:check": "node scripts/check-i18n.ts",
+    "verify": "node scripts/verify.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",

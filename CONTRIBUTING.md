@@ -65,7 +65,9 @@ Every change comes with tests.
 - Integration tests run against a real PostgreSQL. Set `PAGEHALL_TEST_DATABASE_URL`, for example to the database of the development environment, to include them locally. Mail tests also need `PAGEHALL_TEST_MAILPIT_URL=http://localhost:8025`. CI always runs them.
 - Authentication, permissions, encryption and imports require thorough tests of both allowed and denied cases.
 
-`pnpm lint`, `pnpm typecheck` and `pnpm test` must pass before a pull request is reviewed.
+Before you push, run `pnpm verify`. It runs every check of the CI jobs "Lint, typecheck and checks" and "Quick checks": lint, typecheck, translations, private references, patched dependencies, script tests, sign-off, licenses, the dependency audit and the comparison of the API description with `origin/main`. The API comparison needs Docker. A test fails when CI gains a check that `pnpm verify` does not run.
+
+`pnpm verify` and `pnpm test` must pass before a pull request is reviewed.
 
 ## AI tools
 
