@@ -146,8 +146,8 @@ test("two people discuss a page with comments, reactions, a mention and a task",
   await page.getByRole("button", { name: "React with 🎉" }).click();
   await expect(other.getByRole("button", { name: /🎉 1/ })).toBeVisible();
 
-  const task = other.getByRole("checkbox", { name: /Mark as done: Test the TCP fallback/ });
-  await task.check();
+  await other.getByRole("checkbox", { name: /Mark as done: Test the TCP fallback/ }).click();
+  await expect(other.getByRole("checkbox", { name: /Mark as open: Test the TCP fallback/ })).toBeChecked();
   await expect(page.getByRole("checkbox", { name: /Mark as open: Test the TCP fallback/ })).toBeChecked();
 
   await other.goto("/tasks?filter=done");
