@@ -1366,6 +1366,56 @@ export const auditCatalog = {
     fields: z.object({ importId: z.uuid() }),
     visibility: "organization",
   }),
+  "import.placeholderMapped": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({
+      importId: z.uuid(),
+      placeholderId: z.uuid(),
+      via: z.enum(["manual", "email", "userList"]),
+      bulk: z.boolean(),
+      items: z.number().int().nonnegative(),
+      comments: z.number().int().nonnegative(),
+      mentions: z.number().int().nonnegative(),
+      tasks: z.number().int().nonnegative(),
+      reactions: z.number().int().nonnegative(),
+      restrictions: z.number().int().nonnegative(),
+      spaceRoles: z.number().int().nonnegative(),
+    }),
+    visibility: "organization",
+  }),
+  "import.tokenUsed": event({
+    actor: ["system", "account"],
+    target: "import",
+    fields: z.object({ site: z.string(), purpose: z.enum(["check", "import"]) }),
+    visibility: "organization",
+  }),
+  "import.tokenDeleted": event({
+    actor: ["system", "account"],
+    target: "import",
+    fields: z.object({
+      reason: z.enum(["accepted", "discarded", "stopped", "failed", "replaced", "removed"]),
+    }),
+    visibility: "organization",
+  }),
+  "import.groupMapped": event({
+    actor: ["account"],
+    target: "group",
+    fields: z.object({ importId: z.uuid(), name: z.string(), created: z.boolean() }),
+    visibility: "organization",
+  }),
+  "import.permissionsApplied": event({
+    actor: ["account"],
+    target: "import",
+    fields: z.object({
+      spaceId: z.uuid(),
+      via: z.enum(["accept", "mapping"]),
+      imported: z.number().int().nonnegative(),
+      applied: z.number().int().nonnegative(),
+      changed: z.boolean(),
+    }),
+    visibility: "organization",
+  }),
 } as const satisfies Record<string, AuditEventDefinition>;
 
 export type AuditEventName = keyof typeof auditCatalog;

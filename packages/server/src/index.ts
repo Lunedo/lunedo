@@ -310,6 +310,7 @@ export {
 } from "./identity/sync.js";
 export { type SyncRunSignal, signalRun } from "./identity/sync-signals.js";
 export type { WithheldRole } from "./identity/withheld.js";
+export { atlassianHostsSetting } from "./imports/atlassian.js";
 export { ImportError } from "./imports/errors.js";
 export type { FolderFile } from "./imports/folder.js";
 export {
@@ -320,11 +321,21 @@ export {
   type ImportView,
   MAX_REVIEWERS,
   type MacroUsage,
+  type PeopleSourceInput,
+  type PeopleSourceView,
   type ReportEntry,
   type ReportSummary,
 } from "./imports/imports.js";
 export { pipelinePhases } from "./imports/pipeline.js";
 export { problemCodes, reportCategoryNames } from "./imports/report.js";
+export {
+  type GrantState,
+  type ImportGroupView,
+  MAX_MAPPINGS,
+  type PermissionEntry,
+  type PlaceholderView,
+  type ProposedAccess,
+} from "./imports/resolution.js";
 export { type ImportState, importStates } from "./imports/schema.js";
 export { importFolderSetting, importSettings, maxUploadSetting } from "./imports/settings.js";
 export {
@@ -339,6 +350,7 @@ export {
   type UploadPart,
   UploadTooLargeError,
 } from "./imports/uploads.js";
+export { MAX_USER_LIST_BYTES } from "./imports/user-list.js";
 export {
   defineJob,
   type EnqueueOptions,

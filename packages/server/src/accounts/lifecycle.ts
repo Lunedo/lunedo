@@ -32,6 +32,7 @@ import { OrganizationError } from "../organizations/organizations.js";
 import { settingValues } from "../settings/schema.js";
 import { apiTokens } from "../tokens/schema.js";
 import { withUniqueEmail } from "./accounts.js";
+import { movePlaceholderContent } from "./placeholder-content.js";
 import { type Principal, SYSTEM } from "./principal.js";
 import { accounts, instance } from "./schema.js";
 
@@ -327,6 +328,7 @@ export class AccountLifecycleService {
         .where(
           and(eq(roleAssignments.principalKind, "account"), eq(roleAssignments.principalId, placeholderId)),
         );
+      await movePlaceholderContent(tx, placeholderId, accountId);
       await tx
         .update(accounts)
         .set({

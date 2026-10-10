@@ -3232,7 +3232,12 @@
         "stopped": "Import stopped",
         "failed": "Import failed",
         "takenOver": "Import taken over",
-        "placeholderCreated": "Placeholder created by an import"
+        "placeholderCreated": "Placeholder created by an import",
+        "placeholderMapped": "Placeholder of an import mapped to an account",
+        "tokenUsed": "Atlassian API token of an import used",
+        "tokenDeleted": "Atlassian API token of an import deleted",
+        "groupMapped": "Group from an import mapped",
+        "permissionsApplied": "Imported permissions applied"
       }
     },
     "action": "Action",
@@ -6081,6 +6086,7 @@
       "cleanDescription": "Everything in the export was imported.",
       "entries": "Report entries",
       "wholeExport": "The export as a whole",
+      "restrictedPage": "A restricted page you cannot open",
       "openPage": "Open page",
       "previous": "Previous",
       "next": "Next",

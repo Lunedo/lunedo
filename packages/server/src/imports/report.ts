@@ -8,6 +8,7 @@ export const reportCategories = {
   attachments: ["missingAttachment", "attachmentFileMissing", "attachmentTooLarge", "attachmentUnreadable"],
   links: ["externalPageLink", "unsupportedLink", "invalidLink", "externalImage"],
   content: ["invalidContent", "contentTruncated", "macroDataTruncated", "unresolvedPerson", "invalidLabel"],
+  comments: ["inlineCommentMoved", "tooManyComments"],
   archive: ["duplicateEntry", "skippedEntry"],
 } as const;
 

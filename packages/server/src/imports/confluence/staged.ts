@@ -12,10 +12,17 @@ import type {
   SourceAttachment,
   SourceAttachmentVersion,
   SourceBody,
+  SourceComment,
+  SourceCommentStatus,
+  SourceContentType,
   SourceLabel,
+  SourceLike,
   SourcePage,
   SourcePerson,
+  SourceRestriction,
   SourceSpace,
+  SourceSpacePermission,
+  SourceVersion,
 } from "../source.js";
 import type { StagingStore } from "../staging.js";
 
@@ -28,6 +35,7 @@ export interface StagedSpace {
 }
 
 export interface StagedPage {
+  type?: SourceContentType;
   title: string;
   version: number;
   creatorKey: string | null;
@@ -67,6 +75,67 @@ export interface StagedFile {
   location: ZipEntryLocation;
 }
 
+export interface StagedVersion {
+  title: string;
+  version: number;
+  authorKey: string | null;
+  created: string | null;
+}
+
+export interface StagedComment {
+  creatorKey: string | null;
+  created: string | null;
+  modified: string | null;
+}
+
+export interface StagedProperty {
+  name: string;
+  value: string;
+}
+
+export interface StagedLike {
+  userKey: string | null;
+  created: string | null;
+}
+
+export interface StagedSpacePermission {
+  spaceId: string | null;
+  type: string;
+  group: string | null;
+  userKey: string | null;
+  allUsers: boolean;
+}
+
+export interface StagedPermissionSet {
+  contentId: string;
+  type: string;
+}
+
+export interface StagedContentPermission {
+  type: string | null;
+  userKey: string | null;
+  accountId: string | null;
+  group: string | null;
+}
+
+export interface StagedRestriction {
+  kind: "view" | "edit";
+  origin: "table" | "legacy";
+  userKey: string | null;
+  accountId: string | null;
+  group: string | null;
+}
+
+export const COMMENT_PROPERTIES = new Set([
+  "inline-comment",
+  "actualCommentType",
+  "inline-marker-ref",
+  "inline-original-selection",
+  "status",
+  "status-lastmodifier",
+  "status-lastmoddate",
+]);
+
 export const kinds = {
   space: "space",
   page: "page",
@@ -76,7 +145,44 @@ export const kinds = {
   labelling: "labelling",
   user: "user",
   file: "file",
+  version: "version",
+  comment: "comment",
+  property: "property",
+  like: "like",
+  watch: "watch",
+  spacePermission: "spacePermission",
+  permissionSet: "permissionSet",
+  contentPermission: "contentPermission",
+  restriction: "restriction",
 } as const;
+
+export function versionSort(version: number): string {
+  return String(Math.max(0, Math.trunc(version))).padStart(10, "0");
+}
+
+export function restrictionKind(type: string | null | undefined): "view" | "edit" | null {
+  const value = (type ?? "").trim().toLowerCase();
+  if (value === "view") return "view";
+  if (value === "edit") return "edit";
+  return null;
+}
+
+export function commentStatus(value: string | undefined): SourceCommentStatus {
+  const status = (value ?? "").trim().toLowerCase();
+  if (status === "resolved") return "resolved";
+  if (status === "dangling") return "dangling";
+  return "open";
+}
+
+export function propertyDate(value: string | undefined): string | null {
+  if (!value) return null;
+  const text = value.trim();
+  if (/^\d{10,}$/.test(text)) {
+    const date = new Date(Number(text));
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  }
+  return confluenceDate(text);
+}
 
 const POSITION_OFFSET = 1_000_000_000_000;
 
@@ -178,8 +284,14 @@ export abstract class StagedConfluenceReader implements ImportReader {
     }
     let people = 0;
     for await (const _person of this.people(context)) people += 1;
+    const blogPosts = await context.staging.count(kinds.page, { field: "type", value: "blogPost" });
     return {
-      pages: await context.staging.count(kinds.page),
+      pages: (await context.staging.count(kinds.page)) - blogPosts,
+      blogPosts,
+      versions: await context.staging.count(kinds.version),
+      comments: await context.staging.count(kinds.comment),
+      likes: await context.staging.count(kinds.like),
+      watchers: await context.staging.count(kinds.watch),
       attachments,
       attachmentBytes,
       people,
@@ -208,7 +320,8 @@ export abstract class StagedConfluenceReader implements ImportReader {
       for (const page of batch) {
         yield {
           sourceId: page.sourceId,
-          parentId: page.parentId,
+          type: page.data.type ?? "page",
+          parentId: page.data.type === "blogPost" ? null : page.parentId,
           title: page.data.title,
           creatorId: page.data.creatorKey ? (people.get(page.data.creatorKey) ?? null) : null,
           createdAt: page.data.created,
@@ -224,6 +337,163 @@ export abstract class StagedConfluenceReader implements ImportReader {
       if (batch.length >= 200) yield* flush();
     }
     yield* flush();
+  }
+
+  async *versions(context: ReadContext, pageId: string): AsyncGenerator<SourceVersion> {
+    let batch: { sourceId: string; data: StagedVersion }[] = [];
+    const flush = async function* (this: StagedConfluenceReader) {
+      const people = await this.#people(
+        context.staging,
+        batch.map((version) => version.data.authorKey),
+      );
+      for (const version of batch) {
+        yield {
+          sourceId: version.sourceId,
+          pageId,
+          version: version.data.version,
+          title: version.data.title,
+          authorId: version.data.authorKey ? (people.get(version.data.authorKey) ?? null) : null,
+          createdAt: version.data.created,
+        } satisfies SourceVersion;
+      }
+      batch = [];
+    }.bind(this);
+    for await (const record of context.staging.iterateRef<StagedVersion>(kinds.version, pageId, 20)) {
+      batch.push({ sourceId: record.sourceId, data: record.data });
+      if (batch.length >= 20) yield* flush();
+    }
+    yield* flush();
+  }
+
+  async comments(context: ReadContext, contentIds: readonly string[]): Promise<readonly SourceComment[]> {
+    const records = (await context.staging.byRef<StagedComment>(kinds.comment, contentIds)).sort(
+      (left, right) =>
+        (left.ref ?? "").localeCompare(right.ref ?? "") ||
+        (left.data.created ?? "").localeCompare(right.data.created ?? "") ||
+        left.sourceId.localeCompare(right.sourceId),
+    );
+    const properties = await context.staging.byRef<StagedProperty>(
+      kinds.property,
+      records.map((comment) => comment.sourceId),
+    );
+    const byComment = new Map<string, Map<string, string>>();
+    for (const property of properties) {
+      if (!property.ref) continue;
+      const map = byComment.get(property.ref) ?? new Map<string, string>();
+      map.set(property.data.name, property.data.value);
+      byComment.set(property.ref, map);
+    }
+    const people = await this.#people(context.staging, [
+      ...records.map((comment) => comment.data.creatorKey),
+      ...[...byComment.values()].map((map) => map.get("status-lastmodifier")?.trim() || null),
+    ]);
+    const result: SourceComment[] = [];
+    for (const comment of records) {
+      if (!comment.ref) continue;
+      const own = byComment.get(comment.sourceId) ?? new Map<string, string>();
+      const markerRef = own.get("inline-marker-ref")?.trim() || null;
+      const inline =
+        own.get("inline-comment")?.trim().toLowerCase() === "true" ||
+        own.get("actualCommentType")?.trim().toLowerCase() === "inline" ||
+        markerRef !== null;
+      const status = commentStatus(own.get("status"));
+      const resolverKey = own.get("status-lastmodifier")?.trim() || null;
+      result.push({
+        sourceId: comment.sourceId,
+        pageId: comment.ref,
+        parentId: comment.parentId,
+        authorId: comment.data.creatorKey ? (people.get(comment.data.creatorKey) ?? null) : null,
+        createdAt: comment.data.created,
+        modifiedAt: comment.data.modified,
+        inline:
+          inline && comment.parentId === null
+            ? { markerRef, selection: own.get("inline-original-selection") ?? null }
+            : null,
+        status,
+        resolvedById: status === "resolved" && resolverKey ? (people.get(resolverKey) ?? null) : null,
+        resolvedAt: status === "resolved" ? propertyDate(own.get("status-lastmoddate")) : null,
+      });
+    }
+    return result;
+  }
+
+  async *likes(context: ReadContext): AsyncGenerator<SourceLike> {
+    let batch: { sourceId: string; ref: string; data: StagedLike }[] = [];
+    const flush = async function* (this: StagedConfluenceReader) {
+      const people = await this.#people(
+        context.staging,
+        batch.map((like) => like.data.userKey),
+      );
+      for (const like of batch) {
+        yield {
+          sourceId: like.sourceId,
+          contentId: like.ref,
+          personId: like.data.userKey ? (people.get(like.data.userKey) ?? null) : null,
+          createdAt: like.data.created,
+        } satisfies SourceLike;
+      }
+      batch = [];
+    }.bind(this);
+    for await (const record of context.staging.iterate<StagedLike>(kinds.like, "ref")) {
+      if (!record.ref) continue;
+      batch.push({ sourceId: record.sourceId, ref: record.ref, data: record.data });
+      if (batch.length >= 200) yield* flush();
+    }
+    yield* flush();
+  }
+
+  async *spacePermissions(context: ReadContext): AsyncGenerator<SourceSpacePermission> {
+    const space = await this.space(context);
+    let batch: { sourceId: string; data: StagedSpacePermission }[] = [];
+    const flush = async function* (this: StagedConfluenceReader) {
+      const people = await this.#people(
+        context.staging,
+        batch.map((record) => record.data.userKey),
+      );
+      for (const record of batch) {
+        yield {
+          sourceId: record.sourceId,
+          type: record.data.type,
+          group: record.data.group,
+          personId: record.data.userKey ? (people.get(record.data.userKey) ?? null) : null,
+          allUsers: record.data.allUsers,
+        } satisfies SourceSpacePermission;
+      }
+      batch = [];
+    }.bind(this);
+    for await (const record of context.staging.iterate<StagedSpacePermission>(kinds.spacePermission)) {
+      if (record.data.spaceId !== null && record.data.spaceId !== space.sourceId) continue;
+      batch.push({ sourceId: record.sourceId, data: record.data });
+      if (batch.length >= 200) yield* flush();
+    }
+    yield* flush();
+  }
+
+  async restrictions(
+    context: ReadContext,
+    contentIds: readonly string[],
+  ): Promise<readonly SourceRestriction[]> {
+    const records = await context.staging.byRef<StagedRestriction>(kinds.restriction, contentIds);
+    const people = await this.#people(
+      context.staging,
+      records.map((record) => record.data.userKey),
+    );
+    const result: SourceRestriction[] = [];
+    for (const record of records) {
+      if (!record.ref) continue;
+      result.push({
+        sourceId: record.sourceId,
+        contentId: record.ref,
+        kind: record.data.kind,
+        personId: record.data.accountId
+          ? personId(record.data.accountId, null)
+          : record.data.userKey
+            ? (people.get(record.data.userKey) ?? null)
+            : null,
+        group: record.data.group,
+      });
+    }
+    return result;
   }
 
   async bodies(context: ReadContext, pageIds: readonly string[]): Promise<ReadonlyMap<string, SourceBody>> {
@@ -351,6 +621,51 @@ export abstract class StagedConfluenceReader implements ImportReader {
     }
     return result;
   }
+}
+
+export async function stageRestrictions(staging: StagingStore): Promise<void> {
+  await staging.flush();
+  if ((await staging.count(kinds.restriction, { field: "origin", value: "table" })) > 0) {
+    await staging.removeWhere(kinds.restriction, "origin", "legacy");
+    await staging.remove(kinds.contentPermission);
+    await staging.remove(kinds.permissionSet);
+    return;
+  }
+  let batch: { sourceId: string; ref: string; data: StagedContentPermission }[] = [];
+  const flush = async () => {
+    const sets = await staging.get<StagedPermissionSet>(
+      kinds.permissionSet,
+      batch.map((permission) => permission.ref),
+    );
+    for (const permission of batch) {
+      const set = sets.get(permission.ref);
+      const kind = restrictionKind(set?.data.type ?? permission.data.type);
+      if (!set || !kind || (!permission.data.userKey && !permission.data.accountId && !permission.data.group))
+        continue;
+      await staging.put({
+        kind: kinds.restriction,
+        sourceId: permission.sourceId,
+        ref: set.data.contentId,
+        data: {
+          kind,
+          origin: "legacy",
+          userKey: permission.data.userKey,
+          accountId: permission.data.accountId,
+          group: permission.data.group,
+        } satisfies StagedRestriction,
+      });
+    }
+    batch = [];
+  };
+  for await (const record of staging.iterate<StagedContentPermission>(kinds.contentPermission)) {
+    if (!record.ref) continue;
+    batch.push({ sourceId: record.sourceId, ref: record.ref, data: record.data });
+    if (batch.length >= 200) await flush();
+  }
+  await flush();
+  await staging.flush();
+  await staging.remove(kinds.contentPermission);
+  await staging.remove(kinds.permissionSet);
 }
 
 export interface ScannedArchive {

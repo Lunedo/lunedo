@@ -537,9 +537,13 @@ function EntriesList({
           <ListRow
             key={item.id}
             icon={FileWarning}
-            title={item.item?.title ?? t("imports.report.wholeExport")}
+            title={
+              item.item
+                ? (item.item.title ?? t("imports.report.restrictedPage"))
+                : t("imports.report.wholeExport")
+            }
             description={entryText(t, item)}
-            {...(item.item && spaceKey
+            {...(item.item?.title && spaceKey
               ? {
                   actions: (
                     <Link
@@ -638,7 +642,7 @@ function MacroPages({ entry, name }: { entry: ImportView; name: string }) {
   return (
     <List label={t("imports.report.pagesWith", { name })}>
       {items.map((item) =>
-        item.item ? (
+        item.item?.title ? (
           <ListRow
             key={item.id}
             title={item.item.title}

@@ -36,6 +36,7 @@ export async function createTestServices(
     configuredInstanceUrl?: string;
     directoryConnector?: DirectoryConnector;
     masterKey?: Buffer;
+    atlassianFetch?: typeof fetch;
     beforeMigrations?: (url: string) => Promise<unknown>;
   } = {},
 ): Promise<TestServices> {
@@ -72,6 +73,7 @@ export async function createTestServices(
       insecureIdentityProviders: true,
       configuredInstanceUrl: options.configuredInstanceUrl,
       ...(options.directoryConnector ? { directoryConnector: options.directoryConnector } : {}),
+      ...(options.atlassianFetch ? { atlassianFetch: options.atlassianFetch } : {}),
       mailTransport: () => mail,
     });
   const services = build();

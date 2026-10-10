@@ -70,6 +70,7 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
     fastify.getDefaultJsonParser("error", "error"),
   );
   fastify.addContentTypeParser("application/octet-stream", (_request, payload, done) => done(null, payload));
+  fastify.addContentTypeParser("text/csv", (_request, payload, done) => done(null, payload));
 
   fastify.addHook("onRequest", async (request, reply) => {
     const userAgent = request.headers["user-agent"];

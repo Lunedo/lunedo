@@ -1,6 +1,7 @@
 import {
   importSources,
   importStates,
+  MAX_MAPPINGS,
   MAX_REVIEWERS,
   pipelinePhases,
   problemCodes,
@@ -24,7 +25,7 @@ const stateSchema = extensibleEnum(
 
 const phaseSchema = extensibleEnum(
   ["read", ...pipelinePhases, "done"] as const,
-  "Step the import is in: `read` reads the export, then `space`, `people`, `pages`, `attachments`, `content` and `finish`; `done` after the last step.",
+  "Step the import is in: `read` reads the export, then `space`, `people`, `pages`, `attachments`, `content`, `comments`, `reactions`, `permissions` and `finish`; `done` after the last step.",
 );
 
 const personSchema = z
@@ -52,6 +53,33 @@ export const importSchema = z
     spaceName: z.string().nullable().describe("Name of the new space."),
     spaceKey: z.string().nullable().describe("Key of the new space."),
     archived: z.boolean().describe("Whether the space becomes archived when the import is accepted."),
+    history: z
+      .boolean()
+      .describe(
+        "Whether every Confluence version becomes a Pagehall version, or only the current state is imported.",
+      ),
+    peopleSource: z
+      .object({
+        kind: extensibleEnum(
+          ["token", "list", "skip"],
+          "How people are recognized: `token` reads names and e-mail addresses with a read-only Atlassian API token, `list` uses a user list exported from the Atlassian administration, `skip` keeps every author as a placeholder.",
+        ),
+        site: z.string().nullable().describe("Confluence site the token is used with, or null."),
+        email: z.string().nullable().describe("Atlassian e-mail address the token belongs to, or null."),
+        people: z
+          .number()
+          .int()
+          .nullable()
+          .describe(
+            "People of the export the token could read, or people in the user list; null when unknown.",
+          ),
+        withEmail: z.number().int().nullable().describe("Of these, people with a visible e-mail address."),
+      })
+      .nullable()
+      .describe("How people are recognized. The token itself is never returned."),
+    tokenDeletedAt: timestamp(
+      "When the API token was deleted: when the import was accepted, discarded, stopped or failed.",
+    ).nullable(),
     sourceUrl: z
       .string()
       .nullable()
@@ -67,6 +95,14 @@ export const importSchema = z
     found: z
       .object({
         pages: z.number().int().describe("Pages in the export."),
+        blogPosts: z.number().int().describe("Blog posts in the export."),
+        versions: z.number().int().describe("Earlier versions of pages and blog posts."),
+        comments: z.number().int().describe("Comments, including inline comments and replies."),
+        likes: z.number().int().describe("Likes on pages, blog posts and comments."),
+        watchers: z
+          .number()
+          .int()
+          .describe("Watchers of pages and the space. They are counted, not imported."),
         attachments: z.number().int().describe("Attachments of these pages."),
         attachmentBytes: z.number().int().describe("Size of the current attachment versions in bytes."),
         people: z.number().int().describe("People named in the export."),
@@ -79,7 +115,7 @@ export const importSchema = z
     counts: z
       .record(z.string(), z.number().int())
       .describe(
-        "What was imported, by kind: `pages`, `attachments`, `attachmentVersions`, `people` and `problems`.",
+        "What was imported, by kind: `pages`, `blogPosts`, `versions`, `attachments`, `attachmentVersions`, `comments`, `inlineAnchored`, `inlineMoved`, `likes`, `watchers`, `people`, `peopleMatched`, `restrictions`, `groupsMissing` and `problems`.",
       ),
     errorCode: z
       .string()
@@ -121,6 +157,11 @@ export const exampleImport = {
   progress: { done: 0, total: 0 },
   found: {
     pages: 120,
+    blogPosts: 6,
+    versions: 340,
+    comments: 85,
+    likes: 30,
+    watchers: 44,
     attachments: 40,
     attachmentBytes: 2048000,
     people: 12,
@@ -128,7 +169,24 @@ export const exampleImport = {
     spaceKey: "ITOPS",
     spaceName: "IT Operations",
   },
-  counts: { pages: 120, attachments: 40, attachmentVersions: 52, people: 12, problems: 7 },
+  history: false,
+  peopleSource: {
+    kind: "token",
+    site: "example.atlassian.net",
+    email: "alex@example.com",
+    people: 12,
+    withEmail: 10,
+  },
+  tokenDeletedAt: null,
+  counts: {
+    pages: 120,
+    blogPosts: 6,
+    attachments: 40,
+    attachmentVersions: 52,
+    comments: 85,
+    people: 12,
+    problems: 7,
+  },
   errorCode: null,
   quarantineSpace: { id: ID(6), key: "ITOPS" },
   canManage: true,
@@ -174,6 +232,10 @@ export const updateImportSchema = z
     spaceName: z.string().max(200).optional().describe("Name of the new space, 1 to 100 characters."),
     spaceKey: z.string().max(20).optional().describe("Key of the new space, 2 to 10 letters or digits."),
     archived: z.boolean().optional().describe("Whether the space becomes archived when accepted."),
+    history: z
+      .boolean()
+      .optional()
+      .describe("Whether every Confluence version becomes a Pagehall version. Takes noticeably longer."),
     sourceUrl: z
       .string()
       .max(500)
@@ -220,7 +282,7 @@ export const reportSchema = z
           .object({
             category: extensibleEnum(
               reportCategoryNames as [string, ...string[]],
-              "Area of the problem: `macros`, `attachments`, `links`, `content` or `archive`.",
+              "Area of the problem: `macros`, `attachments`, `links`, `content`, `comments` or `archive`.",
             ),
             code: extensibleEnum(problemCodes as [string, ...string[]], "Kind of problem."),
             count: z.number().int().describe("Number of entries."),
@@ -229,6 +291,13 @@ export const reportSchema = z
       )
       .describe("Entries per kind."),
     total: z.number().int().describe("Number of all entries."),
+    placeholders: z.number().int().describe("People who are still placeholders."),
+    mapped: z.number().int().describe("Placeholders mapped to accounts."),
+    permissionsToCheck: z
+      .number()
+      .int()
+      .describe("Permission entries that did not map exactly or wait for a person or group."),
+    groupsMissing: z.number().int().describe("Confluence groups without a group in Pagehall."),
   })
   .describe("Summary of the report of an import.");
 
@@ -242,7 +311,13 @@ export const reportEntriesSchema = z
             category: z.string().describe("Area of the problem."),
             code: z.string().describe("Kind of problem."),
             item: z
-              .object({ id: uuid("ID of the page."), title: z.string().describe("Title of the page.") })
+              .object({
+                id: uuid("ID of the page."),
+                title: z
+                  .string()
+                  .nullable()
+                  .describe("Title of the page, or null when the caller cannot read it."),
+              })
               .nullable()
               .describe("The affected page, or null when the problem concerns the export as a whole."),
             details: z
@@ -350,3 +425,196 @@ export const exampleUpload = {
 };
 
 export const candidatesSchema = z.array(personSchema).describe("Members who can review imports.");
+
+export const peopleSourceSchema = z
+  .discriminatedUnion("kind", [
+    z
+      .object({
+        kind: z
+          .literal("token")
+          .describe("Read names and e-mail addresses with a read-only Atlassian API token."),
+        site: z
+          .string()
+          .max(300)
+          .describe(
+            "Confluence Cloud site, such as `example.atlassian.net`. Other hosts work only when the instance administrator allowed them.",
+          ),
+        email: z.string().max(320).describe("E-mail address of the Atlassian account the token belongs to."),
+        token: z
+          .string()
+          .max(1000)
+          .describe(
+            "The API token. It is checked at once, stored encrypted and deleted when the import ends.",
+          ),
+      })
+      .strict(),
+    z
+      .object({
+        kind: z.literal("skip").describe("Keep every author as a placeholder named by an Atlassian ID."),
+        confirmed: z
+          .boolean()
+          .describe("Must be true: the administrator confirms that authors become placeholders."),
+      })
+      .strict(),
+  ])
+  .describe("How the import recognizes people. A user list is sent to its own endpoint.");
+
+export const userListResultSchema = z
+  .object({
+    matched: z.number().int().describe("Placeholders mapped by e-mail address."),
+    named: z.number().int().describe("Placeholders that got a name from the list."),
+    remaining: z.number().int().describe("Placeholders that remain."),
+  })
+  .describe("What a user list resolved.");
+
+const roleSchema = extensibleEnum(
+  ["reader", "commenter", "editor", "admin"],
+  "Role in the space: `reader`, `commenter`, `editor` or `admin` (space admin).",
+);
+
+export const placeholdersSchema = z
+  .object({
+    items: z
+      .array(
+        z
+          .object({
+            id: uuid("ID of the placeholder account."),
+            name: z.string().describe("Best name known, or the Atlassian ID when no name is known."),
+            externalId: z.string().describe("Atlassian account ID or Confluence user key."),
+            email: z.string().nullable().describe("E-mail address known from the user source, or null."),
+            named: z.boolean().describe("Whether a name is known."),
+            items: z.number().int().describe("Pages and blog posts the person created in this import."),
+            comments: z.number().int().describe("Comments the person wrote in this import."),
+            restrictedPages: z.number().int().describe("Restricted pages the person may open."),
+            spaceRole: roleSchema
+              .nullable()
+              .describe("Role the person had in the Confluence space, or null."),
+            mappedTo: personSchema.nullable().describe("The account the placeholder was mapped to, or null."),
+            candidates: z
+              .array(personSchema)
+              .describe("Members with a similar name, offered for confirmation. Never mapped automatically."),
+          })
+          .describe("A person of the export without an account."),
+      )
+      .describe("Placeholders, those still open first."),
+    total: z.number().int().describe("Number of all placeholders of the import."),
+    mapped: z.number().int().describe("Number of placeholders mapped to accounts."),
+    nextCursor: z.string().nullable().describe("Cursor of the next page, or null on the last page."),
+  })
+  .describe("People of an import that became placeholders.");
+
+export const mappingsSchema = z
+  .object({
+    mappings: z
+      .array(
+        z
+          .object({
+            placeholderId: uuid("ID of the placeholder."),
+            accountId: uuid("ID of an active member of the organization."),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(MAX_MAPPINGS)
+      .describe("Placeholders and the accounts they become. All are applied together or none."),
+  })
+  .strict()
+  .describe("Mappings of placeholders to accounts.");
+
+export const importGroupSchema = z
+  .object({
+    key: z.string().describe("Lower-case name of the group in Confluence, used in the address."),
+    name: z.string().describe("Name of the group in Confluence."),
+    group: z
+      .object({ id: uuid("ID of the group."), name: z.string().describe("Name of the group.") })
+      .nullable()
+      .describe("The group of the organization it is mapped to, or null."),
+    spaceRole: roleSchema.nullable().describe("Role the group had in the Confluence space, or null."),
+    restrictedPages: z.number().int().describe("Restricted pages the group may open."),
+  })
+  .describe("A group named in the export.");
+
+export const importGroupsSchema = z
+  .array(importGroupSchema)
+  .describe("Groups named in the export, unmapped first.");
+
+export const mapGroupSchema = z
+  .union([
+    z.object({ groupId: uuid("ID of an existing group of the organization.") }).strict(),
+    z
+      .object({ create: z.literal(true).describe("Create a local group with the name from Confluence.") })
+      .strict(),
+  ])
+  .describe("The group a Confluence group becomes.");
+
+export const permissionEntriesSchema = z
+  .object({
+    items: z
+      .array(
+        z
+          .object({
+            id: uuid("ID of the entry."),
+            scope: extensibleEnum(
+              ["space", "page"],
+              "Whether the entry is a space permission or a page restriction.",
+            ),
+            item: z
+              .object({
+                id: uuid("ID of the page."),
+                title: z
+                  .string()
+                  .nullable()
+                  .describe("Title of the page, or null when the caller cannot read it."),
+              })
+              .nullable()
+              .describe("The restricted page, or null for space permissions."),
+            restriction: extensibleEnum(["view", "edit"], "Kind of page restriction.").nullable(),
+            holder: z
+              .object({
+                kind: extensibleEnum(
+                  ["account", "group", "organizationMembers", "anonymous"],
+                  "Who held the permission: a person, a group, all signed-in users or anonymous visitors.",
+                ),
+                id: uuid("ID of the account or group in Pagehall.").nullable(),
+                name: z.string().nullable().describe("Name in Pagehall, or null."),
+                sourceName: z.string().nullable().describe("Name of the group in Confluence, or null."),
+              })
+              .describe("The holder of the permission."),
+            role: roleSchema.nullable().describe("Role in Pagehall, or null when nothing is taken over."),
+            permissions: z
+              .array(z.string())
+              .describe("Confluence permissions of the holder, such as `VIEWSPACE`."),
+            status: extensibleEnum(
+              ["mapped", "check", "missing", "notTaken", "waiting"],
+              "`mapped` fits exactly, `check` differs from Confluence, `missing` waits for a group, `waiting` waits for a person to be mapped, `notTaken` is not taken over.",
+            ),
+            code: z
+              .string()
+              .nullable()
+              .describe(
+                "Why the entry needs attention: `widened`, `narrowed`, `withoutView`, `anonymous`, `groupMissing` or `placeholder`.",
+              ),
+          })
+          .describe("A permission taken from Confluence."),
+      )
+      .describe("Permission entries in the order they were found."),
+    nextCursor: z.string().nullable().describe("Cursor of the next page, or null on the last page."),
+  })
+  .describe("Permissions of the import.");
+
+export const proposedAccessSchema = z
+  .object({
+    visibility: visibilitySchema,
+    grants: z
+      .array(
+        spaceGrantSchema
+          .extend({ name: z.string().nullable().describe("Name of the person or group, or null.") })
+          .describe("A role for a holder, with the holder's name."),
+      )
+      .describe("Roles taken from Confluence for people and groups that exist in Pagehall."),
+    pending: z
+      .number()
+      .int()
+      .describe("Imported roles that wait for a person or group to be mapped; they apply when it is mapped."),
+  })
+  .describe("Who gets access when the import is accepted, as imported from Confluence.");

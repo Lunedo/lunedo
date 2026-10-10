@@ -28,6 +28,7 @@ export const encryptedColumns: readonly EncryptedColumn[] = [
   { table: "audit_subject_keys", idColumn: "subject_id", column: "key" },
   { table: "identity_provider_credentials", idColumn: "id", column: "secret" },
   { table: "identity_provider_secrets", idColumn: "provider_id", column: "directory_key" },
+  { table: "import_credentials", idColumn: "import_id", column: "token" },
   { table: "instance_secrets", idColumn: "name", column: "value" },
   { table: "mail_credentials", idColumn: "id", column: "secret" },
   { table: "mail_outbox", idColumn: "id", column: "message" },

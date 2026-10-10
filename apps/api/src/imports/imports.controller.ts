@@ -13,13 +13,14 @@ import {
   Req,
   Res,
 } from "@nestjs/common";
+import { MAX_USER_LIST_BYTES } from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
-import { decodeCursor, encodeCursor, pageQuery } from "../http/pagination.js";
+import { decodeCursor, encodeCursor, pageQuery, pageQuerySchema } from "../http/pagination.js";
 import { notFound, ProblemException } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import { organizationIdParams, uuid } from "../http/schemas.js";
@@ -33,14 +34,23 @@ import {
   exampleImport,
   exampleUpload,
   folderSchema,
+  importGroupSchema,
+  importGroupsSchema,
   importListSchema,
   importSchema,
   macrosSchema,
+  mapGroupSchema,
+  mappingsSchema,
+  peopleSourceSchema,
+  permissionEntriesSchema,
+  placeholdersSchema,
+  proposedAccessSchema,
   reportEntriesSchema,
   reportSchema,
   reviewersSchema,
   updateImportSchema,
   uploadSchema,
+  userListResultSchema,
 } from "./schemas.js";
 
 const TAG = "Imports";
@@ -73,6 +83,34 @@ const candidatesQuery = z
   .object({ q: z.string().trim().max(200).default("").describe("Part of the name or e-mail address.") })
   .strict();
 const cursorSchema = z.object({ id: z.string() });
+const offsetCursorSchema = z.object({ offset: z.number().int().min(0).max(1_000_000) });
+const groupParams = importParams
+  .extend({ groupKey: z.string().min(1).max(255).describe("Lower-case name of the group in Confluence.") })
+  .strict();
+const peopleQuery = z
+  .object({
+    q: z.string().trim().max(200).optional().describe("Part of the name, e-mail address or Atlassian ID."),
+    ...pageQuery,
+  })
+  .strict();
+
+async function csvBody(request: FastifyRequest): Promise<string> {
+  const body = request.body as Readable | undefined;
+  if (!body || typeof (body as { pipe?: unknown }).pipe !== "function") {
+    throw new ProblemException("unsupportedMediaType", "Send the user list as text/csv");
+  }
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of body as AsyncIterable<Buffer>) {
+    size += chunk.length;
+    if (size > MAX_USER_LIST_BYTES) {
+      body.destroy();
+      throw new ProblemException("userListTooLarge", "The user list is larger than 10 MB.");
+    }
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
 const reportCsvExample =
   '"category","code","page","details"\r\n"macros","unsupportedMacro","Alpha","{""name"":""info"",""count"":1}"\r\n';
 
@@ -506,7 +544,14 @@ export class ImportsController {
     response: {
       description: "The summary.",
       schema: reportSchema,
-      example: { categories: [{ category: "macros", code: "unsupportedMacro", count: 3 }], total: 3 },
+      example: {
+        categories: [{ category: "macros", code: "unsupportedMacro", count: 3 }],
+        total: 3,
+        placeholders: 13,
+        mapped: 2,
+        permissionsToCheck: 6,
+        groupsMissing: 1,
+      },
     },
     errors: ["reportUnavailable"],
   })
@@ -554,6 +599,286 @@ export class ImportsController {
       limit: query.limit,
     });
     return { items: page.entries, nextCursor: page.next ? encodeCursor({ id: page.next }) : null };
+  }
+
+  @Put("imports/:importId/people-source")
+  @Permission("import.manage", importResource)
+  @ApiRoute({
+    summary: "Choose how people are recognized",
+    description:
+      "Sets the user source of an import draft. With `token`, Pagehall checks the read-only Atlassian API token against the given site at once, stores it encrypted, uses it only while the import runs and deletes it when the import is accepted, discarded, stopped or fails. Only `https` sites under `atlassian.net` or hosts the instance administrator allowed are contacted. With `skip`, every author becomes a placeholder. A user list is sent to `people-source/user-list`.",
+    tags: [TAG],
+    params: importParams,
+    body: peopleSourceSchema,
+    bodyExample: {
+      kind: "token",
+      site: "example.atlassian.net",
+      email: "alex@example.com",
+      token: "ATATT3x…",
+    },
+    response: { description: "The import.", schema: importSchema, example: exampleImport },
+    errors: [
+      "importStarted",
+      "invalidAtlassianSite",
+      "invalidAtlassianEmail",
+      "invalidAtlassianToken",
+      "atlassianUnauthorized",
+      "atlassianUnreachable",
+      "atlassianRateLimited",
+      "skipNotConfirmed",
+    ],
+  })
+  async peopleSource(
+    @Param("importId") importId: string,
+    @Body() body: z.output<typeof peopleSourceSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.imports.setPeopleSource(actorOf(request), importId, body);
+  }
+
+  @Put("imports/:importId/people-source/user-list")
+  @Permission("import.manage", importResource)
+  @ApiRoute({
+    summary: "Use a user list to recognize people",
+    description:
+      "Sets a user list exported from the Atlassian administration (admin.atlassian.com › Directory › Users › Export users) as the user source of an import draft. Send the CSV file with `Content-Type: text/csv`, up to 10 MB. People are matched by e-mail address only.",
+    tags: [TAG],
+    params: importParams,
+    upload: { contentTypes: ["text/csv"], description: "The user list as CSV with a header row." },
+    response: { description: "The import.", schema: importSchema, example: exampleImport },
+    errors: ["importStarted", "userListInvalid", "userListTooLarge", "unsupportedMediaType"],
+  })
+  async peopleSourceList(@Param("importId") importId: string, @Req() request: FastifyRequest) {
+    const userList = await csvBody(request);
+    return this.#services.imports.setPeopleSource(actorOf(request), importId, { kind: "list", userList });
+  }
+
+  @Get("imports/:importId/people")
+  @Permission("import.view", importResource)
+  @ApiRoute({
+    summary: "List the placeholders of an import",
+    description:
+      "Lists the people of the export who became placeholders, with the content they own, the account they were mapped to and members with a similar name. Similar names are only offered; nobody is mapped by name automatically.",
+    tags: [TAG],
+    params: importParams,
+    query: peopleQuery,
+    response: {
+      description: "A page of placeholders.",
+      schema: placeholdersSchema,
+      example: {
+        items: [
+          {
+            id: exampleImport.id,
+            name: "J. Weber",
+            externalId: "557058:4f1c0000-0000-0000-0000-000000000000",
+            email: null,
+            named: true,
+            items: 14,
+            comments: 31,
+            restrictedPages: 0,
+            spaceRole: "editor",
+            mappedTo: null,
+            candidates: [{ id: exampleImport.importer.id, name: "Jana Weber" }],
+          },
+        ],
+        total: 13,
+        mapped: 0,
+        nextCursor: null,
+      },
+    },
+    errors: ["reportUnavailable"],
+  })
+  async people(
+    @Param("importId") importId: string,
+    @Query() query: z.output<typeof peopleQuery>,
+    @Req() request: FastifyRequest,
+  ) {
+    const offset = decodeCursor(query.cursor, offsetCursorSchema)?.offset ?? 0;
+    const page = await this.#services.imports.resolution.people(actorOf(request), importId, {
+      q: query.q,
+      offset,
+      limit: query.limit,
+    });
+    return {
+      items: page.people,
+      total: page.total,
+      mapped: page.mapped,
+      nextCursor: page.next === null ? null : encodeCursor({ offset: page.next }),
+    };
+  }
+
+  @Post("imports/:importId/people/mappings")
+  @Permission("import.manage", importResource)
+  @ApiRoute({
+    summary: "Map placeholders to accounts",
+    description:
+      "Maps one or more placeholders to accounts of the organization. Authorship, comments, mentions, tasks, reactions and restrictions move to the account in one step, also after the import was accepted; roles the person had in the Confluence space apply when the import is accepted. Nobody is notified. A mapping cannot be undone. A placeholder that holds access to pages or the space cannot be mapped to the caller's own account.",
+    tags: [TAG],
+    params: importParams,
+    body: mappingsSchema,
+    bodyExample: { mappings: [{ placeholderId: exampleImport.id, accountId: exampleImport.importer.id }] },
+    response: {
+      description: "How many placeholders were mapped.",
+      schema: z
+        .object({ mapped: z.number().int().describe("Number of mapped placeholders.") })
+        .describe("Result."),
+      example: { mapped: 1 },
+    },
+    errors: [
+      "importNotResolvable",
+      "notPlaceholder",
+      "invalidMapping",
+      "invalidMappingTarget",
+      "selfExtension",
+    ],
+  })
+  async mapPeople(
+    @Param("importId") importId: string,
+    @Body() body: z.output<typeof mappingsSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.imports.resolution.mapPeople(actorOf(request), importId, body.mappings);
+  }
+
+  @Post("imports/:importId/people/user-list")
+  @Permission("import.manage", importResource)
+  @ApiRoute({
+    summary: "Resolve placeholders with a user list",
+    description:
+      "Reads a user list exported from the Atlassian administration and maps every remaining placeholder whose e-mail address belongs to a member of the organization. Placeholders without a match get the name from the list. Works before and after accepting. Send the CSV with `Content-Type: text/csv`, up to 10 MB.",
+    tags: [TAG],
+    params: importParams,
+    upload: { contentTypes: ["text/csv"], description: "The user list as CSV with a header row." },
+    response: {
+      description: "What the list resolved.",
+      schema: userListResultSchema,
+      example: { matched: 9, named: 3, remaining: 4 },
+    },
+    errors: ["importNotResolvable", "userListInvalid", "userListTooLarge", "unsupportedMediaType"],
+  })
+  async userList(@Param("importId") importId: string, @Req() request: FastifyRequest) {
+    const text = await csvBody(request);
+    return this.#services.imports.resolution.uploadUserList(actorOf(request), importId, text);
+  }
+
+  @Get("imports/:importId/groups")
+  @Permission("import.view", importResource)
+  @ApiRoute({
+    summary: "List the groups of an import",
+    description:
+      "Lists the Confluence groups named in space permissions and page restrictions, and the group of the organization each is mapped to. Groups are matched by name, including synchronized groups; nothing is created automatically.",
+    tags: [TAG],
+    params: importParams,
+    response: {
+      description: "The groups.",
+      schema: importGroupsSchema,
+      example: [
+        { key: "contractors", name: "contractors", group: null, spaceRole: "reader", restrictedPages: 2 },
+      ],
+    },
+    errors: ["reportUnavailable"],
+  })
+  async groups(@Param("importId") importId: string, @Req() request: FastifyRequest) {
+    return this.#services.imports.resolution.groups(actorOf(request), importId);
+  }
+
+  @Put("imports/:importId/groups/:groupKey")
+  @Permission("import.manage", importResource)
+  @ApiRoute({
+    summary: "Map a group of an import",
+    description:
+      "Maps a Confluence group to an existing group of the organization, or creates a local group with its name (this needs the permission to create groups). Restricted pages open for the group at once; its space role applies when the import is accepted. Nobody is notified.",
+    tags: [TAG],
+    params: groupParams,
+    body: mapGroupSchema,
+    bodyExample: { create: true },
+    response: {
+      description: "The group.",
+      schema: importGroupSchema,
+      example: {
+        key: "contractors",
+        name: "contractors",
+        group: { id: exampleImport.id, name: "contractors" },
+        spaceRole: "reader",
+        restrictedPages: 2,
+      },
+    },
+    errors: ["importNotResolvable", "groupNotFound", "groupAlreadyMapped", "groupNameTaken", "forbidden"],
+  })
+  async mapGroup(
+    @Param("importId") importId: string,
+    @Param("groupKey") groupKey: string,
+    @Body() body: z.output<typeof mapGroupSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.imports.resolution.mapGroup(actorOf(request), importId, groupKey, body);
+  }
+
+  @Get("imports/:importId/permissions")
+  @Permission("import.view", importResource)
+  @ApiRoute({
+    summary: "List the permissions of an import",
+    description:
+      "Lists the space permissions and page restrictions taken from Confluence: the role each person or group gets, and the entries that need attention. Anonymous access is never taken over. Titles of pages the caller cannot read are left out.",
+    tags: [TAG],
+    params: importParams,
+    query: pageQuerySchema,
+    response: {
+      description: "A page of entries.",
+      schema: permissionEntriesSchema,
+      example: {
+        items: [
+          {
+            id: exampleImport.id,
+            scope: "space",
+            item: null,
+            restriction: null,
+            holder: { kind: "group", id: null, name: null, sourceName: "contractors" },
+            role: "reader",
+            permissions: ["VIEWSPACE"],
+            status: "missing",
+            code: "groupMissing",
+          },
+        ],
+        nextCursor: null,
+      },
+    },
+    errors: ["reportUnavailable"],
+  })
+  async permissions(
+    @Param("importId") importId: string,
+    @Query() query: z.output<typeof pageQuerySchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    const cursor = decodeCursor(query.cursor, cursorSchema);
+    const page = await this.#services.imports.resolution.permissions(actorOf(request), importId, {
+      after: cursor?.id,
+      limit: query.limit,
+    });
+    return { items: page.entries, nextCursor: page.next ? encodeCursor({ id: page.next }) : null };
+  }
+
+  @Get("imports/:importId/proposed-access")
+  @Permission("import.view", importResource)
+  @ApiRoute({
+    summary: "Get the imported access",
+    description:
+      "Returns who gets access when the import is accepted, as taken from Confluence. The accept dialog shows it instead of the organization defaults, and the administrator can change it before accepting.",
+    tags: [TAG],
+    params: importParams,
+    response: {
+      description: "The imported access.",
+      schema: proposedAccessSchema,
+      example: {
+        visibility: "organization",
+        grants: [{ principalKind: "organizationMembers", principalId: null, role: "commenter", name: null }],
+        pending: 2,
+      },
+    },
+    errors: ["reportUnavailable"],
+  })
+  async proposedAccess(@Param("importId") importId: string, @Req() request: FastifyRequest) {
+    return this.#services.imports.resolution.proposal(actorOf(request), importId);
   }
 
   @Get("imports/:importId/report/macros")

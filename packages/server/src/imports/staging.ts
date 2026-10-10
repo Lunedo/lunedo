@@ -21,6 +21,7 @@ export interface StoredRecord<T = Record<string, unknown>> {
 type RecordRow = {
   source_id: string;
   ref: string | null;
+  sort: string | null;
   parent_id: string | null;
   ordinal: number | null;
   data: unknown;
@@ -75,15 +76,16 @@ export class StagingStore {
         set ref = excluded.ref, parent_id = excluded.parent_id, sort = excluded.sort, data = excluded.data`);
   }
 
-  async count(kind: string): Promise<number> {
+  async count(kind: string, where?: { field: string; value: string }): Promise<number> {
     const result = await this.#database.execute<{ count: number }>(sql`
-      select count(*)::int as count from import_records where import_id = ${this.#importId} and kind = ${kind}`);
+      select count(*)::int as count from import_records where import_id = ${this.#importId} and kind = ${kind}
+        ${where ? sql`and data ->> ${where.field} = ${where.value}` : sql``}`);
     return result.rows[0]?.count ?? 0;
   }
 
   async *iterate<T>(
     kind: string,
-    order: "ordinal" | "source" | "ref" = "source",
+    order: "ordinal" | "source" | "ref" | "refSort" = "source",
   ): AsyncGenerator<StoredRecord<T>> {
     let last: RecordRow | null = null;
     for (;;) {
@@ -94,6 +96,9 @@ export class StagingStore {
           condition = sql`and (ordinal, source_id) > (${previous.ordinal ?? 0}, ${previous.source_id})`;
         else if (order === "ref") {
           condition = sql`and (coalesce(ref, ''), source_id) > (${previous.ref ?? ""}, ${previous.source_id})`;
+        } else if (order === "refSort") {
+          condition = sql`and (coalesce(ref, ''), coalesce(sort, ''), source_id)
+            > (${previous.ref ?? ""}, ${previous.sort ?? ""}, ${previous.source_id})`;
         } else condition = sql`and source_id > ${previous.source_id}`;
       }
       const ordering =
@@ -101,9 +106,11 @@ export class StagingStore {
           ? sql`ordinal, source_id`
           : order === "ref"
             ? sql`coalesce(ref, ''), source_id`
-            : sql`source_id`;
+            : order === "refSort"
+              ? sql`coalesce(ref, ''), coalesce(sort, ''), source_id`
+              : sql`source_id`;
       const result = await this.#database.execute<RecordRow>(sql`
-        select source_id, ref, parent_id, ordinal, data from import_records
+        select source_id, ref, sort, parent_id, ordinal, data from import_records
         where import_id = ${this.#importId} and kind = ${kind}
           ${order === "ordinal" ? sql`and ordinal is not null` : sql``} ${condition}
         order by ${ordering}
@@ -114,11 +121,27 @@ export class StagingStore {
     }
   }
 
+  async *iterateRef<T>(kind: string, ref: string, batch = BATCH): AsyncGenerator<StoredRecord<T>> {
+    let last: RecordRow | null = null;
+    for (;;) {
+      const previous: RecordRow | null = last;
+      const result: { rows: RecordRow[] } = await this.#database.execute<RecordRow>(sql`
+        select source_id, ref, sort, parent_id, ordinal, data from import_records
+        where import_id = ${this.#importId} and kind = ${kind} and ref = ${ref}
+          ${previous ? sql`and (coalesce(sort, ''), source_id) > (${previous.sort ?? ""}, ${previous.source_id})` : sql``}
+        order by coalesce(sort, ''), source_id
+        limit ${batch}`);
+      for (const row of result.rows) yield toStored<T>(row);
+      if (result.rows.length < batch) return;
+      last = result.rows.at(-1) ?? null;
+    }
+  }
+
   async get<T>(kind: string, sourceIds: readonly string[]): Promise<Map<string, StoredRecord<T>>> {
     const found = new Map<string, StoredRecord<T>>();
     if (sourceIds.length === 0) return found;
     const result = await this.#database.execute<RecordRow>(sql`
-      select source_id, ref, parent_id, ordinal, data from import_records
+      select source_id, ref, sort, parent_id, ordinal, data from import_records
       where import_id = ${this.#importId} and kind = ${kind} and source_id = any(${sql.param([...sourceIds])}::text[])`);
     for (const row of result.rows) found.set(row.source_id, toStored<T>(row));
     return found;
@@ -127,7 +150,7 @@ export class StagingStore {
   async byRef<T>(kind: string, refs: readonly string[]): Promise<StoredRecord<T>[]> {
     if (refs.length === 0) return [];
     const result = await this.#database.execute<RecordRow>(sql`
-      select source_id, ref, parent_id, ordinal, data from import_records
+      select source_id, ref, sort, parent_id, ordinal, data from import_records
       where import_id = ${this.#importId} and kind = ${kind} and ref = any(${sql.param([...refs])}::text[])
       order by source_id`);
     return result.rows.map((row) => toStored<T>(row));
@@ -169,6 +192,20 @@ export class StagingStore {
         from unreached, base
         where r.import_id = ${this.#importId} and r.kind = ${kind} and r.source_id = unreached.source_id`);
     });
+  }
+
+  async remove(kind: string): Promise<void> {
+    await this.flush();
+    await this.#database.execute(
+      sql`delete from import_records where import_id = ${this.#importId} and kind = ${kind}`,
+    );
+  }
+
+  async removeWhere(kind: string, field: string, value: string): Promise<void> {
+    await this.flush();
+    await this.#database.execute(sql`
+      delete from import_records
+      where import_id = ${this.#importId} and kind = ${kind} and data ->> ${field} = ${value}`);
   }
 
   async removeOtherThan(kind: string, field: string, value: string): Promise<void> {

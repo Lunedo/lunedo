@@ -9,6 +9,7 @@ import { testDatabaseBaseUrl } from "../testing/database.js";
 import { testJobContext } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
+import { AtlassianDirectory } from "./atlassian.js";
 import { ConfluenceCsvReader } from "./confluence/csv-reader.js";
 import { ConfluenceXmlReader } from "./confluence/xml-reader.js";
 import { ImportPipeline } from "./pipeline.js";
@@ -67,6 +68,8 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
       audit: services.audit,
       authorization: services.authorization,
       notifications: services.notifications,
+      encryption: test.encryption,
+      atlassian: new AtlassianDirectory(),
       uploads: services.importUploads,
       readers:
         readers ?? new ImportReaderRegistry().register(new ConfluenceXmlReader(), new ConfluenceCsvReader()),
@@ -137,6 +140,7 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
       sourceUrl: "https://example.atlassian.net/wiki",
     });
     if (options.reviewers) await imports.setReviewers(as(admin), created.id, options.reviewers);
+    await imports.setPeopleSource(as(admin), created.id, { kind: "skip", confirmed: true });
     return created.id;
   }
 

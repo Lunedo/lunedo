@@ -3232,7 +3232,12 @@
         "stopped": "Import gestoppt",
         "failed": "Import fehlgeschlagen",
         "takenOver": "Import von anderer Administration fortgesetzt",
-        "placeholderCreated": "Platzhalter durch einen Import angelegt"
+        "placeholderCreated": "Platzhalter durch einen Import angelegt",
+        "placeholderMapped": "Platzhalter eines Imports einem Konto zugeordnet",
+        "tokenUsed": "Atlassian-API-Token eines Imports verwendet",
+        "tokenDeleted": "Atlassian-API-Token eines Imports gelöscht",
+        "groupMapped": "Gruppe aus einem Import zugeordnet",
+        "permissionsApplied": "Importierte Berechtigungen angewendet"
       }
     },
     "action": "Aktion",
@@ -6081,6 +6086,7 @@
       "cleanDescription": "Alles aus dem Export wurde importiert.",
       "entries": "Einträge des Berichts",
       "wholeExport": "Der Export als Ganzes",
+      "restrictedPage": "Eine eingeschränkte Seite, die du nicht öffnen kannst",
       "openPage": "Seite öffnen",
       "previous": "Zurück",
       "next": "Weiter",

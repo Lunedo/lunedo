@@ -3,6 +3,7 @@ import type { ByteSource } from "../formats/bytes.js";
 import { parseXml } from "../formats/xml.js";
 import type { ScanContext } from "../source.js";
 import {
+  COMMENT_PROPERTIES,
   confluenceDate,
   isCurrentStatus,
   kinds,
@@ -10,8 +11,10 @@ import {
   STORAGE_BODY_TYPE,
   StagedConfluenceReader,
   scanArchive,
+  stageRestrictions,
   titleKey,
   toNumber,
+  versionSort,
 } from "./staged.js";
 
 interface XmlObject {
@@ -30,6 +33,14 @@ export function unescapeNestedCdata(body: string): string {
 const WANTED = new Set([
   "Space",
   "Page",
+  "BlogPost",
+  "Comment",
+  "ContentProperty",
+  "LikeEntity",
+  "Notification",
+  "SpacePermission",
+  "ContentPermissionSet",
+  "ContentPermission",
   "BodyContent",
   "Attachment",
   "Label",
@@ -180,6 +191,7 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
     await context.staging.flush();
     await context.staging.removeOtherThan(kinds.page, "spaceId", space.id);
     await context.staging.orderTree(kinds.page);
+    await stageRestrictions(context.staging);
     await context.saveCheckpoint({ objects });
   }
 
@@ -188,23 +200,135 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
     const reference = (name: string) => object.references.get(name) ?? null;
     const status = property("contentStatus") ?? "current";
     switch (object.className) {
-      case "Page": {
-        if (!isCurrentStatus(status) || reference("originalVersion")) return;
+      case "Page":
+      case "BlogPost": {
+        if (!isCurrentStatus(status)) return;
         const title = (property("title") ?? "").trim();
+        const original = reference("originalVersion");
+        const version = toNumber(property("version")) ?? 1;
+        if (original) {
+          await context.staging.put({
+            kind: kinds.version,
+            sourceId: object.id,
+            ref: original,
+            sort: versionSort(version),
+            data: {
+              title,
+              version,
+              authorKey: reference("lastModifier") ?? reference("creator"),
+              created:
+                confluenceDate(property("lastModificationDate")) ?? confluenceDate(property("creationDate")),
+            },
+          });
+          return;
+        }
+        const blog = object.className === "BlogPost";
         await context.staging.put({
           kind: kinds.page,
           sourceId: object.id,
           ref: titleKey(title),
-          parentId: reference("parent"),
-          sort: pageSort(toNumber(property("position")), title),
+          parentId: blog ? null : reference("parent"),
+          sort: blog
+            ? `2${confluenceDate(property("creationDate")) ?? ""}`
+            : pageSort(toNumber(property("position")), title),
           data: {
+            ...(blog ? { type: "blogPost" } : {}),
             title,
-            version: toNumber(property("version")) ?? 1,
+            version,
             creatorKey: reference("creator"),
             created: confluenceDate(property("creationDate")),
             modifierKey: reference("lastModifier"),
             modified: confluenceDate(property("lastModificationDate")),
             spaceId: reference("space"),
+          },
+        });
+        return;
+      }
+      case "Comment": {
+        if (!isCurrentStatus(status) || reference("originalVersion")) return;
+        const container = reference("containerContent");
+        if (!container) return;
+        const created = confluenceDate(property("creationDate"));
+        await context.staging.put({
+          kind: kinds.comment,
+          sourceId: object.id,
+          ref: container,
+          parentId: reference("parent"),
+          sort: created ?? "",
+          data: {
+            creatorKey: reference("creator"),
+            created,
+            modified: confluenceDate(property("lastModificationDate")),
+          },
+        });
+        return;
+      }
+      case "ContentProperty": {
+        const name = (property("name") ?? "").trim();
+        const content = reference("content");
+        if (!content || !COMMENT_PROPERTIES.has(name)) return;
+        const value = property("stringValue") || property("longValue") || property("dateValue") || "";
+        await context.staging.put({
+          kind: kinds.property,
+          sourceId: object.id,
+          ref: content,
+          data: { name, value: value.slice(0, 2000) },
+        });
+        return;
+      }
+      case "LikeEntity": {
+        const content = reference("content");
+        if (!content || (property("liked") ?? "true").trim().toLowerCase() === "false") return;
+        await context.staging.put({
+          kind: kinds.like,
+          sourceId: object.id,
+          ref: content,
+          data: { userKey: reference("user"), created: confluenceDate(property("creationDate")) },
+        });
+        return;
+      }
+      case "Notification":
+        await context.staging.put({ kind: kinds.watch, sourceId: object.id, data: {} });
+        return;
+      case "SpacePermission": {
+        if ((property("active") ?? "true").trim().toLowerCase() === "false") return;
+        const group = (property("group") ?? "").trim();
+        await context.staging.put({
+          kind: kinds.spacePermission,
+          sourceId: object.id,
+          data: {
+            spaceId: (property("spaceId") ?? "").trim() || reference("space"),
+            type: (property("type") ?? "").trim().toUpperCase(),
+            group: group.length > 0 ? group : null,
+            userKey: reference("userSubject"),
+            allUsers: (property("allUsersSubject") ?? "").trim().length > 0,
+          },
+        });
+        return;
+      }
+      case "ContentPermissionSet": {
+        const content = reference("owningContent");
+        if (!content) return;
+        await context.staging.put({
+          kind: kinds.permissionSet,
+          sourceId: object.id,
+          data: { contentId: content, type: (property("type") ?? "").trim() },
+        });
+        return;
+      }
+      case "ContentPermission": {
+        const set = reference("owningSet");
+        if (!set) return;
+        const group = (property("groupName") ?? "").trim();
+        await context.staging.put({
+          kind: kinds.contentPermission,
+          sourceId: object.id,
+          ref: set,
+          data: {
+            type: (property("type") ?? "").trim(),
+            userKey: reference("userSubject"),
+            accountId: null,
+            group: group.length > 0 ? group : null,
           },
         });
         return;

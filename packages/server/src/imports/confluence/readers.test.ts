@@ -9,7 +9,17 @@ import { bufferSource } from "../formats/bytes.js";
 import type { ImportReader, ReadContext } from "../source.js";
 import { StagingStore } from "../staging.js";
 import { createCsvExport, createXmlExport } from "../testing/confluence-export.js";
-import { ALICE, BOB, PAGE, PNG, syntheticExport } from "../testing/fixture.js";
+import {
+  ALICE,
+  BOB,
+  CAROL,
+  PAGE,
+  PEOPLE_COMMENT,
+  PEOPLE_PAGE,
+  PNG,
+  peopleExport,
+  syntheticExport,
+} from "../testing/fixture.js";
 import { ConfluenceCsvReader } from "./csv-reader.js";
 import { ConfluenceXmlReader } from "./xml-reader.js";
 
@@ -181,5 +191,111 @@ describe.skipIf(!baseUrl)("Confluence export readers", () => {
     for await (const page of reader.pages({ staging })) second.push(page.sourceId);
     expect(second).toEqual(first);
     expect(calls).toBeGreaterThanOrEqual(0);
+  });
+
+  it("reads comments, likes, blog posts, versions and permissions the same way from every export format", async () => {
+    const model = peopleExport();
+    async function people(reader: ImportReader, archive: Buffer) {
+      const staging = new StagingStore(test.database, await importRow());
+      const file = bufferSource(archive);
+      await reader.scan(file, {
+        staging,
+        checkpoint: {},
+        async saveCheckpoint() {},
+        async progress() {},
+        async problem() {},
+        signal: new AbortController().signal,
+      });
+      const context: ReadContext = { staging };
+      const pages = [];
+      for await (const page of reader.pages(context)) pages.push({ id: page.sourceId, type: page.type });
+      const versions = [];
+      for await (const version of reader.versions(context, PEOPLE_PAGE.history)) versions.push(version);
+      const likes = [];
+      for await (const like of reader.likes(context)) likes.push(like);
+      const permissions = [];
+      for await (const permission of reader.spacePermissions(context)) permissions.push(permission);
+      const comments = await reader.comments(context, [PEOPLE_PAGE.plan, PEOPLE_PAGE.blog]);
+      const restrictions = await reader.restrictions(context, [PEOPLE_PAGE.secret, PEOPLE_PAGE.editors]);
+      const sort = <T extends { sourceId: string }>(list: T[]) =>
+        [...list].sort((a, b) => a.sourceId.localeCompare(b.sourceId));
+      return {
+        summary: await reader.summary(context),
+        pages: [...pages].sort((a, b) => a.id.localeCompare(b.id)),
+        versions,
+        likes: sort(likes),
+        permissions: sort(permissions).map(({ sourceId: _id, ...rest }) => rest),
+        comments: sort([...comments]),
+        restrictions: [...restrictions]
+          .map(({ sourceId: _id, ...rest }) => rest)
+          .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))),
+      };
+    }
+    const xml = await people(new ConfluenceXmlReader(), createXmlExport(model));
+    const csv = await people(new ConfluenceCsvReader(), createCsvExport(model));
+    const legacy = await people(
+      new ConfluenceCsvReader(),
+      createCsvExport(model, { legacyRestrictions: true }),
+    );
+    expect(csv).toEqual(xml);
+    expect(legacy).toEqual(xml);
+    expect(xml.summary).toMatchObject({
+      pages: 6,
+      blogPosts: 1,
+      versions: 2,
+      comments: 8,
+      likes: 4,
+      watchers: 3,
+    });
+    expect(xml.pages).toContainEqual({ id: PEOPLE_PAGE.blog, type: "blogPost" });
+    expect(xml.versions.map((version) => [version.version, version.authorId, version.title])).toEqual([
+      [1, ALICE.accountId, "Notes"],
+      [2, CAROL.accountId, "Release notes"],
+    ]);
+    const byId = new Map(xml.comments.map((comment) => [comment.sourceId, comment]));
+    expect(byId.get(PEOPLE_COMMENT.reply)).toMatchObject({
+      parentId: PEOPLE_COMMENT.root,
+      authorId: CAROL.accountId,
+    });
+    expect(byId.get(PEOPLE_COMMENT.inlineFound)?.inline).toEqual({
+      markerRef: "marker-found",
+      selection: "rollout window",
+    });
+    expect(byId.get(PEOPLE_COMMENT.inlineResolved)).toMatchObject({
+      status: "resolved",
+      resolvedById: ALICE.accountId,
+      resolvedAt: "2024-04-02T08:00:00.000Z",
+    });
+    expect(byId.get(PEOPLE_COMMENT.inlineDangling)?.status).toBe("dangling");
+    expect(xml.likes.map((like) => [like.contentId, like.personId])).toContainEqual([
+      PEOPLE_COMMENT.root,
+      CAROL.accountId,
+    ]);
+    expect(xml.permissions).toContainEqual({
+      type: "VIEWSPACE",
+      group: null,
+      personId: null,
+      allUsers: false,
+    });
+    expect(xml.permissions).toContainEqual({
+      type: "VIEWSPACE",
+      group: null,
+      personId: null,
+      allUsers: true,
+    });
+    expect(xml.permissions).toContainEqual({
+      type: "EDITSPACE",
+      group: null,
+      personId: BOB.accountId,
+      allUsers: false,
+    });
+    expect(xml.restrictions).toHaveLength(3);
+    expect(xml.restrictions).toEqual(
+      expect.arrayContaining([
+        { contentId: PEOPLE_PAGE.editors, kind: "edit", personId: null, group: "Editors" },
+        { contentId: PEOPLE_PAGE.secret, kind: "view", personId: CAROL.accountId, group: null },
+        { contentId: PEOPLE_PAGE.secret, kind: "view", personId: null, group: "hr-team" },
+      ]),
+    );
   });
 });
