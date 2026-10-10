@@ -1,5 +1,5 @@
 import { documentFromYDoc } from "@pagehall/editor-schema/yjs";
-import { accountPrincipal, type ServerRuntime } from "@pagehall/server";
+import { accountPrincipal, type ServerRuntime, SYSTEM } from "@pagehall/server";
 import { testDatabaseBaseUrl, testRedisUrl } from "@pagehall/server/testing";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
@@ -21,6 +21,13 @@ const redisUrl = testRedisUrl();
 
 function textOf(doc: Y.Doc): string {
   return JSON.stringify(documentFromYDoc(doc));
+}
+
+function rechecksOf(calls: unknown[][], itemId: string): Record<string, unknown>[] {
+  return calls
+    .filter(([, message]) => message === "Collaboration permission rechecked")
+    .map(([fields]) => fields as Record<string, unknown>)
+    .filter((fields) => fields.itemId === itemId);
 }
 
 describe.skipIf(!baseUrl)("collaboration server", () => {
@@ -284,6 +291,54 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
     await waitFor(() => client.closeReasons.includes("permissionRevoked"), 3000);
   });
 
+  it("disconnects a person who loses the edit permission in the space a page was moved to", async () => {
+    const target = await editor();
+    const runtime = cluster.runtimes[0] as ServerRuntime;
+    const destination = await cluster.fixtures.space(target.org.id, target.admin, {
+      grants: [{ principalKind: "account", principalId: target.account, role: "editor" }],
+    });
+    const client = open(first.url, target.itemId, { token: target.token });
+    await client.authenticated;
+    const logged = vi.spyOn(first.runtime.logger, "info");
+    try {
+      await runtime.services.tree.move(accountPrincipal(target.admin), target.itemId, {
+        spaceId: destination.id,
+        parentId: null,
+      });
+      await waitFor(() =>
+        rechecksOf(logged.mock.calls, target.itemId).some((fields) => fields.reason === "tree"),
+      );
+      const entry = (await runtime.services.spacePermissions.list(destination.id)).find(
+        (candidate) => candidate.principalId === target.account,
+      );
+      await runtime.services.spacePermissions.apply(accountPrincipal(target.admin), destination.id, {
+        action: "change",
+        permissionId: entry?.id ?? "",
+        role: "reader",
+      });
+      await waitFor(() => client.closeReasons.includes("permissionRevoked"), 3000);
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
+  it("disconnects a person who leaves the group that gave them the edit permission", async () => {
+    const target = await page();
+    const runtime = cluster.runtimes[0] as ServerRuntime;
+    const account = await cluster.fixtures.member(target.org.id);
+    const group = await cluster.fixtures.group(target.org.id, [account]);
+    await runtime.services.spacePermissions.apply(accountPrincipal(target.admin), target.space.id, {
+      action: "grant",
+      principalKind: "group",
+      principalId: group,
+      role: "editor",
+    });
+    const client = open(first.url, target.itemId, { token: await signIn(runtime, account) });
+    await client.authenticated;
+    await cluster.runtimes[1]?.services.groups.removeMember(SYSTEM, group, account);
+    await waitFor(() => client.closeReasons.includes("permissionRevoked"), 3000);
+  });
+
   it("logs every recheck and revocation with page, account, node, reason, duration and result only", async () => {
     const target = await editor();
     const client = open(first.url, target.itemId, { token: target.token });
@@ -302,10 +357,7 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
         role: "reader",
       });
       await waitFor(() => client.closeReasons.includes("permissionRevoked"), 3000);
-      const lines = logged.mock.calls
-        .filter(([, message]) => message === "Collaboration permission rechecked")
-        .map(([fields]) => fields as unknown as Record<string, unknown>)
-        .filter((fields) => fields.itemId === target.itemId);
+      const lines = rechecksOf(logged.mock.calls, target.itemId);
       expect(lines.at(-1)).toEqual({
         itemId: target.itemId,
         accountId: target.account,
