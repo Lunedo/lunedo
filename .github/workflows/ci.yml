@@ -34,6 +34,7 @@ jobs:
     outputs:
       lane: ${{ steps.scope.outputs.lane }}
       end-to-end: ${{ steps.scope.outputs.endToEnd }}
+      sweeps: ${{ steps.scope.outputs.sweeps }}
       identity-providers: ${{ steps.scope.outputs.identityProviders }}
       backup: ${{ steps.scope.outputs.backup }}
       base: ${{ steps.scope.outputs.base }}
@@ -312,6 +313,8 @@ jobs:
           echo "PAGEHALL_TEST_REPORT_DIR=$GITHUB_WORKSPACE/.test-reports" >> "$GITHUB_ENV"
           echo "PAGEHALL_TEST_JOB=End-to-end tests" >> "$GITHUB_ENV"
       - run: pnpm --filter @pagehall/web test:e2e
+        env:
+          PAGEHALL_E2E_SWEEPS: ${{ needs.scope.outputs.sweeps }}
       - if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

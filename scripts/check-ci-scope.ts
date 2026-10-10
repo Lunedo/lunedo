@@ -43,6 +43,7 @@ if (process.env.GITHUB_STEP_SUMMARY) {
     "",
     `- Changed files: ${files === null ? "unknown, running everything" : files.length}`,
     `- End-to-end, accessibility and visual tests: ${scope.endToEnd ? "run" : "skipped"}`,
+    `- Accessibility and screenshot sweeps: ${scope.sweeps ? "run" : "skipped"}`,
     `- Sign-in through identity providers: ${scope.identityProviders ? "run" : "skipped"}`,
     `- Backup round trip: ${scope.backup ? "run" : "skipped"}`,
   ];

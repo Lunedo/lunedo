@@ -9,6 +9,7 @@ export interface ScopeInput {
 export interface Scope {
   lane: Lane;
   endToEnd: boolean;
+  sweeps: boolean;
   identityProviders: boolean;
   backup: boolean;
 }
@@ -26,6 +27,17 @@ export const everythingPaths = [
 ];
 
 export const endToEndPaths = ["apps/web/", "packages/ui/", "packages/tokens/"];
+
+export const sweepPaths = [
+  "apps/web/src/",
+  "apps/web/e2e/",
+  "apps/web/public/",
+  "apps/web/index.html",
+  "apps/web/vite.config.ts",
+  "apps/web/playwright.config.ts",
+  "packages/ui/",
+  "packages/tokens/",
+];
 
 export const identityProviderPaths = [
   "packages/server/src/identity/",
@@ -69,14 +81,17 @@ function touches(files: readonly string[], paths: readonly string[]): boolean {
 export function scopeOf(input: ScopeInput): Scope {
   const pullRequest = input.event === "pull_request";
   const lane: Lane = pullRequest && input.draft ? "fast" : "full";
-  if (lane === "fast") return { lane, endToEnd: false, identityProviders: false, backup: false };
+  if (lane === "fast")
+    return { lane, endToEnd: false, sweeps: false, identityProviders: false, backup: false };
   const files = input.files;
   if (!pullRequest || files === null || touches(files, everythingPaths)) {
-    return { lane, endToEnd: true, identityProviders: true, backup: true };
+    return { lane, endToEnd: true, sweeps: true, identityProviders: true, backup: true };
   }
+  const endToEnd = touches(files, endToEndPaths);
   return {
     lane,
-    endToEnd: touches(files, endToEndPaths),
+    endToEnd,
+    sweeps: endToEnd && touches(files, sweepPaths),
     identityProviders: touches(files, identityProviderPaths),
     backup: touches(files, backupPaths),
   };

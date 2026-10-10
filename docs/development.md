@@ -174,6 +174,7 @@ Screens are built from the components in `packages/ui`; `/dev/components` shows 
 | Job | Runs on pull requests when these change |
 |---|---|
 | End-to-end, accessibility and visual tests | `apps/web/`, `packages/ui/`, `packages/tokens/` |
+| Accessibility and screenshot sweeps, inside the end-to-end job | `apps/web/src/`, `apps/web/e2e/`, `apps/web/public/`, `apps/web/index.html`, `apps/web/vite.config.ts`, `apps/web/playwright.config.ts`, `packages/ui/`, `packages/tokens/` |
 | Sign-in through identity providers | identity, authentication and sign-in code in server, API and web client including SAML and LDAP, the shared provider configuration, `apps/web/e2e/idp/`, the end-to-end setup, `docker/idp/`, `docker/compose.dev.yml` |
 | Backup round trip (builds the image for amd64 only) | `packages/server/src/backup/`, `packages/server/drizzle/`, `apps/worker/src/cli/`, `docker/Dockerfile`, `docker/start.sh`, `scripts/backup-roundtrip.sh` |
 
