@@ -2072,6 +2072,10 @@
       "imports_folderEnabled": {
         "label": "Import-Ordner",
         "description": "Die Organisations-Administration kann Exporte importieren, die im Unterordner ihrer Organisation im Import-Ordner liegen; er heißt wie der Kurzname der Organisation. Dateien auf oberster Ebene oder im Unterordner einer anderen Organisation werden nie angeboten."
+      },
+      "imports_atlassianHosts": {
+        "label": "Weitere Atlassian-Sites",
+        "description": "Hostnamen, mit denen Pagehall das API-Token eines Imports außer Sites unter atlassian.net verwenden darf, durch Kommas getrennt, etwa wiki.example.com."
       }
     },
     "disabled": {
@@ -5884,7 +5888,10 @@
       "pages": "Seiten und Seitenbaum",
       "attachments": "Anhänge",
       "content": "Seiteninhalt, Links und Labels",
-      "finish": "Bericht"
+      "finish": "Bericht",
+      "comments": "Kommentare und Inline-Kommentare",
+      "reactions": "Likes",
+      "permissions": "Berechtigungen"
     },
     "list": {
       "title": "Importe",
@@ -5916,7 +5923,8 @@
       "stepNames": {
         "source": "Quelle",
         "space": "Space",
-        "check": "Prüfen und starten"
+        "check": "Prüfen und starten",
+        "people": "Personen"
       },
       "progress": "Neuer Import · Schritt {step} von {total}",
       "close": "Schließen",
@@ -5975,7 +5983,13 @@
         "reviewersHint": "Sie können den Quarantäne-Space und den Bericht lesen, den Import aber nicht übernehmen, verwerfen oder stoppen. Füge die Personen hinzu, denen der Space später gehören soll.",
         "addReviewer": "Import-Prüfer hinzufügen",
         "removeReviewer": "{name} entfernen",
-        "reviewersFailed": "Die Import-Prüfer konnten nicht geändert werden"
+        "reviewersFailed": "Die Import-Prüfer konnten nicht geändert werden",
+        "history": {
+          "current": "Nur der aktuelle Stand",
+          "currentDescription": "Am schnellsten. Jede Seite beginnt mit einer Version.",
+          "full": "Vollständiger Seitenverlauf",
+          "fullDescription": "Jede Confluence-Version wird eine Pagehall-Version mit Autor und Datum. Dauert deutlich länger."
+        }
       },
       "check": {
         "intro": "Pagehall hat den Export gelesen. Noch ist nichts importiert.",
@@ -5985,7 +5999,6 @@
         "macros": "{count, plural, one {Makroart} other {Makroarten}}",
         "foundTitle": "Im Export gefunden",
         "peopleTitle": "{count, plural, one {# Person} other {# Personen}}",
-        "peopleDescription": "Sie werden zu Platzhaltern mit ihrer Atlassian-ID als Namen. Du kannst sie später mit Konten verknüpfen.",
         "macrosTitle": "{count, plural, one {# Makroart} other {# Makroarten}}",
         "macrosDescription": "Bleiben mit ihren Originaldaten als „noch nicht angezeigt“ erhalten. Lesende sehen einen Hinweis; der Bericht listet sie auf.",
         "spaceTitle": "Space „{name}“ ({key})",
@@ -5997,7 +6010,19 @@
         "start": "Import starten",
         "startFailed": "Der Import konnte nicht gestartet werden",
         "notReady": "Pagehall liest den Export noch. Starte den Import, wenn das erledigt ist.",
-        "notRead": "Der Export wurde noch nicht gelesen. Geh zurück zum ersten Schritt und wähle die Datei."
+        "notRead": "Der Export wurde noch nicht gelesen. Geh zurück zum ersten Schritt und wähle die Datei.",
+        "blogPosts": "{count, plural, one {Blogbeitrag} other {Blogbeiträge}}",
+        "comments": "{count, plural, one {Kommentar} other {Kommentare}}",
+        "peopleBy": {
+          "token": "Namen und E-Mail-Adressen kommen über das API-Token. Personen werden per E-Mail-Adresse Konten zugeordnet; alle anderen werden Platzhalter, die du im Bericht zuordnen kannst.",
+          "list": "Namen und E-Mail-Adressen kommen aus der Benutzerliste. Personen werden per E-Mail-Adresse Konten zugeordnet; alle anderen werden Platzhalter, die du im Bericht zuordnen kannst.",
+          "skip": "Sie werden Platzhalter mit ihrer Atlassian-ID als Namen. Du kannst sie später mit einer Benutzerliste auflösen oder im Bericht zuordnen."
+        },
+        "historyFull": "{count, plural, one {# frühere Version} other {# frühere Versionen}} mit Autor und Datum importiert",
+        "historyCurrent": "Nur der aktuelle Stand · {count, plural, one {# frühere Version} other {# frühere Versionen}} ausgelassen",
+        "extras": "{likes, plural, one {# Like wird eine 👍-Reaktion} other {# Likes werden 👍-Reaktionen}}. {watchers, plural, one {# Beobachter wird} other {# Beobachter werden}} nur gezählt.",
+        "permissionsTitle": "Berechtigungen",
+        "permissionsDescription": "Übernommen, soweit sie zu Pagehall-Rollen passen, und im Bericht zur Prüfung markiert. Anonymer Zugriff wird nicht übernommen."
       }
     },
     "upload": {
@@ -6065,7 +6090,11 @@
       "discarding": "Der Import wird verworfen",
       "discardFailed": "Der Import konnte nicht verworfen werden",
       "typeKey": "Gib {key} zur Bestätigung ein",
-      "keyMismatch": "Gib den Schlüssel {key} genau so ein, wie er angezeigt wird."
+      "keyMismatch": "Gib den Schlüssel {key} genau so ein, wie er angezeigt wird.",
+      "tokenDeletedTitle": "API-Token gelöscht",
+      "tokenDeleted": "Pagehall hat das Atlassian-API-Token am {when} gelöscht.",
+      "tokenKeptTitle": "API-Token",
+      "tokenKept": "Das Atlassian-API-Token bleibt verschlüsselt gespeichert, bis du den Import übernimmst oder verwirfst, und wird dann gelöscht."
     },
     "report": {
       "tabs": "Bericht",
@@ -6078,8 +6107,8 @@
       "counts": {
         "pages": "{count, plural, one {Seite} other {Seiten}}",
         "attachments": "{count, plural, one {Anhang} other {Anhänge}}",
-        "people": "{count, plural, one {Person} other {Personen}}",
-        "problems": "{count, plural, one {Punkt zu prüfen} other {Punkte zu prüfen}}"
+        "blogPosts": "{count, plural, one {Blogbeitrag} other {Blogbeiträge}}",
+        "comments": "{count, plural, one {Kommentar} other {Kommentare}}"
       },
       "attention": "Zu prüfen",
       "clean": "Nichts zu prüfen",
@@ -6182,18 +6211,40 @@
           "title": "{count, plural, one {# Ordnereintrag} other {# Ordnereinträge}} übersprungen",
           "hint": "Ordner im Archiv enthalten keinen Inhalt.",
           "entry": "{name} wurde übersprungen."
+        },
+        "inlineCommentMoved": {
+          "title": "{count, plural, one {# Inline-Kommentar hat seinen Text verloren} other {# Inline-Kommentare haben ihren Text verloren}}",
+          "hint": "Sie sind jetzt Seitenkommentare mit dem zitierten Text.",
+          "entry": "Inline-Kommentar zu den Seitenkommentaren verschoben: Der zitierte Text „{quote}“ steht nicht mehr auf der Seite."
+        },
+        "tooManyComments": {
+          "title": "{count, plural, one {# Kommentar über dem Limit} other {# Kommentare über dem Limit}}",
+          "hint": "Eine Seite behält bis zu 2.000 Kommentare; der Rest wurde ausgelassen.",
+          "entry": "Kommentar ausgelassen: Die Seite hat bereits 2.000 Kommentare."
         }
-      }
+      },
+      "people": "Personen",
+      "comments": "Kommentare",
+      "permissions": "Berechtigungen",
+      "noCommentProblems": "Alle Kommentare sind an ihrem Platz angekommen",
+      "placeholdersTitle": "{count, plural, one {# Person ohne Konto} other {# Personen ohne Konto}}",
+      "placeholdersHint": "Sie sind jetzt Platzhalter; ordne sie Konten zu.",
+      "permissionsTitle": "{count, plural, one {# Berechtigung zu prüfen} other {# Berechtigungen zu prüfen}}",
+      "permissionsHint": "Übernommen, soweit sie zu Pagehall-Rollen passen."
     },
     "accept": {
       "title": "„{name}“ übernehmen?",
-      "intro": "„{name}“ wird ein regulärer Space von {organization}. Lege fest, wer dann Zugriff bekommt; die Standardberechtigungen der Organisation für neue Spaces sind eingetragen.",
+      "intro": "„{name}“ wird ein regulärer Space von {organization}. Die Berechtigungen aus Confluence sind eingetragen; ändere sie vor dem Übernehmen, wenn nötig.",
       "archived": "Der Space wird archiviert: nur lesbar und standardmäßig nicht in der Suche.",
-      "placeholders": "Personen aus dem Export bleiben Platzhalter. Sie lassen sich nach der Übernahme mit Konten verknüpfen.",
+      "placeholders": "{count, plural, one {# Person bleibt Platzhalter} other {# Personen bleiben Platzhalter}}. Du kannst sie nach dem Übernehmen zuordnen.",
       "submit": "Import übernehmen",
       "failed": "Der Import konnte nicht übernommen werden",
-      "defaultsFailed": "Die Standardberechtigungen konnten nicht geladen werden",
-      "done": "{name} ist jetzt ein regulärer Space."
+      "done": "{name} ist jetzt ein regulärer Space.",
+      "proposalFailed": "Die importierten Berechtigungen konnten nicht geladen werden",
+      "pending": "{count, plural, one {# importierte Rolle wartet darauf, dass eine Person oder Gruppe zugeordnet wird, und gilt dann.} other {# importierte Rollen warten darauf, dass Personen oder Gruppen zugeordnet werden, und gelten dann.}}",
+      "defaultsUsed": "Der Export enthält keine Space-Berechtigungen, deshalb sind die Standards der Organisation für neue Spaces eingetragen.",
+      "importedHint": "Aus Confluence übernommene Rollen. Ändere sie bei Bedarf.",
+      "defaultsHint": "Deine Organisation schlägt diese Rollen für neue Spaces vor. Ändere sie bei Bedarf."
     },
     "errors": {
       "unknown": {
@@ -6330,6 +6381,142 @@
     "folder": {
       "path": "Import-Ordner dieser Organisation",
       "pathHint": "Pagehall bietet nur Dateien an, die direkt in diesem Ordner liegen. Der Ordner heißt wie der Kurzname der Organisation; ändert sich der Kurzname, ändert sich auch der Pfad."
+    },
+    "people": {
+      "intro": "Confluence-Exporte nennen Personen nur mit einer Atlassian-ID, ohne Namen oder E-Mail-Adresse. Pagehall braucht eine dieser Quellen, um zu erkennen, wer was geschrieben hat. Personen werden nur per E-Mail-Adresse Konten zugeordnet.",
+      "title": "Wie soll Pagehall Personen erkennen?",
+      "token": {
+        "label": "API-Token nur zum Lesen",
+        "description": "Am vollständigsten: Namen und, wo sichtbar, E-Mail-Adressen.",
+        "missing": "Prüfe und speichere zuerst das API-Token oder wähle einen anderen Weg.",
+        "site": "Confluence-Site",
+        "siteHint": "Deine Confluence-Cloud-Adresse, etwa example.atlassian.net. Pagehall verbindet sich nur mit dieser Site.",
+        "email": "Deine Atlassian-E-Mail-Adresse",
+        "token": "API-Token",
+        "tokenHint": "Anlegen unter id.atlassian.com › Sicherheit › API-Token. Lesezugriff genügt. Pagehall speichert es verschlüsselt, nutzt es nur für diesen Import und löscht es danach.",
+        "siteRequired": "Gib die Adresse deiner Confluence-Site ein, etwa example.atlassian.net.",
+        "emailInvalid": "Gib die E-Mail-Adresse deines Atlassian-Kontos ein.",
+        "tokenRequired": "Füge das API-Token ein.",
+        "check": "Token prüfen und speichern",
+        "checkFailed": "Das Token konnte nicht geprüft werden",
+        "checkFailedAction": "Prüfe Site, E-Mail-Adresse und Token und versuche es noch einmal.",
+        "connected": "Verbunden mit {site}",
+        "connectedPlain": "Das Token funktioniert. Pagehall liest die Personen, wenn der Import läuft.",
+        "found": "{people, plural, one {# Person} other {# Personen}} des Exports gefunden, {withEmail} mit sichtbarer E-Mail-Adresse.",
+        "replace": "Token ersetzen"
+      },
+      "list": {
+        "label": "Benutzerliste aus der Atlassian-Administration",
+        "description": "Wenn du kein Token anlegen kannst, oder für Data Center.",
+        "missing": "Lade zuerst die Benutzerliste hoch oder wähle einen anderen Weg."
+      },
+      "skip": {
+        "label": "Vorerst überspringen",
+        "description": "Autoren werden Platzhalter, bis du sie auflöst.",
+        "missing": "Bestätige, dass alle Autoren Platzhalter werden.",
+        "confirm": "Mir ist klar, dass alle Autoren Platzhalter mit ihrer Atlassian-ID werden. Ich kann später noch eine Benutzerliste hochladen und sie auflösen."
+      },
+      "saveFailed": "Die Auswahl konnte nicht gespeichert werden",
+      "listDrop": "Benutzerliste hier ablegen oder Datei wählen",
+      "listHint": "CSV aus admin.atlassian.com › Verzeichnis › Benutzer › Benutzer exportieren, bis 10 MB.",
+      "listChoose": "Datei wählen",
+      "listReading": "Wird gelesen …",
+      "listFailed": "Die Benutzerliste {name} konnte nicht gelesen werden",
+      "listTooLarge": "Die Datei hat {size}; eine Benutzerliste darf höchstens 10 MB haben.",
+      "listFailedAction": "Exportiere die Liste erneut aus der Atlassian-Administration und wähle die CSV-Datei.",
+      "listRetry": "Noch einmal versuchen",
+      "listRead": "Gelesen",
+      "listResult": "{people, plural, one {# Person} other {# Personen}} in der Liste, {withEmail} mit E-Mail-Adresse.",
+      "unknown": "Unbekannte Person",
+      "noEmail": "Keine E-Mail-Adresse sichtbar",
+      "inConfluence": "In Confluence",
+      "content": "Inhalte",
+      "account": "Pagehall-Konto",
+      "owns": "{items, plural, one {# Seite} other {# Seiten}}, {comments, plural, one {# Kommentar} other {# Kommentare}}",
+      "spaceRole": "Rolle im Space: {role}",
+      "restricted": "{count, plural, one {Öffnet # eingeschränkte Seite} other {Öffnet # eingeschränkte Seiten}}",
+      "mappedTo": "Zugeordnet zu {name}",
+      "placeholder": "Platzhalter",
+      "filter": "Personen filtern",
+      "filterPlaceholder": "Name, E-Mail-Adresse oder ID",
+      "mappedCount": "{mapped} von {total} zugeordnet",
+      "uploadList": "Benutzerliste hochladen",
+      "uploadListHint": "Verbleibende Platzhalter werden Mitgliedern mit derselben E-Mail-Adresse zugeordnet. Personen ohne Treffer bekommen den Namen aus der Liste.",
+      "listApplied": "{matched} per E-Mail-Adresse zugeordnet, {named} benannt, {remaining} Platzhalter bleiben.",
+      "loadFailed": "Die Personen konnten nicht geladen werden",
+      "none": "Alle haben ein Konto",
+      "noneDescription": "Alle Personen des Exports wurden per E-Mail-Adresse zugeordnet.",
+      "noMatch": "Niemand passt zum Filter",
+      "noMatchDescription": "Versuche einen anderen Teil des Namens, die E-Mail-Adresse oder die Atlassian-ID.",
+      "clearFilter": "Filter zurücksetzen",
+      "caption": "Personen des Exports ohne Konto",
+      "chosenRegion": "Gewählte Zuordnungen",
+      "chosen": "{count, plural, one {# Person gewählt} other {# Personen gewählt}}",
+      "clearChoices": "Auswahl verwerfen",
+      "map": "{count, plural, one {# Person zuordnen} other {# Personen zuordnen}}",
+      "confirmTitle": "{count, plural, one {# Person zuordnen?} other {# Personen zuordnen?}}",
+      "confirmDescription": "Seiten, Kommentare, Erwähnungen, Aufgaben, Reaktionen und Einschränkungen gehen sofort auf die gewählten Konten über. Niemand wird benachrichtigt. Eine Zuordnung lässt sich nicht rückgängig machen.",
+      "confirmRow": "{from} wird {to}",
+      "confirmAccess": "{count, plural, one {{names} bekommt dadurch auch Zugriff auf eingeschränkte Seiten oder eine Rolle im Space.} other {{names} bekommen dadurch auch Zugriff auf eingeschränkte Seiten oder eine Rolle im Space.}}",
+      "keepPlaceholders": "Platzhalter behalten",
+      "mapped": "{count, plural, one {# Person zugeordnet} other {# Personen zugeordnet}}",
+      "mapFailed": "Die Personen konnten nicht zugeordnet werden",
+      "accountFor": "Konto für {name}",
+      "keepPlaceholder": "Mitglied suchen",
+      "similar": "Ähnlicher Name:",
+      "useCandidate": "{name} wählen"
+    },
+    "permissions": {
+      "allUsers": "Alle angemeldeten Benutzer",
+      "anonymous": "Anonyme Besucher",
+      "group": "Gruppe „{name}“",
+      "restriction": {
+        "view": "{holder} darf „{title}“ ansehen",
+        "edit": "{holder} darf „{title}“ bearbeiten"
+      },
+      "notTaken": "Nicht übernommen",
+      "allMembers": "Alle Mitglieder",
+      "pageRole": {
+        "reader": "{who} darf die Seite ansehen",
+        "editor": "{who} darf die Seite bearbeiten"
+      },
+      "spaceRole": "{who}: {role}",
+      "groupsFailed": "Die Gruppen konnten nicht geladen werden",
+      "groups": "Gruppen aus Confluence",
+      "loadFailed": "Die Berechtigungen konnten nicht geladen werden",
+      "none": "Keine Berechtigungen im Export",
+      "noneDescription": "Der Export enthält keine Space-Berechtigungen und keine Seiteneinschränkungen. Wähle beim Übernehmen, wer Zugriff bekommt.",
+      "caption": "Aus Confluence übernommene Berechtigungen",
+      "inConfluence": "In Confluence",
+      "inPagehall": "In Pagehall",
+      "status": "Status",
+      "statuses": {
+        "mapped": "Übernommen",
+        "check": "Prüfen",
+        "waiting": "Wartet auf eine Person",
+        "missing": "Gruppe fehlt",
+        "notTaken": "Nicht übernommen"
+      },
+      "codes": {
+        "widened": "Pagehall erlaubt mehr als Confluence, etwa Seiten löschen oder Einschränkungen setzen.",
+        "narrowed": "Confluence erlaubte mehr als diese Rolle, etwa Seiten oder Anhänge löschen; dieser Teil wird nicht übernommen.",
+        "withoutView": "Ohne die Berechtigung, den Space anzusehen, wird nichts übernommen.",
+        "anonymous": "Öffentlicher Zugriff ist für diesen Space nicht verfügbar.",
+        "groupMissing": "Keine Gruppe mit diesem Namen. Ordne eine bestehende Gruppe zu oder lege eine an.",
+        "placeholder": "Ordne die Person im Tab Personen einem Konto zu."
+      },
+      "groupMapped": "„{name}“ ist zugeordnet",
+      "groupFailed": "„{name}“ konnte nicht zugeordnet werden",
+      "chooseGroup": "Gruppe für „{name}“",
+      "searchGroup": "Gruppe suchen",
+      "mapGroup": "Gruppe zuordnen",
+      "createGroup": "Gruppe „{name}“ anlegen",
+      "createTitle": "Gruppe „{name}“ anlegen?",
+      "mapTitle": "„{from}“ zu „{to}“ zuordnen?",
+      "mapDescription": "Mitglieder der Gruppe bekommen beim Übernehmen des Imports die Rolle {role} im Space, und {count, plural, =0 {es öffnen sich keine eingeschränkten Seiten} one {# eingeschränkte Seite öffnet sich} other {# eingeschränkte Seiten öffnen sich}} sofort für sie. Niemand wird benachrichtigt. Das lässt sich nicht rückgängig machen.",
+      "noRole": "keine",
+      "keepUnmapped": "Nicht zuordnen",
+      "chooseGroupFirst": "Wähle zuerst eine Gruppe oder lege eine mit diesem Namen an."
     }
   }
 }

@@ -11,7 +11,12 @@ import {
   STATE_DIR,
   writeState,
 } from "./support/environment.js";
-import { FOLDER_EXPORT_TEMPLATE, IMPORT_DIR, writeSyntheticExport } from "./support/imports.js";
+import {
+  FOLDER_EXPORT_TEMPLATE,
+  IMPORT_DIR,
+  PEOPLE_EXPORT_TEMPLATE,
+  writeSyntheticExport,
+} from "./support/imports.js";
 
 const appRoot = fileURLToPath(new URL("../../..", import.meta.url));
 const webRoot = fileURLToPath(new URL("../dist", import.meta.url));
@@ -104,6 +109,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   mkdirSync(env.PAGEHALL_FILES_DIR as string, { recursive: true });
   mkdirSync(IMPORT_DIR, { recursive: true });
   await writeSyntheticExport("csv", FOLDER_EXPORT_TEMPLATE);
+  await writeSyntheticExport("csv", PEOPLE_EXPORT_TEMPLATE, "people");
 
   const log: string[] = [];
   let setupCode: string | null = null;

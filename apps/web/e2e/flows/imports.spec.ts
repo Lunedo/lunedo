@@ -36,6 +36,15 @@ test("an administrator uploads an XML export, a reviewer reads it in quarantine 
   await expectAccessible(page, "import source step");
   await page.getByRole("button", { name: "Continue" }).click();
 
+  await expect(page.getByRole("heading", { name: "People", level: 1 })).toBeVisible();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByText("Check and save the API token first, or choose another way.")).toBeVisible();
+  await page.getByRole("radio", { name: /Skip for now/ }).check();
+  await page.getByRole("checkbox", { name: /every author becomes a placeholder/ }).click();
+  await expect(page.getByRole("checkbox", { name: /every author becomes a placeholder/ })).toBeChecked();
+  await expectAccessible(page, "import people step");
+  await page.getByRole("button", { name: "Continue" }).click();
+
   await expect(page.getByRole("heading", { name: "Space", level: 1 })).toBeVisible();
   await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Synthetic space");
   await page.getByLabel("Key", { exact: true }).fill(key);
@@ -108,6 +117,10 @@ test("an administrator imports a CSV export from the import folder and discards 
   await page.getByRole("combobox", { name: "File in the import folder" }).click();
   await page.getByRole("option", { name: new RegExp(FOLDER_EXPORT) }).click();
   await expect(page.getByText("Export read")).toBeVisible({ timeout: 60_000 });
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("radio", { name: /Skip for now/ }).check();
+  await page.getByRole("checkbox", { name: /every author becomes a placeholder/ }).click();
+  await expect(page.getByRole("checkbox", { name: /every author becomes a placeholder/ })).toBeChecked();
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByLabel("Key", { exact: true }).fill(key);
   await page.getByRole("button", { name: "Continue" }).click();
