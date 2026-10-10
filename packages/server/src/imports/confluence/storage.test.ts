@@ -179,7 +179,7 @@ describe("storage format conversion", () => {
     expect(macros.map((node) => node.attrs?.name)).toEqual(["status", "info", "code"]);
     expect(macros[0]?.attrs?.data).toMatchObject({ parameters: { title: "Done", colour: "Green" } });
     expect(macros[1]?.attrs?.data).toMatchObject({ body: "<p>Info panel</p>", bodyKind: "rich" });
-    expect(macros[2]?.attrs?.data).toMatchObject({ body: "const a = 1 < 2;", bodyKind: "plain" });
+    expect(macros[2]?.attrs?.data).toMatchObject({ body: "const a = list[1 < 2]", bodyKind: "plain" });
   });
 
   it("keeps the text around an inline macro in order", async () => {

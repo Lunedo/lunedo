@@ -27,10 +27,10 @@ interface XmlObject {
 
 const LINKED_COLLECTION = "contentProperties";
 
-const NESTED_CDATA_END = "]] >";
+const NESTED_CDATA_END = /\]\] (\]*>)/g;
 
 export function unescapeNestedCdata(body: string): string {
-  return body.includes(NESTED_CDATA_END) ? body.replaceAll(NESTED_CDATA_END, "]]>") : body;
+  return body.includes("]] ") ? body.replace(NESTED_CDATA_END, "]]$1") : body;
 }
 
 const WANTED = new Set([

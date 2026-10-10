@@ -57,7 +57,7 @@ const RICH_BODY = [
   '<ac:parameter ac:name="colour">Green</ac:parameter></ac:structured-macro> end</p>',
   '<ac:structured-macro ac:name="info" ac:schema-version="1"><ac:rich-text-body><p>Info panel</p></ac:rich-text-body></ac:structured-macro>',
   '<ac:structured-macro ac:name="code" ac:schema-version="1"><ac:parameter ac:name="language">js</ac:parameter>',
-  "<ac:plain-text-body><![CDATA[const a = 1 < 2;]]></ac:plain-text-body></ac:structured-macro>",
+  "<ac:plain-text-body><![CDATA[const a = list[1 < 2]]]></ac:plain-text-body></ac:structured-macro>",
   '<ac:layout><ac:layout-section ac:type="two_equal"><ac:layout-cell><p>Left</p></ac:layout-cell>',
   "<ac:layout-cell><p>Right</p></ac:layout-cell></ac:layout-section></ac:layout>",
   '<p><time datetime="2024-05-06" /></p>',
