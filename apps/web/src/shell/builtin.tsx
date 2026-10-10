@@ -6,6 +6,7 @@ import {
   CircleHelp,
   FileClock,
   Globe,
+  Import,
   KeyRound,
   Languages,
   Layers,
@@ -185,6 +186,15 @@ navigationItems.register(
     labelKey: "navigation.templates",
     to: `${ORGANIZATION}/templates`,
     permission: "organization.templates.manage",
+  },
+  {
+    id: "organization.imports",
+    order: 97.5,
+    section: "organization",
+    icon: Import,
+    labelKey: "navigation.imports",
+    to: `${ORGANIZATION}/imports`,
+    permission: "organization.imports.manage",
   },
   {
     id: "organization.access",

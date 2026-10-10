@@ -540,6 +540,26 @@ const organizationAccessRoute = organizationScreen(
   "AccessOverviewScreen",
 );
 
+const importsRoute = organizationScreen(
+  "/imports",
+  () => import("./imports/imports-screen.js"),
+  "ImportsScreen",
+);
+const importWizardRoute = createRoute({
+  getParentRoute: () => organizationRoute,
+  path: "/imports/$importId/setup",
+  params: { parse: (params) => ({ importId: z.uuid().parse(params.importId) }) },
+  validateSearch: z.object({ step: z.coerce.number().int().min(0).max(2).optional() }),
+  component: lazyRouteComponent(() => import("./imports/import-wizard-screen.js"), "ImportWizardScreen"),
+});
+const importRoute = createRoute({
+  getParentRoute: () => organizationRoute,
+  path: "/imports/$importId",
+  params: { parse: (params) => ({ importId: z.uuid().parse(params.importId) }) },
+  validateSearch: z.object({ tab: z.enum(["summary", "macros", "attachments"]).optional() }),
+  component: lazyRouteComponent(() => import("./imports/import-screen.js"), "ImportScreen"),
+});
+
 const organizationAuditRoute = organizationScreen(
   "/audit-log",
   () => import("./screens/organization/audit-screen.js"),
@@ -733,6 +753,9 @@ const routeTree = rootRoute.addChildren([
         organizationContentRoute,
         organizationTemplatesRoute,
         organizationAccessRoute,
+        importsRoute,
+        importWizardRoute,
+        importRoute,
         organizationAuditRoute,
       ]),
       instanceRoute.addChildren([

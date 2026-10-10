@@ -2,6 +2,7 @@ import { Button, Drawer, IconButton, Menu, Notice, Skeleton } from "@pagehall/ui
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, Link, Outlet, useLocation, useNavigate, useParams } from "@tanstack/react-router";
 import {
+  FileInput,
   FilePlus,
   Folder,
   Home,
@@ -308,6 +309,26 @@ function SpaceNavigation({
           onClick={shell.toggleSidebar}
         />
       </div>
+      {space.quarantined ? (
+        <div className="mx-2 mb-2 flex items-start gap-2 rounded-sm bg-warning-soft px-2 py-1 text-xs">
+          <FileInput aria-hidden="true" className="size-icon-sm shrink-0" />
+          <span className="flex flex-col gap-1">
+            <span>
+              <span className="font-semibold">{t("imports.quarantine.title")}</span> ·{" "}
+              {t("imports.quarantine.description")}
+            </span>
+            {space.organizationId ? (
+              <Link
+                to="/settings/organizations/$organizationId/imports"
+                params={{ organizationId: space.organizationId }}
+                className="font-medium text-accent hover:underline focus-visible:focus-ring"
+              >
+                {t("imports.quarantine.open")}
+              </Link>
+            ) : null}
+          </span>
+        </div>
+      ) : null}
       {space.confidential ? (
         <p className="mx-2 mb-2 flex items-start gap-2 rounded-sm bg-accent-soft px-2 py-1 text-xs">
           <Lock aria-hidden="true" className="size-icon-sm shrink-0" />

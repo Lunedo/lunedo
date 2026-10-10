@@ -1,7 +1,7 @@
 import { Badge, Button, EmptyState, Input, PageHeader, Select, Skeleton } from "@pagehall/ui";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
-import { Layers, Lock, Plus, Search, User, Users } from "lucide-react";
+import { FileInput, Layers, Lock, Plus, Search, User, Users } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
@@ -280,6 +280,11 @@ function SpaceCard({ space, showOrganization }: { space: Space; showOrganization
         ) : null}
         <div className="mt-auto flex flex-wrap gap-2 pt-1">
           <Badge variant="neutral">{t(`spaces.visibility.${space.visibility}.short`)}</Badge>
+          {space.quarantined ? (
+            <Badge variant="warning" icon={FileInput}>
+              {t("imports.quarantine.title")}
+            </Badge>
+          ) : null}
           {space.confidential ? (
             <Badge variant="accent" icon={Lock}>
               {space.oneOnOne ? t("confidential.oneOnOneBadge") : t("confidential.badge")}

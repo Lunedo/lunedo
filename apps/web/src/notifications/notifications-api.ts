@@ -12,6 +12,7 @@ import { instanceKeys } from "../api/instance-queries.js";
 import { organizationKeys } from "../api/organization-queries.js";
 import { queryKeys } from "../api/queries.js";
 import { request } from "../api/request.js";
+import { importChanged } from "../imports/imports-api.js";
 import { isSpaceChangeEvent, type SpaceChangeEvent, spacesChanged } from "../spaces/space-queries.js";
 
 export const notificationKeys = {
@@ -228,7 +229,17 @@ export function useNotificationStream(enabled: boolean): void {
         spacesChanged(queryClient, events);
       }, CHANGE_BATCH_MS);
     };
+    const onImports = (event: MessageEvent<string>) => {
+      try {
+        const data = JSON.parse(event.data) as { importId?: unknown; organizationId?: unknown };
+        if (typeof data.importId !== "string" || typeof data.organizationId !== "string") return;
+        importChanged(queryClient, { importId: data.importId, organizationId: data.organizationId });
+      } catch {
+        return;
+      }
+    };
     source.addEventListener("notifications", onChange);
+    source.addEventListener("imports", onImports);
     source.addEventListener("spaces", onSpaces);
     source.addEventListener("changes", onObjects);
     source.addEventListener("settings", onSettings);
@@ -239,6 +250,7 @@ export function useNotificationStream(enabled: boolean): void {
       source.removeEventListener("syncRuns", onSyncRuns);
       source.removeEventListener("changes", onObjects);
       source.removeEventListener("spaces", onSpaces);
+      source.removeEventListener("imports", onImports);
       if (flush) clearTimeout(flush);
       if (flushSpaces) clearTimeout(flushSpaces);
       source.close();
