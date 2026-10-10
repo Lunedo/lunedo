@@ -41,7 +41,7 @@
   "dependencies": {
     "@pagehall/tokens": "workspace:*",
     "cmdk": "^1.1.1",
-    "lucide-react": "^1.49.0",
-    "radix-ui": "^1.6.7"
+    "lucide-react": "^1.52.0",
+    "radix-ui": "^1.7.0"
   }
 }
