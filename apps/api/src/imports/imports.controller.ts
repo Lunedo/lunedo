@@ -577,6 +577,7 @@ export class ImportsController {
             category: "attachments",
             code: "missingAttachment",
             item: { id: exampleImport.organizationId, title: "Network overview" },
+            restricted: false,
             details: { fileName: "diagram.png" },
           },
         ],
@@ -598,7 +599,14 @@ export class ImportsController {
       after: cursor?.id,
       limit: query.limit,
     });
-    return { items: page.entries, nextCursor: page.next ? encodeCursor({ id: page.next }) : null };
+    return {
+      items: page.entries.map(({ item, ...entry }) => ({
+        ...entry,
+        item: item?.title == null ? null : { id: item.id, title: item.title },
+        restricted: item !== null && item.title === null,
+      })),
+      nextCursor: page.next ? encodeCursor({ id: page.next }) : null,
+    };
   }
 
   @Put("imports/:importId/people-source")

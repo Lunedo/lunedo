@@ -31650,11 +31650,8 @@
                                     "description": "ID of the page."
                                   },
                                   "title": {
-                                    "description": "Title of the page, or null when the caller cannot read it.",
-                                    "type": [
-                                      "string",
-                                      "null"
-                                    ]
+                                    "type": "string",
+                                    "description": "Title of the page."
                                   }
                                 },
                                 "required": [
@@ -31667,7 +31664,11 @@
                                 "type": "null"
                               }
                             ],
-                            "description": "The affected page, or null when the problem concerns the export as a whole."
+                            "description": "The affected page, or null when the problem concerns the export as a whole or a page the caller cannot read."
+                          },
+                          "restricted": {
+                            "type": "boolean",
+                            "description": "True when the problem concerns a page the caller cannot read; `item` is then null."
                           },
                           "details": {
                             "type": "object",
@@ -31683,6 +31684,7 @@
                           "category",
                           "code",
                           "item",
+                          "restricted",
                           "details"
                         ],
                         "additionalProperties": false,
@@ -31715,6 +31717,7 @@
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f0002",
                         "title": "Network overview"
                       },
+                      "restricted": false,
                       "details": {
                         "fileName": "diagram.png"
                       }

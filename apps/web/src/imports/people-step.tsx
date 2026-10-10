@@ -179,7 +179,7 @@ function TokenForm({ entry, onSaved }: { entry: ImportView; onSaved: (entry: Imp
             value={site}
             spellCheck={false}
             autoComplete="off"
-            placeholder="example.atlassian.net"
+            placeholder={t("imports.people.token.sitePlaceholder")}
             onChange={(event) => setSite(event.target.value)}
           />
         </Field>
@@ -188,7 +188,7 @@ function TokenForm({ entry, onSaved }: { entry: ImportView; onSaved: (entry: Imp
             type="email"
             value={email}
             autoComplete="off"
-            placeholder="name@example.com"
+            placeholder={t("imports.people.token.emailPlaceholder")}
             onChange={(event) => setEmail(event.target.value)}
           />
         </Field>

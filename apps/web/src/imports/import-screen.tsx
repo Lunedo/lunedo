@@ -614,8 +614,10 @@ function EntriesList({
             icon={FileWarning}
             title={
               item.item
-                ? (item.item.title ?? t("imports.report.restrictedPage"))
-                : t("imports.report.wholeExport")
+                ? item.item.title
+                : item.restricted
+                  ? t("imports.report.restrictedPage")
+                  : t("imports.report.wholeExport")
             }
             description={entryText(t, item)}
             {...(item.item?.title && spaceKey

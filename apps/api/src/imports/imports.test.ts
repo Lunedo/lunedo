@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -431,6 +431,16 @@ describe.skipIf(!databaseBaseUrl)("imports through the API", () => {
     );
     const restricted = permissions.items.find((entry) => entry.item?.id === secret.rows[0]?.target_id);
     expect(restricted?.item?.title).toBeNull();
+    await test.runtime.pool.query(
+      "insert into import_problems (id, import_id, category, code, key, item_id) values ($1, $2, 'links', 'brokenLink', 'secret', $3)",
+      [randomUUID(), id, secret.rows[0]?.target_id],
+    );
+    const entries = (await owner.get(`/api/v1/imports/${id}/report/entries?limit=100`)).json() as {
+      items: { item: { id: string; title: string } | null; restricted: boolean }[];
+    };
+    expect(entries.items.some((entry) => entry.restricted && entry.item === null)).toBe(true);
+    expect(entries.items.some((entry) => entry.item?.id === secret.rows[0]?.target_id)).toBe(false);
+    expect(entries.items.some((entry) => !entry.restricted && entry.item !== null)).toBe(true);
     expect((await owner.get(`/api/v1/items/${secret.rows[0]?.target_id}`)).statusCode).toBe(404);
 
     const proposal = (await owner.get(`/api/v1/imports/${id}/proposed-access`)).json() as {

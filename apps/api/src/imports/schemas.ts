@@ -315,15 +315,14 @@ export const reportEntriesSchema = z
             category: z.string().describe("Area of the problem."),
             code: z.string().describe("Kind of problem."),
             item: z
-              .object({
-                id: uuid("ID of the page."),
-                title: z
-                  .string()
-                  .nullable()
-                  .describe("Title of the page, or null when the caller cannot read it."),
-              })
+              .object({ id: uuid("ID of the page."), title: z.string().describe("Title of the page.") })
               .nullable()
-              .describe("The affected page, or null when the problem concerns the export as a whole."),
+              .describe(
+                "The affected page, or null when the problem concerns the export as a whole or a page the caller cannot read.",
+              ),
+            restricted: z
+              .boolean()
+              .describe("True when the problem concerns a page the caller cannot read; `item` is then null."),
             details: z
               .record(z.string(), z.unknown())
               .describe("Facts of the problem, such as `name` of a macro or `fileName` of an attachment."),

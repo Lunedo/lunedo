@@ -278,6 +278,41 @@ describe("import report", () => {
     expect(screen.queryByRole("button", { name: "Accept import" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Discard import" })).toBeNull();
   });
+  it("names pages the viewer cannot read as restricted and keeps problems of the export apart", async () => {
+    const entry = (id: string, item: { id: string; title: string } | null, restricted: boolean) => ({
+      id,
+      category: "attachments",
+      code: "missingAttachment",
+      item,
+      restricted,
+      details: { fileName: `${id}.png` },
+    });
+    setup(
+      {
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: importView() }),
+        [`GET /api/v1/imports/${IMPORT_ID}/report`]: () => ({
+          body: { categories: [{ category: "attachments", code: "missingAttachment", count: 3 }], total: 3 },
+        }),
+        [`GET /api/v1/imports/${IMPORT_ID}/report/macros`]: () => ({ body: [] }),
+        [`GET /api/v1/imports/${IMPORT_ID}/report/entries`]: () => ({
+          body: {
+            items: [
+              entry("readable", { id: SPACE_ID, title: "Network overview" }, false),
+              entry("hidden", null, true),
+              entry("export", null, false),
+            ],
+            nextCursor: null,
+          },
+        }),
+      },
+      ["organization.imports.manage"],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}?tab=attachments`);
+    expect(await screen.findByText("Network overview")).toBeTruthy();
+    expect(screen.getByText("A restricted page you cannot open")).toBeTruthy();
+    expect(screen.getByText("The export as a whole")).toBeTruthy();
+    expect(screen.getAllByRole("link", { name: "Open page" })).toHaveLength(1);
+  });
 });
 
 describe("uploads in parts", () => {
