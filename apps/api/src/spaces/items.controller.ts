@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Query, Req } from "@nestjs/common";
-import { MAX_TREE_PAGE, renderPageMarkdown, treeItemKinds } from "@pagehall/server";
+import { containsBlock, MAX_TREE_PAGE, renderPageMarkdown, treeItemKinds } from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
@@ -404,10 +404,21 @@ export class ItemsController {
   async markdown(@Param("pageId") pageId: string, @Req() request: FastifyRequest) {
     const snapshot = await this.#services.documents.readable(pageId);
     if (!snapshot) throw notFound();
-    const references = await this.#services.documents.references(actorOf(request), snapshot.document);
+    const actor = actorOf(request);
+    const references = await this.#services.documents.references(actor, snapshot.document);
+    const listings = {
+      childPages: await this.#services.documents.childPages(actor, pageId, snapshot.document),
+      attachments: containsBlock(snapshot.document, "attachmentList")
+        ? (await this.#services.attachments.list(actor, pageId)).map(({ id, name, size }) => ({
+            id,
+            name,
+            size,
+          }))
+        : null,
+    };
     return {
       itemId: pageId,
-      markdown: renderPageMarkdown(snapshot.document, references),
+      markdown: renderPageMarkdown(snapshot.document, references, listings),
       revision: snapshot.revision,
       updatedAt: snapshot.updatedAt,
     };

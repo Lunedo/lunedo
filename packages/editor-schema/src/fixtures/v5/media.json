@@ -1,0 +1,21 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "image",
+      "attrs": {
+        "attachmentId": "01929b1e-0000-7000-8000-000000000001",
+        "alt": "Network diagram",
+        "width": 640,
+        "align": "left"
+      }
+    },
+    {
+      "type": "file",
+      "attrs": {
+        "attachmentId": "01929b1e-0000-7000-8000-000000000002",
+        "name": "handbook.pdf"
+      }
+    }
+  ]
+}

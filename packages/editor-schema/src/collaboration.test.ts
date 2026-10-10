@@ -4,6 +4,7 @@ import {
   anchorAt,
   containsAnchor,
   type DocumentJson,
+  editorSchemaVersion,
   extractInlineCommentThreads,
   extractTasks,
   MAX_COMMENT_BYTES,
@@ -240,6 +241,6 @@ describe("stored collaborative state of schema version 2", () => {
     expect(validateDocument(documentFromYDoc(ydoc)).ok).toBe(false);
     expect(migrateYDoc(ydoc, 2)).toBe(true);
     expect(validateDocument(documentFromYDoc(ydoc)).ok).toBe(true);
-    expect(migrateYDoc(ydoc, 4)).toBe(false);
+    expect(migrateYDoc(ydoc, editorSchemaVersion)).toBe(false);
   });
 });

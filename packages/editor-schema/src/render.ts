@@ -27,11 +27,28 @@ export const defaultLabels: RenderLabels = {
   tableOfContents: "Table of contents",
   file: "File",
   image: "Image",
+  childPages: "Child pages",
+  noChildPages: "No child pages",
+  attachmentList: "Attachments",
+  noAttachments: "No attachments",
   callout: { info: "Info", tip: "Tip", note: "Note", warning: "Warning", error: "Error" },
 };
 
 function markKey(mark: ValidMark): string {
   return `${mark.type}:${JSON.stringify(mark.attrs)}`;
+}
+
+const SIZE_UNITS = ["B", "KB", "MB", "GB", "TB"] as const;
+
+export function formatBytes(bytes: number): string {
+  let value = Math.max(0, bytes);
+  let unit = 0;
+  while (value >= 1024 && unit < SIZE_UNITS.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  const rounded = unit === 0 || value >= 10 ? Math.round(value) : Math.round(value * 10) / 10;
+  return `${rounded} ${SIZE_UNITS[unit]}`;
 }
 
 export const MAX_EXPENSIVE_RENDER_COST = 20_000;
@@ -88,6 +105,10 @@ abstract class Renderer {
 
   formatDate(iso: string): string {
     return this.context.formatDate?.(iso) ?? iso;
+  }
+
+  formatSize(bytes: number): string {
+    return this.context.formatSize?.(bytes) ?? formatBytes(bytes);
   }
 
   mentionName(id: string): string {

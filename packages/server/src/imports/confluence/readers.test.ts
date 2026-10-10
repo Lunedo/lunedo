@@ -21,7 +21,7 @@ import {
   syntheticExport,
 } from "../testing/fixture.js";
 import { ConfluenceCsvReader } from "./csv-reader.js";
-import { ConfluenceXmlReader } from "./xml-reader.js";
+import { ConfluenceXmlReader, unescapeNestedCdata } from "./xml-reader.js";
 
 const baseUrl = testDatabaseBaseUrl();
 
@@ -297,5 +297,14 @@ describe.skipIf(!baseUrl)("Confluence export readers", () => {
         { contentId: PEOPLE_PAGE.secret, kind: "view", personId: null, group: "hr-team" },
       ]),
     );
+  });
+});
+
+describe("nested CDATA in the XML export", () => {
+  it("restores CDATA ends the export split, also after a closing bracket", () => {
+    expect(unescapeNestedCdata("<![CDATA[a]] ></x>")).toBe("<![CDATA[a]]></x>");
+    expect(unescapeNestedCdata("<![CDATA[list[0]] ]></x>")).toBe("<![CDATA[list[0]]]></x>");
+    expect(unescapeNestedCdata("<![CDATA[x]] ]]></x>")).toBe("<![CDATA[x]]]]></x>");
+    expect(unescapeNestedCdata("plain ]] text")).toBe("plain ]] text");
   });
 });

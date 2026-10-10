@@ -5,6 +5,7 @@ import {
   MigrationError,
   migrateDocument,
   migrations,
+  validateDocument,
 } from "./index.js";
 
 const document: DocumentJson = { type: "doc", content: [{ type: "paragraph" }] };
@@ -36,6 +37,22 @@ describe("migrateDocument", () => {
     expect(() => migrateDocument(document, 0)).toThrow(MigrationError);
     expect(() => migrateDocument(document, 1.5)).toThrow(MigrationError);
     expect(() => migrateDocument(document, 1, {}, 2)).toThrow(MigrationError);
+  });
+});
+
+describe("migration from schema version 4", () => {
+  it("keeps version 4 documents unchanged, as tables of contents start at level 1 by default", () => {
+    const stored: DocumentJson = {
+      type: "doc",
+      content: [
+        { type: "tableOfContents", attrs: { maxLevel: 2 } },
+        { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "Title" }] },
+      ],
+    };
+    const migrated = migrateDocument(stored, 4, migrations, 5);
+    expect(migrated).toEqual(stored);
+    const result = validateDocument(migrated);
+    expect(result.ok && result.document.content?.[0]?.attrs).toEqual({ minLevel: 1, maxLevel: 2 });
   });
 });
 

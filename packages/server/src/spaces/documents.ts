@@ -1,4 +1,6 @@
 import {
+  type ChildPagesRequest,
+  childPagesRequest,
   type DocumentJson,
   editorSchemaVersion,
   emptyDocument,
@@ -7,7 +9,11 @@ import {
   extractPageLinks,
   extractTasks,
   extractTopicUpdates,
+  type ListedAttachment,
+  type ListedPage,
+  MAX_CHILD_PAGE_DEPTH,
   migrateDocument,
+  type NodeJson,
   renderMarkdown,
   slugify,
   type ValidationProblem,
@@ -114,8 +120,49 @@ export function pagePath(spaceKey: string, itemId: string, title: string): strin
   return `/spaces/${encodeURIComponent(spaceKey)}/pages/${itemId}/${slugify(title)}`;
 }
 
-export function renderPageMarkdown(document: DocumentJson, references: PageReferences): string {
+export const MAX_LISTED_CHILD_PAGES = 500;
+
+const childPagesDefaults = { pageId: null, depth: null, sort: "tree", reverse: false };
+
+export interface PageListings {
+  childPages: ReadonlyMap<string, readonly ListedPage[]>;
+  attachments: readonly ListedAttachment[] | null;
+}
+
+interface MutablePage {
+  title: string;
+  href: string;
+  children: MutablePage[];
+}
+
+export function childPagesKey(request: ChildPagesRequest): string {
+  return JSON.stringify([request.pageId, request.depth, request.sort, request.reverse]);
+}
+
+function blocksOfType(node: NodeJson, type: string): NodeJson[] {
+  return [
+    ...(node.type === type ? [node] : []),
+    ...(node.content ?? []).flatMap((child) => blocksOfType(child, type)),
+  ];
+}
+
+export function containsBlock(document: DocumentJson, type: string): boolean {
+  return blocksOfType(document, type).length > 0;
+}
+
+export function renderPageMarkdown(
+  document: DocumentJson,
+  references: PageReferences,
+  listings?: PageListings,
+): string {
   return renderMarkdown(document, {
+    ...(listings
+      ? {
+          childPages: (request: ChildPagesRequest) => listings.childPages.get(childPagesKey(request)) ?? [],
+          attachmentList: () => listings.attachments,
+          attachment: (id: string) => ({ href: `/api/v1/attachments/${id}/content` }),
+        }
+      : {}),
     mention: (id) => {
       const name = references.people[id];
       return name ? { name } : null;
@@ -504,6 +551,74 @@ export class PageDocumentService {
         }),
       ),
     };
+  }
+
+  async childPages(
+    viewer: Principal,
+    itemId: string,
+    document: DocumentJson,
+  ): Promise<Map<string, readonly ListedPage[]>> {
+    const result = new Map<string, readonly ListedPage[]>();
+    for (const block of blocksOfType(document, "childPages")) {
+      const request = childPagesRequest({ attrs: { ...childPagesDefaults, ...block.attrs } });
+      const key = childPagesKey(request);
+      if (!result.has(key)) result.set(key, await this.#childTree(viewer, request.pageId ?? itemId, request));
+    }
+    return result;
+  }
+
+  async #childTree(viewer: Principal, rootId: string, request: ChildPagesRequest): Promise<ListedPage[]> {
+    const root = await this.#database.execute<{ id: string }>(sql`
+      select t.id from tree_items t join spaces s on s.id = t.space_id
+      where t.id = ${rootId} and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}`);
+    if (root.rows.length === 0) return [];
+    const order =
+      request.sort === "title"
+        ? sql`lower(t.title)`
+        : request.sort === "created"
+          ? sql`t.created_at`
+          : request.sort === "modified"
+            ? sql`t.content_updated_at`
+            : sql`t.position`;
+    const direction = request.reverse ? sql`desc` : sql`asc`;
+    const roots: MutablePage[] = [];
+    const listed = new Map<string, MutablePage>();
+    let parents = [rootId];
+    let budget = MAX_LISTED_CHILD_PAGES;
+    for (
+      let level = 1;
+      level <= (request.depth ?? MAX_CHILD_PAGE_DEPTH) && parents.length > 0 && budget > 0;
+      level += 1
+    ) {
+      const rows = await this.#database.execute<{
+        id: string;
+        parent_id: string;
+        title: string;
+        key: string;
+      }>(sql`
+        select t.id, t.parent_id, t.title, s.key from tree_items t
+        join tree_items p on p.id = t.parent_id join spaces s on s.id = t.space_id
+        where t.parent_id = any(${sql.param(parents)}::uuid[]) and t.kind = 'page'
+          and t.archived_root_id is not distinct from p.archived_root_id
+          and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
+        order by ${order} ${direction}, t.position, t.id
+        limit ${budget}`);
+      budget -= rows.rows.length;
+      parents = [];
+      for (const row of rows.rows) {
+        const page: MutablePage = {
+          title: row.title,
+          href: pagePath(row.key, row.id, row.title),
+          children: [],
+        };
+        listed.set(row.id, page);
+        parents.push(row.id);
+        const parent = listed.get(row.parent_id);
+        if (parent) parent.children.push(page);
+        else roots.push(page);
+      }
+    }
+    return roots;
   }
 
   async backlinks(viewer: Principal, itemId: string): Promise<Backlink[]> {

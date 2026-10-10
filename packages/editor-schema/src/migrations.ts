@@ -1,6 +1,6 @@
 import type { DocumentJson, NodeJson } from "./json.js";
 
-export const editorSchemaVersion = 4;
+export const editorSchemaVersion = 5;
 
 export type Migration = (doc: DocumentJson) => DocumentJson;
 
@@ -20,6 +20,7 @@ export const migrations: Record<number, Migration> = {
       return { ...node, attrs };
     }) as DocumentJson,
   3: (doc) => doc,
+  4: (doc) => doc,
 };
 
 export class MigrationError extends Error {

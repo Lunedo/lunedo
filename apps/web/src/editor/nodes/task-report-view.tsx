@@ -1,8 +1,9 @@
 import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { reportFilters, TaskReport } from "../../collaboration/task-report.js";
-import { usePageContext } from "../context.js";
+import { useEditable, usePageContext } from "../context.js";
 
 export function TaskReportView({ node, editor, updateAttributes, selected }: NodeViewProps) {
+  const editable = useEditable(editor);
   const page = usePageContext();
   return (
     <NodeViewWrapper
@@ -13,7 +14,7 @@ export function TaskReportView({ node, editor, updateAttributes, selected }: Nod
       <TaskReport
         filters={reportFilters(node.attrs)}
         currentSpaceId={page?.spaceId ?? null}
-        {...(editor.isEditable ? { onChange: (changes) => updateAttributes(changes) } : {})}
+        {...(editable ? { onChange: (changes) => updateAttributes(changes) } : {})}
       />
     </NodeViewWrapper>
   );

@@ -10,8 +10,10 @@ import {
   Columns2,
   Columns3,
   Columns4,
+  Files,
   FileText,
   Flag,
+  FolderTree,
   Heading1,
   Heading2,
   Heading3,
@@ -218,6 +220,31 @@ export const slashCommands: SlashCommandDefinition[] = [
         .deleteRange(range)
         .insertContent({ type: "taskReport", attrs: { spaceId: pageScopeOf(editor) } })
         .run(),
+  },
+  {
+    id: "childPages",
+    group: "blocks",
+    icon: FolderTree,
+    labelKey: "editor.blocks.childPages",
+    descriptionKey: "editor.blocks.childPagesDescription",
+    keywords: ["children", "child pages", "subpages", "unterseiten"],
+    run: (editor, range) =>
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({ type: "childPages", attrs: { depth: 1 } })
+        .run(),
+  },
+  {
+    id: "attachmentList",
+    group: "blocks",
+    icon: Files,
+    labelKey: "editor.blocks.attachmentList",
+    descriptionKey: "editor.blocks.attachmentListDescription",
+    keywords: ["attachments", "files", "anhänge", "dateien"],
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).insertContent({ type: "attachmentList" }).run(),
   },
   {
     id: "decision",

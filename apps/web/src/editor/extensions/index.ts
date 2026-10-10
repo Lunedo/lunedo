@@ -10,6 +10,7 @@ import { User } from "lucide-react";
 import type { ComponentType } from "react";
 import type * as Y from "yjs";
 import { translateKey } from "../../i18n/translate.js";
+import { AttachmentListView, ChildPagesView } from "../listings.js";
 import {
   AttachmentView,
   CalloutView,
@@ -73,6 +74,8 @@ const BLOCK_VIEWS: Record<string, ComponentType<ReactNodeViewProps>> = {
   image: AttachmentView,
   file: AttachmentView,
   taskReport: TaskReportView,
+  childPages: ChildPagesView,
+  attachmentList: AttachmentListView,
   topicUpdate: TopicUpdateView,
   decision: DecisionView,
 };

@@ -168,6 +168,58 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
     expect(backlinks.json().map((link: { itemId: string }) => link.itemId)).toEqual([source.id]);
   });
 
+  it("lists child pages and attachments in Markdown with only what the reader may see", async () => {
+    const creator = await person();
+    const reader = await person();
+    const space = await createSpace(creator.client, [
+      { principalKind: "account", principalId: reader.id, role: "reader" },
+    ]);
+    const parent = await createPage(creator.client, space.id, "Parent");
+    const network = await createPage(creator.client, space.id, "Network", parent.id);
+    const firewall = await createPage(creator.client, space.id, "Firewall", network.id);
+    const secret = await createPage(creator.client, space.id, "Secret", parent.id);
+    const restricted = await creator.client.post(`/api/v1/pages/${secret.id}/access`, {
+      changes: [{ action: "restrict", kind: "view" }],
+    });
+    expect(restricted.statusCode, restricted.body).toBe(200);
+    for (const name of ["handbook.pdf", "budget.xlsx"]) {
+      const upload = await creator.client.post(
+        `/api/v1/pages/${parent.id}/attachments?name=${name}`,
+        Buffer.from(name),
+        { "content-type": "application/octet-stream" },
+      );
+      expect(upload.statusCode, upload.body).toBe(201);
+    }
+    const stored = await creator.client.put(`/api/v1/pages/${parent.id}/content`, {
+      document: {
+        type: "doc",
+        content: [
+          { type: "childPages", attrs: { depth: 1 } },
+          { type: "childPages", attrs: { sort: "title", reverse: true } },
+          { type: "childPages", attrs: { pageId: firewall.id } },
+          { type: "attachmentList", attrs: { fileTypes: ["pdf"] } },
+        ],
+      },
+    });
+    expect(stored.statusCode, stored.body).toBe(200);
+    const path = (id: string, title: string) => `/spaces/${space.key}/pages/${id}/${title.toLowerCase()}`;
+    const ofCreator = (await creator.client.get(`/api/v1/pages/${parent.id}/markdown`)).json().markdown;
+    expect(ofCreator).toContain(
+      `- [Network](${path(network.id, "Network")})\n- [Secret](${path(secret.id, "Secret")})\n\n`,
+    );
+    expect(ofCreator).toContain(
+      `- [Secret](${path(secret.id, "Secret")})\n- [Network](${path(network.id, "Network")})\n  - [Firewall](${path(firewall.id, "Firewall")})\n\n`,
+    );
+    const ofReader = (await reader.client.get(`/api/v1/pages/${parent.id}/markdown`)).json().markdown;
+    expect(ofReader).not.toContain("Secret");
+    expect(ofReader.trimEnd().split("\n\n")).toEqual([
+      `- [Network](${path(network.id, "Network")})`,
+      `- [Network](${path(network.id, "Network")})\n  - [Firewall](${path(firewall.id, "Firewall")})`,
+      "*No child pages*",
+      expect.stringMatching(/^- \[handbook\.pdf\]\(\/api\/v1\/attachments\/[0-9a-f-]+\/content\) \(12 B\)$/),
+    ]);
+  });
+
   it("arranges the tree and keeps moves inside the rules", async () => {
     const creator = await person();
     const space = await createSpace(creator.client);

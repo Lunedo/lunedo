@@ -1,12 +1,14 @@
 import { toHtml } from "hast-util-to-html";
+import powershell from "highlight.js/lib/languages/powershell";
 import { common, createLowlight } from "lowlight";
 import { z } from "zod";
-import type { ValidNode } from "../json.js";
+import { type MacroConverter, macroText, plainBody, richBody, titleParagraph } from "../importing.js";
+import type { NodeJson, ValidNode } from "../json.js";
 import { attrOf, defineModule, optional } from "../module.js";
 import { element, escapeHtml, fenceFor } from "../text.js";
 import { codeLanguages } from "../values.js";
 
-const lowlight = createLowlight(common);
+const lowlight = createLowlight({ ...common, powershell });
 
 function codeText(node: ValidNode): string {
   return node.content.map((child) => child.text ?? "").join("");
@@ -16,6 +18,46 @@ export function highlightCode(code: string, language: string | null): string {
   if (!language || !lowlight.registered(language)) return escapeHtml(code);
   return toHtml(lowlight.highlight(language, code));
 }
+
+const CONFLUENCE_LANGUAGES: Readonly<Record<string, string>> = {
+  text: "plaintext",
+  none: "plaintext",
+  plain: "plaintext",
+  "c#": "csharp",
+  "c++": "cpp",
+  js: "javascript",
+  ts: "typescript",
+  py: "python",
+  rb: "ruby",
+  vb: "vbnet",
+  yml: "yaml",
+  html: "xml",
+  xhtml: "xml",
+  sh: "bash",
+  ps: "powershell",
+  ps1: "powershell",
+};
+
+export function confluenceLanguage(value: string | null): string | null {
+  const language = (value ?? "").trim().toLowerCase();
+  const resolved = CONFLUENCE_LANGUAGES[language] ?? language;
+  return codeLanguages.includes(resolved) ? resolved : null;
+}
+
+const codeImporter: MacroConverter = {
+  source: "confluence",
+  macros: ["code"],
+  convert: (macro) => {
+    if (richBody(macro)) return null;
+    const text = (plainBody(macro) ?? "").replace(/\r\n?/g, "\n");
+    const block: NodeJson = {
+      type: "codeBlock",
+      attrs: { language: confluenceLanguage(macroText(macro, "language")) },
+      ...(text.length > 0 ? { content: [{ type: "text", text }] } : {}),
+    };
+    return [...titleParagraph(macroText(macro, "title")), block];
+  },
+};
 
 export const codeBlockModule = defineModule({
   name: "codeBlock",
@@ -49,4 +91,5 @@ export const codeBlockModule = defineModule({
       text: codeText,
     },
   ],
+  importers: [codeImporter],
 });

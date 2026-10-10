@@ -1,4 +1,6 @@
 import { useRouter } from "@tanstack/react-router";
+import type { Editor } from "@tiptap/core";
+import { useEditorState } from "@tiptap/react";
 import { createContext, useCallback, useContext } from "react";
 
 export interface PageContext {
@@ -22,4 +24,8 @@ export function useOpenPath(): (path: string) => void {
     },
     [router],
   );
+}
+
+export function useEditable(editor: Editor): boolean {
+  return useEditorState({ editor, selector: ({ editor: current }) => current.isEditable });
 }

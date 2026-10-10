@@ -1,6 +1,7 @@
 import { ModuleRegistry } from "../module.js";
 import { codeBlockModule } from "./code.js";
 import { coreModule } from "./core.js";
+import { attachmentListModule, childPagesModule } from "./listings.js";
 import { listsModule, tasksModule } from "./lists.js";
 import {
   calloutModule,
@@ -20,7 +21,9 @@ import { tableModule } from "./table.js";
 import { templatesModule } from "./templates.js";
 
 export {
+  attachmentListModule,
   calloutModule,
+  childPagesModule,
   codeBlockModule,
   colorsModule,
   columnsModule,
@@ -67,6 +70,8 @@ export const defaultModules = [
   sectionModule,
   imageModule,
   fileModule,
+  attachmentListModule,
+  childPagesModule,
   calloutModule,
   expandModule,
   statusModule,

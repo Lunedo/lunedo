@@ -1,5 +1,6 @@
 import type { MarkSpec, NodeSpec } from "prosemirror-model";
 import type { z } from "zod";
+import type { ImportSource, MacroConverter } from "./importing.js";
 import type { ValidMark, ValidNode } from "./json.js";
 
 export interface AttributeSpec {
@@ -38,6 +39,28 @@ export interface ResolvedPageLink {
   inTrash?: boolean;
 }
 
+export const childPageSorts = ["tree", "title", "created", "modified"] as const;
+export type ChildPageSort = (typeof childPageSorts)[number];
+
+export interface ChildPagesRequest {
+  pageId: string | null;
+  depth: number | null;
+  sort: ChildPageSort;
+  reverse: boolean;
+}
+
+export interface ListedPage {
+  title: string;
+  href: string;
+  children: readonly ListedPage[];
+}
+
+export interface ListedAttachment {
+  id: string;
+  name: string;
+  size: number;
+}
+
 export interface RenderLabels {
   noAccess: string;
   inTrash: string;
@@ -52,6 +75,10 @@ export interface RenderLabels {
   tableOfContents: string;
   file: string;
   image: string;
+  childPages: string;
+  noChildPages: string;
+  attachmentList: string;
+  noAttachments: string;
   callout: Record<"info" | "tip" | "note" | "warning" | "error", string>;
 }
 
@@ -64,6 +91,9 @@ export interface RenderContext {
   showPlaceholders?: boolean;
   taskStatus?: (id: string) => boolean | null;
   topic?: (id: string) => { title: string } | null;
+  childPages?: (request: ChildPagesRequest) => readonly ListedPage[] | null;
+  attachmentList?: () => readonly ListedAttachment[] | null;
+  formatSize?: (bytes: number) => string;
 }
 
 interface BaseRenderer {
@@ -73,6 +103,7 @@ interface BaseRenderer {
   calloutLabel(variant: string): string;
   nextHeadingId(): string;
   formatDate(iso: string): string;
+  formatSize(bytes: number): string;
   mentionName(id: string): string;
   topicTitle(id: string): string;
   pageLink(link: PageLinkTarget): ResolvedPageLink | null;
@@ -121,20 +152,32 @@ export interface EditorModule {
   name: string;
   nodes: readonly NodeDefinition[];
   marks: readonly MarkDefinition[];
+  importers: readonly MacroConverter[];
 }
 
 export function defineModule(module: {
   name: string;
   nodes?: readonly NodeDefinition[];
   marks?: readonly MarkDefinition[];
+  importers?: readonly MacroConverter[];
 }): EditorModule {
-  return { name: module.name, nodes: module.nodes ?? [], marks: module.marks ?? [] };
+  return {
+    name: module.name,
+    nodes: module.nodes ?? [],
+    marks: module.marks ?? [],
+    importers: module.importers ?? [],
+  };
+}
+
+function importerKey(source: ImportSource, macro: string): string {
+  return `${source}/${macro}`;
 }
 
 export class ModuleRegistry {
   readonly #modules: EditorModule[] = [];
   readonly #nodes = new Map<string, NodeDefinition>();
   readonly #marks = new Map<string, MarkDefinition>();
+  readonly #importers = new Map<string, MacroConverter>();
 
   register(...modules: EditorModule[]): this {
     for (const module of modules) {
@@ -147,8 +190,20 @@ export class ModuleRegistry {
       for (const mark of module.marks) {
         if (this.#marks.has(mark.name)) throw new Error(`Mark ${mark.name} is registered twice`);
       }
+      const keys = module.importers.flatMap((importer) =>
+        importer.macros.map((macro) => importerKey(importer.source, macro)),
+      );
+      for (const [index, key] of keys.entries()) {
+        if (this.#importers.has(key) || keys.indexOf(key) !== index) {
+          throw new Error(`Macro ${key.slice(key.indexOf("/") + 1)} has two converters`);
+        }
+      }
       for (const node of module.nodes) this.#nodes.set(node.name, node);
       for (const mark of module.marks) this.#marks.set(mark.name, mark);
+      for (const importer of module.importers) {
+        for (const macro of importer.macros)
+          this.#importers.set(importerKey(importer.source, macro), importer);
+      }
       this.#modules.push(module);
     }
     return this;
@@ -172,6 +227,10 @@ export class ModuleRegistry {
 
   mark(name: string): MarkDefinition | undefined {
     return this.#marks.get(name);
+  }
+
+  importer(source: ImportSource, macro: string): MacroConverter | undefined {
+    return this.#importers.get(importerKey(source, macro));
   }
 }
 
