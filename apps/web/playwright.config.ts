@@ -14,7 +14,7 @@ export default defineConfig({
   retries: retriesFromEnv(),
   workers: endToEndWorkers(),
   fullyParallel: true,
-  timeout: 120_000,
+  timeout: 60_000,
   expect: { timeout: 10_000, toHaveScreenshot: { maxDiffPixelRatio: 0.002, animations: "disabled" } },
   reporter: ci ? [["list"], ["html", { open: "never" }], ["./e2e/support/flaky-reporter.ts"]] : "list",
   globalSetup: "./e2e/global-setup.ts",
@@ -25,6 +25,8 @@ export default defineConfig({
     locale: "en-US",
     timezoneId: "Europe/Vienna",
     reducedMotion: "reduce",
+    actionTimeout: 15_000,
+    navigationTimeout: 45_000,
   },
   projects: [
     {

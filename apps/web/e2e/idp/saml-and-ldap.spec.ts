@@ -136,7 +136,7 @@ async function synchronize(request: APIRequestContext, providerId: string): Prom
         const [latest] = ((await runs.json()) as { items: { id: string; status: string }[] }).items;
         return latest && latest.id !== previous ? latest.status : "pending";
       },
-      { timeout: 60_000 },
+      { timeout: 30_000 },
     )
     .toMatch(/^(succeeded|warnings)$/);
 }

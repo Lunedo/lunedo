@@ -159,7 +159,6 @@ test("one task status in the editor, the read view, My tasks, the task report an
   page,
   organization,
 }) => {
-  test.setTimeout(180_000);
   const space = await collaborationSpace(page, organization);
   const checklist = (await callApi(page, "POST", `/api/v1/spaces/${space.id}/items`, {
     kind: "page",
