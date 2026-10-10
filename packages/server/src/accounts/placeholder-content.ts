@@ -63,7 +63,16 @@ export async function movePlaceholderContent(
       and o.principal_kind = 'account' and o.principal_id = ${to} and o.item_id = p.item_id
       and array_position(${SHARE_ROLES}, p.role::text) > array_position(${SHARE_ROLES}, o.role::text)`);
   const restrictions = await tx.execute<{ item_id: string }>(sql`
-    select distinct item_id from page_shares where principal_kind = 'account' and principal_id = ${from}`);
+    select item_id from page_shares where principal_kind = 'account' and principal_id = ${from}
+    union
+    select item_id from page_restriction_holders where principal_kind = 'account' and principal_id = ${from}`);
+  await tx.execute(sql`
+    insert into page_restriction_holders (item_id, kind, principal_kind, principal_id)
+    select item_id, kind, 'account', ${to} from page_restriction_holders
+    where principal_kind = 'account' and principal_id = ${from}
+    on conflict do nothing`);
+  await tx.execute(sql`
+    delete from page_restriction_holders where principal_kind = 'account' and principal_id = ${from}`);
   await tx.execute(sql`
     delete from page_shares p where p.principal_kind = 'account' and p.principal_id = ${from}
       and exists (select 1 from page_shares o where o.item_id = p.item_id

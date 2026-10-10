@@ -130,6 +130,9 @@ export const importSchema = z
     canManage: z
       .boolean()
       .describe("Whether the caller can change, start, stop, accept or discard the import."),
+    canResolve: z
+      .boolean()
+      .describe("Whether the caller can map people and groups of the import or apply a user list."),
     canTakeOver: z.boolean().describe("Whether the caller can take over a held import."),
     startedAt: timestamp("When the import started.").nullable(),
     finishedAt: timestamp("When the import finished or failed.").nullable(),
@@ -190,6 +193,7 @@ export const exampleImport = {
   errorCode: null,
   quarantineSpace: { id: ID(6), key: "ITOPS" },
   canManage: true,
+  canResolve: true,
   canTakeOver: false,
   startedAt: "2026-10-10T08:00:00.000Z",
   finishedAt: "2026-10-10T08:05:00.000Z",
@@ -592,7 +596,7 @@ export const permissionEntriesSchema = z
               .string()
               .nullable()
               .describe(
-                "Why the entry needs attention: `widened`, `narrowed`, `withoutView`, `anonymous`, `groupMissing` or `placeholder`.",
+                "Why the entry needs attention: `widened`, `narrowed`, `withoutView`, `anonymous`, `groupMissing`, `placeholder` or `withoutSpaceRole` (named in a restriction without a role in the space).",
               ),
           })
           .describe("A permission taken from Confluence."),

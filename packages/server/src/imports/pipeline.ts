@@ -415,53 +415,25 @@ export class ImportPipeline {
       await tx.execute(sql`
         insert into page_restrictions (item_id, kind) values (${itemId}, ${kind}) on conflict do nothing`);
     }
-    const holders = new Map<
-      string,
-      {
-        kind: "account" | "group";
-        accountId: string | null;
-        group: string | null;
-        editor: boolean;
-        view: boolean;
-      }
-    >();
     for (const restriction of restrictions) {
       const accountId = restriction.personId ? (people.get(restriction.personId) ?? null) : null;
       const group = restriction.group ? groupKey(restriction.group) : null;
       const key = accountId ? `account:${accountId}` : group ? `group:${group}` : null;
       if (!key) continue;
-      const holder = holders.get(key) ?? {
-        kind: accountId ? ("account" as const) : ("group" as const),
-        accountId,
-        group,
-        editor: false,
-        view: false,
-      };
-      if (restriction.kind === "edit") holder.editor = true;
-      else holder.view = true;
-      holders.set(key, holder);
-    }
-    for (const [key, holder] of holders) {
-      const role = holder.editor ? "editor" : "reader";
-      const groupId = holder.group ? (groups.get(holder.group) ?? null) : null;
-      const principalId = holder.kind === "account" ? holder.accountId : groupId;
+      const kind = accountId ? "account" : "group";
+      const principalId = accountId ?? (group ? (groups.get(group) ?? null) : null);
       if (principalId) {
         await tx.execute(sql`
-          insert into page_shares (id, item_id, principal_kind, principal_id, role)
-          values (${uuidv7()}, ${itemId}, ${holder.kind}, ${principalId}, ${role})
-          on conflict (item_id, principal_kind, principal_id) do nothing`);
+          insert into page_restriction_holders (item_id, kind, principal_kind, principal_id)
+          values (${itemId}, ${restriction.kind}, ${kind}, ${principalId}) on conflict do nothing`);
       }
-      for (const restriction of [...kinds].filter((kind) =>
-        kind === "edit" ? holder.editor : holder.view,
-      )) {
-        await tx.execute(sql`
-          insert into import_grants (id, import_id, source_key, item_id, restriction, holder_kind, account_id,
-            group_key, role, status, applied_at)
-          values (${uuidv7()}, ${run.importId}, ${`page:${pageSourceId}:${restriction}:${key}`}, ${itemId},
-            ${restriction}, ${holder.kind}, ${holder.accountId}, ${holder.group}, ${role}, 'check',
-            ${principalId ? sql`now()` : sql`null`})
-          on conflict (import_id, source_key) do nothing`);
-      }
+      await tx.execute(sql`
+        insert into import_grants (id, import_id, source_key, item_id, restriction, holder_kind, account_id,
+          group_key, role, status, applied_at)
+        values (${uuidv7()}, ${run.importId}, ${`page:${pageSourceId}:${restriction.kind}:${key}`}, ${itemId},
+          ${restriction.kind}, ${kind}, ${accountId}, ${group}, ${restriction.kind === "edit" ? "editor" : "reader"},
+          'check', ${principalId ? sql`now()` : sql`null`})
+        on conflict (import_id, source_key) do nothing`);
     }
   }
 

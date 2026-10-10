@@ -454,5 +454,40 @@ describe.skipIf(!databaseBaseUrl)("imports through the API", () => {
     expect(afterwards.json()).toMatchObject({ matched: 0 });
     const view = await owner.get(`/api/v1/imports/${id}`);
     expect(view.body).not.toContain(secretToken);
+
+    const second = await member();
+    const carolAccount = await member();
+    const assigned = await owner.post(`/api/v1/organizations/${organizationId}/role-assignments/batch`, {
+      role: { builtIn: "administrator" },
+      principals: [{ kind: "account", id: second.id }],
+    });
+    expect(assigned.statusCode, assigned.body).toBe(201);
+    const remaining = (await second.client.get(`/api/v1/imports/${id}/people`)).json() as {
+      items: { id: string; name: string; mappedTo: unknown }[];
+    };
+    const carolPlaceholder = remaining.items.find((entry) => entry.name === "Carol")?.id ?? "";
+    expect(carolPlaceholder).not.toBe("");
+    const carolMapping = { mappings: [{ placeholderId: carolPlaceholder, accountId: carolAccount.id }] };
+    for (const client of [outsider.client, reviewer.client]) {
+      expect([403, 404]).toContain(
+        (await client.post(`/api/v1/imports/${id}/people/mappings`, carolMapping)).statusCode,
+      );
+      expect([403, 404]).toContain(
+        (
+          await client.post(`/api/v1/imports/${id}/people/user-list`, "User id,User name,email", {
+            "content-type": "text/csv",
+          })
+        ).statusCode,
+      );
+      expect([403, 404]).toContain(
+        (await client.put(`/api/v1/imports/${id}/groups/hr-team`, { create: true })).statusCode,
+      );
+    }
+    const byOther = await second.client.post(`/api/v1/imports/${id}/people/mappings`, carolMapping);
+    expect(byOther.statusCode, byOther.body).toBe(200);
+    expect((await second.client.get(`/api/v1/imports/${id}`)).json()).toMatchObject({
+      canResolve: true,
+      canManage: false,
+    });
   });
 });

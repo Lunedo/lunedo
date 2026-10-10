@@ -79,7 +79,7 @@ export function PeopleTab({ organizationId, entry }: { organizationId: string; e
   const cursor = cursors.at(-1) ?? null;
   const page = useQuery(peopleQuery(entry.id, search.trim(), cursor));
   const wide = useWide();
-  const manage = entry.canManage;
+  const manage = entry.canResolve;
   const chosen = Object.entries(choices);
   const people = page.data?.items ?? [];
   const known = new Map(people.map((person) => [person.id, person]));
@@ -566,7 +566,7 @@ function GroupRow({
         <Badge variant="success" icon={CheckCircle2}>
           {t("imports.people.mappedTo", { name: group.group.name })}
         </Badge>
-      ) : entry.canManage ? (
+      ) : entry.canResolve ? (
         <div className="flex min-w-0 flex-1 basis-field flex-col gap-2">
           <Field
             label={t("imports.permissions.chooseGroup", { name: group.name })}

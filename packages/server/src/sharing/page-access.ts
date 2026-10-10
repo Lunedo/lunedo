@@ -2,7 +2,13 @@ import { uuidv7 } from "@pagehall/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditEvents, AuditLog } from "../audit/audit-log.js";
-import { accountItemCondition, holderCovers } from "../authorization/item-access.js";
+import {
+  accountItemCondition,
+  holderCovers,
+  restrictionHasActiveHolder,
+  restrictionListedBy,
+  restrictionListedCondition,
+} from "../authorization/item-access.js";
 import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
 import type { AccessImpact, RoleChange } from "../authorization/space-access.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
@@ -49,6 +55,7 @@ export interface PageAccess {
     view: RestrictionInfo | null;
     edit: RestrictionInfo | null;
     inherited: { itemId: string; title: string | null }[];
+    holders: { kind: RestrictionKind; holder: AccessHolder }[];
   };
   linkVisitors: { accountId: string; name: string | null; linkId: string; lastOpenedAt: Date }[];
 }
@@ -246,6 +253,26 @@ export class PageAccessService {
       from page_restrictions r join tree_items t on t.id = r.item_id join spaces s on s.id = t.space_id
       where r.item_id = any((select path from tree_items where id = ${itemId})::uuid[])
       order by array_position((select path from tree_items where id = ${itemId}), r.item_id)`);
+    const holders = await this.#database.execute<{
+      kind: RestrictionKind;
+      principal_kind: HolderKind;
+      principal_id: string;
+      name: string | null;
+      email: string | null;
+      members: string | null;
+      active: boolean;
+    }>(sql`
+      select rh.kind, rh.principal_kind, rh.principal_id,
+        case when rh.principal_kind = 'group' then g.name else ${this.#people.visibleName(viewer, sql`a`)} end as name,
+        case when rh.principal_kind = 'account' and ${this.#people.colleagueCondition(viewer, sql`a.id`)} then a.email end as email,
+        case when rh.principal_kind = 'group' then (select count(*) from group_members gm join accounts ga on ga.id = gm.account_id
+          where gm.group_id = g.id and ga.state = 'active' and (gm.expires_at is null or gm.expires_at > now())) end as members,
+        case when rh.principal_kind = 'group' then g.id is not null else a.state = 'active' end as active
+      from page_restriction_holders rh
+      left join accounts a on rh.principal_kind = 'account' and a.id = rh.principal_id
+      left join groups g on rh.principal_kind = 'group' and g.id = rh.principal_id
+      where rh.item_id = ${itemId}
+      order by rh.kind, rh.created_at, rh.principal_id`);
     const visitors = await this.#database.execute<{
       account_id: string;
       name: string | null;
@@ -293,6 +320,17 @@ export class PageAccessService {
         inherited: restrictions.rows
           .filter((row) => row.item_id !== itemId && row.kind === "view")
           .map((row) => ({ itemId: row.item_id, title: row.visible ? row.title : null })),
+        holders: holders.rows.map((row) => ({
+          kind: row.kind,
+          holder: {
+            kind: row.principal_kind,
+            id: row.principal_id,
+            name: row.name,
+            email: row.email,
+            members: row.members === null ? null : Number(row.members),
+            active: row.active,
+          },
+        })),
       },
       linkVisitors: visitors.rows.map((row) => ({
         accountId: row.account_id,
@@ -556,8 +594,7 @@ export class PageAccessService {
 
   async #checkListed(tx: Transaction, itemId: string): Promise<void> {
     const result = await tx.execute<{ kind: RestrictionKind; listed: boolean }>(sql`
-      select r.kind, exists (select 1 from page_shares ps where ps.item_id = r.item_id
-        and (r.kind = 'view' or ps.role = 'editor')) as listed
+      select r.kind, ${restrictionListedBy(sql`r`, () => sql`true`)} as listed
       from page_restrictions r where r.item_id = ${itemId}`);
     for (const row of result.rows) {
       if (row.listed) continue;
@@ -754,16 +791,8 @@ export class PageAccessService {
       update page_restrictions r set orphaned_at = now(), updated_at = now()
       from tree_items t join spaces s on s.id = t.space_id
       where t.id = r.item_id and r.orphaned_at is null
-        and exists (select 1 from page_shares ps where ps.item_id = r.item_id
-          and (r.kind = 'view' or ps.role = 'editor')
-          and ${holderCovers(sql`ps.principal_kind`, sql`ps.principal_id`, sql`${accountId}::uuid`)})
-        and not exists (select 1 from page_shares ps where ps.item_id = r.item_id
-          and (r.kind = 'view' or ps.role = 'editor')
-          and ((ps.principal_kind = 'account' and exists (select 1 from accounts a
-              where a.id = ps.principal_id and a.state = 'active'))
-            or (ps.principal_kind = 'group' and exists (select 1 from group_members gm join accounts a on a.id = gm.account_id
-              where gm.group_id = ps.principal_id and a.state = 'active'
-                and (gm.expires_at is null or gm.expires_at > now())))))
+        and ${restrictionListedCondition(sql`r`, sql`${accountId}::uuid`)}
+        and not ${restrictionHasActiveHolder(sql`r`)}
       returning r.item_id, r.kind, t.title, t.space_id, s.name as space_name, s.key as space_key, s.organization_id`);
     const notified = new Set<string>();
     for (const row of affected.rows) {
@@ -789,12 +818,7 @@ export class PageAccessService {
     await tx.execute(sql`
       update page_restrictions r set orphaned_at = null, updated_at = now()
       where r.item_id = ${itemId} and r.orphaned_at is not null
-        and exists (select 1 from page_shares ps where ps.item_id = r.item_id
-          and (r.kind = 'view' or ps.role = 'editor')
-          and ((ps.principal_kind = 'account' and exists (select 1 from accounts a
-              where a.id = ps.principal_id and a.state = 'active'))
-            or (ps.principal_kind = 'group' and exists (select 1 from group_members gm join accounts a on a.id = gm.account_id
-              where gm.group_id = ps.principal_id and a.state = 'active'))))`);
+        and ${restrictionHasActiveHolder(sql`r`)}`);
   }
 
   async spaceAdministrators(executor: Executor, spaceId: string): Promise<string[]> {

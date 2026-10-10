@@ -5219,7 +5219,11 @@
       "restrictConfirm": "Einschränken",
       "openConfirm": "Einschränkung entfernen",
       "restricted": "Seite eingeschränkt. Du wurdest zur Liste hinzugefügt und behältst den Zugriff.",
-      "opened": "Einschränkung entfernt"
+      "opened": "Einschränkung entfernt",
+      "holdersTitle": "Außerdem in den Einschränkungen genannt",
+      "holdersHint": "Aus einem Import übernommen. Sie passieren die Einschränkung, bekommen durch sie aber keinen Zugriff; um die Seite zu öffnen, brauchen sie eine Rolle im Space.",
+      "holderView": "Darf ansehen",
+      "holderEdit": "Darf bearbeiten"
     },
     "why": {
       "toggle": "Warum hat jemand Zugriff?",
@@ -6434,7 +6438,7 @@
       "account": "Pagehall-Konto",
       "owns": "{items, plural, one {# Seite} other {# Seiten}}, {comments, plural, one {# Kommentar} other {# Kommentare}}",
       "spaceRole": "Rolle im Space: {role}",
-      "restricted": "{count, plural, one {Öffnet # eingeschränkte Seite} other {Öffnet # eingeschränkte Seiten}}",
+      "restricted": "{count, plural, one {Auf # eingeschränkten Seite genannt} other {Auf # eingeschränkten Seiten genannt}}",
       "mappedTo": "Zugeordnet zu {name}",
       "placeholder": "Platzhalter",
       "filter": "Personen filtern",
@@ -6457,7 +6461,7 @@
       "confirmTitle": "{count, plural, one {# Person zuordnen?} other {# Personen zuordnen?}}",
       "confirmDescription": "Seiten, Kommentare, Erwähnungen, Aufgaben, Reaktionen und Einschränkungen gehen sofort auf die gewählten Konten über. Niemand wird benachrichtigt. Eine Zuordnung lässt sich nicht rückgängig machen.",
       "confirmRow": "{from} wird {to}",
-      "confirmAccess": "{count, plural, one {{names} bekommt dadurch auch Zugriff auf eingeschränkte Seiten oder eine Rolle im Space.} other {{names} bekommen dadurch auch Zugriff auf eingeschränkte Seiten oder eine Rolle im Space.}}",
+      "confirmAccess": "{count, plural, one {{names} steht dadurch auch in Einschränkungen von Seiten oder bekommt eine Rolle im Space.} other {{names} stehen dadurch auch in Einschränkungen von Seiten oder bekommen eine Rolle im Space.}}",
       "keepPlaceholders": "Platzhalter behalten",
       "mapped": "{count, plural, one {# Person zugeordnet} other {# Personen zugeordnet}}",
       "mapFailed": "Die Personen konnten nicht zugeordnet werden",
@@ -6503,7 +6507,8 @@
         "withoutView": "Ohne die Berechtigung, den Space anzusehen, wird nichts übernommen.",
         "anonymous": "Öffentlicher Zugriff ist für diesen Space nicht verfügbar.",
         "groupMissing": "Keine Gruppe mit diesem Namen. Ordne eine bestehende Gruppe zu oder lege eine an.",
-        "placeholder": "Ordne die Person im Tab Personen einem Konto zu."
+        "placeholder": "Ordne die Person im Tab Personen einem Konto zu.",
+        "withoutSpaceRole": "In einer Einschränkung genannt, aber ohne Zugriff auf den Space, wie in Confluence. Einschränkungen begrenzen nur; vergib eine Rolle im Space, wenn sich die Seite öffnen soll."
       },
       "groupMapped": "„{name}“ ist zugeordnet",
       "groupFailed": "„{name}“ konnte nicht zugeordnet werden",
@@ -6513,7 +6518,7 @@
       "createGroup": "Gruppe „{name}“ anlegen",
       "createTitle": "Gruppe „{name}“ anlegen?",
       "mapTitle": "„{from}“ zu „{to}“ zuordnen?",
-      "mapDescription": "Mitglieder der Gruppe bekommen beim Übernehmen des Imports die Rolle {role} im Space, und {count, plural, =0 {es öffnen sich keine eingeschränkten Seiten} one {# eingeschränkte Seite öffnet sich} other {# eingeschränkte Seiten öffnen sich}} sofort für sie. Niemand wird benachrichtigt. Das lässt sich nicht rückgängig machen.",
+      "mapDescription": "Mitglieder der Gruppe bekommen beim Übernehmen des Imports die Rolle {role} im Space. {count, plural, =0 {Die Gruppe steht in keiner Einschränkung.} one {Die Gruppe steht sofort in der Einschränkung von # Seite; um sie zu lesen, brauchen Mitglieder weiterhin eine Rolle im Space.} other {Die Gruppe steht sofort in den Einschränkungen von # Seiten; um sie zu lesen, brauchen Mitglieder weiterhin eine Rolle im Space.}} Niemand wird benachrichtigt. Das lässt sich nicht rückgängig machen.",
       "noRole": "keine",
       "keepUnmapped": "Nicht zuordnen",
       "chooseGroupFirst": "Wähle zuerst eine Gruppe oder lege eine mit diesem Namen an."

@@ -5219,7 +5219,11 @@
       "restrictConfirm": "Restrict",
       "openConfirm": "Remove restriction",
       "restricted": "Page restricted. You were added to the list so you keep access.",
-      "opened": "Restriction removed"
+      "opened": "Restriction removed",
+      "holdersTitle": "Also named in the restrictions",
+      "holdersHint": "Taken over from an import. They pass the restriction but get no access from it; to open the page they need a role in the space.",
+      "holderView": "Can view",
+      "holderEdit": "Can edit"
     },
     "why": {
       "toggle": "Why does someone have access?",
@@ -6434,7 +6438,7 @@
       "account": "Pagehall account",
       "owns": "{items, plural, one {# page} other {# pages}}, {comments, plural, one {# comment} other {# comments}}",
       "spaceRole": "Space role: {role}",
-      "restricted": "{count, plural, one {Opens # restricted page} other {Opens # restricted pages}}",
+      "restricted": "{count, plural, one {Named on # restricted page} other {Named on # restricted pages}}",
       "mappedTo": "Mapped to {name}",
       "placeholder": "Placeholder",
       "filter": "Filter people",
@@ -6457,7 +6461,7 @@
       "confirmTitle": "{count, plural, one {Map # person?} other {Map # people?}}",
       "confirmDescription": "Pages, comments, mentions, tasks, reactions and restrictions move to the chosen accounts at once. Nobody is notified. A mapping cannot be undone.",
       "confirmRow": "{from} becomes {to}",
-      "confirmAccess": "{count, plural, one {{names} also gets access to restricted pages or a role in the space.} other {{names} also get access to restricted pages or a role in the space.}}",
+      "confirmAccess": "{count, plural, one {{names} also takes a place on restricted pages or a role in the space.} other {{names} also take places on restricted pages or roles in the space.}}",
       "keepPlaceholders": "Keep placeholders",
       "mapped": "{count, plural, one {# person mapped} other {# people mapped}}",
       "mapFailed": "The people could not be mapped",
@@ -6503,7 +6507,8 @@
         "withoutView": "Without permission to view the space nothing is taken over.",
         "anonymous": "Public access is not available for this space.",
         "groupMissing": "No group with this name. Map an existing group or create one.",
-        "placeholder": "Map the person to an account in the People tab."
+        "placeholder": "Map the person to an account in the People tab.",
+        "withoutSpaceRole": "Named in a restriction, but without access to the space, as in Confluence. Restrictions only narrow access; give a role in the space if the page should open."
       },
       "groupMapped": "“{name}” is mapped",
       "groupFailed": "“{name}” could not be mapped",
@@ -6513,7 +6518,7 @@
       "createGroup": "Create group “{name}”",
       "createTitle": "Create the group “{name}”?",
       "mapTitle": "Map “{from}” to “{to}”?",
-      "mapDescription": "Members of the group get the role {role} in the space when the import is accepted, and {count, plural, =0 {no restricted pages open} one {# restricted page opens} other {# restricted pages open}} for them at once. Nobody is notified. This cannot be undone.",
+      "mapDescription": "Members of the group get the role {role} in the space when the import is accepted. {count, plural, =0 {The group is named on no restricted page.} one {The group is named on # restricted page at once; members still need a role in the space to read it.} other {The group is named on # restricted pages at once; members still need a role in the space to read them.}} Nobody is notified. This cannot be undone.",
       "noRole": "none",
       "keepUnmapped": "Keep unmapped",
       "chooseGroupFirst": "Choose a group first, or create one with this name."

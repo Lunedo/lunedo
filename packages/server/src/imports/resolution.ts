@@ -1,4 +1,3 @@
-import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
@@ -122,7 +121,7 @@ export class ImportResolutionService {
   async #resolvable(tx: Transaction, actor: Principal, importId: string): Promise<ImportRow> {
     await this.#authorization.require(
       actor,
-      "import.manage",
+      "import.resolve",
       { type: "import", id: importId },
       { executor: tx },
     );
@@ -166,8 +165,8 @@ export class ImportResolutionService {
         (select count(*) from tree_items ti where ti.space_id = ${space} and ti.creator_id = a.id)::int as items,
         (select count(*) from comments c join tree_items ct on ct.id = c.item_id
           where ct.space_id = ${space} and c.author_id = a.id)::int as comments,
-        (select count(distinct ps.item_id) from page_shares ps where ps.principal_kind = 'account'
-          and ps.principal_id = a.id)::int as restricted,
+        (select count(distinct rh.item_id) from page_restriction_holders rh where rh.principal_kind = 'account'
+          and rh.principal_id = a.id)::int as restricted,
         (select g.role::text from import_grants g where g.import_id = ${importId} and g.item_id is null
           and g.account_id = a.id and g.role is not null and g.status <> 'notTaken' limit 1) as space_role,
         case when a.merged_into_id is null and a.name <> i.source_id then (
@@ -249,7 +248,7 @@ export class ImportResolutionService {
     importId: string,
     text: string,
   ): Promise<{ matched: number; named: number; remaining: number }> {
-    await this.#authorization.require(actor, "import.manage", { type: "import", id: importId });
+    await this.#authorization.require(actor, "import.resolve", { type: "import", id: importId });
     const entries = new Map((await parseUserList(text)).map((entry) => [entry.externalId, entry]));
     let matched = 0;
     let named = 0;
@@ -343,7 +342,7 @@ export class ImportResolutionService {
     key: string,
     input: { groupId: string } | { create: true },
   ): Promise<ImportGroupView> {
-    await this.#authorization.require(actor, "import.manage", { type: "import", id: importId });
+    await this.#authorization.require(actor, "import.resolve", { type: "import", id: importId });
     await this.#database.transaction(async (tx) => {
       const row = await this.#resolvable(tx, actor, importId);
       const locked = await tx.execute<{ name: string; group_id: string | null }>(sql`
@@ -376,25 +375,20 @@ export class ImportResolutionService {
         if (own.rows[0]?.own) {
           throw new ImportError(
             "selfExtension",
-            "You belong to this group, and it opens restricted pages. Ask another administrator to map it.",
+            "You belong to this group, and it is named in page restrictions. Ask another administrator to map it.",
           );
         }
       }
       await tx.execute(sql`
         update import_groups set group_id = ${groupId}, mapped_by = ${actorIdOf(actor)}, mapped_at = now()
         where import_id = ${importId} and name_key = ${key}`);
-      const shares = await tx.execute<{ id: string; item_id: string; role: Role }>(sql`
-        select id, item_id, role::text as role from import_grants
-        where import_id = ${importId} and group_key = ${key} and item_id is not null and applied_at is null`);
-      for (const share of shares.rows) {
-        await tx.execute(sql`
-          insert into page_shares (id, item_id, principal_kind, principal_id, role)
-          values (${uuidv7()}, ${share.item_id}, 'group', ${groupId}, ${share.role})
-          on conflict (item_id, principal_kind, principal_id) do update
-            set role = case when array_position(array['reader', 'commenter', 'editor'], excluded.role::text)
-              > array_position(array['reader', 'commenter', 'editor'], page_shares.role::text)
-              then excluded.role else page_shares.role end`);
-      }
+      await tx.execute(sql`
+        insert into page_restriction_holders (item_id, kind, principal_kind, principal_id)
+        select gr.item_id, gr.restriction::page_restriction_kind, 'group', ${groupId} from import_grants gr
+        join page_restrictions r on r.item_id = gr.item_id and r.kind::text = gr.restriction
+        where gr.import_id = ${importId} and gr.group_key = ${key} and gr.item_id is not null
+          and gr.restriction is not null and gr.applied_at is null
+        on conflict do nothing`);
       await tx.execute(sql`
         update import_grants set applied_at = now()
         where import_id = ${importId} and group_key = ${key} and item_id is not null and applied_at is null`);
@@ -600,6 +594,7 @@ export class ImportResolutionService {
       permissions: string[];
       status: "mapped" | "check" | "missing" | "notTaken";
       code: string | null;
+      outside: boolean;
     }>(sql`
       select gr.id, gr.item_id,
         case when ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)} then t.title end as title,
@@ -607,7 +602,22 @@ export class ImportResolutionService {
         coalesce(m.name, a.name) as account_name,
         case when a.merged_into_id is not null then m.state::text else a.state::text end as account_state,
         gr.group_key, ig.name as source_group, ig.group_id, g.name as group_name,
-        gr.role::text as role, gr.permissions, gr.status, gr.code
+        gr.role::text as role, gr.permissions, gr.status, gr.code,
+        gr.item_id is not null and not exists (select 1 from import_grants sg
+          left join import_groups sig on sig.import_id = sg.import_id and sig.name_key = sg.group_key
+          left join accounts sa on sa.id = sg.account_id
+          where sg.import_id = gr.import_id and sg.item_id is null and sg.role is not null and sg.status <> 'notTaken'
+            and ((gr.holder_kind = 'group' and sg.holder_kind = 'group' and sg.group_key = gr.group_key)
+              or (gr.holder_kind = 'group' and sg.holder_kind = 'organizationMembers')
+              or (gr.holder_kind = 'account' and sg.holder_kind = 'account'
+                and coalesce(sa.merged_into_id, sa.id) = coalesce(a.merged_into_id, a.id))
+              or (gr.holder_kind = 'account' and sg.holder_kind = 'group' and (sig.group_id is null
+                or exists (select 1 from group_members gm where gm.group_id = sig.group_id
+                  and gm.account_id = coalesce(a.merged_into_id, a.id))))
+              or (gr.holder_kind = 'account' and sg.holder_kind = 'organizationMembers'
+                and exists (select 1 from memberships ms join imports im on im.id = gr.import_id
+                  where ms.account_id = coalesce(a.merged_into_id, a.id)
+                    and ms.organization_id = im.organization_id)))) as outside
       from import_grants gr
       left join tree_items t on t.id = gr.item_id
       left join spaces s on s.id = t.space_id
@@ -653,7 +663,9 @@ export class ImportResolutionService {
               ? "groupMissing"
               : waiting
                 ? "placeholder"
-                : row.code,
+                : row.outside
+                  ? "withoutSpaceRole"
+                  : row.code,
       };
     });
     return { entries, next: result.rows.length > filter.limit ? (rows.at(-1)?.id ?? null) : null };

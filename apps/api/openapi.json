@@ -24022,6 +24022,10 @@
                       "type": "boolean",
                       "description": "Whether the caller can change, start, stop, accept or discard the import."
                     },
+                    "canResolve": {
+                      "type": "boolean",
+                      "description": "Whether the caller can map people and groups of the import or apply a user list."
+                    },
                     "canTakeOver": {
                       "type": "boolean",
                       "description": "Whether the caller can take over a held import."
@@ -24108,6 +24112,7 @@
                     "errorCode",
                     "quarantineSpace",
                     "canManage",
+                    "canResolve",
                     "canTakeOver",
                     "startedAt",
                     "finishedAt",
@@ -24189,6 +24194,7 @@
                     "key": "ITOPS"
                   },
                   "canManage": true,
+                  "canResolve": true,
                   "canTakeOver": false,
                   "startedAt": "2026-10-10T08:00:00.000Z",
                   "finishedAt": "2026-10-10T08:05:00.000Z",
@@ -24927,6 +24933,10 @@
                       "type": "boolean",
                       "description": "Whether the caller can change, start, stop, accept or discard the import."
                     },
+                    "canResolve": {
+                      "type": "boolean",
+                      "description": "Whether the caller can map people and groups of the import or apply a user list."
+                    },
                     "canTakeOver": {
                       "type": "boolean",
                       "description": "Whether the caller can take over a held import."
@@ -25013,6 +25023,7 @@
                     "errorCode",
                     "quarantineSpace",
                     "canManage",
+                    "canResolve",
                     "canTakeOver",
                     "startedAt",
                     "finishedAt",
@@ -25094,6 +25105,7 @@
                     "key": "ITOPS"
                   },
                   "canManage": true,
+                  "canResolve": true,
                   "canTakeOver": false,
                   "startedAt": "2026-10-10T08:00:00.000Z",
                   "finishedAt": "2026-10-10T08:05:00.000Z",
@@ -25880,6 +25892,10 @@
                       "type": "boolean",
                       "description": "Whether the caller can change, start, stop, accept or discard the import."
                     },
+                    "canResolve": {
+                      "type": "boolean",
+                      "description": "Whether the caller can map people and groups of the import or apply a user list."
+                    },
                     "canTakeOver": {
                       "type": "boolean",
                       "description": "Whether the caller can take over a held import."
@@ -25966,6 +25982,7 @@
                     "errorCode",
                     "quarantineSpace",
                     "canManage",
+                    "canResolve",
                     "canTakeOver",
                     "startedAt",
                     "finishedAt",
@@ -26047,6 +26064,7 @@
                     "key": "ITOPS"
                   },
                   "canManage": true,
+                  "canResolve": true,
                   "canTakeOver": false,
                   "startedAt": "2026-10-10T08:00:00.000Z",
                   "finishedAt": "2026-10-10T08:05:00.000Z",
@@ -26732,6 +26750,10 @@
                       "type": "boolean",
                       "description": "Whether the caller can change, start, stop, accept or discard the import."
                     },
+                    "canResolve": {
+                      "type": "boolean",
+                      "description": "Whether the caller can map people and groups of the import or apply a user list."
+                    },
                     "canTakeOver": {
                       "type": "boolean",
                       "description": "Whether the caller can take over a held import."
@@ -26818,6 +26840,7 @@
                     "errorCode",
                     "quarantineSpace",
                     "canManage",
+                    "canResolve",
                     "canTakeOver",
                     "startedAt",
                     "finishedAt",
@@ -26899,6 +26922,7 @@
                     "key": "ITOPS"
                   },
                   "canManage": true,
+                  "canResolve": true,
                   "canTakeOver": false,
                   "startedAt": "2026-10-10T08:00:00.000Z",
                   "finishedAt": "2026-10-10T08:05:00.000Z",
@@ -27335,12 +27359,12 @@
       "put": {
         "operationId": "imports.mapGroup",
         "summary": "Map a group of an import",
-        "description": "Maps a Confluence group to an existing group of the organization, or creates a local group with its name (this needs the permission to create groups). Restricted pages open for the group at once; its space role applies when the import is accepted. Nobody is notified.\n\nRequires the permission `import.manage` on the import in `importId`.",
+        "description": "Maps a Confluence group to an existing group of the organization, or creates a local group with its name (this needs the permission to create groups). The group takes its place on page restrictions at once; restrictions only narrow access, so its members still need a role in the space. Its space role applies when the import is accepted. Nobody is notified.\n\nRequires the permission `import.resolve` on the import in `importId`.",
         "tags": [
           "Imports"
         ],
         "x-pagehall-permission": {
-          "action": "import.manage",
+          "action": "import.resolve",
           "resource": "import",
           "parameter": "importId"
         },
@@ -28648,6 +28672,10 @@
                       "type": "boolean",
                       "description": "Whether the caller can change, start, stop, accept or discard the import."
                     },
+                    "canResolve": {
+                      "type": "boolean",
+                      "description": "Whether the caller can map people and groups of the import or apply a user list."
+                    },
                     "canTakeOver": {
                       "type": "boolean",
                       "description": "Whether the caller can take over a held import."
@@ -28734,6 +28762,7 @@
                     "errorCode",
                     "quarantineSpace",
                     "canManage",
+                    "canResolve",
                     "canTakeOver",
                     "startedAt",
                     "finishedAt",
@@ -28815,6 +28844,7 @@
                     "key": "ITOPS"
                   },
                   "canManage": true,
+                  "canResolve": true,
                   "canTakeOver": false,
                   "startedAt": "2026-10-10T08:00:00.000Z",
                   "finishedAt": "2026-10-10T08:05:00.000Z",
@@ -29559,6 +29589,10 @@
                       "type": "boolean",
                       "description": "Whether the caller can change, start, stop, accept or discard the import."
                     },
+                    "canResolve": {
+                      "type": "boolean",
+                      "description": "Whether the caller can map people and groups of the import or apply a user list."
+                    },
                     "canTakeOver": {
                       "type": "boolean",
                       "description": "Whether the caller can take over a held import."
@@ -29645,6 +29679,7 @@
                     "errorCode",
                     "quarantineSpace",
                     "canManage",
+                    "canResolve",
                     "canTakeOver",
                     "startedAt",
                     "finishedAt",
@@ -29726,6 +29761,7 @@
                     "key": "ITOPS"
                   },
                   "canManage": true,
+                  "canResolve": true,
                   "canTakeOver": false,
                   "startedAt": "2026-10-10T08:00:00.000Z",
                   "finishedAt": "2026-10-10T08:05:00.000Z",
@@ -29936,12 +29972,12 @@
       "post": {
         "operationId": "imports.mapPeople",
         "summary": "Map placeholders to accounts",
-        "description": "Maps one or more placeholders to accounts of the organization. Authorship, comments, mentions, tasks, reactions and restrictions move to the account in one step, also after the import was accepted; roles the person had in the Confluence space apply when the import is accepted. Nobody is notified. A mapping cannot be undone. A placeholder that holds access to pages or the space cannot be mapped to the caller's own account.\n\nRequires the permission `import.manage` on the import in `importId`.",
+        "description": "Maps one or more placeholders to accounts of the organization. Authorship, comments, mentions, tasks, reactions and places on page restrictions move to the account in one step. Before accepting, only the person who started the import can map; after accepting, every organization administrator who manages imports. Roles the person had in the Confluence space apply when the import is accepted. Nobody is notified. A mapping cannot be undone. A placeholder that holds access to pages or the space cannot be mapped to the caller's own account.\n\nRequires the permission `import.resolve` on the import in `importId`.",
         "tags": [
           "Imports"
         ],
         "x-pagehall-permission": {
-          "action": "import.manage",
+          "action": "import.resolve",
           "resource": "import",
           "parameter": "importId"
         },
@@ -30226,12 +30262,12 @@
       "post": {
         "operationId": "imports.userList",
         "summary": "Resolve placeholders with a user list",
-        "description": "Reads a user list exported from the Atlassian administration and maps every remaining placeholder whose e-mail address belongs to a member of the organization. Placeholders without a match get the name from the list. Works before and after accepting. Send the CSV with `Content-Type: text/csv`, up to 10 MB.\n\nRequires the permission `import.manage` on the import in `importId`.",
+        "description": "Reads a user list exported from the Atlassian administration and maps every remaining placeholder whose e-mail address belongs to a member of the organization. Placeholders without a match get the name from the list. Works before and after accepting, with the same permission as mapping placeholders. Send the CSV with `Content-Type: text/csv`, up to 10 MB.\n\nRequires the permission `import.resolve` on the import in `importId`.",
         "tags": [
           "Imports"
         ],
         "x-pagehall-permission": {
-          "action": "import.manage",
+          "action": "import.resolve",
           "resource": "import",
           "parameter": "importId"
         },
@@ -30717,7 +30753,7 @@
                             ]
                           },
                           "code": {
-                            "description": "Why the entry needs attention: `widened`, `narrowed`, `withoutView`, `anonymous`, `groupMissing` or `placeholder`.",
+                            "description": "Why the entry needs attention: `widened`, `narrowed`, `withoutView`, `anonymous`, `groupMissing`, `placeholder` or `withoutSpaceRole` (named in a restriction without a role in the space).",
                             "type": [
                               "string",
                               "null"
@@ -32757,6 +32793,10 @@
                       "type": "boolean",
                       "description": "Whether the caller can change, start, stop, accept or discard the import."
                     },
+                    "canResolve": {
+                      "type": "boolean",
+                      "description": "Whether the caller can map people and groups of the import or apply a user list."
+                    },
                     "canTakeOver": {
                       "type": "boolean",
                       "description": "Whether the caller can take over a held import."
@@ -32843,6 +32883,7 @@
                     "errorCode",
                     "quarantineSpace",
                     "canManage",
+                    "canResolve",
                     "canTakeOver",
                     "startedAt",
                     "finishedAt",
@@ -32924,6 +32965,7 @@
                     "key": "ITOPS"
                   },
                   "canManage": true,
+                  "canResolve": true,
                   "canTakeOver": false,
                   "startedAt": "2026-10-10T08:00:00.000Z",
                   "finishedAt": "2026-10-10T08:05:00.000Z",
@@ -33592,6 +33634,10 @@
                       "type": "boolean",
                       "description": "Whether the caller can change, start, stop, accept or discard the import."
                     },
+                    "canResolve": {
+                      "type": "boolean",
+                      "description": "Whether the caller can map people and groups of the import or apply a user list."
+                    },
                     "canTakeOver": {
                       "type": "boolean",
                       "description": "Whether the caller can take over a held import."
@@ -33678,6 +33724,7 @@
                     "errorCode",
                     "quarantineSpace",
                     "canManage",
+                    "canResolve",
                     "canTakeOver",
                     "startedAt",
                     "finishedAt",
@@ -33759,6 +33806,7 @@
                     "key": "ITOPS"
                   },
                   "canManage": true,
+                  "canResolve": true,
                   "canTakeOver": false,
                   "startedAt": "2026-10-10T08:00:00.000Z",
                   "finishedAt": "2026-10-10T08:05:00.000Z",
@@ -34468,6 +34516,10 @@
                       "type": "boolean",
                       "description": "Whether the caller can change, start, stop, accept or discard the import."
                     },
+                    "canResolve": {
+                      "type": "boolean",
+                      "description": "Whether the caller can map people and groups of the import or apply a user list."
+                    },
                     "canTakeOver": {
                       "type": "boolean",
                       "description": "Whether the caller can take over a held import."
@@ -34554,6 +34606,7 @@
                     "errorCode",
                     "quarantineSpace",
                     "canManage",
+                    "canResolve",
                     "canTakeOver",
                     "startedAt",
                     "finishedAt",
@@ -34635,6 +34688,7 @@
                     "key": "ITOPS"
                   },
                   "canManage": true,
+                  "canResolve": true,
                   "canTakeOver": false,
                   "startedAt": "2026-10-10T08:00:00.000Z",
                   "finishedAt": "2026-10-10T08:05:00.000Z",
@@ -35295,6 +35349,10 @@
                       "type": "boolean",
                       "description": "Whether the caller can change, start, stop, accept or discard the import."
                     },
+                    "canResolve": {
+                      "type": "boolean",
+                      "description": "Whether the caller can map people and groups of the import or apply a user list."
+                    },
                     "canTakeOver": {
                       "type": "boolean",
                       "description": "Whether the caller can take over a held import."
@@ -35381,6 +35439,7 @@
                     "errorCode",
                     "quarantineSpace",
                     "canManage",
+                    "canResolve",
                     "canTakeOver",
                     "startedAt",
                     "finishedAt",
@@ -35462,6 +35521,7 @@
                     "key": "ITOPS"
                   },
                   "canManage": true,
+                  "canResolve": true,
                   "canTakeOver": false,
                   "startedAt": "2026-10-10T08:00:00.000Z",
                   "finishedAt": "2026-10-10T08:05:00.000Z",
@@ -120277,6 +120337,10 @@
                         "type": "boolean",
                         "description": "Whether the caller can change, start, stop, accept or discard the import."
                       },
+                      "canResolve": {
+                        "type": "boolean",
+                        "description": "Whether the caller can map people and groups of the import or apply a user list."
+                      },
                       "canTakeOver": {
                         "type": "boolean",
                         "description": "Whether the caller can take over a held import."
@@ -120363,6 +120427,7 @@
                       "errorCode",
                       "quarantineSpace",
                       "canManage",
+                      "canResolve",
                       "canTakeOver",
                       "startedAt",
                       "finishedAt",
@@ -120447,6 +120512,7 @@
                       "key": "ITOPS"
                     },
                     "canManage": true,
+                    "canResolve": true,
                     "canTakeOver": false,
                     "startedAt": "2026-10-10T08:00:00.000Z",
                     "finishedAt": "2026-10-10T08:05:00.000Z",
@@ -121098,6 +121164,10 @@
                       "type": "boolean",
                       "description": "Whether the caller can change, start, stop, accept or discard the import."
                     },
+                    "canResolve": {
+                      "type": "boolean",
+                      "description": "Whether the caller can map people and groups of the import or apply a user list."
+                    },
                     "canTakeOver": {
                       "type": "boolean",
                       "description": "Whether the caller can take over a held import."
@@ -121184,6 +121254,7 @@
                     "errorCode",
                     "quarantineSpace",
                     "canManage",
+                    "canResolve",
                     "canTakeOver",
                     "startedAt",
                     "finishedAt",
@@ -121265,6 +121336,7 @@
                     "key": "ITOPS"
                   },
                   "canManage": true,
+                  "canResolve": true,
                   "canTakeOver": false,
                   "startedAt": "2026-10-10T08:00:00.000Z",
                   "finishedAt": "2026-10-10T08:05:00.000Z",
@@ -133871,12 +133943,95 @@
                             "description": "A restricted page above this one."
                           },
                           "description": "View restrictions of pages above, which apply to this page as well."
+                        },
+                        "holders": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "view",
+                                  "edit"
+                                ],
+                                "description": "The restriction the entry is named in."
+                              },
+                              "holder": {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "account",
+                                      "group"
+                                    ],
+                                    "description": "`account` for a person, `group` for a group."
+                                  },
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the account or group."
+                                  },
+                                  "name": {
+                                    "description": "Name of the person or group, or null when hidden.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "email": {
+                                    "description": "E-mail address, when the caller may see it.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "members": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "description": "Active members of a group; null for people."
+                                  },
+                                  "active": {
+                                    "type": "boolean",
+                                    "description": "Whether the account is active or the group still exists."
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "name",
+                                  "email",
+                                  "members",
+                                  "active"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A person or group with access to a page."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "holder"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A person or group named in a restriction."
+                          },
+                          "description": "People and groups named in a restriction without an entry in the access list, such as from an import. They pass the restriction but get no access from it: they still need a role in the space."
                         }
                       },
                       "required": [
                         "view",
                         "edit",
-                        "inherited"
+                        "inherited",
+                        "holders"
                       ],
                       "additionalProperties": false,
                       "description": "Restrictions of the page."
@@ -133963,7 +134118,8 @@
                   "restrictions": {
                     "view": null,
                     "edit": null,
-                    "inherited": []
+                    "inherited": [],
+                    "holders": []
                   },
                   "linkVisitors": [],
                   "canInviteGuests": false
@@ -134613,12 +134769,95 @@
                             "description": "A restricted page above this one."
                           },
                           "description": "View restrictions of pages above, which apply to this page as well."
+                        },
+                        "holders": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "view",
+                                  "edit"
+                                ],
+                                "description": "The restriction the entry is named in."
+                              },
+                              "holder": {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "account",
+                                      "group"
+                                    ],
+                                    "description": "`account` for a person, `group` for a group."
+                                  },
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the account or group."
+                                  },
+                                  "name": {
+                                    "description": "Name of the person or group, or null when hidden.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "email": {
+                                    "description": "E-mail address, when the caller may see it.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "members": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "description": "Active members of a group; null for people."
+                                  },
+                                  "active": {
+                                    "type": "boolean",
+                                    "description": "Whether the account is active or the group still exists."
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "name",
+                                  "email",
+                                  "members",
+                                  "active"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A person or group with access to a page."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "holder"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A person or group named in a restriction."
+                          },
+                          "description": "People and groups named in a restriction without an entry in the access list, such as from an import. They pass the restriction but get no access from it: they still need a role in the space."
                         }
                       },
                       "required": [
                         "view",
                         "edit",
-                        "inherited"
+                        "inherited",
+                        "holders"
                       ],
                       "additionalProperties": false,
                       "description": "Restrictions of the page."
@@ -134705,7 +134944,8 @@
                   "restrictions": {
                     "view": null,
                     "edit": null,
-                    "inherited": []
+                    "inherited": [],
+                    "holders": []
                   },
                   "linkVisitors": [],
                   "canInviteGuests": false

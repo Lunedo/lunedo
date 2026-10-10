@@ -73,6 +73,18 @@ export const pageAccessSchema = z
               .describe("A restricted page above this one."),
           )
           .describe("View restrictions of pages above, which apply to this page as well."),
+        holders: z
+          .array(
+            z
+              .object({
+                kind: z.enum(["view", "edit"]).describe("The restriction the entry is named in."),
+                holder: holderSchema,
+              })
+              .describe("A person or group named in a restriction."),
+          )
+          .describe(
+            "People and groups named in a restriction without an entry in the access list, such as from an import. They pass the restriction but get no access from it: they still need a role in the space.",
+          ),
       })
       .describe("Restrictions of the page."),
     linkVisitors: z
@@ -178,7 +190,7 @@ export const examplePageAccess = {
       createdAt: "2026-10-01T09:30:00.000Z",
     },
   ],
-  restrictions: { view: null, edit: null, inherited: [] },
+  restrictions: { view: null, edit: null, inherited: [], holders: [] },
   linkVisitors: [],
   canInviteGuests: false,
 };

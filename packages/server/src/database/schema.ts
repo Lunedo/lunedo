@@ -137,6 +137,7 @@ export {
   accessRequests,
   giveAccessDrafts,
   invitationShares,
+  pageRestrictionHolders,
   pageRestrictions,
   pageShares,
   restrictionKind,

@@ -335,7 +335,7 @@ function InviteGuest({ pageId }: { pageId: string }) {
 function Restrictions({ access, onChange }: { access: PageAccess; onChange: (pending: Pending) => void }) {
   const { t } = useTranslation();
   const format = useFormat();
-  const { view, edit, inherited } = access.restrictions;
+  const { view, edit, inherited, holders } = access.restrictions;
   const setBy = (info: NonNullable<typeof view>) =>
     t("sharing.restrict.setBy", {
       name: info.setBy?.name ?? t("files.someone"),
@@ -418,6 +418,34 @@ function Restrictions({ access, onChange }: { access: PageAccess; onChange: (pen
           }}
         />
       </Field>
+      {holders.length > 0 ? (
+        <div className="flex flex-col gap-1">
+          <h4 className="font-medium">{t("sharing.restrict.holdersTitle")}</h4>
+          <p className="text-sm text-text-muted">{t("sharing.restrict.holdersHint")}</p>
+          <ul className="flex flex-col gap-1">
+            {holders.map((entry) => (
+              <li
+                key={`${entry.kind}:${entry.holder.kind}:${entry.holder.id}`}
+                className="flex flex-wrap items-baseline justify-between gap-x-3"
+              >
+                <span className="min-w-0 break-words">
+                  {entry.holder.name ??
+                    t(
+                      entry.holder.kind === "group"
+                        ? "spaces.holders.unknownGroup"
+                        : "spaces.holders.unknownPerson",
+                    )}
+                </span>
+                <span className="text-sm text-text-muted">
+                  {entry.kind === "view"
+                    ? t("sharing.restrict.holderView")
+                    : t("sharing.restrict.holderEdit")}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </section>
   );
 }

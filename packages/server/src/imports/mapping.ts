@@ -35,6 +35,8 @@ export async function isMappableAccount(
 export async function holdsAccess(tx: Transaction, placeholderId: string): Promise<boolean> {
   const result = await tx.execute<{ held: boolean }>(sql`
     select exists (select 1 from page_shares where principal_kind = 'account' and principal_id = ${placeholderId})
+      or exists (select 1 from page_restriction_holders where principal_kind = 'account'
+        and principal_id = ${placeholderId})
       or exists (select 1 from space_permissions where principal_kind = 'account' and principal_id = ${placeholderId})
       or exists (select 1 from import_grants where account_id = ${placeholderId} and item_id is null
         and applied_at is null and role is not null and status <> 'notTaken') as held`);
@@ -50,6 +52,9 @@ export async function holdsAccessElsewhere(
     with own as (select quarantine_space_id as space_id from imports where id = ${importId})
     select exists (select 1 from page_shares p join tree_items t on t.id = p.item_id
         where p.principal_kind = 'account' and p.principal_id = ${placeholderId}
+          and t.space_id is distinct from (select space_id from own))
+      or exists (select 1 from page_restriction_holders h join tree_items t on t.id = h.item_id
+        where h.principal_kind = 'account' and h.principal_id = ${placeholderId}
           and t.space_id is distinct from (select space_id from own))
       or exists (select 1 from space_permissions where principal_kind = 'account' and principal_id = ${placeholderId}
         and space_id is distinct from (select space_id from own))

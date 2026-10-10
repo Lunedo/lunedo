@@ -68,6 +68,7 @@ function importView(overrides: Record<string, unknown> = {}) {
     errorCode: null,
     quarantineSpace: { id: SPACE_ID, key: "ITOPS" },
     canManage: true,
+    canResolve: true,
     canTakeOver: false,
     startedAt: "2026-10-10T08:00:00.000Z",
     finishedAt: "2026-10-10T08:05:00.000Z",
@@ -264,7 +265,9 @@ describe("import report", () => {
   it("shows reviewers the report without accept, discard or stop", async () => {
     setup(
       {
-        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: importView({ canManage: false }) }),
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({
+          body: importView({ canManage: false, canResolve: false }),
+        }),
         [`GET /api/v1/imports/${IMPORT_ID}/report`]: () => ({ body: { categories: [], total: 0 } }),
         [`GET /api/v1/imports/${IMPORT_ID}/report/macros`]: () => ({ body: [] }),
       },
@@ -548,7 +551,7 @@ describe("people and permissions in the report", () => {
     await userEvent.click(screen.getByRole("button", { name: "Map 1 person" }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("J. Weber becomes Jana Weber")).toBeTruthy();
-    expect(within(dialog).getByText(/also gets access to restricted pages/)).toBeTruthy();
+    expect(within(dialog).getByText(/also takes a place on restricted pages/)).toBeTruthy();
     await userEvent.click(within(dialog).getByRole("button", { name: "Map 1 person" }));
     await waitFor(() =>
       expect(api.requests.find((request) => request.path.endsWith("/mappings"))?.body).toEqual({
@@ -577,7 +580,7 @@ describe("people and permissions in the report", () => {
     expect(screen.getByText("Public access is not available for this space.")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Create group “contractors”" }));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText(/1 restricted page opens/)).toBeTruthy();
+    expect(within(dialog).getByText(/named on 1 restricted page at once/)).toBeTruthy();
     await userEvent.click(within(dialog).getByRole("button", { name: "Create group “contractors”" }));
     await waitFor(() =>
       expect(api.requests.find((request) => request.path.endsWith("/groups/contractors"))?.body).toEqual({
@@ -590,7 +593,9 @@ describe("people and permissions in the report", () => {
     setup(
       {
         ...reportRoutes(),
-        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: importView({ canManage: false }) }),
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({
+          body: importView({ canManage: false, canResolve: false }),
+        }),
       },
       [],
     );
@@ -598,6 +603,21 @@ describe("people and permissions in the report", () => {
     expect(await screen.findByText("J. Weber")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Choose Jana Weber" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Upload user list" })).toBeNull();
+  });
+
+  it("lets another administrator map the people of an accepted import", async () => {
+    setup(
+      {
+        ...reportRoutes(),
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({
+          body: importView({ state: "accepted", canManage: false, canResolve: true }),
+        }),
+      },
+      [],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}?tab=people`);
+    expect(await screen.findByRole("button", { name: "Choose Jana Weber" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Accept import" })).toBeNull();
   });
 
   it("fills the accept dialog with the imported permissions instead of the defaults", async () => {

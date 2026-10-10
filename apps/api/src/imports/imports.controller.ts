@@ -708,11 +708,11 @@ export class ImportsController {
   }
 
   @Post("imports/:importId/people/mappings")
-  @Permission("import.manage", importResource)
+  @Permission("import.resolve", importResource)
   @ApiRoute({
     summary: "Map placeholders to accounts",
     description:
-      "Maps one or more placeholders to accounts of the organization. Authorship, comments, mentions, tasks, reactions and restrictions move to the account in one step, also after the import was accepted; roles the person had in the Confluence space apply when the import is accepted. Nobody is notified. A mapping cannot be undone. A placeholder that holds access to pages or the space cannot be mapped to the caller's own account.",
+      "Maps one or more placeholders to accounts of the organization. Authorship, comments, mentions, tasks, reactions and places on page restrictions move to the account in one step. Before accepting, only the person who started the import can map; after accepting, every organization administrator who manages imports. Roles the person had in the Confluence space apply when the import is accepted. Nobody is notified. A mapping cannot be undone. A placeholder that holds access to pages or the space cannot be mapped to the caller's own account.",
     tags: [TAG],
     params: importParams,
     body: mappingsSchema,
@@ -741,11 +741,11 @@ export class ImportsController {
   }
 
   @Post("imports/:importId/people/user-list")
-  @Permission("import.manage", importResource)
+  @Permission("import.resolve", importResource)
   @ApiRoute({
     summary: "Resolve placeholders with a user list",
     description:
-      "Reads a user list exported from the Atlassian administration and maps every remaining placeholder whose e-mail address belongs to a member of the organization. Placeholders without a match get the name from the list. Works before and after accepting. Send the CSV with `Content-Type: text/csv`, up to 10 MB.",
+      "Reads a user list exported from the Atlassian administration and maps every remaining placeholder whose e-mail address belongs to a member of the organization. Placeholders without a match get the name from the list. Works before and after accepting, with the same permission as mapping placeholders. Send the CSV with `Content-Type: text/csv`, up to 10 MB.",
     tags: [TAG],
     params: importParams,
     upload: { contentTypes: ["text/csv"], description: "The user list as CSV with a header row." },
@@ -783,11 +783,11 @@ export class ImportsController {
   }
 
   @Put("imports/:importId/groups/:groupKey")
-  @Permission("import.manage", importResource)
+  @Permission("import.resolve", importResource)
   @ApiRoute({
     summary: "Map a group of an import",
     description:
-      "Maps a Confluence group to an existing group of the organization, or creates a local group with its name (this needs the permission to create groups). Restricted pages open for the group at once; its space role applies when the import is accepted. Nobody is notified.",
+      "Maps a Confluence group to an existing group of the organization, or creates a local group with its name (this needs the permission to create groups). The group takes its place on page restrictions at once; restrictions only narrow access, so its members still need a role in the space. Its space role applies when the import is accepted. Nobody is notified.",
     tags: [TAG],
     params: groupParams,
     body: mapGroupSchema,

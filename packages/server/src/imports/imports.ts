@@ -88,6 +88,7 @@ export interface ImportView {
   readonly errorCode: string | null;
   readonly quarantineSpace: { readonly id: string; readonly key: string } | null;
   readonly canManage: boolean;
+  readonly canResolve: boolean;
   readonly canTakeOver: boolean;
   readonly startedAt: Date | null;
   readonly finishedAt: Date | null;
@@ -320,6 +321,7 @@ export class ImportService {
   async #view(viewer: Principal, row: ImportRow, reviewers: readonly ImportPerson[]): Promise<ImportView> {
     const resource = { type: "import", id: row.id };
     const canManage = (await this.#authorization.explain(viewer, "import.manage", resource)).allowed;
+    const canResolve = (await this.#authorization.explain(viewer, "import.resolve", resource)).allowed;
     const canTakeOver = (await this.#authorization.explain(viewer, "import.takeOver", resource)).allowed;
     const file: ImportFileView | null =
       row.file_kind === "upload" && row.upload_id
@@ -377,6 +379,7 @@ export class ImportService {
           ? { id: row.quarantine_space_id, key: row.quarantine_key }
           : null,
       canManage,
+      canResolve,
       canTakeOver,
       startedAt: date(row.started_at),
       finishedAt: date(row.finished_at),
@@ -398,7 +401,7 @@ export class ImportService {
     const result = await this.#database.execute<ImportRow>(sql`
       ${SELECT}
       where i.organization_id = ${organizationId}
-        and (i.importer_id = ${viewerId} or i.state = 'held'
+        and (i.importer_id = ${viewerId} or i.state in ('held', 'accepted')
           or (exists (select 1 from import_reviewers r where r.import_id = i.id and r.account_id = ${viewerId})
             and i.state not in ('draft', 'analyzing', 'ready')))
       order by i.created_at desc, i.id

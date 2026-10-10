@@ -453,17 +453,17 @@ describe.skipIf(!baseUrl)("Confluence imports: people, comments, history and per
         if (entry.item?.id === secret) expect(entry.item.title).toBeNull();
     };
     for (const viewer of [w.admin, w.reviewer]) await hidden(viewer);
-    const shares = await test.database.execute<{
+    const holders = await test.database.execute<{
       principal_kind: string;
       principal_id: string;
-      role: string;
+      kind: string;
     }>(sql`
-      select principal_kind::text as principal_kind, principal_id, role::text as role from page_shares
+      select principal_kind::text as principal_kind, principal_id, kind::text as kind from page_restriction_holders
       where item_id = any(${sql.param([secret, editorsPage])}::uuid[]) order by item_id`);
-    expect(shares.rows).toEqual(
+    expect(holders.rows).toEqual(
       expect.arrayContaining([
-        { principal_kind: "account", principal_id: await person(result.id, CAROL.accountId), role: "reader" },
-        { principal_kind: "group", principal_id: w.editors, role: "editor" },
+        { principal_kind: "account", principal_id: await person(result.id, CAROL.accountId), kind: "view" },
+        { principal_kind: "group", principal_id: w.editors, kind: "edit" },
       ]),
     );
     const proposal = await test.services.imports.resolution.proposal(as(w.admin), result.id);
@@ -592,7 +592,7 @@ describe.skipIf(!baseUrl)("Confluence imports: people, comments, history and per
     );
   });
 
-  it("maps a group in the report to an existing group and opens restricted pages for its members", async () => {
+  it("maps a group in the report to an existing group and lists it on restricted pages for its members", async () => {
     const w = await world();
     const result = await run(w);
     const secret = await page(result.id, PEOPLE_PAGE.secret);
@@ -733,7 +733,7 @@ describe.skipIf(!baseUrl)("Confluence imports: people, comments, history and per
     expect(email.rows[0]?.email).toBeNull();
   });
 
-  it("refuses to map a group that opens restricted pages to a group of the administrator", async () => {
+  it("refuses to map a group named in page restrictions to a group of the administrator", async () => {
     const w = await world();
     const result = await run(w);
     const own = await test.services.groups.create(SYSTEM, w.organizationId, { name: "Admins of HR" });
