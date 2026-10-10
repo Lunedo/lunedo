@@ -1,68 +1,6 @@
-import type { Page } from "@playwright/test";
-import { expect, type Organization, test } from "../support/fixtures.js";
-import { callApi, expectAccessible, setAppearance } from "../support/helpers.js";
-import { type Person, unique } from "../support/people.js";
-
-const VARIANTS = [
-  { colorMode: "light", language: "en" },
-  { colorMode: "dark", language: "de" },
-] as const;
-const WIDTHS = [1440, 390] as const;
-
-interface Series {
-  id: string;
-  title: string;
-  upcoming: { id: string; title: string };
-}
-
-function slug(title: string): string {
-  return title
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[^\w\s-]/g, "")
-    .trim()
-    .split(/\s+/)
-    .join("-");
-}
-
-async function teamSpace(page: Page, organization: Organization, members: Person[]) {
-  await page.goto("/spaces");
-  const key = `M${unique()}`;
-  const space = (await callApi(page, "POST", `/api/v1/organizations/${organization.id}/spaces`, {
-    name: `Meetings ${key}`,
-    key,
-    visibility: "private",
-    grants: members.map((member) => ({ principalKind: "account", principalId: member.id, role: "editor" })),
-  })) as { id: string; key: string };
-  return space;
-}
-
-async function series(page: Page, spaceId: string, body: Record<string, unknown>): Promise<Series> {
-  return (await callApi(page, "POST", `/api/v1/spaces/${spaceId}/meeting-series`, {
-    templateId: "builtin:team-meeting",
-    startTime: "09:30",
-    timeZone: "Europe/Vienna",
-    durationMinutes: 45,
-    ...body,
-  })) as Series;
-}
-
-async function capture(page: Page, name: string, open: () => Promise<void>) {
-  for (const variant of VARIANTS) {
-    await setAppearance(page, variant);
-    for (const width of WIDTHS) {
-      await page.setViewportSize({ width, height: 900 });
-      await open();
-      await page.evaluate(() => document.fonts.ready);
-      await expectAccessible(page, `${name} (${variant.colorMode}, ${variant.language}, ${width})`);
-      const file = `${name}-${variant.colorMode}-${variant.language}-${width}.png`;
-      await page.screenshot({ fullPage: true, path: test.info().outputPath(file) });
-      await test.info().attach(file, { path: test.info().outputPath(file), contentType: "image/png" });
-    }
-  }
-  await setAppearance(page, VARIANTS[0]);
-  await page.setViewportSize({ width: 1440, height: 900 });
-}
+import { expect, test } from "../support/fixtures.js";
+import { callApi } from "../support/helpers.js";
+import { type Series, series, teamSpace } from "../support/meetings.js";
 
 test("a team holds a quarterly and a biweekly series with attendance, topics, tasks and decisions", async ({
   page,
@@ -129,55 +67,6 @@ test("a team holds a quarterly and a biweekly series with attendance, topics, ta
   await expect(page.getByRole("link", { name: /Jour fixe IT/ }).first()).toBeVisible();
 });
 
-test("meeting screens pass the review in both languages and themes", async ({ page, organization }) => {
-  const colleague = await organization.invite("Noah");
-  const space = await teamSpace(page, organization, [colleague]);
-  const created = await series(page, space.id, {
-    name: "Jour fixe Ops",
-    members: [colleague.id],
-    rhythm: { frequency: "weekly", interval: 1, weekdays: ["MO"] },
-    startsOn: "2030-03-18",
-  });
-  const topic = (await callApi(page, "POST", `/api/v1/meeting-series/${created.id}/topics`, {
-    title: "Storage migration",
-    labels: ["infrastructure"],
-  })) as { id: string };
-  await callApi(page, "POST", `/api/v1/topics/${topic.id}/decision`, {
-    statement: "Move to the new NAS in May.",
-  });
-  const meetingPath = `/spaces/${space.key}/pages/${created.upcoming.id}/${slug(created.upcoming.title)}`;
-  await capture(page, "meetings-list", async () => {
-    await page.goto(`/spaces/${space.key}/meetings`);
-    await expect(page.getByRole("link", { name: /Jour fixe Ops/ }).first()).toBeVisible();
-  });
-  await capture(page, "meeting-series", async () => {
-    await page.goto(`/spaces/${space.key}/meetings/${created.id}`);
-    await expect(page.getByText("Move to the new NAS in May.")).toBeVisible();
-  });
-  await capture(page, "meeting-page", async () => {
-    await page.goto(meetingPath);
-    await expect(page.getByRole("region", { name: /Meeting details|Besprechungsdetails/ })).toBeVisible();
-  });
-  await capture(page, "meeting-private-notes", async () => {
-    await page.goto(`${meetingPath}?notes=true`);
-    await expect(
-      page.getByRole("complementary", { name: /Your private notes|Deine privaten Notizen/ }),
-    ).toBeVisible();
-  });
-  await capture(page, "meeting-topic", async () => {
-    await page.goto(`/spaces/${space.key}/topics/${topic.id}`);
-    await expect(page.getByRole("heading", { name: "Storage migration", level: 1 })).toBeVisible();
-  });
-  await capture(page, "meeting-create-series", async () => {
-    await page.goto(`/spaces/${space.key}/meetings`);
-    await page
-      .getByRole("button", { name: /New series|Neue Serie/ })
-      .first()
-      .click();
-    await expect(page.getByRole("dialog")).toBeVisible();
-  });
-});
-
 test("two people hold a one-on-one that administrators cannot read, with private notes and a successor", async ({
   page,
   organization,
@@ -215,10 +104,6 @@ test("two people hold a one-on-one that administrators cannot read, with private
     await page.goto(`/settings/organizations/${organization.id}/spaces`);
     await expect(page.getByText(spaceKey ?? "").first()).toBeVisible();
     await expect(page.getByText(anna.name)).toHaveCount(0);
-    await capture(page, "confidential-spaces-organization", async () => {
-      await page.goto(`/settings/organizations/${organization.id}/spaces`);
-      await expect(page.getByText(spaceKey ?? "").first()).toBeVisible();
-    });
 
     const second = await organization.signIn(ben);
     try {
@@ -227,10 +112,6 @@ test("two people hold a one-on-one that administrators cannot read, with private
       ).json()) as { revision: number; document: unknown };
       expect(JSON.stringify(notes.document)).not.toContain("Ask about goals");
       expect(notes.revision).toBe(0);
-      await capture(second.page, "home-meetings", async () => {
-        await second.page.goto("/home");
-        await expect(second.page.getByRole("region", { name: /One-on-ones|1:1-Gespräche/ })).toBeVisible();
-      });
     } finally {
       await second.context.close();
     }

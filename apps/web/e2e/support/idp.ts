@@ -28,7 +28,7 @@ export function newTestUser(prefix: string, domain = TEST_DOMAIN): NewTestUser {
   return { username, email: `${username}@${domain}`, name: `${prefix} ${username.slice(-10)}` };
 }
 
-export const AUTHENTIK_FLOW_TIMEOUT = 60_000;
+export const AUTHENTIK_FLOW_TIMEOUT = 30_000;
 
 export interface IdentityProviderFixture {
   readonly name: IdentityProviderName;

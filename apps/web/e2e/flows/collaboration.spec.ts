@@ -1,105 +1,7 @@
-import type { Page } from "@playwright/test";
-import { expect, type Organization, test } from "../support/fixtures.js";
-import { callApi, expectAccessible, setAppearance } from "../support/helpers.js";
+import { collaborationSpace, publishedPost, vpnPage } from "../support/collaboration.js";
+import { expect, test } from "../support/fixtures.js";
+import { callApi, expectAccessible } from "../support/helpers.js";
 import { publishScheduledPostNow } from "../support/jobs.js";
-import { type Person, unique } from "../support/people.js";
-
-const VARIANTS = [
-  { colorMode: "light", language: "en" },
-  { colorMode: "dark", language: "de" },
-] as const;
-const WIDTHS = [1440, 390] as const;
-
-interface Space {
-  id: string;
-  key: string;
-  colleague: Person;
-}
-
-function paragraph(text: string) {
-  return { type: "paragraph", content: [{ type: "text", text }] };
-}
-
-async function collaborationSpace(page: Page, organization: Organization): Promise<Space> {
-  await page.goto("/spaces");
-  const colleague = await organization.invite("Carla");
-  const key = `CO${unique()}`;
-  const space = (await callApi(page, "POST", `/api/v1/organizations/${organization.id}/spaces`, {
-    name: "Collaboration",
-    key,
-    visibility: "private",
-    grants: [{ principalKind: "account", principalId: colleague.id, role: "commenter" }],
-  })) as { id: string };
-  return { id: space.id, key, colleague };
-}
-
-async function vpnPage(page: Page, space: Space): Promise<{ id: string; path: string }> {
-  const created = (await callApi(page, "POST", `/api/v1/spaces/${space.id}/items`, {
-    kind: "page",
-    title: "VPN access",
-    parentId: null,
-    mode: "publish",
-  })) as { id: string };
-  await callApi(page, "PUT", `/api/v1/pages/${created.id}/content`, {
-    document: {
-      type: "doc",
-      content: [
-        paragraph("Hotel Wi-Fi blocks UDP on port 51820."),
-        {
-          type: "taskList",
-          content: [
-            {
-              type: "taskItem",
-              attrs: { assignee: space.colleague.id, dueDate: "2026-12-01" },
-              content: [paragraph("Test the TCP fallback")],
-            },
-          ],
-        },
-        {
-          type: "paragraph",
-          content: [
-            { type: "text", text: "Ask " },
-            { type: "mention", attrs: { id: space.colleague.id } },
-            { type: "text", text: " about hotels." },
-          ],
-        },
-      ],
-    },
-  });
-  await callApi(page, "POST", `/api/v1/pages/${created.id}/publish`, {});
-  return { id: created.id, path: `/spaces/${space.key}/pages/${created.id}/vpn-access` };
-}
-
-async function publishedPost(page: Page, space: Space): Promise<string> {
-  const post = (await callApi(page, "POST", `/api/v1/spaces/${space.id}/blog`, {
-    title: "New VPN client from Monday",
-    excerpt: "Existing tunnels keep working.",
-  })) as { id: string };
-  await callApi(page, "PUT", `/api/v1/pages/${post.id}/content`, {
-    document: { type: "doc", content: [paragraph("The company portal ships the new client on Monday.")] },
-  });
-  await callApi(page, "POST", `/api/v1/pages/${post.id}/publish`, {});
-  return post.id;
-}
-
-async function captureScreens(page: Page, name: string, path: string) {
-  await page.goto(path);
-  for (const variant of VARIANTS) {
-    await setAppearance(page, variant);
-    for (const width of WIDTHS) {
-      await page.setViewportSize({ width, height: 900 });
-      await page.goto(path);
-      await page.evaluate(() => document.fonts.ready);
-      await page.waitForLoadState("networkidle");
-      await expectAccessible(page, `${name} (${variant.colorMode}, ${variant.language}, ${width})`);
-      const file = `${name}-${variant.colorMode}-${variant.language}-${width}.png`;
-      await page.screenshot({ fullPage: true, path: test.info().outputPath(file) });
-      await test.info().attach(file, { path: test.info().outputPath(file), contentType: "image/png" });
-    }
-  }
-  await setAppearance(page, { colorMode: "light", language: "en" });
-  await page.setViewportSize({ width: 1280, height: 900 });
-}
 
 test("two people discuss a page with comments, reactions, a mention and a task", async ({
   page,
@@ -125,12 +27,6 @@ test("two people discuss a page with comments, reactions, a mention and a task",
   const panel = other.getByRole("complementary", { name: "Comments" });
   await expect(panel.getByText("Happened twice this week.")).toBeVisible();
   await expectAccessible(other, "comments panel");
-  for (const width of WIDTHS) {
-    await other.setViewportSize({ width, height: 900 });
-    await expectAccessible(other, `comments panel at ${width}`);
-    await other.screenshot({ path: test.info().outputPath(`comments-panel-${width}.png`) });
-  }
-  await other.setViewportSize({ width: 1280, height: 720 });
 
   await page.goto(pagePath);
   await page.getByRole("button", { name: /Comments/ }).click();
@@ -146,8 +42,8 @@ test("two people discuss a page with comments, reactions, a mention and a task",
   await page.getByRole("button", { name: "React with 🎉" }).click();
   await expect(other.getByRole("button", { name: /🎉 1/ })).toBeVisible();
 
-  const task = other.getByRole("checkbox", { name: /Mark as done: Test the TCP fallback/ });
-  await task.check();
+  await other.getByRole("checkbox", { name: /Mark as done: Test the TCP fallback/ }).click();
+  await expect(other.getByRole("checkbox", { name: /Mark as open: Test the TCP fallback/ })).toBeChecked();
   await expect(page.getByRole("checkbox", { name: /Mark as open: Test the TCP fallback/ })).toBeChecked();
 
   await other.goto("/tasks?filter=done");
@@ -159,7 +55,6 @@ test("one task status in the editor, the read view, My tasks, the task report an
   page,
   organization,
 }) => {
-  test.setTimeout(180_000);
   const space = await collaborationSpace(page, organization);
   const checklist = (await callApi(page, "POST", `/api/v1/spaces/${space.id}/items`, {
     kind: "page",
@@ -308,26 +203,4 @@ test("shows recent pages, starred items, tasks, mentions and new posts on For yo
     main.getByRole("region", { name: "Mentions" }).getByRole("link", { name: /VPN access/ }),
   ).toBeVisible();
   await expectAccessible(other, "For you");
-});
-
-test("new screens pass the accessibility check in English and German, light and dark, wide and narrow", async ({
-  page,
-  organization,
-}) => {
-  test.setTimeout(300_000);
-  const space = await collaborationSpace(page, organization);
-  const { id: pageId, path: pagePath } = await vpnPage(page, space);
-  await callApi(page, "POST", `/api/v1/pages/${pageId}/comments`, {
-    body: { type: "doc", content: [paragraph("Happened twice this week.")] },
-    anchor: { exact: "Hotel Wi-Fi blocks UDP on port 51820.", prefix: "", suffix: "" },
-  });
-  const postId = await publishedPost(page, space);
-  await callApi(page, "PUT", `/api/v1/organizations/${organization.id}/blog/pinned/${postId}`, {
-    pinned: true,
-  });
-  await captureScreens(page, "page-with-comments", pagePath);
-  await captureScreens(page, "space-blog", `/spaces/${space.key}/blog`);
-  await captureScreens(page, "organization-blog", "/blog");
-  await captureScreens(page, "my-tasks", "/tasks");
-  await captureScreens(page, "for-you", "/home");
 });

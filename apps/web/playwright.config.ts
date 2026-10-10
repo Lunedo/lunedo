@@ -5,6 +5,7 @@ import { BASE_URL } from "./e2e/support/environment.js";
 
 const ci = Boolean(process.env.CI);
 const identityProviders = process.env.PAGEHALL_E2E_IDP === "1";
+const sweeps = process.env.PAGEHALL_E2E_SWEEPS !== "false";
 const chrome = { ...devices["Desktop Chrome"] };
 const afterSetup = identityProviders ? ["idp"] : ["setup"];
 
@@ -14,7 +15,7 @@ export default defineConfig({
   retries: retriesFromEnv(),
   workers: endToEndWorkers(),
   fullyParallel: true,
-  timeout: 120_000,
+  timeout: 60_000,
   expect: { timeout: 10_000, toHaveScreenshot: { maxDiffPixelRatio: 0.002, animations: "disabled" } },
   reporter: ci ? [["list"], ["html", { open: "never" }], ["./e2e/support/flaky-reporter.ts"]] : "list",
   globalSetup: "./e2e/global-setup.ts",
@@ -25,6 +26,8 @@ export default defineConfig({
     locale: "en-US",
     timezoneId: "Europe/Vienna",
     reducedMotion: "reduce",
+    actionTimeout: 15_000,
+    navigationTimeout: 45_000,
   },
   projects: [
     {
@@ -46,6 +49,16 @@ export default defineConfig({
       dependencies: afterSetup,
       use: chrome,
     },
+    ...(sweeps
+      ? [
+          {
+            name: "sweeps",
+            testMatch: /sweeps\/.*\.spec\.ts/,
+            dependencies: [...afterSetup, "flows", "components"],
+            use: chrome,
+          },
+        ]
+      : []),
     {
       name: "instance",
       testMatch: /instance\/.*\.spec\.ts/,

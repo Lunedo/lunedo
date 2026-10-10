@@ -1,66 +1,10 @@
 import type { Page } from "@playwright/test";
 import { BASE_URL } from "../support/environment.js";
 import { docx, PNG, pdf, wav, xlsx } from "../support/files.js";
-import { expect, type Organization, test } from "../support/fixtures.js";
-import { callApi, expectAccessible, setAppearance } from "../support/helpers.js";
-import { forwardFrom, SIGNED_OUT, unique } from "../support/people.js";
-
-const VARIANTS = [
-  { colorMode: "light", language: "en" },
-  { colorMode: "dark", language: "de" },
-] as const;
-const WIDTHS = [1440, 390] as const;
-
-interface Place {
-  spaceId: string;
-  spaceKey: string;
-  pageId: string;
-  pagePath: string;
-}
-
-function slug(title: string): string {
-  return title.toLowerCase().split(" ").join("-");
-}
-
-async function createPage(page: Page, spaceId: string, spaceKey: string, title: string) {
-  const created = (await callApi(page, "POST", `/api/v1/spaces/${spaceId}/items`, {
-    kind: "page",
-    title,
-    parentId: null,
-    mode: "live",
-  })) as { id: string };
-  return { id: created.id, path: `/spaces/${spaceKey}/pages/${created.id}/${slug(title)}` };
-}
-
-async function place(page: Page, organization: Organization, title = "Network plan"): Promise<Place> {
-  await page.goto("/spaces");
-  const spaceKey = `F${unique()}`;
-  const space = (await callApi(page, "POST", `/api/v1/organizations/${organization.id}/spaces`, {
-    name: `Files and access ${spaceKey}`,
-    key: spaceKey,
-    visibility: "private",
-    grants: [],
-  })) as { id: string };
-  const created = await createPage(page, space.id, spaceKey, title);
-  return { spaceId: space.id, spaceKey, pageId: created.id, pagePath: created.path };
-}
-
-async function capture(page: Page, name: string, open: () => Promise<void>) {
-  for (const variant of VARIANTS) {
-    await setAppearance(page, variant);
-    for (const width of WIDTHS) {
-      await page.setViewportSize({ width, height: 900 });
-      await open();
-      await page.evaluate(() => document.fonts.ready);
-      await expectAccessible(page, `${name} (${variant.colorMode}, ${variant.language}, ${width})`);
-      const file = `${name}-${variant.colorMode}-${variant.language}-${width}.png`;
-      await page.screenshot({ fullPage: true, path: test.info().outputPath(file) });
-      await test.info().attach(file, { path: test.info().outputPath(file), contentType: "image/png" });
-    }
-  }
-  await setAppearance(page, { colorMode: "light", language: "en" });
-  await page.setViewportSize({ width: 1280, height: 900 });
-}
+import { expect, test } from "../support/fixtures.js";
+import { callApi, expectAccessible } from "../support/helpers.js";
+import { forwardFrom, SIGNED_OUT } from "../support/people.js";
+import { createPage, place } from "../support/places.js";
 
 function attachments(page: Page) {
   return page.getByRole("region", { name: /^Attachments/ });
@@ -183,11 +127,6 @@ test("uploads files by picker, drop and paste, previews them in a sandbox and re
   expect(html.headers()["content-type"]).not.toContain("text/html");
   expect(html.headers()["x-content-type-options"]).toBe("nosniff");
   await htmlDrawer.getByRole("button", { name: "Close" }).click();
-
-  await capture(page, "attachments", async () => {
-    await page.goto(pagePath);
-    await expect(page.getByRole("button", { name: /^notes.txt/ })).toBeVisible();
-  });
 });
 
 test("previews every supported type without running scripts inside the files", async ({
@@ -319,37 +258,6 @@ test("restricts and shares a page, opens links and decides an access request", a
     await expect(page.getByText("Approved")).toBeVisible();
     await other.goto(hidden.path);
     await expect(other.getByRole("heading", { name: "Budget" })).toBeVisible();
-
-    await capture(page, "space-access", async () => {
-      await page.goto(`/spaces/${spaceKey}/settings/access`);
-      await expect(page.getByRole("link", { name: "Network plan" }).first()).toBeVisible();
-    });
-    await capture(page, "share-dialog", async () => {
-      await page.goto(pagePath);
-      await page.getByRole("button", { name: /^(Share|Freigeben)$/ }).click();
-      await expect(page.getByRole("dialog").getByText(colleague.name).first()).toBeVisible();
-    });
-    await capture(page, "share-links", async () => {
-      await page.goto(pagePath);
-      await page.getByRole("button", { name: /^(Share|Freigeben)$/ }).click();
-      await page.getByRole("tab", { name: /^(Share links|Freigabelinks)$/ }).click();
-      await expect(
-        page.getByRole("dialog").getByRole("button", { name: /^(Copy link|Link kopieren)$/ }),
-      ).toBeVisible();
-    });
-    await capture(page, "give-access", async () => {
-      await page.goto(`/spaces/${spaceKey}/settings/access`);
-      await page
-        .getByRole("button", {
-          name: /^(Give access|Zugriff geben|Continue giving access|Zugriff geben fortsetzen)$/,
-        })
-        .click();
-      await expect(page.getByRole("dialog")).toBeVisible();
-    });
-    await capture(other, "shared-page", async () => {
-      await other.goto(new URL(address).pathname);
-      await expect(other.getByRole("heading", { name: "Network plan" })).toBeVisible();
-    });
   } finally {
     await context.close();
   }
@@ -385,15 +293,6 @@ test("opens a link for anyone with a password without an account", async ({
       await expect(visitor.getByRole("heading", { name: "Status page" })).toBeVisible();
       await expect(visitor.getByText("Hidden plan")).toHaveCount(0);
       await expectAccessible(visitor, "page opened through a link");
-      for (const colorScheme of ["light", "dark"] as const) {
-        await visitor.emulateMedia({ colorScheme });
-        for (const width of WIDTHS) {
-          await visitor.setViewportSize({ width, height: 900 });
-          await expectAccessible(visitor, `link page (${colorScheme}, ${width})`);
-          const file = `link-page-${colorScheme}-${width}.png`;
-          await visitor.screenshot({ fullPage: true, path: test.info().outputPath(file) });
-        }
-      }
       expect(visitor.url()).not.toContain("unlock");
     } finally {
       await anonymous.close();
@@ -422,10 +321,6 @@ test("shows what a person can do and exports the overview", async ({ page, organ
   await section.getByRole("button", { name: "Why?" }).first().click();
   await expect(section.getByText("Can edit: the page is shared with them")).toBeVisible();
   await expectAccessible(page, "access overview");
-  await capture(page, "access-overview", async () => {
-    await choose();
-    await expect(page.getByRole("button", { name: /^(Why\?|Warum\?)$/ }).first()).toBeVisible();
-  });
   const csv = await page.request.get(
     `/api/v1/organizations/${organization.id}/access-overview?accountId=${person.id}`,
   );

@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { scopeOf } from "./ci-scope.ts";
 
-const none = { endToEnd: false, identityProviders: false, backup: false };
-const all = { endToEnd: true, identityProviders: true, backup: true };
+const none = { endToEnd: false, sweeps: false, identityProviders: false, backup: false };
+const all = { endToEnd: true, sweeps: true, identityProviders: true, backup: true };
 
 function ready(files: string[] | null) {
   return scopeOf({ event: "pull_request", draft: false, files });
@@ -48,7 +48,7 @@ describe("scopeOf", () => {
       "packages/ui/src/button.tsx",
       "packages/tokens/src/index.ts",
     ]) {
-      assert.deepEqual(ready([file]), { lane: "full", ...none, endToEnd: true }, file);
+      assert.deepEqual(ready([file]), { lane: "full", ...none, endToEnd: true, sweeps: true }, file);
     }
   });
 
@@ -70,8 +70,26 @@ describe("scopeOf", () => {
       lane: "full",
       ...none,
       endToEnd: true,
+      sweeps: true,
       identityProviders: true,
     });
+  });
+
+  it("runs the sweeps for the web client, ui, tokens and the end-to-end tests, not for other web files", () => {
+    for (const file of [
+      "apps/web/src/screens/home.tsx",
+      "apps/web/e2e/flows/shell.spec.ts",
+      "apps/web/e2e/sweeps/settings.spec.ts",
+      "apps/web/playwright.config.ts",
+      "apps/web/index.html",
+      "packages/ui/src/button.tsx",
+      "packages/tokens/src/index.ts",
+    ]) {
+      assert.equal(ready([file]).sweeps, true, file);
+    }
+    for (const file of ["apps/web/package.json", "apps/web/vitest.config.ts", "apps/web/tsconfig.json"]) {
+      assert.deepEqual(ready([file]), { lane: "full", ...none, endToEnd: true }, file);
+    }
   });
 
   it("runs the backup round trip for backup, the file storage, migrations and the Docker setup", () => {
