@@ -1,11 +1,12 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "../support/fixtures.js";
 import { callApi } from "../support/helpers.js";
-import { FOLDER_EXPORT, updateImportRow, waitForImportState } from "../support/imports.js";
+import { FOLDER_EXPORT, placeFolderExport, updateImportRow, waitForImportState } from "../support/imports.js";
 import { unique } from "../support/people.js";
 import { sweepAppearances } from "../support/sweeps.js";
 
 async function prepared(page: Page, organizationId: string, reviewerId: string | null) {
+  await placeFolderExport(organizationId);
   const created = (await callApi(page, "POST", `/api/v1/organizations/${organizationId}/imports`, {
     source: "confluence-csv",
   })) as { id: string };

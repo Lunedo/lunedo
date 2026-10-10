@@ -1,6 +1,12 @@
 import { expect, test } from "../support/fixtures.js";
 import { expectAccessible } from "../support/helpers.js";
-import { FOLDER_EXPORT, importIdFrom, waitForImportState, writeSyntheticExport } from "../support/imports.js";
+import {
+  FOLDER_EXPORT,
+  importIdFrom,
+  placeFolderExport,
+  waitForImportState,
+  writeSyntheticExport,
+} from "../support/imports.js";
 import { unique } from "../support/people.js";
 
 test("an administrator uploads an XML export, a reviewer reads it in quarantine and the administrator accepts it", async ({
@@ -90,12 +96,15 @@ test("an administrator imports a CSV export from the import folder and discards 
 }) => {
   test.slow();
   const key = `C${unique()}`.slice(0, 10);
+  const folder = await placeFolderExport(organization.id);
   await page.goto(`/settings/organizations/${organization.id}/imports`);
+  await expect(page.getByRole("textbox", { name: "Import folder of this organization" })).toHaveValue(folder);
   await page.getByRole("button", { name: "New import" }).first().click();
   await expect(page).toHaveURL(/\/imports\/[0-9a-f-]+\/setup/);
   const importId = importIdFrom(page);
   await page.getByText("CSV space export", { exact: true }).click();
   await page.getByText("Server import folder", { exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Import folder of this organization" })).toHaveValue(folder);
   await page.getByRole("combobox", { name: "File in the import folder" }).click();
   await page.getByRole("option", { name: new RegExp(FOLDER_EXPORT) }).click();
   await expect(page.getByText("Export read")).toBeVisible({ timeout: 60_000 });

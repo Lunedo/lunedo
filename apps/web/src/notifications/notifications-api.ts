@@ -12,7 +12,7 @@ import { instanceKeys } from "../api/instance-queries.js";
 import { organizationKeys } from "../api/organization-queries.js";
 import { queryKeys } from "../api/queries.js";
 import { request } from "../api/request.js";
-import { importChanged } from "../imports/imports-api.js";
+import { importChanged, importKeys } from "../imports/imports-api.js";
 import { isSpaceChangeEvent, type SpaceChangeEvent, spacesChanged } from "../spaces/space-queries.js";
 
 export const notificationKeys = {
@@ -134,6 +134,7 @@ export function changeKeys(event: ChangeEvent): QueryKey[] {
   if (!event.organizationId) return keys;
   keys.push(organizationKeys.organization(event.organizationId), ["group"], ["serviceAccount"]);
   if (PROVIDER_TARGETS.has(event.target)) keys.push(...(INSTANCE_TARGET_KEYS[event.target] ?? []));
+  if (event.target === "organization") keys.push(importKeys.folder(event.organizationId));
   if (ORGANIZATION_WIDE_TARGETS.has(event.target)) {
     keys.push(instanceKeys.accounts, instanceKeys.organizations, queryKeys.organizations);
   }

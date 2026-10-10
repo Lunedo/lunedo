@@ -128,7 +128,7 @@ export class ImportsController {
   @ApiRoute({
     summary: "List the import folder",
     description:
-      "Lists the regular files directly inside the import folder of the server. Symbolic links and subfolders are left out.",
+      "Lists the regular files directly inside this organization's subfolder of the import folder on the server, named after the organization's slug. Symbolic links, hidden files and further subfolders are left out; files of other organizations and at the top level are never offered.",
     tags: [TAG],
     params: organizationIdParams,
     response: {
@@ -136,6 +136,7 @@ export class ImportsController {
       schema: folderSchema,
       example: {
         enabled: true,
+        path: "/data/import/acme",
         files: [{ name: "export.zip", size: 6871947673, modifiedAt: "2026-10-09T18:00:00.000Z" }],
         maxUploadBytes: 2147483648,
       },

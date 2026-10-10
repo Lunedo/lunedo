@@ -17,12 +17,14 @@ export function UploadField({
   organizationId,
   current,
   maxBytes,
+  folder,
   onLinked,
   onComplete,
 }: {
   organizationId: string;
   current: ImportView["file"];
   maxBytes: number;
+  folder: { enabled: boolean; path: string } | null;
   onLinked: (uploadId: string) => Promise<void>;
   onComplete: (uploadId: string) => Promise<void>;
 }) {
@@ -133,7 +135,11 @@ export function UploadField({
             size: format.bytes(status.size),
             limit: format.bytes(maxBytes),
           })}
-          action={t("imports.upload.tooLargeAction")}
+          action={
+            folder?.enabled === false
+              ? t("imports.upload.tooLargeActionNoFolder", { path: folder.path })
+              : t("imports.upload.tooLargeAction", { path: folder?.path ?? "" })
+          }
         />
       ) : null}
       {status.kind === "failed" ? (

@@ -46,6 +46,7 @@ interface WorkRow {
   file_kind: "upload" | "folder" | null;
   upload_id: string | null;
   folder_file: string | null;
+  organization_slug: string;
   space_name: string | null;
   space_key: string | null;
   source_url: string | null;
@@ -82,7 +83,9 @@ export class ImportWorker {
   }
 
   async #load(importId: string): Promise<WorkRow | null> {
-    const result = await this.#database.execute<WorkRow>(sql`select * from imports where id = ${importId}`);
+    const result = await this.#database.execute<WorkRow>(sql`
+      select i.*, o.slug as organization_slug from imports i join organizations o on o.id = i.organization_id
+      where i.id = ${importId}`);
     return result.rows[0] ?? null;
   }
 
@@ -161,7 +164,7 @@ export class ImportWorker {
   async #source(row: WorkRow): Promise<ByteSource> {
     if (row.file_kind === "upload" && row.upload_id) return this.#options.uploads.source(row.upload_id);
     if (row.file_kind === "folder" && row.folder_file) {
-      const file = await this.#options.folder.open(row.folder_file);
+      const file = await this.#options.folder.open(row.organization_slug, row.folder_file);
       const expected = row.found?.file as { size?: number; modifiedAt?: string } | undefined;
       if (expected && (expected.size !== file.size || expected.modifiedAt !== file.modifiedAt)) {
         await file.close();

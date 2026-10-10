@@ -1112,7 +1112,8 @@
     "forbiddenTitle": "No access",
     "forbiddenDescription": "Your roles do not allow you to see this page. Ask an owner of the organization for access if you need it.",
     "failedTitle": "This page could not be loaded",
-    "retry": "Try again"
+    "retry": "Try again",
+    "uploadTooLarge": "The file is larger than uploads allow. Ask the instance administrators to raise the upload limit, or to place the file in your organization's import folder."
   },
   "validation": {
     "required": "This field is required.",
@@ -2066,11 +2067,11 @@
       },
       "imports_maxUploadMegabytes": {
         "label": "Largest export to upload",
-        "description": "Exports above this size are refused before the upload starts, with a hint to use the import folder of the server instead."
+        "description": "Exports above this size are refused before the upload starts, with a hint to raise this limit or to use the organization's import folder on the server."
       },
       "imports_folderEnabled": {
         "label": "Import folder",
-        "description": "Organization administrators can import exports that the person who runs the server places in the import folder."
+        "description": "Organization administrators can import exports placed in their organization's subfolder of the import folder, named after the organization's short name. Files at the top level or in another organization's subfolder are never offered."
       }
     },
     "disabled": {
@@ -5900,8 +5901,8 @@
       "held": "{source} · {name} can no longer import; another administrator can take over",
       "failed": "{source} · failed {when}",
       "largeTitle": "Large exports",
-      "largeFolder": "Exports above {size} cannot be uploaded from the browser. Ask the person who runs the server to place the file in the import folder of the server; you can then choose it here.",
-      "largeNoFolder": "Exports above {size} cannot be uploaded from the browser, and the import folder of the server is turned off. Ask the person who runs the server to turn it on."
+      "largeFolder": "Exports above {size} cannot be uploaded from the browser. Ask the instance administrators to raise the upload limit, or to place the file in this organization's import folder on the server; you can then choose it in a new import.",
+      "largeNoFolder": "Exports above {size} cannot be uploaded from the browser. Ask the instance administrators to raise the upload limit, or to turn on the import folder and place the file in this organization's import folder on the server."
     },
     "wizard": {
       "title": "New import",
@@ -5936,14 +5937,14 @@
         "uploadDescription": "Up to {size}. The upload continues after a lost connection.",
         "uploadDescriptionPlain": "The upload continues after a lost connection.",
         "folder": "Server import folder",
-        "folderDescription": "For larger exports. The file must already be on the server.",
+        "folderDescription": "For larger exports. The file must already be in this organization's import folder on the server.",
         "fileRequired": "Choose the export file, and wait until the upload is finished.",
         "folderFile": "File in the import folder",
-        "folderHint": "Pagehall reads only regular files directly inside the import folder.",
+        "folderHint": "Pagehall reads only regular files directly inside this organization's import folder.",
         "folderPlaceholder": "Choose a file",
         "folderOption": "{name} · {size}",
         "folderEmpty": "The import folder is empty",
-        "folderEmptyDescription": "Ask the person who runs the server to place the export there. It appears here without a reload.",
+        "folderEmptyDescription": "Ask the instance administrators to place the export in the folder shown above. It appears here without a reload.",
         "folderDisabled": "Imports from the import folder are turned off for this instance. Upload the file instead, or ask an instance administrator to turn the import folder on.",
         "folderLoadFailed": "The import folder could not be read",
         "folderFailed": "The file could not be chosen",
@@ -6010,10 +6011,11 @@
       "done": "Uploaded",
       "tooLarge": "{name} cannot be uploaded",
       "tooLargeCause": "The file has {size}; uploads from the browser are limited to {limit}.",
-      "tooLargeAction": "Ask the person who runs the server to place the file in the import folder, then choose “Server import folder”.",
+      "tooLargeAction": "Ask the instance administrators to raise the upload limit, or to place the file in the import folder {path}, then choose “Server import folder”.",
       "failed": "{name} could not be uploaded",
       "failedAction": "Retry the upload. Parts that already arrived are kept.",
-      "retry": "Retry upload"
+      "retry": "Retry upload",
+      "tooLargeActionNoFolder": "Ask the instance administrators to raise the upload limit, or to turn on the import folder and place the file in {path}."
     },
     "detail": {
       "loadFailed": "The import could not be loaded",
@@ -6318,6 +6320,10 @@
       "title": "Import in quarantine",
       "description": "This space holds an import that is not accepted yet. Only the importing administrator and the reviewers can see it, and nobody can change it.",
       "open": "Open the imports"
+    },
+    "folder": {
+      "path": "Import folder of this organization",
+      "pathHint": "Pagehall offers only files directly inside this folder. The folder is named after the organization's short name; when the short name changes, the path changes too."
     }
   }
 }

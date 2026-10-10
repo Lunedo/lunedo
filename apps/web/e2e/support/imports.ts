@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { copyFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -11,6 +12,7 @@ const serverRoot = fileURLToPath(new URL("../../../../packages/server", import.m
 
 export const IMPORT_DIR = path.join(STATE_DIR, "import");
 export const FOLDER_EXPORT = "space-export.zip";
+export const FOLDER_EXPORT_TEMPLATE = path.join(STATE_DIR, FOLDER_EXPORT);
 
 const WRITE_EXPORT = `
 const { writeFileSync } = await import("node:fs");
@@ -38,6 +40,28 @@ export async function importState(importId: string): Promise<string> {
   } finally {
     await client.end();
   }
+}
+
+export async function organizationImportFolder(organizationId: string): Promise<string> {
+  const client = new pg.Client({ connectionString: readState().databaseUrl });
+  await client.connect();
+  try {
+    const result = await client.query<{ slug: string }>("select slug from organizations where id = $1", [
+      organizationId,
+    ]);
+    const slug = result.rows[0]?.slug;
+    if (!slug) throw new Error(`No organization ${organizationId}`);
+    return path.join(IMPORT_DIR, slug);
+  } finally {
+    await client.end();
+  }
+}
+
+export async function placeFolderExport(organizationId: string): Promise<string> {
+  const directory = await organizationImportFolder(organizationId);
+  mkdirSync(directory, { recursive: true });
+  copyFileSync(FOLDER_EXPORT_TEMPLATE, path.join(directory, FOLDER_EXPORT));
+  return directory;
 }
 
 export async function updateImportRow(importId: string, sql: string, values: unknown[] = []): Promise<void> {

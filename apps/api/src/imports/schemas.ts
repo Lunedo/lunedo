@@ -160,7 +160,11 @@ export const updateImportSchema = z
         z
           .object({
             kind: z.literal("folder").describe("A file in the import folder of the server."),
-            name: z.string().min(1).max(255).describe("Name of a file directly inside the import folder."),
+            name: z
+              .string()
+              .min(1)
+              .max(255)
+              .describe("Name of a file directly inside this organization's subfolder of the import folder."),
           })
           .strict(),
       ])
@@ -267,6 +271,11 @@ export const macrosSchema = z
 export const folderSchema = z
   .object({
     enabled: z.boolean().describe("Whether the instance allows imports from the import folder."),
+    path: z
+      .string()
+      .describe(
+        "Folder on the server for this organization's exports: the subfolder named after the organization's slug inside the import folder. It changes when the slug changes.",
+      ),
     files: z
       .array(
         z
@@ -277,15 +286,15 @@ export const folderSchema = z
           })
           .describe("A file in the import folder."),
       )
-      .describe("Regular files directly inside the import folder."),
+      .describe("Regular files directly inside this organization's subfolder of the import folder."),
     maxUploadBytes: z
       .number()
       .int()
       .describe(
-        "Largest file that can be uploaded from the browser; larger exports go through the import folder.",
+        "Largest file that can be uploaded from the browser; instance administrators can raise it, or larger exports go through the import folder.",
       ),
   })
-  .describe("Files in the import folder.");
+  .describe("Files in this organization's subfolder of the import folder.");
 
 export const uploadSchema = z
   .object({

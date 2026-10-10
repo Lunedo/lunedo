@@ -99,11 +99,13 @@ function setup(routes: Record<string, () => { status?: number; body?: unknown }>
     "GET /api/v1/account/preferences": () => ({ body: [] }),
     "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
     [`GET /api/v1/organizations/${ORGANIZATION.id}/import-folder`]: () => ({
-      body: { enabled: true, files: [], maxUploadBytes: 1024 },
+      body: { enabled: true, path: FOLDER_PATH, files: [], maxUploadBytes: 1024 },
     }),
     ...routes,
   });
 }
+
+const FOLDER_PATH = "/data/import/example-group";
 
 async function open(path: string) {
   window.history.replaceState(null, "", path);
@@ -156,6 +158,10 @@ describe("imports list", () => {
     expect(within(list).getByRole("button", { name: "Open report" })).toBeTruthy();
     expect(within(list).getByRole("button", { name: "Continue" })).toBeTruthy();
     expect(screen.getAllByRole("button", { name: "New import" }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("textbox", { name: "Import folder of this organization" })).toHaveProperty(
+      "value",
+      FOLDER_PATH,
+    );
   });
 
   it("explains the first use and offers no new import without the permission", async () => {
@@ -167,6 +173,27 @@ describe("imports list", () => {
 });
 
 describe("import wizard", () => {
+  it("shows the organization's import folder in the wizard", async () => {
+    setup(
+      {
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({
+          body: importView({ state: "draft", file: null, found: null }),
+        }),
+      },
+      ["organization.imports.manage"],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}/setup?step=0`);
+    await userEvent.click(await screen.findByText("Server import folder", { exact: true }));
+    expect(
+      (
+        (await screen.findByRole("textbox", {
+          name: "Import folder of this organization",
+        })) as HTMLInputElement
+      ).value,
+    ).toBe(FOLDER_PATH);
+    expect(screen.getByText("The import folder is empty")).toBeTruthy();
+  });
+
   it("refuses a file above the upload limit before anything is sent", async () => {
     const api = setup(
       {
@@ -181,7 +208,12 @@ describe("import wizard", () => {
     const input = (await screen.findByLabelText(/Drop the export here/)) as HTMLInputElement;
     await userEvent.upload(input, new File([new Uint8Array(4096)], "big.zip", { type: "application/zip" }));
     expect(await screen.findByText("big.zip cannot be uploaded")).toBeTruthy();
-    expect(screen.getByText(/place the file in the import folder/)).toBeTruthy();
+    expect(screen.getByText(/uploads from the browser are limited to 1 kB/)).toBeTruthy();
+    expect(
+      screen.getByText(
+        `Ask the instance administrators to raise the upload limit, or to place the file in the import folder ${FOLDER_PATH}, then choose “Server import folder”.`,
+      ),
+    ).toBeTruthy();
     expect(api.requests.some((request) => request.path.includes("/import-uploads"))).toBe(false);
   });
 });

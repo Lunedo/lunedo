@@ -31,11 +31,27 @@ The report lists problems by category: macros, attachments, links, content and a
 - Mentions of people become placeholder accounts that are not able to sign in.
 - Only the current version of each page is imported. Attachments keep all versions.
 
-## Uploads and the import folder
+## Large exports
 
-Uploads are sent in parts, can be resumed after an interruption, and are checked with a SHA-256 checksum at the end. The instance setting for the maximum upload size defaults to 2 GB. Larger files go into the import folder (`PAGEHALL_IMPORT_DIR`, default `/data/import`): only regular files directly inside it are offered; symbolic links, hidden files and subfolders are ignored. Mount the folder read-only.
+There are two ways to import a large export.
 
-Uploaded files are deleted 7 days after an import was accepted, discarded or stopped.
+### Upload in the browser
+
+This is the normal way. Uploads are sent in parts of 16 MB, continue after an interruption without sending finished parts again, and are checked with a SHA-256 checksum at the end. Files of several gigabytes work.
+
+The instance setting for the largest export to upload defaults to 2 GB. Instance administrators can raise it. When a file is above the limit, the wizard names the limit and both ways: ask the instance administrators to raise the limit, or to place the file in the organization's import folder.
+
+### Import folder on the server
+
+This is the fallback for the person who runs the server. Each organization has its own subfolder of the import folder (`PAGEHALL_IMPORT_DIR`, default `/data/import`), named after the organization's short name in addresses (its slug):
+
+```
+/data/import/<organization slug>/export.zip
+```
+
+The import wizard and the organization's import settings show the exact path. Pagehall offers only regular files directly inside the organization's subfolder; symbolic links, hidden files and further subfolders are ignored. An organization never sees files of another organization's subfolder or files at the top level. When the slug changes, the old subfolder is no longer read and the interface shows the new path; move the files there. Mount the folder read-only. Instance administrators can turn the import folder off.
+
+Uploaded files are deleted 7 days after an import was accepted, discarded or stopped. Files in the import folder are never changed or deleted by Pagehall.
 
 ## Defensive reading
 

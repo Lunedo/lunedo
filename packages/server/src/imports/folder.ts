@@ -1,5 +1,5 @@
-import { constants, createReadStream } from "node:fs";
-import { lstat, open, readdir, realpath } from "node:fs/promises";
+import { constants, createReadStream, type Dirent } from "node:fs";
+import { lstat, open, readdir, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 import type { Readable } from "node:stream";
 import { ImportError } from "./errors.js";
@@ -13,6 +13,7 @@ export interface FolderFile {
 
 const MAX_LISTED = 500;
 const NAME = /^[^/\\\0]{1,255}$/;
+const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
 
 function notAvailable(): ImportError {
   return new ImportError("importFolderUnavailable", "The import folder does not exist or cannot be read.");
@@ -25,17 +26,50 @@ function fileMissing(): ImportError {
   );
 }
 
+function isMissing(error: unknown): boolean {
+  return (error as NodeJS.ErrnoException | null)?.code === "ENOENT";
+}
+
 export function isSafeFolderName(name: string): boolean {
   return NAME.test(name) && name !== "." && name !== ".." && !name.startsWith(".");
 }
 
-export class ImportFolder {
-  constructor(readonly directory: string) {}
+export function isSafeFolderSlug(slug: string): boolean {
+  return SLUG.test(slug);
+}
 
-  async list(): Promise<FolderFile[]> {
-    let entries: import("node:fs").Dirent[];
+export class ImportFolder {
+  constructor(readonly root: string) {}
+
+  pathFor(slug: string): string {
+    if (!isSafeFolderSlug(slug)) throw notAvailable();
+    return path.join(this.root, slug);
+  }
+
+  async #directory(slug: string): Promise<string | null> {
+    if (!isSafeFolderSlug(slug)) throw notAvailable();
+    const root = await realpath(this.root).catch(() => {
+      throw notAvailable();
+    });
+    const directory = path.join(root, slug);
+    if (path.dirname(directory) !== root) throw notAvailable();
+    let stats: import("node:fs").Stats;
     try {
-      entries = await readdir(this.directory, { withFileTypes: true });
+      stats = await lstat(directory);
+    } catch (error) {
+      if (isMissing(error)) return null;
+      throw notAvailable();
+    }
+    if (!stats.isDirectory()) throw notAvailable();
+    return directory;
+  }
+
+  async list(slug: string): Promise<FolderFile[]> {
+    const directory = await this.#directory(slug);
+    if (directory === null) return [];
+    let entries: Dirent[];
+    try {
+      entries = await readdir(directory, { withFileTypes: true });
     } catch {
       throw notAvailable();
     }
@@ -43,7 +77,7 @@ export class ImportFolder {
     for (const entry of entries) {
       if (!entry.isFile() || !isSafeFolderName(entry.name)) continue;
       try {
-        const stats = await lstat(path.join(this.directory, entry.name));
+        const stats = await lstat(path.join(directory, entry.name));
         if (!stats.isFile()) continue;
         files.push({ name: entry.name, size: stats.size, modifiedAt: stats.mtime.toISOString() });
       } catch {}
@@ -52,11 +86,10 @@ export class ImportFolder {
     return files.sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  async open(name: string): Promise<ByteSource & { readonly modifiedAt: string }> {
+  async open(slug: string, name: string): Promise<ByteSource & { readonly modifiedAt: string }> {
     if (!isSafeFolderName(name)) throw fileMissing();
-    const directory = await realpath(this.directory).catch(() => {
-      throw notAvailable();
-    });
+    const directory = await this.#directory(slug);
+    if (directory === null) throw fileMissing();
     const target = path.join(directory, name);
     if (path.dirname(target) !== directory) throw fileMissing();
     const before = await lstat(target).catch(() => {
@@ -67,7 +100,16 @@ export class ImportFolder {
       throw fileMissing();
     });
     const stats = await handle.stat();
-    if (!stats.isFile() || stats.ino !== before.ino || stats.dev !== before.dev) {
+    const resolved = await realpath(target).catch(() => null);
+    const after = resolved === null ? null : await stat(resolved).catch(() => null);
+    if (
+      !stats.isFile() ||
+      stats.ino !== before.ino ||
+      stats.dev !== before.dev ||
+      resolved !== target ||
+      after?.ino !== stats.ino ||
+      after.dev !== stats.dev
+    ) {
       await handle.close();
       throw fileMissing();
     }

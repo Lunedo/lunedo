@@ -314,6 +314,21 @@ describe("objectsChanged", () => {
     expect(queryClient.getQueryState(accounts)?.isInvalidated).toBe(false);
   });
 
+  it("reloads the import folder after the organization changed, since its path follows the slug", () => {
+    const queryClient = createQueryClient();
+    const folder = ["imports", "folder", organization];
+    const other = ["imports", "folder", "01929b1e-0000-7000-8000-0000000000b2"];
+    queryClient.setQueryData(folder, {});
+    queryClient.setQueryData(other, {});
+    objectsChanged(queryClient, [{ scope: "organization", organizationId: organization, target: "group" }]);
+    expect(queryClient.getQueryState(folder)?.isInvalidated).toBe(false);
+    objectsChanged(queryClient, [
+      { scope: "organization", organizationId: organization, target: "organization" },
+    ]);
+    expect(queryClient.getQueryState(folder)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(other)?.isInvalidated).toBe(false);
+  });
+
   it("follows change events from the stream in one batch", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {

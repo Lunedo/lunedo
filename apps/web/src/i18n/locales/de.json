@@ -1112,7 +1112,8 @@
     "forbiddenTitle": "Kein Zugriff",
     "forbiddenDescription": "Deine Rollen erlauben dir diese Seite nicht. Bitte einen Owner der Organisation um Zugriff, wenn du ihn brauchst.",
     "failedTitle": "Diese Seite konnte nicht geladen werden",
-    "retry": "Erneut versuchen"
+    "retry": "Erneut versuchen",
+    "uploadTooLarge": "Die Datei ist größer als für Uploads erlaubt. Bitte die Instanz-Administration, das Upload-Limit zu erhöhen oder die Datei in den Import-Ordner deiner Organisation zu legen."
   },
   "validation": {
     "required": "Dieses Feld ist erforderlich.",
@@ -2066,11 +2067,11 @@
       },
       "imports_maxUploadMegabytes": {
         "label": "Größter hochladbarer Export",
-        "description": "Exporte über dieser Größe werden vor dem Upload abgelehnt, mit dem Hinweis, stattdessen den Import-Ordner des Servers zu verwenden."
+        "description": "Exporte über dieser Größe werden vor dem Upload abgelehnt, mit dem Hinweis, dieses Limit zu erhöhen oder den Import-Ordner der Organisation auf dem Server zu verwenden."
       },
       "imports_folderEnabled": {
         "label": "Import-Ordner",
-        "description": "Die Organisations-Administration kann Exporte importieren, die die Person, die den Server betreibt, in den Import-Ordner legt."
+        "description": "Die Organisations-Administration kann Exporte importieren, die im Unterordner ihrer Organisation im Import-Ordner liegen; er heißt wie der Kurzname der Organisation. Dateien auf oberster Ebene oder im Unterordner einer anderen Organisation werden nie angeboten."
       }
     },
     "disabled": {
@@ -5900,8 +5901,8 @@
       "held": "{source} · {name} darf nicht mehr importieren; eine andere Person aus der Administration kann übernehmen",
       "failed": "{source} · fehlgeschlagen {when}",
       "largeTitle": "Große Exporte",
-      "largeFolder": "Exporte über {size} lassen sich nicht im Browser hochladen. Bitte die Person, die den Server betreibt, die Datei in den Import-Ordner des Servers zu legen; danach kannst du sie hier auswählen.",
-      "largeNoFolder": "Exporte über {size} lassen sich nicht im Browser hochladen, und der Import-Ordner des Servers ist ausgeschaltet. Bitte die Person, die den Server betreibt, ihn einzuschalten."
+      "largeFolder": "Exporte über {size} lassen sich nicht im Browser hochladen. Bitte die Instanz-Administration, das Upload-Limit zu erhöhen oder die Datei in den Import-Ordner dieser Organisation auf dem Server zu legen; danach kannst du sie in einem neuen Import auswählen.",
+      "largeNoFolder": "Exporte über {size} lassen sich nicht im Browser hochladen. Bitte die Instanz-Administration, das Upload-Limit zu erhöhen oder den Import-Ordner einzuschalten und die Datei in den Import-Ordner dieser Organisation auf dem Server zu legen."
     },
     "wizard": {
       "title": "Neuer Import",
@@ -5936,14 +5937,14 @@
         "uploadDescription": "Bis {size}. Der Upload läuft nach einem Verbindungsabbruch weiter.",
         "uploadDescriptionPlain": "Der Upload läuft nach einem Verbindungsabbruch weiter.",
         "folder": "Import-Ordner des Servers",
-        "folderDescription": "Für größere Exporte. Die Datei muss schon auf dem Server liegen.",
+        "folderDescription": "Für größere Exporte. Die Datei muss schon im Import-Ordner dieser Organisation auf dem Server liegen.",
         "fileRequired": "Wähle die Exportdatei und warte, bis der Upload fertig ist.",
         "folderFile": "Datei im Import-Ordner",
-        "folderHint": "Pagehall liest nur normale Dateien, die direkt im Import-Ordner liegen.",
+        "folderHint": "Pagehall liest nur normale Dateien, die direkt im Import-Ordner dieser Organisation liegen.",
         "folderPlaceholder": "Datei auswählen",
         "folderOption": "{name} · {size}",
         "folderEmpty": "Der Import-Ordner ist leer",
-        "folderEmptyDescription": "Bitte die Person, die den Server betreibt, den Export dort abzulegen. Er erscheint hier ohne Neuladen.",
+        "folderEmptyDescription": "Bitte die Instanz-Administration, den Export in den oben gezeigten Ordner zu legen. Er erscheint hier ohne Neuladen.",
         "folderDisabled": "Importe aus dem Import-Ordner sind in dieser Instanz ausgeschaltet. Lade die Datei stattdessen hoch oder bitte die Instanz-Administration, den Import-Ordner einzuschalten.",
         "folderLoadFailed": "Der Import-Ordner konnte nicht gelesen werden",
         "folderFailed": "Die Datei konnte nicht ausgewählt werden",
@@ -6010,10 +6011,11 @@
       "done": "Hochgeladen",
       "tooLarge": "{name} kann nicht hochgeladen werden",
       "tooLargeCause": "Die Datei hat {size}; Uploads aus dem Browser sind auf {limit} begrenzt.",
-      "tooLargeAction": "Bitte die Person, die den Server betreibt, die Datei in den Import-Ordner zu legen, und wähle dann „Import-Ordner des Servers“.",
+      "tooLargeAction": "Bitte die Instanz-Administration, das Upload-Limit zu erhöhen oder die Datei in den Import-Ordner {path} zu legen, und wähle dann „Import-Ordner des Servers“.",
       "failed": "{name} konnte nicht hochgeladen werden",
       "failedAction": "Versuche den Upload erneut. Bereits angekommene Teile bleiben erhalten.",
-      "retry": "Upload erneut versuchen"
+      "retry": "Upload erneut versuchen",
+      "tooLargeActionNoFolder": "Bitte die Instanz-Administration, das Upload-Limit zu erhöhen oder den Import-Ordner einzuschalten und die Datei in {path} zu legen."
     },
     "detail": {
       "loadFailed": "Der Import konnte nicht geladen werden",
@@ -6318,6 +6320,10 @@
       "title": "Import in Quarantäne",
       "description": "Dieser Space enthält einen Import, der noch nicht übernommen wurde. Nur die importierende Administration und die Import-Prüfer sehen ihn, und niemand kann ihn ändern.",
       "open": "Importe öffnen"
+    },
+    "folder": {
+      "path": "Import-Ordner dieser Organisation",
+      "pathHint": "Pagehall bietet nur Dateien an, die direkt in diesem Ordner liegen. Der Ordner heißt wie der Kurzname der Organisation; ändert sich der Kurzname, ändert sich auch der Pfad."
     }
   }
 }

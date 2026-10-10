@@ -68,7 +68,7 @@ export const configSettings = [
   setting(
     "PAGEHALL_IMPORT_DIR",
     path.default("/data/import"),
-    "Import folder: exports placed here can be imported without uploading them. Only regular files directly inside it are read.",
+    "Import folder: exports placed in an organization's subfolder, named after its slug, can be imported without uploading them. Only regular files directly inside that subfolder are read.",
   ),
   setting(
     "PAGEHALL_FILE_STORAGE",

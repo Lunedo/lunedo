@@ -27,10 +27,16 @@ describe.skipIf(!databaseBaseUrl)("imports through the API", () => {
   let counter = 0;
   const importDir = mkdtempSync(path.join(tmpdir(), "pagehall-import-folder-"));
 
+  async function slugOf(id: string): Promise<string> {
+    const result = await test.runtime.pool.query<{ slug: string }>(
+      "select slug from organizations where id = $1",
+      [id],
+    );
+    return result.rows[0]?.slug ?? "";
+  }
+
   beforeAll(async () => {
-    writeFileSync(path.join(importDir, "space-export.zip"), createXmlExport(syntheticExport()));
-    mkdirSync(path.join(importDir, "nested"));
-    writeFileSync(path.join(importDir, "nested", "hidden.zip"), "x");
+    writeFileSync(path.join(importDir, "top-level.zip"), createXmlExport(syntheticExport()));
     test = await createAuthTestApp({ ...configuredSetupEnv, PAGEHALL_IMPORT_DIR: importDir });
     await completeConfiguredSetup(test);
     await test.runtime.settings.set(clientAttemptLimitSetting, {}, "instance", 10_000);
@@ -39,6 +45,10 @@ describe.skipIf(!databaseBaseUrl)("imports through the API", () => {
     await owner.post("/api/v1/auth/sign-in", OWNER);
     await addTotp(owner);
     organizationId = await firstOrganizationId(test);
+    const own = path.join(importDir, await slugOf(organizationId));
+    mkdirSync(path.join(own, "nested"), { recursive: true });
+    writeFileSync(path.join(own, "space-export.zip"), createXmlExport(syntheticExport()));
+    writeFileSync(path.join(own, "nested", "hidden.zip"), "x");
   });
 
   afterAll(async () => {
@@ -265,13 +275,15 @@ describe.skipIf(!databaseBaseUrl)("imports through the API", () => {
   it("imports a file from the import folder by its name only", async () => {
     const listing = await owner.get(`/api/v1/organizations/${organizationId}/import-folder`);
     expect(listing.statusCode, listing.body).toBe(200);
-    expect((listing.json() as { files: { name: string }[] }).files.map((file) => file.name)).toEqual([
-      "space-export.zip",
-    ]);
+    expect(listing.json()).toMatchObject({
+      path: path.join(importDir, await slugOf(organizationId)),
+      files: [{ name: "space-export.zip" }],
+    });
+    expect((listing.json() as { files: unknown[] }).files).toHaveLength(1);
     const created = (
       await owner.post(`/api/v1/organizations/${organizationId}/imports`, { source: "confluence-xml" })
     ).json() as { id: string };
-    for (const name of ["../space-export.zip", "nested/hidden.zip", "nested"]) {
+    for (const name of ["../top-level.zip", "top-level.zip", "nested/hidden.zip", "nested"]) {
       const refused = await owner.patch(`/api/v1/imports/${created.id}`, { file: { kind: "folder", name } });
       expect(refused.json(), name).toMatchObject({ code: "importFileUnavailable" });
     }
@@ -284,5 +296,31 @@ describe.skipIf(!databaseBaseUrl)("imports through the API", () => {
       file: { kind: "folder", name: "space-export.zip" },
       found: { pages: 8 },
     });
+  });
+
+  it("keeps the import folders of organizations apart and follows a changed slug", async () => {
+    const created = await owner.post("/api/v1/organizations", { name: `Imports elsewhere ${counter}` });
+    expect(created.statusCode, created.body).toBe(201);
+    const otherId = (created.json() as { id: string }).id;
+    const otherSlug = await slugOf(otherId);
+    mkdirSync(path.join(importDir, otherSlug));
+    writeFileSync(path.join(importDir, otherSlug, "other-export.zip"), createXmlExport(syntheticExport()));
+    const names = async (id: string) =>
+      (
+        (await owner.get(`/api/v1/organizations/${id}/import-folder`)).json() as { files: { name: string }[] }
+      ).files.map((file) => file.name);
+    expect(await names(otherId)).toEqual(["other-export.zip"]);
+    expect(await names(organizationId)).toEqual(["space-export.zip"]);
+    const draft = (
+      await owner.post(`/api/v1/organizations/${organizationId}/imports`, { source: "confluence-xml" })
+    ).json() as { id: string };
+    for (const name of ["other-export.zip", `../${otherSlug}/other-export.zip`]) {
+      const refused = await owner.patch(`/api/v1/imports/${draft.id}`, { file: { kind: "folder", name } });
+      expect(refused.json(), name).toMatchObject({ code: "importFileUnavailable" });
+    }
+    const renamed = await owner.patch(`/api/v1/organizations/${otherId}`, { slug: `${otherSlug}-renamed` });
+    expect(renamed.statusCode, renamed.body).toBe(200);
+    const listing = (await owner.get(`/api/v1/organizations/${otherId}/import-folder`)).json();
+    expect(listing).toMatchObject({ path: path.join(importDir, `${otherSlug}-renamed`), files: [] });
   });
 });

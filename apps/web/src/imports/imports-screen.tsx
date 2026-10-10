@@ -10,6 +10,7 @@ import type { Formatter } from "../format/format.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { SettingsPage } from "../screens/settings/settings-page.js";
 import { useOrganizationState } from "../shell/shell-context.js";
+import { FolderPath } from "./folder-path.js";
 import { importTitle, isWizardState, sourceLabel, stateBadge, stateLabel } from "./import-labels.js";
 import { createImport, folderQuery, type ImportView, importsQuery } from "./imports-api.js";
 
@@ -153,9 +154,14 @@ export function ImportsScreen() {
       )}
       {canImport && folder.data ? (
         <Notice variant="info" title={t("imports.list.largeTitle")}>
-          {folder.data.enabled
-            ? t("imports.list.largeFolder", { size: format.bytes(folder.data.maxUploadBytes) })
-            : t("imports.list.largeNoFolder", { size: format.bytes(folder.data.maxUploadBytes) })}
+          <div className="flex flex-col gap-3">
+            <span>
+              {folder.data.enabled
+                ? t("imports.list.largeFolder", { size: format.bytes(folder.data.maxUploadBytes) })
+                : t("imports.list.largeNoFolder", { size: format.bytes(folder.data.maxUploadBytes) })}
+            </span>
+            <FolderPath path={folder.data.path} />
+          </div>
         </Notice>
       ) : null}
     </SettingsPage>

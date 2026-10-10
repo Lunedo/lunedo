@@ -391,7 +391,7 @@ export class ImportService {
           }
           changes.push(sql`file_kind = 'upload', upload_id = ${upload.id}, folder_file = null`);
         } else {
-          await this.#requireFolderFile(input.file.name);
+          await this.#requireFolderFile(tx, row.organization_id, input.file.name);
           changes.push(sql`file_kind = 'folder', upload_id = null, folder_file = ${input.file.name}`);
         }
         fileChanged = true;
@@ -435,7 +435,17 @@ export class ImportService {
     return this.get(actor, importId);
   }
 
-  async #requireFolderFile(name: string): Promise<FolderFile> {
+  async #organizationSlug(executor: Executor, organizationId: string): Promise<string> {
+    const result = await executor.execute<{ slug: string }>(
+      sql`select slug from organizations where id = ${organizationId}`,
+    );
+    const slug = result.rows[0]?.slug;
+    if (slug === undefined)
+      throw new ImportError("importFolderUnavailable", "The organization does not exist.");
+    return slug;
+  }
+
+  async #requireFolderFile(executor: Executor, organizationId: string, name: string): Promise<FolderFile> {
     if (!(await this.#settings.get(importFolderSetting, {}))) {
       throw new ImportError(
         "importFolderDisabled",
@@ -444,7 +454,8 @@ export class ImportService {
     }
     if (!isSafeFolderName(name))
       throw new ImportError("importFileUnavailable", "The file is not in the import folder.");
-    const file = (await this.#folder.list()).find((candidate) => candidate.name === name);
+    const slug = await this.#organizationSlug(executor, organizationId);
+    const file = (await this.#folder.list(slug)).find((candidate) => candidate.name === name);
     if (!file) throw new ImportError("importFileUnavailable", "The file is not in the import folder.");
     return file;
   }
@@ -452,15 +463,17 @@ export class ImportService {
   async listFolder(
     actor: Principal,
     organizationId: string,
-  ): Promise<{ enabled: boolean; files: FolderFile[]; maxUploadBytes: number }> {
+  ): Promise<{ enabled: boolean; path: string; files: FolderFile[]; maxUploadBytes: number }> {
     await this.#authorization.require(actor, "organization.imports.manage", {
       type: "organization",
       id: organizationId,
     });
     const maxUploadBytes = await this.#uploads.maxBytes();
+    const slug = await this.#organizationSlug(this.#database, organizationId);
+    const folderPath = this.#folder.pathFor(slug);
     if (!(await this.#settings.get(importFolderSetting, {})))
-      return { enabled: false, files: [], maxUploadBytes };
-    return { enabled: true, files: await this.#folder.list(), maxUploadBytes };
+      return { enabled: false, path: folderPath, files: [], maxUploadBytes };
+    return { enabled: true, path: folderPath, files: await this.#folder.list(slug), maxUploadBytes };
   }
 
   async remove(actor: Principal, importId: string): Promise<void> {

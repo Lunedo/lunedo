@@ -29,6 +29,7 @@ import { useFormat } from "../preferences/preferences-provider.js";
 import { SettingsPage } from "../screens/settings/settings-page.js";
 import { useOrganizationState } from "../shell/shell-context.js";
 import { HolderPicker } from "../spaces/access/holders.js";
+import { FolderPath } from "./folder-path.js";
 import { errorText, importTitle } from "./import-labels.js";
 import {
   folderQuery,
@@ -467,6 +468,7 @@ function SourceStep({
               organizationId={organizationId}
               current={entry.file?.kind === "upload" ? entry.file : null}
               maxBytes={folder.data?.maxUploadBytes ?? Number.MAX_SAFE_INTEGER}
+              folder={folder.data ? { enabled: folder.data.enabled, path: folder.data.path } : null}
               onLinked={async (uploadId) => {
                 await patch({ file: { kind: "upload", uploadId } });
               }}
@@ -476,6 +478,7 @@ function SourceStep({
             />
           ) : (
             <FolderField
+              path={folder.data?.path ?? ""}
               files={folder.data?.files ?? []}
               enabled={folder.data?.enabled ?? false}
               loading={folder.isPending}
@@ -503,6 +506,7 @@ function SourceStep({
 }
 
 function FolderField({
+  path,
   files,
   enabled,
   loading,
@@ -511,6 +515,7 @@ function FolderField({
   value,
   onChange,
 }: {
+  path: string;
   files: { name: string; size: number }[];
   enabled: boolean;
   loading: boolean;
@@ -527,25 +532,30 @@ function FolderField({
   if (!enabled) {
     return <Notice variant="warning">{t("imports.wizard.source.folderDisabled")}</Notice>;
   }
-  if (files.length === 0) {
-    return (
-      <Notice variant="info" title={t("imports.wizard.source.folderEmpty")}>
-        {t("imports.wizard.source.folderEmptyDescription")}
-      </Notice>
-    );
-  }
   return (
-    <Field label={t("imports.wizard.source.folderFile")} hint={t("imports.wizard.source.folderHint")}>
-      <Select
-        value={value ?? ""}
-        onValueChange={onChange}
-        placeholder={t("imports.wizard.source.folderPlaceholder")}
-        options={files.map((file) => ({
-          value: file.name,
-          label: t("imports.wizard.source.folderOption", { name: file.name, size: format.bytes(file.size) }),
-        }))}
-      />
-    </Field>
+    <div className="flex flex-col gap-3">
+      <FolderPath path={path} />
+      {files.length === 0 ? (
+        <Notice variant="info" title={t("imports.wizard.source.folderEmpty")}>
+          {t("imports.wizard.source.folderEmptyDescription")}
+        </Notice>
+      ) : (
+        <Field label={t("imports.wizard.source.folderFile")} hint={t("imports.wizard.source.folderHint")}>
+          <Select
+            value={value ?? ""}
+            onValueChange={onChange}
+            placeholder={t("imports.wizard.source.folderPlaceholder")}
+            options={files.map((file) => ({
+              value: file.name,
+              label: t("imports.wizard.source.folderOption", {
+                name: file.name,
+                size: format.bytes(file.size),
+              }),
+            }))}
+          />
+        </Field>
+      )}
+    </div>
   );
 }
 
