@@ -49,6 +49,7 @@ ENV NODE_ENV=production \
     PAGEHALL_WEB_ROOT=/app/web
 RUN install -d -o node -g node -m 700 /var/lib/pagehall /var/lib/pagehall/files /var/lib/pagehall/secrets \
     /var/lib/pagehall/backups
+RUN install -d -o root -g root -m 755 /data/import
 WORKDIR /app
 COPY --from=build --chown=root:root /out/api ./api
 COPY --from=build --chown=root:root /out/collab ./collab

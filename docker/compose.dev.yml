@@ -97,6 +97,9 @@ services:
       PAGEHALL_INSTANCE_URL: ${PAGEHALL_INSTANCE_URL:-}
       # Only the Vite dev proxy in this container forwards the client's address and protocol.
       PAGEHALL_TRUSTED_PROXIES: 127.0.0.1,::1
+      # Optional: a folder for exports larger than the upload limit. Add a read-only mount
+      # such as "./import:/data/import:ro" to the volumes of this service.
+      # PAGEHALL_IMPORT_DIR: /data/import
       TURBO_TELEMETRY_DISABLED: "1"
       DO_NOT_TRACK: "1"
     ports:
