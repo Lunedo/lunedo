@@ -514,6 +514,42 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
     }
   });
 
+  it("closes connections whose recheck fails unexpectedly and keeps rechecking the others", async () => {
+    const concurrency = Math.floor(first.runtime.config.database.poolSize / 2);
+    const failing = await editor();
+    const broken = Array.from({ length: concurrency }, () =>
+      open(first.url, failing.itemId, { token: failing.token }),
+    );
+    await Promise.all(broken.map((client) => client.authenticated));
+    const target = await editor();
+    const client = open(first.url, target.itemId, { token: target.token });
+    await client.authenticated;
+    const logger = first.runtime.logger;
+    const info = logger.info.bind(logger);
+    const logged = vi.spyOn(logger, "info").mockImplementation(((...args: unknown[]) => {
+      const [fields, message] = args as [Record<string, unknown>, string];
+      if (message === "Collaboration permission rechecked" && fields.itemId === failing.itemId) {
+        throw new Error("log sink failed");
+      }
+      return (info as (...rest: unknown[]) => void)(...args);
+    }) as typeof logger.info);
+    try {
+      await notify(SPACE_CHANGES_CHANNEL, { spaceId: failing.space.id, kind: "access", itemId: null });
+      await waitFor(() => broken.every((opened) => opened.closeReasons.includes("unavailable")), 3000);
+      const entry = (await first.runtime.services.spacePermissions.list(target.space.id)).find(
+        (candidate) => candidate.principalId === target.account,
+      );
+      await first.runtime.services.spacePermissions.apply(accountPrincipal(target.admin), target.space.id, {
+        action: "change",
+        permissionId: entry?.id ?? "",
+        role: "reader",
+      });
+      await waitFor(() => client.closeReasons.includes("permissionRevoked"), 3000);
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
   it("brings content written through the API to open editors at once", async () => {
     const target = await editor();
     const client = open(first.url, target.itemId, { token: target.token });

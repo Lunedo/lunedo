@@ -82,6 +82,7 @@ const RECHECK_PRIORITY: Record<RecheckReason, number> = {
   reconnect: 1,
   interval: 2,
 };
+const LOWER_PRIORITY_TURN = 4;
 
 interface Recheck {
   sessions: boolean;
@@ -169,6 +170,7 @@ export async function createCollabServer(options: {
     () => new Set<Connection<CollabContext>>(),
   );
   const checking = new Set<Connection<CollabContext>>();
+  let turns = 0;
   const concurrency = Math.max(1, Math.floor(runtime.config.database.poolSize / 2));
 
   async function instanceOrigin(): Promise<string | null> {
@@ -279,15 +281,36 @@ export async function createCollabServer(options: {
     queues[priorityOf(recheck)]?.add(connection);
   }
 
-  function next(): Connection<CollabContext> | undefined {
-    for (const queue of queues) {
+  function oldestOf(
+    candidates: Set<Connection<CollabContext>>[],
+  ): Set<Connection<CollabContext>> | undefined {
+    let oldest: Set<Connection<CollabContext>> | undefined;
+    let oldestSince = Number.POSITIVE_INFINITY;
+    for (const queue of candidates) {
       const [first] = queue;
-      if (first) {
-        queue.delete(first);
-        return first;
+      const since = first && pending.get(first)?.since;
+      if (since !== undefined && since < oldestSince) {
+        oldest = queue;
+        oldestSince = since;
       }
     }
-    return undefined;
+    return oldest;
+  }
+
+  function next(): Connection<CollabContext> | undefined {
+    turns += 1;
+    const lower = turns % LOWER_PRIORITY_TURN === 0 ? oldestOf(queues.slice(1)) : undefined;
+    const queue = lower ?? queues.find((candidate) => candidate.size > 0);
+    const [first] = queue ?? [];
+    if (first) queue?.delete(first);
+    return first;
+  }
+
+  function release(connection: Connection<CollabContext>, result: RecheckResult): void {
+    checking.delete(connection);
+    if (result === "kept" && isOpen(connection)) enqueue(connection);
+    else pending.delete(connection);
+    drain();
   }
 
   function drain(): void {
@@ -298,12 +321,14 @@ export async function createCollabServer(options: {
       pending.delete(connection);
       if (!recheck || !isOpen(connection)) continue;
       checking.add(connection);
-      void check(connection, recheck).then((result) => {
-        checking.delete(connection);
-        if (result === "kept" && isOpen(connection)) enqueue(connection);
-        else pending.delete(connection);
-        drain();
-      });
+      void check(connection, recheck).then(
+        (result) => release(connection, result),
+        (error: unknown) => {
+          logger.warn({ err: error }, "Checking a collaboration connection failed");
+          release(connection, "unavailable");
+          connection.close(closeReasons.unavailable);
+        },
+      );
     }
   }
 
