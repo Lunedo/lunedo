@@ -91,6 +91,7 @@ export function importHarness(test: () => TestServices, options: ImportHarnessOp
       reviewers?: string[];
       history?: boolean;
       people?: PeopleSourceInput;
+      archive?: Buffer;
     },
   ): Promise<string> {
     const imports = test().services.imports;
@@ -99,9 +100,10 @@ export function importHarness(test: () => TestServices, options: ImportHarnessOp
       source: format === "xml" ? "confluence-xml" : "confluence-csv",
     });
     const archive =
-      format === "xml"
+      input.archive ??
+      (format === "xml"
         ? createXmlExport(model)
-        : createCsvExport(model, { legacyRestrictions: input.legacyRestrictions ?? false });
+        : createCsvExport(model, { legacyRestrictions: input.legacyRestrictions ?? false }));
     const uploadId = await upload(input.admin, input.organizationId, archive);
     await imports.update(as(input.admin), created.id, { file: { kind: "upload", uploadId } });
     await drive(created.id);

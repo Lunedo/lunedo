@@ -228,6 +228,7 @@ export function largeExport(pageCount: number, attachmentCount: number): Synthet
 
 export const CAROL = { key: "8a7f0003", accountId: "557058:dddddddd-0004" };
 export const DAVE = { key: "8a7f0004", accountId: "557058:eeeeeeee-0005" };
+export const EVE = { key: "8a7f0005", accountId: "557058:ffffffff-0006" };
 
 export const PEOPLE_PAGE = {
   home: "7001",
@@ -256,7 +257,7 @@ export const OLDER_DATE = "2020-01-10 08:30:00.000";
 export function peopleExport(): SyntheticExport {
   return {
     space: { id: "8001", key: "PPL", name: "People space", homePageId: PEOPLE_PAGE.home },
-    users: [ALICE, BOB, CAROL, DAVE],
+    users: [ALICE, BOB, CAROL, DAVE, EVE],
     pages: [
       {
         id: PEOPLE_PAGE.home,
@@ -336,6 +337,7 @@ export function peopleExport(): SyntheticExport {
           '<time datetime="2024-07-01" /></ac:task-body></ac:task></ac:task-list>',
         ].join(""),
         creatorKey: ALICE.key,
+        modifierKey: DAVE.key,
       },
     ],
     blogPosts: [

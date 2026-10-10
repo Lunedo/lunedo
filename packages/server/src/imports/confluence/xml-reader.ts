@@ -22,7 +22,10 @@ interface XmlObject {
   id: string;
   readonly properties: Map<string, string>;
   readonly references: Map<string, string>;
+  readonly elements: string[];
 }
+
+const LINKED_COLLECTION = "contentProperties";
 
 const NESTED_CDATA_END = "]] >";
 
@@ -52,8 +55,9 @@ const PROGRESS_STEP = 500;
 class ObjectReader {
   object: XmlObject | null = null;
   #property: { name: string; reference: boolean; text: string } | null = null;
-  #idTarget: "object" | "reference" | null = null;
+  #idTarget: "object" | "reference" | "element" | null = null;
   #idText = "";
+  #collection = false;
 
   constructor(private readonly onObject: (object: XmlObject) => void) {}
 
@@ -61,13 +65,22 @@ class ObjectReader {
     if (depth === 2 && name === "object") {
       const className = attributes.class ?? "";
       this.object = WANTED.has(className)
-        ? { className, id: "", properties: new Map(), references: new Map() }
+        ? { className, id: "", properties: new Map(), references: new Map(), elements: [] }
         : null;
       return;
     }
     if (!this.object) return;
     if (depth === 3 && name === "id") {
       this.#idTarget = "object";
+      this.#idText = "";
+      return;
+    }
+    if (depth === 3 && name === "collection") {
+      this.#collection = this.object.className === "Comment" && attributes.name === LINKED_COLLECTION;
+      return;
+    }
+    if (depth === 5 && name === "id" && this.#collection) {
+      this.#idTarget = "element";
       this.#idText = "";
       return;
     }
@@ -93,6 +106,16 @@ class ObjectReader {
     if (name === "id" && this.#idTarget === "object" && depth === 3) {
       object.id = this.#idText.trim();
       this.#idTarget = null;
+      return;
+    }
+    if (name === "id" && this.#idTarget === "element" && depth === 5) {
+      const id = this.#idText.trim();
+      if (id) object.elements.push(id);
+      this.#idTarget = null;
+      return;
+    }
+    if (name === "collection" && depth === 3) {
+      this.#collection = false;
       return;
     }
     if (name === "id" && this.#idTarget === "reference" && depth === 4 && this.#property) {
@@ -261,15 +284,23 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
             modified: confluenceDate(property("lastModificationDate")),
           },
         });
+        for (const element of object.elements) {
+          await context.staging.put({
+            kind: kinds.propertyLink,
+            sourceId: element,
+            ref: object.id,
+            data: {},
+          });
+        }
         return;
       }
       case "ContentProperty": {
         const name = (property("name") ?? "").trim();
+        if (!COMMENT_PROPERTIES.has(name)) return;
         const content = reference("content");
-        if (!content || !COMMENT_PROPERTIES.has(name)) return;
         const value = property("stringValue") || property("longValue") || property("dateValue") || "";
         await context.staging.put({
-          kind: kinds.property,
+          kind: content ? kinds.property : kinds.propertyValue,
           sourceId: object.id,
           ref: content,
           data: { name, value: value.slice(0, 2000) },

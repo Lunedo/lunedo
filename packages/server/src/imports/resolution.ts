@@ -324,6 +324,8 @@ export class ImportResolutionService {
           and gr.group_key = ig.name_key and gr.item_id is not null)::int as restricted
       from import_groups ig left join groups g on g.id = ig.group_id
       where ig.import_id = ${importId}
+        and exists (select 1 from import_grants gr where gr.import_id = ig.import_id and gr.group_key = ig.name_key
+          and gr.status <> 'notTaken')
       order by (ig.group_id is not null), lower(ig.name), ig.name_key
       limit 1000`);
     return result.rows.map((row) => ({

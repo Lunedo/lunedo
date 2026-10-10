@@ -254,11 +254,22 @@ export function createXmlExport(model: SyntheticExport): Buffer {
     }
   }
   for (const comment of model.comments ?? []) {
+    const properties = commentProperties(comment).map(([name, value]) => {
+      propertyId += 1;
+      return { id: String(propertyId), name, value };
+    });
+    const collection = `<collection name="contentProperties" class="java.util.Collection">${properties
+      .map(
+        (entry) =>
+          `<element class="ContentProperty" package="com.atlassian.confluence.content"><id name="id">${entry.id}</id></element>`,
+      )
+      .join("")}</collection>`;
     parts.push(
       object(
         "Comment",
         comment.id,
         [
+          collection,
           property("version", 1),
           reference("creator", "ConfluenceUserImpl", comment.creatorKey, "key"),
           property("creationDate", comment.created ?? DATE),
@@ -271,17 +282,12 @@ export function createXmlExport(model: SyntheticExport): Buffer {
       ),
     );
     body(comment.id, "Comment", comment.body);
-    for (const [name, value] of commentProperties(comment)) {
-      propertyId += 1;
+    for (const entry of properties) {
       parts.push(
         object(
           "ContentProperty",
-          String(propertyId),
-          [
-            property("name", name),
-            property("stringValue", value),
-            reference("content", "Comment", comment.id),
-          ].join(""),
+          entry.id,
+          [property("name", entry.name), property("stringValue", entry.value)].join(""),
         ),
       );
     }

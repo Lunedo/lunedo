@@ -148,6 +148,8 @@ export const kinds = {
   version: "version",
   comment: "comment",
   property: "property",
+  propertyValue: "propertyValue",
+  propertyLink: "propertyLink",
   like: "like",
   watch: "watch",
   spacePermission: "spacePermission",
@@ -302,7 +304,20 @@ export abstract class StagedConfluenceReader implements ImportReader {
 
   async *people(context: ReadContext): AsyncGenerator<SourcePerson> {
     const seen = new Set<string>();
+    const referenced = await context.staging.distinctValues(
+      [
+        kinds.page,
+        kinds.version,
+        kinds.attachment,
+        kinds.comment,
+        kinds.like,
+        kinds.spacePermission,
+        kinds.restriction,
+      ],
+      ["creatorKey", "modifierKey", "authorKey", "userKey"],
+    );
     for await (const record of context.staging.iterate<StagedUser>(kinds.user)) {
+      if (!referenced.has(record.sourceId)) continue;
       const id = personId(record.data.accountId, record.sourceId);
       if (!id || seen.has(id)) continue;
       seen.add(id);
@@ -372,12 +387,22 @@ export abstract class StagedConfluenceReader implements ImportReader {
         (left.data.created ?? "").localeCompare(right.data.created ?? "") ||
         left.sourceId.localeCompare(right.sourceId),
     );
-    const properties = await context.staging.byRef<StagedProperty>(
-      kinds.property,
-      records.map((comment) => comment.sourceId),
+    const commentIds = records.map((comment) => comment.sourceId);
+    const properties = await context.staging.byRef<StagedProperty>(kinds.property, commentIds);
+    const links = await context.staging.byRef<Record<string, never>>(kinds.propertyLink, commentIds);
+    const linked = await context.staging.get<StagedProperty>(
+      kinds.propertyValue,
+      links.map((link) => link.sourceId),
     );
+    const owned = [
+      ...properties,
+      ...links.flatMap((link) => {
+        const value = linked.get(link.sourceId);
+        return value ? [{ ref: link.ref, data: value.data }] : [];
+      }),
+    ];
     const byComment = new Map<string, Map<string, string>>();
-    for (const property of properties) {
+    for (const property of owned) {
       if (!property.ref) continue;
       const map = byComment.get(property.ref) ?? new Map<string, string>();
       map.set(property.data.name, property.data.value);

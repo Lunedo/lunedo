@@ -12,6 +12,7 @@ import {
   BOB,
   CAROL,
   DAVE,
+  EVE,
   OLD_DATE,
   PEOPLE_COMMENT,
   PEOPLE_PAGE,
@@ -196,6 +197,7 @@ describe.skipIf(!baseUrl)("Confluence imports: people, comments, history and per
     expect(bobRow?.mappedTo).toBeNull();
     expect(bobRow?.candidates.map((candidate) => candidate.id)).toContain(w.bobLookalike);
     expect(result.counts).toMatchObject({ people: 4, peopleMatched: 1 });
+    expect(await person(result.id, EVE.accountId)).toBe("");
   });
 
   it("imports page comments with replies, authors and original times", async () => {

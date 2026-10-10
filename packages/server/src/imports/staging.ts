@@ -137,6 +137,17 @@ export class StagingStore {
     }
   }
 
+  async distinctValues(kinds: readonly string[], fields: readonly string[]): Promise<Set<string>> {
+    const result = await this.#database.execute<{ value: string }>(sql`
+      select distinct v.value from import_records r
+      cross join lateral unnest(array[${sql.join(
+        fields.map((field) => sql`r.data ->> ${field}`),
+        sql`, `,
+      )}]) as v(value)
+      where r.import_id = ${this.#importId} and r.kind = any(${sql.param([...kinds])}::text[]) and v.value is not null`);
+    return new Set(result.rows.map((row) => row.value));
+  }
+
   async get<T>(kind: string, sourceIds: readonly string[]): Promise<Map<string, StoredRecord<T>>> {
     const found = new Map<string, StoredRecord<T>>();
     if (sourceIds.length === 0) return found;
