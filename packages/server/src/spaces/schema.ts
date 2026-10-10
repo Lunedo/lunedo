@@ -72,6 +72,7 @@ export const spaces = pgTable(
     discoverable: boolean().notNull().default(false),
     confidential: boolean().notNull().default(false),
     oneOnOne: boolean().notNull().default(false),
+    quarantined: boolean().notNull().default(false),
     overviewItemId: uuid().references((): AnyPgColumn => treeItems.id, { onDelete: "set null" }),
     createdBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     archivedAt: timestampColumn(),
@@ -98,6 +99,10 @@ export const spaces = pgTable(
       sql`not ${table.confidential} or (${table.visibility} = 'private' and not ${table.discoverable} and ${table.personalOf} is null)`,
     ),
     check("spaces_one_on_one_confidential", sql`not ${table.oneOnOne} or ${table.confidential}`),
+    check(
+      "spaces_quarantine_private",
+      sql`not ${table.quarantined} or (${table.visibility} = 'private' and not ${table.discoverable} and ${table.personalOf} is null and not ${table.confidential})`,
+    ),
   ],
 );
 

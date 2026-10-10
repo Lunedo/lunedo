@@ -66,6 +66,11 @@ export const configSettings = [
   setting("PAGEHALL_DATABASE_POOL_SIZE", positiveInt.default(10), "Maximum connections per process."),
   setting("PAGEHALL_FILES_DIR", path.default("/var/lib/pagehall/files"), "Directory of the file store."),
   setting(
+    "PAGEHALL_IMPORT_DIR",
+    path.default("/data/import"),
+    "Import folder: exports placed here can be imported without uploading them. Only regular files directly inside it are read.",
+  ),
+  setting(
     "PAGEHALL_FILE_STORAGE",
     z.enum(["local", "s3"]).default("local"),
     "Where attachments are stored: local in the file store directory, or s3 in S3-compatible object storage.",

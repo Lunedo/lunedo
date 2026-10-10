@@ -284,7 +284,8 @@ export class AccessExplanationService {
       throw new SpaceError("personNotFound", "The person does not exist");
     }
     const limit = options.spaceIds ? sql`s.id = any(${sql.param(options.spaceIds)}::uuid[])` : sql`true`;
-    const base = sql`${this.#spaceScope(options.organizationId)} and ${limit} and s.deleted_at is null and s.personal_of is null`;
+    const base = sql`${this.#spaceScope(options.organizationId)} and ${limit} and s.deleted_at is null and s.personal_of is null
+      and (not s.quarantined or ${this.#authorization.spaceFilter(viewer, sql`s`)})`;
     const scope = sql`${base} and (not s.confidential or ${this.#authorization.spaceFilter(viewer, sql`s`)})`;
     const confidential = await this.#database.execute<{ count: string }>(sql`
       select count(*) as count from spaces s

@@ -29,7 +29,7 @@ export interface ServerConfig {
   redisUrl: Secret | undefined;
   logLevel: LogLevel;
   database: { url: Secret; poolSize: number };
-  paths: { files: string; secrets: string; webRoot: string | undefined };
+  paths: { files: string; secrets: string; webRoot: string | undefined; imports: string };
   fileStorage: FileStorageConfig;
   filesUrl: string | undefined;
   keys: {
@@ -224,6 +224,7 @@ export function loadConfig(env: Env): ServerConfig {
     filesUrl: (values.PAGEHALL_FILES_URL as string | undefined)?.replace(/\/$/, ""),
     paths: {
       files: values.PAGEHALL_FILES_DIR as string,
+      imports: values.PAGEHALL_IMPORT_DIR as string,
       secrets: secretsDir,
       webRoot: values.PAGEHALL_WEB_ROOT as string | undefined,
     },

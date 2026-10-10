@@ -12,6 +12,7 @@ import { HealthModule } from "./health/health.module.js";
 import { ApiRouteInterceptor } from "./http/api-route.interceptor.js";
 import { ErrorFilter } from "./http/error.filter.js";
 import { IdentityModule } from "./identity/identity.module.js";
+import { ImportsModule } from "./imports/imports.module.js";
 import { MetricsController } from "./metrics/metrics.controller.js";
 import { NotificationsModule } from "./notifications/notifications.module.js";
 import { OrganizationsModule } from "./organizations/organizations.module.js";
@@ -42,6 +43,7 @@ export class AppModule {
               SpacesModule,
               CollaborationModule,
               FilesModule,
+              ImportsModule,
               SharingModule,
             ]
           : []),

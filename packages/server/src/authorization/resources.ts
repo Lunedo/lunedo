@@ -127,6 +127,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "organization.integrations.manage": organizationArea("integrationsAndApi", "manage"),
       "organization.audit.view": organizationArea("auditLog", "view"),
       "organization.access.view": organizationArea("spaces", "view"),
+      "organization.imports.manage": organizationArea("spaces", "manage"),
     },
     rules: {
       membersCreateGroups: async (context) => {
@@ -465,6 +466,59 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     },
   };
 
+  const importingAdministrator = async (context: RuleContext): Promise<boolean> => {
+    if (!context.organizationId) return false;
+    const facts = await context.organizationFacts(context.organizationId);
+    return facts.roles.some((role) => grantsLevel(role.areas.spaces, "manage"));
+  };
+
+  const importOf: ResourceType = {
+    type: "import",
+    organizationOf: async (executor, id) => {
+      if (!UUID.test(id)) return null;
+      const result = await executor.execute<{ organization_id: string }>(
+        sql`select organization_id from imports where id = ${id.toLowerCase()}`,
+      );
+      return result.rows[0]?.organization_id ?? null;
+    },
+    actions: {
+      "import.view": { scope: "organization", rule: "importerOrReviewer" },
+      "import.manage": { scope: "organization", rule: "importer" },
+      "import.takeOver": { scope: "organization", rule: "heldForAdministrator" },
+    },
+    rules: {
+      importerOrReviewer: async (context) => {
+        if (!context.organizationId || !context.resource.id) return false;
+        const facts = await context.organizationFacts(context.organizationId);
+        if (facts.membership?.kind !== "member") return false;
+        const result = await context.executor.execute<{ importer: boolean; reviewer: boolean }>(sql`
+          select i.importer_id = ${context.accountId} as importer,
+            exists (select 1 from import_reviewers r where r.import_id = i.id and r.account_id = ${context.accountId})
+              as reviewer
+          from imports i where i.id = ${context.resource.id.toLowerCase()}`);
+        const row = result.rows[0];
+        if (!row) return false;
+        return row.reviewer || (row.importer && (await importingAdministrator(context)));
+      },
+      importer: async (context) => {
+        if (!context.organizationId || !context.resource.id) return false;
+        const result = await context.executor.execute<{ importer_id: string }>(
+          sql`select importer_id from imports where id = ${context.resource.id.toLowerCase()}`,
+        );
+        if (result.rows[0]?.importer_id !== context.accountId) return false;
+        return importingAdministrator(context);
+      },
+      heldForAdministrator: async (context) => {
+        if (!context.organizationId || !context.resource.id) return false;
+        const result = await context.executor.execute<{ state: string }>(
+          sql`select state from imports where id = ${context.resource.id.toLowerCase()}`,
+        );
+        if (result.rows[0]?.state !== "held") return false;
+        return importingAdministrator(context);
+      },
+    },
+  };
+
   return [
     instance,
     organization,
@@ -477,6 +531,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     comment,
     task,
     attachment,
+    importOf,
   ];
 }
 
@@ -519,7 +574,7 @@ async function commentState(
     deleted: boolean;
   }>(sql`
     select (t.trash_entry_id is not null or s.deleted_at is not null) as trashed,
-      (t.archived_root_id is not null or s.archived_at is not null) as archived,
+      (t.archived_root_id is not null or s.archived_at is not null or s.quarantined) as archived,
       not t.reader_visible as unpublished,
       (r.quote is not null and not r.quote_public) as hidden,
       c.deleted_at is not null as deleted
@@ -534,7 +589,7 @@ async function spaceState(
   id: string,
 ): Promise<{ deleted: boolean; archived: boolean } | null> {
   const result = await executor.execute<{ deleted: boolean; archived: boolean }>(sql`
-    select deleted_at is not null as deleted, archived_at is not null as archived from spaces where id = ${id}`);
+    select deleted_at is not null as deleted, (archived_at is not null or quarantined) as archived from spaces where id = ${id}`);
   return result.rows[0] ?? null;
 }
 
@@ -549,8 +604,8 @@ async function itemState(
     unpublished: boolean;
   }>(sql`
     select (t.trash_entry_id is not null or s.deleted_at is not null) as trashed,
-      (t.archived_root_id is not null or s.archived_at is not null) as archived,
-      s.archived_at is not null as space_archived,
+      (t.archived_root_id is not null or s.archived_at is not null or s.quarantined) as archived,
+      (s.archived_at is not null or s.quarantined) as space_archived,
       not t.reader_visible as unpublished
     from tree_items t join spaces s on s.id = t.space_id where t.id = ${id}`);
   const row = result.rows[0];

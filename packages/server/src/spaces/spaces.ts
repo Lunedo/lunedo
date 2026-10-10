@@ -39,6 +39,7 @@ export interface Space {
   discoverable: boolean;
   confidential: boolean;
   oneOnOne: boolean;
+  quarantined: boolean;
   organizationId: string | null;
   organizationName: string | null;
   personal: boolean;
@@ -63,6 +64,7 @@ type SpaceRow = {
   discoverable: boolean;
   confidential: boolean;
   one_on_one: boolean;
+  quarantined: boolean;
   organization_id: string | null;
   organization_name: string | null;
   personal_of: string | null;
@@ -75,7 +77,7 @@ type SpaceRow = {
 };
 
 const SPACE_COLUMNS = sql`s.id, s.key, s.name, s.description, s.visibility, s.discoverable,
-  s.confidential, s.one_on_one, s.organization_id,
+  s.confidential, s.one_on_one, s.quarantined, s.organization_id,
   o.name as organization_name, s.personal_of, s.owner_account_id, owner.name as owner_name,
   s.overview_item_id, s.archived_at is not null as archived, s.created_at, s.updated_at`;
 
@@ -93,6 +95,7 @@ function toSpace(row: SpaceRow): Space {
     discoverable: row.discoverable,
     confidential: row.confidential,
     oneOnOne: row.one_on_one,
+    quarantined: row.quarantined,
     organizationId: row.organization_id,
     organizationName: row.organization_name,
     personal: row.personal_of !== null,
@@ -503,7 +506,7 @@ export class SpaceService {
     const sortName = sql`lower(s.name)`;
     const result = await this.#database.execute<SpaceRow & { sort_name: string }>(sql`
       select ${SPACE_COLUMNS}, ${sortName} as sort_name from ${SPACE_FROM}
-      where s.organization_id = ${organizationId} and not s.confidential
+      where s.organization_id = ${organizationId} and not s.confidential and not s.quarantined
         and not ${activeAdministratorCondition(storedGrants(sql`s.id`), sql`s.organization_id`)}
         ${page.after ? sql`and ${afterKey([sortName, sql`s.id`], page.after)}` : sql``}
       order by ${sortName}, s.id
@@ -523,6 +526,7 @@ export class SpaceService {
       if (!space.organizationId) throw new SpaceError("spaceNotFound", "The space does not exist");
       const hasAdministrator = await tx.execute<{ present: boolean }>(sql`
         select ${activeAdministratorCondition(storedGrants(sql`${spaceId}::uuid`), sql`${space.organizationId}::uuid`)} as present`);
+      if (space.quarantined) throw new SpaceError("spaceNotFound", "The space does not exist");
       if (space.confidential) {
         throw new SpaceError(
           "spaceNotFound",

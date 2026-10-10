@@ -26,6 +26,7 @@ import { encryptedStreamOwnersOf, fileStoreOf } from "../files/owners.js";
 import { fileSettings } from "../files/settings.js";
 import { readinessChecks } from "../health/readiness.js";
 import { syncLogRetentionDaysSetting } from "../identity/sync.js";
+import { importSettings } from "../imports/settings.js";
 import type { JobQueue } from "../jobs/job-queue.js";
 import { PgBossQueue } from "../jobs/pg-boss-queue.js";
 import {
@@ -161,6 +162,7 @@ export async function createServerRuntime(options: {
         ...collaborationSettings,
         ...sharingSettings,
         ...fileSettings,
+        ...importSettings,
         auditRetentionSetting,
         smtpSetting,
         mailMethodSetting,
@@ -204,6 +206,7 @@ export async function createServerRuntime(options: {
       jobs,
       logger,
       filesDir: config.paths.files,
+      importDir: config.paths.imports,
       fileStore,
       configuredInstanceUrl: config.instanceUrl,
       passwordHashConcurrency: config.passwordHashConcurrency,

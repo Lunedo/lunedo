@@ -66,6 +66,21 @@ import {
   providerSyncRetentionJob,
   providerSyncScheduleJob,
 } from "./identity/sync.js";
+import { ConfluenceCsvReader } from "./imports/confluence/csv-reader.js";
+import { ConfluenceXmlReader } from "./imports/confluence/xml-reader.js";
+import { ImportService } from "./imports/imports.js";
+import {
+  IMPORT_CLEANUP_SCHEDULE,
+  IMPORT_WATCHDOG_SCHEDULE,
+  importCleanupJob,
+  importWatchdogJob,
+  importWorkJob,
+} from "./imports/jobs.js";
+import { importNotificationTypes } from "./imports/notifications.js";
+import { ImportPipeline } from "./imports/pipeline.js";
+import { ImportReaderRegistry } from "./imports/source.js";
+import { UploadService } from "./imports/uploads.js";
+import { ImportWorker } from "./imports/worker.js";
 import type { JobQueue } from "./jobs/job-queue.js";
 import type { Logger } from "./logging/logger.js";
 import {
@@ -205,6 +220,9 @@ export interface AccountServices {
   decisions: DecisionService;
   privateNotes: PrivateNotesService;
   oneOnOnes: OneOnOneService;
+  importUploads: UploadService;
+  imports: ImportService;
+  importWorker: ImportWorker;
 }
 
 export function createAccountServices(options: {
@@ -218,6 +236,7 @@ export function createAccountServices(options: {
   jobs: JobQueue | undefined;
   logger: Logger;
   filesDir: string;
+  importDir?: string;
   fileStore?: FileStore;
   configuredInstanceUrl?: string | undefined;
   passwordHashConcurrency: number;
@@ -277,6 +296,7 @@ export function createAccountServices(options: {
       ...collaborationNotificationTypes,
       ...sharingNotificationTypes,
       ...meetingNotificationTypes,
+      ...importNotificationTypes,
     ),
   });
   mail.useNotifications(notifications);
@@ -553,6 +573,30 @@ export function createAccountServices(options: {
     people,
     notifications,
   });
+  const importUploads = new UploadService({ database, files, settings, authorization });
+  const imports = new ImportService({
+    database,
+    authorization,
+    audit,
+    settings,
+    uploads: importUploads,
+    jobs,
+    importDir: options.importDir ?? "/data/import",
+    holders: spacePermissions.holders,
+  });
+  const importWorker = new ImportWorker({
+    database,
+    pool: options.pool,
+    audit,
+    authorization,
+    notifications,
+    uploads: importUploads,
+    readers: new ImportReaderRegistry().register(new ConfluenceXmlReader(), new ConfluenceCsvReader()),
+    pipeline: new ImportPipeline({ database, files, settings, audit }),
+    folder: imports.folder,
+    jobs,
+    logger,
+  });
   setupRegistry.register(
     ...builtinSetupSteps({
       database,
@@ -642,6 +686,9 @@ export function createAccountServices(options: {
     decisions,
     privateNotes,
     oneOnOnes,
+    importUploads,
+    imports,
+    importWorker,
   };
 }
 
@@ -735,6 +782,13 @@ export async function workAccountJobs(
       job.logger.info({ ...result, drafts, files }, "Trash retention applied");
     }
   });
+  await jobs.work(importWorkJob, services.importWorker.work, { concurrency: 2 });
+  await jobs.work(importWatchdogJob, async () => {
+    await services.importWorker.watchdog();
+  });
+  await jobs.work(importCleanupJob, async (job) => {
+    while ((await services.importUploads.removeExpired()) > 0) job.signal.throwIfAborted();
+  });
   await jobs.work(fileCleanupJob, async (job) => {
     let removed = 0;
     for (;;) {
@@ -765,6 +819,8 @@ export async function workAccountJobs(
   await jobs.schedule(dispatchPendingMailJob, DISPATCH_PENDING_MAIL_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(trashRetentionJob, TRASH_RETENTION_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(fileCleanupJob, FILE_CLEANUP_SCHEDULE, {}, { key: "hourly" });
+  await jobs.schedule(importWatchdogJob, IMPORT_WATCHDOG_SCHEDULE, {}, { key: "regular" });
+  await jobs.schedule(importCleanupJob, IMPORT_CLEANUP_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(liveVersionsJob, LIVE_VERSIONS_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(authCleanupJob, AUTH_CLEANUP_SCHEDULE, {}, { key: "regular" });
   await jobs.schedule(auditRetentionJob, AUDIT_RETENTION_SCHEDULE, {}, { key: "daily" });

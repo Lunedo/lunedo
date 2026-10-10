@@ -182,6 +182,26 @@ async function syncTopicUpdates(tx: Transaction, itemId: string, document: Docum
     where mt.series_id = ${seriesId}`);
 }
 
+export async function publishTasks(tx: Transaction, itemId: string, document: DocumentJson): Promise<void> {
+  const tasks = extractTasks(document);
+  const ids = tasks.map((task) => task.id);
+  if (tasks.length > 0) {
+    await tx.execute(sql`
+      insert into tasks (id, item_id) select unnest(${sql.param(ids)}::uuid[]), ${itemId}
+      on conflict (id) do nothing`);
+    await tx.execute(sql`
+      update tasks k set published = true, assignee_id = a.id, due_date = s."dueDate"::date, text = s.text,
+        position = s.position, updated_at = now()
+      from jsonb_to_recordset(${JSON.stringify(tasks)}::jsonb)
+        as s(id uuid, assignee uuid, "dueDate" text, text text, position int)
+      left join accounts a on a.id = s.assignee
+      where k.id = s.id and k.item_id = ${itemId}`);
+  }
+  await tx.execute(sql`
+    update tasks set published = false, updated_at = now()
+    where item_id = ${itemId} and published and not (id = any(${sql.param(ids)}::uuid[]))`);
+}
+
 interface ItemFacts {
   title: string;
   kind: "page" | "blogPost" | "meetingTopic";
@@ -215,23 +235,7 @@ export class ContentActivity {
     document: DocumentJson,
     actorId: string | null,
   ): Promise<void> {
-    const tasks = extractTasks(document);
-    const ids = tasks.map((task) => task.id);
-    if (tasks.length > 0) {
-      await tx.execute(sql`
-        insert into tasks (id, item_id) select unnest(${sql.param(ids)}::uuid[]), ${itemId}
-        on conflict (id) do nothing`);
-      await tx.execute(sql`
-        update tasks k set published = true, assignee_id = a.id, due_date = s."dueDate"::date, text = s.text,
-          position = s.position, updated_at = now()
-        from jsonb_to_recordset(${JSON.stringify(tasks)}::jsonb)
-          as s(id uuid, assignee uuid, "dueDate" text, text text, position int)
-        left join accounts a on a.id = s.assignee
-        where k.id = s.id and k.item_id = ${itemId}`);
-    }
-    await tx.execute(sql`
-      update tasks set published = false, updated_at = now()
-      where item_id = ${itemId} and published and not (id = any(${sql.param(ids)}::uuid[]))`);
+    await publishTasks(tx, itemId, document);
     await syncDecisions(tx, itemId, document);
     await syncTopicUpdates(tx, itemId, document);
     const threads = [...extractInlineCommentThreads(document).keys()];

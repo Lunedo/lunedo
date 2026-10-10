@@ -14,6 +14,7 @@ import { API_ROUTE, type ApiRouteDefinition } from "../http/api-route.js";
 import { IdentityProvidersController } from "../identity/identity-providers.controller.js";
 import { ProviderAuthController } from "../identity/provider-auth.controller.js";
 import { ProviderGroupsController } from "../identity/provider-groups.controller.js";
+import { ImportsController } from "../imports/imports.controller.js";
 import { MeetingsController } from "../meetings/meetings.controller.js";
 import { OneOnOnesController } from "../meetings/one-on-ones.controller.js";
 import { NotificationsController } from "../notifications/notifications.controller.js";
@@ -70,6 +71,7 @@ export const apiControllers = (): Type[] => [
   PageAccessController,
   ShareLinksController,
   AccessRequestsController,
+  ImportsController,
 ];
 
 export interface ApiRouteInfo {
