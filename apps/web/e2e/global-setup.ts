@@ -58,7 +58,21 @@ async function waitFor(check: () => Promise<boolean>, timeoutMs: number, what: s
   throw new Error(`Timed out waiting for ${what}`);
 }
 
+async function answers(url: string): Promise<boolean> {
+  return fetch(url).then(
+    () => true,
+    () => false,
+  );
+}
+
 export default async function globalSetup(): Promise<() => Promise<void>> {
+  for (const port of [E2E_PORT, E2E_PORT + 1, E2E_PORT + 2]) {
+    if (await answers(`http://localhost:${port}/`)) {
+      throw new Error(
+        `Port ${port} is already in use, probably by another end-to-end run. Wait for it to finish, or choose other ports with PAGEHALL_E2E_PORT.`,
+      );
+    }
+  }
   rmSync(STATE_DIR, { recursive: true, force: true });
   await fetch(`${MAILPIT_URL}/api/v1/messages`, { method: "DELETE" });
   mkdirSync(STATE_DIR, { recursive: true });
