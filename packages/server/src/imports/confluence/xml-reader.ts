@@ -5,6 +5,7 @@ import type { ScanContext } from "../source.js";
 import {
   COMMENT_PROPERTIES,
   confluenceDate,
+  formerTitleRecord,
   isCurrentStatus,
   kinds,
   pageSort,
@@ -49,6 +50,7 @@ const WANTED = new Set([
   "Label",
   "Labelling",
   "ConfluenceUserImpl",
+  "PageTemplate",
 ]);
 const PROGRESS_STEP = 500;
 
@@ -213,6 +215,7 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
     });
     await context.staging.flush();
     await context.staging.removeOtherThan(kinds.page, "spaceId", space.id);
+    await context.staging.removeOtherThan(kinds.template, "spaceId", space.id);
     await context.staging.orderTree(kinds.page);
     await stageRestrictions(context.staging);
     await context.saveCheckpoint({ objects });
@@ -243,6 +246,7 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
                 confluenceDate(property("lastModificationDate")) ?? confluenceDate(property("creationDate")),
             },
           });
+          if (title) await context.staging.put(formerTitleRecord(original, title));
           return;
         }
         const blog = object.className === "BlogPost";
@@ -415,6 +419,30 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
           sourceId: object.id,
           ref: content,
           data: { labelId: label },
+        });
+        return;
+      }
+      case "PageTemplate": {
+        const spaceId = reference("space");
+        if (
+          !spaceId ||
+          reference("originalVersion") ||
+          (property("bodyType") ?? STORAGE_BODY_TYPE).trim() !== STORAGE_BODY_TYPE
+        ) {
+          return;
+        }
+        await context.staging.put({
+          kind: kinds.template,
+          sourceId: object.id,
+          data: {
+            name: (property("name") ?? "").trim(),
+            description: (property("description") ?? "").trim(),
+            body: unescapeNestedCdata(property("content") ?? ""),
+            spaceId,
+            creatorKey: reference("creator"),
+            created: confluenceDate(property("creationDate")),
+            modified: confluenceDate(property("lastModificationDate")),
+          },
         });
         return;
       }

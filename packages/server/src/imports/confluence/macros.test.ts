@@ -13,16 +13,24 @@ const RUNBOOK = ID(1);
 const REPORT = ID(2);
 const SHEET = ID(3);
 const OTHER_REPORT = ID(4);
+const SPACE = ID(5);
+const PROJECT = ID(6);
+const TEMPLATE = ID(7);
 
 function lookup(): StorageLookup {
   let next = 100;
   return {
     page(reference) {
-      if (reference.title === "Runbook") {
+      if (reference.title === "Runbook" || (reference.formerTitles && reference.title === "Old runbook")) {
         return { kind: "page", pageId: RUNBOOK, path: `/spaces/SYN/pages/${RUNBOOK}/runbook` };
+      }
+      if (reference.sourceId === "181305345") {
+        return { kind: "page", pageId: PROJECT, path: `/spaces/SYN/pages/${PROJECT}/project` };
       }
       return { kind: "external", href: null };
     },
+    spaceId: (key) => (key === null || key.toLowerCase() === "syn" ? SPACE : null),
+    template: (sourceId) => (sourceId === "235077637" ? TEMPLATE : null),
     attachment(reference) {
       if (reference.fileName === "report.pdf" && reference.pageTitle === "Runbook") {
         return { attachmentId: OTHER_REPORT, name: "report.pdf" };
@@ -427,6 +435,23 @@ describe("children macro", () => {
       "children",
     );
     await unsupported(macro("children", { page: "OPS:Runbook" }), "children");
+    await unsupported(macro("children", { page: "<ac:link />" }), "children");
+  });
+
+  it("finds a page by a title it had earlier or by a title given as text", async () => {
+    expect(
+      await blocks(
+        macro("children", { page: '<ac:link><ri:page ri:content-title="Old runbook" /></ac:link>' }),
+      ),
+    ).toEqual([{ type: "childPages", attrs: { ...defaults, pageId: RUNBOOK } }]);
+    expect(await blocks(macro("children", { page: " Runbook " }))).toEqual([
+      { type: "childPages", attrs: { ...defaults, pageId: RUNBOOK } },
+    ]);
+  });
+
+  it("uses earlier titles only for child pages, not for links", async () => {
+    const page = await convert('<p><ac:link><ri:page ri:content-title="Old runbook" /></ac:link></p>');
+    expect(page.notes).toEqual([{ code: "externalPageLink", title: "Old runbook", spaceKey: null }]);
   });
 });
 
@@ -526,5 +551,407 @@ describe("references of converted macros", () => {
       { fileName: "report.pdf", pageTitle: "Runbook", spaceKey: null },
     ]);
     expect(references.people).toEqual([{ accountId: "557058:aaaa", userKey: null }]);
+  });
+});
+
+function legacy(name: string, parameters: Record<string, string>): string {
+  const params = Object.entries(parameters)
+    .map(([key, value]) => `<ac:parameter ac:name="${key}">${value}</ac:parameter>`)
+    .join("");
+  return `<ac:macro ac:name="${name}">${params}</ac:macro>`;
+}
+
+const SYN = '<ri:space ri:space-key="SYN" />';
+const OPS = '<ri:space ri:space-key="OPS" />';
+
+describe("content report table", () => {
+  const defaults = { spaceId: SPACE, labels: [], sort: "modified", reverse: false, limit: 20 };
+
+  for (const [parameters, attrs] of [
+    [
+      { maxResults: "20", spaces: SYN, labels: "gst" },
+      { ...defaults, labels: ["gst"] },
+    ],
+    [
+      { maxResults: "20", spaces: SYN, sort: "Page title", labels: "gst" },
+      { ...defaults, labels: ["gst"], sort: "title" },
+    ],
+    [
+      { maxResults: "20", spaces: SYN, labels: "gst-nieder&ouml;sterreich-active" },
+      { ...defaults, labels: ["gst-niederösterreich-active"] },
+    ],
+    [
+      { spaces: SYN, labels: "Project Alpha, meeting-notes" },
+      { ...defaults, labels: ["project-alpha", "meeting-notes"] },
+    ],
+    [{ maxResults: "", spaces: SYN }, defaults],
+    [
+      { maxResults: "500", spaces: "@self" },
+      { ...defaults, limit: 100 },
+    ],
+    [
+      { spaces: SYN, sort: "creation", reverse: "true" },
+      { ...defaults, sort: "created", reverse: true },
+    ],
+    [{ spaces: SYN, sort: "modified" }, defaults],
+    [{}, defaults],
+  ] as const) {
+    it(`converts content-report-table with ${JSON.stringify(parameters)}`, async () => {
+      expect(await blocks(macro("content-report-table", parameters))).toEqual([
+        { type: "pageReport", attrs },
+      ]);
+    });
+  }
+
+  it("converts the legacy form with a blueprint and keeps Pagehall's own empty text", async () => {
+    expect(
+      await blocks(
+        legacy("content-report-table", {
+          contentBlueprintId: "e180ddf0-7a48-4425-9c04-a3682cb92d41",
+          blueprintModuleCompleteKey:
+            "com.atlassian.confluence.plugins.confluence-knowledge-base:kb-how-to-article-blueprint",
+          analyticsKey: "kb-how-to-article",
+          blankDescription: "Provide step-by-step guidance.",
+          blankTitle: "How-to article",
+          spaces: "SYN",
+          createButtonLabel: "Add how-to article",
+          labels: "kb-how-to-article",
+        }),
+      ),
+    ).toEqual([{ type: "pageReport", attrs: { ...defaults, labels: ["kb-how-to-article"] } }]);
+  });
+
+  it("stays unsupported for other spaces, label operators, unknown sorts and filters", async () => {
+    for (const parameters of <Record<string, string>[]>[
+      { spaces: OPS, labels: "gst" },
+      { spaces: `${SYN}${OPS}` },
+      { spaces: "SYN,OPS" },
+      { spaces: SYN, labels: "+gst" },
+      { spaces: SYN, labels: "-gst" },
+      { spaces: SYN, labels: "!!!" },
+      { spaces: SYN, maxResults: "many" },
+      { spaces: SYN, maxResults: "0" },
+      { spaces: SYN, sort: "Creator" },
+      { spaces: SYN, cql: "label = gst" },
+    ]) {
+      await unsupported(macro("content-report-table", parameters), "content-report-table");
+    }
+  });
+});
+
+describe("recently updated", () => {
+  const defaults = { spaceId: SPACE, labels: [], sort: "modified", reverse: false, limit: 15 };
+
+  for (const [parameters, attrs] of [
+    [{ types: "page", max: "15", spaces: SYN, theme: "concise" }, defaults],
+    [{}, defaults],
+    [
+      { max: "40", labels: "news", spaces: "@self" },
+      { ...defaults, limit: 40, labels: ["news"] },
+    ],
+    [
+      { max: "250", hideHeading: "true", showProfilePic: "true" },
+      { ...defaults, limit: 100 },
+    ],
+  ] as const) {
+    it(`converts recently-updated with ${JSON.stringify(parameters)} to the latest changes`, async () => {
+      expect(await blocks(macro("recently-updated", parameters))).toEqual([{ type: "pageReport", attrs }]);
+    });
+  }
+
+  it("stays unsupported for other content types, authors, other spaces and broken numbers", async () => {
+    for (const parameters of <Record<string, string>[]>[
+      { types: "page,blogpost" },
+      { types: "comment" },
+      { author: "anna" },
+      { spaces: OPS },
+      { max: "-1" },
+    ]) {
+      await unsupported(macro("recently-updated", parameters), "recently-updated");
+    }
+  });
+});
+
+describe("decision report", () => {
+  const defaults = { spaceId: SPACE, labels: [], parentId: null, order: "newest" };
+
+  for (const [parameters, attrs] of [
+    [{ cql: "space = &quot;SYN&quot;" }, defaults],
+    [{ sort: "Page created", reverse: "true", cql: "space = &quot;SYN&quot;" }, defaults],
+    [
+      { sort: "Page created", cql: "space = &quot;SYN&quot;" },
+      { ...defaults, order: "oldest" },
+    ],
+    [
+      {
+        cql: "space = &quot;SYN&quot; and label = &quot;project-m365&quot; and parent = &quot;181305345&quot;",
+      },
+      { ...defaults, labels: ["project-m365"], parentId: PROJECT },
+    ],
+    [
+      { cql: 'space = "SYN" AND parent = "181305345" and label = "project-ad-ida-datenqualit&auml;t"' },
+      { ...defaults, labels: ["project-ad-ida-datenqualität"], parentId: PROJECT },
+    ],
+    [{ cql: "label = 'meeting-notes'" }, { ...defaults, spaceId: null, labels: ["meeting-notes"] }],
+    [{ cql: "space = SYN and parent = 181305345" }, { ...defaults, parentId: PROJECT }],
+    [
+      { cql: "label = &quot;meeting-notes&quot; and space = currentSpace ( )" },
+      { ...defaults, labels: ["meeting-notes"] },
+    ],
+    [{ cql: "space = currentSpace()" }, defaults],
+  ] as const) {
+    it(`converts decisionreport with ${JSON.stringify(parameters)}`, async () => {
+      expect(await blocks(macro("decisionreport", parameters))).toEqual([{ type: "decisionReport", attrs }]);
+    });
+  }
+
+  it("converts the legacy form", async () => {
+    expect(
+      await blocks(
+        legacy("decisionreport", { cql: "space = &quot;SYN&quot; and label = &quot;meeting-notes&quot;" }),
+      ),
+    ).toEqual([{ type: "decisionReport", attrs: { ...defaults, labels: ["meeting-notes"] } }]);
+  });
+
+  it("stays unsupported for queries it cannot translate and pages outside the export", async () => {
+    for (const cql of [
+      'space = "SYN" and parent = "234913802"',
+      'space = "SYN" and meet in ("a", "b")',
+      'space = "SYN" or label = "x"',
+      'space = "SYN" and not label = "x"',
+      'label = "a" and label = "b"',
+      'space != "SYN"',
+      'space = "OPS"',
+      'type = "page"',
+      'ancestor = "181305345"',
+      "parent = currentContent()",
+      'space = "SYN" and',
+      "(space = SYN)",
+      "",
+    ]) {
+      await unsupported(macro("decisionreport", { cql }), "decisionreport");
+    }
+    await unsupported(macro("decisionreport", {}), "decisionreport");
+    await unsupported(macro("decisionreport", { cql: "space = SYN", sort: "Page title" }), "decisionreport");
+    await unsupported(macro("decisionreport", { cql: "space = SYN", columns: "owner" }), "decisionreport");
+  });
+});
+
+describe("task report", () => {
+  const defaults = {
+    spaceId: null,
+    seriesId: null,
+    pageIds: [PROJECT],
+    labels: ["project-m365"],
+    assignee: null,
+    assignedToViewer: false,
+    due: "any",
+    status: "open",
+  };
+
+  for (const [parameters, attrs] of [
+    [{ pages: "181305345", isMissingRequiredParameters: "true", labels: "project-m365" }, defaults],
+    [
+      { pages: "181305345", isMissingRequiredParameters: "true", labels: "project-m365", status: "complete" },
+      { ...defaults, status: "done" },
+    ],
+    [
+      { pages: "181305345", isMissingRequiredParameters: "true", labels: "", status: "complete" },
+      { ...defaults, labels: [], status: "done" },
+    ],
+    [
+      { pages: "181305345, 181305345", status: "incomplete" },
+      { ...defaults, labels: [] },
+    ],
+  ] as const) {
+    it(`converts tasks-report-macro with ${JSON.stringify(parameters)}`, async () => {
+      expect(await blocks(macro("tasks-report-macro", parameters))).toEqual([{ type: "taskReport", attrs }]);
+    });
+  }
+
+  it("converts the legacy form for a space", async () => {
+    expect(
+      await blocks(
+        legacy("tasks-report-macro", {
+          spaces: "SYN",
+          pageSize: "10",
+          spaceAndPage: "space:SYN",
+          status: "incomplete",
+          labels: "meeting-notes",
+        }),
+      ),
+    ).toEqual([
+      { type: "taskReport", attrs: { ...defaults, spaceId: SPACE, pageIds: [], labels: ["meeting-notes"] } },
+    ]);
+  });
+
+  it("stays unsupported for pages outside the export, missing scopes and filters it cannot keep", async () => {
+    for (const parameters of <Record<string, string>[]>[
+      { pages: "234913802" },
+      { pages: "181305345,234913802" },
+      { pages: "Runbook" },
+      { labels: "project-m365" },
+      { pages: "181305345", status: "all" },
+      { spaceAndPage: "page:SYN:Runbook" },
+      { spaces: "OPS" },
+      { pages: "181305345", assignees: "anna" },
+      { pages: "181305345", duedateFrom: "2026-01-01" },
+    ]) {
+      await unsupported(macro("tasks-report-macro", parameters), "tasks-report-macro");
+    }
+  });
+});
+
+describe("create from template", () => {
+  it("points to the imported space template with the button label", async () => {
+    expect(
+      await blocks(
+        macro("create-from-template", {
+          spaceKey: SYN,
+          templateName: "235077637",
+          templateId: "235077637",
+          buttonLabel: "Hier klicken um eine neue Gesch&auml;ftsstelle einzurichten",
+        }),
+      ),
+    ).toEqual([
+      {
+        type: "templateButton",
+        attrs: {
+          templateId: TEMPLATE,
+          label: "Hier klicken um eine neue Geschäftsstelle einzurichten",
+          title: "",
+        },
+      },
+    ]);
+  });
+
+  for (const [title, pattern] of [
+    ["@currentDate M365 Besprechungsnotiz", "{currentDate} M365 Besprechungsnotiz"],
+    ["Project @projectName@ – @currentDate", "Project {projectName} – {currentDate}"],
+    ["  Weekly   notes ", "Weekly notes"],
+    ["@Owner_Name notes", "{ownerName} notes"],
+  ] as const) {
+    it(`turns the title pattern ${JSON.stringify(title)} into input fields`, async () => {
+      expect(
+        await blocks(
+          macro("create-from-template", {
+            spaceKey: SYN,
+            templateId: "235077637",
+            title,
+            buttonLabel: "New note",
+          }),
+        ),
+      ).toEqual([
+        { type: "templateButton", attrs: { templateId: TEMPLATE, label: "New note", title: pattern } },
+      ]);
+    });
+  }
+
+  for (const [blueprint, templateId, label] of [
+    [
+      "com.atlassian.confluence.plugins.confluence-knowledge-base:kb-how-to-article-blueprint",
+      "builtin:how-to",
+      "Add how-to article",
+    ],
+    [
+      "com.atlassian.confluence.plugins.confluence-business-blueprints:meeting-notes-blueprint",
+      "builtin:meeting-notes",
+      "Create meeting note",
+    ],
+  ] as const) {
+    it(`points the legacy form ${blueprint.split(":")[1]} to the built-in template ${templateId}`, async () => {
+      expect(
+        await blocks(
+          legacy("create-from-template", {
+            contentBlueprintId: "361fad9c-5a23-4460-99f8-35b89eda47a4",
+            blueprintModuleCompleteKey: blueprint,
+            createButtonLabel: label,
+          }),
+        ),
+      ).toEqual([{ type: "templateButton", attrs: { templateId, label, title: "" } }]);
+    });
+  }
+
+  it("shortens a long button label and leaves a missing one to Pagehall's default", async () => {
+    const [long] = await blocks(
+      macro("create-from-template", { templateId: "235077637", buttonLabel: "x".repeat(150) }),
+    );
+    expect(long?.attrs?.label).toBe("x".repeat(100));
+    const [missing] = await blocks(macro("create-from-template", { templateId: "235077637" }));
+    expect(missing?.attrs?.label).toBe("");
+  });
+
+  it("stays unsupported for templates outside the export, other spaces and unknown blueprints", async () => {
+    for (const parameters of <Record<string, string>[]>[
+      { templateId: "999" },
+      { templateId: "abc" },
+      { templateId: "235077637", spaceKey: OPS },
+      { templateId: "235077637", title: `@currentDate ${"x".repeat(260)}` },
+      { blueprintModuleCompleteKey: "com.example:roadmap-blueprint" },
+      {},
+    ]) {
+      await unsupported(macro("create-from-template", parameters), "create-from-template");
+    }
+  });
+});
+
+describe("references of report macros", () => {
+  it("collect the pages a task or decision report names", async () => {
+    const references = storageReferences(
+      await parseStorage(
+        [
+          macro("tasks-report-macro", { pages: "181305345,234913802", labels: "x" }),
+          macro("decisionreport", { cql: 'space = "SYN" and parent = "252510232"' }),
+          macro("decisionreport", { cql: "space = SYN or parent = 1" }),
+          macro("children", { page: "Runbook" }),
+        ].join(""),
+      ),
+    );
+    expect(references.pages).toEqual([
+      { title: null, spaceKey: null, sourceId: "181305345" },
+      { title: null, spaceKey: null, sourceId: "234913802" },
+      { title: null, spaceKey: null, sourceId: "252510232" },
+      { title: "Runbook", spaceKey: null, sourceId: null },
+    ]);
+  });
+});
+
+describe("space templates", () => {
+  const variables = new Map([
+    ["Project name", "projectName"],
+    ["Owner", "owner"],
+  ]);
+
+  async function template(xhtml: string): Promise<ConvertedPage> {
+    const page = convertStorage(await parseStorage(xhtml), { ...lookup(), templateVariables: variables });
+    expect(validateDocument(page.document).ok).toBe(true);
+    return page;
+  }
+
+  it("turn variables into input fields and placeholders into instructions", async () => {
+    const page = await template(
+      '<at:declarations><at:string at:name="Project name" /><at:list at:name="Owner"><at:option at:value="Anna" /></at:list></at:declarations>' +
+        '<h1>Project <at:var at:name="Project name" /></h1><p><ac:placeholder>Describe the goal</ac:placeholder></p>' +
+        '<p>Owner: <at:var at:name="Owner" at:rawxhtml="true" /> <at:var at:name="Unknown" /></p>',
+    );
+    expect(page.document.content?.map(strip)).toEqual([
+      {
+        type: "heading",
+        attrs: { level: 1, textAlign: "left", indent: 0 },
+        content: [text("Project "), { type: "templateField", attrs: { field: "projectName" } }],
+      },
+      { type: "paragraph", content: [{ type: "placeholder", attrs: { text: "Describe the goal" } }] },
+      {
+        type: "paragraph",
+        content: [text("Owner: "), { type: "templateField", attrs: { field: "owner" } }],
+      },
+    ]);
+  });
+
+  it("drop placeholders and variables on pages", async () => {
+    const page = await convert(
+      '<p>A<ac:placeholder>Describe the goal</ac:placeholder> <at:var at:name="Owner" /></p>',
+    );
+    expect(page.document.content?.map(strip)).toEqual([{ type: "paragraph", content: [text("A")] }]);
   });
 });

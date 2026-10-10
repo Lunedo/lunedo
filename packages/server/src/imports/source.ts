@@ -66,6 +66,16 @@ export interface SourceVersion {
   readonly createdAt: string | null;
 }
 
+export interface SourceTemplate {
+  readonly sourceId: string;
+  readonly name: string;
+  readonly description: string;
+  readonly body: string;
+  readonly creatorId: string | null;
+  readonly createdAt: string | null;
+  readonly modifiedAt: string | null;
+}
+
 export type SourceCommentStatus = "open" | "resolved" | "dangling";
 
 export interface SourceComment {
@@ -153,6 +163,8 @@ export interface ImportReader {
   openFile(file: ByteSource, context: ReadContext, path: string): Promise<Readable | null>;
   labels(context: ReadContext, pageIds: readonly string[]): Promise<readonly SourceLabel[]>;
   pagesByTitle(context: ReadContext, titles: readonly string[]): Promise<ReadonlyMap<string, string>>;
+  pagesByFormerTitle(context: ReadContext, titles: readonly string[]): Promise<ReadonlyMap<string, string>>;
+  templates(context: ReadContext): AsyncIterable<SourceTemplate>;
   resolvePeople(
     context: ReadContext,
     references: readonly PersonReference[],

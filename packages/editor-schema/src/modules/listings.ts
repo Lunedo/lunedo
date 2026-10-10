@@ -6,6 +6,10 @@ import {
   macroParameter,
   macroReference,
   macroText,
+  type SourceElement,
+  singleLine,
+  sourceElements,
+  sourceText,
 } from "../importing.js";
 import type { ValidNode } from "../json.js";
 import {
@@ -91,15 +95,29 @@ function attachmentHref(
   return resolved ? renderer.safeHref(resolved.href) : null;
 }
 
+function plainPageTitle(macro: SourceElement): string | null {
+  const parameter = macroParameter(macro, "page");
+  if (!parameter || sourceElements(parameter).length > 0) return null;
+  const title = singleLine(sourceText(parameter));
+  return title.length > 0 ? title : null;
+}
+
 const childPagesImporter: MacroConverter = {
   source: "confluence",
   macros: ["children"],
+  references: (macro) => {
+    const title = plainPageTitle(macro);
+    return title ? { pageTitles: [title] } : {};
+  },
   convert: (macro, context) => {
     let pageId: string | null = null;
     if (macroParameter(macro, "page")) {
-      const reference = macroReference(macro, "page", "ri:page");
+      const title = plainPageTitle(macro);
+      const reference =
+        macroReference(macro, "page", "ri:page") ??
+        (title ? { name: "ri:page", attributes: { "ri:content-title": title }, children: [] } : null);
       if (!reference) return null;
-      pageId = context.page(reference);
+      pageId = context.page(reference, { formerTitles: true });
       if (!pageId) return null;
     }
     const depth = boundedInteger(macroText(macro, "depth"), 1, 999);

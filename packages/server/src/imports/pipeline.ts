@@ -3,6 +3,7 @@ import { yDocFromDocument } from "@pagehall/editor-schema/yjs";
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import * as Y from "yjs";
+import { accountScopeChain } from "../accounts/scope.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import { claimTaskIds, publishTasks, syncDecisions } from "../collaboration/content.js";
 import { writeTaskStatus } from "../collaboration/tasks.js";
@@ -10,12 +11,21 @@ import type { Database, Transaction } from "../database/database.js";
 import { type FileService, FileTooLargeError } from "../files/files.js";
 import { cleanFileName, fileNameKey } from "../files/names.js";
 import { MEGABYTE, maxFileSizeSetting } from "../files/settings.js";
+import { languageSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import { encodeState, MAX_LABELS_PER_PAGE, normalizeLabel, recomputeLinks } from "../spaces/documents.js";
 import { endPosition, ITEM_TITLE_MAX_LENGTH } from "../spaces/items.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { refreshReaderVisibility } from "../spaces/visibility.js";
+import { type TemplateLanguage, templateLanguages } from "../templates/builtin/types.js";
+import type { TemplateField } from "../templates/fields.js";
+import {
+  TEMPLATE_DESCRIPTION_MAX_LENGTH,
+  TEMPLATE_NAME_MAX_LENGTH,
+  TEMPLATE_TITLE_MAX_LENGTH,
+} from "../templates/templates.js";
 import { threadAnchor, toCommentDocument, withoutThreads } from "./comment-document.js";
+import { titleKey } from "./confluence/staged.js";
 import {
   type ConversionNote,
   type ConvertedPage,
@@ -38,14 +48,23 @@ import type {
   SourcePage,
   SourcePerson,
   SourceRestriction,
+  SourceTemplate,
 } from "./source.js";
 import type { StagingStore } from "./staging.js";
+import {
+  addButtonFields,
+  IMPORTED_TEMPLATE_CATEGORY,
+  mergeFields,
+  type TemplateVariables,
+  templateVariables,
+} from "./templates.js";
 
 export const pipelinePhases = [
   "space",
   "people",
   "pages",
   "attachments",
+  "templates",
   "content",
   "comments",
   "reactions",
@@ -87,6 +106,7 @@ interface BodyEntry {
   readonly key: string;
   readonly owner: string;
   readonly body: string;
+  readonly variables?: ReadonlyMap<string, string>;
 }
 
 interface Converter {
@@ -168,6 +188,8 @@ export class ImportPipeline {
         return this.#pages(run);
       case "attachments":
         return this.#attachments(run);
+      case "templates":
+        return this.#templates(run);
       case "content":
         return this.#content(run);
       case "comments":
@@ -189,6 +211,12 @@ export class ImportPipeline {
       where import_id = ${importId} and kind = ${kind} and source_id = any(${sql.param([...new Set(sourceIds)])}::text[])`);
     for (const row of rows.rows) result.set(row.source_id, row.target_id);
     return result;
+  }
+
+  async #allMapped(importId: string, kind: string): Promise<Map<string, string>> {
+    const rows = await this.#database.execute<{ source_id: string; target_id: string }>(sql`
+      select source_id, target_id from import_items where import_id = ${importId} and kind = ${kind}`);
+    return new Map(rows.rows.map((row) => [row.source_id, row.target_id]));
   }
 
   async #map(
@@ -579,10 +607,20 @@ export class ImportPipeline {
       ].map((reference) => reference.title as string),
     );
     const byTitle = await run.reader.pagesByTitle(context, titles);
+    const formerTitles = await run.reader.pagesByFormerTitle(
+      context,
+      titles.filter((title) => !byTitle.has(titleKey(title))),
+    );
     const sourceIds = references.flatMap((list) =>
       list.pages.map((reference) => reference.sourceId).filter((id): id is string => id !== null),
     );
-    const pageTargets = await this.#mapped(run.importId, "page", [...byTitle.values(), ...sourceIds]);
+    const pageTargets = await this.#mapped(run.importId, "page", [
+      ...byTitle.values(),
+      ...formerTitles.values(),
+      ...sourceIds,
+    ]);
+    const space = await this.#requireSpace(run.importId);
+    const templates = await this.#allMapped(run.importId, "template");
     const pageInfo = await this.#pageInfo([...pageTargets.values()]);
     const attachmentKeys = references.flatMap((list, index) => {
       const owner = entries[index]?.owner ?? "";
@@ -615,16 +653,21 @@ export class ImportPipeline {
     }
     const spacePath = `/spaces/${encodeURIComponent(run.spaceKey)}`;
     const owners = new Map(entries.map((entry) => [entry.key, entry.owner]));
+    const variables = new Map(
+      entries.flatMap((entry) => (entry.variables ? [[entry.key, entry.variables] as const] : [])),
+    );
     return {
       failed,
       convert: (key, inlineComment) => {
         const owner = owners.get(key) ?? "";
         const resolvePage = (reference: PageReference) => {
+          const title =
+            reference.title !== null && sameSpace(reference) ? titleKey(reference.title) : undefined;
           const sourceId =
             reference.sourceId ??
-            (reference.title !== null && sameSpace(reference)
-              ? byTitle.get(reference.title.trim().toLocaleLowerCase("en"))
-              : undefined);
+            (title === undefined
+              ? undefined
+              : (byTitle.get(title) ?? (reference.formerTitles ? formerTitles.get(title) : undefined)));
           const target = sourceId ? pageTargets.get(sourceId) : undefined;
           const info = target ? pageInfo.get(target) : undefined;
           if (target && info) {
@@ -659,12 +702,133 @@ export class ImportPipeline {
             return sourceId ? (placeholders.get(sourceId) ?? null) : null;
           },
           space: (spaceKey) => (spaceKey.toLowerCase() === sourceKey.toLowerCase() ? spacePath : null),
+          spaceId: (spaceKey) =>
+            spaceKey === null || spaceKey.toLowerCase() === sourceKey.toLowerCase() ? space.spaceId : null,
+          template: (sourceId) => templates.get(sourceId) ?? null,
           newId: () => uuidv7(),
           ...(inlineComment ? { inlineComment } : {}),
+          ...(variables.has(key) ? { templateVariables: variables.get(key) } : {}),
         };
         return convertStorage(parsed.get(key) ?? ROOT, lookup);
       },
     };
+  }
+
+  async #language(run: PipelineRun): Promise<TemplateLanguage> {
+    const chain = { ...(await accountScopeChain(this.#database, run.importerId)), user: run.importerId };
+    const language = await this.#settings.get(languageSetting, chain);
+    return (templateLanguages as readonly string[]).includes(language)
+      ? (language as TemplateLanguage)
+      : "en";
+  }
+
+  async #templates(run: PipelineRun): Promise<void> {
+    const context: ReadContext = { staging: run.staging };
+    const sourceSpace = await run.reader.space(context);
+    const space = await this.#requireSpace(run.importId);
+    const templates: SourceTemplate[] = [];
+    for await (const template of run.reader.templates(context)) templates.push(template);
+    if (templates.length === 0) return;
+    const people = await this.#persons(
+      run,
+      templates.map((template) => template.creatorId),
+    );
+    const empty = JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] });
+    await this.#database.transaction(async (tx) => {
+      const created = await this.#mappedIn(
+        tx,
+        run.importId,
+        "template",
+        templates.map((template) => template.sourceId),
+      );
+      for (const template of templates) {
+        if (created.has(template.sourceId)) continue;
+        const id = uuidv7();
+        const creatorId = (template.creatorId ? people.get(template.creatorId) : undefined) ?? run.importerId;
+        const name =
+          template.name.replace(/\s+/g, " ").trim().slice(0, TEMPLATE_NAME_MAX_LENGTH) ||
+          `Template ${template.sourceId}`;
+        await tx.execute(sql`
+          insert into page_templates (id, level, space_id, name, description, category, title, document,
+            schema_version, fields, created_by, updated_by, created_at, updated_at)
+          values (${id}, 'space', ${space.spaceId}, ${name},
+            ${template.description.replace(/\s+/g, " ").trim().slice(0, TEMPLATE_DESCRIPTION_MAX_LENGTH)},
+            ${IMPORTED_TEMPLATE_CATEGORY}, ${name.slice(0, TEMPLATE_TITLE_MAX_LENGTH)}, ${empty}::jsonb,
+            ${editorSchemaVersion}, '[]'::jsonb, ${creatorId}, ${creatorId},
+            coalesce(${template.createdAt}::timestamptz, now()),
+            coalesce(${template.modifiedAt}::timestamptz, now()))`);
+        await this.#map(tx, run.importId, "template", template.sourceId, id);
+      }
+    });
+    const done = await this.#mapped(
+      run.importId,
+      "templateContent",
+      templates.map((template) => template.sourceId),
+    );
+    const open = templates.filter((template) => !done.has(template.sourceId));
+    if (open.length === 0) return;
+    const targets = await this.#mapped(
+      run.importId,
+      "template",
+      open.map((template) => template.sourceId),
+    );
+    const language = await this.#language(run);
+    for (let start = 0; start < open.length; start += CONTENT_BATCH) {
+      const batch = open.slice(start, start + CONTENT_BATCH);
+      const declared = new Map<string, TemplateVariables>();
+      for (const template of batch) {
+        try {
+          declared.set(template.sourceId, templateVariables(await parseStorage(template.body)));
+        } catch {
+          declared.set(template.sourceId, { fields: [], variables: new Map() });
+        }
+      }
+      const converter = await this.#converter(
+        run,
+        context,
+        sourceSpace.key,
+        batch.map((template) => ({
+          key: template.sourceId,
+          owner: "",
+          body: template.body,
+          variables: declared.get(template.sourceId)?.variables ?? new Map(),
+        })),
+      );
+      for (const template of batch) {
+        const templateId = targets.get(template.sourceId);
+        if (!templateId) continue;
+        const converted = converter.convert(template.sourceId);
+        const base = { sourceKind: "template", sourceId: template.sourceId, itemId: null };
+        const problems: ProblemInput[] = converted.notes.map((note) => ({
+          ...noteProblem(note, "", template.sourceId),
+          ...base,
+        }));
+        if (converter.failed.has(template.sourceId)) {
+          problems.push({ code: "invalidContent", ...base, details: { element: "body" } });
+        }
+        for (const [name, count] of converted.macros) {
+          problems.push({ code: "unsupportedMacro", ...base, details: { name, count } });
+        }
+        await this.#database.transaction(async (tx) => {
+          if (await this.#mappedOne(tx, run.importId, "templateContent", template.sourceId)) return;
+          const current = await tx.execute<{ fields: TemplateField[] }>(
+            sql`select fields from page_templates where id = ${templateId} for update`,
+          );
+          const fields = mergeFields(
+            declared.get(template.sourceId)?.fields ?? [],
+            current.rows[0]?.fields ?? [],
+          );
+          await tx.execute(sql`
+            update page_templates set document = ${JSON.stringify(converted.document)}::jsonb,
+              fields = ${JSON.stringify(fields)}::jsonb, schema_version = ${editorSchemaVersion}
+            where id = ${templateId}`);
+          await addButtonFields(tx, converted.document, language);
+          await recordProblems(tx, run.importId, problems);
+          await this.#map(tx, run.importId, "templateContent", template.sourceId, templateId);
+        });
+      }
+      await run.beat();
+    }
   }
 
   async #content(run: PipelineRun): Promise<void> {
@@ -730,6 +894,7 @@ export class ImportPipeline {
       open.map((page) => page.modifierId),
     );
     const space = await this.#requireSpace(run.importId);
+    const language = await this.#language(run);
     for (const page of open) {
       const itemId = items.get(page.sourceId);
       if (!itemId) continue;
@@ -783,6 +948,7 @@ export class ImportPipeline {
           modifiedAt: page.modifiedAt,
           number: previous + 1,
         });
+        await addButtonFields(tx, document, language);
         if (page.type === "blogPost") {
           await tx.execute(sql`
             update blog_posts set published_at = coalesce(${page.createdAt}::timestamptz, now()), updated_at = now()
@@ -859,12 +1025,14 @@ export class ImportPipeline {
         run,
         open.map((version) => version.authorId),
       );
+      const language = await this.#language(run);
       await this.#database.transaction(async (tx) => {
         await tx.execute(sql`select id from tree_items where id = ${itemId} for update`);
         for (const [index, version] of versions.entries()) {
           if (done.has(version.sourceId)) continue;
           if (await this.#mappedOne(tx, run.importId, "version", version.sourceId)) continue;
           const document = converter.convert(version.sourceId).document;
+          await addButtonFields(tx, document, language);
           const author = (version.authorId ? authors.get(version.authorId) : undefined) ?? run.importerId;
           const id = uuidv7();
           await tx.execute(sql`

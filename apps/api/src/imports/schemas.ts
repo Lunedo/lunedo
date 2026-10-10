@@ -323,6 +323,15 @@ export const reportEntriesSchema = z
             restricted: z
               .boolean()
               .describe("True when the problem concerns a page the caller cannot read; `item` is then null."),
+            template: z
+              .object({
+                id: uuid("ID of the space template."),
+                name: z.string().describe("Name of the space template."),
+              })
+              .nullable()
+              .describe(
+                "The affected space template, or null when the problem concerns a page or the export.",
+              ),
             details: z
               .record(z.string(), z.unknown())
               .describe("Facts of the problem, such as `name` of a macro or `fileName` of an attachment."),
