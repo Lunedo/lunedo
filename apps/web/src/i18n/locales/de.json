@@ -6058,8 +6058,7 @@
       "discarding": "Der Import wird verworfen",
       "discardFailed": "Der Import konnte nicht verworfen werden",
       "typeKey": "Gib {key} zur Bestätigung ein",
-      "keyMismatch": "Gib den Schlüssel {key} genau so ein, wie er angezeigt wird.",
-      "backToList": "Alle Importe"
+      "keyMismatch": "Gib den Schlüssel {key} genau so ein, wie er angezeigt wird."
     },
     "report": {
       "tabs": "Bericht",

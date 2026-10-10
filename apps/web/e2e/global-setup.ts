@@ -11,6 +11,7 @@ import {
   STATE_DIR,
   writeState,
 } from "./support/environment.js";
+import { FOLDER_EXPORT, IMPORT_DIR, writeSyntheticExport } from "./support/imports.js";
 
 const appRoot = fileURLToPath(new URL("../../..", import.meta.url));
 const webRoot = fileURLToPath(new URL("../dist", import.meta.url));
@@ -95,11 +96,14 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     PAGEHALL_WEB_ROOT: webRoot,
     PAGEHALL_SECRETS_DIR: path.join(dataDir, "secrets"),
     PAGEHALL_FILES_DIR: path.join(dataDir, "files"),
+    PAGEHALL_IMPORT_DIR: IMPORT_DIR,
     PAGEHALL_LOG_LEVEL: "info",
     PAGEHALL_TRUSTED_PROXIES: "127.0.0.1,::1",
     PAGEHALL_INSECURE_IDENTITY_PROVIDERS: process.env.PAGEHALL_E2E_IDP === "1" ? "true" : "false",
   };
   mkdirSync(env.PAGEHALL_FILES_DIR as string, { recursive: true });
+  mkdirSync(IMPORT_DIR, { recursive: true });
+  await writeSyntheticExport("csv", path.join(IMPORT_DIR, FOLDER_EXPORT));
 
   const log: string[] = [];
   let setupCode: string | null = null;

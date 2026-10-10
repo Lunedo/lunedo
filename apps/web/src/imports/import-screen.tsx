@@ -84,7 +84,7 @@ export function ImportScreen() {
 function ImportDetail({ organizationId, entry }: { organizationId: string; entry: ImportView }) {
   const { t } = useTranslation();
   const format = useFormat();
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const failed = useFailureToast();
@@ -273,21 +273,6 @@ function ImportDetail({ organizationId, entry }: { organizationId: string; entry
           />
         </>
       ) : null}
-      {entry.state === "accepted" ? null : (
-        <p className="text-sm text-text-muted">
-          <Button
-            variant="outline"
-            onClick={() =>
-              void navigate({
-                to: "/settings/organizations/$organizationId/imports",
-                params: { organizationId },
-              })
-            }
-          >
-            {t("imports.detail.backToList")}
-          </Button>
-        </p>
-      )}
     </SettingsPage>
   );
 }
@@ -623,6 +608,7 @@ function MacrosTab({ entry }: { entry: ImportView }) {
           {
             key: "result",
             header: t("imports.report.result"),
+            hideBelow: "sm",
             cell: () => <span className="text-text-muted">{t("imports.report.notConverted")}</span>,
           },
         ]}

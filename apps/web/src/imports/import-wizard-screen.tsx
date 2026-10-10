@@ -18,7 +18,7 @@ import {
 } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Check, FileInput, Lock, X } from "lucide-react";
+import { ArrowLeft, Check, FileInput, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
@@ -53,6 +53,17 @@ interface Form {
   spaceKey: string;
   archived: boolean;
   sourceUrl: string;
+}
+
+function formBody(form: Form): ImportUpdate {
+  const body: ImportUpdate = { archived: form.archived, sourceUrl: form.sourceUrl.trim() || null };
+  if (form.spaceName.trim()) body.spaceName = form.spaceName.trim();
+  if (KEY_PATTERN.test(form.spaceKey)) body.spaceKey = form.spaceKey;
+  return body;
+}
+
+function isEditable(state: ImportView["state"]): boolean {
+  return state === "draft" || state === "analyzing" || state === "ready";
 }
 
 function formOf(entry: ImportView): Form {
@@ -146,11 +157,7 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
     const text = JSON.stringify(form);
     if (text === saved.current) return;
     const timer = setTimeout(() => {
-      const body: ImportUpdate = { archived: form.archived };
-      if (form.spaceName.trim()) body.spaceName = form.spaceName.trim();
-      if (KEY_PATTERN.test(form.spaceKey)) body.spaceKey = form.spaceKey;
-      body.sourceUrl = form.sourceUrl.trim() || null;
-      patch(body)
+      patch(formBody(form))
         .then(() => {
           saved.current = text;
         })
@@ -161,7 +168,16 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
 
   const goTo = (next: number) => {
     void navigate({ to: ".", search: { step: next } });
-    void patch({ draftStep: next }).catch(() => undefined);
+    const text = JSON.stringify(form);
+    const body: ImportUpdate =
+      text === saved.current || !isEditable(entry.state)
+        ? { draftStep: next }
+        : { draftStep: next, ...formBody(form) };
+    patch(body)
+      .then(() => {
+        saved.current = text;
+      })
+      .catch(() => undefined);
   };
 
   const validateSpace = async (): Promise<boolean> => {
@@ -756,12 +772,9 @@ function CheckStep({ entry, form }: { entry: ImportView; form: Form }) {
         </ul>
       </Section>
       <Notice variant="info" title={t("imports.wizard.check.quarantineTitle")}>
-        <span className="inline-flex items-start gap-2">
-          <Lock aria-hidden="true" className="mt-1 size-icon-sm shrink-0" />
-          {reviewers.length > 0
-            ? t("imports.wizard.check.quarantineWithReviewers", { names: reviewers.join(", ") })
-            : t("imports.wizard.check.quarantineAlone")}
-        </span>
+        {reviewers.length > 0
+          ? t("imports.wizard.check.quarantineWithReviewers", { names: reviewers.join(", ") })
+          : t("imports.wizard.check.quarantineAlone")}
       </Notice>
     </>
   );

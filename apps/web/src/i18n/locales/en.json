@@ -6058,8 +6058,7 @@
       "discarding": "The import is being discarded",
       "discardFailed": "The import could not be discarded",
       "typeKey": "Type {key} to confirm",
-      "keyMismatch": "Type the key {key} exactly as shown.",
-      "backToList": "All imports"
+      "keyMismatch": "Type the key {key} exactly as shown."
     },
     "report": {
       "tabs": "Report",
