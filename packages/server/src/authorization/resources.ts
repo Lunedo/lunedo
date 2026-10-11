@@ -499,7 +499,9 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
         }>(sql`
           select i.importer_id = ${context.accountId} as importer,
             exists (select 1 from import_reviewers r where r.import_id = i.id and r.account_id = ${context.accountId})
-              as reviewer, i.state = 'accepted' as accepted
+              as reviewer,
+            i.state = 'accepted' or (i.target_space_id is not null and i.state in ('running', 'review', 'superseded'))
+              as accepted
           from imports i where i.id = ${context.resource.id.toLowerCase()}`);
         const row = result.rows[0];
         if (!row) return false;
@@ -510,7 +512,9 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
         const facts = await context.organizationFacts(context.organizationId);
         if (facts.membership?.kind !== "member") return false;
         const result = await context.executor.execute<{ importer: boolean; accepted: boolean }>(sql`
-          select i.importer_id = ${context.accountId} as importer, i.state = 'accepted' as accepted
+          select i.importer_id = ${context.accountId} as importer,
+            i.state = 'accepted' or (i.target_space_id is not null and i.state in ('running', 'review'))
+              as accepted
           from imports i where i.id = ${context.resource.id.toLowerCase()}`);
         const row = result.rows[0];
         if (!row || !(row.importer || row.accepted)) return false;

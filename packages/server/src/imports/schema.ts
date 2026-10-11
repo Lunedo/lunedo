@@ -39,6 +39,7 @@ export const importStates = [
   "discarded",
   "stopped",
   "failed",
+  "superseded",
 ] as const;
 export type ImportState = (typeof importStates)[number];
 export const importState = pgEnum("import_state", importStates);
@@ -115,6 +116,7 @@ export const imports = pgTable(
     found: jsonb(),
     counts: jsonb().notNull().default({}),
     quarantineSpaceId: uuid().references(() => spaces.id, { onDelete: "set null" }),
+    targetSpaceId: uuid().references(() => spaces.id, { onDelete: "cascade" }),
     errorCode: text(),
     stopRequestedAt: timestampColumn(),
     heartbeatAt: timestampColumn(),
@@ -132,6 +134,9 @@ export const imports = pgTable(
     index().on(table.decidedBy),
     index().on(table.fileExpiresAt),
     uniqueIndex("imports_quarantine_space_unique").on(table.quarantineSpaceId),
+    uniqueIndex("imports_active_reimport_unique")
+      .on(table.targetSpaceId)
+      .where(sql`${table.state} in ('running', 'held', 'review')`),
     check("imports_file_kind", sql`${table.fileKind} is null or ${table.fileKind} in ('upload', 'folder')`),
     check("imports_draft_step", sql`${table.draftStep} between 0 and 10`),
     check(
@@ -275,6 +280,105 @@ export const importItems = pgTable(
   (table) => [
     primaryKey({ columns: [table.importId, table.kind, table.sourceId] }),
     index().on(table.targetId),
+    index().on(table.kind, table.sourceId),
+  ],
+);
+
+export const importedSpaces = pgTable(
+  "imported_spaces",
+  {
+    spaceId: uuid()
+      .primaryKey()
+      .references(() => spaces.id, { onDelete: "cascade" }),
+    importId: uuid().references(() => imports.id, { onDelete: "set null" }),
+    source: text().notNull(),
+    sourceSpaceId: text().notNull(),
+    sourceSpaceKey: text().notNull(),
+    createdAt: timestampColumn().notNull().defaultNow(),
+  },
+  (table) => [index().on(table.importId), index().on(table.sourceSpaceKey)],
+);
+
+export const importBaselines = pgTable(
+  "import_baselines",
+  {
+    spaceId: uuid()
+      .notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
+    kind: text().notNull(),
+    sourceId: text().notNull(),
+    targetId: uuid(),
+    importId: uuid().references(() => imports.id, { onDelete: "set null" }),
+    sourceVersion: integer(),
+    checksum: text().notNull(),
+    data: jsonb().notNull().default({}),
+    local: jsonb().notNull().default({}),
+    kept: boolean().notNull().default(false),
+    recordedAt: timestampColumn().notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.spaceId, table.kind, table.sourceId] }),
+    index().on(table.kind, table.sourceId),
+    index().on(table.targetId),
+    index().on(table.importId),
+    check("import_baselines_kind", sql`${table.kind} in ('page', 'template', 'spacePermission')`),
+  ],
+);
+
+export const importTitles = pgTable(
+  "import_titles",
+  {
+    spaceId: uuid()
+      .notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
+    spaceKey: text().notNull(),
+    titleKey: text().notNull(),
+    sourceId: text().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.spaceId, table.spaceKey, table.titleKey, table.sourceId] }),
+    index().on(table.spaceKey, table.titleKey),
+  ],
+);
+
+export const importChanges = pgTable(
+  "import_changes",
+  {
+    id: primaryId(),
+    importId: uuid()
+      .notNull()
+      .references(() => imports.id, { onDelete: "cascade" }),
+    kind: text().notNull(),
+    sourceId: text().notNull(),
+    change: text().notNull(),
+    itemId: uuid().references(() => treeItems.id, { onDelete: "set null" }),
+    targetId: uuid(),
+    title: text(),
+    details: jsonb().notNull().default({}),
+    decision: text(),
+    decidedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    decidedAt: timestampColumn(),
+    appliedAt: timestampColumn(),
+    appliedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+  },
+  (table) => [
+    uniqueIndex("import_changes_unique").on(table.importId, table.kind, table.sourceId, table.change),
+    index().on(table.importId, table.change),
+    index().on(table.itemId),
+    index().on(table.decidedBy),
+    index().on(table.appliedBy),
+    check(
+      "import_changes_kind",
+      sql`${table.kind} in ('page', 'template', 'comment', 'attachment', 'spacePermission', 'restriction')`,
+    ),
+    check(
+      "import_changes_change",
+      sql`${table.change} in ('new', 'updated', 'conflict', 'deleted', 'moved', 'movedHere', 'labels', 'gone', 'permission')`,
+    ),
+    check(
+      "import_changes_decision",
+      sql`${table.decision} is null or ${table.decision} in ('pagehall', 'source', 'both', 'trash', 'keep')`,
+    ),
   ],
 );
 

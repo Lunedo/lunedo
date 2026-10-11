@@ -234,6 +234,7 @@ export class ContentActivity {
     itemId: string,
     document: DocumentJson,
     actorId: string | null,
+    notify = true,
   ): Promise<void> {
     await publishTasks(tx, itemId, document);
     await syncDecisions(tx, itemId, document);
@@ -257,7 +258,7 @@ export class ContentActivity {
       delete from content_mentions where item_id = ${itemId} and comment_id is null and notified_at is null
         and not (account_id = any(select coalesce(a.merged_into_id, a.id) from accounts a
           where a.id = any(${sql.param(mentioned)}::uuid[])))`);
-    await this.deliver(tx, [itemId]);
+    if (notify) await this.deliver(tx, [itemId]);
   }
 
   async commentMentions(

@@ -13,7 +13,7 @@ import {
   Req,
   Res,
 } from "@nestjs/common";
-import { MAX_USER_LIST_BYTES } from "@pagehall/server";
+import { CONFLUENCE_LINK_MAX_LENGTH, MAX_USER_LIST_BYTES } from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission } from "../access/route-access.js";
@@ -27,10 +27,17 @@ import { organizationIdParams, uuid } from "../http/schemas.js";
 import {
   acceptSchema,
   candidatesSchema,
+  changeComparisonSchema,
+  changeListSchema,
+  changeSummarySchema,
   completeUploadSchema,
   confirmationSchema,
+  confluenceLinkSchema,
   createImportSchema,
   createUploadSchema,
+  decidedSchema,
+  decisionsSchema,
+  differenceImpactSchema,
   exampleImport,
   exampleUpload,
   folderSchema,
@@ -87,6 +94,49 @@ const offsetCursorSchema = z.object({ offset: z.number().int().min(0).max(1_000_
 const groupParams = importParams
   .extend({ groupKey: z.string().min(1).max(255).describe("Lower-case name of the group in Confluence.") })
   .strict();
+const changeParams = importParams.extend({ changeId: uuid("ID of the change.") }).strict();
+const changesQuery = z
+  .object({
+    tab: z
+      .enum(["conflicts", "updates", "deleted", "moved", "permissions"])
+      .describe("Group of changes to list."),
+    ...pageQuery,
+  })
+  .strict();
+const linkQuery = z
+  .object({
+    url: z
+      .string()
+      .min(1)
+      .max(CONFLUENCE_LINK_MAX_LENGTH)
+      .describe(
+        "The old Confluence address: with a page ID (`/pages/123/Title`, `pageId=123`), a Data Center path (`/display/KEY/Title`) or a short link (`/x/AbC`). A path without the host works too.",
+      ),
+  })
+  .strict();
+const exampleChange = {
+  id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f0101",
+  kind: "page",
+  change: "conflict",
+  item: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f0102", title: "On-call rota", spaceKey: "ITOPS" },
+  title: "On-call rota",
+  sourceTitle: "On-call rota",
+  reason: "both",
+  editing: false,
+  changedHere: {
+    by: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f0103", name: "Lukas Hofer" },
+    at: "2026-10-09T09:00:00.000Z",
+  },
+  changedAtSource: "2026-10-10T08:00:00.000Z",
+  from: null,
+  to: null,
+  labels: null,
+  permission: null,
+  decision: null,
+  decidedBy: null,
+  decidedAt: null,
+  appliedAt: null,
+};
 const peopleQuery = z
   .object({
     q: z.string().trim().max(200).optional().describe("Part of the name, e-mail address or Atlassian ID."),
@@ -940,5 +990,240 @@ export class ImportsController {
         yield* rows;
       })(),
     );
+  }
+
+  @Get("imports/:importId/changes/summary")
+  @Permission("import.view", importResource)
+  @ApiRoute({
+    summary: "Summarize the changes of a re-import",
+    description:
+      "Counts the changes a re-import found, by group, with the conflicts and deletions that still wait for a decision. Changes of pages the caller cannot read are only counted as hidden.",
+    tags: [TAG],
+    params: importParams,
+    response: {
+      description: "The summary.",
+      schema: changeSummarySchema,
+      example: {
+        tabs: [
+          { tab: "conflicts", count: 4, open: 4 },
+          { tab: "updates", count: 31, open: 0 },
+          { tab: "deleted", count: 2, open: 2 },
+          { tab: "moved", count: 0, open: 0 },
+          { tab: "permissions", count: 1, open: 0 },
+        ],
+        hidden: 0,
+        counts: { new: 12, updated: 19, unchanged: 1203, conflicts: 4, deleted: 2 },
+        open: 6,
+        applying: false,
+      },
+    },
+    errors: ["changesUnavailable"],
+  })
+  async changeSummary(@Param("importId") importId: string, @Req() request: FastifyRequest) {
+    return this.#services.imports.reimports.summary(actorOf(request), importId);
+  }
+
+  @Get("imports/:importId/changes")
+  @Permission("import.view", importResource)
+  @ApiRoute({
+    summary: "List the changes of a re-import",
+    description:
+      "Lists the changes of one group. Nothing changes until the changes are applied. Changes of pages the caller cannot read are left out.",
+    tags: [TAG],
+    params: importParams,
+    query: changesQuery,
+    response: {
+      description: "A page of changes.",
+      schema: changeListSchema,
+      example: { items: [exampleChange], nextCursor: null },
+    },
+    errors: ["changesUnavailable"],
+  })
+  async changes(
+    @Param("importId") importId: string,
+    @Query() query: z.output<typeof changesQuery>,
+    @Req() request: FastifyRequest,
+  ) {
+    const cursor = decodeCursor(query.cursor, cursorSchema);
+    const page = await this.#services.imports.reimports.changes(actorOf(request), importId, {
+      tab: query.tab,
+      after: cursor?.id,
+      limit: query.limit,
+    });
+    return { items: page.entries, nextCursor: page.next ? encodeCursor({ id: page.next }) : null };
+  }
+
+  @Put("imports/:importId/changes/decisions")
+  @Permission("import.resolve", importResource)
+  @ApiRoute({
+    summary: "Decide changes of a re-import",
+    description:
+      "Records one decision for up to 500 conflicts or pages deleted at the source. Nothing changes until the changes are applied; a decision can be taken back until then.",
+    tags: [TAG],
+    params: importParams,
+    body: decisionsSchema,
+    bodyExample: { ids: [exampleChange.id], decision: "pagehall" },
+    response: {
+      description: "How many changes were decided.",
+      schema: decidedSchema,
+      example: { decided: 1 },
+    },
+    errors: ["changeNotFound", "changeApplied", "invalidDecision", "reimportNotInReview"],
+  })
+  async decide(
+    @Param("importId") importId: string,
+    @Body() body: z.output<typeof decisionsSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.imports.reimports.decide(actorOf(request), importId, body);
+  }
+
+  @Post("imports/:importId/apply")
+  @Permission("import.resolve", importResource)
+  @ApiRoute({
+    summary: "Apply the changes of a re-import",
+    description:
+      "Applies the changes in the background: new items are created, items changed only at the source get a new version, moves follow the source, and decided conflicts and deletions are carried out. Undecided conflicts and deletions wait. Permissions never change. Applying again changes nothing that was applied already.",
+    tags: [TAG],
+    params: importParams,
+    response: {
+      description: "The re-import.",
+      schema: importSchema,
+      example: { ...exampleImport, state: "running", phase: "lineage" },
+    },
+    errors: ["reimportNotInReview"],
+  })
+  async apply(@Param("importId") importId: string, @Req() request: FastifyRequest) {
+    await this.#services.imports.reimports.apply(actorOf(request), importId);
+    return this.#services.imports.get(actorOf(request), importId);
+  }
+
+  @Get("imports/:importId/changes/:changeId/compare")
+  @Permission("import.view", importResource)
+  @ApiRoute({
+    summary: "Compare a conflict",
+    description:
+      "Compares the current content of a page or space template in Pagehall with the content of the new export, converted as it would be applied, without applying anything. The Pagehall side is the draft for people who may edit the page, otherwise its latest version. The source of a page restricted further at the source is shown only to people who keep access once the restriction is applied.",
+    tags: [TAG],
+    params: changeParams,
+    response: {
+      description: "The comparison.",
+      schema: changeComparisonSchema,
+      example: {
+        kind: "page",
+        pagehall: { title: "Release plan", version: null },
+        source: { title: "Release plan", version: 7 },
+        decision: null,
+        diff: { title: null, blocks: [], changes: 0 },
+        before: { type: "doc", content: [] },
+        after: { type: "doc", content: [] },
+        references: { people: {}, pages: {}, topics: {} },
+      },
+    },
+    errors: [
+      "changesUnavailable",
+      "changeNotFound",
+      "changeNotComparable",
+      "comparisonUnavailable",
+      "comparisonWithheld",
+    ],
+  })
+  async compareChange(
+    @Param("importId") importId: string,
+    @Param("changeId") changeId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    const actor = actorOf(request);
+    const comparison = await this.#services.imports.reimports.compare(actor, importId, changeId);
+    const references = await this.#services.documents.references(actor, {
+      type: "doc",
+      content: [...(comparison.before.content ?? []), ...(comparison.after.content ?? [])],
+    });
+    return { ...comparison, references };
+  }
+
+  @Post("imports/:importId/changes/:changeId/preview")
+  @Permission("import.resolve", importResource)
+  @ApiRoute({
+    summary: "Preview a permission difference",
+    description:
+      "Shows who gains or loses access when the permission difference is applied. Space differences need permission to manage the space, page differences permission to share the page.",
+    tags: [TAG],
+    params: changeParams,
+    response: {
+      description: "Who gains or loses access.",
+      schema: differenceImpactSchema,
+      example: {
+        space: {
+          gaining: 3,
+          losing: 0,
+          raised: 0,
+          lowered: 0,
+          changes: [],
+          unlisted: 3,
+          truncated: false,
+        },
+        page: null,
+      },
+    },
+    errors: ["changeNotFound", "changeApplied", "holderNotInPagehall", "reimportNotInReview"],
+  })
+  async previewDifference(
+    @Param("importId") importId: string,
+    @Param("changeId") changeId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.imports.reimports.preview(actorOf(request), importId, changeId);
+  }
+
+  @Post("imports/:importId/changes/:changeId/apply")
+  @Permission("import.resolve", importResource)
+  @ApiRoute({
+    summary: "Apply a permission difference",
+    description:
+      "Applies one difference to the permissions at the source and records it in the audit log. Show its effect with the preview first.",
+    tags: [TAG],
+    params: changeParams,
+    status: 204,
+    errors: [
+      "changeNotFound",
+      "holderNotInPagehall",
+      "differenceResolved",
+      "reimportNotInReview",
+      "lastSpaceAdmin",
+      "notRestricted",
+    ],
+  })
+  async applyDifference(
+    @Param("importId") importId: string,
+    @Param("changeId") changeId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    await this.#services.imports.reimports.applyDifference(actorOf(request), importId, changeId);
+  }
+
+  @Get("confluence-links")
+  @Permission("instance.content.view")
+  @ApiRoute({
+    summary: "Resolve an old Confluence link",
+    description:
+      "Finds the page imported from an old Confluence address. A link to a page the caller cannot read gives the same answer as a link to an unknown page.",
+    tags: [TAG],
+    query: linkQuery,
+    response: {
+      description: "The page.",
+      schema: confluenceLinkSchema,
+      example: {
+        itemId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f0102",
+        kind: "page",
+        spaceKey: "ITOPS",
+        title: "On-call rota",
+        slug: "on-call-rota",
+      },
+    },
+    errors: ["notFound"],
+  })
+  async resolveLink(@Query() query: z.output<typeof linkQuery>, @Req() request: FastifyRequest) {
+    return this.#services.imports.links.resolve(actorOf(request), query.url);
   }
 }

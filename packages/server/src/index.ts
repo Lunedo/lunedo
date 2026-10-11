@@ -334,7 +334,15 @@ export {
   type ReportEntry,
   type ReportSummary,
 } from "./imports/imports.js";
-export { pipelinePhases } from "./imports/pipeline.js";
+export { CONFLUENCE_LINK_MAX_LENGTH, type ResolvedLink } from "./imports/links.js";
+export { pipelinePhases, reimportPhases } from "./imports/pipeline.js";
+export {
+  type ChangeEntryView,
+  type ChangeSummary,
+  type ChangeTab,
+  changeTabs,
+} from "./imports/reimport.js";
+export { changeDecisions, changeKinds, changeTypes } from "./imports/reimport-compare.js";
 export { problemCodes, reportCategoryNames } from "./imports/report.js";
 export {
   type GrantState,

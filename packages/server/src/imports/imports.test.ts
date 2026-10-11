@@ -78,6 +78,8 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
         files: services.files,
         settings: test.settings,
         audit: services.audit,
+        versions: services.versions,
+        trash: services.trash,
       }),
       folder: services.imports.folder,
       jobs: undefined,

@@ -132,7 +132,9 @@ function map(error: unknown): Mapped | null {
   if (error instanceof OrganizationError)
     return { code: codeOf(error.code, "invalidInput"), detail: error.message, extensions: error.details };
   if (error instanceof ImportError) {
-    const code = error.code === "importNotFound" || error.code === "uploadNotFound" ? "notFound" : error.code;
+    const code = ["importNotFound", "uploadNotFound", "confluenceLinkNotFound"].includes(error.code)
+      ? "notFound"
+      : error.code;
     return { code: codeOf(code, "invalidInput"), detail: error.message, extensions: error.details };
   }
   if (error instanceof SpaceError) {

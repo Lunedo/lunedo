@@ -71,7 +71,9 @@ export type AccessChange =
   | { action: "changeShare"; shareId: string; role?: ShareRole; includeDescendants?: boolean }
   | { action: "removeShare"; shareId: string }
   | { action: "restrict"; kind: RestrictionKind }
-  | { action: "unrestrict"; kind: RestrictionKind };
+  | { action: "unrestrict"; kind: RestrictionKind }
+  | { action: "listHolder"; kind: RestrictionKind; holderKind: HolderKind; holderId: string }
+  | { action: "unlistHolder"; kind: RestrictionKind; holderKind: HolderKind; holderId: string };
 
 export interface PageAccessImpact {
   read: AccessImpact;
@@ -114,6 +116,10 @@ class PreviewRollback extends Error {
   constructor(readonly impact: PageAccessImpact) {
     super("Preview");
   }
+}
+
+export interface AccessChangeOptions {
+  readonly shareWithActor?: boolean;
 }
 
 const IMPACT_LIST_LIMIT = 100;
@@ -341,13 +347,18 @@ export class PageAccessService {
     };
   }
 
-  async preview(actor: Principal, itemId: string, changes: AccessChange[]): Promise<PageAccessImpact> {
+  async preview(
+    actor: Principal,
+    itemId: string,
+    changes: AccessChange[],
+    options: AccessChangeOptions = {},
+  ): Promise<PageAccessImpact> {
     try {
       await this.#database.transaction(async (tx) => {
         const item = await this.#item(tx, itemId);
         await this.#requireShare(tx, actor, itemId);
         const before = await this.#levels(tx, item, changes);
-        await this.#apply(tx, actor, item, changes, { audit: false });
+        await this.#apply(tx, actor, item, changes, { ...options, audit: false });
         const after = await this.#levels(tx, item, changes);
         throw new PreviewRollback(await this.#impact(tx, actor, before, after));
       });
@@ -370,12 +381,13 @@ export class PageAccessService {
     actor: Principal,
     itemId: string,
     changes: AccessChange[],
+    options: AccessChangeOptions = {},
   ): Promise<string[]> {
     const located = await this.#item(tx, itemId);
     await lockSpaces(tx, [located.space_id]);
     const item = await this.#item(tx, itemId);
     await this.#requireShare(tx, actor, itemId);
-    const notified = await this.#apply(tx, actor, item, changes, { audit: true });
+    const notified = await this.#apply(tx, actor, item, changes, { ...options, audit: true });
     await this.#afterChange(tx, item.space_id, itemId);
     const mailIds: string[] = [];
     for (const entry of notified) {
@@ -465,7 +477,7 @@ export class PageAccessService {
     actor: Principal,
     item: ItemRow,
     changes: AccessChange[],
-    options: { audit: boolean },
+    options: AccessChangeOptions & { audit: boolean },
   ): Promise<{ accountId: string; role: ShareRole; includeDescendants: boolean }[]> {
     const events: AuditEvents = [];
     const notified: { accountId: string; role: ShareRole; includeDescendants: boolean }[] = [];
@@ -557,7 +569,7 @@ export class PageAccessService {
             insert into page_restrictions (item_id, kind, set_by) values (${item.id}, ${change.kind}, ${actorId})
             on conflict do nothing returning item_id`);
           if (inserted.rows.length === 0) break;
-          if (actorId) {
+          if (actorId && options.shareWithActor !== false) {
             await tx.execute(sql`
               insert into page_shares (id, item_id, principal_kind, principal_id, role, created_by)
               values (${uuidv7()}, ${item.id}, 'account', ${actorId}, 'editor', ${actorId})
@@ -568,6 +580,51 @@ export class PageAccessService {
             actor,
             targetId: item.id,
             fields: { ...base, kind: change.kind },
+            scope: auditScopeOf({ organizationId: item.organization_id }),
+          });
+          break;
+        }
+        case "listHolder":
+        case "unlistHolder": {
+          const name =
+            change.holderKind === "account"
+              ? await this.#listedAccount(tx, change.holderId)
+              : await this.#validateHolder(tx, actor, item, "group", change.holderId);
+          if (change.action === "listHolder") {
+            const restricted = await tx.execute(sql`
+              select 1 from page_restrictions where item_id = ${item.id} and kind = ${change.kind}`);
+            if (restricted.rows.length === 0) {
+              throw new SpaceError(
+                "notRestricted",
+                "The page has no restriction of this kind; restrict it first",
+              );
+            }
+            const inserted = await tx.execute(sql`
+              insert into page_restriction_holders (item_id, kind, principal_kind, principal_id)
+              values (${item.id}, ${change.kind}, ${change.holderKind}, ${change.holderId})
+              on conflict do nothing returning item_id`);
+            if (inserted.rows.length === 0) break;
+          } else {
+            const removed = await tx.execute(sql`
+              delete from page_restriction_holders where item_id = ${item.id} and kind = ${change.kind}
+                and principal_kind = ${change.holderKind} and principal_id = ${change.holderId}
+              returning item_id`);
+            if (removed.rows.length === 0) break;
+          }
+          events.push({
+            name:
+              change.action === "listHolder"
+                ? "page.restrictionHolderAdded"
+                : "page.restrictionHolderRemoved",
+            actor,
+            targetId: item.id,
+            fields: {
+              ...base,
+              kind: change.kind,
+              principalKind: change.holderKind,
+              principalId: change.holderId,
+              name,
+            },
             scope: auditScopeOf({ organizationId: item.organization_id }),
           });
           break;
@@ -590,6 +647,15 @@ export class PageAccessService {
     await this.#checkListed(tx, item.id);
     if (options.audit) await this.#audit.recordMany(tx, events);
     return notified;
+  }
+
+  async #listedAccount(tx: Transaction, accountId: string): Promise<string> {
+    const account = await tx.execute<{ name: string }>(sql`
+      select name from accounts where id = ${accountId} and type <> 'portal' and state in ('active', 'placeholder')
+        and merged_into_id is null`);
+    const row = account.rows[0];
+    if (!row) throw new SpaceError("invalidHolder", "Choose a person you can find in the search");
+    return row.name;
   }
 
   async #checkListed(tx: Transaction, itemId: string): Promise<void> {
@@ -642,6 +708,11 @@ export class PageAccessService {
     const accounts = changes
       .filter((change) => change.action === "share" && change.holderKind === "account")
       .map((change) => (change.action === "share" ? change.holderId : ""));
+    for (const change of changes) {
+      if (change.action !== "listHolder" && change.action !== "unlistHolder") continue;
+      if (change.holderKind === "account") accounts.push(change.holderId);
+      else groups.push(change.holderId);
+    }
     return sql`
       select sp.principal_id from space_permissions sp where sp.space_id = ${item.space_id} and sp.principal_kind = 'account'
       union select gm.account_id from space_permissions sp join group_members gm on gm.group_id = sp.principal_id

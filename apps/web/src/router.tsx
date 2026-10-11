@@ -232,6 +232,12 @@ const myAccessRequestsRoute = createRoute({
   component: lazyRouteComponent(() => import("./sharing/access-requests.js"), "MyAccessRequestsScreen"),
 });
 
+const confluenceLinkRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/confluence/$",
+  component: lazyRouteComponent(() => import("./imports/confluence-link.js"), "ConfluenceRedirectScreen"),
+});
+
 const accessRequestRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/access-requests/$requestId",
@@ -558,11 +564,35 @@ const importRoute = createRoute({
   params: { parse: (params) => ({ importId: z.uuid().parse(params.importId) }) },
   validateSearch: z.object({
     tab: z
-      .enum(["summary", "macros", "people", "comments", "attachments", "permissions"])
+      .enum([
+        "summary",
+        "macros",
+        "people",
+        "comments",
+        "attachments",
+        "permissions",
+        "conflicts",
+        "updates",
+        "deleted",
+        "moved",
+      ])
       .optional()
       .catch(undefined),
   }),
   component: lazyRouteComponent(() => import("./imports/import-screen.js"), "ImportScreen"),
+});
+
+const reimportComparisonRoute = createRoute({
+  getParentRoute: () => organizationRoute,
+  path: "/imports/$importId/changes/$changeId/compare",
+  params: {
+    parse: (params) => ({
+      importId: z.uuid().parse(params.importId),
+      changeId: z.uuid().parse(params.changeId),
+    }),
+  },
+  validateSearch: z.object({ view: z.enum(["inline", "sideBySide"]).optional().catch(undefined) }),
+  component: lazyRouteComponent(() => import("./imports/reimport-comparison.js"), "ReimportComparisonScreen"),
 });
 
 const organizationAuditRoute = organizationScreen(
@@ -715,6 +745,7 @@ const routeTree = rootRoute.addChildren([
     sharedPageRoute,
     myAccessRequestsRoute,
     accessRequestRoute,
+    confluenceLinkRoute,
     spaceRoute.addChildren([
       spaceIndexRoute,
       spaceBlogRoute,
@@ -759,6 +790,7 @@ const routeTree = rootRoute.addChildren([
         organizationTemplatesRoute,
         organizationAccessRoute,
         importsRoute,
+        reimportComparisonRoute,
         importWizardRoute,
         importRoute,
         organizationAuditRoute,

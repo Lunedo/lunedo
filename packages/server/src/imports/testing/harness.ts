@@ -40,7 +40,14 @@ export function importHarness(test: () => TestServices, options: ImportHarnessOp
       atlassian: new AtlassianDirectory(options.fetch ? { fetch: options.fetch } : {}),
       uploads: services.importUploads,
       readers: new ImportReaderRegistry().register(new ConfluenceXmlReader(), new ConfluenceCsvReader()),
-      pipeline: new ImportPipeline({ database, files: services.files, settings, audit: services.audit }),
+      pipeline: new ImportPipeline({
+        database,
+        files: services.files,
+        settings,
+        audit: services.audit,
+        versions: services.versions,
+        trash: services.trash,
+      }),
       folder: services.imports.folder,
       jobs: undefined,
       logger: options.logger ?? createLogger({ service: "test", level: "silent" }),
@@ -129,11 +136,68 @@ export function importHarness(test: () => TestServices, options: ImportHarnessOp
     return test().services.imports.get(as(input.admin), id);
   }
 
+  async function accepted(model: SyntheticExport, input: Parameters<typeof prepared>[1]) {
+    const view = await imported(model, input);
+    await test().services.imports.accept(as(input.admin), view.id, { visibility: "private", grants: [] });
+    return test().services.imports.get(as(input.admin), view.id);
+  }
+
+  async function analyzedReimport(
+    model: SyntheticExport,
+    input: {
+      organizationId: string;
+      admin: string;
+      spaceId: string;
+      format?: "xml" | "csv";
+      people?: PeopleSourceInput;
+      archive?: Buffer;
+    },
+  ): Promise<string> {
+    const imports = test().services.imports;
+    const format = input.format ?? "xml";
+    const created = await imports.create(as(input.admin), input.organizationId, {
+      source: format === "xml" ? "confluence-xml" : "confluence-csv",
+      spaceId: input.spaceId,
+    });
+    const archive = input.archive ?? (format === "xml" ? createXmlExport(model) : createCsvExport(model));
+    const uploadId = await upload(input.admin, input.organizationId, archive);
+    await imports.update(as(input.admin), created.id, { file: { kind: "upload", uploadId } });
+    await drive(created.id);
+    return created.id;
+  }
+
+  async function reimported(model: SyntheticExport, input: Parameters<typeof analyzedReimport>[1]) {
+    const id = await analyzedReimport(model, input);
+    const imports = test().services.imports;
+    await imports.setPeopleSource(as(input.admin), id, input.people ?? { kind: "skip", confirmed: true });
+    await imports.start(as(input.admin), id);
+    await drive(id);
+    return imports.get(as(input.admin), id);
+  }
+
+  async function applyChanges(actor: string, importId: string, runner = worker()) {
+    await test().services.imports.reimports.apply(as(actor), importId);
+    await drive(importId, runner);
+    return test().services.imports.get(as(actor), importId);
+  }
+
   async function target(importId: string, kind: string, sourceId: string): Promise<string> {
     const result = await test().database.execute<{ target_id: string }>(sql`
       select target_id from import_items where import_id = ${importId} and kind = ${kind} and source_id = ${sourceId}`);
     return result.rows[0]?.target_id ?? "";
   }
 
-  return { as, worker, drive, upload, prepared, imported, target };
+  return {
+    as,
+    worker,
+    drive,
+    upload,
+    prepared,
+    imported,
+    accepted,
+    analyzedReimport,
+    reimported,
+    applyChanges,
+    target,
+  };
 }

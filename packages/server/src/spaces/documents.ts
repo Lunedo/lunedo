@@ -363,11 +363,23 @@ export class PageDocumentService {
     return this.#database.transaction((tx) => this.#store(tx, itemId, doc, options.actorId));
   }
 
-  async storeLocked(tx: Transaction, itemId: string, doc: Y.Doc, actorId: string | null): Promise<number> {
-    return this.#store(tx, itemId, doc, actorId);
+  async storeLocked(
+    tx: Transaction,
+    itemId: string,
+    doc: Y.Doc,
+    actorId: string | null,
+    options: { notify?: boolean } = {},
+  ): Promise<number> {
+    return this.#store(tx, itemId, doc, actorId, options.notify ?? true);
   }
 
-  async #store(tx: Transaction, itemId: string, doc: Y.Doc, actorId: string | null): Promise<number> {
+  async #store(
+    tx: Transaction,
+    itemId: string,
+    doc: Y.Doc,
+    actorId: string | null,
+    notify = true,
+  ): Promise<number> {
     await tx.execute(sql`select item_id from page_documents where item_id = ${itemId} for update`);
     const locked = await tx.execute<{
       state: Buffer;
@@ -401,7 +413,7 @@ export class PageDocumentService {
       await recomputeLinks(tx, itemId, document);
     }
     await syncCommentAnchors(tx, itemId, document);
-    if (live) await this.#activity.readerContentChanged(tx, itemId, document, actorId);
+    if (live) await this.#activity.readerContentChanged(tx, itemId, document, actorId, notify);
     const stored = Number(revision.rows[0]?.revision ?? 0);
     await signalSpaceChange(tx, { spaceId: row.space_id, kind: live ? "page" : "draft", itemId });
     await signalDocumentChange(tx, { itemId, revision: stored, origin: this.#origin });

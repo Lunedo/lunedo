@@ -1,8 +1,12 @@
-import { CommandPalette } from "@pagehall/ui";
-import { Building2 } from "lucide-react";
-import type { ComponentProps } from "react";
+import { CommandPalette, useToast } from "@pagehall/ui";
+import { Building2, Link2 } from "lucide-react";
+import { type ComponentProps, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ApiError } from "../api/request.js";
+import { useFailureToast } from "../errors/failure.js";
 import { translateKey } from "../i18n/translate.js";
+import { useConfluenceLink } from "../imports/confluence-link.js";
+import { looksLikeConfluenceLink } from "../imports/reimport-api.js";
 import { commands, isNavigationVisible, navigationItems } from "./extensions.js";
 import { useRegistry } from "./registry.js";
 import { useShell } from "./shell.js";
@@ -20,6 +24,10 @@ export function CommandPaletteHost({
   const organization = useOrganizationState();
   const navigation = useRegistry(navigationItems);
   const actions = useRegistry(commands);
+  const openLink = useConfluenceLink();
+  const failed = useFailureToast();
+  const { toast } = useToast();
+  const [query, setQuery] = useState("");
   if (!open) return null;
 
   const close = () => onOpenChange(false);
@@ -66,6 +74,37 @@ export function CommandPaletteHost({
     });
   }
 
+  if (looksLikeConfluenceLink(query)) {
+    const link = query.trim();
+    const open = (): Promise<void> =>
+      openLink(link).catch((error: unknown) => {
+        if (error instanceof ApiError && error.code === "notFound") {
+          toast({
+            title: t("commands.confluenceLinkFailed"),
+            description: t("imports.links.notFound"),
+            variant: "error",
+          });
+        } else {
+          failed(t("commands.confluenceLinkFailed"), error, () => void open());
+        }
+      });
+    groups.unshift({
+      heading: t("commands.confluenceLink"),
+      items: [
+        {
+          id: "confluence-link",
+          label: t("commands.openConfluenceLink"),
+          icon: Link2,
+          alwaysShown: true,
+          onSelect: () => {
+            close();
+            void open();
+          },
+        },
+      ],
+    });
+  }
+
   groups.push({
     heading: t("commands.actions"),
     items: actions
@@ -91,6 +130,8 @@ export function CommandPaletteHost({
       placeholder={t("commands.placeholder")}
       emptyText={t("commands.empty")}
       groups={groups}
+      query={query}
+      onQueryChange={setQuery}
     />
   );
 }

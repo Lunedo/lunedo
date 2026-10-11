@@ -9,7 +9,7 @@ Organization administrators import a Confluence space export into a new space. B
 3. Name the new space, choose its key, whether the full page history is imported, whether it is archived after accepting, and the reviewers.
 4. Check the analysis and start the import.
 
-The import runs as a background job in the phases space, people, pages, attachments, content, comments, reactions, permissions and finish. It is resumable: after a restart or a node failure, another worker continues from the last checkpoint. Every imported object is mapped by its source ID, so repeating a phase never creates duplicates. Only one worker runs an import at a time.
+The import runs as a background job in the phases space, people, pages, attachments, templates, content, comments, reactions, permissions, baseline and finish. It is resumable: after a restart or a node failure, another worker continues from the last checkpoint. Every imported object is mapped by its source ID, so repeating a phase never creates duplicates. Only one worker runs an import at a time.
 
 Unfinished setups are kept as drafts and can be continued.
 
@@ -64,6 +64,65 @@ Before accepting, only the person who started the import maps people and groups.
 ## Notifications
 
 An import never notifies anyone: not for mentions, tasks, comments, reactions or blog posts, neither while it runs nor when it is accepted or people are mapped. Imported mentions and task assignments are marked as delivered, so a later edit does not notify for them either.
+
+## Re-import
+
+A migration can run in stages: import a newer export of the same Confluence space into the space an earlier import created. Open the accepted import and choose **Re-import a newer export**. The wizard asks for the file and for the way people are recognized again; placeholders mapped earlier stay mapped.
+
+Pagehall accepts only an export of the same Confluence space (the space ID in the export decides) and refuses any other with a message. Use the same export format as before: the XML and the CSV export write some references differently, so a change of format can show unchanged pages as updated. Spaces imported before re-imports existed cannot be re-imported. Starting, deciding and applying a re-import needs permission to manage the space.
+
+Every import records, for each page, blog post, template and space permission, the version and a checksum that came from it, as well as labels, restrictions, the parent page and the titles. Pagehall compares the newer export with this record and lists the changes. **Nothing changes until the changes are applied.**
+
+- **New** pages are created where they are in Confluence, with their restrictions.
+- Pages **changed only at the source** get a new version marked as from Confluence; the earlier version stays in the history. Unchanged pages are skipped.
+- Pages **changed on both sides** are conflicts and are never overwritten automatically. For each conflict, also for many at once: keep the Pagehall version, take the Confluence version (a new version), or keep both: the Pagehall version stays current and the Confluence version is added to the history, marked "from Confluence, not applied", where the two can be compared.
+- **Compare** shows a conflict before you decide: the current Pagehall content next to the content of the new export, converted as it would be applied, in the same view as the comparison of two versions. Comparing changes nothing. People who may only read the page see its latest version instead of the draft. When a page, one of its parent pages or the space is restricted further in Confluence, the new content is shown only to people who keep access once those restrictions are applied.
+- A page with an open **editing session** is held like a conflict. A re-import never writes into a document someone is editing; a decided change is applied once the session has ended.
+- A page whose restrictions were **narrowed at the source** is held as well: its new content, comments and attachments wait until the restriction is applied in Pagehall or someone decides.
+- A restriction is applied exactly as in Confluence, with the people and groups named there. Applying it gives the person who applies it no access; if Confluence does not name them, they can no longer read the page afterwards.
+- Pages **deleted at the source** are listed. For each, decide to move it to the trash or keep it. Nothing happens without a decision.
+- Pages **moved at the source** follow, unless they were moved in Pagehall since the last import; then they stay and are listed.
+- New comments and attachments are added; new versions of an attachment become versions. Comments and attachments deleted at the source are only listed. Added labels are added; a label removed at the source is removed only if it was not touched in Pagehall.
+- Macros are converted with the current converters, so pages improve when the converters improve.
+- Nothing notifies anyone, as in the first import.
+
+**Permissions are never changed by a re-import.** Where the permissions in Confluence changed since the last import and Pagehall does not match them yet, the difference is listed. Each one can be applied after Pagehall showed who gains or loses access, and is written to the audit log.
+
+**Apply changes** applies everything that is decided and leaves open conflicts and deletions waiting, without a deadline. A re-import changes only pages the person applying it may edit; the rest waits for someone with access. Applying again changes nothing that was applied already, and an interrupted run continues where it stopped. A newer export replaces an open re-import of the same space and evaluates its open decisions again.
+
+## Old Confluence links
+
+Imported pages remember their Confluence page IDs and titles, so old links keep working:
+
+- page addresses with an ID: `/wiki/spaces/OPS/pages/123456/Title`, `/pages/viewpage.action?pageId=123456`
+- Data Center paths: `/display/OPS/Title`, by the title at import time and the titles of later re-imports, and `/display/OPS/2024/01/31/Title` for blog posts
+- short links: `/x/AbCd`, which encode the page ID
+
+Pagehall resolves them at `/confluence/<old path>`. People can also paste an old link into the search (the command palette) or into the field **Paste an old Confluence link** on the import page. A link to a page the person cannot read answers exactly like a link to an unknown page.
+
+To keep the old host name working, let a reverse proxy redirect it to Pagehall. Requests keep their path and query string, and people sign in to Pagehall as usual.
+
+Caddy:
+
+```
+confluence.example.org {
+	redir https://wiki.example.org/confluence{uri} permanent
+}
+```
+
+nginx:
+
+```
+server {
+    listen 443 ssl;
+    server_name confluence.example.org;
+    ssl_certificate     /etc/ssl/confluence.example.org.crt;
+    ssl_certificate_key /etc/ssl/confluence.example.org.key;
+    return 301 https://wiki.example.org/confluence$request_uri;
+}
+```
+
+If Confluence ran under a context path such as `/confluence` or `/wiki`, nothing changes: Pagehall finds the page in the rest of the path. Links to Confluence Cloud (`*.atlassian.net`) cannot be redirected, because the host belongs to Atlassian; paste them into the search instead.
 
 ## Large exports
 

@@ -1084,7 +1084,10 @@
     "changeLanguage": "Sprache ändern",
     "signOut": "Abmelden",
     "goSpaces": "Zu den Spaces",
-    "openPersonalSpace": "Meinen persönlichen Space öffnen"
+    "openPersonalSpace": "Meinen persönlichen Space öffnen",
+    "confluenceLink": "Alter Confluence-Link",
+    "openConfluenceLink": "Aus diesem Link importierte Seite öffnen",
+    "confluenceLinkFailed": "Der Confluence-Link konnte nicht geöffnet werden"
   },
   "shortcuts": {
     "title": "Tastenkürzel",
@@ -1344,7 +1347,24 @@
     "invalidSourceUrl": "Gib die Adresse der Confluence-Site mit https:// ein.",
     "invalidReviewer": "Import-Prüfer müssen aktive Mitglieder der Organisation sein. Wähle eine andere Person.",
     "tooManyReviewers": "Ein Import kann bis zu 50 Import-Prüfer haben. Entferne zuerst einige.",
-    "uploadTooLarge": "Die Datei ist größer als für Uploads erlaubt. Bitte die Person, die den Server betreibt, sie in den Import-Ordner zu legen."
+    "uploadTooLarge": "Die Datei ist größer als für Uploads erlaubt. Bitte die Person, die den Server betreibt, sie in den Import-Ordner zu legen.",
+    "spaceNotImported": "Erneute Importe gehen nur in Bereiche, die ein Import angelegt hat. Wähle einen solchen Bereich.",
+    "importedBeforeReimports": "Dieser Bereich wurde importiert, bevor erneute Importe möglich waren. Importiere den Export stattdessen in einen neuen Bereich.",
+    "importNotAccepted": "Übernimm oder verwirf den ersten Import, bevor du erneut importierst.",
+    "reimportRunning": "Ein anderer erneuter Import dieses Bereichs läuft. Starte diesen, wenn er fertig ist.",
+    "reimportApplying": "Pagehall wendet die Änderungen gerade an; das lässt sich nicht anhalten. Warte, bis es fertig ist.",
+    "reimportNotInReview": "Diese Änderungen warten nicht mehr darauf, angewendet zu werden. Lade die Seite neu.",
+    "changesUnavailable": "Die Änderungen werden aufgelistet, sobald Pagehall den Export verglichen hat. Warte einen Moment und lade neu.",
+    "changeNotFound": "Einige der gewählten Änderungen gibt es nicht mehr. Lade die Liste neu.",
+    "changeApplied": "Einige der gewählten Änderungen wurden bereits angewendet. Lade die Liste neu.",
+    "invalidDecision": "Diese Entscheidung passt nicht zu allen gewählten Änderungen. Wähle Änderungen einer Art.",
+    "holderNotInPagehall": "Diese Person oder Gruppe ist noch nicht in Pagehall. Ordne sie im Bericht des ersten Imports zu.",
+    "differenceResolved": "Pagehall entspricht hier bereits Confluence. Lade die Liste neu.",
+    "notRestricted": "Die Seite ist nicht auf diese Weise eingeschränkt. Übernimm zuerst die Einschränkung.",
+    "reimportSpaceFixed": "Ein erneuter Import geht in den Bereich des früheren Imports; seine Bereichseinstellungen lassen sich nicht ändern.",
+    "changeNotComparable": "Vor dem Anwenden lassen sich nur Konflikte vergleichen. Wähle einen Konflikt.",
+    "comparisonUnavailable": "Dieser Konflikt wurde angewendet oder durch einen neueren Export ersetzt. Vergleiche die Versionen im Verlauf der Seite.",
+    "comparisonWithheld": "In Confluence dürfen weniger Personen diesen Inhalt lesen. Übernimm zuerst die Einschränkungen bei den Berechtigungsabweichungen."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -3186,7 +3206,9 @@
         "shared": "Seite freigegeben",
         "shareChanged": "Seitenzugriff geändert",
         "unshared": "Seitenzugriff entfernt",
-        "guestInvited": "Gast zu einer Seite eingeladen"
+        "guestInvited": "Gast zu einer Seite eingeladen",
+        "restrictionHolderAdded": "Person oder Gruppe zu einer Seitenbeschränkung hinzugefügt",
+        "restrictionHolderRemoved": "Person oder Gruppe aus einer Seitenbeschränkung entfernt"
       },
       "trash": {
         "itemsDeleted": "In den Papierkorb verschoben",
@@ -3241,7 +3263,12 @@
         "tokenUsed": "Atlassian-API-Token eines Imports verwendet",
         "tokenDeleted": "Atlassian-API-Token eines Imports gelöscht",
         "groupMapped": "Gruppe aus einem Import zugeordnet",
-        "permissionsApplied": "Importierte Berechtigungen angewendet"
+        "permissionsApplied": "Importierte Berechtigungen angewendet",
+        "reimportStarted": "Erneuter Import gestartet",
+        "reimportRefused": "Erneuter Import für einen anderen Bereich abgelehnt",
+        "reimportApplied": "Erneuter Import angewendet",
+        "conflictsDecided": "Entscheidungen zu einem erneuten Import getroffen",
+        "permissionDifferenceApplied": "Abweichung der Berechtigungen aus einem erneuten Import übernommen"
       }
     },
     "action": "Aktion",
@@ -4774,7 +4801,9 @@
       "published": "Veröffentlicht",
       "session": "Bearbeitungssitzung",
       "restored": "Aus Version {number} wiederhergestellt",
-      "modeChanged": "Bearbeitungsmodus geändert"
+      "modeChanged": "Bearbeitungsmodus geändert",
+      "imported": "Aus Confluence",
+      "importedNotApplied": "Aus Confluence, nicht übernommen"
     },
     "draftChanges": "{count, plural, one {# Änderung, nicht veröffentlicht} other {# Änderungen, nicht veröffentlicht}}",
     "compare": "Vergleichen",
@@ -5985,7 +6014,8 @@
       "discarding": "Wird verworfen",
       "discarded": "Verworfen",
       "stopped": "Gestoppt",
-      "failed": "Fehlgeschlagen"
+      "failed": "Fehlgeschlagen",
+      "superseded": "Ersetzt"
     },
     "sources": {
       "confluence-xml": {
@@ -6008,7 +6038,13 @@
       "comments": "Kommentare und Inline-Kommentare",
       "reactions": "Likes",
       "permissions": "Berechtigungen",
-      "templates": "Space-Vorlagen"
+      "templates": "Space-Vorlagen",
+      "compare": "Mit dem Bereich vergleichen",
+      "lineage": "Frühere Importe",
+      "moves": "Verschiebungen",
+      "labels": "Labels",
+      "deletions": "Gelöschte Seiten",
+      "baseline": "Importierten Stand festhalten"
     },
     "list": {
       "title": "Importe",
@@ -6031,7 +6067,14 @@
       "failed": "{source} · fehlgeschlagen {when}",
       "largeTitle": "Große Exporte",
       "largeFolder": "Exporte über {size} lassen sich nicht im Browser hochladen. Bitte die Instanz-Administration, das Upload-Limit zu erhöhen oder die Datei in den Import-Ordner dieser Organisation auf dem Server zu legen; danach kannst du sie in einem neuen Import auswählen.",
-      "largeNoFolder": "Exporte über {size} lassen sich nicht im Browser hochladen. Bitte die Instanz-Administration, das Upload-Limit zu erhöhen oder den Import-Ordner einzuschalten und die Datei in den Import-Ordner dieser Organisation auf dem Server zu legen."
+      "largeNoFolder": "Exporte über {size} lassen sich nicht im Browser hochladen. Bitte die Instanz-Administration, das Upload-Limit zu erhöhen oder den Import-Ordner einzuschalten und die Datei in den Import-Ordner dieser Organisation auf dem Server zu legen.",
+      "comparing": "{source} · wird mit dem Bereich verglichen",
+      "applying": "{source} · Änderungen werden angewendet",
+      "reimportReview": "{source} · verglichen {when} · {count, plural, one {# Änderung} other {# Änderungen}} gefunden, {open} warten auf eine Entscheidung",
+      "reimportApplied": "{source} · alle Änderungen angewendet {when}",
+      "superseded": "{source} · ersetzt durch einen neueren erneuten Import {when}",
+      "reviewChanges": "Änderungen prüfen",
+      "reimportTitle": "Erneuter Import in {space}"
     },
     "wizard": {
       "title": "Neuer Import",
@@ -6139,7 +6182,8 @@
         "historyCurrent": "Nur der aktuelle Stand · {count, plural, one {# frühere Version} other {# frühere Versionen}} ausgelassen",
         "extras": "{likes, plural, one {# Like wird eine 👍-Reaktion} other {# Likes werden 👍-Reaktionen}}. {watchers, plural, one {# Beobachter wird} other {# Beobachter werden}} nur gezählt.",
         "permissionsTitle": "Berechtigungen",
-        "permissionsDescription": "Übernommen, soweit sie zu Pagehall-Rollen passen, und im Bericht zur Prüfung markiert. Anonymer Zugriff wird nicht übernommen."
+        "permissionsDescription": "Übernommen, soweit sie zu Pagehall-Rollen passen, und im Bericht zur Prüfung markiert. Anonymer Zugriff wird nicht übernommen.",
+        "peopleCount": "{count, plural, one {Person} other {Personen}}"
       }
     },
     "upload": {
@@ -6489,6 +6533,11 @@
         "what": "Der Import hat nach mehreren Versuchen aufgehört",
         "cause": "Ein unerwartetes Problem ist wiederholt aufgetreten.",
         "action": "Verwirf den Import und starte ihn neu. Schlägt er wieder fehl, bitte die Person, die den Server betreibt, die Logs zu prüfen."
+      },
+      "foreignSpace": {
+        "what": "Dieser Export stammt aus einem anderen Confluence-Bereich",
+        "cause": "Ein erneuter Import nimmt nur einen Export des Confluence-Bereichs an, aus dem dieser Bereich importiert wurde.",
+        "action": "Wähle einen Export desselben Confluence-Bereichs oder starte einen neuen Import in einen neuen Bereich."
       }
     },
     "quarantine": {
@@ -6638,6 +6687,186 @@
       "noRole": "keine",
       "keepUnmapped": "Nicht zuordnen",
       "chooseGroupFirst": "Wähle zuerst eine Gruppe oder lege eine mit diesem Namen an."
+    },
+    "links": {
+      "label": "Alten Confluence-Link einfügen",
+      "hint": "Links mit einer Seiten-ID, Data-Center-Adressen mit /display/ und Kurzlinks mit /x/ öffnen die importierte Seite.",
+      "placeholder": "https://wiki.example.org/display/OPS/Backup+rotation",
+      "open": "Seite öffnen",
+      "invalid": "Das ist kein Link auf eine Confluence-Seite. Füge die vollständige Adresse einer Confluence-Seite ein.",
+      "notFound": "Über diesen Link wurde keine Seite importiert, die du öffnen kannst. Prüfe den Link oder frage jemanden mit Zugriff auf die Seite.",
+      "failed": "Der Link konnte nicht geprüft werden: {cause}",
+      "redirecting": "Die importierte Seite wird geöffnet",
+      "notFoundTitle": "Diese Confluence-Seite gibt es hier nicht",
+      "notFoundDescription": "Über diesen Confluence-Link wurde keine Seite importiert, die du öffnen kannst. Sie ist vielleicht noch nicht importiert, oder du brauchst Zugriff. Frage die Person, die den Link geteilt hat.",
+      "failedTitle": "Der Confluence-Link konnte nicht geöffnet werden",
+      "failedDescription": "Pagehall konnte den Link nicht prüfen. Lade die Seite neu, um es erneut zu versuchen.",
+      "home": "Zur Startseite"
+    },
+    "reimport": {
+      "title": "Änderungen seit dem letzten Import",
+      "subtitle": "Erneuter Import in {space} · {source} · verglichen {when}",
+      "againTitle": "Neueren Export importieren",
+      "againDescription": "Importiere einen neueren Export desselben Confluence-Bereichs. Pagehall listet die Änderungen auf und ändert nichts, bis du sie anwendest.",
+      "again": "Neueren Export erneut importieren",
+      "startFailed": "Der erneute Import konnte nicht gestartet werden",
+      "wizardTitle": "Erneuter Import in {space}",
+      "wizardProgress": "Erneuter Import in {space} · Schritt {step} von {total}",
+      "compare": "Mit dem Bereich vergleichen",
+      "checkIntro": "Pagehall vergleicht diesen Export mit dem, was zuvor in {space} importiert wurde.",
+      "checkNoticeTitle": "Noch ändert sich nichts",
+      "checkNotice": "Der Vergleich listet die Änderungen nur auf. Über Konflikte und gelöschte Seiten entscheidest du, und es wird nichts geschrieben, bis du die Änderungen anwendest. Berechtigungen ändert ein erneuter Import nie.",
+      "applying": "Die Änderungen werden angewendet. Du kannst diese Seite verlassen.",
+      "applyFailed": "Die Änderungen konnten nicht angewendet werden",
+      "loadFailed": "Die Änderungen konnten nicht geladen werden",
+      "doneTitle": "Alle Änderungen sind angewendet",
+      "done": "Angewendet {when}. Importiere einen neueren Export, um spätere Änderungen aus Confluence zu übernehmen.",
+      "supersededTitle": "Ein neuerer erneuter Import hat diesen ersetzt",
+      "superseded": "Offene Konflikte und Löschungen dieses erneuten Imports wurden mit dem neueren Export neu bewertet.",
+      "hiddenTitle": "Einige Änderungen werden nicht angezeigt",
+      "hidden": "{count, plural, one {# Änderung betrifft eine Seite, die du nicht öffnen kannst.} other {# Änderungen betreffen Seiten, die du nicht öffnen kannst.}} Jemand mit Zugriff auf diese Seiten entscheidet darüber.",
+      "tabsLabel": "Änderungen",
+      "tabs": {
+        "conflicts": "Auf beiden Seiten geändert",
+        "updates": "Neu und aktualisiert",
+        "deleted": "In der Quelle gelöscht",
+        "moved": "Verschoben",
+        "permissions": "Berechtigungen"
+      },
+      "waiting": "{conflicts, plural, =0 {} one {# Konflikt} other {# Konflikte}}{conflicts, select, 0 {} other {{deletions, select, 0 {} other { und }}}}{deletions, plural, =0 {} one {# gelöschte Seite} other {# gelöschte Seiten}} warten noch auf eine Entscheidung. Den Rest kannst du jetzt anwenden und später entscheiden.",
+      "allDecided": "Alles ist entschieden.",
+      "apply": "Änderungen anwenden",
+      "bulkLabel": "Für die ausgewählten Änderungen entscheiden",
+      "selected": "{count, plural, one {# ausgewählt} other {# ausgewählt}}",
+      "decisions": {
+        "pagehall": "Pagehall-Version behalten",
+        "source": "Confluence-Version übernehmen",
+        "both": "Beide behalten",
+        "trash": "In den Papierkorb verschieben",
+        "keep": "In Pagehall behalten",
+        "later": "Später entscheiden"
+      },
+      "applied": "Angewendet",
+      "undecided": "Nicht entschieden",
+      "decide": "Entscheiden…",
+      "decisionFor": "Entscheidung für {title}",
+      "saved": "Gespeichert",
+      "decideFailed": "Die Entscheidung konnte nicht gespeichert werden",
+      "conflictsHint": "Diese Seiten wurden seit dem letzten Import in Pagehall und in Confluence geändert, oder jemand bearbeitet sie gerade. Nichts wird überschrieben, bis du entscheidest. „Vergleichen“ zeigt den Unterschied, bevor du entscheidest. „Beide behalten“ behält die Pagehall-Version und fügt die Confluence-Version dem Verlauf hinzu.",
+      "noConflicts": "Nichts wurde auf beiden Seiten geändert",
+      "noConflictsDescription": "Seiten, die nur in Confluence geändert wurden, werden als neue Version aktualisiert.",
+      "selectAll": "Alle auswählen",
+      "select": "{title} auswählen",
+      "columns": {
+        "page": "Seite",
+        "changedHere": "In Pagehall geändert",
+        "changedAtSource": "In Confluence geändert",
+        "decision": "Entscheidung",
+        "lastChange": "Zuletzt in Pagehall geändert",
+        "move": "In Confluence verschoben",
+        "outcome": "In Pagehall",
+        "where": "Wo",
+        "difference": "Abweichung zu Confluence",
+        "action": "Aktion",
+        "compare": "Unterschied"
+      },
+      "changedBy": "{name}, {when}",
+      "someone": "Jemand",
+      "template": "Bereichsvorlage",
+      "editing": "Wird bearbeitet",
+      "restricted": "In Confluence weiter eingeschränkt. Übernimm zuerst die Abweichung der Berechtigungen oder entscheide.",
+      "sourceTitle": "In Confluence: {title}",
+      "updates": {
+        "newPages": "{count, plural, =0 {Keine neuen Seiten} one {# neue Seite} other {# neue Seiten}}",
+        "newPagesDescription": "Werden dort angelegt, wo sie in Confluence sind, mit ihren Einschränkungen.",
+        "updatedPages": "{count, plural, =0 {Keine Seiten nur in Confluence geändert} one {# Seite nur in Confluence geändert} other {# Seiten nur in Confluence geändert}}",
+        "updatedPagesDescription": "Werden als neue Version aktualisiert. Die frühere Version bleibt im Verlauf.",
+        "unchanged": "{count, plural, =0 {Keine unveränderten Seiten} one {# Seite unverändert} other {# Seiten unverändert}}",
+        "unchangedDescription": "Werden übersprungen.",
+        "labels": "{count, plural, one {Labels auf # Seite geändert} other {Labels auf # Seiten geändert}}",
+        "labelsDescription": "Neue Labels werden hinzugefügt. Ein entferntes Label wird nur entfernt, wenn es in Pagehall niemand angefasst hat.",
+        "newComments": "{count, plural, one {# neuer Kommentar} other {# neue Kommentare}}",
+        "newCommentsDescription": "Werden ihren Seiten hinzugefügt, ohne jemanden zu benachrichtigen.",
+        "newAttachments": "{count, plural, one {# neue Anhangsversion} other {# neue Anhangsversionen}}",
+        "newAttachmentsDescription": "Neue Dateien werden hinzugefügt, neue Versionen vorhandener Dateien werden zu Versionen.",
+        "newTemplates": "{count, plural, one {# neue Bereichsvorlage} other {# neue Bereichsvorlagen}}",
+        "newTemplatesDescription": "Werden den Vorlagen des Bereichs hinzugefügt.",
+        "updatedTemplates": "{count, plural, one {# Bereichsvorlage nur in Confluence geändert} other {# Bereichsvorlagen nur in Confluence geändert}}",
+        "updatedTemplatesDescription": "Werden mit dem Inhalt aus Confluence aktualisiert.",
+        "deletedHere": "{count, plural, one {# Seite in Pagehall gelöscht} other {# Seiten in Pagehall gelöscht}}",
+        "deletedHereDescription": "Werden nicht neu angelegt."
+      },
+      "deletedHint": "Diese Seiten gibt es in Confluence nicht mehr. Entscheide, was in Pagehall mit ihnen passiert. Seiten im Papierkorb lassen sich von dort wiederherstellen.",
+      "noDeleted": "In Confluence wurde nichts gelöscht",
+      "noDeletedDescription": "In Confluence gelöschte Seiten werden hier aufgelistet, und ohne Entscheidung passiert nichts mit ihnen.",
+      "notChangedHere": "Seit dem Import nicht geändert",
+      "goneTitle": "In Confluence gelöschte Kommentare und Anhänge",
+      "goneDescription": "Sie bleiben in Pagehall. Lösche sie dort, wenn sie nicht mehr gebraucht werden.",
+      "goneComment": "Ein Kommentar zu {title}",
+      "goneAttachment": "Der Anhang {name}",
+      "noMoves": "Nichts wurde verschoben",
+      "noMovesDescription": "In Confluence verschobene Seiten folgen in Pagehall, außer jemand hat sie hier verschoben.",
+      "topLevel": "Oberste Ebene",
+      "movedTo": "verschoben nach",
+      "stays": "Bleibt, weil es in Pagehall verschoben wurde",
+      "follows": "Folgt Confluence",
+      "permissionsHint": "Pagehall ändert Berechtigungen nie von selbst. Diese Berechtigungen haben sich seit dem letzten Import in Confluence geändert. Übernimm jede einzeln, nachdem du geprüft hast, wer Zugriff erhält oder verliert.",
+      "noPermissions": "Keine Abweichungen bei den Berechtigungen",
+      "noPermissionsDescription": "Die Berechtigungen in Confluence haben sich seit dem letzten Import nicht geändert, oder Pagehall entspricht ihnen bereits.",
+      "wholeSpace": "Ganzer Bereich",
+      "permissions": {
+        "members": "Alle Mitglieder der Organisation",
+        "none": "kein Zugriff",
+        "space": "{holder}: {role} in Confluence, {current} in Pagehall",
+        "restrict": {
+          "view": "In Confluence für das Ansehen eingeschränkt",
+          "edit": "In Confluence für das Bearbeiten eingeschränkt"
+        },
+        "unrestrict": {
+          "view": "In Confluence nicht mehr für das Ansehen eingeschränkt",
+          "edit": "In Confluence nicht mehr für das Bearbeiten eingeschränkt"
+        },
+        "list": {
+          "view": "{holder} darf die Seite in Confluence ansehen",
+          "edit": "{holder} darf die Seite in Confluence bearbeiten"
+        },
+        "unlist": {
+          "view": "{holder} darf die Seite in Confluence nicht mehr ansehen",
+          "edit": "{holder} darf die Seite in Confluence nicht mehr bearbeiten"
+        },
+        "apply": "Übernehmen…",
+        "notInPagehall": "Noch nicht in Pagehall. Ordne diese Person oder Gruppe im Bericht des ersten Imports zu.",
+        "confirmTitle": "Diese Abweichung übernehmen?",
+        "confirm": "Abweichung übernehmen",
+        "cancel": "Abbrechen",
+        "applied": "Abweichung der Berechtigungen übernommen",
+        "failed": "Die Abweichung konnte nicht übernommen werden",
+        "impactFailed": "Pagehall konnte nicht anzeigen, wer Zugriff erhält oder verliert"
+      },
+      "stateReview": "Änderungen bereit",
+      "openSpace": "Bereich öffnen",
+      "stopDescription": "Beendet den Vergleich des Exports. Im Bereich hat sich nichts geändert.",
+      "stopConfirm": "Pagehall beendet den Vergleich des Exports. Im Bereich hat sich nichts geändert, und du kannst jederzeit erneut importieren.",
+      "discard": "Erneuten Import verwerfen",
+      "discardTitle": "Diesen erneuten Import verwerfen?",
+      "discardDescription": "Verwirft die Liste der Änderungen und die noch nicht angewendeten Entscheidungen. Bereits angewendete Änderungen bleiben, und Seiten werden nicht angefasst.",
+      "discardConfirm": "Die Liste der Änderungen und die noch nicht angewendeten Entscheidungen werden verworfen. Bereits angewendete Änderungen bleiben. Du kannst den Export später erneut importieren.",
+      "compareAction": "Vergleichen",
+      "compareTitle": "„{title}“ mit der Confluence-Version vergleichen",
+      "comparison": {
+        "heading": "Mit Confluence vergleichen",
+        "title": "„{title}“ vergleichen",
+        "description": "Der aktuelle Inhalt in Pagehall neben dem Inhalt des neuen Exports, so wie er übernommen würde. Nichts ändert sich, bis du die Änderungen anwendest.",
+        "sides": "Links oder entfernt: {before}. Rechts oder hinzugefügt: {after}.",
+        "pagehallCurrent": "Pagehall, aktueller Inhalt",
+        "pagehallVersion": "Pagehall, Version {number}",
+        "source": "Confluence, neuer Export",
+        "sourceVersion": "Confluence, Version {number}",
+        "failed": "Der Vergleich konnte nicht geladen werden",
+        "withheldTitle": "Der neue Inhalt ist in Confluence eingeschränkt",
+        "withheld": "In Confluence dürfen weniger Personen diesen Inhalt lesen als in Pagehall. Der neue Inhalt wird nur Personen gezeigt, die nach Übernahme der Einschränkungen weiter Zugriff haben. Sie werden genau wie in Confluence übernommen: Das Übernehmen gibt dir keinen Zugriff, und wenn Confluence dich nicht nennt, verlierst du ihn.",
+        "openPermissions": "Berechtigungsabweichungen öffnen"
+      }
     }
   }
 }

@@ -12,6 +12,7 @@ export interface CommandItem {
   icon?: LucideIcon;
   shortcut?: string[];
   keywords?: string[];
+  alwaysShown?: boolean;
   onSelect: () => void;
 }
 
@@ -27,6 +28,8 @@ export interface CommandPaletteProps {
   placeholder: string;
   emptyText: string;
   groups: CommandGroup[];
+  query?: string;
+  onQueryChange?: (query: string) => void;
 }
 
 export function CommandPalette({
@@ -36,6 +39,8 @@ export function CommandPalette({
   placeholder,
   emptyText,
   groups,
+  query,
+  onQueryChange,
 }: CommandPaletteProps) {
   const returnFocus = useReturnFocus(open);
   return (
@@ -52,6 +57,8 @@ export function CommandPalette({
               <div className="flex items-center gap-2 border-b border-border px-4">
                 <Icon icon={Search} className="text-text-muted" />
                 <Command.Input
+                  {...(query !== undefined ? { value: query } : {})}
+                  {...(onQueryChange ? { onValueChange: onQueryChange } : {})}
                   placeholder={placeholder}
                   className="h-control-lg w-full min-w-0 bg-transparent text-content text-text outline-none placeholder:text-text-muted"
                 />
@@ -74,6 +81,7 @@ export function CommandPalette({
                           key={item.id}
                           value={item.id}
                           keywords={[item.label, ...(item.keywords ?? [])]}
+                          {...(item.alwaysShown ? { forceMount: true } : {})}
                           onSelect={() => {
                             onOpenChange(false);
                             item.onSelect();

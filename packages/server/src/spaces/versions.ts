@@ -8,7 +8,7 @@ import { applyDocument } from "@pagehall/editor-schema/yjs";
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import * as Y from "yjs";
-import type { Principal } from "../accounts/principal.js";
+import { type Principal, SYSTEM } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import { type ContentActivity, syncCommentAnchors } from "../collaboration/content.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
@@ -248,13 +248,14 @@ export class VersionService {
     page: LockedPage,
     actor: Principal,
     document: DocumentJson,
+    notify = true,
   ): Promise<number> {
     const doc = new Y.Doc();
     Y.applyUpdate(doc, page.state, MERGE_ORIGIN);
     applyDocument(doc, document, API_ORIGIN);
     const actorId = actorIdOf(actor);
     if (actorId) await recordClient(tx, page.itemId, doc.clientID, actorId);
-    const revision = await this.#documents.storeLocked(tx, page.itemId, doc, actorId);
+    const revision = await this.#documents.storeLocked(tx, page.itemId, doc, actorId, { notify });
     const stored = await tx.execute<{ state: Buffer; snapshot: unknown; schema_version: number }>(
       sql`select state, snapshot, schema_version from page_documents where item_id = ${page.itemId}`,
     );
@@ -568,6 +569,36 @@ export class VersionService {
         scope: auditScopeOf(page),
       });
     });
+  }
+
+  async importVersion(
+    tx: Transaction,
+    input: { itemId: string; title: string; document: DocumentJson; authorId: string | null; apply: boolean },
+  ): Promise<number> {
+    const page = await this.#lock(tx, input.itemId);
+    if (!input.apply) {
+      const number = (page.latest ?? 0) + 1;
+      const doc = new Y.Doc();
+      Y.applyUpdate(doc, page.state);
+      const stateVector = Buffer.from(Y.encodeStateVector(doc));
+      doc.destroy();
+      await tx.execute(sql`
+        insert into page_versions (id, item_id, number, title, document, schema_version, reason, revision,
+          state_vector, contributors, created_by)
+        values (${uuidv7()}, ${page.itemId}, ${number}, ${input.title}, ${JSON.stringify(input.document)}::jsonb,
+          ${editorSchemaVersion}, 'importedNotApplied', ${page.revision}, ${stateVector},
+          ${sql.param(input.authorId ? [input.authorId] : [])}::uuid[], ${input.authorId})`);
+      await signalSpaceChange(tx, { spaceId: page.spaceId, kind: "page", itemId: page.itemId });
+      return number;
+    }
+    if (page.mode === "publish" && hasDraftChanges(page) && page.publishedNumber !== null) {
+      await this.#saveDraft(tx, page, SYSTEM, "replaced");
+    }
+    await this.#replaceContent(tx, page, SYSTEM, input.document, false);
+    page.draftTitle = input.title;
+    const number = await this.#createVersion(tx, page, { reason: "imported", actorId: input.authorId });
+    await refreshReaderVisibility(tx, [page.itemId]);
+    return number;
   }
 
   async renameDraft(tx: Transaction, itemId: string, title: string): Promise<boolean> {

@@ -15,6 +15,8 @@ import {
   FOLDER_EXPORT_TEMPLATE,
   IMPORT_DIR,
   PEOPLE_EXPORT_TEMPLATE,
+  REIMPORT_AFTER_TEMPLATE,
+  REIMPORT_BEFORE_TEMPLATE,
   writeSyntheticExport,
 } from "./support/imports.js";
 
@@ -110,6 +112,8 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   mkdirSync(IMPORT_DIR, { recursive: true });
   await writeSyntheticExport("csv", FOLDER_EXPORT_TEMPLATE);
   await writeSyntheticExport("csv", PEOPLE_EXPORT_TEMPLATE, "people");
+  await writeSyntheticExport("xml", REIMPORT_BEFORE_TEMPLATE, "reimportBefore");
+  await writeSyntheticExport("xml", REIMPORT_AFTER_TEMPLATE, "reimportAfter");
 
   const log: string[] = [];
   let setupCode: string | null = null;

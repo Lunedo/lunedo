@@ -1,4 +1,3 @@
-import { type DocumentDiff, renderDiffHtml } from "@pagehall/editor-schema";
 import {
   Badge,
   Button,
@@ -15,12 +14,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
 import { History, RotateCcw } from "lucide-react";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
-import { applyWidths, readViewContext } from "../../editor/read-view.js";
-import { rememberReferences } from "../../editor/references.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { translateKey } from "../../i18n/translate.js";
@@ -41,11 +38,11 @@ import { itemSlug } from "../item-paths.js";
 import { spaceDisplayName } from "../space-badge.js";
 import { useSpace } from "../space-context.js";
 import { type ItemDetails, itemQuery, pagePath } from "../space-queries.js";
-import "../../editor/editor.css";
+import { type DiffLayout, DiffView } from "./diff-view.js";
 
 const route = getRouteApi("/app/spaces/$spaceKey/pages/$itemId/history");
 
-type View = "inline" | "sideBySide";
+type View = DiffLayout;
 
 function sideOf(value: string | undefined): VersionSide | undefined {
   if (value === "draft") return "draft";
@@ -229,31 +226,7 @@ function Comparison({
   view: View;
 }) {
   const { t } = useTranslation();
-  const format = useFormat();
   const comparison = useQuery(compareQuery(pageId, from, to));
-  const labels = useMemo(
-    () => ({ moved: t("versions.diff.moved"), attributes: t("versions.diff.attributes") }),
-    [t],
-  );
-  const rendered = useMemo(() => {
-    if (!comparison.data) return null;
-    const diff = comparison.data.diff as unknown as DocumentDiff;
-    const context = readViewContext(comparison.data.references, t, format);
-    try {
-      return {
-        diff,
-        inline: renderDiffHtml(diff, "inline", context, { labels }),
-        before: renderDiffHtml(diff, "before", context, { labels }),
-        after: renderDiffHtml(diff, "after", context, { labels }),
-      };
-    } catch {
-      return null;
-    }
-  }, [comparison.data, t, format, labels]);
-  useLayoutEffect(() => {
-    if (comparison.data) rememberReferences(comparison.data.references);
-  }, [comparison.data]);
-
   if (comparison.isPending) return <Skeleton className="h-field w-full" />;
   if (comparison.isError) {
     return (
@@ -264,61 +237,18 @@ function Comparison({
       />
     );
   }
-  if (!rendered) return <p className="text-danger">{t("editor.readView.invalid")}</p>;
-  const { diff } = rendered;
   return (
-    <section aria-label={t("versions.comparison")} className="flex flex-col gap-3">
-      <p className="flex flex-wrap gap-4 text-sm text-text-muted" role="status">
-        <span>
-          {diff.changes === 0
-            ? t("versions.noDifferences")
-            : t("versions.changeCount", { count: diff.changes })}
-        </span>
-        <span>
-          <ins className="ph-diff-added">{t("versions.added")}</ins>
-        </span>
-        <span>
-          <del className="ph-diff-removed">{t("versions.removed")}</del>
-        </span>
-      </p>
-      {diff.title ? (
-        <p className="text-sm">
-          {t("versions.titleChanged")} <del className="ph-diff-removed">{diff.title.before}</del>{" "}
-          <ins className="ph-diff-added">{diff.title.after}</ins>
-        </p>
-      ) : null}
-      {view === "inline" ? (
-        <DiffHtml html={rendered.inline} label={t("versions.changes")} />
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          <DiffHtml html={rendered.before} label={sideLabel(t, from)} heading />
-          <DiffHtml html={rendered.after} label={sideLabel(t, to)} heading />
-        </div>
-      )}
-    </section>
+    <DiffView
+      comparison={comparison.data}
+      layout={view}
+      beforeLabel={sideLabel(t, from)}
+      afterLabel={sideLabel(t, to)}
+    />
   );
 }
 
 function sideLabel(t: TFunction, side: VersionSide): string {
   return side === "draft" ? t("versions.draft") : t("versions.versionNumber", { number: side });
-}
-
-function DiffHtml({ html, label, heading = false }: { html: string; label: string; heading?: boolean }) {
-  const container = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    if (container.current && html) applyWidths(container.current);
-  }, [html]);
-  return (
-    <section aria-label={label} className="flex min-w-0 flex-col gap-2">
-      {heading ? <h2 className="text-sm font-semibold text-text-muted">{label}</h2> : null}
-      <div
-        ref={container}
-        className="ph-content ph-read-view ph-diff min-w-0 rounded-md border border-border bg-surface p-4"
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: the shared renderer escapes all content of the validated documents
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-    </section>
-  );
 }
 
 function VersionList({
