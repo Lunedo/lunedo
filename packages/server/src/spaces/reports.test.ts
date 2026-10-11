@@ -125,7 +125,37 @@ describe.skipIf(!baseUrl)("page, decision and task reports", () => {
     const elsewhere = await page(hidden.id, "Other space", doc(decision("Elsewhere"), task("Far away")), {
       labels: ["vpn"],
     });
-    return { editor, reader, outsider, shared, hidden, alpha, child, secret, secretChild, draft, elsewhere };
+    const closedParent = await page(hidden.id, "Closed parent", doc(paragraph("Closed")));
+    const sharedChild = await page(
+      hidden.id,
+      "Shared child",
+      doc(decision("Shared decision"), task("Shared task")),
+      { parentId: closedParent },
+    );
+    await test.services.pageAccess.change(editor, sharedChild, [
+      {
+        action: "share",
+        holderKind: "account",
+        holderId: outsiderId,
+        role: "reader",
+        includeDescendants: false,
+      },
+    ]);
+    return {
+      editor,
+      reader,
+      outsider,
+      shared,
+      hidden,
+      alpha,
+      child,
+      secret,
+      secretChild,
+      draft,
+      elsewhere,
+      closedParent,
+      sharedChild,
+    };
   }
 
   it("list only pages the reader can see, in every space or one, filtered by label", async () => {
@@ -231,6 +261,52 @@ describe.skipIf(!baseUrl)("page, decision and task reports", () => {
     expect(await texts(w.reader, { labels: ["vpn"] })).toEqual(["Order keys", "Rotate"]);
     const counts = await test.services.tasks.list(w.reader, { pageIds: [w.secret, w.elsewhere] });
     expect(counts.counts).toEqual({ open: 0, done: 0, overdue: 0 });
+  });
+
+  it("treat a page the viewer cannot see in the page and parent filters exactly like an unknown page", async () => {
+    const w = await world();
+    const unknown = randomUUID();
+    expect(
+      (await test.services.reports.decisions(w.outsider, decisionDefaults)).items.map((entry) => entry.text),
+    ).toEqual(["Shared decision"]);
+    expect(
+      (await test.services.tasks.list(w.outsider, { status: "all" })).items.map((entry) => entry.text),
+    ).toEqual(["Shared task"]);
+    const decisions = async (parentId: string) =>
+      test.services.reports.decisions(w.outsider, { ...decisionDefaults, parentId });
+    expect(await decisions(w.closedParent)).toEqual(await decisions(unknown));
+    expect(await decisions(unknown)).toEqual({ items: [], next: null });
+    expect((await decisions(w.closedParent)).items).toEqual([]);
+    expect(
+      (
+        await test.services.reports.decisions(w.editor, { ...decisionDefaults, parentId: w.closedParent })
+      ).items.map((entry) => entry.text),
+    ).toEqual(["Shared decision"]);
+    const tasks = async (pageIds: string[]) =>
+      test.services.tasks.list(w.outsider, { pageIds, status: "all" });
+    expect(await tasks([w.closedParent])).toEqual(await tasks([unknown]));
+    expect((await tasks([w.closedParent])).items).toEqual([]);
+    expect(await tasks([w.closedParent, w.sharedChild])).toEqual(await tasks([unknown, w.sharedChild]));
+    expect((await tasks([unknown, w.sharedChild])).items.map((entry) => entry.text)).toEqual(["Shared task"]);
+    expect(
+      (await test.services.tasks.list(w.editor, { pageIds: [w.closedParent], status: "all" })).items.map(
+        (entry) => entry.text,
+      ),
+    ).toEqual(["Shared task"]);
+    const rendered = async (parentId: string) => {
+      const document = doc({ type: "decisionReport", attrs: { ...decisionDefaults, parentId } });
+      return renderPageMarkdown(
+        document,
+        { people: {}, pages: {}, topics: {} },
+        {
+          childPages: new Map(),
+          attachments: null,
+          ...(await test.services.reports.forDocument(w.outsider, document)),
+        },
+      );
+    };
+    expect(await rendered(w.closedParent)).toBe(await rendered(unknown));
+    expect(await rendered(w.closedParent)).not.toContain("Shared decision");
   });
 
   it("render the reports of a page as Markdown with what the reader may see", async () => {

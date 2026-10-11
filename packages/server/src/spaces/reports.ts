@@ -13,7 +13,7 @@ import type { AuthorizationService } from "../authorization/service.js";
 import type { Database } from "../database/database.js";
 import { blocksOfType, pagePath, reportKey } from "./documents.js";
 import type { PeopleService } from "./people.js";
-import { visibleItem } from "./visibility.js";
+import { visibleItem, visiblePages } from "./visibility.js";
 
 export const MAX_DECISION_REPORT_PAGE = 100;
 
@@ -169,7 +169,7 @@ export class ReportService {
       from decisions d join tree_items t on t.id = d.item_id join spaces s on s.id = t.space_id
       where d.published and d.text <> '' and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
         ${archiveCondition(request.spaceId)} ${labelCondition(request.labels)}
-        ${request.parentId ? sql`and t.parent_id = ${request.parentId}` : sql``}
+        ${request.parentId ? sql`and t.parent_id = any(${visiblePages(this.#authorization, viewer, [request.parentId])})` : sql``}
         ${after}
       order by t.created_at ${newest ? sql`desc` : sql`asc`}, d.id ${newest ? sql`desc` : sql`asc`}
       limit ${limit + 1}`);

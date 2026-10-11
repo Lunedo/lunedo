@@ -326,6 +326,82 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
     expect(created.json().title).toBe("2 Nov 2026 Project X notes");
   });
 
+  it("answers report filters with a page the caller cannot see exactly like with an unknown page", async () => {
+    const creator = await person();
+    const outsider = await person();
+    const space = await createSpace(creator.client);
+    const parent = await createPage(creator.client, space.id, "Closed parent");
+    const child = await createPage(creator.client, space.id, "Shared child", parent.id);
+    const stored = await creator.client.put(`/api/v1/pages/${child.id}/content`, {
+      document: {
+        type: "doc",
+        content: [
+          {
+            type: "decision",
+            attrs: { id: randomUUID() },
+            content: [{ type: "paragraph", content: [{ type: "text", text: "Shared decision" }] }],
+          },
+          {
+            type: "taskList",
+            content: [
+              {
+                type: "taskItem",
+                attrs: { id: randomUUID() },
+                content: [{ type: "paragraph", content: [{ type: "text", text: "Shared task" }] }],
+              },
+            ],
+          },
+        ],
+      },
+    });
+    expect(stored.statusCode, stored.body).toBe(200);
+    const shared = await creator.client.post(`/api/v1/pages/${child.id}/access`, {
+      changes: [
+        {
+          action: "share",
+          holderKind: "account",
+          holderId: outsider.id,
+          role: "reader",
+          includeDescendants: false,
+        },
+      ],
+    });
+    expect(shared.statusCode, shared.body).toBe(200);
+    expect((await outsider.client.get("/api/v1/reports/decisions")).body).toContain("Shared decision");
+    expect((await outsider.client.get("/api/v1/tasks?status=all")).body).toContain("Shared task");
+    const unknown = randomUUID();
+    const answer = async (path: string) => {
+      const response = await outsider.client.get(path);
+      return { status: response.statusCode, body: response.body };
+    };
+    for (const path of [
+      (id: string) => `/api/v1/reports/decisions?parentId=${id}`,
+      (id: string) => `/api/v1/tasks?pageIds=${id}&status=all`,
+      (id: string) => `/api/v1/tasks?pageIds=${id},${child.id}&status=all`,
+      (id: string) => `/api/v1/items/${id}`,
+    ]) {
+      const ofHidden = await answer(path(parent.id));
+      expect(ofHidden, path(parent.id)).toEqual(await answer(path(unknown)));
+      expect(ofHidden.body).not.toContain("Shared decision");
+    }
+    expect((await creator.client.get(`/api/v1/reports/decisions?parentId=${parent.id}`)).body).toContain(
+      "Shared decision",
+    );
+
+    const own = await createSpace(outsider.client);
+    const rendered = async (parentId: string) => {
+      const page = await createPage(outsider.client, own.id, `Report ${parentId}`);
+      const report = await outsider.client.put(`/api/v1/pages/${page.id}/content`, {
+        document: { type: "doc", content: [{ type: "decisionReport", attrs: { parentId } }] },
+      });
+      expect(report.statusCode, report.body).toBe(200);
+      const response = await outsider.client.get(`/api/v1/pages/${page.id}/markdown`);
+      return { status: response.statusCode, markdown: response.json().markdown };
+    };
+    expect(await rendered(parent.id)).toEqual(await rendered(unknown));
+    expect((await rendered(parent.id)).markdown).toBe("*No decisions match the filters*\n");
+  });
+
   it("arranges the tree and keeps moves inside the rules", async () => {
     const creator = await person();
     const space = await createSpace(creator.client);

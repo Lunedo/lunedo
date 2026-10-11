@@ -55,6 +55,15 @@ export function visibleItem(
     and ${publishedFor(authorization, viewer, item, space)})`;
 }
 
+export function visiblePages(
+  authorization: AuthorizationService,
+  viewer: Principal,
+  pageIds: readonly string[],
+): SQL {
+  return sql`array(select p.id from tree_items p join spaces ps on ps.id = p.space_id
+    where p.id = any(${sql.param([...pageIds])}::uuid[]) and ${visibleItem(authorization, viewer, sql`p`, sql`ps`)})`;
+}
+
 export function spaceKeyFor(authorization: AuthorizationService, viewer: Principal, space: SQL): SQL {
   return sql`(case when ${authorization.spaceFilter(viewer, space)} then ${space}.key else '' end)`;
 }
