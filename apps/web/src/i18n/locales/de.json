@@ -3758,7 +3758,13 @@
       "childPages": "Unterseiten",
       "childPagesDescription": "Liste der Seiten unter dieser oder einer anderen Seite",
       "attachmentList": "Anhangliste",
-      "attachmentListDescription": "Liste der Dateien, die an dieser Seite hängen"
+      "attachmentListDescription": "Liste der Dateien, die an dieser Seite hängen",
+      "pageReport": "Seitenbericht",
+      "pageReportDescription": "Tabelle der Seiten mit einem Label oder der letzten Änderungen",
+      "decisionReport": "Entscheidungsbericht",
+      "decisionReportDescription": "Liste der Entscheidungen auf Seiten",
+      "templateButton": "Vorlagen-Schaltfläche",
+      "templateButtonDescription": "Schaltfläche, die eine Seite aus einer Vorlage anlegt"
     },
     "mention": {
       "unknown": "Unbekannte Person"
@@ -4061,6 +4067,71 @@
       "fileTypes": "Dateitypen",
       "fileTypesHint": "Dateiendungen, durch Kommas getrennt, zum Beispiel pdf, docx. Leer lassen, um alle Dateien zu zeigen.",
       "fileTypesInvalid": "Gib bis zu {count} Dateiendungen nur mit Buchstaben und Ziffern ein, durch Kommas getrennt, zum Beispiel pdf, docx."
+    },
+    "reports": {
+      "scope": "Spaces",
+      "thisSpace": "Dieser Space",
+      "otherSpace": "Ein anderer Space",
+      "allSpaces": "Alle Spaces, die ich lesen kann",
+      "labels": "Labels",
+      "searchLabel": "Label suchen oder eingeben",
+      "labelHint": "Label eingeben, um danach zu filtern.",
+      "tooManyLabels": "Bis zu {count} Labels wählen. Entferne eines, bevor du ein weiteres hinzufügst.",
+      "searchPage": "Seite suchen",
+      "hiddenPage": "Eine Seite, die du nicht öffnen kannst",
+      "tooManyPages": "Bis zu {count} Seiten wählen. Entferne eine, bevor du eine weitere hinzufügst.",
+      "reverse": "Reihenfolge umkehren"
+    },
+    "pageReport": {
+      "title": "Seitenbericht",
+      "loadFailed": "Die Seiten des Berichts konnten nicht geladen werden.",
+      "empty": "Keine Seite, die du sehen kannst, passt zu den Filtern.",
+      "page": "Seite",
+      "author": "Autor",
+      "updated": "Zuletzt geändert",
+      "labelsHint": "Seiten mit mindestens einem dieser Labels. Leer lassen für alle Seiten.",
+      "sort": "Reihenfolge",
+      "sorts": {
+        "modified": "Zuletzt geänderte zuerst",
+        "created": "Neueste zuerst",
+        "title": "Nach Titel"
+      },
+      "limit": "Anzeigen",
+      "limitValue": "{count, plural, one {# Seite} other {bis zu # Seiten}}"
+    },
+    "decisionReport": {
+      "title": "Entscheidungsbericht",
+      "loadFailed": "Die Entscheidungen konnten nicht geladen werden.",
+      "empty": "Keine Entscheidung, die du sehen kannst, passt zu den Filtern.",
+      "more": "Weitere Entscheidungen anzeigen",
+      "labelsHint": "Entscheidungen auf Seiten mit mindestens einem dieser Labels. Leer lassen für alle Seiten.",
+      "parent": "Unter der Seite",
+      "parentHint": "Nur Entscheidungen auf Seiten direkt unter dieser Seite. Leer lassen für alle Seiten.",
+      "order": "Reihenfolge",
+      "orders": {
+        "newest": "Neueste Seiten zuerst",
+        "oldest": "Älteste Seiten zuerst"
+      }
+    },
+    "templateButton": {
+      "defaultLabel": "Aus Vorlage erstellen",
+      "create": "Seite erstellen",
+      "dialogTitle": "Neue Seite aus {name}",
+      "dialogDescription": "Die Seite wird unter dieser Seite angelegt und zum Bearbeiten geöffnet.",
+      "editorsOnly": "Nur Bearbeiter dieses Space können mit dieser Schaltfläche Seiten anlegen.",
+      "loadFailed": "Die Vorlagen dieses Space konnten nicht geladen werden.",
+      "missing": "Die Vorlage dieser Schaltfläche gibt es nicht mehr. Ein Bearbeiter kann eine andere wählen.",
+      "template": "Vorlage",
+      "chooseTemplate": "Vorlage wählen",
+      "unavailable": "Vorlage nicht mehr verfügbar",
+      "ownTemplate": "{name} (Space)",
+      "label": "Text der Schaltfläche",
+      "labelHint": "Leer lassen, um den Namen der Vorlage anzuzeigen.",
+      "title": "Titel neuer Seiten",
+      "titleHint": "Verwende die Eingabefelder {fields}. Leer lassen für den Titel der Vorlage.",
+      "titleHintNoFields": "Diese Vorlage hat keine Eingabefelder. Leer lassen für den Titel der Vorlage.",
+      "tooLong": "Höchstens {count} Zeichen verwenden.",
+      "unknownFields": "{count, plural, one {{fields} ist kein Eingabefeld} other {{fields} sind keine Eingabefelder}} dieser Vorlage. Entferne {count, plural, one {es} other {sie}} oder wähle eine andere Vorlage."
     }
   },
   "spaces": {
@@ -4986,7 +5057,10 @@
       "status": "Status",
       "emptyTitle": "Keine passenden Aufgaben",
       "emptyDescription": "Ändere die Filter oder füge veröffentlichten Seiten Aufgaben mit Zuständigen hinzu.",
-      "seriesScope": "Offene Aufgaben aus den Besprechungen dieser Serie."
+      "seriesScope": "Offene Aufgaben aus den Besprechungen dieser Serie.",
+      "pages": "Seiten",
+      "pagesHint": "Nur Aufgaben auf diesen Seiten und den Seiten darunter. Leer lassen für alle Seiten.",
+      "labelsHint": "Nur Aufgaben auf Seiten mit mindestens einem dieser Labels. Leer lassen für alle Seiten."
     },
     "checkOnPages": "Aufgaben werden auf den Seiten abgehakt, die aus dieser Vorlage entstehen."
   },
@@ -5933,7 +6007,8 @@
       "finish": "Bericht",
       "comments": "Kommentare und Inline-Kommentare",
       "reactions": "Likes",
-      "permissions": "Berechtigungen"
+      "permissions": "Berechtigungen",
+      "templates": "Space-Vorlagen"
     },
     "list": {
       "title": "Importe",
@@ -6272,7 +6347,8 @@
       "placeholdersTitle": "{count, plural, one {# Person ohne Konto} other {# Personen ohne Konto}}",
       "placeholdersHint": "Sie sind jetzt Platzhalter; ordne sie Konten zu.",
       "permissionsTitle": "{count, plural, one {# Berechtigung zu prüfen} other {# Berechtigungen zu prüfen}}",
-      "permissionsHint": "Übernommen, soweit sie zu Pagehall-Rollen passen."
+      "permissionsHint": "Übernommen, soweit sie zu Pagehall-Rollen passen.",
+      "template": "Space-Vorlage {name}"
     },
     "accept": {
       "title": "„{name}“ übernehmen?",

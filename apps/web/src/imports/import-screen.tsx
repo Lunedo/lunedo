@@ -63,6 +63,7 @@ const PHASES = [
   "people",
   "pages",
   "attachments",
+  "templates",
   "content",
   "comments",
   "reactions",
@@ -615,9 +616,11 @@ function EntriesList({
             title={
               item.item
                 ? item.item.title
-                : item.restricted
-                  ? t("imports.report.restrictedPage")
-                  : t("imports.report.wholeExport")
+                : item.template
+                  ? t("imports.report.template", { name: item.template.name })
+                  : item.restricted
+                    ? t("imports.report.restrictedPage")
+                    : t("imports.report.wholeExport")
             }
             description={entryText(t, item)}
             {...(item.item?.title && spaceKey
@@ -719,7 +722,9 @@ function MacroPages({ entry, name }: { entry: ImportView; name: string }) {
   return (
     <List label={t("imports.report.pagesWith", { name })}>
       {items.map((item) =>
-        item.item?.title ? (
+        item.template ? (
+          <ListRow key={item.id} title={t("imports.report.template", { name: item.template.name })} />
+        ) : item.item?.title ? (
           <ListRow
             key={item.id}
             title={item.item.title}

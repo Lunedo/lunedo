@@ -81,6 +81,10 @@
       "description": "The page tree with pages, folders and links, page content, labels and backlinks."
     },
     {
+      "name": "Reports",
+      "description": ""
+    },
+    {
       "name": "Roles",
       "description": "Custom roles and role assignments of an organization."
     },
@@ -23839,6 +23843,7 @@
                             "people",
                             "pages",
                             "attachments",
+                            "templates",
                             "content",
                             "comments",
                             "reactions",
@@ -24750,6 +24755,7 @@
                             "people",
                             "pages",
                             "attachments",
+                            "templates",
                             "content",
                             "comments",
                             "reactions",
@@ -25709,6 +25715,7 @@
                             "people",
                             "pages",
                             "attachments",
+                            "templates",
                             "content",
                             "comments",
                             "reactions",
@@ -26567,6 +26574,7 @@
                             "people",
                             "pages",
                             "attachments",
+                            "templates",
                             "content",
                             "comments",
                             "reactions",
@@ -28489,6 +28497,7 @@
                             "people",
                             "pages",
                             "attachments",
+                            "templates",
                             "content",
                             "comments",
                             "reactions",
@@ -29406,6 +29415,7 @@
                             "people",
                             "pages",
                             "attachments",
+                            "templates",
                             "content",
                             "comments",
                             "reactions",
@@ -31670,6 +31680,33 @@
                             "type": "boolean",
                             "description": "True when the problem concerns a page the caller cannot read; `item` is then null."
                           },
+                          "template": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the space template."
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "description": "Name of the space template."
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The affected space template, or null when the problem concerns a page or the export."
+                          },
                           "details": {
                             "type": "object",
                             "propertyNames": {
@@ -31685,6 +31722,7 @@
                           "code",
                           "item",
                           "restricted",
+                          "template",
                           "details"
                         ],
                         "additionalProperties": false,
@@ -31718,6 +31756,7 @@
                         "title": "Network overview"
                       },
                       "restricted": false,
+                      "template": null,
                       "details": {
                         "fileName": "diagram.png"
                       }
@@ -32613,6 +32652,7 @@
                             "people",
                             "pages",
                             "attachments",
+                            "templates",
                             "content",
                             "comments",
                             "reactions",
@@ -33454,6 +33494,7 @@
                             "people",
                             "pages",
                             "attachments",
+                            "templates",
                             "content",
                             "comments",
                             "reactions",
@@ -34336,6 +34377,7 @@
                             "people",
                             "pages",
                             "attachments",
+                            "templates",
                             "content",
                             "comments",
                             "reactions",
@@ -35169,6 +35211,7 @@
                             "people",
                             "pages",
                             "attachments",
+                            "templates",
                             "content",
                             "comments",
                             "reactions",
@@ -120157,6 +120200,7 @@
                               "people",
                               "pages",
                               "attachments",
+                              "templates",
                               "content",
                               "comments",
                               "reactions",
@@ -120984,6 +121028,7 @@
                             "people",
                             "pages",
                             "attachments",
+                            "templates",
                             "content",
                             "comments",
                             "reactions",
@@ -148357,6 +148402,569 @@
         }
       }
     },
+    "/api/v1/reports/decisions": {
+      "get": {
+        "operationId": "reports.decisions",
+        "summary": "List decisions for a decision report",
+        "description": "Lists the decisions on published pages the caller can read, filtered by space, labels of the page and parent page, as the decision report block shows them. Empty decisions are left out.\n\nRequires the permission `instance.content.view` on the instance.",
+        "tags": [
+          "Reports"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.content.view",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "query",
+            "required": false,
+            "description": "Only decisions in this space. Leave it out for every space the caller can read.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "labels",
+            "in": "query",
+            "required": false,
+            "description": "Only decisions on pages with at least one of these labels. Up to 20 labels, separated by commas.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2100
+            }
+          },
+          {
+            "name": "parentId",
+            "in": "query",
+            "required": false,
+            "description": "Only decisions on direct children of this page.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "description": "`newest` (default) or `oldest` first, by the date of the page.",
+            "schema": {
+              "default": "newest",
+              "type": "string",
+              "enum": [
+                "newest",
+                "oldest"
+              ]
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Cursor from `nextCursor` of the previous page.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of decisions, 1 to 100.",
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of decisions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the decision."
+                          },
+                          "text": {
+                            "type": "string",
+                            "description": "The decision as plain text."
+                          },
+                          "page": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the page."
+                              },
+                              "title": {
+                                "type": "string",
+                                "description": "Title of the page."
+                              },
+                              "path": {
+                                "type": "string",
+                                "description": "Path of the page in the web interface."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "title",
+                              "path"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The page the decision was made on."
+                          },
+                          "date": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When that page was created. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "text",
+                          "page",
+                          "date"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A decision in a decision report."
+                      },
+                      "description": "Decisions in the requested order."
+                    },
+                    "nextCursor": {
+                      "description": "Cursor for the next page, or null on the last page.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextCursor"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Decisions."
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d31",
+                      "text": "Remote staff use WireGuard from November.",
+                      "page": {
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11",
+                        "title": "VPN access for remote staff",
+                        "path": "/spaces/ITOPS/pages/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11/vpn-access-for-remote-staff"
+                      },
+                      "date": "2026-09-01T08:00:00.000Z"
+                    }
+                  ],
+                  "nextCursor": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/pages": {
+      "get": {
+        "operationId": "reports.pages",
+        "summary": "List pages for a page report",
+        "description": "Lists pages the caller can read, filtered by space and labels, as the page report block shows them. Archived pages are left out unless the report is limited to an archived space. Pages the caller cannot read are never counted or named.\n\nRequires the permission `instance.content.view` on the instance.",
+        "tags": [
+          "Reports"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.content.view",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "query",
+            "required": false,
+            "description": "Only pages in this space. Leave it out for every space the caller can read.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "labels",
+            "in": "query",
+            "required": false,
+            "description": "Only pages with at least one of these labels. Up to 20 labels, separated by commas.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2100
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "description": "`modified` (default) or `created`, newest first, or `title` from A to Z.",
+            "schema": {
+              "default": "modified",
+              "type": "string",
+              "enum": [
+                "modified",
+                "created",
+                "title"
+              ]
+            }
+          },
+          {
+            "name": "reverse",
+            "in": "query",
+            "required": false,
+            "description": "`true` reverses the order.",
+            "schema": {
+              "default": "false",
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of pages, 1 to 100.",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The pages.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the page."
+                      },
+                      "title": {
+                        "type": "string",
+                        "description": "Title of the page."
+                      },
+                      "path": {
+                        "type": "string",
+                        "description": "Path of the page in the web interface."
+                      },
+                      "spaceId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Space of the page."
+                      },
+                      "author": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "Account ID."
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Name as the caller may see it."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Who created the page, or null when the caller may not see that person."
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When the page was created. ISO 8601 timestamp in UTC."
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When the content last changed. ISO 8601 timestamp in UTC."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "title",
+                      "path",
+                      "spaceId",
+                      "author",
+                      "createdAt",
+                      "updatedAt"
+                    ],
+                    "additionalProperties": false,
+                    "description": "A page in a page report."
+                  },
+                  "description": "Pages in the requested order."
+                },
+                "example": [
+                  {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11",
+                    "title": "VPN access for remote staff",
+                    "path": "/spaces/ITOPS/pages/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11/vpn-access-for-remote-staff",
+                    "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                    "author": {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                      "name": "Anna Berger"
+                    },
+                    "createdAt": "2026-09-01T08:00:00.000Z",
+                    "updatedAt": "2026-10-06T07:00:00.000Z"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/service-accounts/{serviceAccountId}": {
       "get": {
         "operationId": "serviceAccounts.get",
@@ -159314,7 +159922,7 @@
                     ]
                   },
                   "template": {
-                    "description": "Create the page from a template. The title may be left empty to use the template's title.",
+                    "description": "Create the page from a template. The title may be left empty to use the title pattern or the template's title.",
                     "type": "object",
                     "properties": {
                       "id": {
@@ -159334,6 +159942,11 @@
                           "type": "string",
                           "maxLength": 200
                         }
+                      },
+                      "titlePattern": {
+                        "description": "Title with `{key}` for input fields, used instead of the template's title, as a template button sets it. Unknown keys become empty.",
+                        "type": "string",
+                        "maxLength": 255
                       }
                     },
                     "required": [
@@ -169947,6 +170560,26 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "pageIds",
+            "in": "query",
+            "required": false,
+            "description": "Only tasks on these pages and their descendants. Up to 20 page IDs, separated by commas.",
+            "schema": {
+              "type": "string",
+              "maxLength": 800
+            }
+          },
+          {
+            "name": "labels",
+            "in": "query",
+            "required": false,
+            "description": "Only tasks on pages with at least one of these labels. Up to 20 labels, separated by commas.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2100
             }
           },
           {

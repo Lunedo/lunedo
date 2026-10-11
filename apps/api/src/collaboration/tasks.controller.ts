@@ -55,6 +55,8 @@ export class TasksController {
       assignee: query.assignee,
       spaceId: query.spaceId,
       seriesId: query.seriesId,
+      pageIds: query.pageIds,
+      labels: query.labels,
       status: query.status,
       due: query.due,
       after: after ?? undefined,

@@ -62,7 +62,45 @@ export function isAllowedHref(href: string): boolean {
   }
 }
 
+export const MAX_LABEL_LENGTH = 100;
+export const MAX_FILTER_LABELS = 20;
+export const MAX_FILTER_PAGES = 20;
+
+export function cleanLabel(value: string): string | null {
+  const label = value
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^\p{L}\p{N}._-]/gu, "")
+    .replace(/-+/g, "-");
+  return label.length > 0 && label.length <= MAX_LABEL_LENGTH ? label : null;
+}
+
+const BUILT_IN_TEMPLATE = /^builtin:[a-z][a-z0-9-]{0,39}$/;
+
+export function isTemplateId(value: string): boolean {
+  return isUuid(value) || BUILT_IN_TEMPLATE.test(value);
+}
+
+function unique<T>(values: readonly T[]): boolean {
+  return new Set(values).size === values.length;
+}
+
 export const uuidValue = z.string().refine(isUuid, "Expected a lowercase UUID");
+export const labelValue = z
+  .string()
+  .refine((value) => cleanLabel(value) === value, "Expected a lowercase label without spaces");
+export const labelsValue = z
+  .array(labelValue)
+  .max(MAX_FILTER_LABELS)
+  .refine(unique, "Each label may appear only once");
+export const pageIdsValue = z
+  .array(z.string().refine(isUuid, "Expected a lowercase UUID"))
+  .max(MAX_FILTER_PAGES)
+  .refine(unique, "Each page may appear only once");
+export const templateIdValue = z
+  .string()
+  .refine(isTemplateId, "Expected a template ID or a built-in template such as builtin:how-to");
 export const isoDateValue = z.string().refine(isIsoDate, "Expected a date in the form YYYY-MM-DD");
 export const colorValue = z.enum(contentColors);
 export const hrefValue = z.string().refine(isAllowedHref, "Expected an http, https, mailto or internal link");

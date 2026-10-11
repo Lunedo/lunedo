@@ -216,6 +216,7 @@ export class ItemsController {
         values: body.template.values,
         placement,
         title: body.title,
+        titlePattern: body.template.titlePattern,
         mode: body.mode,
       });
     }
@@ -415,6 +416,7 @@ export class ItemsController {
             size,
           }))
         : null,
+      ...(await this.#services.reports.forDocument(actor, snapshot.document)),
     };
     return {
       itemId: pageId,

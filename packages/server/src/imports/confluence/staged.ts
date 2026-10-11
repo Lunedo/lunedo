@@ -22,6 +22,7 @@ import type {
   SourceRestriction,
   SourceSpace,
   SourceSpacePermission,
+  SourceTemplate,
   SourceVersion,
 } from "../source.js";
 import type { StagingStore } from "../staging.js";
@@ -80,6 +81,25 @@ export interface StagedVersion {
   version: number;
   authorKey: string | null;
   created: string | null;
+}
+
+export interface StagedTemplate {
+  name: string;
+  description: string;
+  body: string;
+  spaceId: string | null;
+  creatorKey: string | null;
+  created: string | null;
+  modified: string | null;
+}
+
+export interface StagedFormerTitle {
+  pageId: string;
+}
+
+export function formerTitleRecord(pageId: string, title: string) {
+  const key = titleKey(title);
+  return { kind: kinds.formerTitle, sourceId: `${pageId}/${key}`, ref: key, data: { pageId } };
 }
 
 export interface StagedComment {
@@ -156,6 +176,8 @@ export const kinds = {
   permissionSet: "permissionSet",
   contentPermission: "contentPermission",
   restriction: "restriction",
+  template: "template",
+  formerTitle: "formerTitle",
 } as const;
 
 export function versionSort(version: number): string {
@@ -607,6 +629,58 @@ export abstract class StagedConfluenceReader implements ImportReader {
     for (const record of records)
       if (record.ref && !result.has(record.ref)) result.set(record.ref, record.sourceId);
     return result;
+  }
+
+  async pagesByFormerTitle(
+    context: ReadContext,
+    titles: readonly string[],
+  ): Promise<ReadonlyMap<string, string>> {
+    const wanted = [...new Set(titles.map(titleKey))];
+    const records = await context.staging.byRef<StagedFormerTitle>(kinds.formerTitle, wanted);
+    const pages = await context.staging.get<StagedPage>(
+      kinds.page,
+      records.map((record) => record.data.pageId),
+    );
+    const candidates = new Map<string, Set<string>>();
+    for (const record of records) {
+      if (!record.ref || !pages.has(record.data.pageId)) continue;
+      const set = candidates.get(record.ref) ?? new Set<string>();
+      set.add(record.data.pageId);
+      candidates.set(record.ref, set);
+    }
+    const result = new Map<string, string>();
+    for (const [key, set] of candidates) {
+      const [only] = set;
+      if (set.size === 1 && only) result.set(key, only);
+    }
+    return result;
+  }
+
+  async *templates(context: ReadContext): AsyncGenerator<SourceTemplate> {
+    let batch: { sourceId: string; data: StagedTemplate }[] = [];
+    const flush = async function* (this: StagedConfluenceReader) {
+      const people = await this.#people(
+        context.staging,
+        batch.map((template) => template.data.creatorKey),
+      );
+      for (const template of batch) {
+        yield {
+          sourceId: template.sourceId,
+          name: template.data.name,
+          description: template.data.description,
+          body: template.data.body,
+          creatorId: template.data.creatorKey ? (people.get(template.data.creatorKey) ?? null) : null,
+          createdAt: template.data.created,
+          modifiedAt: template.data.modified,
+        } satisfies SourceTemplate;
+      }
+      batch = [];
+    }.bind(this);
+    for await (const record of context.staging.iterate<StagedTemplate>(kinds.template)) {
+      batch.push({ sourceId: record.sourceId, data: record.data });
+      if (batch.length >= 20) yield* flush();
+    }
+    yield* flush();
   }
 
   async resolvePeople(

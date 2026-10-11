@@ -31,7 +31,7 @@ import "../../editor/editor.css";
 
 const BLANK = "blank";
 
-function today(): string {
+export function today(): string {
   const now = new Date();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
@@ -353,7 +353,7 @@ function TemplatePreview({ template }: { template: PageTemplate }) {
   );
 }
 
-function FieldInput({
+export function FieldInput({
   field,
   value,
   error,

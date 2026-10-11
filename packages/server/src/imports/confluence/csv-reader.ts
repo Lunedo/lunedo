@@ -6,6 +6,7 @@ import type { ScanContext } from "../source.js";
 import {
   COMMENT_PROPERTIES,
   confluenceDate,
+  formerTitleRecord,
   isCurrentStatus,
   kinds,
   pageSort,
@@ -37,6 +38,7 @@ const TABLES = [
   "content_permissions",
   "content_perm_set",
   "content_perm",
+  "pagetemplates",
 ] as const;
 type Table = (typeof TABLES)[number];
 
@@ -107,6 +109,7 @@ export class ConfluenceCsvReader extends StagedConfluenceReader {
     });
     await context.staging.flush();
     await context.staging.removeOtherThan(kinds.page, "spaceId", spaceId);
+    await context.staging.removeOtherThan(kinds.template, "spaceId", spaceId);
     await context.staging.orderTree(kinds.page);
     await stageRestrictions(context.staging);
   }
@@ -241,6 +244,25 @@ export class ConfluenceCsvReader extends StagedConfluenceReader {
         });
         return;
       }
+      case "pagetemplates": {
+        const spaceId = optional(row, "spaceid");
+        const bodyType = optional(row, "bodytypeid") ?? STORAGE_BODY_TYPE;
+        if (!spaceId || optional(row, "prevver") || bodyType !== STORAGE_BODY_TYPE) return;
+        await context.staging.put({
+          kind: kinds.template,
+          sourceId: value(row, "templateid"),
+          data: {
+            name: value(row, "templatename"),
+            description: value(row, "templatedesc"),
+            body: row.content ?? "",
+            spaceId,
+            creatorKey: optional(row, "creator"),
+            created: confluenceDate(row.creationdate),
+            modified: confluenceDate(row.lastmoddate),
+          },
+        });
+        return;
+      }
       case "content_label": {
         const content = optional(row, "contentid");
         const label = optional(row, "labelid");
@@ -280,6 +302,7 @@ export class ConfluenceCsvReader extends StagedConfluenceReader {
             created: confluenceDate(row.lastmoddate) ?? confluenceDate(row.creationdate),
           },
         });
+        if (title) await context.staging.put(formerTitleRecord(original, title));
         return;
       }
       const blog = type === "BLOGPOST";

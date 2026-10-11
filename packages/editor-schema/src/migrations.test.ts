@@ -40,6 +40,19 @@ describe("migrateDocument", () => {
   });
 });
 
+describe("migration from schema version 5", () => {
+  it("keeps version 5 documents unchanged, as task reports without page or label filters show every page", () => {
+    const stored: DocumentJson = {
+      type: "doc",
+      content: [{ type: "taskReport", attrs: { spaceId: null, status: "done" } }],
+    };
+    const migrated = migrateDocument(stored, 5, migrations, 6);
+    expect(migrated).toEqual(stored);
+    const result = validateDocument(migrated);
+    expect(result.ok && result.document.content?.[0]?.attrs).toMatchObject({ pageIds: [], labels: [] });
+  });
+});
+
 describe("migration from schema version 4", () => {
   it("keeps version 4 documents unchanged, as tables of contents start at level 1 by default", () => {
     const stored: DocumentJson = {

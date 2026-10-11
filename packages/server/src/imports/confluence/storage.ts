@@ -5,6 +5,7 @@ import {
   MAX_DOCUMENT_BYTES,
   MAX_MACRO_DATA_BYTES,
   MAX_NODES,
+  MAX_PLACEHOLDER_LENGTH,
   type MacroConverter,
   type MacroImportContext,
   type MarkJson,
@@ -21,6 +22,7 @@ export interface PageReference {
   readonly title: string | null;
   readonly spaceKey: string | null;
   readonly sourceId: string | null;
+  readonly formerTitles?: boolean;
 }
 
 export interface AttachmentReference {
@@ -43,6 +45,9 @@ export interface StorageLookup {
   attachment(reference: AttachmentReference): { readonly attachmentId: string; readonly name: string } | null;
   person(reference: PersonReference): string | null;
   space(spaceKey: string): string | null;
+  spaceId?(spaceKey: string | null): string | null;
+  template?(sourceId: string): string | null;
+  readonly templateVariables?: ReadonlyMap<string, string>;
   inlineComment?(ref: string): string | null;
   newId(): string;
 }
@@ -230,8 +235,16 @@ export function storageReferences(root: XmlNode): {
   const people: PersonReference[] = [];
   const visit = (node: XmlNode | string, insideMacro: boolean, macroPage: XmlNode | null) => {
     if (typeof node === "string") return;
-    const macro = insideMacro || (isMacro(node.name) && !importerOf(node));
+    const importer = isMacro(node.name) ? importerOf(node) : undefined;
+    const macro = insideMacro || (isMacro(node.name) && !importer);
     const page = isMacro(node.name) ? macroPageOf(node) : macroPage;
+    if (!macro && importer?.references) {
+      const declared = importer.references(node);
+      for (const sourceId of declared.pageIds ?? []) {
+        if (/^\d{1,19}$/.test(sourceId)) pages.push({ title: null, spaceKey: null, sourceId });
+      }
+      for (const title of declared.pageTitles ?? []) pages.push({ title, spaceKey: null, sourceId: null });
+    }
     if (!macro) {
       if (node.name === "ri:page") {
         pages.push({
@@ -318,14 +331,21 @@ class Converter {
           spaceKey: target?.attributes["ri:space-key"] ?? null,
         });
       },
-      page: (reference) => {
+      page: (reference, options) => {
         const resolved = this.lookup.page({
           title: reference.attributes["ri:content-title"] ?? "",
           spaceKey: reference.attributes["ri:space-key"] ?? null,
           sourceId: null,
+          ...(options?.formerTitles ? { formerTitles: true } : {}),
         });
         return resolved.kind === "page" ? resolved.pageId : null;
       },
+      pageById: (sourceId) => {
+        const resolved = this.lookup.page({ title: null, spaceKey: null, sourceId });
+        return resolved.kind === "page" ? resolved.pageId : null;
+      },
+      space: (key) => this.lookup.spaceId?.(key) ?? null,
+      template: (sourceId) => this.lookup.template?.(sourceId) ?? null,
     };
   }
 
@@ -377,8 +397,18 @@ class Converter {
         return this.emoticon(node, marks);
       case "ac:link":
         return this.link(node, marks);
-      case "ac:placeholder":
+      case "ac:placeholder": {
+        const text = textContent(node).replace(/\s+/g, " ").trim().slice(0, MAX_PLACEHOLDER_LENGTH);
+        return this.lookup.templateVariables && text.length > 0
+          ? [{ inline: { type: "placeholder", attrs: { text } } }]
+          : [];
+      }
+      case "at:declarations":
         return [];
+      case "at:var": {
+        const field = this.lookup.templateVariables?.get(node.attributes["at:name"] ?? "");
+        return field ? [{ inline: { type: "templateField", attrs: { field } } }] : [];
+      }
       case "ac:inline-comment-marker": {
         const ref = (node.attributes["ac:ref"] ?? "").trim();
         const threadId = ref ? (this.lookup.inlineComment?.(ref) ?? null) : null;

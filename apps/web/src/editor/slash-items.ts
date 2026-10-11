@@ -10,9 +10,12 @@ import {
   Columns2,
   Columns3,
   Columns4,
+  FilePlus,
+  FileStack,
   Files,
   FileText,
   Flag,
+  FlagTriangleRight,
   FolderTree,
   Heading1,
   Heading2,
@@ -219,6 +222,59 @@ export const slashCommands: SlashCommandDefinition[] = [
         .focus()
         .deleteRange(range)
         .insertContent({ type: "taskReport", attrs: { spaceId: pageScopeOf(editor) } })
+        .run(),
+  },
+  {
+    id: "pageReport",
+    group: "blocks",
+    icon: FileStack,
+    labelKey: "editor.blocks.pageReport",
+    descriptionKey: "editor.blocks.pageReportDescription",
+    keywords: [
+      "pages",
+      "report",
+      "recently updated",
+      "content report",
+      "seiten",
+      "bericht",
+      "zuletzt geändert",
+    ],
+    run: (editor, range) =>
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({ type: "pageReport", attrs: { spaceId: pageScopeOf(editor) } })
+        .run(),
+  },
+  {
+    id: "decisionReport",
+    group: "blocks",
+    icon: FlagTriangleRight,
+    labelKey: "editor.blocks.decisionReport",
+    descriptionKey: "editor.blocks.decisionReportDescription",
+    keywords: ["decisions", "report", "entscheidungen", "bericht"],
+    run: (editor, range) =>
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({ type: "decisionReport", attrs: { spaceId: pageScopeOf(editor) } })
+        .run(),
+  },
+  {
+    id: "templateButton",
+    group: "blocks",
+    icon: FilePlus,
+    labelKey: "editor.blocks.templateButton",
+    descriptionKey: "editor.blocks.templateButtonDescription",
+    keywords: ["template", "button", "create", "vorlage", "knopf", "schaltfläche"],
+    run: (editor, range) =>
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({ type: "templateButton", attrs: { templateId: "builtin:meeting-notes" } })
         .run(),
   },
   {

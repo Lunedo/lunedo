@@ -142,6 +142,7 @@ import {
 import { PeopleService } from "./spaces/people.js";
 import { SpaceHolders, SpacePermissionService } from "./spaces/permissions.js";
 import { PersonalSpaceService } from "./spaces/personal.js";
+import { ReportService } from "./spaces/reports.js";
 import { SpaceService } from "./spaces/spaces.js";
 import { TrashService } from "./spaces/trash.js";
 import { VersionService } from "./spaces/versions.js";
@@ -219,6 +220,7 @@ export interface AccountServices {
   meetings: MeetingService;
   topics: TopicService;
   decisions: DecisionService;
+  reports: ReportService;
   privateNotes: PrivateNotesService;
   oneOnOnes: OneOnOneService;
   importUploads: UploadService;
@@ -565,6 +567,7 @@ export function createAccountServices(options: {
   });
   const topics = new TopicService({ database, authorization, people, documents, meetings });
   const decisions = new DecisionService({ database, authorization });
+  const reports = new ReportService({ database, authorization, people });
   const privateNotes = new PrivateNotesService({ database, authorization });
   const oneOnOnes = new OneOnOneService({
     database,
@@ -692,6 +695,7 @@ export function createAccountServices(options: {
     meetings,
     topics,
     decisions,
+    reports,
     privateNotes,
     oneOnOnes,
     importUploads,

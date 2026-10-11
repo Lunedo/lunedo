@@ -9,6 +9,7 @@ import { ListChecks } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { rememberReferences, usePersonName } from "../editor/references.js";
+import { LabelsField, labelsOf, PagesField, pageIdsOf } from "../editor/reports.js";
 import { translateKey } from "../i18n/translate.js";
 import { peopleLoader } from "./people.js";
 import type { TaskQuery } from "./queries.js";
@@ -17,6 +18,8 @@ import { TaskTable } from "./task-table.js";
 export interface TaskReportFilters {
   spaceId: string | null;
   seriesId: string | null;
+  pageIds: string[];
+  labels: string[];
   assignee: string | null;
   assignedToViewer: boolean;
   due: TaskReportDue;
@@ -29,6 +32,8 @@ export function reportFilters(attrs: Record<string, unknown>): TaskReportFilters
   return {
     spaceId: typeof attrs.spaceId === "string" ? attrs.spaceId : null,
     seriesId: typeof attrs.seriesId === "string" ? attrs.seriesId : null,
+    pageIds: pageIdsOf(attrs.pageIds),
+    labels: labelsOf(attrs.labels),
     assignee: typeof attrs.assignee === "string" ? attrs.assignee : null,
     assignedToViewer: attrs.assignedToViewer === true || attrs.assignedToViewer === "true",
     due: (taskReportDueWindows as readonly string[]).includes(due) ? (due as TaskReportDue) : "any",
@@ -45,6 +50,8 @@ export function reportQuery(filters: TaskReportFilters): TaskQuery {
     limit: 50,
     ...(filters.spaceId ? { spaceId: filters.spaceId } : {}),
     ...(filters.seriesId ? { seriesId: filters.seriesId } : {}),
+    ...(filters.pageIds.length > 0 ? { pageIds: filters.pageIds.join(",") } : {}),
+    ...(filters.labels.length > 0 ? { labels: filters.labels.join(",") } : {}),
     ...(filters.assignedToViewer
       ? { assignee: "me" }
       : filters.assignee
@@ -128,6 +135,23 @@ export function TaskReport({
               />
             </Field>
           ) : null}
+          {filters.seriesId ? null : (
+            <>
+              <PagesField
+                pageIds={filters.pageIds}
+                label={t("tasks.report.pages")}
+                hint={t("tasks.report.pagesHint")}
+                onChange={(pageIds) => onChange({ pageIds })}
+              />
+              <LabelsField
+                labels={filters.labels}
+                spaceId={filters.spaceId ?? currentSpaceId}
+                label={t("editor.reports.labels")}
+                hint={t("tasks.report.labelsHint")}
+                onChange={(labels) => onChange({ labels })}
+              />
+            </>
+          )}
           <Field label={t("tasks.report.due")}>
             <Select
               value={filters.due}

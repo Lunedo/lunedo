@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@pagehall/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -218,6 +219,187 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
       "*No child pages*",
       expect.stringMatching(/^- \[handbook\.pdf\]\(\/api\/v1\/attachments\/[0-9a-f-]+\/content\) \(12 B\)$/),
     ]);
+  });
+
+  it("reports pages, decisions and tasks through the API with only what the reader may see", async () => {
+    const creator = await person();
+    const reader = await person();
+    const space = await createSpace(creator.client, [
+      { principalKind: "account", principalId: reader.id, role: "reader" },
+    ]);
+    const decision = (text: string) => ({
+      type: "decision",
+      attrs: { id: randomUUID() },
+      content: [{ type: "paragraph", content: [{ type: "text", text }] }],
+    });
+    const task = (text: string) => ({
+      type: "taskList",
+      content: [
+        {
+          type: "taskItem",
+          attrs: { id: randomUUID() },
+          content: [{ type: "paragraph", content: [{ type: "text", text }] }],
+        },
+      ],
+    });
+    const project = await createPage(creator.client, space.id, "Project");
+    const open = await createPage(creator.client, space.id, "Kick-off", project.id);
+    const secret = await createPage(creator.client, space.id, "Secret meeting", project.id);
+    for (const [page, text] of [
+      [open, "Ship in May"],
+      [secret, "Acquire the rival"],
+    ] as const) {
+      const stored = await creator.client.put(`/api/v1/pages/${page.id}/content`, {
+        document: { type: "doc", content: [decision(text), task(`${text} task`)] },
+      });
+      expect(stored.statusCode, stored.body).toBe(200);
+      const label = await creator.client.post(`/api/v1/pages/${page.id}/labels`, { label: "project-x" });
+      expect(label.statusCode, label.body).toBe(200);
+    }
+    const restricted = await creator.client.post(`/api/v1/pages/${secret.id}/access`, {
+      changes: [{ action: "restrict", kind: "view" }],
+    });
+    expect(restricted.statusCode, restricted.body).toBe(200);
+    const paths = [
+      `/api/v1/reports/pages?spaceId=${space.id}&labels=project-x&sort=title`,
+      `/api/v1/reports/decisions?spaceId=${space.id}&labels=project-x&parentId=${project.id}`,
+      `/api/v1/tasks?pageIds=${project.id}&labels=project-x&status=all`,
+    ];
+    for (const path of paths) {
+      const ofReader = await reader.client.get(path);
+      expect(ofReader.statusCode, ofReader.body).toBe(200);
+      expect(ofReader.body, path).not.toMatch(/Secret|rival/);
+      expect(ofReader.body, path).toMatch(/Kick-off/);
+      expect((await creator.client.get(path)).body, path).toMatch(/Secret meeting/);
+    }
+    expect((await reader.client.get(paths[0] as string)).json()).toEqual([
+      expect.objectContaining({
+        id: open.id,
+        title: "Kick-off",
+        path: `/spaces/${space.key}/pages/${open.id}/kick-off`,
+        spaceId: space.id,
+      }),
+    ]);
+    expect((await reader.client.get(paths[1] as string)).json()).toEqual({
+      items: [
+        expect.objectContaining({ text: "Ship in May", page: expect.objectContaining({ id: open.id }) }),
+      ],
+      nextCursor: null,
+    });
+    for (const invalid of [
+      "/api/v1/reports/pages?labels=Two%20Words",
+      "/api/v1/reports/pages?limit=101",
+      "/api/v1/reports/decisions?order=random",
+      "/api/v1/tasks?pageIds=not-a-page",
+    ]) {
+      expect((await reader.client.get(invalid)).statusCode, invalid).toBe(400);
+    }
+
+    const overview = await creator.client.put(`/api/v1/pages/${project.id}/content`, {
+      document: {
+        type: "doc",
+        content: [
+          { type: "pageReport", attrs: { spaceId: space.id, labels: ["project-x"], sort: "title" } },
+          { type: "decisionReport", attrs: { spaceId: space.id, parentId: project.id } },
+          { type: "templateButton", attrs: { templateId: "builtin:meeting-notes", label: "New notes" } },
+        ],
+      },
+    });
+    expect(overview.statusCode, overview.body).toBe(200);
+    const markdown = (await reader.client.get(`/api/v1/pages/${project.id}/markdown`)).json().markdown;
+    expect(markdown).toContain(`| [Kick-off](/spaces/${space.key}/pages/${open.id}/kick-off) |`);
+    expect(markdown).toContain("- Ship in May");
+    expect(markdown).toContain("*New notes*");
+    expect(markdown).not.toMatch(/Secret|rival/);
+
+    const created = await creator.client.post(`/api/v1/spaces/${space.id}/items`, {
+      kind: "page",
+      title: "",
+      parentId: project.id,
+      template: {
+        id: "builtin:meeting-notes",
+        values: { date: "2026-11-02" },
+        titlePattern: "{date} Project X notes",
+      },
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    expect(created.json().title).toBe("2 Nov 2026 Project X notes");
+  });
+
+  it("answers report filters with a page the caller cannot see exactly like with an unknown page", async () => {
+    const creator = await person();
+    const outsider = await person();
+    const space = await createSpace(creator.client);
+    const parent = await createPage(creator.client, space.id, "Closed parent");
+    const child = await createPage(creator.client, space.id, "Shared child", parent.id);
+    const stored = await creator.client.put(`/api/v1/pages/${child.id}/content`, {
+      document: {
+        type: "doc",
+        content: [
+          {
+            type: "decision",
+            attrs: { id: randomUUID() },
+            content: [{ type: "paragraph", content: [{ type: "text", text: "Shared decision" }] }],
+          },
+          {
+            type: "taskList",
+            content: [
+              {
+                type: "taskItem",
+                attrs: { id: randomUUID() },
+                content: [{ type: "paragraph", content: [{ type: "text", text: "Shared task" }] }],
+              },
+            ],
+          },
+        ],
+      },
+    });
+    expect(stored.statusCode, stored.body).toBe(200);
+    const shared = await creator.client.post(`/api/v1/pages/${child.id}/access`, {
+      changes: [
+        {
+          action: "share",
+          holderKind: "account",
+          holderId: outsider.id,
+          role: "reader",
+          includeDescendants: false,
+        },
+      ],
+    });
+    expect(shared.statusCode, shared.body).toBe(200);
+    expect((await outsider.client.get("/api/v1/reports/decisions")).body).toContain("Shared decision");
+    expect((await outsider.client.get("/api/v1/tasks?status=all")).body).toContain("Shared task");
+    const unknown = randomUUID();
+    const answer = async (path: string) => {
+      const response = await outsider.client.get(path);
+      return { status: response.statusCode, body: response.body };
+    };
+    for (const path of [
+      (id: string) => `/api/v1/reports/decisions?parentId=${id}`,
+      (id: string) => `/api/v1/tasks?pageIds=${id}&status=all`,
+      (id: string) => `/api/v1/tasks?pageIds=${id},${child.id}&status=all`,
+      (id: string) => `/api/v1/items/${id}`,
+    ]) {
+      const ofHidden = await answer(path(parent.id));
+      expect(ofHidden, path(parent.id)).toEqual(await answer(path(unknown)));
+      expect(ofHidden.body).not.toContain("Shared decision");
+    }
+    expect((await creator.client.get(`/api/v1/reports/decisions?parentId=${parent.id}`)).body).toContain(
+      "Shared decision",
+    );
+
+    const own = await createSpace(outsider.client);
+    const rendered = async (parentId: string) => {
+      const page = await createPage(outsider.client, own.id, `Report ${parentId}`);
+      const report = await outsider.client.put(`/api/v1/pages/${page.id}/content`, {
+        document: { type: "doc", content: [{ type: "decisionReport", attrs: { parentId } }] },
+      });
+      expect(report.statusCode, report.body).toBe(200);
+      const response = await outsider.client.get(`/api/v1/pages/${page.id}/markdown`);
+      return { status: response.statusCode, markdown: response.json().markdown };
+    };
+    expect(await rendered(parent.id)).toEqual(await rendered(unknown));
+    expect((await rendered(parent.id)).markdown).toBe("*No decisions match the filters*\n");
   });
 
   it("arranges the tree and keeps moves inside the rules", async () => {

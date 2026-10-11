@@ -78,6 +78,16 @@ export interface SyntheticRestriction {
   readonly group?: string;
 }
 
+export interface SyntheticTemplate {
+  readonly id: string;
+  readonly name: string;
+  readonly description?: string;
+  readonly body: string;
+  readonly creatorKey: string;
+  readonly spaceId?: string | null;
+  readonly previousVersionOf?: string;
+}
+
 export interface SyntheticExport {
   readonly space: {
     readonly id: string;
@@ -94,6 +104,7 @@ export interface SyntheticExport {
   readonly watchers?: number;
   readonly spacePermissions?: readonly SyntheticSpacePermission[];
   readonly restrictions?: readonly SyntheticRestriction[];
+  readonly templates?: readonly SyntheticTemplate[];
   readonly extraFiles?: readonly ZipFileSpec[];
 }
 
@@ -364,6 +375,28 @@ export function createXmlExport(model: SyntheticExport): Buffer {
       ),
     );
   }
+  for (const template of model.templates ?? []) {
+    const spaceId = template.spaceId === undefined ? model.space.id : template.spaceId;
+    parts.push(
+      object(
+        "PageTemplate",
+        template.id,
+        [
+          property("name", template.name),
+          property("description", template.description ?? null),
+          property("content", template.body),
+          spaceId === null ? "" : reference("space", "Space", spaceId),
+          template.previousVersionOf
+            ? reference("originalVersion", "PageTemplate", template.previousVersionOf)
+            : "",
+          reference("creator", "ConfluenceUserImpl", template.creatorKey, "key"),
+          property("creationDate", DATE),
+          property("lastModificationDate", DATE),
+          property("bodyType", 2),
+        ].join(""),
+      ),
+    );
+  }
   parts.push(
     object(
       "Space",
@@ -619,6 +652,32 @@ export function createCsvExport(
       ]),
     ),
     ...restrictionTables,
+    "pagetemplates.csv": csvTable(
+      [
+        "templateid",
+        "templatename",
+        "templatedesc",
+        "content",
+        "spaceid",
+        "prevver",
+        "creator",
+        "creationdate",
+        "lastmoddate",
+        "bodytypeid",
+      ],
+      (model.templates ?? []).map((template) => [
+        template.id,
+        template.name,
+        template.description ?? null,
+        template.body,
+        template.spaceId === undefined ? model.space.id : template.spaceId,
+        template.previousVersionOf ?? null,
+        template.creatorKey,
+        DATE,
+        DATE,
+        "2",
+      ]),
+    ),
   };
   const descriptor = `exportType=space\nexportFormat=csv\nspaceKey=${model.space.key}\nsource=cloud\n`;
   const files: ZipFileSpec[] = [{ name: "exportDescriptor.properties.gz", data: descriptor }];

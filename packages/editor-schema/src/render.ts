@@ -31,6 +31,14 @@ export const defaultLabels: RenderLabels = {
   noChildPages: "No child pages",
   attachmentList: "Attachments",
   noAttachments: "No attachments",
+  pageReport: "Page report",
+  noReportedPages: "No pages match the filters",
+  decisionReport: "Decision report",
+  noReportedDecisions: "No decisions match the filters",
+  reportTitle: "Title",
+  reportAuthor: "Author",
+  reportUpdated: "Last changed",
+  templateButton: "Create from template",
   callout: { info: "Info", tip: "Tip", note: "Note", warning: "Warning", error: "Error" },
 };
 

@@ -578,6 +578,7 @@ export class ImportsController {
             code: "missingAttachment",
             item: { id: exampleImport.organizationId, title: "Network overview" },
             restricted: false,
+            template: null,
             details: { fileName: "diagram.png" },
           },
         ],

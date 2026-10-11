@@ -126,6 +126,22 @@ const context: RenderContext = {
     { id: ID, name: "handbook.pdf", size: 2_621_440 },
     { id: PAGE, name: "budget.xlsx", size: 512 },
   ],
+  pageReport: () => [
+    {
+      title: "VPN setup",
+      href: `/pages/${PAGE}`,
+      author: "Anna Berger",
+      updatedAt: "2026-10-01T08:00:00.000Z",
+    },
+    { title: "", href: "/pages/untitled", author: null, updatedAt: "2026-09-30T08:00:00.000Z" },
+  ],
+  decisionReport: () => [
+    {
+      text: "Use WireGuard",
+      page: { title: "VPN setup", href: `/pages/${PAGE}` },
+      date: "2026-10-02T08:00:00.000Z",
+    },
+  ],
 };
 
 describe("callout", () => {
@@ -627,6 +643,147 @@ describe("attachment list", () => {
       expect(() => renderHtml(doc({ type: "attachmentList", attrs: { fileTypes } }))).toThrow(
         InvalidDocumentError,
       );
+    }
+  });
+});
+
+describe("page report", () => {
+  const block = {
+    type: "pageReport",
+    attrs: { spaceId: PAGE, labels: ["vpn", "network"], sort: "title", reverse: true, limit: 5 },
+  };
+
+  it("shows the label and the filters until the reader's pages are known", () => {
+    expect(renderHtml(doc(block))).toBe(
+      `<section class="ph-page-report" aria-label="Page report" data-space-id="${PAGE}" data-labels="vpn,network" data-sort="title" data-reverse="true" data-limit="5"><p>Page report</p></section>`,
+    );
+    expect(renderMarkdown(doc(block))).toBe("*Page report*\n");
+  });
+
+  it("asks for the pages with the block's filters and lists title, author and last change", () => {
+    const requests: unknown[] = [];
+    const pages = {
+      ...context,
+      pageReport: (request: unknown) => {
+        requests.push(request);
+        return context.pageReport?.(request as never) ?? null;
+      },
+    };
+    const html = renderHtml(doc(block), pages);
+    expect(html).toContain(
+      `<tr><td><a href="/pages/${PAGE}">VPN setup</a></td><td>Anna Berger</td><td>on 2026-10-01</td></tr>`,
+    );
+    expect(html).toContain(
+      '<td><a href="/pages/untitled">Untitled page</a></td><td>Unknown person</td><td>on 2026-09-30</td>',
+    );
+    expect(renderMarkdown(doc(block), pages)).toBe(
+      `| Title | Author | Last changed |\n| --- | --- | --- |\n| [VPN setup](/pages/${PAGE}) | Anna Berger | on 2026-10-01 |\n| [Untitled page](/pages/untitled) | Unknown person | on 2026-09-30 |\n`,
+    );
+    expect(requests).toEqual([
+      { spaceId: PAGE, labels: ["vpn", "network"], sort: "title", reverse: true, limit: 5 },
+      { spaceId: PAGE, labels: ["vpn", "network"], sort: "title", reverse: true, limit: 5 },
+    ]);
+  });
+
+  it("defaults to all spaces, the latest changes first and 20 pages", () => {
+    const html = renderHtml(doc({ type: "pageReport" }));
+    expect(html).toContain('data-sort="modified" data-limit="20"');
+    expect(html).not.toContain("data-space-id");
+    expect(html).not.toContain("data-labels");
+  });
+
+  it("says when no page matches and never links to unsafe addresses or renders markup", () => {
+    expect(renderHtml(doc(block), { pageReport: () => [] })).toContain(
+      '<p class="ph-listing-empty">No pages match the filters</p>',
+    );
+    expect(renderMarkdown(doc(block), { pageReport: () => [] })).toBe("*No pages match the filters*\n");
+    const evil = {
+      pageReport: () => [
+        { title: "<b>x</b> | y", href: "javascript:alert(1)", author: "<i>z</i>", updatedAt: "2026-10-01" },
+      ],
+    };
+    expect(renderHtml(doc(block), evil)).toContain(
+      "<td>&lt;b&gt;x&lt;/b&gt; | y</td><td>&lt;i&gt;z&lt;/i&gt;</td>",
+    );
+    expect(renderMarkdown(doc(block), evil)).toContain(
+      "| \\<b\\>x\\</b\\> \\| y | \\<i\\>z\\</i\\> | 2026-10-01 |",
+    );
+  });
+
+  it("refuses unknown sort orders, limits outside 1 to 100 and labels that are not normalized", () => {
+    for (const attrs of [
+      { sort: "random" },
+      { limit: 0 },
+      { limit: 101 },
+      { labels: ["Upper"] },
+      { labels: ["two words"] },
+      { labels: ["a", "a"] },
+      { labels: Array.from({ length: 21 }, (_, i) => `l${i}`) },
+      { spaceId: "IT" },
+    ]) {
+      expect(() => renderHtml(doc({ type: "pageReport", attrs }))).toThrow(InvalidDocumentError);
+    }
+  });
+});
+
+describe("decision report", () => {
+  const block = {
+    type: "decisionReport",
+    attrs: { spaceId: PAGE, labels: ["vpn"], parentId: ID, order: "oldest" },
+  };
+
+  it("shows the label and the filters until the reader's decisions are known", () => {
+    expect(renderHtml(doc(block))).toBe(
+      `<section class="ph-decision-report" aria-label="Decision report" data-space-id="${PAGE}" data-labels="vpn" data-parent-id="${ID}" data-order="oldest"><p>Decision report</p></section>`,
+    );
+    expect(renderMarkdown(doc(block))).toBe("*Decision report*\n");
+  });
+
+  it("lists each decision with the page it was made on", () => {
+    expect(renderHtml(doc(block), context)).toContain(
+      `<ul><li><p>Use WireGuard</p><p class="ph-decision-source"><a href="/pages/${PAGE}">VPN setup</a> · on 2026-10-02</p></li></ul>`,
+    );
+    expect(renderMarkdown(doc(block), context)).toBe(
+      `- Use WireGuard\n  [VPN setup](/pages/${PAGE}) · on 2026-10-02\n`,
+    );
+    expect(renderMarkdown(doc(block), { decisionReport: () => [] })).toBe(
+      "*No decisions match the filters*\n",
+    );
+  });
+
+  it("refuses unknown orders and parents that are not page IDs", () => {
+    for (const attrs of [{ order: "random" }, { parentId: "123" }, { labels: [""] }]) {
+      expect(() => renderHtml(doc({ type: "decisionReport", attrs }))).toThrow(InvalidDocumentError);
+    }
+  });
+});
+
+describe("template button", () => {
+  it("shows its label, or a default label, with the template and title pattern", () => {
+    expect(
+      renderHtml(
+        doc({
+          type: "templateButton",
+          attrs: { templateId: ID, label: "New <project>", title: "Project {name}" },
+        }),
+      ),
+    ).toBe(
+      `<div class="ph-template-button" data-template-id="${ID}" data-label="New &lt;project&gt;" data-title="Project {name}"><span class="ph-template-button-label">New &lt;project&gt;</span></div>`,
+    );
+    expect(renderMarkdown(doc({ type: "templateButton", attrs: { templateId: "builtin:how-to" } }))).toBe(
+      "*Create from template*\n",
+    );
+  });
+
+  it("refuses unknown template IDs and labels over 100 characters", () => {
+    for (const attrs of [
+      {},
+      { templateId: "how-to" },
+      { templateId: "builtin:How" },
+      { templateId: ID, label: "x".repeat(101) },
+      { templateId: ID, title: "x".repeat(256) },
+    ]) {
+      expect(() => renderHtml(doc({ type: "templateButton", attrs }))).toThrow(InvalidDocumentError);
     }
   });
 });

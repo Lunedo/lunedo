@@ -793,6 +793,59 @@ details.ph-expand > summary {
   @apply mt-0 size-6;
 }
 
+.ph-content ul.ph-task-table:not([data-type]) {
+  @apply ps-0;
+  list-style: none;
+}
+
+.ph-content .ph-task-table > li > * + * {
+  @apply mt-0;
+}
+
+.ph-content .ph-page-report-block,
+.ph-content .ph-decision-report-block,
+.ph-content .ph-template-button-block {
+  @apply my-4 rounded-md border border-border bg-surface p-4;
+}
+
+.ph-content .ph-page-report,
+.ph-content .ph-decision-report,
+.ph-content .ph-template-button {
+  @apply my-4;
+}
+
+.ph-content :is(.ph-page-report-block, .ph-decision-report-block) :is(.ph-page-report, .ph-decision-report) {
+  @apply my-0;
+}
+
+.ph-content :is(.ph-page-report-block, .ph-decision-report-block) h3 {
+  @apply mt-0;
+}
+
+.ph-content :is(.ph-page-report, .ph-decision-report, .ph-task-report, .ph-task-report-block) a {
+  @apply inline-flex min-h-6 items-center;
+}
+
+.ph-content :is(.ph-page-report-block, .ph-task-report-block) button[role="checkbox"] {
+  @apply mt-0 size-6;
+}
+
+.ph-content
+  :is(.ph-page-report-block, .ph-decision-report-block, .ph-task-report-block)
+  [data-combobox]
+  span
+  > button {
+  @apply size-6 items-center justify-center;
+}
+
+.ph-content .ph-decision-report-items > li + li {
+  @apply mt-3;
+}
+
+.ph-content .ph-decision-report-items p {
+  @apply my-0;
+}
+
 .ph-decision {
   @apply flex flex-col gap-1 rounded-md border-l-4 px-4 py-3;
   border-color: var(--ph-color-success);

@@ -3758,7 +3758,13 @@
       "childPages": "Child pages",
       "childPagesDescription": "List of the pages below this page or another page",
       "attachmentList": "Attachment list",
-      "attachmentListDescription": "List of the files attached to this page"
+      "attachmentListDescription": "List of the files attached to this page",
+      "pageReport": "Page report",
+      "pageReportDescription": "Table of pages with a label, or of the latest changes",
+      "decisionReport": "Decision report",
+      "decisionReportDescription": "List of the decisions made on pages",
+      "templateButton": "Template button",
+      "templateButtonDescription": "Button that creates a page from a template"
     },
     "mention": {
       "unknown": "Unknown person"
@@ -4061,6 +4067,71 @@
       "fileTypes": "File types",
       "fileTypesHint": "File extensions separated by commas, for example pdf, docx. Leave empty to list every file.",
       "fileTypesInvalid": "Enter up to {count} file extensions with letters and digits only, separated by commas, for example pdf, docx."
+    },
+    "reports": {
+      "scope": "Spaces",
+      "thisSpace": "This space",
+      "otherSpace": "Another space",
+      "allSpaces": "All spaces I can read",
+      "labels": "Labels",
+      "searchLabel": "Search or type a label",
+      "labelHint": "Type a label to filter by it.",
+      "tooManyLabels": "Choose up to {count} labels. Remove one before you add another.",
+      "searchPage": "Search for a page",
+      "hiddenPage": "A page you cannot open",
+      "tooManyPages": "Choose up to {count} pages. Remove one before you add another.",
+      "reverse": "Reverse order"
+    },
+    "pageReport": {
+      "title": "Page report",
+      "loadFailed": "The pages of the report could not be loaded.",
+      "empty": "No pages you can see match the filters.",
+      "page": "Page",
+      "author": "Author",
+      "updated": "Last changed",
+      "labelsHint": "Pages with at least one of these labels. Leave empty for every page.",
+      "sort": "Order",
+      "sorts": {
+        "modified": "Last changed first",
+        "created": "Newest first",
+        "title": "By title"
+      },
+      "limit": "Show",
+      "limitValue": "{count, plural, one {# page} other {up to # pages}}"
+    },
+    "decisionReport": {
+      "title": "Decision report",
+      "loadFailed": "The decisions could not be loaded.",
+      "empty": "No decisions you can see match the filters.",
+      "more": "Show more decisions",
+      "labelsHint": "Decisions on pages with at least one of these labels. Leave empty for every page.",
+      "parent": "Below page",
+      "parentHint": "Only decisions on pages directly below this page. Leave empty for every page.",
+      "order": "Order",
+      "orders": {
+        "newest": "Newest pages first",
+        "oldest": "Oldest pages first"
+      }
+    },
+    "templateButton": {
+      "defaultLabel": "Create from template",
+      "create": "Create page",
+      "dialogTitle": "New page from {name}",
+      "dialogDescription": "The page is created below this page and opens for editing.",
+      "editorsOnly": "Only editors of this space can create pages with this button.",
+      "loadFailed": "The templates of this space could not be loaded.",
+      "missing": "The template of this button no longer exists. An editor can choose another one.",
+      "template": "Template",
+      "chooseTemplate": "Choose a template",
+      "unavailable": "Template no longer available",
+      "ownTemplate": "{name} (space)",
+      "label": "Button text",
+      "labelHint": "Leave empty to show the name of the template.",
+      "title": "Title of new pages",
+      "titleHint": "Use the input fields {fields}. Leave empty to use the title of the template.",
+      "titleHintNoFields": "This template has no input fields. Leave empty to use the title of the template.",
+      "tooLong": "Use up to {count} characters.",
+      "unknownFields": "{count, plural, one {{fields} is not an input field} other {{fields} are not input fields}} of this template. Remove {count, plural, one {it} other {them}} or choose another template."
     }
   },
   "spaces": {
@@ -4986,7 +5057,10 @@
       "status": "Status",
       "emptyTitle": "No tasks match",
       "emptyDescription": "Change the filters, or add tasks with assignees to published pages.",
-      "seriesScope": "Open tasks from the meetings of this series."
+      "seriesScope": "Open tasks from the meetings of this series.",
+      "pages": "Pages",
+      "pagesHint": "Only tasks on these pages and the pages below them. Leave empty for every page.",
+      "labelsHint": "Only tasks on pages with at least one of these labels. Leave empty for every page."
     },
     "checkOnPages": "Tasks are checked on the pages made from this template."
   },
@@ -5933,7 +6007,8 @@
       "finish": "Report",
       "comments": "Comments and inline comments",
       "reactions": "Likes",
-      "permissions": "Permissions"
+      "permissions": "Permissions",
+      "templates": "Space templates"
     },
     "list": {
       "title": "Imports",
@@ -6272,7 +6347,8 @@
       "placeholdersTitle": "{count, plural, one {# person without an account} other {# people without an account}}",
       "placeholdersHint": "They are placeholders now; map them to accounts.",
       "permissionsTitle": "{count, plural, one {# permission entry to check} other {# permission entries to check}}",
-      "permissionsHint": "Taken over as far as they map to Pagehall roles."
+      "permissionsHint": "Taken over as far as they map to Pagehall roles.",
+      "template": "Space template {name}"
     },
     "accept": {
       "title": "Accept “{name}”?",

@@ -7,6 +7,7 @@ import { AuthController } from "../auth/auth.controller.js";
 import { BlogController } from "../collaboration/blog.controller.js";
 import { CommentsController } from "../collaboration/comments.controller.js";
 import { HomeController } from "../collaboration/home.controller.js";
+import { ReportsController } from "../collaboration/reports.controller.js";
 import { TasksController } from "../collaboration/tasks.controller.js";
 import { DocsController } from "../docs/docs.controller.js";
 import { AttachmentsController } from "../files/attachments.controller.js";
@@ -65,6 +66,7 @@ export const apiControllers = (): Type[] => [
   OneOnOnesController,
   CommentsController,
   TasksController,
+  ReportsController,
   BlogController,
   HomeController,
   AttachmentsController,

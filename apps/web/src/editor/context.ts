@@ -15,12 +15,12 @@ export function usePageContext(): PageContext | null {
   return useContext(PageContextValue);
 }
 
-export function useOpenPath(): (path: string) => void {
+export function useOpenPath(): (path: string, options?: { edit?: boolean }) => void {
   const router = useRouter({ warn: false });
   return useCallback(
-    (path: string) => {
-      if (router) void router.navigate({ to: path });
-      else globalThis.location.assign(path);
+    (path: string, options?: { edit?: boolean }) => {
+      if (router) void router.navigate({ to: path, ...(options?.edit ? { search: { edit: true } } : {}) });
+      else globalThis.location.assign(options?.edit ? `${path}?edit=true` : path);
     },
     [router],
   );

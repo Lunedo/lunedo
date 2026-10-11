@@ -15,10 +15,10 @@ import {
 import { colorsModule, formattingModule, inlineCommentModule, linkModule } from "./marks.js";
 import { decisionModule, topicUpdateModule } from "./meetings.js";
 import { dateModule, emojiModule, mentionModule, pageLinkModule } from "./references.js";
-import { taskReportModule } from "./reports.js";
+import { decisionReportModule, pageReportModule, taskReportModule } from "./reports.js";
 import { fileModule, imageModule, sectionModule } from "./structure.js";
 import { tableModule } from "./table.js";
-import { templatesModule } from "./templates.js";
+import { templateButtonModule, templatesModule } from "./templates.js";
 
 export {
   attachmentListModule,
@@ -30,6 +30,7 @@ export {
   coreModule,
   dateModule,
   decisionModule,
+  decisionReportModule,
   emojiModule,
   expandModule,
   fileModule,
@@ -41,12 +42,14 @@ export {
   mathModule,
   mentionModule,
   pageLinkModule,
+  pageReportModule,
   sectionModule,
   statusModule,
   tableModule,
   tableOfContentsModule,
   taskReportModule,
   tasksModule,
+  templateButtonModule,
   templatesModule,
   topicUpdateModule,
   unsupportedMacroModule,
@@ -60,6 +63,8 @@ export const defaultModules = [
   inlineCommentModule,
   listsModule,
   taskReportModule,
+  pageReportModule,
+  decisionReportModule,
   tasksModule,
   codeBlockModule,
   tableModule,
@@ -79,6 +84,7 @@ export const defaultModules = [
   columnsModule,
   mathModule,
   templatesModule,
+  templateButtonModule,
   topicUpdateModule,
   decisionModule,
   unsupportedMacroModule,

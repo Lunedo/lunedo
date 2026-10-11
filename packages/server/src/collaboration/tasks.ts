@@ -10,7 +10,7 @@ import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, SpaceError } from "../spaces/common.js";
 import type { PeopleService } from "../spaces/people.js";
 import { signalSpaceChange } from "../spaces/signals.js";
-import { spaceKeyFor, spaceNameFor, visibleItem } from "../spaces/visibility.js";
+import { spaceKeyFor, spaceNameFor, visibleItem, visiblePages } from "../spaces/visibility.js";
 
 export const MAX_TASK_PAGE = 200;
 
@@ -42,6 +42,8 @@ export interface TaskFilter {
   assignee?: string | undefined;
   spaceId?: string | undefined;
   seriesId?: string | undefined;
+  pageIds?: readonly string[] | undefined;
+  labels?: readonly string[] | undefined;
   status?: TaskReportStatus | undefined;
   due?: TaskReportDue | undefined;
   after?: [sortDate: string, id: string] | undefined;
@@ -210,6 +212,8 @@ export class TaskService {
         ${assignee ? sql`and k.assignee_id = ${assignee}` : sql``}
         ${filter.spaceId ? sql`and t.space_id = ${filter.spaceId}` : sql``}
         ${filter.seriesId ? sql`and exists (select 1 from meetings m where m.item_id = t.id and m.series_id = ${filter.seriesId} and m.state <> 'skipped')` : sql``}
+        ${filter.pageIds?.length ? sql`and t.path && ${visiblePages(this.#authorization, viewer, filter.pageIds)}` : sql``}
+        ${filter.labels?.length ? sql`and exists (select 1 from page_labels l where l.item_id = t.id and l.label = any(${sql.param([...filter.labels])}::text[]))` : sql``}
         ${dueCondition}`;
     const status = filter.status ?? "open";
     const statusCondition =
