@@ -89,6 +89,7 @@ export const auditEventNames = [
   "group.deleted",
   "group.memberAdded",
   "group.memberRemoved",
+  "group.selfAdded",
   "group.managerAdded",
   "group.managerRemoved",
   "invitation.created",

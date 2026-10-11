@@ -370,15 +370,11 @@ export class ImportResolutionService {
           select exists (select 1 from group_members
             where group_id = ${groupId} and account_id = ${actorIdOf(actor)}
               and (expires_at is null or expires_at > now()))
-            and exists (select 1 from import_grants where import_id = ${importId} and group_key = ${key}
-              and item_id is not null) as own`);
-        if (own.rows[0]?.own) {
-          throw new ImportError(
-            "selfExtension",
-            "You belong to this group, and it is named in page restrictions. Ask another administrator to map it.",
-          );
-        }
+            or exists (select 1 from group_managers where group_id = ${groupId} and account_id = ${actorIdOf(actor)})
+            as own`);
+        if (own.rows[0]?.own) await this.#selfAdded(tx, actor, groupId, importId, "importMapping", row);
       }
+      if ("create" in input) await this.#selfAdded(tx, actor, groupId, importId, "importCreation", row);
       await tx.execute(sql`
         update import_groups set group_id = ${groupId}, mapped_by = ${actorIdOf(actor)}, mapped_at = now()
         where import_id = ${importId} and name_key = ${key}`);
@@ -405,6 +401,24 @@ export class ImportResolutionService {
     const found = groups.find((group) => group.key === key);
     if (!found) throw new ImportError("groupNotFound", "The import names no group like this.");
     return found;
+  }
+
+  async #selfAdded(
+    tx: Transaction,
+    actor: Principal,
+    groupId: string,
+    importId: string,
+    source: "importMapping" | "importCreation",
+    row: ImportRow,
+  ): Promise<void> {
+    if (actor.type !== "account") return;
+    await this.#audit.record(tx, {
+      name: "group.selfAdded",
+      actor,
+      targetId: groupId,
+      fields: { accountId: actor.id, source, importId, expiresAt: null },
+      scope: { type: "organization", id: row.organization_id },
+    });
   }
 
   async #afterResolution(tx: Transaction, actor: Principal, row: ImportRow): Promise<void> {

@@ -3138,7 +3138,8 @@
         "memberAdded": "Group member added",
         "memberRemoved": "Group member removed",
         "managerAdded": "Group manager added",
-        "managerRemoved": "Group manager removed"
+        "managerRemoved": "Group manager removed",
+        "selfAdded": "Added themselves to the group"
       },
       "invitation": {
         "created": "Invitation sent",

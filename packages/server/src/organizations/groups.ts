@@ -351,6 +351,21 @@ export class GroupService {
         })
         .returning({ accountId: groupMembers.accountId });
       if (inserted.length === 0) return;
+      if (actor.type === "account" && actor.id === accountId) {
+        await this.#audit.record(tx, {
+          name: "group.selfAdded",
+          actor,
+          targetId: id,
+          fields: {
+            accountId,
+            source: "member",
+            importId: null,
+            expiresAt: expiresAt?.toISOString() ?? null,
+          },
+          scope: scopeOf(group.organizationId),
+        });
+        return;
+      }
       await this.#audit.record(tx, {
         name: "group.memberAdded",
         actor,

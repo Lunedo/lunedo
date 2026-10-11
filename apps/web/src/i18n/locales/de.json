@@ -3138,7 +3138,8 @@
         "memberAdded": "Gruppenmitglied hinzugefügt",
         "memberRemoved": "Gruppenmitglied entfernt",
         "managerAdded": "Gruppenverwalter hinzugefügt",
-        "managerRemoved": "Gruppenverwalter entfernt"
+        "managerRemoved": "Gruppenverwalter entfernt",
+        "selfAdded": "Selbst zur Gruppe hinzugefügt"
       },
       "invitation": {
         "created": "Einladung gesendet",

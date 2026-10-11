@@ -846,7 +846,7 @@ export class ImportsController {
   @ApiRoute({
     summary: "Map a group of an import",
     description:
-      "Maps a Confluence group to an existing group of the organization, or creates a local group with its name (this needs the permission to create groups). The group takes its place on page restrictions at once; restrictions only narrow access, so its members still need a role in the space. Its space role applies when the import is accepted. Nobody is notified.",
+      "Maps a Confluence group to an existing group of the organization, or creates a local group with its name (this needs the permission to create groups). The group takes its place on page restrictions at once; restrictions only narrow access, so its members still need a role in the space. Its space role applies when the import is accepted. Nobody is notified. When the caller belongs to or manages the chosen group, or creates it, the audit log records this as a self-addition with the import named.",
     tags: [TAG],
     params: groupParams,
     body: mapGroupSchema,

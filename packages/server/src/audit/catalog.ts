@@ -774,6 +774,17 @@ export const auditCatalog = {
     fields: z.object({ accountId: z.uuid(), expiresAt: z.iso.datetime().nullable() }),
     visibility: "organization",
   }),
+  "group.selfAdded": event({
+    actor: ["account"],
+    target: "group",
+    fields: z.object({
+      accountId: z.uuid(),
+      source: z.enum(["member", "importMapping", "importCreation"]),
+      importId: z.uuid().nullable(),
+      expiresAt: z.iso.datetime().nullable(),
+    }),
+    visibility: "organization",
+  }),
   "group.memberRemoved": event({
     actor: ["account", "system"],
     target: "group",

@@ -22179,7 +22179,7 @@
       "post": {
         "operationId": "groups.addMember",
         "summary": "Add a group member",
-        "description": "Adds a member of the organization to the group, optionally until a date.\n\nRequires the permission `group.manage` on the group in `groupId`.",
+        "description": "Adds a member of the organization to the group, optionally until a date. Group managers and organization administrators may add themselves; the audit log records that as a self-addition.\n\nRequires the permission `group.manage` on the group in `groupId`.",
         "tags": [
           "Groups"
         ],
@@ -31310,7 +31310,7 @@
       "put": {
         "operationId": "imports.mapGroup",
         "summary": "Map a group of an import",
-        "description": "Maps a Confluence group to an existing group of the organization, or creates a local group with its name (this needs the permission to create groups). The group takes its place on page restrictions at once; restrictions only narrow access, so its members still need a role in the space. Its space role applies when the import is accepted. Nobody is notified.\n\nRequires the permission `import.resolve` on the import in `importId`.",
+        "description": "Maps a Confluence group to an existing group of the organization, or creates a local group with its name (this needs the permission to create groups). The group takes its place on page restrictions at once; restrictions only narrow access, so its members still need a role in the space. Its space role applies when the import is accepted. Nobody is notified. When the caller belongs to or manages the chosen group, or creates it, the audit log records this as a self-addition with the import named.\n\nRequires the permission `import.resolve` on the import in `importId`.",
         "tags": [
           "Imports"
         ],
