@@ -239,7 +239,14 @@ export class AccessRequestsController {
       schema: accessRequestSchema,
       example: exampleAccessRequest,
     },
-    errors: ["requestNotFound", "requestClosed", "invalidRole", "lastSpaceAdmin", "selfExtension"],
+    errors: [
+      "requestNotFound",
+      "requestClosed",
+      "invalidRole",
+      "lastSpaceAdmin",
+      "selfExtension",
+      "shareBeyondOwnAccess",
+    ],
   })
   async decide(
     @Param("requestId") requestId: string,

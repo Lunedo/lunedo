@@ -1364,7 +1364,10 @@
     "reimportSpaceFixed": "Ein erneuter Import geht in den Bereich des früheren Imports; seine Bereichseinstellungen lassen sich nicht ändern.",
     "changeNotComparable": "Vor dem Anwenden lassen sich nur Konflikte vergleichen. Wähle einen Konflikt.",
     "comparisonUnavailable": "Dieser Konflikt wurde angewendet oder durch einen neueren Export ersetzt. Vergleiche die Versionen im Verlauf der Seite.",
-    "comparisonWithheld": "In Confluence dürfen weniger Personen diesen Inhalt lesen. Übernimm zuerst die Einschränkungen bei den Berechtigungsabweichungen."
+    "comparisonWithheld": "In Confluence dürfen weniger Personen diesen Inhalt lesen. Übernimm zuerst die Einschränkungen bei den Berechtigungsabweichungen.",
+    "shareBeyondOwnAccess": "Deine eigene Rolle im Space gibt dir diesen Zugriff auf die Seite nicht. Wähle eine niedrigere Rolle oder frag einen Space-Admin.",
+    "shareBeyondOwnAccessBelow": "Deine eigene Rolle im Space deckt {count, plural, one {# Seite} other {# Seiten}} darunter nicht ab. Gib nur diese Seite frei, wähle eine niedrigere Rolle oder frag einen Space-Admin.",
+    "ownShare": "Du kannst keinen Zugriff ändern, den du selbst oder über eine deiner Gruppen hast. Bitte jemand anderen, der die Seite freigeben kann."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",

@@ -219,6 +219,8 @@ export const problems = {
   personNotFound: { status: 404, title: "The person does not exist" },
   nameTaken: { status: 409, title: "A file with this name exists" },
   alreadyShared: { status: 409, title: "The page is already shared with them" },
+  shareBeyondOwnAccess: { status: 403, title: "A share cannot reach further than your own access" },
+  ownShare: { status: 403, title: "Nobody changes access they hold themselves" },
   restrictionWithoutViewers: { status: 409, title: "A restricted page needs someone who can view it" },
   restrictionWithoutEditors: {
     status: 409,
@@ -352,6 +354,11 @@ export const problemSchema = z
       .optional()
       .describe("Largest allowed file size in bytes, for `fileTooLarge` and `uploadTooLarge`."),
     missing: z.number().int().optional().describe("Number of parts still missing, for `uploadIncomplete`."),
+    uncoveredPages: z
+      .number()
+      .int()
+      .optional()
+      .describe("Number of pages below that your own role does not cover, for `shareBeyondOwnAccess`."),
     maxDays: z
       .number()
       .int()

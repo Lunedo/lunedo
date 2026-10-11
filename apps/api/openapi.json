@@ -1041,7 +1041,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `selfExtension`: Nobody can extend their own permissions.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `selfExtension`: Nobody can extend their own permissions. `shareBeyondOwnAccess`: A share cannot reach further than your own access.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1070,6 +1070,14 @@
                       "title": "Nobody can extend their own permissions",
                       "status": 403,
                       "code": "selfExtension"
+                    }
+                  },
+                  "shareBeyondOwnAccess": {
+                    "value": {
+                      "type": "urn:pagehall:problem:shareBeyondOwnAccess",
+                      "title": "A share cannot reach further than your own access",
+                      "status": 403,
+                      "code": "shareBeyondOwnAccess"
                     }
                   }
                 }
@@ -139477,7 +139485,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `ownShare`: Nobody changes access they hold themselves. `shareBeyondOwnAccess`: A share cannot reach further than your own access.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -139498,6 +139506,22 @@
                       "title": "Not allowed",
                       "status": 403,
                       "code": "forbidden"
+                    }
+                  },
+                  "ownShare": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ownShare",
+                      "title": "Nobody changes access they hold themselves",
+                      "status": 403,
+                      "code": "ownShare"
+                    }
+                  },
+                  "shareBeyondOwnAccess": {
+                    "value": {
+                      "type": "urn:pagehall:problem:shareBeyondOwnAccess",
+                      "title": "A share cannot reach further than your own access",
+                      "status": 403,
+                      "code": "shareBeyondOwnAccess"
                     }
                   }
                 }
@@ -140368,7 +140392,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `guestInvitesDisabled`: Members cannot invite guests in this organization.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `guestInvitesDisabled`: Members cannot invite guests in this organization. `shareBeyondOwnAccess`: A share cannot reach further than your own access.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -140397,6 +140421,14 @@
                       "title": "Members cannot invite guests in this organization",
                       "status": 403,
                       "code": "guestInvitesDisabled"
+                    }
+                  },
+                  "shareBeyondOwnAccess": {
+                    "value": {
+                      "type": "urn:pagehall:problem:shareBeyondOwnAccess",
+                      "title": "A share cannot reach further than your own access",
+                      "status": 403,
+                      "code": "shareBeyondOwnAccess"
                     }
                   }
                 }
@@ -141387,7 +141419,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `ownShare`: Nobody changes access they hold themselves. `shareBeyondOwnAccess`: A share cannot reach further than your own access.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -141408,6 +141440,22 @@
                       "title": "Not allowed",
                       "status": 403,
                       "code": "forbidden"
+                    }
+                  },
+                  "ownShare": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ownShare",
+                      "title": "Nobody changes access they hold themselves",
+                      "status": 403,
+                      "code": "ownShare"
+                    }
+                  },
+                  "shareBeyondOwnAccess": {
+                    "value": {
+                      "type": "urn:pagehall:problem:shareBeyondOwnAccess",
+                      "title": "A share cannot reach further than your own access",
+                      "status": 403,
+                      "code": "shareBeyondOwnAccess"
                     }
                   }
                 }
@@ -146743,7 +146791,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `ownShare`: Nobody changes access they hold themselves. `shareBeyondOwnAccess`: A share cannot reach further than your own access.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -146764,6 +146812,22 @@
                       "title": "Not allowed",
                       "status": 403,
                       "code": "forbidden"
+                    }
+                  },
+                  "ownShare": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ownShare",
+                      "title": "Nobody changes access they hold themselves",
+                      "status": 403,
+                      "code": "ownShare"
+                    }
+                  },
+                  "shareBeyondOwnAccess": {
+                    "value": {
+                      "type": "urn:pagehall:problem:shareBeyondOwnAccess",
+                      "title": "A share cannot reach further than your own access",
+                      "status": 403,
+                      "code": "shareBeyondOwnAccess"
                     }
                   }
                 }
@@ -177484,6 +177548,12 @@
           },
           "missing": {
             "description": "Number of parts still missing, for `uploadIncomplete`.",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "uncoveredPages": {
+            "description": "Number of pages below that your own role does not cover, for `shareBeyondOwnAccess`.",
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
