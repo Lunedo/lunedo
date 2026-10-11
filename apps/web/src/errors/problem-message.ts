@@ -20,6 +20,7 @@ const KNOWN = new Set([
   "changeNotComparable",
   "comparisonUnavailable",
   "comparisonWithheld",
+  "restrictionPending",
   "invalidDecision",
   "holderNotInPagehall",
   "differenceResolved",

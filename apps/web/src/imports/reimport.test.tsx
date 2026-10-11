@@ -96,6 +96,9 @@ function change(overrides: Record<string, unknown>) {
     to: null,
     labels: null,
     permission: null,
+    held: false,
+    heldFor: null,
+    decisions: ["pagehall", "source", "both"],
     decision: null,
     decidedBy: null,
     decidedAt: null,
@@ -237,7 +240,11 @@ describe("re-import changes", () => {
 
   it("saves a single decision at once and confirms it at the field", async () => {
     const api = setup({
-      ...changeRoutes({ deleted: [change({ change: "deleted", reason: null, changedHere: null })] }),
+      ...changeRoutes({
+        deleted: [
+          change({ change: "deleted", reason: null, changedHere: null, decisions: ["trash", "keep"] }),
+        ],
+      }),
       [`PUT /api/v1/imports/${IMPORT_ID}/changes/decisions`]: () => ({ body: { decided: 1 } }),
     });
     await open(`${DETAIL}?tab=deleted`);
@@ -369,6 +376,7 @@ describe("re-import changes", () => {
           kind: "page",
           pagehall: { title: "On-call rota", version: null },
           source: { title: "On-call rota", version: 7 },
+          decisions: ["pagehall", "source", "both"],
           decision: null,
           diff: diffDocuments(
             {
@@ -406,6 +414,76 @@ describe("re-import changes", () => {
       ids: [CHANGE(1)],
       decision: "source",
     });
+  });
+
+  it("offers only keeping the Pagehall version while a restriction from Confluence waits", async () => {
+    const api = setup({
+      ...changeRoutes({
+        conflicts: [
+          change({
+            reason: "restricted",
+            held: true,
+            heldFor: { differenceId: CHANGE(9), title: "Finance" },
+            decisions: ["pagehall"],
+          }),
+          change({
+            id: CHANGE(2),
+            item: { id: OTHER_PAGE, title: "Printer queue", spaceKey: "ARCH" },
+            title: "Printer queue",
+          }),
+        ],
+      }),
+      [`PUT /api/v1/imports/${IMPORT_ID}/changes/decisions`]: () => ({ body: { decided: 2 } }),
+    });
+    await open(DETAIL);
+    expect(await screen.findByText(/Waits for the restriction of “Finance” from Confluence/)).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "Show the permission difference" }).getAttribute("href"),
+    ).toContain("tab=permissions");
+    await userEvent.click(screen.getByRole("combobox", { name: "Decision for On-call rota" }));
+    const options = await screen.findAllByRole("option");
+    expect(options.map((option) => option.textContent)).toEqual(["Keep Pagehall version", "Decide later"]);
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select all" }));
+    const bar = screen.getByRole("toolbar", { name: "Decide for the selected changes" });
+    expect(within(bar).queryByRole("button", { name: "Take Confluence version" })).toBeNull();
+    expect(within(bar).queryByRole("button", { name: "Keep both" })).toBeNull();
+    expect(within(bar).getByText(/only “Keep Pagehall version” is offered/)).toBeTruthy();
+    await userEvent.click(within(bar).getByRole("button", { name: "Keep Pagehall version" }));
+    await waitFor(() =>
+      expect(api.requests.find((request) => request.method === "PUT")?.body).toEqual({
+        ids: [CHANGE(1), CHANGE(2)],
+        decision: "pagehall",
+      }),
+    );
+  });
+
+  it("offers only keeping the Pagehall version on the comparison while a restriction waits", async () => {
+    const document = {
+      type: "doc" as const,
+      content: [{ type: "paragraph", content: [{ type: "text", text: "Rota" }] }],
+    };
+    setup({
+      ...changeRoutes({}),
+      [`GET /api/v1/imports/${IMPORT_ID}/changes/${CHANGE(1)}/compare`]: () => ({
+        body: {
+          kind: "page",
+          pagehall: { title: "On-call rota", version: null },
+          source: { title: "On-call rota", version: 7 },
+          decisions: ["pagehall"],
+          decision: null,
+          diff: diffDocuments({ title: "On-call rota", document }, { title: "On-call rota", document }),
+          before: document,
+          after: document,
+          references: { people: {}, pages: {}, topics: {} },
+        },
+      }),
+    });
+    await open(`${DETAIL}/changes/${CHANGE(1)}/compare`);
+    expect(await screen.findByText(/only “Keep Pagehall version” is possible/)).toBeTruthy();
+    await userEvent.click(screen.getByRole("combobox", { name: "Decision for On-call rota" }));
+    const options = await screen.findAllByRole("option");
+    expect(options.map((option) => option.textContent)).toEqual(["Keep Pagehall version", "Decide later"]);
   });
 
   it("explains that the source of a page restricted further is not shown", async () => {

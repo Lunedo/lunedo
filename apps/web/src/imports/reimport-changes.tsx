@@ -183,10 +183,12 @@ export function ReimportChanges({ entry }: { entry: ImportView }) {
 function SelectionBar({
   count,
   decisions,
+  limited = false,
   onDecide,
 }: {
   count: number;
   decisions: readonly ChangeDecision[];
+  limited?: boolean;
   onDecide: (decision: ChangeDecision | null) => void;
 }) {
   const { t } = useTranslation();
@@ -195,30 +197,31 @@ function SelectionBar({
     <div
       role="toolbar"
       aria-label={t("imports.reimport.bulkLabel")}
-      className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface-sunken p-3"
+      className="flex flex-col gap-2 rounded-md border border-border bg-surface-sunken p-3"
     >
-      <span className="me-auto font-medium">{t("imports.reimport.selected", { count })}</span>
-      {decisions.map((decision) => (
-        <Button key={decision} variant="secondary" onClick={() => onDecide(decision)}>
-          {translateKey(t, `imports.reimport.decisions.${decision}`)}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="me-auto font-medium">{t("imports.reimport.selected", { count })}</span>
+        {decisions.map((decision) => (
+          <Button key={decision} variant="secondary" onClick={() => onDecide(decision)}>
+            {translateKey(t, `imports.reimport.decisions.${decision}`)}
+          </Button>
+        ))}
+        <Button variant="outline" onClick={() => onDecide(null)}>
+          {t("imports.reimport.decisions.later")}
         </Button>
-      ))}
-      <Button variant="outline" onClick={() => onDecide(null)}>
-        {t("imports.reimport.decisions.later")}
-      </Button>
+      </div>
+      {limited ? <p className="text-sm text-text-muted">{t("imports.reimport.selectionLimited")}</p> : null}
     </div>
   );
 }
 
 function DecisionCell({
   entry,
-  decisions,
   editable,
   saved,
   onDecide,
 }: {
   entry: ChangeEntry;
-  decisions: readonly ChangeDecision[];
   editable: boolean;
   saved: boolean;
   onDecide: (decision: ChangeDecision | null) => void;
@@ -248,7 +251,7 @@ function DecisionCell({
       <Select
         value={entry.decision ?? undefined}
         onValueChange={(value) => onDecide(value === UNDECIDED ? null : (value as ChangeDecision))}
-        options={decisionOptions(t, decisions)}
+        options={decisionOptions(t, entry.decisions)}
         placeholder={t("imports.reimport.decide")}
         aria-label={t("imports.reimport.decisionFor", { title: entry.title ?? "" })}
       />
@@ -293,13 +296,18 @@ function ConflictsTab({ entry, editable }: { entry: ImportView; editable: boolea
       return next;
     });
   const all = open.length > 0 && open.every((row) => selected.has(row.id));
+  const chosen = open.filter((row) => selected.has(row.id));
+  const offered = CONFLICT_DECISIONS.filter((decision) =>
+    chosen.every((row) => row.decisions.includes(decision)),
+  );
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-text-muted">{t("imports.reimport.conflictsHint")}</p>
       {editable ? (
         <SelectionBar
           count={selected.size}
-          decisions={CONFLICT_DECISIONS}
+          decisions={offered}
+          limited={offered.length < CONFLICT_DECISIONS.length}
           onDecide={(decision) =>
             void decide([...selected], decision).then((ok) => {
               if (ok) setSelected(new Set());
@@ -390,7 +398,6 @@ function ConflictsTab({ entry, editable }: { entry: ImportView; editable: boolea
             cell: (row: ChangeEntry) => (
               <DecisionCell
                 entry={row}
-                decisions={CONFLICT_DECISIONS}
                 editable={editable}
                 saved={saved.has(row.id)}
                 onDecide={(decision) => void decide([row.id], decision)}
@@ -429,8 +436,25 @@ function ChangeTitle({ entry }: { entry: ChangeEntry }) {
           <Badge variant="warning">{t("imports.reimport.editing")}</Badge>
         </span>
       ) : null}
-      {entry.reason === "restricted" ? (
-        <span className="text-sm text-text-muted">{t("imports.reimport.restricted")}</span>
+      {entry.held ? (
+        <span className="text-sm text-text-muted">
+          {entry.heldFor
+            ? t("imports.reimport.restrictedBy", { title: entry.heldFor.title })
+            : t("imports.reimport.restricted")}
+          {entry.heldFor ? (
+            <>
+              {" "}
+              <Link
+                from="/settings/organizations/$organizationId/imports/$importId"
+                to="."
+                search={{ tab: "permissions" }}
+                className="text-accent underline underline-offset-2 hover:no-underline focus-visible:focus-ring"
+              >
+                {t("imports.reimport.showDifference")}
+              </Link>
+            </>
+          ) : null}
+        </span>
       ) : null}
       {entry.sourceTitle && entry.sourceTitle !== entry.title ? (
         <span className="text-sm text-text-muted">
@@ -454,6 +478,7 @@ function UpdatesTab({ counts, format }: { counts: Readonly<Record<string, number
       ["newTemplates", "newTemplates"],
       ["updatedTemplates", "updatedTemplates"],
       ["deletedHere", "deletedHere"],
+      ["restricted", "restricted"],
     ] as const
   ).filter(
     ([name]) => (counts[name] ?? 0) > 0 || name === "new" || name === "updated" || name === "unchanged",
@@ -571,7 +596,6 @@ function DeletedTab({ entry, editable }: { entry: ImportView; editable: boolean 
             cell: (row: ChangeEntry) => (
               <DecisionCell
                 entry={row}
-                decisions={DELETE_DECISIONS}
                 editable={editable}
                 saved={saved.has(row.id)}
                 onDecide={(decision) => void decide([row.id], decision)}
