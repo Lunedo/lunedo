@@ -439,10 +439,12 @@ export class ReimportService {
       kind === "page"
         ? await this.#currentPage(viewer, change.item_id)
         : await this.#currentTemplate(viewer, row.target_space_id, change.target_id);
-    if (kind === "page" && change.item_id && (await this.#withheld(viewer, importId, change.item_id))) {
+    if (
+      await this.#withheld(viewer, importId, row.target_space_id, kind === "page" ? change.item_id : null)
+    ) {
       throw new ImportError(
         "comparisonWithheld",
-        "The page is more restricted in Confluence. Its new content is shown only to people who keep access once the restriction is applied.",
+        "Fewer people may read this content in Confluence. Its new content is shown only to people who keep access once the restrictions are applied.",
       );
     }
     const document = await this.#pipeline.previewSource(
@@ -522,30 +524,52 @@ export class ReimportService {
     };
   }
 
-  async #withheld(viewer: Principal, importId: string, itemId: string): Promise<boolean> {
-    const pending = await this.#database.execute<{ details: Record<string, unknown> }>(sql`
-      select details from import_changes
-      where import_id = ${importId} and item_id = ${itemId} and change = 'permission' and applied_at is null
-        and details ->> 'scope' = 'page' and details ->> 'restriction' = 'view'
+  async #withheld(
+    viewer: Principal,
+    importId: string,
+    spaceId: string,
+    itemId: string | null,
+  ): Promise<boolean> {
+    const pending = await this.#database.execute<{
+      item_id: string | null;
+      details: Record<string, unknown>;
+    }>(sql`
+      select item_id, details from import_changes
+      where import_id = ${importId} and change = 'permission' and applied_at is null
+        and (details ->> 'scope' = 'space' or (details ->> 'scope' = 'page' and details ->> 'restriction' = 'view'))
       order by case details ->> 'action' when 'restrict' then 0 else 1 end, id`);
-    const narrowing = pending.rows.some(
-      (row) => row.details.action === "restrict" || row.details.action === "unlistHolder",
-    );
-    if (!narrowing) return false;
-    const changes = pending.rows.flatMap((row) => {
-      try {
-        return [this.#pageChange(row.details)];
-      } catch {
-        return [];
-      }
-    });
+    const narrows = (details: Record<string, unknown>) =>
+      details.scope === "page"
+        ? details.action === "restrict" || details.action === "unlistHolder"
+        : details.action === "remove";
+    if (!pending.rows.some((row) => narrows(row.details))) return false;
     try {
       await this.#database.transaction(async (tx) => {
-        await this.#pageAccess.changeWithin(tx, SYSTEM, itemId, changes);
+        for (const row of pending.rows) {
+          try {
+            await tx.transaction(async (step) => {
+              if (row.details.scope === "page") {
+                if (!row.item_id) throw new ImportError("changeNotFound", "The difference has no page.");
+                await this.#pageAccess.changeWithin(step, SYSTEM, row.item_id, [
+                  this.#pageChange(row.details),
+                ]);
+              } else {
+                await this.#spacePermissions.apply(
+                  SYSTEM,
+                  spaceId,
+                  await this.#spaceChange(step, spaceId, row.details),
+                  { tx: step },
+                );
+              }
+            });
+          } catch (error) {
+            if (narrows(row.details)) throw error;
+          }
+        }
         const allowed = await this.#authorization.authorize(
           viewer,
-          "item.view",
-          { type: "item", id: itemId },
+          itemId ? "item.view" : "space.view",
+          itemId ? { type: "item", id: itemId } : { type: "space", id: spaceId },
           { executor: tx },
         );
         throw new AccessProbe(allowed);

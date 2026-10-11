@@ -1364,7 +1364,7 @@
     "reimportSpaceFixed": "Ein erneuter Import geht in den Bereich des früheren Imports; seine Bereichseinstellungen lassen sich nicht ändern.",
     "changeNotComparable": "Vor dem Anwenden lassen sich nur Konflikte vergleichen. Wähle einen Konflikt.",
     "comparisonUnavailable": "Dieser Konflikt wurde angewendet oder durch einen neueren Export ersetzt. Vergleiche die Versionen im Verlauf der Seite.",
-    "comparisonWithheld": "In Confluence dürfen weniger Personen diese Seite lesen. Übernimm zuerst die Einschränkung bei den Berechtigungsabweichungen."
+    "comparisonWithheld": "In Confluence dürfen weniger Personen diesen Inhalt lesen. Übernimm zuerst die Einschränkungen bei den Berechtigungsabweichungen."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -6864,7 +6864,7 @@
         "sourceVersion": "Confluence, Version {number}",
         "failed": "Der Vergleich konnte nicht geladen werden",
         "withheldTitle": "Der neue Inhalt ist in Confluence eingeschränkt",
-        "withheld": "In Confluence dürfen weniger Personen diese Seite lesen als in Pagehall. Ihr neuer Inhalt wird nur Personen gezeigt, die nach Übernahme der Einschränkung weiter Zugriff haben. Übernimm zuerst die Einschränkung bei den Berechtigungsabweichungen.",
+        "withheld": "In Confluence dürfen weniger Personen diesen Inhalt lesen als in Pagehall. Der neue Inhalt wird nur Personen gezeigt, die nach Übernahme der Einschränkungen weiter Zugriff haben. Übernimm sie zuerst bei den Berechtigungsabweichungen.",
         "openPermissions": "Berechtigungsabweichungen öffnen"
       }
     }

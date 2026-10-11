@@ -869,6 +869,83 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
     });
   });
 
+  it("withholds the source when a parent page is restricted further at the source", async () => {
+    const w = await world();
+    await editLocally(w);
+    const after = reimportAfter();
+    const reimport = await harness.reimported(
+      {
+        ...after,
+        restrictions: [
+          ...(after.restrictions ?? []),
+          { id: "3962", contentId: RE.home, kind: "View" as const, userKey: ALICE.key },
+        ],
+      },
+      { organizationId: w.organizationId, admin: w.admin, spaceId: w.spaceId },
+    );
+    const item = await w.item(RE.keepHere);
+    const conflict = await idOf(w.admin, reimport.id, "conflicts", item);
+    await expect(
+      test.services.imports.reimports.compare(as(w.otherAdmin), reimport.id, conflict),
+    ).rejects.toMatchObject({ code: "comparisonWithheld" });
+  });
+
+  it("withholds the source when a narrowing restriction cannot be tried out", async () => {
+    const w = await world();
+    await editLocally(w);
+    const reimport = await harness.reimported(reimportAfter(), {
+      organizationId: w.organizationId,
+      admin: w.admin,
+      spaceId: w.spaceId,
+    });
+    const item = await w.item(RE.keepHere);
+    const conflict = await idOf(w.admin, reimport.id, "conflicts", item);
+    await test.database.execute(sql`
+      insert into import_changes (id, import_id, kind, source_id, change, item_id, target_id, title, details)
+      values (gen_random_uuid(), ${reimport.id}, 'restriction', ${`${RE.keepHere}:view:members`}, 'permission',
+        ${item}, ${item}, 'Keep here', ${JSON.stringify({
+          scope: "page",
+          action: "unlistHolder",
+          restriction: "view",
+          holderKind: "organizationMembers",
+          principal: { kind: "organizationMembers", id: null },
+        })}::jsonb)`);
+    await expect(
+      test.services.imports.reimports.compare(as(w.otherAdmin), reimport.id, conflict),
+    ).rejects.toMatchObject({ code: "comparisonWithheld" });
+  });
+
+  it("withholds the source from people who lose the space at the source", async () => {
+    const w = await world();
+    await editLocally(w);
+    await test.database.execute(sql`
+      insert into group_members (group_id, account_id) values (${w.readers}, ${w.otherAdmin})`);
+    await test.services.spacePermissions.apply(as(w.admin), w.spaceId, {
+      action: "grant",
+      principalKind: "group",
+      principalId: w.readers,
+      role: "reader",
+    });
+    await test.database.execute(sql`
+      delete from space_permissions where space_id = ${w.spaceId} and principal_kind = 'account'
+        and principal_id = ${w.otherAdmin}`);
+    const after = reimportAfter();
+    const reimport = await harness.reimported(
+      {
+        ...after,
+        spacePermissions: (after.spacePermissions ?? []).filter((entry) => entry.group !== "readers"),
+      },
+      { organizationId: w.organizationId, admin: w.admin, spaceId: w.spaceId },
+    );
+    const reimports = test.services.imports.reimports;
+    const conflict = await idOf(w.admin, reimport.id, "conflicts", await w.item(RE.keepHere));
+    await expect(reimports.compare(as(w.otherAdmin), reimport.id, conflict)).rejects.toMatchObject({
+      code: "comparisonWithheld",
+    });
+    const comparison = await reimports.compare(as(w.admin), reimport.id, conflict);
+    expect(JSON.stringify(comparison.after)).toContain("Source keep here");
+  });
+
   it("compares a space template changed on both sides", async () => {
     const template = {
       id: "3701",

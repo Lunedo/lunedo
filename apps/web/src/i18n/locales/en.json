@@ -1364,7 +1364,7 @@
     "reimportSpaceFixed": "A re-import goes into the space of the earlier import; its space settings cannot change.",
     "changeNotComparable": "Only conflicts can be compared before they are applied. Choose a conflict.",
     "comparisonUnavailable": "This conflict was applied or replaced by a newer export. Compare the versions in the history of the page.",
-    "comparisonWithheld": "In Confluence, fewer people may read this page. Apply the restriction from the permission differences first."
+    "comparisonWithheld": "Fewer people may read this content in Confluence. Apply the restrictions from the permission differences first."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -6864,7 +6864,7 @@
         "sourceVersion": "Confluence, version {number}",
         "failed": "The comparison could not be loaded",
         "withheldTitle": "The new content is restricted in Confluence",
-        "withheld": "In Confluence, fewer people may read this page than in Pagehall. Its new content is shown only to people who keep access once the restriction is applied. Apply the restriction from the permission differences first.",
+        "withheld": "Fewer people may read this content in Confluence than in Pagehall. Its new content is shown only to people who keep access once the restrictions are applied. Apply them from the permission differences first.",
         "openPermissions": "Open permission differences"
       }
     }
