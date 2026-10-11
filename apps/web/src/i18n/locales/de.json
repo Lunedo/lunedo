@@ -3186,7 +3186,9 @@
         "shared": "Seite freigegeben",
         "shareChanged": "Seitenzugriff geändert",
         "unshared": "Seitenzugriff entfernt",
-        "guestInvited": "Gast zu einer Seite eingeladen"
+        "guestInvited": "Gast zu einer Seite eingeladen",
+        "restrictionHolderAdded": "Person oder Gruppe zu einer Seitenbeschränkung hinzugefügt",
+        "restrictionHolderRemoved": "Person oder Gruppe aus einer Seitenbeschränkung entfernt"
       },
       "trash": {
         "itemsDeleted": "In den Papierkorb verschoben",
@@ -3241,7 +3243,12 @@
         "tokenUsed": "Atlassian-API-Token eines Imports verwendet",
         "tokenDeleted": "Atlassian-API-Token eines Imports gelöscht",
         "groupMapped": "Gruppe aus einem Import zugeordnet",
-        "permissionsApplied": "Importierte Berechtigungen angewendet"
+        "permissionsApplied": "Importierte Berechtigungen angewendet",
+        "reimportStarted": "Erneuter Import gestartet",
+        "reimportRefused": "Erneuter Import für einen anderen Bereich abgelehnt",
+        "reimportApplied": "Erneuter Import angewendet",
+        "conflictsDecided": "Entscheidungen zu einem erneuten Import getroffen",
+        "permissionDifferenceApplied": "Abweichung der Berechtigungen aus einem erneuten Import übernommen"
       }
     },
     "action": "Aktion",

@@ -1,15 +1,21 @@
 import {
+  changeDecisions,
+  changeKinds,
+  changeTabs,
+  changeTypes,
   importSources,
   importStates,
   MAX_MAPPINGS,
   MAX_REVIEWERS,
   pipelinePhases,
   problemCodes,
+  reimportPhases,
   reportCategoryNames,
 } from "@pagehall/server";
 import { z } from "zod";
 import { extensibleEnum, timestamp, uuid } from "../http/schemas.js";
-import { spaceGrantSchema, visibilitySchema } from "../spaces/schemas.js";
+import { pageImpactSchema } from "../sharing/schemas.js";
+import { impactSchema, spaceGrantSchema, visibilitySchema } from "../spaces/schemas.js";
 
 const ID = (n: number) => `01929b1e-7c3a-7d2e-9f4b-3c2d1e0f${String(n).padStart(4, "0")}`;
 
@@ -20,12 +26,12 @@ export const sourceSchema = extensibleEnum(
 
 const stateSchema = extensibleEnum(
   importStates,
-  "State of the import. `draft` while the wizard is filled in, `analyzing` while the export is read, `ready` when it can be started, `running` while it imports, `held` when the importing administrator lost the permission and another administrator has to take over, `stopping` and `discarding` while the quarantine space is deleted, `review` when the quarantine space waits for a decision, `accepted`, `discarded`, `stopped` and `failed` at the end.",
+  "State of the import. `draft` while the wizard is filled in, `analyzing` while the export is read, `ready` when it can be started, `running` while it imports, `held` when the importing administrator lost the permission and another administrator has to take over, `stopping` and `discarding` while the quarantine space is deleted, `review` when the quarantine space waits for a decision, `accepted`, `discarded`, `stopped` and `failed` at the end. A re-import is in `running` while it compares or applies, in `review` while changes wait for a decision, `accepted` when everything is applied, and `superseded` when a newer re-import of the same space replaced it.",
 );
 
 const phaseSchema = extensibleEnum(
-  ["read", ...pipelinePhases, "done"] as const,
-  "Step the import is in: `read` reads the export, then `space`, `people`, `pages`, `attachments`, `content`, `comments`, `reactions`, `permissions` and `finish`; `done` after the last step.",
+  ["read", "compare", ...new Set([...pipelinePhases, ...reimportPhases]), "done"] as [string, ...string[]],
+  "Step the import is in: `read` reads the export, then `space`, `people`, `pages`, `attachments`, `templates`, `content`, `comments`, `reactions`, `permissions`, `baseline` and `finish`; `done` after the last step. A re-import compares in `compare` and applies in `lineage`, `people`, `pages`, `moves`, `attachments`, `templates`, `content`, `labels`, `comments`, `reactions`, `deletions`, `baseline` and `finish`.",
 );
 
 const personSchema = z
@@ -127,6 +133,19 @@ export const importSchema = z
       .object({ id: uuid("ID of the space."), key: z.string().describe("Key of the space.") })
       .nullable()
       .describe("The space the import writes into."),
+    targetSpace: z
+      .object({
+        id: uuid("ID of the space."),
+        key: z.string().describe("Key of the space."),
+        name: z.string().describe("Name of the space."),
+      })
+      .nullable()
+      .describe(
+        "For a re-import, the space created by the earlier import that the changes go into; otherwise null.",
+      ),
+    reimportSpaceId: uuid(
+      "Space a newer export of the same Confluence space can be imported into again, or null when this import offers no re-import.",
+    ).nullable(),
     canManage: z
       .boolean()
       .describe("Whether the caller can change, start, stop, accept or discard the import."),
@@ -192,6 +211,8 @@ export const exampleImport = {
   },
   errorCode: null,
   quarantineSpace: { id: ID(6), key: "ITOPS" },
+  targetSpace: null,
+  reimportSpaceId: null,
   canManage: true,
   canResolve: true,
   canTakeOver: false,
@@ -205,7 +226,15 @@ export const exampleImport = {
 
 export const importListSchema = z.array(importSchema).describe("Imports, newest first.");
 
-export const createImportSchema = z.object({ source: sourceSchema }).strict().describe("A new import draft.");
+export const createImportSchema = z
+  .object({
+    source: sourceSchema,
+    spaceId: uuid(
+      "For a re-import: the space an earlier import created from the same Confluence space. Leave it out for an import into a new space.",
+    ).optional(),
+  })
+  .strict()
+  .describe("A new import draft.");
 
 export const updateImportSchema = z
   .object({
@@ -630,3 +659,192 @@ export const proposedAccessSchema = z
       .describe("Imported roles that wait for a person or group to be mapped; they apply when it is mapped."),
   })
   .describe("Who gets access when the import is accepted, as imported from Confluence.");
+
+const tabSchema = extensibleEnum(
+  changeTabs,
+  "Group of changes: `conflicts` (changed in Pagehall and at the source, or held because someone is editing), `updates` (new and changed only at the source), `deleted` (deleted at the source), `moved` (moved at the source) and `permissions` (differences to the permissions in the source).",
+);
+
+const decisionSchema = extensibleEnum(
+  changeDecisions,
+  "Decision: for a conflict `pagehall` keeps the Pagehall version, `source` takes the source version as a new version, `both` keeps the Pagehall version and adds the source version to the history, marked as not applied; for a page deleted at the source `trash` moves it to the trash and `keep` keeps it.",
+);
+
+export const changeSummarySchema = z
+  .object({
+    tabs: z
+      .array(
+        z
+          .object({
+            tab: tabSchema,
+            count: z.number().int().describe("Changes in this group the caller can see."),
+            open: z.number().int().describe("Of these, changes that still need a decision."),
+          })
+          .describe("A group of changes."),
+      )
+      .describe("Changes by group."),
+    hidden: z
+      .number()
+      .int()
+      .describe("Changes of pages the caller cannot read. They are decided by someone with access."),
+    counts: z
+      .record(z.string(), z.number().int())
+      .describe(
+        "What the comparison found: `new`, `updated`, `unchanged`, `conflicts`, `deleted`, `moved`, `movedHere`, `labels`, `deletedHere`, `newComments`, `goneComments`, `newAttachmentVersions`, `goneAttachments`, `newTemplates`, `updatedTemplates` and `permissions`.",
+      ),
+    open: z
+      .number()
+      .int()
+      .describe("Conflicts and deletions that still wait, including those the caller cannot see."),
+    applying: z.boolean().describe("Whether Pagehall is applying the changes right now."),
+  })
+  .describe("Summary of the changes of a re-import.");
+
+const placeSchema = z
+  .object({ id: uuid("ID of the page."), title: z.string().describe("Title of the page.") })
+  .describe("A page.");
+
+const changePersonSchema = z
+  .object({
+    id: uuid("ID of the account."),
+    name: z.string().nullable().describe("Name of the person, or null when unknown."),
+  })
+  .describe("A person.");
+
+export const changeEntrySchema = z
+  .object({
+    id: uuid("ID of the change."),
+    kind: extensibleEnum(
+      changeKinds,
+      "What changed: a page, template, comment, attachment, space permission or page restriction.",
+    ),
+    change: extensibleEnum(
+      changeTypes,
+      "Kind of change: `new`, `updated`, `conflict`, `deleted` (deleted at the source), `moved` (follows the source), `movedHere` (moved in Pagehall, so it stays), `labels`, `gone` (a comment or attachment deleted at the source, only listed) or `permission`.",
+    ),
+    item: z
+      .object({
+        id: uuid("ID of the page."),
+        title: z.string().describe("Title of the page in Pagehall."),
+        spaceKey: z.string().describe("Key of its space."),
+      })
+      .nullable()
+      .describe("The page in Pagehall, or null when the change concerns something else."),
+    title: z.string().nullable().describe("Title of what changed."),
+    sourceTitle: z.string().nullable().describe("Title at the source, for changed pages."),
+    reason: extensibleEnum(
+      ["both", "editing", "restricted"],
+      "Why it is a conflict: `both` when it was changed on both sides, `editing` when someone is editing the page, `restricted` when the page was restricted further at the source and that permission difference is not applied yet.",
+    ).nullable(),
+    editing: z
+      .boolean()
+      .describe(
+        "Whether someone was editing the page. Its source version is applied once the editing session has ended.",
+      ),
+    changedHere: z
+      .object({
+        by: changePersonSchema.nullable().describe("Who changed it last, or null when unknown."),
+        at: timestamp("When it was changed last in Pagehall."),
+      })
+      .nullable()
+      .describe("The last change in Pagehall, for conflicts."),
+    changedAtSource: timestamp("When it was changed at the source.").nullable(),
+    from: placeSchema
+      .nullable()
+      .describe("Parent page before the move at the source, when the caller can see it."),
+    to: placeSchema
+      .nullable()
+      .describe("Parent page after the move at the source, when the caller can see it."),
+    labels: z
+      .object({
+        added: z.array(z.string()).describe("Labels added at the source."),
+        removed: z
+          .array(z.string())
+          .describe(
+            "Labels removed at the source. They are removed only if nobody touched them in Pagehall.",
+          ),
+      })
+      .nullable()
+      .describe("Label changes."),
+    permission: z
+      .object({
+        scope: extensibleEnum(["space", "page"], "Whether it concerns the space or a page restriction."),
+        action: extensibleEnum(
+          ["grant", "change", "remove", "restrict", "unrestrict", "listHolder", "unlistHolder"],
+          "What applying does.",
+        ),
+        holder: z
+          .object({
+            kind: extensibleEnum(["account", "group", "organizationMembers"], "Kind of holder."),
+            id: uuid("ID of the account or group in Pagehall.").nullable(),
+            name: z.string().nullable().describe("Name in Pagehall, or null when unknown."),
+            sourceName: z.string().nullable().describe("Name or ID at the source."),
+          })
+          .nullable()
+          .describe("Who gains or loses the permission."),
+        role: z
+          .string()
+          .nullable()
+          .describe("Role according to the source, or null when the role is removed."),
+        currentRole: z.string().nullable().describe("Role in Pagehall now, or null."),
+        restriction: z.string().nullable().describe("`view` or `edit` for page restrictions."),
+        applicable: z
+          .boolean()
+          .describe(
+            "Whether it can be applied now. Holders not in Pagehall yet are mapped in the report first.",
+          ),
+      })
+      .nullable()
+      .describe(
+        "A difference to the permissions at the source. Pagehall never changes permissions by itself.",
+      ),
+    decision: decisionSchema.nullable(),
+    decidedBy: changePersonSchema.nullable().describe("Who decided, or null."),
+    decidedAt: timestamp("When it was decided.").nullable(),
+    appliedAt: timestamp("When it was applied, or null while it waits.").nullable(),
+  })
+  .describe("A change found by a re-import.");
+
+export const changeListSchema = z
+  .object({
+    items: z.array(changeEntrySchema).describe("Changes, oldest first."),
+    nextCursor: z.string().nullable().describe("Cursor of the next page, or null."),
+  })
+  .describe("A page of changes.");
+
+export const decisionsSchema = z
+  .object({
+    ids: z
+      .array(uuid("ID of a change."))
+      .min(1)
+      .max(500)
+      .describe("The changes to decide, up to 500 at once."),
+    decision: decisionSchema.nullable().describe("The decision, or null to take it back."),
+  })
+  .strict()
+  .describe("A decision for one or more changes.");
+
+export const decidedSchema = z
+  .object({ decided: z.number().int().describe("Number of changes decided.") })
+  .describe("Result of a decision.");
+
+export const confluenceLinkSchema = z
+  .object({
+    itemId: uuid("ID of the page or blog post."),
+    kind: extensibleEnum(["page", "blogPost"], "Kind of the item."),
+    spaceKey: z
+      .string()
+      .describe("Key of its space, or empty when the caller can open the page only because it is shared."),
+    title: z.string().describe("Title of the page."),
+    slug: z.string().describe("Title as it appears in the address."),
+  })
+  .describe("The Pagehall page an old Confluence link points to.");
+
+export const differenceImpactSchema = z
+  .object({
+    space: impactSchema.nullable().describe("Effect on the space, for space differences."),
+    page: pageImpactSchema
+      .nullable()
+      .describe("Effect on reading and editing the page, for page differences."),
+  })
+  .describe("Who gains or loses access when a permission difference is applied.");

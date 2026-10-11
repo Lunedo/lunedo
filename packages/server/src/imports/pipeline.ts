@@ -3,19 +3,22 @@ import { yDocFromDocument } from "@pagehall/editor-schema/yjs";
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import * as Y from "yjs";
+import { accountPrincipal } from "../accounts/principal.js";
 import { accountScopeChain } from "../accounts/scope.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import { claimTaskIds, publishTasks, syncDecisions } from "../collaboration/content.js";
 import { writeTaskStatus } from "../collaboration/tasks.js";
-import type { Database, Transaction } from "../database/database.js";
+import type { Database, Executor, Transaction } from "../database/database.js";
 import { type FileService, FileTooLargeError } from "../files/files.js";
 import { cleanFileName, fileNameKey } from "../files/names.js";
 import { MEGABYTE, maxFileSizeSetting } from "../files/settings.js";
 import { languageSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import { encodeState, MAX_LABELS_PER_PAGE, normalizeLabel, recomputeLinks } from "../spaces/documents.js";
-import { endPosition, ITEM_TITLE_MAX_LENGTH } from "../spaces/items.js";
+import { endPosition, ITEM_TITLE_MAX_LENGTH, lockSpaces } from "../spaces/items.js";
 import { signalSpaceChange } from "../spaces/signals.js";
+import type { TrashService } from "../spaces/trash.js";
+import type { VersionService } from "../spaces/versions.js";
 import { refreshReaderVisibility } from "../spaces/visibility.js";
 import { type TemplateLanguage, templateLanguages } from "../templates/builtin/types.js";
 import type { TemplateField } from "../templates/fields.js";
@@ -24,6 +27,19 @@ import {
   TEMPLATE_NAME_MAX_LENGTH,
   TEMPLATE_TITLE_MAX_LENGTH,
 } from "../templates/templates.js";
+import {
+  pageBaselines,
+  pageStatesOf,
+  recordHolderBaselines,
+  recordImportedSpace,
+  recordPageBaselines,
+  recordTemplateBaselines,
+  recordTitles,
+  type SourcePageState,
+  sourceHolders,
+  templateState,
+  updateSourceSide,
+} from "./baselines.js";
 import { threadAnchor, toCommentDocument, withoutThreads } from "./comment-document.js";
 import { titleKey } from "./confluence/staged.js";
 import {
@@ -37,9 +53,17 @@ import {
 } from "./confluence/storage.js";
 import { ImportFormatError } from "./errors.js";
 import type { ByteSource } from "./formats/bytes.js";
-import { type Directory, ensurePeople } from "./people.js";
+import { type Directory, ensurePeople, personOf } from "./people.js";
 import { ensureGroups, groupKey, roleFor } from "./permissions.js";
 import { createQuarantineSpace } from "./quarantine.js";
+import {
+  type ChangeDecision,
+  type ChangeType,
+  changedLocally,
+  lineageImports,
+  localPages,
+  openSessions,
+} from "./reimport-compare.js";
 import { type ProblemInput, recordProblems } from "./report.js";
 import type {
   ImportReader,
@@ -69,9 +93,41 @@ export const pipelinePhases = [
   "comments",
   "reactions",
   "permissions",
+  "baseline",
   "finish",
 ] as const;
-export type PipelinePhase = (typeof pipelinePhases)[number];
+export const reimportPhases = [
+  "lineage",
+  "people",
+  "pages",
+  "moves",
+  "attachments",
+  "templates",
+  "content",
+  "labels",
+  "comments",
+  "reactions",
+  "deletions",
+  "baseline",
+  "finish",
+] as const;
+export type PipelinePhase = (typeof pipelinePhases)[number] | (typeof reimportPhases)[number];
+
+export interface ReimportRun {
+  readonly spaceId: string;
+  readonly actorId: string;
+  editable(executor: Executor, itemIds: readonly string[]): Promise<Set<string>>;
+}
+
+interface ChangeEntry {
+  readonly id: string;
+  readonly sourceId: string;
+  readonly change: ChangeType;
+  readonly itemId: string | null;
+  readonly targetId: string | null;
+  readonly details: Record<string, unknown>;
+  readonly decision: ChangeDecision | null;
+}
 
 export interface PipelineRun {
   readonly importId: string;
@@ -86,6 +142,7 @@ export interface PipelineRun {
   readonly reader: ImportReader;
   readonly file: ByteSource;
   readonly staging: StagingStore;
+  readonly reimport: ReimportRun | null;
   beat(): Promise<void>;
   progress(done: number, total: number): Promise<void>;
 }
@@ -147,12 +204,6 @@ export function originalPageUrl(base: string | null, spaceKey: string, title: st
   return `${root}/display/${encodeURIComponent(spaceKey)}/${encodeURIComponent(title).replaceAll("%20", "+")}`;
 }
 
-export function personOf(sourceId: string): Pick<SourcePerson, "sourceId" | "accountId" | "userKey"> {
-  return sourceId.startsWith("key:")
-    ? { sourceId, accountId: null, userKey: sourceId.slice(4) }
-    : { sourceId, accountId: sourceId, userKey: null };
-}
-
 function stateVectorOf(document: DocumentJson): Buffer {
   const doc = yDocFromDocument(document);
   const vector = Buffer.from(Y.encodeStateVector(doc));
@@ -165,17 +216,23 @@ export class ImportPipeline {
   readonly #files: FileService;
   readonly #settings: SettingsService;
   readonly #audit: AuditLog;
+  readonly #versions: VersionService;
+  readonly #trash: TrashService;
 
   constructor(options: {
     database: Database;
     files: FileService;
     settings: SettingsService;
     audit: AuditLog;
+    versions: VersionService;
+    trash: TrashService;
   }) {
     this.#database = options.database;
     this.#files = options.files;
     this.#settings = options.settings;
     this.#audit = options.audit;
+    this.#versions = options.versions;
+    this.#trash = options.trash;
   }
 
   async runPhase(phase: PipelinePhase, run: PipelineRun): Promise<void> {
@@ -198,8 +255,18 @@ export class ImportPipeline {
         return this.#reactions(run);
       case "permissions":
         return this.#permissions(run);
+      case "baseline":
+        return run.reimport ? this.#reimportBaseline(run, run.reimport) : this.#baseline(run);
       case "finish":
-        return this.#finish(run);
+        return run.reimport ? undefined : this.#finish(run);
+      case "lineage":
+        return run.reimport ? this.#lineage(run, run.reimport) : undefined;
+      case "moves":
+        return run.reimport ? this.#moves(run, run.reimport) : undefined;
+      case "labels":
+        return run.reimport ? this.#labels(run, run.reimport) : undefined;
+      case "deletions":
+        return run.reimport ? this.#deletions(run, run.reimport) : undefined;
     }
   }
 
@@ -255,7 +322,8 @@ export class ImportPipeline {
 
   async quarantineSpace(importId: string): Promise<{ spaceId: string; overviewId: string } | null> {
     const result = await this.#database.execute<{ space_id: string; overview_item_id: string | null }>(sql`
-      select s.id as space_id, s.overview_item_id from imports i join spaces s on s.id = i.quarantine_space_id
+      select s.id as space_id, s.overview_item_id from imports i
+      join spaces s on s.id = coalesce(i.target_space_id, i.quarantine_space_id)
       where i.id = ${importId}`);
     const row = result.rows[0];
     return row?.overview_item_id ? { spaceId: row.space_id, overviewId: row.overview_item_id } : null;
@@ -379,11 +447,19 @@ export class ImportPipeline {
           if (page.sourceId === home) {
             id = space.overviewId;
           } else {
+            const nested = page.type === "page" && page.parentId !== null && page.parentId !== home;
             const parentId =
-              page.type === "page" && page.parentId && page.parentId !== home
+              nested && page.parentId
                 ? (parents.get(page.parentId) ??
                   (await this.#mappedOne(tx, run.importId, "page", page.parentId)))
                 : null;
+            if (
+              run.reimport &&
+              nested &&
+              (!parentId || !(await run.reimport.editable(tx, [parentId])).has(parentId))
+            ) {
+              continue;
+            }
             const creatorId = (page.creatorId ? people.get(page.creatorId) : undefined) ?? run.importerId;
             id = uuidv7();
             const position = await endPosition(tx, space.spaceId, parentId);
@@ -477,6 +553,7 @@ export class ImportPipeline {
       done += 1;
       const itemId = (await this.#mapped(run.importId, "page", [attachment.pageId])).get(attachment.pageId);
       if (!itemId) continue;
+      if (run.reimport && !(await this.#writable(run, run.reimport, [itemId])).has(itemId)) continue;
       const name = cleanFileName(attachment.fileName) ?? `attachment-${attachment.sourceId}`;
       const versions = await this.#mapped(
         run.importId,
@@ -765,7 +842,17 @@ export class ImportPipeline {
       "templateContent",
       templates.map((template) => template.sourceId),
     );
-    const open = templates.filter((template) => !done.has(template.sourceId));
+    const plan = run.reimport ? await this.#plan(run.importId, "template") : null;
+    const wanted = (template: SourceTemplate) =>
+      plan
+        ? (plan.get(template.sourceId) ?? []).some(
+            (entry) =>
+              (entry.change === "new" && !done.has(template.sourceId)) ||
+              entry.change === "updated" ||
+              (entry.change === "conflict" && entry.decision !== null),
+          )
+        : !done.has(template.sourceId);
+    const open = templates.filter(wanted);
     if (open.length === 0) return;
     const targets = await this.#mapped(
       run.importId,
@@ -809,10 +896,9 @@ export class ImportPipeline {
         for (const [name, count] of converted.macros) {
           problems.push({ code: "unsupportedMacro", ...base, details: { name, count } });
         }
-        await this.#database.transaction(async (tx) => {
-          if (await this.#mappedOne(tx, run.importId, "templateContent", template.sourceId)) return;
+        const write = async (tx: Transaction, id: string) => {
           const current = await tx.execute<{ fields: TemplateField[] }>(
-            sql`select fields from page_templates where id = ${templateId} for update`,
+            sql`select fields from page_templates where id = ${id} for update`,
           );
           const fields = mergeFields(
             declared.get(template.sourceId)?.fields ?? [],
@@ -821,13 +907,95 @@ export class ImportPipeline {
           await tx.execute(sql`
             update page_templates set document = ${JSON.stringify(converted.document)}::jsonb,
               fields = ${JSON.stringify(fields)}::jsonb, schema_version = ${editorSchemaVersion}
-            where id = ${templateId}`);
+            where id = ${id}`);
           await addButtonFields(tx, converted.document, language);
           await recordProblems(tx, run.importId, problems);
-          await this.#map(tx, run.importId, "templateContent", template.sourceId, templateId);
+        };
+        await this.#database.transaction(async (tx) => {
+          if (!plan || !run.reimport) {
+            if (await this.#mappedOne(tx, run.importId, "templateContent", template.sourceId)) return;
+            await write(tx, templateId);
+            await this.#map(tx, run.importId, "templateContent", template.sourceId, templateId);
+            return;
+          }
+          await this.#reimportTemplate(tx, run, run.reimport, {
+            template,
+            templateId,
+            entries: plan.get(template.sourceId) ?? [],
+            write,
+          });
         });
       }
       await run.beat();
+    }
+  }
+
+  async #reimportTemplate(
+    tx: Transaction,
+    run: PipelineRun,
+    reimport: ReimportRun,
+    input: {
+      template: SourceTemplate;
+      templateId: string;
+      entries: readonly ChangeEntry[];
+      write: (tx: Transaction, id: string) => Promise<void>;
+    },
+  ): Promise<void> {
+    const state = templateState(input.template);
+    const record = () =>
+      recordTemplateBaselines(tx, {
+        spaceId: reimport.spaceId,
+        importId: run.importId,
+        templates: [{ state, targetId: input.templateId }],
+      });
+    const sourceOnly = () =>
+      tx.execute(sql`
+        update import_baselines set checksum = ${state.checksum}, import_id = ${run.importId}, recorded_at = now()
+        where space_id = ${reimport.spaceId} and kind = 'template' and source_id = ${state.sourceId}`);
+    for (const entry of input.entries) {
+      const current = await this.#lockChange(tx, entry.id);
+      if (!current) continue;
+      if (current.change === "new") {
+        if (!(await this.#mappedOne(tx, run.importId, "templateContent", state.sourceId))) {
+          await input.write(tx, input.templateId);
+          await this.#map(tx, run.importId, "templateContent", state.sourceId, input.templateId);
+        }
+        await record();
+        await this.#applied(tx, entry.id, reimport.actorId);
+        continue;
+      }
+      if (current.change === "updated") {
+        const local = await tx.execute<{ changed: boolean }>(sql`
+          select p.updated_at is distinct from (b.local ->> 'updatedAt')::timestamptz as changed
+          from import_baselines b join page_templates p on p.id = b.target_id
+          where b.space_id = ${reimport.spaceId} and b.kind = 'template' and b.source_id = ${state.sourceId}`);
+        if (local.rows[0]?.changed !== false) {
+          await this.#hold(tx, entry.id, "both");
+          continue;
+        }
+        await input.write(tx, input.templateId);
+        await record();
+        await this.#applied(tx, entry.id, reimport.actorId);
+        continue;
+      }
+      if (current.change !== "conflict" || current.decision === null) continue;
+      if (current.decision === "source") {
+        await input.write(tx, input.templateId);
+        await sourceOnly();
+      } else if (current.decision === "both") {
+        const copy = uuidv7();
+        await tx.execute(sql`
+          insert into page_templates (id, level, space_id, name, description, category, title, document, schema_version,
+            fields, created_by, updated_by)
+          select ${copy}, level, space_id, left(name || ' (Confluence)', ${TEMPLATE_NAME_MAX_LENGTH}), description,
+            category, title, document, schema_version, '[]'::jsonb, ${reimport.actorId}, ${reimport.actorId}
+          from page_templates where id = ${input.templateId}`);
+        await input.write(tx, copy);
+        await sourceOnly();
+      } else {
+        await sourceOnly();
+      }
+      await this.#applied(tx, entry.id, reimport.actorId);
     }
   }
 
@@ -835,12 +1003,16 @@ export class ImportPipeline {
     const context: ReadContext = { staging: run.staging };
     const sourceSpace = await run.reader.space(context);
     const total = await run.staging.count("page");
+    const plan = run.reimport ? await this.#plan(run.importId, "page") : null;
     let done = 0;
     let batch: SourcePage[] = [];
     const flush = async () => {
       const pages = batch;
       batch = [];
-      const worked = await this.#contentBatch(run, context, sourceSpace.key, pages);
+      const worked =
+        plan && run.reimport
+          ? await this.#reimportContent(run, run.reimport, context, sourceSpace, pages, plan)
+          : await this.#contentBatch(run, context, sourceSpace.key, pages);
       done += pages.length;
       if (!worked) return;
       await run.progress(done, total);
@@ -853,11 +1025,289 @@ export class ImportPipeline {
     await flush();
   }
 
+  async #reimportContent(
+    run: PipelineRun,
+    reimport: ReimportRun,
+    context: ReadContext,
+    sourceSpace: { key: string; homePageId: string | null },
+    pages: readonly SourcePage[],
+    plan: ReadonlyMap<string, ChangeEntry[]>,
+  ): Promise<boolean> {
+    const created = pages.filter((page) => plan.get(page.sourceId)?.some((entry) => entry.change === "new"));
+    const states = new Map(
+      (await pageStatesOf(run.reader, context, created, sourceSpace.homePageId)).map((state) => [
+        state.sourceId,
+        state,
+      ]),
+    );
+    const added = await this.#contentBatch(
+      run,
+      context,
+      sourceSpace.key,
+      created,
+      async (tx, page, itemId) => {
+        const state = states.get(page.sourceId);
+        if (state) {
+          await recordPageBaselines(tx, {
+            spaceId: reimport.spaceId,
+            importId: run.importId,
+            pages: [{ state, targetId: itemId }],
+          });
+        }
+        for (const entry of plan.get(page.sourceId) ?? []) {
+          if (entry.change === "new") await this.#applied(tx, entry.id, reimport.actorId);
+        }
+      },
+    );
+    const updated = await this.#updateBatch(run, reimport, context, sourceSpace, pages, plan);
+    return added || updated;
+  }
+
+  async #writable(run: PipelineRun, reimport: ReimportRun, itemIds: readonly string[]): Promise<Set<string>> {
+    const editable = await reimport.editable(this.#database, itemIds);
+    if (editable.size === 0) return editable;
+    const narrowed = await this.#database.execute<{ item_id: string }>(sql`
+      select distinct item_id from import_changes
+      where import_id = ${run.importId} and change = 'permission' and applied_at is null and item_id is not null
+        and details ->> 'restriction' = 'view' and details ->> 'action' in ('restrict', 'unlistHolder')
+        and item_id = any(${sql.param([...editable])}::uuid[])`);
+    for (const row of narrowed.rows) editable.delete(row.item_id);
+    return editable;
+  }
+
+  async #plan(importId: string, kind: string): Promise<Map<string, ChangeEntry[]>> {
+    const rows = await this.#database.execute<{
+      id: string;
+      source_id: string;
+      change: ChangeType;
+      item_id: string | null;
+      target_id: string | null;
+      details: Record<string, unknown>;
+      decision: ChangeDecision | null;
+    }>(sql`
+      select id, source_id, change, item_id, target_id, details, decision from import_changes
+      where import_id = ${importId} and kind = ${kind} and applied_at is null`);
+    const plan = new Map<string, ChangeEntry[]>();
+    for (const row of rows.rows) {
+      const list = plan.get(row.source_id) ?? [];
+      list.push({
+        id: row.id,
+        sourceId: row.source_id,
+        change: row.change,
+        itemId: row.item_id,
+        targetId: row.target_id,
+        details: row.details,
+        decision: row.decision,
+      });
+      plan.set(row.source_id, list);
+    }
+    return plan;
+  }
+
+  async #lockChange(
+    tx: Transaction,
+    id: string,
+  ): Promise<{
+    change: ChangeType;
+    decision: ChangeDecision | null;
+    details: Record<string, unknown>;
+  } | null> {
+    const result = await tx.execute<{
+      change: ChangeType;
+      decision: ChangeDecision | null;
+      details: Record<string, unknown>;
+      applied_at: Date | string | null;
+    }>(sql`select change, decision, details, applied_at from import_changes where id = ${id} for update`);
+    const row = result.rows[0];
+    return row && row.applied_at === null ? row : null;
+  }
+
+  async #applied(tx: Transaction, id: string, actorId: string): Promise<void> {
+    await tx.execute(sql`
+      update import_changes set applied_at = now(), applied_by = ${actorId} where id = ${id} and applied_at is null`);
+  }
+
+  async #hold(tx: Transaction, id: string, reason: "both" | "editing"): Promise<void> {
+    await tx.execute(sql`
+      update import_changes set change = 'conflict', details = details || ${JSON.stringify({ reason })}::jsonb
+      where id = ${id}`);
+  }
+
+  async #refreshLocal(tx: Transaction, spaceId: string, sourceId: string): Promise<void> {
+    await tx.execute(sql`
+      update import_baselines b set local = coalesce((
+        select jsonb_build_object('revision', d.revision, 'title', t.title, 'parentId', t.parent_id)
+        from tree_items t join page_documents d on d.item_id = t.id where t.id = b.target_id), b.local)
+      where b.space_id = ${spaceId} and b.kind = 'page' and b.source_id = ${sourceId}`);
+  }
+
+  async #updateBatch(
+    run: PipelineRun,
+    reimport: ReimportRun,
+    context: ReadContext,
+    sourceSpace: { key: string; homePageId: string | null },
+    pages: readonly SourcePage[],
+    plan: ReadonlyMap<string, ChangeEntry[]>,
+  ): Promise<boolean> {
+    const work = pages.flatMap((page) =>
+      (plan.get(page.sourceId) ?? [])
+        .filter(
+          (entry) => entry.change === "updated" || (entry.change === "conflict" && entry.decision !== null),
+        )
+        .map((entry) => ({ page, entry })),
+    );
+    if (work.length === 0) return false;
+    const touched = [...new Map(work.map(({ page }) => [page.sourceId, page])).values()];
+    const ids = touched.map((page) => page.sourceId);
+    const states = new Map(
+      (await pageStatesOf(run.reader, context, touched, sourceSpace.homePageId)).map((state) => [
+        state.sourceId,
+        state,
+      ]),
+    );
+    const baselines = await pageBaselines(this.#database, reimport.spaceId, ids);
+    const bodies = await run.reader.bodies(context, ids);
+    const comments = await run.reader.comments(context, ids);
+    const known = await this.#mapped(
+      run.importId,
+      "comment",
+      comments.map((comment) => comment.sourceId),
+    );
+    const markers = new Map<string, Map<string, string>>();
+    for (const comment of comments) {
+      if (!comment.inline?.markerRef) continue;
+      const map = markers.get(comment.pageId) ?? new Map<string, string>();
+      if (!map.has(comment.inline.markerRef)) map.set(comment.inline.markerRef, comment.sourceId);
+      markers.set(comment.pageId, map);
+    }
+    const converter = await this.#converter(
+      run,
+      context,
+      sourceSpace.key,
+      touched.map((page) => ({
+        key: page.sourceId,
+        owner: page.sourceId,
+        body: bodies.get(page.sourceId)?.content ?? "",
+      })),
+    );
+    const modifiers = await this.#persons(
+      run,
+      touched.map((page) => page.modifierId),
+    );
+    const language = await this.#language(run);
+    const editable = await reimport.editable(
+      this.#database,
+      work.flatMap(({ entry }) => (entry.targetId ? [entry.targetId] : [])),
+    );
+    let progressed = false;
+    for (const { page, entry } of work) {
+      const itemId = entry.targetId;
+      const state = states.get(page.sourceId);
+      const baseline = baselines.get(page.sourceId);
+      if (!itemId || !state || !baseline || !editable.has(itemId)) continue;
+      const threads = new Map<string, string>();
+      const converted = converter.convert(page.sourceId, (ref) => {
+        const commentId = markers.get(page.sourceId)?.get(ref);
+        if (!commentId) return null;
+        const existing = known.get(commentId);
+        if (existing) return existing;
+        const threadId = threads.get(commentId) ?? uuidv7();
+        threads.set(commentId, threadId);
+        return threadId;
+      });
+      const unanchored = new Set<string>();
+      for (const [commentId, threadId] of threads) {
+        if (!threadAnchor(converted.document, threadId)) {
+          unanchored.add(threadId);
+          threads.delete(commentId);
+        }
+      }
+      const document = withoutThreads(converted.document, unanchored);
+      const problems: ProblemInput[] = converted.notes.map((note) =>
+        noteProblem(note, itemId, page.sourceId),
+      );
+      for (const [name, count] of converted.macros) {
+        problems.push({
+          code: "unsupportedMacro",
+          sourceKind: "page",
+          sourceId: page.sourceId,
+          itemId,
+          details: { name, count },
+        });
+      }
+      const author = (page.modifierId ? modifiers.get(page.modifierId) : undefined) ?? run.importerId;
+      await this.#database.transaction(async (tx) => {
+        const current = await this.#lockChange(tx, entry.id);
+        if (!current) return;
+        const exists = (await localPages(tx, [itemId])).get(itemId);
+        if (!exists) {
+          await this.#applied(tx, entry.id, reimport.actorId);
+          progressed = true;
+          return;
+        }
+        let apply: boolean | null;
+        if (current.change === "updated") {
+          if (changedLocally(exists, baseline)) {
+            await this.#hold(tx, entry.id, "both");
+            progressed = true;
+            return;
+          }
+          apply = true;
+        } else if (current.change === "conflict" && current.decision === "source") {
+          apply = true;
+        } else if (current.change === "conflict" && current.decision === "both") {
+          apply = false;
+        } else if (current.change === "conflict" && current.decision === "pagehall") {
+          apply = null;
+        } else {
+          return;
+        }
+        if (apply === true && (await openSessions(tx, [itemId])).has(itemId)) {
+          if (current.change === "updated") {
+            await this.#hold(tx, entry.id, "editing");
+            progressed = true;
+          } else {
+            await tx.execute(sql`
+              update import_changes set details = details || ${JSON.stringify({ editing: true })}::jsonb
+              where id = ${entry.id}`);
+          }
+          return;
+        }
+        if (apply !== null) {
+          await addButtonFields(tx, document, language);
+          await this.#versions.importVersion(tx, {
+            itemId,
+            title: pageTitle(page),
+            document,
+            authorId: author,
+            apply,
+          });
+        }
+        if (apply === true) {
+          const stored = await tx.execute<{ snapshot: DocumentJson }>(
+            sql`select snapshot from page_documents where item_id = ${itemId}`,
+          );
+          await this.#published(tx, itemId, stored.rows[0]?.snapshot ?? document, converted.tasks, author);
+          for (const [commentId, threadId] of threads) {
+            await this.#map(tx, run.importId, "commentThread", commentId, threadId);
+          }
+          await recordProblems(tx, run.importId, problems);
+        }
+        await updateSourceSide(tx, { spaceId: reimport.spaceId, importId: run.importId, state });
+        if (apply === true) await this.#refreshLocal(tx, reimport.spaceId, page.sourceId);
+        await this.#applied(tx, entry.id, reimport.actorId);
+        progressed = true;
+      });
+    }
+    return progressed;
+  }
+
   async #contentBatch(
     run: PipelineRun,
     context: ReadContext,
     sourceKey: string,
     pages: readonly SourcePage[],
+    after?: (tx: Transaction, page: SourcePage, itemId: string) => Promise<void>,
   ): Promise<boolean> {
     if (pages.length === 0) return false;
     const finished = await this.#mapped(
@@ -979,6 +1429,7 @@ export class ImportPipeline {
         }
         await recordProblems(tx, run.importId, problems);
         await this.#map(tx, run.importId, "content", page.sourceId, itemId);
+        await after?.(tx, page, itemId);
         await signalSpaceChange(tx, { spaceId: space.spaceId, kind: "page", itemId });
       });
     }
@@ -1100,13 +1551,26 @@ export class ImportPipeline {
       });
     }
     await recomputeLinks(tx, itemId, claimed);
+    await this.#published(tx, itemId, claimed, input.tasks, actorId);
+  }
+
+  async #published(
+    tx: Transaction,
+    itemId: string,
+    claimed: DocumentJson,
+    tasks: readonly { id: string; done: boolean }[],
+    actorId: string,
+  ): Promise<void> {
     await publishTasks(tx, itemId, claimed);
     await syncDecisions(tx, itemId, claimed);
     await tx.execute(sql`
       update tasks set notified_assignee_id = assignee_id where item_id = ${itemId} and assignee_id is not null`);
+    await tx.execute(sql`
+      update content_mentions set notified_at = now()
+      where item_id = ${itemId} and comment_id is null and notified_at is null`);
     await markMentionsNotified(tx, itemId, null, extractMentions(claimed), actorId);
     const claimedIds = taskIds(claimed);
-    for (const [index, task] of input.tasks.entries()) {
+    for (const [index, task] of tasks.entries()) {
       const id = claimedIds.includes(task.id) ? task.id : claimedIds[index];
       if (id && task.done) await writeTaskStatus(tx, { taskId: id, itemId, done: true, actorId: null });
     }
@@ -1157,13 +1621,21 @@ export class ImportPipeline {
       "commentSkipped",
       all.map((comment) => comment.sourceId),
     );
-    const open = all.filter((comment) => !finished.has(comment.sourceId) && !skipped.has(comment.sourceId));
-    if (open.length === 0) return false;
+    const unmapped = all.filter(
+      (comment) => !finished.has(comment.sourceId) && !skipped.has(comment.sourceId),
+    );
+    if (unmapped.length === 0) return false;
     const items = await this.#mapped(
       run.importId,
       "page",
-      open.map((comment) => comment.pageId),
+      unmapped.map((comment) => comment.pageId),
     );
+    const allowed = run.reimport ? await this.#writable(run, run.reimport, [...items.values()]) : null;
+    const open = unmapped.filter((comment) => {
+      const itemId = items.get(comment.pageId);
+      return itemId !== undefined && (!allowed || allowed.has(itemId));
+    });
+    if (open.length === 0) return false;
     const threads = await this.#mapped(
       run.importId,
       "commentThread",
@@ -1408,6 +1880,287 @@ export class ImportPipeline {
             ${sql.param([...holder.permissions].sort())}::text[], ${decision.status}, ${decision.code})
           on conflict (import_id, source_key) do nothing`);
       }
+    });
+  }
+
+  async #pageBatches(
+    run: PipelineRun,
+    context: ReadContext,
+    spaceId: string,
+    handle: (tx: Transaction, states: readonly SourcePageState[]) => Promise<void>,
+  ): Promise<void> {
+    const home = (await run.reader.space(context)).homePageId;
+    let batch: SourcePage[] = [];
+    const flush = async () => {
+      const pages = batch;
+      batch = [];
+      const done = await this.#mapped(
+        run.importId,
+        "baseline",
+        pages.map((page) => page.sourceId),
+      );
+      const open = pages.filter((page) => !done.has(page.sourceId));
+      if (open.length === 0) return;
+      const states = await pageStatesOf(run.reader, context, open, home);
+      await this.#database.transaction(async (tx) => {
+        await handle(tx, states);
+        for (const state of states) await this.#map(tx, run.importId, "baseline", state.sourceId, spaceId);
+      });
+      await run.beat();
+    };
+    for await (const page of run.reader.pages(context)) {
+      batch.push(page);
+      if (batch.length >= PAGE_BATCH) await flush();
+    }
+    await flush();
+  }
+
+  async #baseline(run: PipelineRun): Promise<void> {
+    const context: ReadContext = { staging: run.staging };
+    const space = await this.#requireSpace(run.importId);
+    const source = await run.reader.space(context);
+    await recordImportedSpace(this.#database, {
+      spaceId: space.spaceId,
+      importId: run.importId,
+      sourceSpaceId: source.sourceId,
+      sourceSpaceKey: source.key,
+    });
+    await this.#pageBatches(run, context, space.spaceId, async (tx, states) => {
+      const targets = await this.#mappedIn(
+        tx,
+        run.importId,
+        "page",
+        states.map((state) => state.sourceId),
+      );
+      const pages = states.flatMap((state) => {
+        const targetId = targets.get(state.sourceId);
+        return targetId ? [{ state, targetId }] : [];
+      });
+      await recordPageBaselines(tx, { spaceId: space.spaceId, importId: run.importId, pages });
+      await recordTitles(tx, {
+        spaceId: space.spaceId,
+        spaceKey: source.key,
+        titles: states.map((state) => ({ sourceId: state.sourceId, title: state.title })),
+      });
+    });
+    const templates: { state: ReturnType<typeof templateState>; targetId: string }[] = [];
+    for await (const template of run.reader.templates(context)) {
+      const targetId = (await this.#mapped(run.importId, "template", [template.sourceId])).get(
+        template.sourceId,
+      );
+      if (targetId) templates.push({ state: templateState(template), targetId });
+    }
+    await recordTemplateBaselines(this.#database, {
+      spaceId: space.spaceId,
+      importId: run.importId,
+      templates,
+    });
+    await recordHolderBaselines(this.#database, {
+      spaceId: space.spaceId,
+      importId: run.importId,
+      holders: await sourceHolders(run.reader, context),
+    });
+  }
+
+  async #lineage(run: PipelineRun, reimport: ReimportRun): Promise<void> {
+    const lineage = (await lineageImports(this.#database, reimport.spaceId)).filter(
+      (id) => id !== run.importId,
+    );
+    await this.#database.execute(sql`
+      insert into import_items (import_id, kind, source_id, target_id)
+      select distinct on (kind, source_id) ${run.importId}, kind, source_id, target_id from import_items
+      where import_id = any(${sql.param(lineage)}::uuid[])
+        and kind in ('page', 'attachmentName', 'attachmentVersion', 'attachmentSkipped', 'comment', 'commentSkipped',
+          'commentThread', 'like', 'template', 'person')
+      order by kind, source_id, created_at desc
+      on conflict (import_id, kind, source_id) do nothing`);
+  }
+
+  async #moves(run: PipelineRun, reimport: ReimportRun): Promise<void> {
+    const plan = await this.#plan(run.importId, "page");
+    const entries = [...plan.values()]
+      .flat()
+      .filter((entry) => entry.change === "moved" || entry.change === "movedHere");
+    for (const entry of entries) {
+      const itemId = entry.targetId;
+      const to = typeof entry.details.to === "string" ? entry.details.to : null;
+      const parentId = to ? ((await this.#mapped(run.importId, "page", [to])).get(to) ?? null) : null;
+      await this.#database.transaction(async (tx) => {
+        await lockSpaces(tx, [reimport.spaceId]);
+        const current = await this.#lockChange(tx, entry.id);
+        if (!current || !itemId || !(await reimport.editable(tx, [itemId])).has(itemId)) return;
+        const baseline = (await pageBaselines(tx, reimport.spaceId, [entry.sourceId])).get(entry.sourceId);
+        const page = (await localPages(tx, [itemId])).get(itemId);
+        let follow = current.change === "moved" && page !== undefined && baseline !== undefined;
+        if (follow && page && baseline && page.parentId !== (baseline.local.parentId ?? null)) follow = false;
+        if (follow && to && !parentId) follow = false;
+        if (follow && parentId) {
+          const blocked = await tx.execute<{ found: boolean }>(sql`
+            with recursive up as (
+              select id, parent_id, 1 as depth from tree_items where id = ${parentId}
+              union all
+              select t.id, t.parent_id, up.depth + 1 from tree_items t join up on t.id = up.parent_id
+              where up.depth < 1000
+            )
+            select exists (select 1 from up where id = ${itemId})
+              or not exists (select 1 from tree_items where id = ${parentId} and trash_entry_id is null
+                and space_id = ${reimport.spaceId}) as found`);
+          if (blocked.rows[0]?.found) follow = false;
+        }
+        if (follow) {
+          const position = await endPosition(tx, reimport.spaceId, parentId);
+          await tx.execute(sql`
+            update tree_items set parent_id = ${parentId}, position = ${position}, updated_at = now()
+            where id = ${itemId}`);
+          await refreshReaderVisibility(tx, [itemId]);
+          await signalSpaceChange(tx, { spaceId: reimport.spaceId, kind: "tree", itemId });
+          await this.#refreshLocal(tx, reimport.spaceId, entry.sourceId);
+        } else if (current.change === "moved") {
+          await tx.execute(sql`update import_changes set change = 'movedHere' where id = ${entry.id}`);
+        }
+        await tx.execute(sql`
+          update import_baselines set data = data || ${JSON.stringify({ parentId: to })}::jsonb
+          where space_id = ${reimport.spaceId} and kind = 'page' and source_id = ${entry.sourceId}`);
+        await this.#applied(tx, entry.id, reimport.actorId);
+      });
+      await run.beat();
+    }
+  }
+
+  async #labels(run: PipelineRun, reimport: ReimportRun): Promise<void> {
+    const plan = await this.#plan(run.importId, "page");
+    const entries = [...plan.values()].flat().filter((entry) => entry.change === "labels");
+    for (const entry of entries) {
+      const itemId = entry.targetId;
+      const added = (entry.details.added as string[] | undefined) ?? [];
+      const removed = (entry.details.removed as string[] | undefined) ?? [];
+      await this.#database.transaction(async (tx) => {
+        const current = await this.#lockChange(tx, entry.id);
+        if (!current || !itemId || !(await reimport.editable(tx, [itemId])).has(itemId)) return;
+        const baseline = (await pageBaselines(tx, reimport.spaceId, [entry.sourceId])).get(entry.sourceId);
+        const since = baseline?.data.labelsAt ?? null;
+        const count = await tx.execute<{ count: number }>(
+          sql`select count(*)::int as count from page_labels where item_id = ${itemId}`,
+        );
+        let room = MAX_LABELS_PER_PAGE - (count.rows[0]?.count ?? 0);
+        for (const label of added) {
+          if (room <= 0) break;
+          const inserted = await tx.execute(sql`
+            insert into page_labels (item_id, label, created_by) values (${itemId}, ${label}, ${run.importerId})
+            on conflict do nothing`);
+          room -= inserted.rowCount ?? 0;
+        }
+        if (removed.length > 0) {
+          await tx.execute(sql`
+            delete from page_labels where item_id = ${itemId} and label = any(${sql.param(removed)}::text[])
+              ${since ? sql`and created_at <= ${since}::timestamptz` : sql``}`);
+        }
+        const labels = [...new Set([...(baseline?.data.labels ?? []), ...added])]
+          .filter((label) => !removed.includes(label))
+          .sort();
+        await tx.execute(sql`
+          update import_baselines set data = data || jsonb_build_object('labels', ${JSON.stringify(labels)}::jsonb,
+            'labelsAt', now())
+          where space_id = ${reimport.spaceId} and kind = 'page' and source_id = ${entry.sourceId}`);
+        await signalSpaceChange(tx, { spaceId: reimport.spaceId, kind: "page", itemId });
+        await this.#applied(tx, entry.id, reimport.actorId);
+      });
+    }
+  }
+
+  async #deletions(run: PipelineRun, reimport: ReimportRun): Promise<void> {
+    const actor = accountPrincipal(reimport.actorId);
+    const rows = await this.#database.execute<{
+      id: string;
+      source_id: string;
+      target_id: string | null;
+    }>(sql`
+      select id, source_id, target_id from import_changes
+      where import_id = ${run.importId} and applied_at is null
+        and ((change = 'deleted' and decision is not null) or change = 'gone')`);
+    for (const row of rows.rows) {
+      await this.#database.transaction(async (tx) => {
+        const current = await this.#lockChange(tx, row.id);
+        if (!current) return;
+        const kept = () =>
+          tx.execute(sql`
+            update import_baselines set kept = true where space_id = ${reimport.spaceId} and kind = 'page'
+              and source_id = ${row.source_id}`);
+        if (current.change === "deleted" && current.decision === "trash" && row.target_id) {
+          if (!(await reimport.editable(tx, [row.target_id])).has(row.target_id)) return;
+          const page = (await localPages(tx, [row.target_id])).get(row.target_id);
+          const overview = await tx.execute<{ overview: boolean }>(sql`
+            select exists (select 1 from spaces where overview_item_id = ${row.target_id}) as overview`);
+          if (page && !overview.rows[0]?.overview) {
+            await this.#trash.deleteItemWithin(tx, actor, row.target_id);
+            await tx.execute(sql`
+              delete from import_baselines where space_id = ${reimport.spaceId} and kind = 'page'
+                and source_id = ${row.source_id}`);
+          } else {
+            await kept();
+          }
+        } else if (current.change === "deleted" && current.decision === "keep") {
+          await kept();
+        }
+        await this.#applied(tx, row.id, reimport.actorId);
+      });
+      await run.beat();
+    }
+  }
+
+  async #reimportBaseline(run: PipelineRun, reimport: ReimportRun): Promise<void> {
+    const context: ReadContext = { staging: run.staging };
+    const source = await run.reader.space(context);
+    const open = await this.#database.execute<{ kind: string; source_id: string }>(sql`
+      select kind, source_id from import_changes
+      where import_id = ${run.importId} and change = 'permission' and applied_at is null`);
+    const openHolders = new Set(
+      open.rows.filter((row) => row.kind === "spacePermission").map((row) => row.source_id),
+    );
+    const openPages = new Set(
+      open.rows
+        .filter((row) => row.kind === "restriction")
+        .map((row) => row.source_id.slice(0, row.source_id.indexOf(":"))),
+    );
+    await recordImportedSpace(this.#database, {
+      spaceId: reimport.spaceId,
+      importId: run.importId,
+      sourceSpaceId: source.sourceId,
+      sourceSpaceKey: source.key,
+    });
+    await this.#pageBatches(run, context, reimport.spaceId, async (tx, states) => {
+      const ids = states.map((state) => state.sourceId);
+      const targets = await this.#mappedIn(tx, run.importId, "page", ids);
+      const known = await pageBaselines(tx, reimport.spaceId, ids);
+      const missing = states.flatMap((state) => {
+        const targetId = targets.get(state.sourceId);
+        return targetId && !known.has(state.sourceId) ? [{ state, targetId }] : [];
+      });
+      await recordPageBaselines(tx, { spaceId: reimport.spaceId, importId: run.importId, pages: missing });
+      await recordTitles(tx, {
+        spaceId: reimport.spaceId,
+        spaceKey: source.key,
+        titles: states.map((state) => ({ sourceId: state.sourceId, title: state.title })),
+      });
+      for (const state of states) {
+        if (openPages.has(state.sourceId) || !known.has(state.sourceId)) continue;
+        await tx.execute(sql`
+          update import_baselines set data = data || jsonb_build_object('restrictions',
+            ${JSON.stringify(state.restrictions)}::jsonb), kept = false
+          where space_id = ${reimport.spaceId} and kind = 'page' and source_id = ${state.sourceId}`);
+      }
+    });
+    const holders = await sourceHolders(run.reader, context);
+    await this.#database.transaction(async (tx) => {
+      await recordHolderBaselines(tx, {
+        spaceId: reimport.spaceId,
+        importId: run.importId,
+        holders: holders.filter((holder) => !openHolders.has(holder.key)),
+      });
+      await tx.execute(sql`
+        delete from import_baselines where space_id = ${reimport.spaceId} and kind = 'spacePermission'
+          and not (source_id = any(${sql.param(holders.map((holder) => holder.key))}::text[]))
+          and not (source_id = any(${sql.param([...openHolders])}::text[]))`);
     });
   }
 

@@ -19,3 +19,5 @@ export const importFolderSetting = defineSetting({
 });
 
 export const importSettings = [maxUploadSetting, importFolderSetting, atlassianHostsSetting];
+
+export const FILE_RETENTION_DAYS = 7;

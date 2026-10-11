@@ -76,7 +76,10 @@ export {
 } from "../identity/schema.js";
 export {
   accountExternalIds,
+  importBaselines,
+  importChanges,
   importCredentials,
+  importedSpaces,
   importDirectory,
   importGrants,
   importGroups,
@@ -86,6 +89,7 @@ export {
   importReviewers,
   importState,
   imports,
+  importTitles,
   importUploadParts,
   importUploads,
 } from "../imports/schema.js";

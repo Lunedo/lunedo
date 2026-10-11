@@ -46,7 +46,14 @@ export const pageModes = ["publish", "live"] as const;
 export type PageMode = (typeof pageModes)[number];
 export const pageMode = pgEnum("page_mode", pageModes);
 
-export const versionReasons = ["published", "session", "restored", "modeChanged"] as const;
+export const versionReasons = [
+  "published",
+  "session",
+  "restored",
+  "modeChanged",
+  "imported",
+  "importedNotApplied",
+] as const;
 export type VersionReason = (typeof versionReasons)[number];
 export const versionReason = pgEnum("version_reason", versionReasons);
 

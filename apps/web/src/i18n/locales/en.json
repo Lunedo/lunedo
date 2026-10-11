@@ -3186,7 +3186,9 @@
         "shared": "Page shared",
         "shareChanged": "Page access changed",
         "unshared": "Page access removed",
-        "guestInvited": "Guest invited to a page"
+        "guestInvited": "Guest invited to a page",
+        "restrictionHolderAdded": "Person or group added to a page restriction",
+        "restrictionHolderRemoved": "Person or group removed from a page restriction"
       },
       "trash": {
         "itemsDeleted": "Moved to the trash",
@@ -3241,7 +3243,12 @@
         "tokenUsed": "Atlassian API token of an import used",
         "tokenDeleted": "Atlassian API token of an import deleted",
         "groupMapped": "Group from an import mapped",
-        "permissionsApplied": "Imported permissions applied"
+        "permissionsApplied": "Imported permissions applied",
+        "reimportStarted": "Re-import started",
+        "reimportRefused": "Re-import refused for another space",
+        "reimportApplied": "Re-import applied",
+        "conflictsDecided": "Re-import decisions made",
+        "permissionDifferenceApplied": "Permission difference from a re-import applied"
       }
     },
     "action": "Action",

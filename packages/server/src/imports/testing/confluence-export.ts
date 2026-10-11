@@ -29,6 +29,7 @@ export interface SyntheticPage {
   readonly created?: string;
   readonly modified?: string;
   readonly modifierKey?: string;
+  readonly version?: number;
 }
 
 export interface SyntheticAttachmentVersion {
@@ -218,7 +219,9 @@ export function createXmlExport(model: SyntheticExport): Buffer {
     ...(model.blogPosts ?? []).map((post): ["BlogPost", SyntheticPage] => ["BlogPost", post]),
   ];
   for (const [className, page] of contents) {
-    parts.push(contentObject(className, page, model, page.id, null, (page.history?.length ?? 0) + 1));
+    parts.push(
+      contentObject(className, page, model, page.id, null, page.version ?? (page.history?.length ?? 0) + 1),
+    );
     body(page.id, className, page.body);
     for (const [index, old] of (page.history ?? []).entries()) {
       parts.push(contentObject(className, page, model, old.id, old, index + 1));
@@ -464,7 +467,7 @@ export function createCsvExport(
     ...(model.blogPosts ?? []).map((post): ["BLOGPOST", SyntheticPage] => ["BLOGPOST", post]),
   ];
   for (const [type, page] of contents) {
-    const version = (page.history?.length ?? 0) + 1;
+    const version = page.version ?? (page.history?.length ?? 0) + 1;
     content.push([
       page.id,
       type,

@@ -8,7 +8,9 @@ import type { Database, Executor, Transaction } from "../database/database.js";
 import type { JobQueue } from "../jobs/job-queue.js";
 import type { GroupService } from "../organizations/groups.js";
 import type { SettingsService } from "../settings/service.js";
+import type { PageAccessService } from "../sharing/page-access.js";
 import { actorIdOf, auditScopeOf, mergeGrants } from "../spaces/common.js";
+import type { SpacePermissionService } from "../spaces/permissions.js";
 import type { SpaceGrant } from "../spaces/settings.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { cleanKey, type HolderValidation, insertGrants, SPACE_NAME_MAX_LENGTH } from "../spaces/spaces.js";
@@ -19,22 +21,28 @@ import { ImportError } from "./errors.js";
 import { type FolderFile, ImportFolder, isSafeFolderName } from "./folder.js";
 import { spreadsheetCell } from "./formats/csv.js";
 import { importWorkJob } from "./jobs.js";
+import { ConfluenceLinkService } from "./links.js";
 import { createQuarantineSpace, setQuarantineReaders } from "./quarantine.js";
+import { ReimportService } from "./reimport.js";
 import { type ReportCategory, reportCategoryNames } from "./report.js";
 import { ImportResolutionService } from "./resolution.js";
 import type { ImportState } from "./schema.js";
-import { importFolderSetting } from "./settings.js";
+import { FILE_RETENTION_DAYS, importFolderSetting } from "./settings.js";
+
+export { FILE_RETENTION_DAYS };
+
 import { signalImportChange } from "./signals.js";
 import { type ImportSource, importSources } from "./source.js";
 import type { UploadService } from "./uploads.js";
 import { parseUserList } from "./user-list.js";
 
 export const MAX_REVIEWERS = 50;
-export const FILE_RETENTION_DAYS = 7;
 const SOURCE_URL_MAX_LENGTH = 500;
 
 const EDITABLE: readonly ImportState[] = ["draft", "analyzing", "ready"];
 const STARTED: readonly ImportState[] = ["running", "held", "stopping", "review", "accepting", "failed"];
+const REIMPORT_FIXED =
+  "A re-import goes into the space of the earlier import; its space settings cannot change.";
 const FINAL: readonly ImportState[] = ["accepted", "discarded", "stopped"];
 
 export interface ImportPerson {
@@ -87,6 +95,8 @@ export interface ImportView {
   readonly counts: Readonly<Record<string, number>>;
   readonly errorCode: string | null;
   readonly quarantineSpace: { readonly id: string; readonly key: string } | null;
+  readonly targetSpace: { readonly id: string; readonly key: string; readonly name: string } | null;
+  readonly reimportSpaceId: string | null;
   readonly canManage: boolean;
   readonly canResolve: boolean;
   readonly canTakeOver: boolean;
@@ -185,6 +195,10 @@ type ImportRow = Record<string, unknown> & {
   error_code: string | null;
   quarantine_space_id: string | null;
   quarantine_key: string | null;
+  target_space_id: string | null;
+  target_key: string | null;
+  target_name: string | null;
+  reimport_space_id: string | null;
   started_at: Date | string | null;
   finished_at: Date | string | null;
   decided_at: Date | string | null;
@@ -195,13 +209,19 @@ type ImportRow = Record<string, unknown> & {
 
 const SELECT = sql`
   select i.*, a.name as importer_name, u.name as upload_name, u.size as upload_size, u.complete as upload_complete,
-    s.key as quarantine_key, c.site as credential_site, c.email as credential_email,
+    s.key as quarantine_key, ts.key as target_key, ts.name as target_name,
+    (select x.space_id from imported_spaces x join spaces xs on xs.id = x.space_id
+      where x.space_id = coalesce(i.target_space_id, i.quarantine_space_id) and not xs.quarantined
+        and i.state in ('accepted', 'review', 'superseded')
+        and not exists (select 1 from trash_entries e where e.space_id = xs.id and e.kind = 'space')) as reimport_space_id,
+    c.site as credential_site, c.email as credential_email,
     c.people as credential_people, c.with_email as credential_with_email,
     (select count(*)::int from import_directory d where d.import_id = i.id) as directory_people,
     (select count(d.email)::int from import_directory d where d.import_id = i.id) as directory_with_email
   from imports i join accounts a on a.id = i.importer_id
   left join import_uploads u on u.id = i.upload_id
   left join spaces s on s.id = i.quarantine_space_id
+  left join spaces ts on ts.id = i.target_space_id
   left join import_credentials c on c.import_id = i.id`;
 
 function date(value: Date | string | null): Date | null {
@@ -252,6 +272,8 @@ export class ImportService {
   readonly #encryption: Encryption;
   readonly #atlassian: AtlassianDirectory;
   readonly resolution: ImportResolutionService;
+  readonly reimports: ReimportService;
+  readonly links: ConfluenceLinkService;
 
   constructor(options: {
     database: Database;
@@ -265,6 +287,8 @@ export class ImportService {
     jobs: JobQueue | undefined;
     importDir: string;
     holders: HolderValidation;
+    spacePermissions: SpacePermissionService;
+    pageAccess: PageAccessService;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
@@ -282,6 +306,18 @@ export class ImportService {
       audit: options.audit,
       groups: options.groups,
       holders: options.holders,
+    });
+    this.links = new ConfluenceLinkService({
+      database: options.database,
+      authorization: options.authorization,
+    });
+    this.reimports = new ReimportService({
+      database: options.database,
+      authorization: options.authorization,
+      audit: options.audit,
+      jobs: options.jobs,
+      spacePermissions: options.spacePermissions,
+      pageAccess: options.pageAccess,
     });
   }
 
@@ -379,6 +415,11 @@ export class ImportService {
         row.quarantine_space_id && row.quarantine_key
           ? { id: row.quarantine_space_id, key: row.quarantine_key }
           : null,
+      targetSpace:
+        row.target_space_id && row.target_key !== null
+          ? { id: row.target_space_id, key: row.target_key, name: row.target_name ?? "" }
+          : null,
+      reimportSpaceId: row.reimport_space_id,
       canManage,
       canResolve,
       canTakeOver,
@@ -403,6 +444,7 @@ export class ImportService {
       ${SELECT}
       where i.organization_id = ${organizationId}
         and (i.importer_id = ${viewerId} or i.state in ('held', 'accepted')
+          or (i.target_space_id is not null and i.state in ('running', 'review', 'superseded'))
           or (exists (select 1 from import_reviewers r where r.import_id = i.id and r.account_id = ${viewerId})
             and i.state not in ('draft', 'analyzing', 'ready')))
       order by i.created_at desc, i.id
@@ -435,7 +477,7 @@ export class ImportService {
   async create(
     actor: Principal,
     organizationId: string,
-    input: { source: ImportSource },
+    input: { source: ImportSource; spaceId?: string | undefined },
   ): Promise<ImportView> {
     await this.#authorization.require(actor, "organization.imports.manage", {
       type: "organization",
@@ -444,8 +486,16 @@ export class ImportService {
     const importerId = actorIdOf(actor);
     if (!importerId) throw new ImportError("accountRequired", "Only people can import.");
     const id = uuidv7();
-    await this.#database.execute(sql`
-      insert into imports (id, organization_id, importer_id, source) values (${id}, ${organizationId}, ${importerId}, ${input.source})`);
+    const spaceId = input.spaceId;
+    if (spaceId) {
+      await this.#authorization.require(actor, "space.manage", { type: "space", id: spaceId });
+      await this.#database.transaction((tx) =>
+        ReimportService.createDraft(tx, { id, organizationId, importerId, source: input.source, spaceId }),
+      );
+    } else {
+      await this.#database.execute(sql`
+        insert into imports (id, organization_id, importer_id, source) values (${id}, ${organizationId}, ${importerId}, ${input.source})`);
+    }
     return this.get(actor, id);
   }
 
@@ -459,6 +509,15 @@ export class ImportService {
       }
       const changes: ReturnType<typeof sql>[] = [];
       let fileChanged = false;
+      if (
+        row.target_space_id &&
+        (input.spaceName !== undefined ||
+          input.spaceKey !== undefined ||
+          input.archived !== undefined ||
+          input.history !== undefined)
+      ) {
+        throw new ImportError("reimportSpaceFixed", REIMPORT_FIXED);
+      }
       if (input.source !== undefined && input.source !== row.source) {
         if (!importSources.includes(input.source))
           throw new ImportError("invalidSource", "Choose an export format.");
@@ -761,6 +820,17 @@ export class ImportService {
           "Choose how Pagehall recognizes people: an API token, a user list, or skip with confirmation.",
         );
       }
+      if (row.target_space_id) {
+        await this.#authorization.require(
+          actor,
+          "space.manage",
+          { type: "space", id: row.target_space_id },
+          { executor: tx },
+        );
+        await ReimportService.start(tx, this.#audit, actor, { ...row, target_space_id: row.target_space_id });
+        await signalImportChange(tx, { importId, organizationId: row.organization_id });
+        return;
+      }
       const name = cleanSpaceName(row.space_name ?? "");
       if (!row.space_key)
         throw new ImportError("invalidSpaceKey", "The key needs 2 to 10 letters or digits.");
@@ -815,6 +885,16 @@ export class ImportService {
         throw new ImportError("importNotRunning", "The import is not running.");
       }
       this.#confirm(row, confirmation);
+      if (row.target_space_id) {
+        if (row.phase !== "compare") {
+          throw new ImportError(
+            "reimportApplying",
+            "Pagehall is applying the changes; this cannot be stopped. Wait until it is done.",
+          );
+        }
+        await this.#closeReimport(tx, actor, row, "stopped");
+        return;
+      }
       await tx.execute(sql`
         update imports set state = 'stopping', stop_requested_at = now(), updated_at = now() where id = ${importId}`);
       await this.#audit.record(tx, {
@@ -838,6 +918,10 @@ export class ImportService {
         throw new ImportError("importNotInReview", "Only a finished or failed import can be discarded.");
       }
       this.#confirm(row, confirmation);
+      if (row.target_space_id) {
+        await this.#closeReimport(tx, actor, row, "discarded");
+        return;
+      }
       await tx.execute(
         sql`update imports set state = 'discarding', updated_at = now() where id = ${importId}`,
       );
@@ -854,8 +938,35 @@ export class ImportService {
     return this.get(actor, importId);
   }
 
+  async #closeReimport(
+    tx: Transaction,
+    actor: Principal,
+    row: ImportRow,
+    state: "stopped" | "discarded",
+  ): Promise<void> {
+    await tx.execute(sql`
+      update imports set state = ${state}, phase = null, decided_at = now(), decided_by = ${actorIdOf(actor)},
+        file_expires_at = now() + make_interval(days => ${FILE_RETENTION_DAYS}), updated_at = now()
+      where id = ${row.id}`);
+    await tx.execute(sql`delete from import_records where import_id = ${row.id}`);
+    await this.#releaseFile(tx, row);
+    await deleteCredentials(tx, this.#audit, {
+      importId: row.id,
+      organizationId: row.organization_id,
+      reason: state,
+    });
+    await this.#audit.record(tx, {
+      name: state === "stopped" ? "import.stopped" : "import.discarded",
+      actor,
+      targetId: row.id,
+      fields: state === "stopped" ? { spaceId: null, phase: row.phase } : { spaceId: null },
+      scope: { type: "organization", id: row.organization_id },
+    });
+    await signalImportChange(tx, { importId: row.id, organizationId: row.organization_id });
+  }
+
   #confirm(row: ImportRow, confirmation: string): void {
-    const expected = row.quarantine_key ?? row.space_key ?? "";
+    const expected = row.quarantine_key ?? row.target_key ?? row.space_key ?? "";
     if (confirmation.trim().toUpperCase() !== expected.toUpperCase() || expected.length === 0) {
       throw new ImportError("confirmationMismatch", "Type the key of the space to confirm.");
     }
@@ -869,7 +980,7 @@ export class ImportService {
     await this.#authorization.require(actor, "import.manage", { type: "import", id: importId });
     await this.#database.transaction(async (tx) => {
       const row = await this.#locked(tx, importId);
-      if (row.state !== "review")
+      if (row.state !== "review" || row.target_space_id)
         throw new ImportError("importNotInReview", "Only a finished import can be accepted.");
       const spaceId = row.quarantine_space_id;
       if (!spaceId) throw new ImportError("importNotInReview", "The quarantine space is missing.");

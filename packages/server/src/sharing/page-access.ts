@@ -71,7 +71,9 @@ export type AccessChange =
   | { action: "changeShare"; shareId: string; role?: ShareRole; includeDescendants?: boolean }
   | { action: "removeShare"; shareId: string }
   | { action: "restrict"; kind: RestrictionKind }
-  | { action: "unrestrict"; kind: RestrictionKind };
+  | { action: "unrestrict"; kind: RestrictionKind }
+  | { action: "listHolder"; kind: RestrictionKind; holderKind: HolderKind; holderId: string }
+  | { action: "unlistHolder"; kind: RestrictionKind; holderKind: HolderKind; holderId: string };
 
 export interface PageAccessImpact {
   read: AccessImpact;
@@ -572,6 +574,51 @@ export class PageAccessService {
           });
           break;
         }
+        case "listHolder":
+        case "unlistHolder": {
+          const name =
+            change.holderKind === "account"
+              ? await this.#listedAccount(tx, change.holderId)
+              : await this.#validateHolder(tx, actor, item, "group", change.holderId);
+          if (change.action === "listHolder") {
+            const restricted = await tx.execute(sql`
+              select 1 from page_restrictions where item_id = ${item.id} and kind = ${change.kind}`);
+            if (restricted.rows.length === 0) {
+              throw new SpaceError(
+                "notRestricted",
+                "The page has no restriction of this kind; restrict it first",
+              );
+            }
+            const inserted = await tx.execute(sql`
+              insert into page_restriction_holders (item_id, kind, principal_kind, principal_id)
+              values (${item.id}, ${change.kind}, ${change.holderKind}, ${change.holderId})
+              on conflict do nothing returning item_id`);
+            if (inserted.rows.length === 0) break;
+          } else {
+            const removed = await tx.execute(sql`
+              delete from page_restriction_holders where item_id = ${item.id} and kind = ${change.kind}
+                and principal_kind = ${change.holderKind} and principal_id = ${change.holderId}
+              returning item_id`);
+            if (removed.rows.length === 0) break;
+          }
+          events.push({
+            name:
+              change.action === "listHolder"
+                ? "page.restrictionHolderAdded"
+                : "page.restrictionHolderRemoved",
+            actor,
+            targetId: item.id,
+            fields: {
+              ...base,
+              kind: change.kind,
+              principalKind: change.holderKind,
+              principalId: change.holderId,
+              name,
+            },
+            scope: auditScopeOf({ organizationId: item.organization_id }),
+          });
+          break;
+        }
         case "unrestrict": {
           const removed = await tx.execute(sql`
             delete from page_restrictions where item_id = ${item.id} and kind = ${change.kind} returning item_id`);
@@ -590,6 +637,15 @@ export class PageAccessService {
     await this.#checkListed(tx, item.id);
     if (options.audit) await this.#audit.recordMany(tx, events);
     return notified;
+  }
+
+  async #listedAccount(tx: Transaction, accountId: string): Promise<string> {
+    const account = await tx.execute<{ name: string }>(sql`
+      select name from accounts where id = ${accountId} and type <> 'portal' and state in ('active', 'placeholder')
+        and merged_into_id is null`);
+    const row = account.rows[0];
+    if (!row) throw new SpaceError("invalidHolder", "Choose a person you can find in the search");
+    return row.name;
   }
 
   async #checkListed(tx: Transaction, itemId: string): Promise<void> {
@@ -642,6 +698,11 @@ export class PageAccessService {
     const accounts = changes
       .filter((change) => change.action === "share" && change.holderKind === "account")
       .map((change) => (change.action === "share" ? change.holderId : ""));
+    for (const change of changes) {
+      if (change.action !== "listHolder" && change.action !== "unlistHolder") continue;
+      if (change.holderKind === "account") accounts.push(change.holderId);
+      else groups.push(change.holderId);
+    }
     return sql`
       select sp.principal_id from space_permissions sp where sp.space_id = ${item.space_id} and sp.principal_kind = 'account'
       union select gm.account_id from space_permissions sp join group_members gm on gm.group_id = sp.principal_id

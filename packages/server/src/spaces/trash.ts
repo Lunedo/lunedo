@@ -229,76 +229,77 @@ export class TrashService {
   }
 
   async deleteItem(actor: Principal, itemId: string): Promise<TrashEntry> {
-    const entryId = await this.#database.transaction(async (tx) => {
-      const located = await tx.execute<{ space_id: string }>(
-        sql`select space_id from tree_items where id = ${itemId}`,
-      );
-      const spaceId = located.rows[0]?.space_id;
-      if (!spaceId) throw new SpaceError("itemNotFound", "The item does not exist");
-      await lockSpaces(tx, [spaceId]);
-      const item = await tx.execute<{
-        kind: TreeItemKind;
-        title: string;
-        parent_id: string | null;
-        position: string;
-        trash_entry_id: string | null;
-        archived_root_id: string | null;
-        organization_id: string | null;
-        overview: boolean;
-      }>(sql`
-        select t.kind, t.title, t.parent_id, t.position, t.trash_entry_id, t.archived_root_id, s.organization_id,
-          s.overview_item_id = t.id as overview
-        from tree_items t join spaces s on s.id = t.space_id where t.id = ${itemId} for update of t`);
-      const row = item.rows[0];
-      if (!row || row.trash_entry_id) throw new SpaceError("itemNotFound", "The item does not exist");
-      if (row.overview)
-        throw new SpaceError("overviewPage", "The overview page of a space cannot be deleted");
-      const subtree = await tx.execute<{ id: string }>(sql`
-        with recursive down as (
-          select id from tree_items where id = ${itemId}
-          union all
-          select t.id from tree_items t join down on t.parent_id = down.id where t.trash_entry_id is null
-        )
-        select id from down`);
-      const ids = subtree.rows.map((entry) => entry.id);
-      const overview = await tx.execute<{ id: string }>(sql`
-        select id from spaces where overview_item_id = any(${sql.param(ids)}::uuid[])`);
-      if (overview.rows[0]) {
-        throw new SpaceError("overviewPage", "The overview page of a space cannot be deleted");
-      }
-      const id = uuidv7();
-      await tx.execute(sql`
-        insert into trash_entries (id, space_id, kind, root_item_id, title, item_kind, descendants, deleted_by)
-        values (${id}, ${spaceId}, 'items', ${itemId}, ${row.title}, ${row.kind}, ${ids.length - 1},
-          ${actorIdOf(actor)})`);
-      await tx.execute(sql`
-        update tree_items set trash_entry_id = ${id}, updated_at = now() where id = any(${sql.param(ids)}::uuid[])`);
-      if (row.archived_root_id !== itemId) {
-        await tx.execute(sql`
-          update tree_items set restore_parent_id = parent_id, restore_position = position, parent_id = null
-          where id = ${itemId}`);
-      }
-      await this.#audit.record(tx, {
-        name: "trash.itemsDeleted",
-        actor,
-        targetId: id,
-        fields: {
-          spaceId,
-          title: row.title,
-          kind: "items",
-          itemKind: row.kind,
-          descendants: ids.length - 1,
-          itemId,
-        },
-        scope: auditScopeOf({ organizationId: row.organization_id }),
-      });
-      await this.#activity.revealed(tx, await refreshReaderVisibility(tx, [itemId]));
-      await signalSpaceChange(tx, { spaceId, kind: "tree", itemId });
-      return id;
-    });
+    const entryId = await this.#database.transaction((tx) => this.deleteItemWithin(tx, actor, itemId));
     const entry = await this.get(entryId);
     if (!entry) throw new SpaceError("trashEntryNotFound", "The trash entry does not exist");
     return entry;
+  }
+
+  async deleteItemWithin(tx: Transaction, actor: Principal, itemId: string): Promise<string> {
+    const located = await tx.execute<{ space_id: string }>(
+      sql`select space_id from tree_items where id = ${itemId}`,
+    );
+    const spaceId = located.rows[0]?.space_id;
+    if (!spaceId) throw new SpaceError("itemNotFound", "The item does not exist");
+    await lockSpaces(tx, [spaceId]);
+    const item = await tx.execute<{
+      kind: TreeItemKind;
+      title: string;
+      parent_id: string | null;
+      position: string;
+      trash_entry_id: string | null;
+      archived_root_id: string | null;
+      organization_id: string | null;
+      overview: boolean;
+    }>(sql`
+      select t.kind, t.title, t.parent_id, t.position, t.trash_entry_id, t.archived_root_id, s.organization_id,
+        s.overview_item_id = t.id as overview
+      from tree_items t join spaces s on s.id = t.space_id where t.id = ${itemId} for update of t`);
+    const row = item.rows[0];
+    if (!row || row.trash_entry_id) throw new SpaceError("itemNotFound", "The item does not exist");
+    if (row.overview) throw new SpaceError("overviewPage", "The overview page of a space cannot be deleted");
+    const subtree = await tx.execute<{ id: string }>(sql`
+      with recursive down as (
+        select id from tree_items where id = ${itemId}
+        union all
+        select t.id from tree_items t join down on t.parent_id = down.id where t.trash_entry_id is null
+      )
+      select id from down`);
+    const ids = subtree.rows.map((entry) => entry.id);
+    const overview = await tx.execute<{ id: string }>(sql`
+      select id from spaces where overview_item_id = any(${sql.param(ids)}::uuid[])`);
+    if (overview.rows[0]) {
+      throw new SpaceError("overviewPage", "The overview page of a space cannot be deleted");
+    }
+    const id = uuidv7();
+    await tx.execute(sql`
+      insert into trash_entries (id, space_id, kind, root_item_id, title, item_kind, descendants, deleted_by)
+      values (${id}, ${spaceId}, 'items', ${itemId}, ${row.title}, ${row.kind}, ${ids.length - 1},
+        ${actorIdOf(actor)})`);
+    await tx.execute(sql`
+      update tree_items set trash_entry_id = ${id}, updated_at = now() where id = any(${sql.param(ids)}::uuid[])`);
+    if (row.archived_root_id !== itemId) {
+      await tx.execute(sql`
+        update tree_items set restore_parent_id = parent_id, restore_position = position, parent_id = null
+        where id = ${itemId}`);
+    }
+    await this.#audit.record(tx, {
+      name: "trash.itemsDeleted",
+      actor,
+      targetId: id,
+      fields: {
+        spaceId,
+        title: row.title,
+        kind: "items",
+        itemKind: row.kind,
+        descendants: ids.length - 1,
+        itemId,
+      },
+      scope: auditScopeOf({ organizationId: row.organization_id }),
+    });
+    await this.#activity.revealed(tx, await refreshReaderVisibility(tx, [itemId]));
+    await signalSpaceChange(tx, { spaceId, kind: "tree", itemId });
+    return id;
   }
 
   async restore(

@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
+import { accountPrincipal, type Principal, SYSTEM } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Encryption } from "../crypto/envelope.js";
-import type { Database } from "../database/database.js";
+import type { Database, Executor } from "../database/database.js";
 import type { DatabasePool } from "../database/pool.js";
 import type { JobContext, JobQueue } from "../jobs/job-queue.js";
 import type { Logger } from "../logging/logger.js";
@@ -23,8 +23,9 @@ import type { ImportFolder } from "./folder.js";
 import type { ByteSource } from "./formats/bytes.js";
 import { FILE_RETENTION_DAYS } from "./imports.js";
 import { importWorkJob } from "./jobs.js";
-import { type ImportPipeline, type PipelinePhase, pipelinePhases } from "./pipeline.js";
+import { type ImportPipeline, type PipelinePhase, pipelinePhases, reimportPhases } from "./pipeline.js";
 import { purgeQuarantineSpace } from "./quarantine.js";
+import { ReimportComparer } from "./reimport-compare.js";
 import { type ProblemCode, problemCodes, recordProblems } from "./report.js";
 import type { ImportState } from "./schema.js";
 import { signalImportChange } from "./signals.js";
@@ -33,11 +34,26 @@ import { StagingStore } from "./staging.js";
 import type { UploadService } from "./uploads.js";
 
 const SEGMENT_MS = 25 * 60 * 1000;
+
+async function editableItems(
+  executor: Executor,
+  authorization: AuthorizationService,
+  principal: Principal,
+  itemIds: readonly string[],
+): Promise<Set<string>> {
+  if (itemIds.length === 0) return new Set();
+  const result = await executor.execute<{ id: string }>(sql`
+    select t.id from tree_items t join spaces s on s.id = t.space_id
+    where t.id = any(${sql.param([...new Set(itemIds)])}::uuid[]) and t.trash_entry_id is null
+      and ${authorization.itemFilter(principal, sql`t`, sql`s`, "editor", { editRestriction: true })}`);
+  return new Set(result.rows.map((row) => row.id));
+}
 const BEAT_MS = 2000;
 const PERMISSION_CHECK_MS = 60 * 1000;
 const PROGRESS_MS = 1000;
 const STALE_MINUTES = 3;
 const PHASES_DONE = "done";
+export const COMPARE = "compare";
 
 interface WorkRow {
   id: string;
@@ -58,6 +74,8 @@ interface WorkRow {
   checkpoint: Record<string, unknown>;
   found: Record<string, unknown> | null;
   quarantine_space_id: string | null;
+  target_space_id: string | null;
+  decided_by: string | null;
   [key: string]: unknown;
 }
 
@@ -240,6 +258,29 @@ export class ImportWorker {
         },
       });
       const summary = await reader.summary({ staging });
+      const targetSpaceId = row.target_space_id;
+      if (targetSpaceId) {
+        const source = await reader.space({ staging });
+        const imported = await this.#database.execute<{ source_space_id: string }>(sql`
+          select source_space_id from imported_spaces where space_id = ${targetSpaceId}`);
+        if (imported.rows[0]?.source_space_id !== source.sourceId) {
+          await this.#database.transaction(async (tx) => {
+            const refused = await tx.execute(sql`
+              update imports set state = 'draft', phase = null, error_code = 'foreignSpace', updated_at = now()
+              where id = ${row.id} and state = 'analyzing' and checkpoint ->> 'run' = ${runId}`);
+            if (refused.rowCount === 0) return;
+            await this.#options.audit.record(tx, {
+              name: "import.reimportRefused",
+              actor: SYSTEM,
+              targetId: row.id,
+              fields: { spaceId: targetSpaceId, sourceSpaceKey: summary.spaceKey.slice(0, 255) },
+              scope: { type: "organization", id: row.organization_id },
+            });
+            await signalImportChange(tx, { importId: row.id, organizationId: row.organization_id });
+          });
+          return;
+        }
+      }
       const macroKinds = await this.#macroKinds(row.id);
       const fileInfo =
         row.file_kind === "folder" && "modifiedAt" in file
@@ -334,11 +375,40 @@ export class ImportWorker {
     };
     try {
       await this.#requireImporter(row);
+      if (row.target_space_id && row.phase === COMPARE) {
+        const counts = await new ReimportComparer(this.#database).compare({
+          importId: row.id,
+          organizationId: row.organization_id,
+          spaceId: row.target_space_id,
+          reader,
+          staging,
+          beat,
+        });
+        await this.#database.transaction(async (tx) => {
+          await tx.execute(sql`
+            update imports set state = 'review', phase = null, counts = ${JSON.stringify(counts)}::jsonb,
+              finished_at = now(), updated_at = now()
+            where id = ${row.id} and state = 'running'`);
+          await signalImportChange(tx, { importId: row.id, organizationId: row.organization_id });
+        });
+        return;
+      }
+      const phases: readonly PipelinePhase[] = row.target_space_id ? reimportPhases : pipelinePhases;
+      const applier = row.decided_by ?? row.importer_id;
+      const reimport =
+        row.target_space_id !== null
+          ? {
+              spaceId: row.target_space_id,
+              actorId: applier,
+              editable: (executor: Executor, itemIds: readonly string[]) =>
+                editableItems(executor, this.#options.authorization, accountPrincipal(applier), itemIds),
+            }
+          : null;
       const start =
         row.phase === PHASES_DONE
-          ? pipelinePhases.length
-          : Math.max(0, pipelinePhases.indexOf((row.phase ?? "space") as PipelinePhase));
-      for (const [index, phase] of pipelinePhases.entries()) {
+          ? phases.length
+          : Math.max(0, phases.indexOf((row.phase ?? phases[0]) as PipelinePhase));
+      for (const [index, phase] of phases.entries()) {
         if (index < start) continue;
         await this.#database.execute(sql`
           update imports set phase = ${phase}, progress_done = 0, progress_total = 0, heartbeat_at = now()
@@ -352,11 +422,12 @@ export class ImportWorker {
           spaceName: row.space_name ?? "",
           spaceKey: row.space_key ?? "",
           sourceUrl: row.source_url,
-          history: row.history,
+          history: row.history && reimport === null,
           directory,
           reader,
           file,
           staging,
+          reimport,
           beat,
           progress: async (done, total) => {
             if (Date.now() - lastProgress < PROGRESS_MS && done < total) return;
@@ -368,11 +439,12 @@ export class ImportWorker {
           },
         });
         await this.#database.execute(sql`
-          update imports set phase = ${pipelinePhases[index + 1] ?? PHASES_DONE}
+          update imports set phase = ${phases[index + 1] ?? PHASES_DONE}
           where id = ${row.id} and state = 'running'`);
         await beat();
       }
-      await this.#finished(row);
+      if (reimport) await this.#applied(row, reimport.actorId);
+      else await this.#finished(row);
     } catch (error) {
       if (error instanceof ImportStoppedError) return;
       if (error instanceof ImportFormatError) return this.#fail(row.id, error.code);
@@ -444,6 +516,69 @@ export class ImportWorker {
     });
   }
 
+  async #applied(row: WorkRow, actorId: string): Promise<void> {
+    await this.#database.transaction(async (tx) => {
+      const locked = await tx.execute<{ started: string | null }>(sql`
+        select checkpoint ->> 'applyStartedAt' as started from imports
+        where id = ${row.id} and state = 'running' for update`);
+      if (!locked.rows[0]) return;
+      const result = await tx.execute<{ change: string; decision: string | null; count: number }>(sql`
+        select change, decision, count(*)::int as count from import_changes
+        where import_id = ${row.id} and change <> 'permission'
+          and applied_at >= coalesce(${locked.rows[0].started}::timestamptz, '-infinity'::timestamptz)
+        group by change, decision`);
+      const count = (change: string, decision?: string) =>
+        result.rows
+          .filter(
+            (entry) => entry.change === change && (decision === undefined || entry.decision === decision),
+          )
+          .reduce((sum, entry) => sum + entry.count, 0);
+      const open = await tx.execute<{ count: number }>(sql`
+        select count(*)::int as count from import_changes
+        where import_id = ${row.id} and applied_at is null and change in ('conflict', 'deleted')`);
+      const waiting = open.rows[0]?.count ?? 0;
+      await tx.execute(sql`
+        update imports set state = ${waiting > 0 ? "review" : "accepted"}, phase = null,
+          checkpoint = '{}'::jsonb, updated_at = now(),
+          file_expires_at = ${waiting > 0 ? null : sql`now() + make_interval(days => ${FILE_RETENTION_DAYS})`}
+        where id = ${row.id}`);
+      await deleteCredentials(tx, this.#options.audit, {
+        importId: row.id,
+        organizationId: row.organization_id,
+        reason: "accepted",
+      });
+      if (waiting === 0) {
+        await tx.execute(sql`delete from import_records where import_id = ${row.id}`);
+        if (row.upload_id) {
+          await tx.execute(sql`
+            update import_uploads set expires_at = now() + make_interval(days => ${FILE_RETENTION_DAYS})
+            where id = ${row.upload_id}`);
+        }
+      }
+      await this.#options.audit.record(tx, {
+        name: "import.reimportApplied",
+        actor: accountPrincipal(actorId),
+        targetId: row.id,
+        fields: {
+          spaceId: row.target_space_id ?? "",
+          created: count("new"),
+          updated: count("updated"),
+          keptPagehall: count("conflict", "pagehall"),
+          tookSource: count("conflict", "source"),
+          keptBoth: count("conflict", "both"),
+          trashed: count("deleted", "trash"),
+          keptDeleted: count("deleted", "keep"),
+          moved: count("moved"),
+          stayed: count("movedHere"),
+          labels: count("labels"),
+          waiting,
+        },
+        scope: { type: "organization", id: row.organization_id },
+      });
+      await signalImportChange(tx, { importId: row.id, organizationId: row.organization_id });
+    });
+  }
+
   async #fail(importId: string, code: string): Promise<void> {
     await this.#database.transaction(async (tx) => {
       const updated = await tx.execute<WorkRow>(sql`
@@ -481,6 +616,7 @@ export class ImportWorker {
   }
 
   async #purge(row: WorkRow, signal: AbortSignal): Promise<void> {
+    if (row.target_space_id) return;
     if (row.quarantine_space_id) {
       await purgeQuarantineSpace(this.#database, row.quarantine_space_id, signal, async (removed) => {
         await this.#database.execute(sql`

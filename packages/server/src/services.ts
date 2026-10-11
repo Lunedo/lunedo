@@ -592,6 +592,8 @@ export function createAccountServices(options: {
     jobs,
     importDir: options.importDir ?? "/data/import",
     holders: spacePermissions.holders,
+    spacePermissions,
+    pageAccess,
   });
   const importWorker = new ImportWorker({
     database,
@@ -603,7 +605,7 @@ export function createAccountServices(options: {
     atlassian,
     uploads: importUploads,
     readers: new ImportReaderRegistry().register(new ConfluenceXmlReader(), new ConfluenceCsvReader()),
-    pipeline: new ImportPipeline({ database, files, settings, audit }),
+    pipeline: new ImportPipeline({ database, files, settings, audit, versions, trash }),
     folder: imports.folder,
     jobs,
     logger,

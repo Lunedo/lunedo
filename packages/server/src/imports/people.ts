@@ -21,6 +21,12 @@ export type Directory = (
 
 export const NO_DIRECTORY: Directory = async () => new Map();
 
+export function personOf(sourceId: string): Pick<SourcePerson, "sourceId" | "accountId" | "userKey"> {
+  return sourceId.startsWith("key:")
+    ? { sourceId, accountId: null, userKey: sourceId.slice(4) }
+    : { sourceId, accountId: sourceId, userKey: null };
+}
+
 export function externalIdOf(person: Pick<SourcePerson, "accountId" | "userKey">): {
   source: string;
   id: string;

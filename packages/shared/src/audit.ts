@@ -127,6 +127,8 @@ export const auditEventNames = [
   "page.updateRejected",
   "page.restrictionSet",
   "page.restrictionRemoved",
+  "page.restrictionHolderAdded",
+  "page.restrictionHolderRemoved",
   "page.shared",
   "page.shareChanged",
   "page.unshared",
@@ -174,6 +176,11 @@ export const auditEventNames = [
   "import.tokenDeleted",
   "import.groupMapped",
   "import.permissionsApplied",
+  "import.reimportStarted",
+  "import.reimportRefused",
+  "import.reimportApplied",
+  "import.conflictsDecided",
+  "import.permissionDifferenceApplied",
 ] as const;
 
 export type AuditEventName = (typeof auditEventNames)[number];

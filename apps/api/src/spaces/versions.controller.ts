@@ -8,7 +8,7 @@ import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
-import { timestamp, uuid } from "../http/schemas.js";
+import { extensibleEnum, timestamp, uuid } from "../http/schemas.js";
 import { documentSchema, exampleDocument, modeSchema, pageContentSchema } from "./schemas.js";
 
 const TAG = "Versions";
@@ -33,11 +33,10 @@ const versionSchema = z
     number: z.number().int().describe("Number of the version, counting from 1."),
     title: z.string().describe("Title of the page in this version."),
     note: z.string().describe("Note of the person who published it, or empty."),
-    reason: z
-      .enum(versionReasons)
-      .describe(
-        "Why the version exists: `published` (someone published), `session` (an editing session in live mode ended), `restored` (an older version was restored in live mode) or `modeChanged` (the page switched modes).",
-      ),
+    reason: extensibleEnum(
+      versionReasons,
+      "Why the version exists: `published` (someone published), `session` (an editing session in live mode ended), `restored` (an older version was restored in live mode), `modeChanged` (the page switched modes), `imported` (a re-import applied the source version) or `importedNotApplied` (a re-import added the source version to the history without applying it).",
+    ),
     restoredFrom: z.number().int().nullable().describe("The restored version, or null."),
     createdAt: timestamp("When the version was created."),
     createdBy: personSchema

@@ -13,6 +13,14 @@ export {
   peopleExport,
   syntheticExport,
 } from "../imports/testing/fixture.js";
+export { tinyLinkCode } from "../imports/links.js";
+export {
+  foreignExport,
+  RE,
+  RE_COMMENT,
+  reimportAfter,
+  reimportBefore,
+} from "../imports/testing/reimport-fixture.js";
 export { createZip, type ZipFileSpec } from "../imports/testing/zip-writer.js";
 export {
   createMigratedDatabase,
