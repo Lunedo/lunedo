@@ -218,6 +218,53 @@ describe.skipIf(!databaseBaseUrl)("re-imports and old Confluence links through t
     expect(blocked.json()).toMatchObject({ code: "holderNotInPagehall" });
   });
 
+  it("compares a conflict before deciding without changing the page", async () => {
+    const { importId, spaceId } = await acceptedSpace();
+    const target = await test.runtime.pool.query<{ target_id: string }>(
+      "select target_id from import_items where import_id = $1 and kind = 'page' and source_id = $2",
+      [importId, RE.keepHere],
+    );
+    const pageId = target.rows[0]?.target_id ?? "";
+    const edited = await owner.put(`/api/v1/pages/${pageId}/content`, {
+      document: {
+        type: "doc",
+        content: [{ type: "paragraph", content: [{ type: "text", text: "Edited here" }] }],
+      },
+    });
+    expect(edited.statusCode, edited.body).toBe(200);
+    const id = await analyzed(reimportAfter(), spaceId);
+    await started(id);
+    const conflict = (await changes(owner, id, "conflicts")).find((entry) => entry.item?.id === pageId);
+    const before = (await owner.get(`/api/v1/pages/${pageId}/draft`)).json() as { revision: number };
+
+    const compared = await owner.get(`/api/v1/imports/${id}/changes/${conflict?.id}/compare`);
+    expect(compared.statusCode, compared.body).toBe(200);
+    const body = compared.json() as {
+      kind: string;
+      source: { version: number };
+      diff: { changes: number };
+      before: unknown;
+      after: unknown;
+      references: unknown;
+    };
+    expect(body).toMatchObject({ kind: "page", source: { version: 2 } });
+    expect(body.diff.changes).toBeGreaterThan(0);
+    expect(JSON.stringify(body.before)).toContain("Edited here");
+    expect(JSON.stringify(body.after)).toContain("Source keep here");
+    expect(body.references).toBeDefined();
+    const after = (await owner.get(`/api/v1/pages/${pageId}/draft`)).json() as { revision: number };
+    expect(after.revision).toBe(before.revision);
+
+    const updated = (await changes(owner, id, "updates"))[0];
+    const refused = await owner.get(`/api/v1/imports/${id}/changes/${updated?.id}/compare`);
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json()).toMatchObject({ code: "changeNotComparable" });
+    const outsider = await member();
+    expect(
+      (await outsider.client.get(`/api/v1/imports/${id}/changes/${conflict?.id}/compare`)).statusCode,
+    ).toBe(404);
+  });
+
   it("refuses an export of another Confluence space", async () => {
     const { spaceId } = await acceptedSpace();
     const id = await analyzed(foreignExport(), spaceId);

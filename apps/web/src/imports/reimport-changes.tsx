@@ -5,6 +5,7 @@ import {
   Checkbox,
   ConfirmDialog,
   EmptyState,
+  Icon,
   List,
   ListRow,
   Notice,
@@ -366,6 +367,22 @@ function ConflictsTab({ entry, editable }: { entry: ImportView; editable: boolea
             header: t("imports.reimport.columns.changedAtSource"),
             hideBelow: "md" as const,
             cell: (row: ChangeEntry) => (row.changedAtSource ? format.relative(row.changedAtSource) : ""),
+          },
+          {
+            key: "compare",
+            header: t("imports.reimport.columns.compare"),
+            cell: (row: ChangeEntry) =>
+              row.appliedAt || entry.state !== "review" ? null : (
+                <Link
+                  to="/settings/organizations/$organizationId/imports/$importId/changes/$changeId/compare"
+                  params={{ organizationId: entry.organizationId, importId: entry.id, changeId: row.id }}
+                  aria-label={t("imports.reimport.compareTitle", { title: row.title ?? "" })}
+                  className="inline-flex h-control-md items-center gap-2 rounded-md border border-control-border px-3 font-medium whitespace-nowrap hover:bg-hover focus-visible:focus-ring"
+                >
+                  <Icon icon={GitCompareArrows} size="sm" />
+                  {t("imports.reimport.compareAction")}
+                </Link>
+              ),
           },
           {
             key: "decision",

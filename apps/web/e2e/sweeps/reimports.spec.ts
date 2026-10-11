@@ -99,6 +99,17 @@ test("re-import screens pass the accessibility check in English and German, ligh
     await page.getByRole("checkbox", { name: /^(Select all|Alle auswählen)$/ }).click();
     await expect(page.getByRole("toolbar")).toBeVisible();
   });
+  for (const view of ["inline", "sideBySide"]) {
+    await sweepAppearances(page, `reimport-comparison-${view}`, async () => {
+      await page.goto(`${base}/${reimport}?tab=conflicts`);
+      await page.getByRole("link", { name: /^(Compare “Take source”|„Take source“ mit)/ }).click();
+      await expect(page.getByRole("region", { name: /^(Comparison|Vergleich)$/ })).toBeVisible();
+      if (view === "sideBySide") {
+        await page.getByRole("radio", { name: /^(Side by side|Nebeneinander)$/ }).click();
+        await expect(page.getByRole("heading", { name: /^Confluence, (version|Version) 2$/ })).toBeVisible();
+      }
+    });
+  }
   await sweepAppearances(page, "reimport-difference-dialog", async () => {
     await page.goto(`${base}/${reimport}?tab=permissions`);
     await page

@@ -1,3 +1,4 @@
+import { diffDocuments } from "@pagehall/editor-schema";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -357,6 +358,67 @@ describe("re-import changes", () => {
         .getAllByRole("listitem")
         .map((item) => item.textContent),
     ).toEqual(["1Source", "2People", "3Check and start"]);
+  });
+
+  it("compares a conflict before deciding and decides on the comparison", async () => {
+    const paragraph = (text: string) => ({ type: "paragraph", content: [{ type: "text", text }] });
+    const api = setup({
+      ...changeRoutes({ conflicts: [change({})] }),
+      [`GET /api/v1/imports/${IMPORT_ID}/changes/${CHANGE(1)}/compare`]: () => ({
+        body: {
+          kind: "page",
+          pagehall: { title: "On-call rota", version: null },
+          source: { title: "On-call rota", version: 7 },
+          decision: null,
+          diff: diffDocuments(
+            {
+              title: "On-call rota",
+              document: { type: "doc", content: [paragraph("Lukas covers weekends")] },
+            },
+            {
+              title: "On-call rota",
+              document: { type: "doc", content: [paragraph("Mira covers weekends")] },
+            },
+          ),
+          before: { type: "doc", content: [paragraph("Lukas covers weekends")] },
+          after: { type: "doc", content: [paragraph("Mira covers weekends")] },
+          references: { people: {}, pages: {}, topics: {} },
+        },
+      }),
+      [`PUT /api/v1/imports/${IMPORT_ID}/changes/decisions`]: () => ({ body: { decided: 1 } }),
+    });
+    await open(DETAIL);
+    await userEvent.click(
+      await screen.findByRole("link", { name: "Compare “On-call rota” with the Confluence version" }),
+    );
+    expect(await screen.findByRole("heading", { name: "Compare “On-call rota”" })).toBeTruthy();
+    expect(await screen.findByText("1 change")).toBeTruthy();
+    expect(
+      screen.getByText("Left or removed: Pagehall, current content. Right or added: Confluence, version 7."),
+    ).toBeTruthy();
+    expect(api.requests.some((request) => request.method !== "GET")).toBe(false);
+    await userEvent.click(screen.getByRole("radio", { name: "Side by side" }));
+    expect(await screen.findByRole("heading", { name: "Confluence, version 7" })).toBeTruthy();
+    await userEvent.click(screen.getByRole("combobox", { name: "Decision for On-call rota" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Take Confluence version" }));
+    expect(await screen.findByText("Saved")).toBeTruthy();
+    expect(api.requests.find((request) => request.method === "PUT")?.body).toEqual({
+      ids: [CHANGE(1)],
+      decision: "source",
+    });
+  });
+
+  it("explains that the source of a page restricted further is not shown", async () => {
+    setup({
+      ...changeRoutes({}),
+      [`GET /api/v1/imports/${IMPORT_ID}/changes/${CHANGE(1)}/compare`]: () =>
+        problem(403, "comparisonWithheld"),
+    });
+    await open(`${DETAIL}/changes/${CHANGE(1)}/compare`);
+    expect(await screen.findByText("The new content is restricted in Confluence")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open permission differences" }).getAttribute("href")).toContain(
+      "tab=permissions",
+    );
   });
 });
 

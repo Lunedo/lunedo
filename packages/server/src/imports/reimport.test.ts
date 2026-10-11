@@ -8,7 +8,7 @@ import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
 import { tinyLinkCode } from "./links.js";
 import type { ChangeTab } from "./reimport.js";
-import { ALICE, BOB } from "./testing/fixture.js";
+import { ALICE, BOB, CAROL } from "./testing/fixture.js";
 import { importHarness } from "./testing/harness.js";
 import { foreignExport, RE, RE_COMMENT, reimportAfter, reimportBefore } from "./testing/reimport-fixture.js";
 
@@ -32,7 +32,7 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
     await test?.close();
   });
 
-  async function world() {
+  async function world(before = reimportBefore()) {
     const organization = await fixtures.organization();
     const otherAdmin = await fixtures.member(organization.id);
     await test.database.execute(sql`
@@ -40,7 +40,7 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
       values (gen_random_uuid(), 'organization', ${organization.id}, 'account', ${otherAdmin}, 'administrator')`);
     const readers = await test.services.groups.create(SYSTEM, organization.id, { name: "readers" });
     const key = `R${randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase()}`;
-    const first = await harness.accepted(reimportBefore(), {
+    const first = await harness.accepted(before, {
       organizationId: organization.id,
       admin: organization.owner,
       key,
@@ -739,6 +739,173 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
       sql`select kind::text as kind from page_restrictions where item_id = ${item}`,
     );
     expect(restricted.rows.map((row) => row.kind)).toEqual(["view"]);
+  });
+
+  async function untouched(w: World, importId: string, itemId: string) {
+    const result = await test.database.execute<Record<string, unknown>>(sql`
+      select
+        (select count(*) from accounts)::int as accounts,
+        (select count(*) from import_items where import_id = ${importId})::int as items,
+        (select count(*) from import_changes where import_id = ${importId} and decision is not null)::int as decided,
+        (select count(*) from page_restrictions where item_id = ${itemId})::int as restrictions,
+        (select count(*) from page_shares where item_id = ${itemId})::int as shares,
+        (select revision from page_documents where item_id = ${itemId}) as revision`);
+    return {
+      counts: result.rows[0],
+      space: await snapshot(w.spaceId),
+      document: await document(itemId),
+      versions: await versions(itemId),
+    };
+  }
+
+  it("compares a conflict with the converted source version and changes nothing", async () => {
+    const w = await world();
+    await editLocally(w);
+    const after = reimportAfter();
+    const mention = `<ac:link><ri:user ri:userkey="${CAROL.key}" ri:account-id="${CAROL.accountId}" /></ac:link>`;
+    const mentioning = {
+      ...after,
+      users: [...after.users, CAROL],
+      pages: after.pages.map((entry) =>
+        entry.id === RE.keepHere ? { ...entry, body: `<p>Source keep here ${mention}</p>` } : entry,
+      ),
+    };
+    const reimport = await harness.reimported(mentioning, {
+      organizationId: w.organizationId,
+      admin: w.admin,
+      spaceId: w.spaceId,
+    });
+    const reimports = test.services.imports.reimports;
+    const item = await w.item(RE.keepHere);
+    const conflict = await idOf(w.admin, reimport.id, "conflicts", item);
+    const before = await untouched(w, reimport.id, item);
+
+    const comparison = await reimports.compare(as(w.admin), reimport.id, conflict);
+    expect(comparison).toMatchObject({
+      kind: "page",
+      pagehall: { title: "Keep here", version: null },
+      source: { title: "Keep here", version: 2 },
+    });
+    expect(JSON.stringify(comparison.before)).toContain(`Local ${RE.keepHere}`);
+    expect(JSON.stringify(comparison.after)).toContain("Source keep here");
+    expect(JSON.stringify(comparison.after)).not.toContain(`Local ${RE.keepHere}`);
+    expect(comparison.diff.changes).toBeGreaterThan(0);
+    await reimports.compare(as(w.admin), reimport.id, conflict);
+    expect(await untouched(w, reimport.id, item)).toEqual(before);
+
+    const sourceOnly = await idOf(w.admin, reimport.id, "updates", await w.item(RE.sourceOnly));
+    await expect(reimports.compare(as(w.admin), reimport.id, sourceOnly)).rejects.toMatchObject({
+      code: "changeNotComparable",
+    });
+    await expect(reimports.compare(as(w.admin), reimport.id, randomUUID())).rejects.toMatchObject({
+      code: "changeNotFound",
+    });
+    const stranger = await fixtures.member(w.organizationId);
+    await expect(reimports.compare(as(stranger), reimport.id, conflict)).rejects.toBeInstanceOf(
+      ForbiddenError,
+    );
+
+    await decideAll(w, reimport.id);
+    await harness.applyChanges(w.admin, reimport.id);
+    await expect(reimports.compare(as(w.admin), reimport.id, conflict)).rejects.toMatchObject({
+      code: "comparisonUnavailable",
+    });
+  });
+
+  it("compares the published version for people who may only read the page", async () => {
+    const w = await world();
+    await editLocally(w);
+    const reimport = await harness.reimported(reimportAfter(), {
+      organizationId: w.organizationId,
+      admin: w.admin,
+      spaceId: w.spaceId,
+    });
+    const item = await w.item(RE.keepHere);
+    const conflict = await idOf(w.admin, reimport.id, "conflicts", item);
+    const comparison = await test.services.imports.reimports.compare(as(w.otherAdmin), reimport.id, conflict);
+    expect(comparison.pagehall.version).toBe(1);
+    expect(JSON.stringify(comparison.before)).toContain("Original keep here");
+    expect(JSON.stringify(comparison.before)).not.toContain(`Local ${RE.keepHere}`);
+  });
+
+  it("shows the source of a page restricted further at the source only to people who keep access", async () => {
+    const w = await world();
+    const after = reimportAfter();
+    const narrowed = {
+      ...after,
+      restrictions: [
+        ...(after.restrictions ?? []),
+        { id: "3961", contentId: RE.sourceOnly, kind: "View" as const, userKey: ALICE.key },
+      ],
+    };
+    const reimport = await harness.reimported(narrowed, {
+      organizationId: w.organizationId,
+      admin: w.admin,
+      spaceId: w.spaceId,
+    });
+    const reimports = test.services.imports.reimports;
+    const item = await w.item(RE.sourceOnly);
+    const conflict = await idOf(w.admin, reimport.id, "conflicts", item);
+    const before = await untouched(w, reimport.id, item);
+    for (const viewer of [w.admin, w.otherAdmin]) {
+      const refused = await reimports
+        .compare(as(viewer), reimport.id, conflict)
+        .catch((error: unknown) => error);
+      expect(refused).toMatchObject({ code: "comparisonWithheld" });
+      expect(JSON.stringify(refused)).not.toContain("New text from the source");
+    }
+    expect(await untouched(w, reimport.id, item)).toEqual(before);
+
+    const restriction = (await changes(w.admin, reimport.id, "permissions")).find(
+      (entry) => entry.item?.id === item && entry.permission?.action === "restrict",
+    );
+    await reimports.applyDifference(as(w.admin), reimport.id, restriction?.id ?? "");
+    const comparison = await reimports.compare(as(w.admin), reimport.id, conflict);
+    expect(JSON.stringify(comparison.after)).toContain("New text from the source");
+    expect(comparison.source.title).toBe("Source only, renamed");
+    expect(comparison.diff.title).toEqual({ before: "Source only", after: "Source only, renamed" });
+    await expect(reimports.compare(as(w.otherAdmin), reimport.id, conflict)).rejects.toMatchObject({
+      code: "changeNotFound",
+    });
+  });
+
+  it("compares a space template changed on both sides", async () => {
+    const template = {
+      id: "3701",
+      name: "Status report",
+      description: "Weekly status",
+      body: "<p>Template original</p>",
+      creatorKey: ALICE.key,
+    };
+    const w = await world({ ...reimportBefore(), templates: [template] });
+    const templateId = await harness.target(w.first.id, "template", template.id);
+    await test.database.execute(sql`
+      update page_templates set document = ${JSON.stringify(paragraph("Template edited here"))}::jsonb,
+        updated_at = now() + interval '1 second'
+      where id = ${templateId}`);
+    const reimport = await harness.reimported(
+      { ...reimportAfter(), templates: [{ ...template, body: "<p>Template from the source</p>" }] },
+      { organizationId: w.organizationId, admin: w.admin, spaceId: w.spaceId },
+    );
+    const conflict = (await changes(w.admin, reimport.id, "conflicts")).find(
+      (entry) => entry.kind === "template",
+    );
+    const stored = async () =>
+      (
+        await test.database.execute(
+          sql`select document, updated_at from page_templates where id = ${templateId}`,
+        )
+      ).rows[0];
+    const before = await stored();
+    const comparison = await test.services.imports.reimports.compare(
+      as(w.admin),
+      reimport.id,
+      conflict?.id ?? "",
+    );
+    expect(comparison).toMatchObject({ kind: "template", pagehall: { title: "Status report" } });
+    expect(JSON.stringify(comparison.before)).toContain("Template edited here");
+    expect(JSON.stringify(comparison.after)).toContain("Template from the source");
+    expect(await stored()).toEqual(before);
   });
 
   it("records version, checksum and titles of every imported item", async () => {

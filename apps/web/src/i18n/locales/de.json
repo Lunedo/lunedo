@@ -1361,7 +1361,10 @@
     "holderNotInPagehall": "Diese Person oder Gruppe ist noch nicht in Pagehall. Ordne sie im Bericht des ersten Imports zu.",
     "differenceResolved": "Pagehall entspricht hier bereits Confluence. Lade die Liste neu.",
     "notRestricted": "Die Seite ist nicht auf diese Weise eingeschränkt. Übernimm zuerst die Einschränkung.",
-    "reimportSpaceFixed": "Ein erneuter Import geht in den Bereich des früheren Imports; seine Bereichseinstellungen lassen sich nicht ändern."
+    "reimportSpaceFixed": "Ein erneuter Import geht in den Bereich des früheren Imports; seine Bereichseinstellungen lassen sich nicht ändern.",
+    "changeNotComparable": "Vor dem Anwenden lassen sich nur Konflikte vergleichen. Wähle einen Konflikt.",
+    "comparisonUnavailable": "Dieser Konflikt wurde angewendet oder durch einen neueren Export ersetzt. Vergleiche die Versionen im Verlauf der Seite.",
+    "comparisonWithheld": "In Confluence dürfen weniger Personen diese Seite lesen. Übernimm zuerst die Einschränkung bei den Berechtigungsabweichungen."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -6749,7 +6752,7 @@
       "decisionFor": "Entscheidung für {title}",
       "saved": "Gespeichert",
       "decideFailed": "Die Entscheidung konnte nicht gespeichert werden",
-      "conflictsHint": "Diese Seiten wurden seit dem letzten Import in Pagehall und in Confluence geändert, oder jemand bearbeitet sie gerade. Nichts wird überschrieben, bis du entscheidest. „Beide behalten“ behält die Pagehall-Version und fügt die Confluence-Version dem Verlauf hinzu, wo du beide vergleichen kannst.",
+      "conflictsHint": "Diese Seiten wurden seit dem letzten Import in Pagehall und in Confluence geändert, oder jemand bearbeitet sie gerade. Nichts wird überschrieben, bis du entscheidest. „Vergleichen“ zeigt den Unterschied, bevor du entscheidest. „Beide behalten“ behält die Pagehall-Version und fügt die Confluence-Version dem Verlauf hinzu.",
       "noConflicts": "Nichts wurde auf beiden Seiten geändert",
       "noConflictsDescription": "Seiten, die nur in Confluence geändert wurden, werden als neue Version aktualisiert.",
       "selectAll": "Alle auswählen",
@@ -6764,7 +6767,8 @@
         "outcome": "In Pagehall",
         "where": "Wo",
         "difference": "Abweichung zu Confluence",
-        "action": "Aktion"
+        "action": "Aktion",
+        "compare": "Unterschied"
       },
       "changedBy": "{name}, {when}",
       "someone": "Jemand",
@@ -6846,7 +6850,23 @@
       "discard": "Erneuten Import verwerfen",
       "discardTitle": "Diesen erneuten Import verwerfen?",
       "discardDescription": "Verwirft die Liste der Änderungen und die noch nicht angewendeten Entscheidungen. Bereits angewendete Änderungen bleiben, und Seiten werden nicht angefasst.",
-      "discardConfirm": "Die Liste der Änderungen und die noch nicht angewendeten Entscheidungen werden verworfen. Bereits angewendete Änderungen bleiben. Du kannst den Export später erneut importieren."
+      "discardConfirm": "Die Liste der Änderungen und die noch nicht angewendeten Entscheidungen werden verworfen. Bereits angewendete Änderungen bleiben. Du kannst den Export später erneut importieren.",
+      "compareAction": "Vergleichen",
+      "compareTitle": "„{title}“ mit der Confluence-Version vergleichen",
+      "comparison": {
+        "heading": "Mit Confluence vergleichen",
+        "title": "„{title}“ vergleichen",
+        "description": "Der aktuelle Inhalt in Pagehall neben dem Inhalt des neuen Exports, so wie er übernommen würde. Nichts ändert sich, bis du die Änderungen anwendest.",
+        "sides": "Links oder entfernt: {before}. Rechts oder hinzugefügt: {after}.",
+        "pagehallCurrent": "Pagehall, aktueller Inhalt",
+        "pagehallVersion": "Pagehall, Version {number}",
+        "source": "Confluence, neuer Export",
+        "sourceVersion": "Confluence, Version {number}",
+        "failed": "Der Vergleich konnte nicht geladen werden",
+        "withheldTitle": "Der neue Inhalt ist in Confluence eingeschränkt",
+        "withheld": "In Confluence dürfen weniger Personen diese Seite lesen als in Pagehall. Ihr neuer Inhalt wird nur Personen gezeigt, die nach Übernahme der Einschränkung weiter Zugriff haben. Übernimm zuerst die Einschränkung bei den Berechtigungsabweichungen.",
+        "openPermissions": "Berechtigungsabweichungen öffnen"
+      }
     }
   }
 }

@@ -27,6 +27,7 @@ import { organizationIdParams, uuid } from "../http/schemas.js";
 import {
   acceptSchema,
   candidatesSchema,
+  changeComparisonSchema,
   changeListSchema,
   changeSummarySchema,
   completeUploadSchema,
@@ -1095,6 +1096,50 @@ export class ImportsController {
   async apply(@Param("importId") importId: string, @Req() request: FastifyRequest) {
     await this.#services.imports.reimports.apply(actorOf(request), importId);
     return this.#services.imports.get(actorOf(request), importId);
+  }
+
+  @Get("imports/:importId/changes/:changeId/compare")
+  @Permission("import.view", importResource)
+  @ApiRoute({
+    summary: "Compare a conflict",
+    description:
+      "Compares the current content of a page or space template in Pagehall with the content of the new export, converted as it would be applied, without applying anything. The Pagehall side is the draft for people who may edit the page, otherwise its latest version. The source of a page restricted further at the source is shown only to people who keep access once the restriction is applied.",
+    tags: [TAG],
+    params: changeParams,
+    response: {
+      description: "The comparison.",
+      schema: changeComparisonSchema,
+      example: {
+        kind: "page",
+        pagehall: { title: "Release plan", version: null },
+        source: { title: "Release plan", version: 7 },
+        decision: null,
+        diff: { title: null, blocks: [], changes: 0 },
+        before: { type: "doc", content: [] },
+        after: { type: "doc", content: [] },
+        references: { people: {}, pages: {}, topics: {} },
+      },
+    },
+    errors: [
+      "changesUnavailable",
+      "changeNotFound",
+      "changeNotComparable",
+      "comparisonUnavailable",
+      "comparisonWithheld",
+    ],
+  })
+  async compareChange(
+    @Param("importId") importId: string,
+    @Param("changeId") changeId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    const actor = actorOf(request);
+    const comparison = await this.#services.imports.reimports.compare(actor, importId, changeId);
+    const references = await this.#services.documents.references(actor, {
+      type: "doc",
+      content: [...(comparison.before.content ?? []), ...(comparison.after.content ?? [])],
+    });
+    return { ...comparison, references };
   }
 
   @Post("imports/:importId/changes/:changeId/preview")

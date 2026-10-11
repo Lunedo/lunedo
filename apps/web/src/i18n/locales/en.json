@@ -1361,7 +1361,10 @@
     "holderNotInPagehall": "This person or group is not in Pagehall yet. Map them in the report of the first import.",
     "differenceResolved": "Pagehall already matches Confluence here. Reload the list.",
     "notRestricted": "The page is not restricted this way. Apply the restriction first.",
-    "reimportSpaceFixed": "A re-import goes into the space of the earlier import; its space settings cannot change."
+    "reimportSpaceFixed": "A re-import goes into the space of the earlier import; its space settings cannot change.",
+    "changeNotComparable": "Only conflicts can be compared before they are applied. Choose a conflict.",
+    "comparisonUnavailable": "This conflict was applied or replaced by a newer export. Compare the versions in the history of the page.",
+    "comparisonWithheld": "In Confluence, fewer people may read this page. Apply the restriction from the permission differences first."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -6749,7 +6752,7 @@
       "decisionFor": "Decision for {title}",
       "saved": "Saved",
       "decideFailed": "The decision could not be saved",
-      "conflictsHint": "These pages were changed in Pagehall and in Confluence since the last import, or someone is editing them. Nothing is overwritten until you decide. “Keep both” keeps the Pagehall version and adds the Confluence version to the history, where you can compare them.",
+      "conflictsHint": "These pages were changed in Pagehall and in Confluence since the last import, or someone is editing them. Nothing is overwritten until you decide. “Compare” shows the difference before you decide. “Keep both” keeps the Pagehall version and adds the Confluence version to the history.",
       "noConflicts": "Nothing was changed on both sides",
       "noConflictsDescription": "Pages changed only in Confluence are updated as a new version.",
       "selectAll": "Select all",
@@ -6764,7 +6767,8 @@
         "outcome": "In Pagehall",
         "where": "Where",
         "difference": "Difference to Confluence",
-        "action": "Action"
+        "action": "Action",
+        "compare": "Difference"
       },
       "changedBy": "{name}, {when}",
       "someone": "Someone",
@@ -6846,7 +6850,23 @@
       "discard": "Discard re-import",
       "discardTitle": "Discard this re-import?",
       "discardDescription": "Discards the list of changes and the decisions not applied yet. Changes already applied stay, and pages are not touched.",
-      "discardConfirm": "The list of changes and the decisions not applied yet are discarded. Changes already applied stay. You can import the export again later."
+      "discardConfirm": "The list of changes and the decisions not applied yet are discarded. Changes already applied stay. You can import the export again later.",
+      "compareAction": "Compare",
+      "compareTitle": "Compare “{title}” with the Confluence version",
+      "comparison": {
+        "heading": "Compare with Confluence",
+        "title": "Compare “{title}”",
+        "description": "The current content in Pagehall next to the content of the new export, as it would be applied. Nothing changes until you apply the changes.",
+        "sides": "Left or removed: {before}. Right or added: {after}.",
+        "pagehallCurrent": "Pagehall, current content",
+        "pagehallVersion": "Pagehall, version {number}",
+        "source": "Confluence, new export",
+        "sourceVersion": "Confluence, version {number}",
+        "failed": "The comparison could not be loaded",
+        "withheldTitle": "The new content is restricted in Confluence",
+        "withheld": "In Confluence, fewer people may read this page than in Pagehall. Its new content is shown only to people who keep access once the restriction is applied. Apply the restriction from the permission differences first.",
+        "openPermissions": "Open permission differences"
+      }
     }
   }
 }

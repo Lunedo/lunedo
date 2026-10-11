@@ -14,6 +14,7 @@ import type { SpacePermissionService } from "../spaces/permissions.js";
 import type { SpaceGrant } from "../spaces/settings.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { cleanKey, type HolderValidation, insertGrants, SPACE_NAME_MAX_LENGTH } from "../spaces/spaces.js";
+import type { VersionService } from "../spaces/versions.js";
 import { visibleItem } from "../spaces/visibility.js";
 import { type AtlassianDirectory, atlassianHostsSetting, atlassianSite } from "./atlassian.js";
 import { deleteCredentials, tokenContext } from "./credentials.js";
@@ -31,8 +32,9 @@ import { FILE_RETENTION_DAYS, importFolderSetting } from "./settings.js";
 
 export { FILE_RETENTION_DAYS };
 
+import type { ImportPipeline } from "./pipeline.js";
 import { signalImportChange } from "./signals.js";
-import { type ImportSource, importSources } from "./source.js";
+import { type ImportReaderRegistry, type ImportSource, importSources } from "./source.js";
 import type { UploadService } from "./uploads.js";
 import { parseUserList } from "./user-list.js";
 
@@ -289,6 +291,9 @@ export class ImportService {
     holders: HolderValidation;
     spacePermissions: SpacePermissionService;
     pageAccess: PageAccessService;
+    versions: VersionService;
+    pipeline: ImportPipeline;
+    readers: ImportReaderRegistry;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
@@ -318,6 +323,9 @@ export class ImportService {
       jobs: options.jobs,
       spacePermissions: options.spacePermissions,
       pageAccess: options.pageAccess,
+      versions: options.versions,
+      pipeline: options.pipeline,
+      readers: options.readers,
     });
   }
 

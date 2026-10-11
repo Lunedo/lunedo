@@ -580,6 +580,11 @@ export function createAccountServices(options: {
   });
   const importUploads = new UploadService({ database, files, settings, authorization });
   const atlassian = new AtlassianDirectory(options.atlassianFetch ? { fetch: options.atlassianFetch } : {});
+  const importReaders = new ImportReaderRegistry().register(
+    new ConfluenceXmlReader(),
+    new ConfluenceCsvReader(),
+  );
+  const importPipeline = new ImportPipeline({ database, files, settings, audit, versions, trash });
   const imports = new ImportService({
     database,
     authorization,
@@ -594,6 +599,9 @@ export function createAccountServices(options: {
     holders: spacePermissions.holders,
     spacePermissions,
     pageAccess,
+    versions,
+    pipeline: importPipeline,
+    readers: importReaders,
   });
   const importWorker = new ImportWorker({
     database,
@@ -604,8 +612,8 @@ export function createAccountServices(options: {
     encryption,
     atlassian,
     uploads: importUploads,
-    readers: new ImportReaderRegistry().register(new ConfluenceXmlReader(), new ConfluenceCsvReader()),
-    pipeline: new ImportPipeline({ database, files, settings, audit, versions, trash }),
+    readers: importReaders,
+    pipeline: importPipeline,
     folder: imports.folder,
     jobs,
     logger,

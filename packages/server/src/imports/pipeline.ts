@@ -166,6 +166,16 @@ interface BodyEntry {
   readonly variables?: ReadonlyMap<string, string>;
 }
 
+type ConverterRun = Pick<PipelineRun, "importId" | "organizationId" | "spaceKey" | "sourceUrl" | "reader"> & {
+  readonly directory?: Directory;
+  readonly preview?: readonly string[];
+};
+
+export type PreviewRun = Pick<
+  PipelineRun,
+  "importId" | "organizationId" | "spaceKey" | "sourceUrl" | "reader" | "staging"
+> & { readonly lineage: readonly string[] };
+
 interface Converter {
   readonly failed: ReadonlySet<string>;
   convert(key: string, inlineComment?: (ref: string) => string | null): ConvertedPage;
@@ -278,6 +288,72 @@ export class ImportPipeline {
       where import_id = ${importId} and kind = ${kind} and source_id = any(${sql.param([...new Set(sourceIds)])}::text[])`);
     for (const row of rows.rows) result.set(row.source_id, row.target_id);
     return result;
+  }
+
+  async #lookup(
+    run: ConverterRun,
+    kind: string,
+    sourceIds: readonly string[] | null,
+  ): Promise<Map<string, string>> {
+    if (!run.preview) {
+      return sourceIds ? this.#mapped(run.importId, kind, sourceIds) : this.#allMapped(run.importId, kind);
+    }
+    if (sourceIds?.length === 0 || run.preview.length === 0) return new Map();
+    const rows = await this.#database.execute<{ source_id: string; target_id: string }>(sql`
+      select distinct on (source_id) source_id, target_id from import_items
+      where import_id = any(${sql.param([...run.preview])}::uuid[]) and kind = ${kind}
+        ${sourceIds ? sql`and source_id = any(${sql.param([...new Set(sourceIds)])}::text[])` : sql``}
+      order by source_id, created_at desc`);
+    return new Map(rows.rows.map((row) => [row.source_id, row.target_id]));
+  }
+
+  async previewSource(
+    run: PreviewRun,
+    target: { kind: "page" | "template"; sourceId: string },
+  ): Promise<DocumentJson | null> {
+    const context: ReadContext = { staging: run.staging };
+    const preview = { ...run, preview: run.lineage };
+    const sourceSpace = await run.reader.space(context);
+    if (target.kind === "template") {
+      let template: SourceTemplate | null = null;
+      for await (const entry of run.reader.templates(context)) {
+        if (entry.sourceId === target.sourceId) {
+          template = entry;
+          break;
+        }
+      }
+      if (!template) return null;
+      let variables: ReadonlyMap<string, string> = new Map();
+      try {
+        variables = templateVariables(await parseStorage(template.body)).variables;
+      } catch {
+        variables = new Map();
+      }
+      const converter = await this.#converter(preview, context, sourceSpace.key, [
+        { key: template.sourceId, owner: "", body: template.body, variables },
+      ]);
+      return converter.convert(template.sourceId).document;
+    }
+    const body = (await run.reader.bodies(context, [target.sourceId])).get(target.sourceId);
+    if (!body) return null;
+    const comments = await run.reader.comments(context, [target.sourceId]);
+    const threads = await this.#lookup(
+      preview,
+      "comment",
+      comments.map((comment) => comment.sourceId),
+    );
+    const markers = new Map<string, string>();
+    for (const comment of comments) {
+      const ref = comment.inline?.markerRef;
+      if (ref && !markers.has(ref)) markers.set(ref, comment.sourceId);
+    }
+    const converter = await this.#converter(preview, context, sourceSpace.key, [
+      { key: target.sourceId, owner: target.sourceId, body: body.content },
+    ]);
+    return converter.convert(target.sourceId, (ref) => {
+      const commentId = markers.get(ref);
+      return commentId ? (threads.get(commentId) ?? null) : null;
+    }).document;
   }
 
   async #allMapped(importId: string, kind: string): Promise<Map<string, string>> {
@@ -657,7 +733,7 @@ export class ImportPipeline {
   }
 
   async #converter(
-    run: PipelineRun,
+    run: ConverterRun,
     context: ReadContext,
     sourceKey: string,
     entries: readonly BodyEntry[],
@@ -691,13 +767,13 @@ export class ImportPipeline {
     const sourceIds = references.flatMap((list) =>
       list.pages.map((reference) => reference.sourceId).filter((id): id is string => id !== null),
     );
-    const pageTargets = await this.#mapped(run.importId, "page", [
+    const pageTargets = await this.#lookup(run, "page", [
       ...byTitle.values(),
       ...formerTitles.values(),
       ...sourceIds,
     ]);
     const space = await this.#requireSpace(run.importId);
-    const templates = await this.#allMapped(run.importId, "template");
+    const templates = await this.#lookup(run, "template", null);
     const pageInfo = await this.#pageInfo([...pageTargets.values()]);
     const attachmentKeys = references.flatMap((list, index) => {
       const owner = entries[index]?.owner ?? "";
@@ -711,17 +787,24 @@ export class ImportPipeline {
         return `${page}/${fileNameKey(reference.fileName)}`;
       });
     });
-    const attachments = await this.#mapped(run.importId, "attachmentName", attachmentKeys);
+    const attachments = await this.#lookup(run, "attachmentName", attachmentKeys);
     const attachmentNames = await this.#attachmentNames([...attachments.values()]);
     const mentioned = references.flatMap((list) => list.people);
     const people = await run.reader.resolvePeople(context, mentioned);
-    const placeholders = await ensurePeople(
-      this.#database,
-      this.#audit,
-      { organizationId: run.organizationId, importId: run.importId },
-      people.filter((person): person is SourcePerson => person !== null),
-      run.directory,
-    );
+    const known = people.filter((person): person is SourcePerson => person !== null);
+    const placeholders = run.preview
+      ? await this.#lookup(
+          run,
+          "person",
+          known.map((person) => person.sourceId),
+        )
+      : await ensurePeople(
+          this.#database,
+          this.#audit,
+          { organizationId: run.organizationId, importId: run.importId },
+          known,
+          run.directory,
+        );
     const personKeys = new Map<string, string>();
     for (const [index, reference] of mentioned.entries()) {
       const person = people[index];

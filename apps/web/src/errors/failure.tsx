@@ -20,6 +20,9 @@ const NOT_RETRYABLE = new Set([
   "alreadyMember",
   "alreadyAssigned",
   "lastOwner",
+  "changeNotComparable",
+  "comparisonUnavailable",
+  "comparisonWithheld",
 ]);
 
 export function isRetryable(error: unknown): boolean {

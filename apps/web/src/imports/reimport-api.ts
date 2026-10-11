@@ -9,6 +9,7 @@ export type ChangeEntry = Awaited<ReturnType<typeof fetchChanges>>["items"][numb
 export type ChangeDecision = NonNullable<ChangeEntry["decision"]>;
 export type DifferenceImpact = Awaited<ReturnType<typeof previewDifference>>;
 export type ResolvedLink = Awaited<ReturnType<typeof resolveConfluenceLink>>;
+export type ChangeComparison = Awaited<ReturnType<typeof fetchComparison>>;
 
 export const CHANGE_TABS: readonly ChangeTab[] = ["conflicts", "updates", "deleted", "moved", "permissions"];
 
@@ -16,6 +17,8 @@ export const reimportKeys = {
   summary: (importId: string) => ["imports", "report", importId, "changes", "summary"] as const,
   changes: (importId: string, tab: ChangeTab, cursor: string | null) =>
     ["imports", "report", importId, "changes", tab, cursor] as const,
+  comparison: (importId: string, changeId: string) =>
+    ["imports", "report", importId, "changes", "comparison", changeId] as const,
 };
 
 function fetchSummary(importId: string) {
@@ -40,6 +43,21 @@ export function changesQuery(importId: string, tab: ChangeTab, cursor: string | 
   return queryOptions({
     queryKey: reimportKeys.changes(importId, tab, cursor),
     queryFn: () => fetchChanges(importId, tab, cursor),
+  });
+}
+
+function fetchComparison(importId: string, changeId: string) {
+  return request(() =>
+    api.GET("/api/v1/imports/{importId}/changes/{changeId}/compare", {
+      params: { path: { importId, changeId } },
+    }),
+  );
+}
+
+export function changeComparisonQuery(importId: string, changeId: string) {
+  return queryOptions({
+    queryKey: reimportKeys.comparison(importId, changeId),
+    queryFn: () => fetchComparison(importId, changeId),
   });
 }
 

@@ -582,6 +582,19 @@ const importRoute = createRoute({
   component: lazyRouteComponent(() => import("./imports/import-screen.js"), "ImportScreen"),
 });
 
+const reimportComparisonRoute = createRoute({
+  getParentRoute: () => organizationRoute,
+  path: "/imports/$importId/changes/$changeId/compare",
+  params: {
+    parse: (params) => ({
+      importId: z.uuid().parse(params.importId),
+      changeId: z.uuid().parse(params.changeId),
+    }),
+  },
+  validateSearch: z.object({ view: z.enum(["inline", "sideBySide"]).optional().catch(undefined) }),
+  component: lazyRouteComponent(() => import("./imports/reimport-comparison.js"), "ReimportComparisonScreen"),
+});
+
 const organizationAuditRoute = organizationScreen(
   "/audit-log",
   () => import("./screens/organization/audit-screen.js"),
@@ -777,6 +790,7 @@ const routeTree = rootRoute.addChildren([
         organizationTemplatesRoute,
         organizationAccessRoute,
         importsRoute,
+        reimportComparisonRoute,
         importWizardRoute,
         importRoute,
         organizationAuditRoute,

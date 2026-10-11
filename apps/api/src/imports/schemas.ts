@@ -15,7 +15,13 @@ import {
 import { z } from "zod";
 import { extensibleEnum, timestamp, uuid } from "../http/schemas.js";
 import { pageImpactSchema } from "../sharing/schemas.js";
-import { impactSchema, spaceGrantSchema, visibilitySchema } from "../spaces/schemas.js";
+import {
+  documentSchema,
+  impactSchema,
+  pageContentSchema,
+  spaceGrantSchema,
+  visibilitySchema,
+} from "../spaces/schemas.js";
 
 const ID = (n: number) => `01929b1e-7c3a-7d2e-9f4b-3c2d1e0f${String(n).padStart(4, "0")}`;
 
@@ -848,3 +854,33 @@ export const differenceImpactSchema = z
       .describe("Effect on reading and editing the page, for page differences."),
   })
   .describe("Who gains or loses access when a permission difference is applied.");
+
+const comparisonSideSchema = z.object({
+  title: z.string().describe("Title on this side."),
+  version: z
+    .number()
+    .int()
+    .nullable()
+    .describe(
+      "Version number: in Pagehall the published version when the caller may only read the page, null for the current draft or a template; at the source the version in the export.",
+    ),
+});
+
+export const changeComparisonSchema = z
+  .object({
+    kind: extensibleEnum(["page", "template"], "Whether a page or a space template is compared."),
+    pagehall: comparisonSideSchema.describe("The current content in Pagehall."),
+    source: comparisonSideSchema.describe("The content of the new export, converted as it would be applied."),
+    decision: decisionSchema.nullable().describe("The decision taken for the conflict so far, or null."),
+    diff: z
+      .json()
+      .describe(
+        "The comparison in the same form as the comparison of two versions: `title`, `blocks` and the number of `changes`.",
+      ),
+    before: documentSchema,
+    after: documentSchema,
+    references: pageContentSchema.shape.references,
+  })
+  .describe(
+    "The current content in Pagehall compared with the content of the new export. Nothing is applied.",
+  );

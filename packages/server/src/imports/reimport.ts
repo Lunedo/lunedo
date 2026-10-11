@@ -1,6 +1,7 @@
+import { type DocumentDiff, type DocumentJson, diffDocuments } from "@pagehall/editor-schema";
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
-import type { Principal } from "../accounts/principal.js";
+import { type Principal, SYSTEM } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { AccessImpact } from "../authorization/space-access.js";
@@ -8,16 +9,25 @@ import type { Database, Transaction } from "../database/database.js";
 import type { JobQueue } from "../jobs/job-queue.js";
 import type { PageAccessImpact, PageAccessService } from "../sharing/page-access.js";
 import { actorIdOf } from "../spaces/common.js";
+import { migrated } from "../spaces/documents.js";
 import type { PermissionChange, SpacePermissionService } from "../spaces/permissions.js";
 import type { SpaceRole } from "../spaces/schema.js";
+import type { VersionService } from "../spaces/versions.js";
 import { visibleItem } from "../spaces/visibility.js";
 import { deleteCredentials } from "./credentials.js";
 import { ImportError } from "./errors.js";
 import { importWorkJob } from "./jobs.js";
-import type { ChangeDecision, ChangeType, PrincipalRef } from "./reimport-compare.js";
+import type { ImportPipeline } from "./pipeline.js";
+import {
+  type ChangeDecision,
+  type ChangeType,
+  lineageImports,
+  type PrincipalRef,
+} from "./reimport-compare.js";
 import { FILE_RETENTION_DAYS } from "./settings.js";
 import { signalImportChange } from "./signals.js";
-import type { ImportSource } from "./source.js";
+import type { ImportReaderRegistry, ImportSource } from "./source.js";
+import { StagingStore } from "./staging.js";
 
 export const changeTabs = ["conflicts", "updates", "deleted", "moved", "permissions"] as const;
 export type ChangeTab = (typeof changeTabs)[number];
@@ -76,6 +86,16 @@ export interface ChangeEntryView {
   readonly appliedAt: Date | null;
 }
 
+export interface ChangeComparison {
+  readonly kind: "page" | "template";
+  readonly pagehall: { readonly title: string; readonly version: number | null };
+  readonly source: { readonly title: string; readonly version: number | null };
+  readonly decision: ChangeDecision | null;
+  readonly diff: DocumentDiff;
+  readonly before: DocumentJson;
+  readonly after: DocumentJson;
+}
+
 export interface ChangeSummary {
   readonly tabs: readonly { readonly tab: ChangeTab; readonly count: number; readonly open: number }[];
   readonly hidden: number;
@@ -124,6 +144,12 @@ function text(value: unknown): string | null {
   return typeof value === "string" ? value : null;
 }
 
+class AccessProbe extends Error {
+  constructor(readonly allowed: boolean) {
+    super("The access probe is rolled back");
+  }
+}
+
 export class ReimportService {
   readonly #database: Database;
   readonly #authorization: AuthorizationService;
@@ -131,6 +157,9 @@ export class ReimportService {
   readonly #jobs: JobQueue | undefined;
   readonly #spacePermissions: SpacePermissionService;
   readonly #pageAccess: PageAccessService;
+  readonly #versions: VersionService;
+  readonly #pipeline: ImportPipeline;
+  readonly #readers: ImportReaderRegistry;
 
   constructor(options: {
     database: Database;
@@ -139,6 +168,9 @@ export class ReimportService {
     jobs: JobQueue | undefined;
     spacePermissions: SpacePermissionService;
     pageAccess: PageAccessService;
+    versions: VersionService;
+    pipeline: ImportPipeline;
+    readers: ImportReaderRegistry;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
@@ -146,6 +178,9 @@ export class ReimportService {
     this.#jobs = options.jobs;
     this.#spacePermissions = options.spacePermissions;
     this.#pageAccess = options.pageAccess;
+    this.#versions = options.versions;
+    this.#pipeline = options.pipeline;
+    this.#readers = options.readers;
   }
 
   async #row(executor: Database | Transaction, importId: string, lock = false): Promise<ReimportRow> {
@@ -356,6 +391,170 @@ export class ReimportService {
     const holders = await this.#holders(rows);
     const entries = rows.map((row) => this.#entry(row, places, holders));
     return { entries, next: result.rows.length > filter.limit ? (rows.at(-1)?.id ?? null) : null };
+  }
+
+  async compare(viewer: Principal, importId: string, changeId: string): Promise<ChangeComparison> {
+    await this.#readable(viewer, importId);
+    const imported = await this.#database.execute<{
+      state: string;
+      organization_id: string;
+      source: ImportSource;
+      space_key: string | null;
+      source_url: string | null;
+      target_space_id: string;
+    }>(sql`
+      select state::text as state, organization_id, source, space_key, source_url, target_space_id from imports
+      where id = ${importId}`);
+    const row = imported.rows[0];
+    const found = await this.#database.execute<{
+      kind: string;
+      change: ChangeType;
+      source_id: string;
+      item_id: string | null;
+      target_id: string | null;
+      details: Record<string, unknown>;
+      decision: ChangeDecision | null;
+      applied: boolean;
+      visible: boolean;
+    }>(sql`
+      select c.kind, c.change, c.source_id, c.item_id, c.target_id, c.details, c.decision,
+        c.applied_at is not null as applied,
+        ${this.#visible(viewer)} as visible
+      from import_changes c where c.import_id = ${importId} and c.id = ${changeId}`);
+    const change = found.rows[0];
+    if (!row || !change?.visible) {
+      throw new ImportError("changeNotFound", "The change does not exist. Reload the list.");
+    }
+    if (change.change !== "conflict" || (change.kind !== "page" && change.kind !== "template")) {
+      throw new ImportError("changeNotComparable", "Only conflicts of pages and templates can be compared.");
+    }
+    if (row.state !== "review" || change.applied) {
+      throw new ImportError(
+        "comparisonUnavailable",
+        "The change was applied or replaced by a newer export. Compare the versions in the history of the page.",
+      );
+    }
+    const kind = change.kind;
+    const pagehall =
+      kind === "page"
+        ? await this.#currentPage(viewer, change.item_id)
+        : await this.#currentTemplate(viewer, row.target_space_id, change.target_id);
+    if (kind === "page" && change.item_id && (await this.#withheld(viewer, importId, change.item_id))) {
+      throw new ImportError(
+        "comparisonWithheld",
+        "The page is more restricted in Confluence. Its new content is shown only to people who keep access once the restriction is applied.",
+      );
+    }
+    const document = await this.#pipeline.previewSource(
+      {
+        importId,
+        organizationId: row.organization_id,
+        spaceKey: row.space_key ?? "",
+        sourceUrl: row.source_url,
+        reader: this.#readers.get(row.source),
+        staging: new StagingStore(this.#database, importId),
+        lineage: await lineageImports(this.#database, row.target_space_id),
+      },
+      { kind, sourceId: change.source_id },
+    );
+    if (!document) {
+      throw new ImportError(
+        "comparisonUnavailable",
+        "The export no longer holds this content. Compare the export again.",
+      );
+    }
+    const sourceTitle = text(change.details.sourceTitle) ?? pagehall.title;
+    const version = change.details.sourceVersion;
+    return {
+      kind,
+      pagehall: { title: pagehall.title, version: pagehall.version },
+      source: { title: sourceTitle, version: typeof version === "number" ? version : null },
+      decision: change.decision,
+      diff: diffDocuments(
+        { title: pagehall.title, document: pagehall.document },
+        { title: sourceTitle, document },
+      ),
+      before: pagehall.document,
+      after: document,
+    };
+  }
+
+  async #currentPage(
+    viewer: Principal,
+    itemId: string | null,
+  ): Promise<{ title: string; document: DocumentJson; version: number | null }> {
+    if (!itemId) throw new ImportError("changeNotFound", "The change does not exist. Reload the list.");
+    const resource = { type: "item" as const, id: itemId };
+    await this.#authorization.require(viewer, "item.view", resource);
+    if (await this.#authorization.authorize(viewer, "item.edit", resource)) {
+      const draft = await this.#versions.draft(itemId);
+      return { title: draft.title, document: draft.document, version: null };
+    }
+    const latest = (await this.#versions.list(itemId))[0];
+    const content = latest ? await this.#versions.get(itemId, latest.number) : null;
+    if (!content) {
+      throw new ImportError(
+        "comparisonUnavailable",
+        "The page has no published version you may read. Ask an editor of the page to compare it.",
+      );
+    }
+    return { title: content.title, document: content.document, version: content.number };
+  }
+
+  async #currentTemplate(
+    viewer: Principal,
+    spaceId: string,
+    templateId: string | null,
+  ): Promise<{ title: string; document: DocumentJson; version: null }> {
+    await this.#authorization.require(viewer, "space.view", { type: "space", id: spaceId });
+    const result = await this.#database.execute<{
+      name: string;
+      document: unknown;
+      schema_version: number;
+    }>(sql`
+      select name, document, schema_version from page_templates where id = ${templateId} and space_id = ${spaceId}`);
+    const template = result.rows[0];
+    if (!template) throw new ImportError("changeNotFound", "The template no longer exists. Reload the list.");
+    return {
+      title: template.name,
+      document: migrated(template.document, template.schema_version),
+      version: null,
+    };
+  }
+
+  async #withheld(viewer: Principal, importId: string, itemId: string): Promise<boolean> {
+    const pending = await this.#database.execute<{ details: Record<string, unknown> }>(sql`
+      select details from import_changes
+      where import_id = ${importId} and item_id = ${itemId} and change = 'permission' and applied_at is null
+        and details ->> 'scope' = 'page' and details ->> 'restriction' = 'view'
+      order by case details ->> 'action' when 'restrict' then 0 else 1 end, id`);
+    const narrowing = pending.rows.some(
+      (row) => row.details.action === "restrict" || row.details.action === "unlistHolder",
+    );
+    if (!narrowing) return false;
+    const changes = pending.rows.flatMap((row) => {
+      try {
+        return [this.#pageChange(row.details)];
+      } catch {
+        return [];
+      }
+    });
+    try {
+      await this.#database.transaction(async (tx) => {
+        await this.#pageAccess.changeWithin(tx, SYSTEM, itemId, changes);
+        const allowed = await this.#authorization.authorize(
+          viewer,
+          "item.view",
+          { type: "item", id: itemId },
+          { executor: tx },
+        );
+        throw new AccessProbe(allowed);
+      });
+    } catch (error) {
+      if (error instanceof AccessProbe) return !error.allowed;
+      return true;
+    }
+    return true;
   }
 
   async #places(
