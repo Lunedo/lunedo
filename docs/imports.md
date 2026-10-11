@@ -69,7 +69,7 @@ An import never notifies anyone: not for mentions, tasks, comments, reactions or
 
 A migration can run in stages: import a newer export of the same Confluence space into the space an earlier import created. Open the accepted import and choose **Re-import a newer export**. The wizard asks for the file and for the way people are recognized again; placeholders mapped earlier stay mapped.
 
-Pagehall accepts only an export of the same Confluence space (the space ID in the export decides) and refuses any other with a message. Spaces imported before re-imports existed cannot be re-imported. Starting, deciding and applying a re-import needs permission to manage the space.
+Pagehall accepts only an export of the same Confluence space (the space ID in the export decides) and refuses any other with a message. Use the same export format as before: the XML and the CSV export write some references differently, so a change of format can show unchanged pages as updated. Spaces imported before re-imports existed cannot be re-imported. Starting, deciding and applying a re-import needs permission to manage the space.
 
 Every import records, for each page, blog post, template and space permission, the version and a checksum that came from it, as well as labels, restrictions, the parent page and the titles. Pagehall compares the newer export with this record and lists the changes. **Nothing changes until the changes are applied.**
 

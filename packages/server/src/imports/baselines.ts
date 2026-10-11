@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { sql } from "drizzle-orm";
+import { decodeHTML } from "entities/decode";
 import type { Executor } from "../database/database.js";
 import { MAX_LABELS_PER_PAGE, normalizeLabel } from "../spaces/documents.js";
 import { titleKey } from "./confluence/staged.js";
@@ -63,6 +64,16 @@ export interface PageBaseline {
   readonly kept: boolean;
 }
 
+const MARKUP_ENTITIES = new Set(["&amp;", "&lt;", "&gt;", "&quot;", "&#38;", "&#60;", "&#62;", "&#34;"]);
+
+export function normalizedBody(body: string): string {
+  return body
+    .replace(/\r\n?/g, "\n")
+    .replace(/&(?:#\d{1,7}|#x[0-9a-f]{1,6}|[a-z][a-z0-9]{1,31});/gi, (entity) =>
+      MARKUP_ENTITIES.has(entity.toLowerCase()) ? entity : decodeHTML(entity),
+    );
+}
+
 export function checksum(...parts: readonly string[]): string {
   return createHash("sha256").update(parts.join("\u0000")).digest("base64url");
 }
@@ -108,7 +119,7 @@ export async function pageStatesOf(
       parentId: page.sourceId === homePageId ? null : sourceParent(page, homePageId),
       title: page.title,
       version: page.version,
-      checksum: checksum(page.type, page.title, bodies.get(page.sourceId)?.content ?? ""),
+      checksum: checksum(page.type, page.title, normalizedBody(bodies.get(page.sourceId)?.content ?? "")),
       labels: cleanLabels(
         labels.filter((label) => label.pageId === page.sourceId).map((label) => label.name),
       ),
@@ -142,7 +153,7 @@ export function templateState(template: SourceTemplate): SourceTemplateState {
   return {
     sourceId: template.sourceId,
     name: template.name,
-    checksum: checksum(template.name, template.description, template.body),
+    checksum: checksum(template.name, template.description, normalizedBody(template.body)),
   };
 }
 
