@@ -86,7 +86,7 @@ export function reimportAfter(): SyntheticExport {
     ...before,
     pages: [
       unchanged(RE.home),
-      unchanged(RE.steady, { labels: ["stays", "touched", "fresh"] }),
+      unchanged(RE.steady, { labels: ["stays", "fresh"] }),
       changed(RE.sourceOnly, "<p>New text from the source</p>", { title: "Source only, renamed" }),
       changed(RE.keepHere, "<p>Source keep here</p>"),
       changed(RE.takeSource, "<p>Source take source</p>"),
