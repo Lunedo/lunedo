@@ -96,6 +96,9 @@ test("re-import screens pass the accessibility check in English and German, ligh
   }
   await sweepAppearances(page, "reimport-conflicts-selected", async () => {
     await page.goto(`${base}/${reimport}?tab=conflicts`);
+    await expect(
+      page.getByRole("link", { name: /^(Compare “Take source”|„Take source“ mit)/ }),
+    ).toBeVisible();
     await page.getByRole("checkbox", { name: /^(Select all|Alle auswählen)$/ }).click();
     await expect(page.getByRole("toolbar")).toBeVisible();
   });
