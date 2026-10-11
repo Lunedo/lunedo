@@ -387,6 +387,13 @@ export class ImportPipeline {
     return new Map(rows.rows.map((row) => [row.source_id, row.target_id]));
   }
 
+  async #inSpace(tx: Transaction, itemId: string, spaceId: string): Promise<boolean> {
+    const result = await tx.execute(
+      sql`select 1 from tree_items where id = ${itemId} and space_id = ${spaceId}`,
+    );
+    return result.rows.length > 0;
+  }
+
   async #mappedOne(
     tx: Transaction,
     importId: string,
@@ -532,7 +539,9 @@ export class ImportPipeline {
             if (
               run.reimport &&
               nested &&
-              (!parentId || !(await run.reimport.editable(tx, [parentId])).has(parentId))
+              (!parentId ||
+                !(await this.#inSpace(tx, parentId, space.spaceId)) ||
+                !(await run.reimport.editable(tx, [parentId])).has(parentId))
             ) {
               continue;
             }
