@@ -616,27 +616,31 @@ describe.skipIf(!baseUrl)("sharing", () => {
         principalId: reader,
         role: "reader",
       });
-      await Promise.all([
+      const results = await Promise.allSettled([
         test.services.pageAccess.change(context.editor, restrictedRoot.id, [
           { action: "restrict", kind: "view" },
         ]),
         test.services.tree.move(context.editor, context.shared.id, { parentId: restrictedRoot.id }),
         test.services.tree.move(context.editor, restrictedRoot.id, { parentId: context.root.id }),
       ]);
-      for (const id of [restrictedRoot.id, context.shared.id, context.child.id]) {
-        expect(await can(accountPrincipal(reader), "item.view", { type: "item", id })).toBe(false);
+      expect(results[0]?.status).toBe("fulfilled");
+      for (const result of results) {
+        if (result.status === "rejected") expect(result.reason).toMatchObject({ code: "moveChangesAccess" });
       }
-      const paths = await test.pool.query<{ id: string; path: string[] }>(
-        "select id, path from tree_items where space_id = $1",
+      const paths = await test.pool.query<{ id: string; parent_id: string | null; path: string[] }>(
+        "select id, parent_id, path from tree_items where space_id = $1",
         [context.space.id],
       );
-      const byId = new Map(paths.rows.map((row) => [row.id, row.path]));
-      expect(byId.get(context.child.id)).toEqual([
-        context.root.id,
-        restrictedRoot.id,
-        context.shared.id,
-        context.child.id,
-      ]);
+      const byId = new Map(paths.rows.map((row) => [row.id, row]));
+      for (const row of paths.rows) {
+        const parent = row.parent_id ? byId.get(row.parent_id) : undefined;
+        expect(row.path).toEqual([...(parent?.path ?? []), row.id]);
+      }
+      for (const id of [restrictedRoot.id, context.shared.id, context.child.id]) {
+        if (!byId.get(id)?.path.includes(restrictedRoot.id)) continue;
+        expect(await can(accountPrincipal(reader), "item.view", { type: "item", id })).toBe(false);
+      }
+      expect(byId.get(context.child.id)?.path).toContain(context.shared.id);
     });
   });
 });

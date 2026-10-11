@@ -78,9 +78,12 @@ const convertSchema = z
   .describe("The kind to convert to.");
 
 const previewMoveSchema = z
-  .object({ spaceId: uuid("Target space.") })
+  .object({
+    spaceId: uuid("Target space. Leave it out to stay in the space.").optional(),
+    parentId: uuid("Parent item, or null for the root of the tree.").nullable(),
+  })
   .strict()
-  .describe("The space the item would move to.");
+  .describe("The place the item would move to.");
 
 const replaceSchema = z
   .object({ document: documentSchema })
@@ -300,22 +303,23 @@ export class ItemsController {
   @Post("items/:itemId/move/preview")
   @Permission("item.edit", item)
   @ApiRoute({
-    summary: "Preview a move to another space",
+    summary: "Preview a move",
     description:
-      "Shows who would gain or lose access to the item and its children if it moved to the space. Needs edit permission in both spaces. Nothing is changed.",
+      "Shows who would gain or lose access to the item and its children if it moved to the place, through roles in the space and through view restrictions it inherits there. When access changes, the answer carries a confirmation to send with the move. Needs edit permission in both spaces. Nothing is changed.",
     tags: [TAG],
     status: 200,
     params: itemParams,
     body: previewMoveSchema,
-    bodyExample: { spaceId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10" },
+    bodyExample: { spaceId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10", parentId: null },
     response: { description: "The change in access.", schema: moveImpactSchema, example: exampleMoveImpact },
+    errors: ["invalidPlacement", "moveIntoDescendant", "overviewPage", "confidentialSharing"],
   })
   async previewMove(
     @Param("itemId") itemId: string,
     @Body() body: z.output<typeof previewMoveSchema>,
     @Req() request: FastifyRequest,
   ) {
-    return this.#services.tree.moveImpact(actorOf(request), itemId, body.spaceId);
+    return this.#services.tree.moveImpact(actorOf(request), itemId, body);
   }
 
   @Post("items/:itemId/move")
@@ -323,14 +327,21 @@ export class ItemsController {
   @ApiRoute({
     summary: "Move an item",
     description:
-      "Moves an item with its children to another place, also in another space. Moving below the item itself or one of its descendants is refused. Moving to another space needs edit permission in both spaces; preview how access changes first.",
+      "Moves an item with its children to another place, also in another space. Moving below the item itself or one of its descendants is refused. Moving to another space needs edit permission in both spaces. When the move changes who can access the content, through roles or inherited view restrictions, it is refused with the change unless the request carries the confirmation of a preview of exactly that change.",
     tags: [TAG],
     status: 200,
     params: itemParams,
     body: moveItemSchema,
     bodyExample: { parentId: null, afterId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a41" },
     response: { description: "The moved item.", schema: treeItemSchema, example: exampleItem },
-    errors: ["invalidPlacement", "moveIntoDescendant", "itemMoved", "overviewPage"],
+    errors: [
+      "invalidPlacement",
+      "moveIntoDescendant",
+      "itemMoved",
+      "overviewPage",
+      "confidentialSharing",
+      "moveChangesAccess",
+    ],
   })
   async move(
     @Param("itemId") itemId: string,

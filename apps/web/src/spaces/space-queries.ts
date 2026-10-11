@@ -18,6 +18,7 @@ export type SpaceVisibility = Space["visibility"];
 export type TreeItem = Ok<"/api/v1/spaces/{spaceId}/items", "get">["items"][number];
 export type ItemDetails = Ok<"/api/v1/items/{itemId}", "get">;
 export type AccessImpact = Ok<"/api/v1/spaces/{spaceId}/permissions/preview", "post">;
+export type MoveImpact = Ok<"/api/v1/items/{itemId}/move/preview", "post">;
 export type SpacePermission = Ok<"/api/v1/spaces/{spaceId}/permissions", "get">[number];
 export type HolderKind = SpacePermission["principalKind"];
 export type PageContent = Ok<"/api/v1/pages/{pageId}/content", "get">;

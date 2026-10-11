@@ -19,6 +19,7 @@ import { problemMessage } from "../../errors/problem-message.js";
 import { ImpactSummary } from "../access/impact.js";
 import { spaceDisplayName } from "../space-badge.js";
 import { itemQuery, type SpaceWithRole, spaceKeys, type TreeItem } from "../space-queries.js";
+import { moveImpactOf } from "./move-confirmation.js";
 
 const ROOT = "root";
 
@@ -73,18 +74,21 @@ function MoveForm({
     queryFn: () => request(() => api.GET("/api/v1/spaces", { params: { query: { limit: 200 } } })),
   });
   const crossSpace = targetSpaceId !== space.id;
+  const parentId = parent.value === ROOT ? null : parent.value;
+  const impactKey = ["items", item.id, "moveImpact", targetSpaceId, parentId];
   const impact = useQuery({
-    queryKey: ["items", item.id, "moveImpact", targetSpaceId],
-    enabled: crossSpace,
+    queryKey: impactKey,
     queryFn: () =>
       request(() =>
         api.POST("/api/v1/items/{itemId}/move/preview", {
           params: { path: { itemId: item.id } },
-          body: { spaceId: targetSpaceId },
+          body: { ...(crossSpace ? { spaceId: targetSpaceId } : {}), parentId },
         }),
       ),
     retry: false,
+    throwOnError: false,
   });
+  const changesAccess = impact.data?.confirmation != null;
   const targetSpace = spaces.data?.items.find((entry) => entry.id === targetSpaceId) ?? space;
 
   const loadParents = async (query: string) => {
@@ -111,7 +115,6 @@ function MoveForm({
     setFailure(null);
     setMoving(true);
     try {
-      const parentId = parent.value === ROOT ? null : parent.value;
       let beforeId: string | undefined;
       if (position === "first") {
         const children = await request(() =>
@@ -131,6 +134,7 @@ function MoveForm({
             parentId,
             ...(crossSpace ? { spaceId: targetSpaceId } : {}),
             ...(beforeId ? { beforeId } : {}),
+            ...(impact.data?.confirmation ? { confirmation: impact.data.confirmation } : {}),
           },
         }),
       );
@@ -144,7 +148,11 @@ function MoveForm({
       });
       onDone();
     } catch (error) {
-      setFailure(problemMessage(t, error));
+      const changed = moveImpactOf(error);
+      if (changed) {
+        queryClient.setQueryData(impactKey, changed);
+        setFailure(t("move.accessChanged"));
+      } else setFailure(problemMessage(t, error));
     } finally {
       setMoving(false);
     }
@@ -206,10 +214,10 @@ function MoveForm({
           ]}
         />
       </fieldset>
-      {crossSpace ? (
+      {crossSpace || changesAccess || impact.isError ? (
         <section aria-label={t("move.accessChange")} className="flex flex-col gap-2">
           <h3 className="font-semibold">{t("move.accessChange")}</h3>
-          {impact.isPending ? <Skeleton className="h-12 w-full" /> : null}
+          {impact.isPending ? <Skeleton className="h-control-md w-full" /> : null}
           {impact.isError ? (
             <LoadError what={t("move.impactFailed")} error={impact.error} onRetry={() => impact.refetch()} />
           ) : null}

@@ -1367,7 +1367,10 @@
     "comparisonWithheld": "In Confluence dürfen weniger Personen diesen Inhalt lesen. Übernimm zuerst die Einschränkungen bei den Berechtigungsabweichungen.",
     "shareBeyondOwnAccess": "Deine eigene Rolle im Space gibt dir diesen Zugriff auf die Seite nicht. Wähle eine niedrigere Rolle oder frag einen Space-Admin.",
     "shareBeyondOwnAccessBelow": "Deine eigene Rolle im Space deckt {count, plural, one {# Seite} other {# Seiten}} darunter nicht ab. Gib nur diese Seite frei, wähle eine niedrigere Rolle oder frag einen Space-Admin.",
-    "ownShare": "Du kannst keinen Zugriff ändern, den du selbst oder über eine deiner Gruppen hast. Bitte jemand anderen, der die Seite freigeben kann."
+    "ownShare": "Du kannst keinen Zugriff ändern, den du selbst oder über eine deiner Gruppen hast. Bitte jemand anderen, der die Seite freigeben kann.",
+    "confidentialSharing": "Der Inhalt gibt Gruppen oder über breite Links Zugriff. Entferne diese Einträge und verschiebe ihn dann in den vertraulichen Space.",
+    "confidentialSharingPages": "{count, plural, one {# Seite gibt} other {# Seiten geben}} Gruppen oder über breite Links Zugriff. Entferne die Gruppen aus Freigaben, Links und Beschränkungen und widerrufe die breiten Links, dann verschiebe erneut.",
+    "moveChangesAccess": "Das Verschieben ändert, wer den Inhalt öffnen kann. Prüfe, wer Zugriff erhält und wer ihn verliert, und bestätige dann das Verschieben."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -4508,7 +4511,12 @@
     "submitToSpace": "Nach {space} verschieben",
     "moved": "{title} verschoben",
     "movedToSpace": "{title} nach {space} verschoben",
-    "failed": "Der Eintrag konnte nicht verschoben werden"
+    "failed": "Der Eintrag konnte nicht verschoben werden",
+    "confirmTitle": "{title} verschieben und Zugriff ändern?",
+    "confirmDescription": "Am neuen Ort gelten andere Rollen oder Seitenbeschränkungen, daher können andere Personen den Inhalt öffnen.",
+    "confirm": "Verschieben und Zugriff ändern",
+    "accessChanged": "Wer Zugriff erhält oder verliert, hat sich inzwischen geändert. Prüfe die Liste unten und verschiebe erneut.",
+    "accessChangedAgain": "Wer Zugriff erhält oder verliert, hat sich inzwischen geändert. Prüfe die Liste und bestätige erneut."
   },
   "createItem": {
     "folderTitle": "Neuer Ordner",

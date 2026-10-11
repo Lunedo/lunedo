@@ -3,10 +3,11 @@ import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditEvents, AuditLog } from "../audit/audit-log.js";
 import {
-  accountItemCondition,
   editRestrictionCondition,
   holderCovers,
   holderMatches,
+  itemLevel,
+  LEVEL_ROLES,
   restrictionHasActiveHolder,
   restrictionListedBy,
   viewRestrictionCondition,
@@ -130,20 +131,10 @@ export interface AccessChangeOptions {
 }
 
 const IMPACT_LIST_LIMIT = 100;
-const RANK_ROLES: (SpaceRole | null)[] = [null, "reader", "commenter", "editor"];
 
 export interface ShareReach {
   page: boolean;
   uncoveredBelow: number;
-}
-
-function levelCase(account: SQL, item: SQL, space: SQL): SQL {
-  const readable = sql`(${accountItemCondition(account, item, space, "reader")}
-    and (${item}.reader_visible or ${accountItemCondition(account, item, space, "editor")}))`;
-  return sql`case
-    when ${accountItemCondition(account, item, space, "editor", { editRestriction: true })} then 3
-    when ${accountItemCondition(account, item, space, "commenter")} and ${readable} then 2
-    when ${readable} then 1 else 0 end`;
 }
 
 export class PageAccessService {
@@ -544,7 +535,7 @@ export class PageAccessService {
             );
           }
           const widened = includeDescendants && !current.include_descendants;
-          const raised = RANK_ROLES.indexOf(role) > RANK_ROLES.indexOf(current.role);
+          const raised = LEVEL_ROLES.indexOf(role) > LEVEL_ROLES.indexOf(current.role);
           if (widened || raised) await this.requireReach(tx, actor, item.id, role, includeDescendants);
           await tx.execute(sql`
             update page_shares set role = ${role}, include_descendants = ${includeDescendants}, updated_at = now()
@@ -802,7 +793,7 @@ export class PageAccessService {
 
   async #levels(tx: Transaction, item: ItemRow, changes: AccessChange[]): Promise<Map<string, number>> {
     const result = await tx.execute<{ id: string; level: number }>(sql`
-      select a.id, ${levelCase(sql`a.id`, sql`t`, sql`s`)} as level
+      select a.id, ${itemLevel(sql`a.id`, sql`t`, sql`s`)} as level
       from accounts a cross join tree_items t join spaces s on s.id = t.space_id
       where t.id = ${item.id} and a.state = 'active' and a.id in (${this.#candidates(item, changes)})`);
     return new Map(result.rows.map((row) => [row.id, Number(row.level)]));
@@ -831,8 +822,8 @@ export class PageAccessService {
         changes.push({
           accountId: id,
           name: listed.get(id) ?? "",
-          before: RANK_ROLES[before.get(id) ?? 0] ?? null,
-          after: RANK_ROLES[after.get(id) ?? 0] ?? null,
+          before: LEVEL_ROLES[before.get(id) ?? 0] ?? null,
+          after: LEVEL_ROLES[after.get(id) ?? 0] ?? null,
         });
       }
       return {

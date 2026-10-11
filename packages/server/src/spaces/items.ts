@@ -2,13 +2,22 @@ import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
-import { type AccessImpact, accessImpact } from "../authorization/space-access.js";
+import type { AccessImpact } from "../authorization/space-access.js";
 import type { ContentActivity } from "../collaboration/content.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { SettingsService } from "../settings/service.js";
-import { actorIdOf, currentGrants, SpaceError } from "./common.js";
+import type { ValueSigner } from "../sharing/signer.js";
+import { actorIdOf, SpaceError } from "./common.js";
 import { insertInitialDocument, type PageDocumentService } from "./documents.js";
 import { positionBetween } from "./fractional-index.js";
+import {
+  accessLevels,
+  candidateAccounts,
+  changeParts,
+  levelChanges,
+  representativeItems,
+  summarizeChanges,
+} from "./move-impact.js";
 import type { PeopleService } from "./people.js";
 import type { PageMode, PageWidth, TreeItemKind } from "./schema.js";
 import { defaultPageModeSetting } from "./settings.js";
@@ -57,6 +66,20 @@ export interface ItemDetails extends TreeItem {
   spaceName: string;
   spaceAccess: boolean;
   ancestors: { id: string; kind: TreeItemKind; title: string; published: boolean }[];
+}
+
+export interface MoveImpact extends AccessImpact {
+  leavesConfidential: boolean;
+  confirmation: string | null;
+}
+
+const MOVE_CONFIRMATION = "move-impact";
+const CONFIRMATION_MS = 60 * 60 * 1000;
+
+class MovePreview extends Error {
+  constructor(readonly impact: MoveImpact) {
+    super("Preview");
+  }
 }
 
 export interface Placement {
@@ -227,6 +250,23 @@ export async function lockSpaces(tx: Transaction, spaceIds: string[]): Promise<v
   }
 }
 
+async function broadlySharedPages(tx: Transaction, itemId: string, targetSpaceId: string): Promise<number> {
+  const result = await tx.execute<{ pages: number }>(sql`
+    with recursive down as (
+      select id from tree_items where id = ${itemId}
+      union all
+      select t.id from tree_items t join down on t.parent_id = down.id
+    )
+    select count(*)::int as pages from down d
+    where (select confidential from spaces where id = ${targetSpaceId}) and (
+      exists (select 1 from page_shares ps where ps.item_id = d.id and ps.principal_kind <> 'account')
+      or exists (select 1 from share_links sl where sl.item_id = d.id and sl.revoked_at is null
+        and (sl.scope <> 'people' or exists (select 1 from share_link_people lp
+          where lp.link_id = sl.id and lp.principal_kind <> 'account')))
+      or exists (select 1 from page_restriction_holders rh where rh.item_id = d.id and rh.principal_kind <> 'account'))`);
+  return Number(result.rows[0]?.pages ?? 0);
+}
+
 export class TreeService {
   readonly #database: Database;
   readonly #authorization: AuthorizationService;
@@ -235,6 +275,7 @@ export class TreeService {
   readonly #versions: VersionService;
   readonly #settings: SettingsService;
   readonly #activity: ContentActivity;
+  readonly #signer: ValueSigner;
 
   constructor(options: {
     database: Database;
@@ -244,6 +285,7 @@ export class TreeService {
     versions: VersionService;
     settings: SettingsService;
     activity: ContentActivity;
+    signer: ValueSigner;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
@@ -252,6 +294,7 @@ export class TreeService {
     this.#versions = options.versions;
     this.#settings = options.settings;
     this.#activity = options.activity;
+    this.#signer = options.signer;
   }
 
   async #modeFor(spaceId: string, requested: PageMode | undefined): Promise<PageMode> {
@@ -599,48 +642,34 @@ export class TreeService {
   async moveImpact(
     actor: Principal,
     itemId: string,
-    targetSpaceId: string,
-  ): Promise<AccessImpact & { leavesConfidential: boolean }> {
-    const source = await this.#database.execute<{ space_id: string }>(
-      sql`select space_id from tree_items where id = ${itemId}`,
-    );
-    const sourceSpaceId = source.rows[0]?.space_id;
-    if (!sourceSpaceId) throw new SpaceError("itemNotFound", "The item does not exist");
-    await this.#requireEdit(actor, sourceSpaceId);
-    await this.#requireEdit(actor, targetSpaceId);
-    const state = async (spaceId: string) => {
-      const space = await this.#database.execute<{
-        organization_id: string | null;
-        visibility: "private" | "organization" | "instance";
-      }>(sql`select organization_id, visibility from spaces where id = ${spaceId}`);
-      const row = space.rows[0];
-      if (!row) throw new SpaceError("spaceNotFound", "The space does not exist");
-      return {
-        organizationId: row.organization_id,
-        visibility: row.visibility,
-        grants: await currentGrants(this.#database, spaceId),
-      };
-    };
-    const confidential = await this.#database.execute<{ id: string; confidential: boolean }>(sql`
-      select id, confidential from spaces where id in (${sourceSpaceId}, ${targetSpaceId})`);
-    const isConfidential = (id: string) => confidential.rows.some((row) => row.id === id && row.confidential);
-    const impact = await accessImpact(
-      this.#database,
-      await state(sourceSpaceId),
-      await state(targetSpaceId),
-      (account) => this.#people.visibleCondition(actor, account),
-    );
-    return {
-      ...impact,
-      leavesConfidential: isConfidential(sourceSpaceId) && !isConfidential(targetSpaceId),
-    };
+    target: { spaceId?: string | undefined; parentId: string | null },
+  ): Promise<MoveImpact> {
+    try {
+      await this.#moving(actor, itemId, target, null);
+    } catch (error) {
+      if (error instanceof MovePreview) return error.impact;
+      throw error;
+    }
+    throw new Error("The move preview did not finish");
   }
 
   async move(
     actor: Principal,
     itemId: string,
-    target: Placement & { spaceId?: string | undefined },
+    target: Placement & { spaceId?: string | undefined; confirmation?: string | undefined },
   ): Promise<TreeItem> {
+    await this.#moving(actor, itemId, target, target.confirmation ?? "");
+    const moved = await this.get(actor, itemId);
+    if (!moved) throw new SpaceError("itemNotFound", "The item does not exist");
+    return moved;
+  }
+
+  async #moving(
+    actor: Principal,
+    itemId: string,
+    target: Placement & { spaceId?: string | undefined },
+    confirmation: string | null,
+  ): Promise<void> {
     const located = await this.#database.execute<{ space_id: string }>(
       sql`select space_id from tree_items where id = ${itemId}`,
     );
@@ -652,92 +681,131 @@ export class TreeService {
 
     await this.#database.transaction(async (tx) => {
       await lockSpaces(tx, [sourceSpaceId, targetSpaceId]);
-      const current = await tx.execute<{
-        space_id: string;
-        parent_id: string | null;
-        in_tree: boolean;
-        kind: TreeItemKind;
-      }>(
-        sql`select space_id, parent_id, (trash_entry_id is null and archived_root_id is null) as in_tree, kind
-          from tree_items where id = ${itemId} for update`,
+      const items = await representativeItems(tx, itemId);
+      const accounts = await candidateAccounts(
+        tx,
+        { itemId, parentId: target.parentId, spaceIds: [sourceSpaceId, targetSpaceId] },
+        items,
       );
-      const row = current.rows[0];
-      if (!row?.in_tree) throw new SpaceError("itemNotFound", "The item does not exist");
-      if (row.kind === "blogPost") {
-        throw new SpaceError("invalidPlacement", "Blog posts are not part of the page tree");
-      }
-      const meetingPart = await tx.execute<{ part: boolean }>(sql`
-        select (${row.kind} = 'meetingTopic' or exists (select 1 from meetings where item_id = ${itemId})) as part`);
-      if (meetingPart.rows[0]?.part) {
-        throw new SpaceError(
-          "invalidPlacement",
-          "Meetings and topics stay in their series; move the series instead",
-        );
-      }
-      if (row.space_id !== sourceSpaceId) {
-        throw new SpaceError("itemMoved", "Someone else moved the item at the same moment; try again");
-      }
-      if (target.parentId === itemId) {
-        throw new SpaceError("moveIntoDescendant", "An item cannot be moved below itself");
-      }
-      await this.#checkParent(tx, actor, targetSpaceId, target.parentId);
-      if (target.parentId !== null) {
-        const cycle = await tx.execute<{ found: boolean }>(sql`
-          with recursive up as (
-            select id, parent_id, 1 as depth from tree_items where id = ${target.parentId}
-            union all
-            select t.id, t.parent_id, up.depth + 1 from tree_items t join up on t.id = up.parent_id
-            where up.depth < 1000
-          )
-          select exists (select 1 from up where id = ${itemId}) as found`);
-        if (cycle.rows[0]?.found) {
-          throw new SpaceError("moveIntoDescendant", "An item cannot be moved below its own descendant");
-        }
-      }
-      if (targetSpaceId !== sourceSpaceId) {
-        const overview = await tx.execute<{ id: string }>(
-          sql`select id from spaces where overview_item_id = ${itemId}`,
-        );
-        if (overview.rows[0]) {
-          throw new SpaceError("overviewPage", "The overview page of a space stays in its space");
-        }
-        const broad = await tx.execute<{ found: boolean }>(sql`
-          with recursive down as (
-            select id from tree_items where id = ${itemId}
-            union all
-            select t.id from tree_items t join down on t.parent_id = down.id
-          )
-          select (select confidential from spaces where id = ${targetSpaceId}) and (
-            exists (select 1 from page_shares ps where ps.item_id in (select id from down) and ps.principal_kind <> 'account')
-            or exists (select 1 from share_links sl where sl.item_id in (select id from down)
-              and sl.scope <> 'people' and sl.revoked_at is null)) as found`);
-        if (broad.rows[0]?.found) {
+      const before = await accessLevels(tx, items, accounts);
+      await this.#relocate(tx, actor, itemId, sourceSpaceId, targetSpaceId, target);
+      const changes = levelChanges(items, before, await accessLevels(tx, items, accounts));
+      const parts = [
+        actorIdOf(actor) ?? "",
+        itemId,
+        targetSpaceId,
+        target.parentId ?? "",
+        ...changeParts(changes),
+      ];
+      if (confirmation === null || changes.length > 0) {
+        const confidential = await tx.execute<{ leaves: boolean }>(sql`
+          select (select confidential from spaces where id = ${sourceSpaceId})
+            and not (select confidential from spaces where id = ${targetSpaceId}) as leaves`);
+        const impact: MoveImpact = {
+          ...(await summarizeChanges(tx, changes, (account) =>
+            this.#people.visibleCondition(actor, account),
+          )),
+          leavesConfidential: confidential.rows[0]?.leaves === true,
+          confirmation:
+            changes.length > 0
+              ? await this.#signer.sign(MOVE_CONFIRMATION, parts, new Date(Date.now() + CONFIRMATION_MS))
+              : null,
+        };
+        if (confirmation === null) throw new MovePreview(impact);
+        if (!(await this.#signer.verify(MOVE_CONFIRMATION, parts, confirmation))) {
           throw new SpaceError(
-            "confidentialSharing",
-            "The content is shared with groups or through broad links. Remove these shares before moving it into a confidential space.",
+            "moveChangesAccess",
+            "The move changes who can open the content. Check who gains and who loses access, then confirm the move.",
+            { impact },
           );
         }
       }
-      const position = await this.#placementPosition(tx, targetSpaceId, target, itemId);
-      await tx.execute(sql`
-        update tree_items set parent_id = ${target.parentId}, position = ${position}, updated_at = now()
-        where id = ${itemId}`);
-      if (targetSpaceId !== sourceSpaceId) {
-        await tx.execute(sql`
-          with recursive down as (
-            select id from tree_items where id = ${itemId}
-            union all
-            select t.id from tree_items t join down on t.parent_id = down.id
-          )
-          update tree_items set space_id = ${targetSpaceId}, updated_at = now() where id in (select id from down)`);
-        await signalSpaceChange(tx, { spaceId: targetSpaceId, kind: "tree", itemId });
-      }
-      await this.#activity.revealed(tx, await refreshReaderVisibility(tx, [itemId]));
-      await signalSpaceChange(tx, { spaceId: sourceSpaceId, kind: "tree", itemId });
     });
-    const moved = await this.get(actor, itemId);
-    if (!moved) throw new SpaceError("itemNotFound", "The item does not exist");
-    return moved;
+  }
+
+  async #relocate(
+    tx: Transaction,
+    actor: Principal,
+    itemId: string,
+    sourceSpaceId: string,
+    targetSpaceId: string,
+    target: Placement,
+  ): Promise<void> {
+    const current = await tx.execute<{
+      space_id: string;
+      parent_id: string | null;
+      in_tree: boolean;
+      kind: TreeItemKind;
+    }>(
+      sql`select space_id, parent_id, (trash_entry_id is null and archived_root_id is null) as in_tree, kind
+        from tree_items where id = ${itemId} for update`,
+    );
+    const row = current.rows[0];
+    if (!row?.in_tree) throw new SpaceError("itemNotFound", "The item does not exist");
+    if (row.kind === "blogPost") {
+      throw new SpaceError("invalidPlacement", "Blog posts are not part of the page tree");
+    }
+    const meetingPart = await tx.execute<{ part: boolean }>(sql`
+      select (${row.kind} = 'meetingTopic' or exists (select 1 from meetings where item_id = ${itemId})) as part`);
+    if (meetingPart.rows[0]?.part) {
+      throw new SpaceError(
+        "invalidPlacement",
+        "Meetings and topics stay in their series; move the series instead",
+      );
+    }
+    if (row.space_id !== sourceSpaceId) {
+      throw new SpaceError("itemMoved", "Someone else moved the item at the same moment; try again");
+    }
+    if (target.parentId === itemId) {
+      throw new SpaceError("moveIntoDescendant", "An item cannot be moved below itself");
+    }
+    await this.#checkParent(tx, actor, targetSpaceId, target.parentId);
+    if (target.parentId !== null) {
+      const cycle = await tx.execute<{ found: boolean }>(sql`
+        with recursive up as (
+          select id, parent_id, 1 as depth from tree_items where id = ${target.parentId}
+          union all
+          select t.id, t.parent_id, up.depth + 1 from tree_items t join up on t.id = up.parent_id
+          where up.depth < 1000
+        )
+        select exists (select 1 from up where id = ${itemId}) as found`);
+      if (cycle.rows[0]?.found) {
+        throw new SpaceError("moveIntoDescendant", "An item cannot be moved below its own descendant");
+      }
+    }
+    if (targetSpaceId !== sourceSpaceId) {
+      const overview = await tx.execute<{ id: string }>(
+        sql`select id from spaces where overview_item_id = ${itemId}`,
+      );
+      if (overview.rows[0]) {
+        throw new SpaceError("overviewPage", "The overview page of a space stays in its space");
+      }
+      const broad = await broadlySharedPages(tx, itemId, targetSpaceId);
+      if (broad > 0) {
+        throw new SpaceError(
+          "confidentialSharing",
+          `${broad} ${broad === 1 ? "page gives" : "pages give"} access to groups or through broad links. Remove the groups from their shares, links and restrictions, and revoke the broad links, before moving the content into a confidential space.`,
+          { pages: broad },
+        );
+      }
+    }
+    const position = await this.#placementPosition(tx, targetSpaceId, target, itemId);
+    await tx.execute(sql`
+      update tree_items set space_id = ${targetSpaceId}, parent_id = ${target.parentId}, position = ${position},
+        updated_at = now()
+      where id = ${itemId}`);
+    if (targetSpaceId !== sourceSpaceId) {
+      await tx.execute(sql`
+        with recursive down as (
+          select id from tree_items where id = ${itemId}
+          union all
+          select t.id from tree_items t join down on t.parent_id = down.id
+        )
+        update tree_items set space_id = ${targetSpaceId}, updated_at = now() where id in (select id from down)`);
+      await signalSpaceChange(tx, { spaceId: targetSpaceId, kind: "tree", itemId });
+    }
+    await this.#activity.revealed(tx, await refreshReaderVisibility(tx, [itemId]));
+    await signalSpaceChange(tx, { spaceId: sourceSpaceId, kind: "tree", itemId });
   }
 
   async #requireEdit(actor: Principal, spaceId: string): Promise<void> {

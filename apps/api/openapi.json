@@ -106339,7 +106339,7 @@
       "post": {
         "operationId": "items.move",
         "summary": "Move an item",
-        "description": "Moves an item with its children to another place, also in another space. Moving below the item itself or one of its descendants is refused. Moving to another space needs edit permission in both spaces; preview how access changes first.\n\nRequires the permission `item.edit` on the item in `itemId`.",
+        "description": "Moves an item with its children to another place, also in another space. Moving below the item itself or one of its descendants is refused. Moving to another space needs edit permission in both spaces. When the move changes who can access the content, through roles or inherited view restrictions, it is refused with the change unless the request carries the confirmation of a preview of exactly that change.\n\nRequires the permission `item.edit` on the item in `itemId`.",
         "tags": [
           "Pages"
         ],
@@ -106415,6 +106415,11 @@
                       }
                     ],
                     "description": "Place the item directly after this sibling. Without either, the item goes last."
+                  },
+                  "confirmation": {
+                    "description": "Confirmation from the preview of this move. Needed when the move changes who can access the content.",
+                    "type": "string",
+                    "maxLength": 200
                   }
                 },
                 "required": [
@@ -106822,19 +106827,35 @@
             }
           },
           "409": {
-            "description": "`itemMoved`: The item was moved at the same moment. `moveIntoDescendant`: An item cannot be moved below itself. `overviewPage`: The overview page of a space stays a page in its space.",
+            "description": "`confidentialSharing`: The content is shared too broadly for a confidential space. `itemMoved`: The item was moved at the same moment. `moveChangesAccess`: The move changes who can access the content. `moveIntoDescendant`: An item cannot be moved below itself. `overviewPage`: The overview page of a space stays a page in its space.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
+                  "confidentialSharing": {
+                    "value": {
+                      "type": "urn:pagehall:problem:confidentialSharing",
+                      "title": "The content is shared too broadly for a confidential space",
+                      "status": 409,
+                      "code": "confidentialSharing"
+                    }
+                  },
                   "itemMoved": {
                     "value": {
                       "type": "urn:pagehall:problem:itemMoved",
                       "title": "The item was moved at the same moment",
                       "status": 409,
                       "code": "itemMoved"
+                    }
+                  },
+                  "moveChangesAccess": {
+                    "value": {
+                      "type": "urn:pagehall:problem:moveChangesAccess",
+                      "title": "The move changes who can access the content",
+                      "status": 409,
+                      "code": "moveChangesAccess"
                     }
                   },
                   "moveIntoDescendant": {
@@ -106883,8 +106904,8 @@
     "/api/v1/items/{itemId}/move/preview": {
       "post": {
         "operationId": "items.previewMove",
-        "summary": "Preview a move to another space",
-        "description": "Shows who would gain or lose access to the item and its children if it moved to the space. Needs edit permission in both spaces. Nothing is changed.\n\nRequires the permission `item.edit` on the item in `itemId`.",
+        "summary": "Preview a move",
+        "description": "Shows who would gain or lose access to the item and its children if it moved to the place, through roles in the space and through view restrictions it inherits there. When access changes, the answer carries a confirmation to send with the move. Needs edit permission in both spaces. Nothing is changed.\n\nRequires the permission `item.edit` on the item in `itemId`.",
         "tags": [
           "Pages"
         ],
@@ -106923,17 +106944,30 @@
                   "spaceId": {
                     "type": "string",
                     "format": "uuid",
-                    "description": "Target space."
+                    "description": "Target space. Leave it out to stay in the space."
+                  },
+                  "parentId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Parent item, or null for the root of the tree."
                   }
                 },
                 "required": [
-                  "spaceId"
+                  "parentId"
                 ],
                 "additionalProperties": false,
-                "description": "The space the item would move to."
+                "description": "The place the item would move to."
               },
               "example": {
-                "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10"
+                "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                "parentId": null
               }
             }
           }
@@ -107045,6 +107079,13 @@
                     "leavesConfidential": {
                       "type": "boolean",
                       "description": "True when the content leaves a confidential space and loses its protection."
+                    },
+                    "confirmation": {
+                      "description": "Send this with the move to confirm exactly this change, or null when access does not change. Valid for one hour.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     }
                   },
                   "required": [
@@ -107055,7 +107096,8 @@
                     "unlisted",
                     "truncated",
                     "changes",
-                    "leavesConfidential"
+                    "leavesConfidential",
+                    "confirmation"
                   ],
                   "additionalProperties": false,
                   "description": "Who gains, loses or changes access through the move."
@@ -107075,13 +107117,14 @@
                       "after": "reader"
                     }
                   ],
-                  "leavesConfidential": false
+                  "leavesConfidential": false,
+                  "confirmation": "mbx2k1c0.Hq3l2bS8yq1m0e7pW9cJx4rT6uV5aZ2nD0gF1hK8sLw"
                 }
               }
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidPlacement`: The place in the page tree is not valid.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -107102,6 +107145,14 @@
                       "title": "The request is not valid",
                       "status": 400,
                       "code": "invalidInput"
+                    }
+                  },
+                  "invalidPlacement": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidPlacement",
+                      "title": "The place in the page tree is not valid",
+                      "status": 400,
+                      "code": "invalidPlacement"
                     }
                   }
                 }
@@ -107178,6 +107229,42 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`confidentialSharing`: The content is shared too broadly for a confidential space. `moveIntoDescendant`: An item cannot be moved below itself. `overviewPage`: The overview page of a space stays a page in its space.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "confidentialSharing": {
+                    "value": {
+                      "type": "urn:pagehall:problem:confidentialSharing",
+                      "title": "The content is shared too broadly for a confidential space",
+                      "status": 409,
+                      "code": "confidentialSharing"
+                    }
+                  },
+                  "moveIntoDescendant": {
+                    "value": {
+                      "type": "urn:pagehall:problem:moveIntoDescendant",
+                      "title": "An item cannot be moved below itself",
+                      "status": 409,
+                      "code": "moveIntoDescendant"
+                    }
+                  },
+                  "overviewPage": {
+                    "value": {
+                      "type": "urn:pagehall:problem:overviewPage",
+                      "title": "The overview page of a space stays a page in its space",
+                      "status": 409,
+                      "code": "overviewPage"
                     }
                   }
                 }
@@ -177592,6 +177679,137 @@
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
+          },
+          "pages": {
+            "description": "Number of pages that give access to groups or through broad links, for `confidentialSharing`.",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "impact": {
+            "description": "Who gains and who loses access, with the confirmation to send, for `moveChangesAccess`.",
+            "type": "object",
+            "properties": {
+              "gaining": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Number of people who get access."
+              },
+              "losing": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Number of people who lose access."
+              },
+              "raised": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Number of people whose role rises."
+              },
+              "lowered": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Number of people whose role drops."
+              },
+              "unlisted": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Number of affected people the caller may not see; they are counted but not listed."
+              },
+              "truncated": {
+                "type": "boolean",
+                "description": "Whether `changes` lists only the first 100 people."
+              },
+              "changes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "accountId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the account."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Name of the person."
+                    },
+                    "before": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "reader",
+                            "commenter",
+                            "editor",
+                            "admin"
+                          ],
+                          "description": "Space role: `reader` reads, `commenter` also comments, `editor` also creates, edits and moves content, `admin` also manages the space and its permissions."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Role before the change, or null for no access."
+                    },
+                    "after": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "reader",
+                            "commenter",
+                            "editor",
+                            "admin"
+                          ],
+                          "description": "Space role: `reader` reads, `commenter` also comments, `editor` also creates, edits and moves content, `admin` also manages the space and its permissions."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Role after the change, or null for no access."
+                    }
+                  },
+                  "required": [
+                    "accountId",
+                    "name",
+                    "before",
+                    "after"
+                  ],
+                  "additionalProperties": false,
+                  "description": "How the access of one person changes."
+                },
+                "description": "People whose access changes, ordered by name."
+              },
+              "leavesConfidential": {
+                "type": "boolean",
+                "description": "True when the content leaves a confidential space and loses its protection."
+              },
+              "confirmation": {
+                "description": "Send this with the move to confirm exactly this change, or null when access does not change. Valid for one hour.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "gaining",
+              "losing",
+              "raised",
+              "lowered",
+              "unlisted",
+              "truncated",
+              "changes",
+              "leavesConfidential",
+              "confirmation"
+            ],
+            "additionalProperties": false
           },
           "problems": {
             "description": "What is wrong with the document, for `invalidDocument` and `invalidComment`.",

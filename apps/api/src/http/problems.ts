@@ -1,5 +1,6 @@
 import { HttpException } from "@nestjs/common";
 import { z } from "zod";
+import { moveImpactSchema } from "../spaces/schemas.js";
 
 export const PROBLEM_TYPE_PREFIX = "urn:pagehall:problem:";
 
@@ -195,6 +196,7 @@ export const problems = {
   notUnderReview: { status: 409, title: "The personal space is not under review" },
   moveIntoDescendant: { status: 409, title: "An item cannot be moved below itself" },
   itemMoved: { status: 409, title: "The item was moved at the same moment" },
+  moveChangesAccess: { status: 409, title: "The move changes who can access the content" },
   overviewPage: { status: 409, title: "The overview page of a space stays a page in its space" },
   tooManyLabels: { status: 409, title: "The page has too many labels" },
   tooManyComments: { status: 409, title: "The page has too many comments" },
@@ -364,6 +366,16 @@ export const problemSchema = z
       .int()
       .optional()
       .describe("Longest allowed lifetime of a link for anyone in days, for `expiryTooLate`."),
+    pages: z
+      .number()
+      .int()
+      .optional()
+      .describe(
+        "Number of pages that give access to groups or through broad links, for `confidentialSharing`.",
+      ),
+    impact: moveImpactSchema
+      .optional()
+      .describe("Who gains and who loses access, with the confirmation to send, for `moveChangesAccess`."),
     problems: z
       .array(
         z

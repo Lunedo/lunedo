@@ -91,6 +91,23 @@ afterEach(() => {
   window.history.replaceState(null, "", "/");
 });
 
+function moveImpact(change: { losing?: number; after?: "reader" | null }) {
+  const changed = change.losing !== undefined;
+  return {
+    gaining: 0,
+    losing: change.losing ?? 0,
+    raised: 0,
+    lowered: 0,
+    unlisted: 0,
+    truncated: false,
+    changes: changed
+      ? [{ accountId: ANNA, name: "Anna Berger", before: "reader", after: change.after ?? null }]
+      : [],
+    leavesConfidential: false,
+    confirmation: changed ? "confirmed-impact" : null,
+  };
+}
+
 function baseRoutes(permissions: string[] = ["organization.view", "organization.spaces.create"]) {
   return {
     "GET /api/v1/instance/info": () => ({
@@ -472,6 +489,72 @@ describe("page tree", () => {
     );
   });
 
+  it("asks before a drag and drop that changes access and moves only after confirmation", async () => {
+    let attempts = 0;
+    const { tree, requests } = await renderTree({
+      [`POST /api/v1/items/${NETWORK}/move`]: () => {
+        attempts += 1;
+        return attempts === 1
+          ? problem(409, "moveChangesAccess", { impact: moveImpact({ losing: 1, after: null }) })
+          : { body: item(NETWORK, "Network", "page", RUNBOOKS) };
+      },
+    });
+    const network = within(tree).getByRole("treeitem", { name: "Network" });
+    const runbooks = within(tree).getByRole("treeitem", { name: "Runbooks" });
+    vi.spyOn(runbooks, "getBoundingClientRect").mockReturnValue({
+      top: 0,
+      height: 40,
+      bottom: 40,
+      left: 0,
+      right: 200,
+      width: 200,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    const dataTransfer = { setData: () => {}, effectAllowed: "", dropEffect: "" };
+    fireEvent.dragStart(network, { dataTransfer });
+    fireEvent.dragOver(runbooks, { dataTransfer, clientY: 20 });
+    fireEvent.drop(runbooks, { dataTransfer, clientY: 20 });
+
+    const dialog = await screen.findByRole("dialog", { name: "Move Network and change access?" });
+    expect(within(dialog).getByText("Anna Berger")).toBeTruthy();
+    expect(attempts).toBe(1);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Move and change access" }));
+    await waitFor(() =>
+      expect(requests.filter((request) => request.method === "POST").at(-1)?.body).toEqual({
+        parentId: RUNBOOKS,
+        confirmation: "confirmed-impact",
+      }),
+    );
+    expect(await screen.findByText("Network moved")).toBeTruthy();
+  });
+
+  it("shows in the Move dialog who loses access within the space and sends the confirmation", async () => {
+    const { tree, requests } = await renderTree({
+      "GET /api/v1/spaces": () => ({ body: { items: [space()], nextCursor: null } }),
+      [`POST /api/v1/items/${NETWORK}/move/preview`]: () => ({
+        body: moveImpact({ losing: 1, after: null }),
+      }),
+      [`POST /api/v1/items/${NETWORK}/move`]: () => ({ body: item(NETWORK, "Network", "page", null) }),
+    });
+    const network = within(tree).getByRole("treeitem", { name: "Network" });
+    await userEvent.click(within(network).getByRole("button", { name: "Actions for Network" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Move…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Move Network" });
+    const section = await within(dialog).findByRole("region", { name: "How access changes" });
+    expect(await within(section).findByText("Anna Berger")).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: /^Move$/ }));
+    await waitFor(() =>
+      expect(requests.find((request) => request.path.endsWith(`/items/${NETWORK}/move`))?.body).toMatchObject(
+        {
+          parentId: null,
+          confirmation: "confirmed-impact",
+        },
+      ),
+    );
+  });
+
   it("offers Move in the menu of every item", async () => {
     const { tree } = await renderTree({
       "GET /api/v1/spaces": () => ({ body: { items: [space()], nextCursor: null } }),
@@ -485,6 +568,7 @@ describe("page tree", () => {
   it("starts the Move dialog at the current place of the item", async () => {
     const { tree, requests } = await renderTree({
       "GET /api/v1/spaces": () => ({ body: { items: [space()], nextCursor: null } }),
+      [`POST /api/v1/items/${VPN}/move/preview`]: () => ({ body: moveImpact({}) }),
       [`POST /api/v1/items/${VPN}/move`]: () => ({ body: item(VPN, "VPN access", "page", RUNBOOKS) }),
     });
     const runbooks = within(tree).getByRole("treeitem", { name: "Runbooks" });

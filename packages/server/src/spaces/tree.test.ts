@@ -236,12 +236,22 @@ describe.skipIf(!baseUrl)("page tree and page content", () => {
       await expect(
         test.services.tree.move(actor, moving.id, { spaceId: readOnly.id, parentId: null }),
       ).rejects.toBeInstanceOf(ForbiddenError);
-      await expect(test.services.tree.moveImpact(actor, moving.id, readOnly.id)).rejects.toBeInstanceOf(
-        ForbiddenError,
-      );
-      const impact = await test.services.tree.moveImpact(actor, moving.id, target.id);
+      await expect(
+        test.services.tree.moveImpact(actor, moving.id, { spaceId: readOnly.id, parentId: null }),
+      ).rejects.toBeInstanceOf(ForbiddenError);
+      const impact = await test.services.tree.moveImpact(actor, moving.id, {
+        spaceId: target.id,
+        parentId: null,
+      });
       expect(impact.changes.map((change) => change.name)).toContain("Reading person");
-      await test.services.tree.move(actor, moving.id, { spaceId: target.id, parentId: null });
+      await expect(
+        test.services.tree.move(actor, moving.id, { spaceId: target.id, parentId: null }),
+      ).rejects.toMatchObject({ code: "moveChangesAccess" });
+      await test.services.tree.move(actor, moving.id, {
+        spaceId: target.id,
+        parentId: null,
+        confirmation: impact.confirmation ?? "",
+      });
       const moved = await test.database.execute<{ space_id: string }>(
         sql`select distinct space_id from tree_items where id = ${moving.id} or parent_id = ${moving.id}`,
       );
