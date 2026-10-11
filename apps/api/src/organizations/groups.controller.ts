@@ -126,7 +126,8 @@ export class GroupsController {
   @Permission("group.manage", group)
   @ApiRoute({
     summary: "Add a group member",
-    description: "Adds a member of the organization to the group, optionally until a date.",
+    description:
+      "Adds a member of the organization to the group, optionally until a date. Group managers and organization administrators may add themselves; the audit log records that as a self-addition.",
     tags: [TAG],
     params: groupParams,
     body: memberSchema,

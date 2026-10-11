@@ -733,19 +733,59 @@ describe.skipIf(!baseUrl)("Confluence imports: people, comments, history and per
     expect(email.rows[0]?.email).toBeNull();
   });
 
-  it("refuses to map a group named in page restrictions to a group of the administrator", async () => {
+  it("audits mapping a group named in page restrictions to a group of the administrator", async () => {
     const w = await world();
     const result = await run(w);
     const own = await test.services.groups.create(SYSTEM, w.organizationId, { name: "Admins of HR" });
     await test.services.groups.addMember(SYSTEM, own.id, w.admin);
-    await expect(
-      test.services.imports.resolution.mapGroup(as(w.admin), result.id, "hr-team", { groupId: own.id }),
-    ).rejects.toMatchObject({ code: "selfExtension" });
-    const secret = await page(result.id, PEOPLE_PAGE.secret);
-    expect(
-      (await test.services.authorization.explain(as(w.admin), "item.view", { type: "item", id: secret }))
-        .allowed,
-    ).toBe(false);
+    await test.services.imports.resolution.mapGroup(as(w.admin), result.id, "hr-team", { groupId: own.id });
+    const events = await test.database.execute<{ actor_id: string; fields: Record<string, unknown> }>(sql`
+      select actor_id, fields from audit_events where name = 'group.selfAdded' and target_id = ${own.id}`);
+    expect(events.rows).toEqual([
+      {
+        actor_id: w.admin,
+        fields: { accountId: w.admin, source: "importMapping", importId: result.id, expiresAt: null },
+      },
+    ]);
+  });
+
+  it("audits mapping to a group the administrator only manages", async () => {
+    const w = await world();
+    const result = await run(w);
+    const managed = await test.services.groups.create(as(w.admin), w.organizationId, { name: "Managed HR" });
+    await test.services.imports.resolution.mapGroup(as(w.admin), result.id, "hr-team", {
+      groupId: managed.id,
+    });
+    const events = await test.database.execute<{ fields: Record<string, unknown> }>(sql`
+      select fields from audit_events where name = 'group.selfAdded' and target_id = ${managed.id}`);
+    expect(events.rows.map((row) => row.fields.source)).toEqual(["importMapping"]);
+  });
+
+  it("audits a group created during the import as a self-addition of its creator", async () => {
+    const w = await world();
+    const result = await run(w);
+    const mapped = await test.services.imports.resolution.mapGroup(as(w.admin), result.id, "hr-team", {
+      create: true,
+    });
+    const groupId = mapped.group?.id ?? "";
+    const events = await test.database.execute<{ actor_id: string; fields: Record<string, unknown> }>(sql`
+      select actor_id, fields from audit_events where name = 'group.selfAdded' and target_id = ${groupId}`);
+    expect(events.rows).toEqual([
+      {
+        actor_id: w.admin,
+        fields: { accountId: w.admin, source: "importCreation", importId: result.id, expiresAt: null },
+      },
+    ]);
+  });
+
+  it("writes no self-addition when the administrator neither belongs to nor manages the group", async () => {
+    const w = await world();
+    const result = await run(w);
+    const other = await test.services.groups.create(SYSTEM, w.organizationId, { name: "Other HR" });
+    await test.services.imports.resolution.mapGroup(as(w.admin), result.id, "hr-team", { groupId: other.id });
+    const events = await test.database.execute<{ count: number }>(sql`
+      select count(*)::int as count from audit_events where name = 'group.selfAdded' and target_id = ${other.id}`);
+    expect(events.rows[0]?.count).toBe(0);
   });
 
   it("resolves remaining placeholders with a user list uploaded after accepting", async () => {

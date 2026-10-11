@@ -569,6 +569,35 @@ describe.skipIf(!baseUrl)("meeting series", () => {
       });
       expect((await test.services.topics.get(context.lead, topicId)).seriesTitle).toBe("Jour fixe IT");
     });
+
+    it("show a reader who holds only a share of the meeting nothing about its series", async () => {
+      const context = await setup();
+      const created = await series(context);
+      await test.services.pageAccess.change(context.lead, created.firstMeetingId, [
+        { action: "share", holderKind: "account", holderId: context.outsiderId, role: "reader" },
+      ]);
+      const meeting = await test.services.meetings.meeting(context.outsider, created.firstMeetingId);
+      expect(meeting).toMatchObject({
+        seriesId: null,
+        seriesTitle: null,
+        timeZone: null,
+        rhythm: null,
+        nextMeetingId: null,
+      });
+      expect(meeting.attendees.map((attendee) => attendee.member)).toEqual([null, null]);
+      expect(JSON.stringify(meeting)).not.toContain("Europe/Vienna");
+      const upcoming = await test.services.meetings.upcoming(context.outsider);
+      expect(upcoming.find((entry) => entry.id === created.firstMeetingId)).toMatchObject({
+        seriesId: null,
+        seriesTitle: null,
+      });
+      const full = await test.services.meetings.meeting(context.reader, created.firstMeetingId);
+      expect(full).toMatchObject({
+        seriesId: created.id,
+        seriesTitle: "Jour fixe IT",
+        timeZone: "Europe/Vienna",
+      });
+    });
   });
 
   describe("private notes", () => {

@@ -11,6 +11,11 @@ export function accessRoleLabel(t: TFunction, role: string | null): string {
 }
 
 export function reasonText(t: TFunction, reason: Reason): string {
+  const text = sourceText(t, reason);
+  return reason.inactive === "membershipEnded" ? t("sharing.why.inactive", { reason: text }) : text;
+}
+
+function sourceText(t: TFunction, reason: Reason): string {
   const role = accessRoleLabel(t, reason.role ?? null);
   switch (reason.type) {
     case "spaceRole": {
@@ -83,7 +88,7 @@ export function ExplanationView({
         <ul className="list-disc ps-5 text-sm">
           {explanation.reasons.map((reason) => (
             <li
-              key={`${reason.type}-${reason.itemId ?? ""}-${reason.linkId ?? ""}-${reason.via?.groupId ?? ""}`}
+              key={`${reason.type}-${reason.itemId ?? ""}-${reason.linkId ?? ""}-${reason.via?.groupId ?? ""}-${reason.inactive ?? ""}`}
             >
               {reasonText(t, reason)}
             </li>

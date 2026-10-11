@@ -4,13 +4,20 @@ import type { Principal } from "../accounts/principal.js";
 import type { AuditEvents, AuditLog } from "../audit/audit-log.js";
 import {
   accountItemCondition,
+  editRestrictionCondition,
   holderCovers,
+  holderMatches,
   restrictionHasActiveHolder,
   restrictionListedBy,
-  restrictionListedCondition,
+  viewRestrictionCondition,
 } from "../authorization/item-access.js";
 import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
-import type { AccessImpact, RoleChange } from "../authorization/space-access.js";
+import {
+  type AccessImpact,
+  organizationMembership,
+  type RoleChange,
+  spaceRoleConditionFor,
+} from "../authorization/space-access.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { NotificationService } from "../notifications/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "../spaces/common.js";
@@ -125,6 +132,11 @@ export interface AccessChangeOptions {
 const IMPACT_LIST_LIMIT = 100;
 const RANK_ROLES: (SpaceRole | null)[] = [null, "reader", "commenter", "editor"];
 
+export interface ShareReach {
+  page: boolean;
+  uncoveredBelow: number;
+}
+
 function levelCase(account: SQL, item: SQL, space: SQL): SQL {
   const readable = sql`(${accountItemCondition(account, item, space, "reader")}
     and (${item}.reader_visible or ${accountItemCondition(account, item, space, "editor")}))`;
@@ -193,7 +205,7 @@ export class PageAccessService {
         join tree_items t on t.id = ps.item_id
         join spaces s on s.id = t.space_id
         left join accounts sb on sb.id = ps.created_by
-        where ${holderCovers(sql`ps.principal_kind`, sql`ps.principal_id`, sql`${accountId}::uuid`)}
+        where ${holderCovers(sql`ps.principal_kind`, sql`ps.principal_id`, sql`${accountId}::uuid`, sql`s.organization_id`)}
           and ps.created_by is distinct from ${accountId}::uuid
           and s.archived_at is null and t.archived_at is null
           and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
@@ -497,6 +509,7 @@ export class PageAccessService {
             );
           }
           const includeDescendants = change.includeDescendants ?? false;
+          if (includeDescendants) await this.requireReach(tx, actor, item.id, change.role, true);
           await tx.execute(sql`
             insert into page_shares (id, item_id, principal_kind, principal_id, role, include_descendants, created_by)
             values (${uuidv7()}, ${item.id}, ${change.holderKind}, ${change.holderId}, ${change.role},
@@ -524,6 +537,15 @@ export class PageAccessService {
           const current = await this.#share(tx, item.id, change.shareId);
           const role = change.role ?? current.role;
           const includeDescendants = change.includeDescendants ?? current.include_descendants;
+          if (actorId && (await this.#holds(tx, actorId, current.principal_kind, current.principal_id))) {
+            throw new SpaceError(
+              "ownShare",
+              "You cannot change access you hold yourself or through one of your groups. Ask someone else who can share the page.",
+            );
+          }
+          const widened = includeDescendants && !current.include_descendants;
+          const raised = RANK_ROLES.indexOf(role) > RANK_ROLES.indexOf(current.role);
+          if (widened || raised) await this.requireReach(tx, actor, item.id, role, includeDescendants);
           await tx.execute(sql`
             update page_shares set role = ${role}, include_descendants = ${includeDescendants}, updated_at = now()
             where id = ${change.shareId}`);
@@ -671,6 +693,52 @@ export class PageAccessService {
           : "A page restricted for editing needs at least one person or group who can edit it",
       );
     }
+  }
+
+  async #holds(tx: Transaction, accountId: string, kind: HolderKind, id: string): Promise<boolean> {
+    const result = await tx.execute<{ holds: boolean }>(sql`
+      select ${holderMatches(sql`${kind}::text`, sql`${id}::uuid`, sql`${accountId}::uuid`)} as holds`);
+    return result.rows[0]?.holds === true;
+  }
+
+  async reach(
+    executor: Executor,
+    actor: Principal,
+    itemId: string,
+    role: ShareRole,
+    includeDescendants: boolean,
+  ): Promise<ShareReach> {
+    if (actor.type === "system") return { page: true, uncoveredBelow: 0 };
+    if (actor.type !== "account") return { page: false, uncoveredBelow: 0 };
+    const account = sql`${actor.id}::uuid`;
+    const covered = sql`(${spaceRoleConditionFor(account, sql`s`, role)}
+      and ${viewRestrictionCondition(account, sql`t`, sql`s`)}
+      ${role === "editor" ? sql`and ${editRestrictionCondition(account, sql`t`, sql`s`)}` : sql``})`;
+    const result = await executor.execute<{ page: boolean; uncovered: number }>(sql`
+      select coalesce(bool_or(${covered}) filter (where t.id = ${itemId}), false) as page,
+        (count(*) filter (where t.id <> ${itemId} and not ${covered}))::int as uncovered
+      from tree_items t join spaces s on s.id = t.space_id
+      where ${includeDescendants ? sql`${itemId}::uuid = any(t.path)` : sql`t.id = ${itemId}`}`);
+    const row = result.rows[0];
+    return { page: row?.page === true, uncoveredBelow: Number(row?.uncovered ?? 0) };
+  }
+
+  async requireReach(
+    executor: Executor,
+    actor: Principal,
+    itemId: string,
+    role: ShareRole,
+    includeDescendants: boolean,
+  ): Promise<void> {
+    const reach = await this.reach(executor, actor, itemId, role, includeDescendants);
+    if (reach.page && reach.uncoveredBelow === 0) return;
+    throw new SpaceError(
+      "shareBeyondOwnAccess",
+      reach.uncoveredBelow > 0
+        ? `Your own role in the space does not give you this access to ${reach.uncoveredBelow} pages below. Share only this page, choose a lower role, or ask a space admin.`
+        : "Your own role in the space does not give you this access to the page. Choose a lower role or ask a space admin.",
+      { uncoveredPages: reach.uncoveredBelow },
+    );
   }
 
   async #share(
@@ -862,8 +930,8 @@ export class PageAccessService {
       update page_restrictions r set orphaned_at = now(), updated_at = now()
       from tree_items t join spaces s on s.id = t.space_id
       where t.id = r.item_id and r.orphaned_at is null
-        and ${restrictionListedCondition(sql`r`, sql`${accountId}::uuid`)}
-        and not ${restrictionHasActiveHolder(sql`r`)}
+        and ${restrictionListedBy(sql`r`, (kind, id) => holderMatches(kind, id, sql`${accountId}::uuid`))}
+        and not ${restrictionHasActiveHolder(sql`r`, sql`s.organization_id`)}
       returning r.item_id, r.kind, t.title, t.space_id, s.name as space_name, s.key as space_key, s.organization_id`);
     const notified = new Set<string>();
     for (const row of affected.rows) {
@@ -885,17 +953,37 @@ export class PageAccessService {
     }
   }
 
+  async afterMembershipEnded(tx: Transaction, organizationId: string, accountId: string): Promise<void> {
+    await this.markOrphanedRestrictions(tx, accountId);
+    const affected = await tx.execute<{ id: string }>(sql`
+      select s.id from spaces s
+      where s.organization_id = ${organizationId} and (
+        exists (select 1 from space_permissions sp where sp.space_id = s.id
+          and sp.principal_kind = 'account' and sp.principal_id = ${accountId})
+        or exists (select 1 from page_shares ps join tree_items t on t.id = ps.item_id
+          where t.space_id = s.id and ps.principal_kind = 'account' and ps.principal_id = ${accountId})
+        or exists (select 1 from share_link_people lp join share_links l on l.id = lp.link_id
+          join tree_items t on t.id = l.item_id
+          where t.space_id = s.id and lp.principal_kind = 'account' and lp.principal_id = ${accountId})
+        or exists (select 1 from share_link_accesses la join share_links l on l.id = la.link_id
+          join tree_items t on t.id = l.item_id where t.space_id = s.id and la.account_id = ${accountId}))
+      order by s.id`);
+    for (const space of affected.rows) {
+      await signalSpaceChange(tx, { spaceId: space.id, kind: "access", itemId: null });
+    }
+  }
+
   async clearOrphaned(tx: Transaction, itemId: string): Promise<void> {
     await tx.execute(sql`
       update page_restrictions r set orphaned_at = null, updated_at = now()
       where r.item_id = ${itemId} and r.orphaned_at is not null
-        and ${restrictionHasActiveHolder(sql`r`)}`);
+        and ${restrictionHasActiveHolder(sql`r`, sql`(select s.organization_id from tree_items t join spaces s on s.id = t.space_id where t.id = r.item_id)`)}`);
   }
 
   async spaceAdministrators(executor: Executor, spaceId: string): Promise<string[]> {
     const result = await executor.execute<{ id: string }>(sql`
       select a.id from accounts a cross join spaces s
-      where s.id = ${spaceId} and a.state = 'active'
+      where s.id = ${spaceId} and a.state = 'active' and ${organizationMembership(sql`s.organization_id`, sql`a.id`)}
         and a.id in (
           select sp.principal_id from space_permissions sp where sp.space_id = s.id and sp.role = 'admin'
             and sp.principal_kind = 'account'

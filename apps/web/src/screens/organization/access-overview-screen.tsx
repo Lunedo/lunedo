@@ -60,6 +60,7 @@ function EntryRow({ entry }: { entry: Entry }) {
         </span>
         {entry.role ? <Badge>{accessRoleLabel(t, entry.role)}</Badge> : null}
         {entry.kind === "link" ? <Badge>{t("sharing.people.viaLink")}</Badge> : null}
+        {entry.inactive ? <Badge variant="warning">{t("organization.access.inactive")}</Badge> : null}
         {entry.reasons.length > 0 ? (
           <button
             type="button"
@@ -71,6 +72,9 @@ function EntryRow({ entry }: { entry: Entry }) {
           </button>
         ) : null}
       </div>
+      {entry.inactive ? (
+        <p className="text-sm text-text-muted">{t("organization.access.inactiveHint")}</p>
+      ) : null}
       {open ? (
         <ul className="list-disc ps-5 text-sm">
           {entry.reasons.map((reason) => (

@@ -261,24 +261,35 @@ export const seriesListSchema = z
 export const meetingSchema = z
   .object({
     id: uuid("ID of the meeting page."),
-    seriesId: uuid("The series."),
-    seriesTitle: z.string().describe("Name of the series."),
+    seriesId: uuid("The series, or null when the caller cannot read it.").nullable(),
+    seriesTitle: z
+      .string()
+      .nullable()
+      .describe("Name of the series, or null when the caller cannot read it."),
     title: z.string().describe("Title of the meeting page."),
     state: meetingStateSchema,
     current: z.boolean().describe("Whether the meeting is open: upcoming or reopened."),
     startsAt: timestamp("Start, or null when not scheduled yet.").nullable(),
     recurrenceId: timestamp("Original start in the rhythm, or null.").nullable(),
     durationMinutes: z.number().int().describe("Duration in minutes."),
-    timeZone: z.string().describe("Time zone of the series."),
+    timeZone: z
+      .string()
+      .nullable()
+      .describe("Time zone of the series, or null when the caller cannot read the series."),
     closedAt: timestamp("When the meeting was closed or skipped.").nullable(),
     closedBy: z
       .object({ id: uuid("Account ID."), name: z.string().nullable().describe("Name, if visible.") })
       .nullable()
       .describe("Who closed it."),
-    nextMeetingId: uuid("The meeting created when this one was closed or skipped.").nullable(),
+    nextMeetingId: uuid(
+      "The meeting created when this one was closed or skipped, or null when the caller cannot read the series.",
+    ).nullable(),
     rhythm: z
       .boolean()
-      .describe("Whether the series has a fixed rhythm; without one, closing asks for the next date."),
+      .nullable()
+      .describe(
+        "Whether the series has a fixed rhythm; without one, closing asks for the next date. Null when the caller cannot read the series.",
+      ),
     attendees: z
       .array(
         z
@@ -286,7 +297,12 @@ export const meetingSchema = z
             id: uuid("Account ID."),
             name: z.string().nullable().describe("Name, if visible."),
             attendance: extensibleEnum(attendanceValues, "Attendance, or null when not recorded.").nullable(),
-            member: z.boolean().describe("Whether the person is a member of the series."),
+            member: z
+              .boolean()
+              .nullable()
+              .describe(
+                "Whether the person is a member of the series, or null when the caller cannot read it.",
+              ),
             canRead: z.boolean().describe("Whether the person can read the meeting page."),
           })
           .describe("An attendee."),
@@ -577,8 +593,11 @@ export const upcomingSchema = z
         title: z.string().describe("Title."),
         startsAt: timestamp("Start, or null when not scheduled yet.").nullable(),
         durationMinutes: z.number().int().describe("Duration in minutes."),
-        seriesId: uuid("The series."),
-        seriesTitle: z.string().describe("Name of the series."),
+        seriesId: uuid("The series, or null when the caller cannot read it.").nullable(),
+        seriesTitle: z
+          .string()
+          .nullable()
+          .describe("Name of the series, or null when the caller cannot read it."),
         spaceId: uuid("The space."),
         spaceKey: z.string().describe("Key of the space."),
         oneOnOne: z.boolean().describe("Whether it is a one-on-one."),

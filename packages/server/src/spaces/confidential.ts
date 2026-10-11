@@ -1,7 +1,11 @@
-import { sql } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
-import { activeAdministratorCondition, storedGrants } from "../authorization/space-access.js";
+import {
+  activeAdministratorCondition,
+  organizationMembership,
+  storedGrants,
+} from "../authorization/space-access.js";
 import type { Database, Transaction } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
 import type { NotificationService } from "../notifications/service.js";
@@ -32,9 +36,13 @@ type SummaryRow = {
   has_administrator: boolean;
 };
 
-function activeHolder(space: ReturnType<typeof sql>): ReturnType<typeof sql> {
+function activeMember(space: SQL): SQL {
+  return sql`(a.state = 'active' and ${organizationMembership(sql`${space}.organization_id`, sql`a.id`)})`;
+}
+
+function activeHolder(space: SQL): SQL {
   return sql`exists (select 1 from space_permissions sp join accounts a on a.id = sp.principal_id
-    where sp.space_id = ${space}.id and sp.principal_kind = 'account' and a.state = 'active')`;
+    where sp.space_id = ${space}.id and sp.principal_kind = 'account' and ${activeMember(space)})`;
 }
 
 function toSummary(row: SummaryRow): ConfidentialSpaceSummary {
@@ -78,7 +86,7 @@ export class ConfidentialSpaceService {
     return sql`s.id, s.key, s.created_at,
       (select count(*) from space_permissions sp where sp.space_id = s.id) as members,
       (select count(*) from space_permissions sp join accounts a on a.id = sp.principal_id
-        where sp.space_id = s.id and sp.principal_kind = 'account' and a.state = 'active') as active_members,
+        where sp.space_id = s.id and sp.principal_kind = 'account' and ${activeMember(sql`s`)}) as active_members,
       (select count(*) from tree_items t where t.space_id = s.id and t.trash_entry_id is null
         and t.kind in ('page', 'blogPost')) as pages,
       greatest(s.updated_at, (select max(t.content_updated_at) from tree_items t where t.space_id = s.id))
@@ -127,7 +135,8 @@ export class ConfidentialSpaceService {
       if (!summary.needsAdministrator) return [];
       const result = await tx.execute<{ id: string; name: string }>(sql`
         select a.id, a.name from space_permissions sp join accounts a on a.id = sp.principal_id
-        where sp.space_id = ${spaceId} and sp.principal_kind = 'account' and a.state = 'active'
+        join spaces s on s.id = sp.space_id
+        where sp.space_id = ${spaceId} and sp.principal_kind = 'account' and ${activeMember(sql`s`)}
           and a.id is distinct from ${actorIdOf(actor)}
         order by lower(a.name), a.id`);
       return result.rows;
@@ -156,8 +165,9 @@ export class ConfidentialSpaceService {
       }
       const member = await tx.execute<{ role: string }>(sql`
         select sp.role from space_permissions sp join accounts a on a.id = sp.principal_id
+        join spaces s on s.id = sp.space_id
         where sp.space_id = ${spaceId} and sp.principal_kind = 'account' and sp.principal_id = ${accountId}
-          and a.state = 'active'`);
+          and ${activeMember(sql`s`)}`);
       const previous = member.rows[0]?.role;
       if (!previous) {
         throw new SpaceError(
@@ -228,9 +238,18 @@ export class ConfidentialSpaceService {
   }
 
   async afterDeactivation(tx: Transaction, accountId: string): Promise<void> {
+    await this.#notifyOrphaned(tx, accountId, null);
+  }
+
+  async afterMembershipEnded(tx: Transaction, organizationId: string, accountId: string): Promise<void> {
+    await this.#notifyOrphaned(tx, accountId, organizationId);
+  }
+
+  async #notifyOrphaned(tx: Transaction, accountId: string, organizationId: string | null): Promise<void> {
     const orphaned = await tx.execute<{ id: string; key: string; organization_id: string }>(sql`
       select s.id, s.key, s.organization_id from spaces s
       where s.confidential and s.deleted_at is null
+        ${organizationId ? sql`and s.organization_id = ${organizationId}` : sql``}
         and exists (select 1 from space_permissions sp where sp.space_id = s.id
           and sp.principal_kind = 'account' and sp.principal_id = ${accountId} and sp.role = 'admin')
         and not ${activeAdministratorCondition(storedGrants(sql`s.id`), sql`s.organization_id`)}

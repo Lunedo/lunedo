@@ -1,4 +1,9 @@
-import { accountAttemptLimitSetting, anyoneLinksSetting, clientAttemptLimitSetting } from "@pagehall/server";
+import {
+  accountAttemptLimitSetting,
+  anyoneLinksSetting,
+  clientAttemptLimitSetting,
+  SYSTEM,
+} from "@pagehall/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -237,6 +242,181 @@ describe.skipIf(!databaseBaseUrl)("page access through the API", () => {
     });
     expect(decided.statusCode, decided.body).toBe(200);
     expect((await member.client.get(`/api/v1/items/${other}`)).statusCode).toBe(200);
+  });
+
+  describe("a share never reaches further than the sharer's own access", () => {
+    async function tree() {
+      const alice = await person();
+      const bob = await person();
+      const created = await space([{ principalKind: "account", principalId: alice.id, role: "editor" }]);
+      const parent = await page(created.id, "Handbook");
+      const open = await page(created.id, "Onboarding", parent);
+      const restricted = await page(created.id, "Salaries", parent);
+      const restrict = await owner.post(`/api/v1/pages/${restricted}/access`, {
+        changes: [{ action: "restrict", kind: "view" }],
+      });
+      expect(restrict.statusCode, restrict.body).toBe(200);
+      const shared = await owner.post(`/api/v1/pages/${parent}/access`, {
+        changes: [{ action: "share", holderKind: "account", holderId: bob.id, role: "editor" }],
+      });
+      expect(shared.statusCode, shared.body).toBe(200);
+      return { alice, bob, space: created, parent, open, restricted };
+    }
+
+    async function shareOf(client: TestClient, pageId: string, holderId: string) {
+      const access = await client.get(`/api/v1/pages/${pageId}/access`);
+      expect(access.statusCode, access.body).toBe(200);
+      const shares = (access.json() as { shares: { id: string; holder: { id: string } }[] }).shares;
+      return shares.find((entry) => entry.holder.id === holderId)?.id ?? "";
+    }
+
+    it("refuses to change one's own share, also to include the pages below", async () => {
+      const t = await tree();
+      const own = await shareOf(t.bob.client, t.parent, t.bob.id);
+      const widened = await t.bob.client.post(`/api/v1/pages/${t.parent}/access`, {
+        changes: [{ action: "changeShare", shareId: own, includeDescendants: true }],
+      });
+      expect(widened.statusCode, widened.body).toBe(403);
+      expect(widened.json().code).toBe("ownShare");
+      expect((await t.bob.client.get(`/api/v1/items/${t.open}`)).statusCode).toBe(404);
+      const lowered = await t.bob.client.post(`/api/v1/pages/${t.parent}/access`, {
+        changes: [{ action: "changeShare", shareId: own, role: "reader" }],
+      });
+      expect(lowered.json().code).toBe("ownShare");
+    });
+
+    it("refuses to share the pages below with someone else beyond the sharer's own access", async () => {
+      const t = await tree();
+      const carol = await person();
+      const byShare = await t.bob.client.post(`/api/v1/pages/${t.parent}/access`, {
+        changes: [
+          {
+            action: "share",
+            holderKind: "account",
+            holderId: carol.id,
+            role: "reader",
+            includeDescendants: true,
+          },
+        ],
+      });
+      expect(byShare.statusCode, byShare.body).toBe(403);
+      expect(byShare.json()).toMatchObject({ code: "shareBeyondOwnAccess", uncoveredPages: 2 });
+      const bySpaceRole = await t.alice.client.post(`/api/v1/pages/${t.parent}/access`, {
+        changes: [
+          {
+            action: "share",
+            holderKind: "account",
+            holderId: carol.id,
+            role: "reader",
+            includeDescendants: true,
+          },
+        ],
+      });
+      expect(bySpaceRole.statusCode, bySpaceRole.body).toBe(403);
+      expect(bySpaceRole.json()).toMatchObject({ code: "shareBeyondOwnAccess", uncoveredPages: 1 });
+      expect((await carol.client.get(`/api/v1/items/${t.open}`)).statusCode).toBe(404);
+      const pageOnly = await t.bob.client.post(`/api/v1/pages/${t.parent}/access`, {
+        changes: [{ action: "share", holderKind: "account", holderId: carol.id, role: "reader" }],
+      });
+      expect(pageOnly.statusCode, pageOnly.body).toBe(200);
+      const raised = await t.bob.client.post(`/api/v1/pages/${t.parent}/access`, {
+        changes: [
+          { action: "changeShare", shareId: await shareOf(owner, t.parent, carol.id), role: "editor" },
+        ],
+      });
+      expect(raised.statusCode, raised.body).toBe(403);
+      expect(raised.json()).toMatchObject({ code: "shareBeyondOwnAccess", uncoveredPages: 0 });
+      const covered = await t.alice.client.post(`/api/v1/pages/${t.open}/access`, {
+        changes: [
+          {
+            action: "share",
+            holderKind: "account",
+            holderId: carol.id,
+            role: "editor",
+            includeDescendants: true,
+          },
+        ],
+      });
+      expect(covered.statusCode, covered.body).toBe(200);
+    });
+
+    it("refuses to widen a share for a group the sharer belongs to", async () => {
+      const t = await tree();
+      const created = await owner.post(`/api/v1/organizations/${organizationId}/groups`, {
+        name: `Handbook readers ${counter}`,
+      });
+      expect(created.statusCode, created.body).toBe(201);
+      const groupId = (created.json() as { id: string }).id;
+      const added = await owner.post(`/api/v1/groups/${groupId}/members`, { accountId: t.bob.id });
+      expect(added.statusCode, added.body).toBeLessThan(300);
+      const toGroup = await t.bob.client.post(`/api/v1/pages/${t.parent}/access`, {
+        changes: [
+          {
+            action: "share",
+            holderKind: "group",
+            holderId: groupId,
+            role: "editor",
+            includeDescendants: true,
+          },
+        ],
+      });
+      expect(toGroup.statusCode, toGroup.body).toBe(403);
+      expect(toGroup.json().code).toBe("shareBeyondOwnAccess");
+      const byOwner = await owner.post(`/api/v1/pages/${t.parent}/access`, {
+        changes: [{ action: "share", holderKind: "group", holderId: groupId, role: "reader" }],
+      });
+      expect(byOwner.statusCode, byOwner.body).toBe(200);
+      const changed = await t.bob.client.post(`/api/v1/pages/${t.parent}/access`, {
+        changes: [
+          {
+            action: "changeShare",
+            shareId: await shareOf(owner, t.parent, groupId),
+            includeDescendants: true,
+          },
+        ],
+      });
+      expect(changed.statusCode, changed.body).toBe(403);
+      expect(changed.json().code).toBe("ownShare");
+    });
+
+    it("refuses to approve an access request for the pages below beyond the approver's own access", async () => {
+      const t = await tree();
+      const carol = await person();
+      const requested = await carol.client.post(`/api/v1/pages/${t.parent}/access-requests`, { message: "" });
+      expect(requested.statusCode, requested.body).toBe(202);
+      const requests = await owner.get(`/api/v1/spaces/${t.space.id}/access-requests`);
+      const request = (requests.json() as { id: string; itemId: string | null }[]).find(
+        (entry) => entry.itemId === t.parent,
+      );
+      const decided = await t.bob.client.post(`/api/v1/access-requests/${request?.id}/decide`, {
+        approve: true,
+        role: "reader",
+        includeDescendants: true,
+      });
+      expect(decided.statusCode, decided.body).toBe(403);
+      expect(decided.json()).toMatchObject({ code: "shareBeyondOwnAccess", uncoveredPages: 2 });
+      expect((await owner.get(`/api/v1/access-requests/${request?.id}`)).json()).toMatchObject({
+        status: "open",
+      });
+      expect((await carol.client.get(`/api/v1/items/${t.open}`)).statusCode).toBe(404);
+    });
+
+    it("refuses to invite a guest to the pages below beyond the sharer's own access", async () => {
+      const t = await tree();
+      await test.runtime.services.roles.assign(SYSTEM, {
+        scope: "organization",
+        organizationId,
+        role: { builtIn: "administrator" },
+        principal: { kind: "account", id: t.alice.id },
+      });
+      const invited = await t.alice.client.post(`/api/v1/pages/${t.parent}/access/invitations`, {
+        email: `guest${counter}@example.net`,
+        role: "reader",
+        includeDescendants: true,
+      });
+      expect(invited.statusCode, invited.body).toBe(403);
+      expect(invited.json()).toMatchObject({ code: "shareBeyondOwnAccess", uncoveredPages: 1 });
+    });
   });
 
   it("explain what a person can do and export the overview as CSV", async () => {

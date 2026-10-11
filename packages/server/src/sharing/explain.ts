@@ -1,8 +1,9 @@
 import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
-import { holderCovers, restrictionListedBy } from "../authorization/item-access.js";
+import { holderCovers, holderMatches, restrictionListedBy } from "../authorization/item-access.js";
 import type { AuthorizationService, Decision, Grant } from "../authorization/service.js";
+import { organizationMembership } from "../authorization/space-access.js";
 import type { Database, Executor } from "../database/database.js";
 import { SpaceError } from "../spaces/common.js";
 import type { PeopleService } from "../spaces/people.js";
@@ -10,7 +11,9 @@ import { highestSpaceRole } from "../spaces/roles.js";
 import type { SpaceRole } from "../spaces/schema.js";
 import type { HolderKind } from "./page-access.js";
 
-export type AccessReason =
+export type InactiveReason = "membershipEnded";
+
+export type AccessReason = (
   | { type: "spaceRole"; role: SpaceRole; via: SpaceReasonVia }
   | {
       type: "share";
@@ -20,7 +23,8 @@ export type AccessReason =
       itemTitle: string | null;
       inherited: boolean;
     }
-  | { type: "link"; linkId: string; scope: string };
+  | { type: "link"; linkId: string; scope: string }
+) & { inactive?: InactiveReason };
 
 export type SpaceReasonVia =
   | { type: "account" }
@@ -50,6 +54,7 @@ export interface PersonAccessEntry {
   role: SpaceRole | null;
   count: number;
   reasons: AccessReason[];
+  inactive: InactiveReason | null;
 }
 
 export interface PersonAccess {
@@ -173,9 +178,15 @@ export class AccessExplanationService {
       resource.type === "item"
         ? await this.#authorization.itemFacts(accountId, resource.id, { fresh: true })
         : null;
+    const spaceId = resource.type === "space" ? resource.id : await this.#spaceOf(resource.id);
+    const spaceFacts = spaceId
+      ? await this.#authorization.spaceRole(accountId, spaceId, { fresh: true })
+      : null;
     const titles = await this.#titles(viewer, [
       ...grants.flatMap((grant) => (grant.kind === "share" ? [grant.itemId] : [])),
       ...(itemFacts?.viewRestrictions.map((restriction) => restriction.itemId) ?? []),
+      ...(itemFacts?.inactiveSources.flatMap((source) => (source.type === "share" ? [source.itemId] : [])) ??
+        []),
     ]);
     const seen = new Set<string>();
     const reasons: AccessReason[] = [];
@@ -188,12 +199,7 @@ export class AccessExplanationService {
       reasons.push(reason);
     }
     if (role === null && base) {
-      const facts =
-        resource.type === "space"
-          ? null
-          : await this.#authorization.spaceRole(accountId, (await this.#spaceOf(resource.id)) ?? "", {
-              fresh: true,
-            });
+      const facts = resource.type === "space" ? null : spaceFacts;
       for (const source of facts?.sources ?? []) {
         const key = JSON.stringify(source);
         if (seen.has(key)) continue;
@@ -214,6 +220,21 @@ export class AccessExplanationService {
           reasons.push({ type: "link", linkId: source.linkId, scope: source.scope });
         }
       }
+    }
+    for (const source of spaceFacts?.inactiveSources ?? []) {
+      reasons.push({ type: "spaceRole", role: source.role, via: source.via, inactive: "membershipEnded" });
+    }
+    for (const source of itemFacts?.inactiveSources ?? []) {
+      if (source.type !== "share") continue;
+      reasons.push({
+        type: "share",
+        role: source.role,
+        via: source.via,
+        itemId: source.itemId,
+        itemTitle: titles.get(source.itemId) ?? null,
+        inherited: source.inherited,
+        inactive: "membershipEnded",
+      });
     }
     const denials = base?.denials ?? [];
     const denial: AccessExplanation["denial"] =
@@ -297,7 +318,15 @@ export class AccessExplanationService {
     const entries: PersonAccessEntry[] = [];
     for (const space of spaces.rows) {
       const facts = await this.#authorization.spaceRole(accountId, space.id, { fresh: true });
-      if (facts.role) {
+      const inactive = facts.inactiveSources.map(
+        (source): AccessReason => ({
+          type: "spaceRole",
+          role: source.role,
+          via: source.via,
+          inactive: "membershipEnded",
+        }),
+      );
+      if (facts.role || inactive.length > 0) {
         entries.push({
           kind: "space",
           spaceId: space.id,
@@ -305,9 +334,15 @@ export class AccessExplanationService {
           spaceKey: space.key,
           itemId: null,
           itemTitle: null,
-          role: facts.role,
+          role: facts.role ?? highestSpaceRole(facts.inactiveSources.map((source) => source.role)),
           count: 1,
-          reasons: facts.sources.map((source) => ({ type: "spaceRole", role: source.role, via: source.via })),
+          reasons: [
+            ...facts.sources.map(
+              (source): AccessReason => ({ type: "spaceRole", role: source.role, via: source.via }),
+            ),
+            ...inactive,
+          ],
+          inactive: facts.role ? null : "membershipEnded",
         });
       }
     }
@@ -324,13 +359,15 @@ export class AccessExplanationService {
       principal_id: string;
       group_name: string | null;
       include_descendants: boolean;
+      active: boolean;
     }>(sql`
       select s.id as space_id, s.name as space_name, s.key as space_key, t.id as item_id, t.title,
         ${this.#authorization.itemFilter(viewer, sql`t`, sql`s`)} as readable,
-        ps.role, ps.principal_kind, ps.principal_id, g.name as group_name, ps.include_descendants
+        ps.role, ps.principal_kind, ps.principal_id, g.name as group_name, ps.include_descendants,
+        ${holderCovers(sql`ps.principal_kind`, sql`ps.principal_id`, accountRef, sql`s.organization_id`)} as active
       from page_shares ps join tree_items t on t.id = ps.item_id join spaces s on s.id = t.space_id
       left join groups g on ps.principal_kind = 'group' and g.id = ps.principal_id
-      where ${scope} and t.trash_entry_id is null and ${holderCovers(sql`ps.principal_kind`, sql`ps.principal_id`, accountRef)}
+      where ${scope} and t.trash_entry_id is null and ${holderMatches(sql`ps.principal_kind`, sql`ps.principal_id`, accountRef)}
       order by lower(s.name), lower(t.title), t.id limit 5000`);
     const hidden = new Map<string, PersonAccessEntry>();
     for (const row of shares.rows) {
@@ -344,6 +381,7 @@ export class AccessExplanationService {
         itemId: row.item_id,
         itemTitle: row.readable ? row.title : null,
         inherited: false,
+        ...(row.active ? {} : { inactive: "membershipEnded" as const }),
       };
       if (row.readable) {
         entries.push({
@@ -356,6 +394,7 @@ export class AccessExplanationService {
           role: row.role,
           count: row.include_descendants ? 2 : 1,
           reasons: [reason],
+          inactive: row.active ? null : "membershipEnded",
         });
         continue;
       }
@@ -369,6 +408,7 @@ export class AccessExplanationService {
         role: null,
         count: 0,
         reasons: [],
+        inactive: null,
       };
       summary.count += 1;
       hidden.set(row.space_id, summary);
@@ -382,9 +422,11 @@ export class AccessExplanationService {
       readable: boolean;
       link_id: string;
       scope: string;
+      active: boolean;
     }>(sql`
       select s.id as space_id, s.name as space_name, s.key as space_key, t.id as item_id, t.title,
-        ${this.#authorization.itemFilter(viewer, sql`t`, sql`s`)} as readable, l.id as link_id, l.scope::text as scope
+        ${this.#authorization.itemFilter(viewer, sql`t`, sql`s`)} as readable, l.id as link_id, l.scope::text as scope,
+        (l.scope not in ('people', 'organization') or ${organizationMembership(sql`s.organization_id`, accountRef)}) as active
       from share_link_accesses la join share_links l on l.id = la.link_id
       join tree_items t on t.id = l.item_id join spaces s on s.id = t.space_id
       where la.account_id = ${accountId} and ${scope} and l.revoked_at is null
@@ -402,6 +444,7 @@ export class AccessExplanationService {
           role: null,
           count: 0,
           reasons: [],
+          inactive: null,
         };
         summary.count += 1;
         hidden.set(row.space_id, summary);
@@ -416,7 +459,15 @@ export class AccessExplanationService {
         itemTitle: row.title,
         role: "reader",
         count: 1,
-        reasons: [{ type: "link", linkId: row.link_id, scope: row.scope }],
+        reasons: [
+          {
+            type: "link",
+            linkId: row.link_id,
+            scope: row.scope,
+            ...(row.active ? {} : { inactive: "membershipEnded" as const }),
+          },
+        ],
+        inactive: row.active ? null : "membershipEnded",
       });
     }
     entries.push(...hidden.values());
@@ -487,7 +538,12 @@ export class AccessExplanationService {
   ): Promise<GiveAccessEffect> {
     const covers = (kind: SQL, id: SQL) =>
       holder.kind === "account"
-        ? holderCovers(kind, id, sql`${holder.id}::uuid`)
+        ? holderCovers(
+            kind,
+            id,
+            sql`${holder.id}::uuid`,
+            sql`(select gs.organization_id from spaces gs where gs.id = ${target.spaceId}::uuid)`,
+          )
         : sql`(${kind} = 'group' and ${id} = ${holder.id}::uuid)`;
     const inScope =
       target.scope === "space" || !target.itemId
@@ -530,6 +586,11 @@ export class AccessExplanationService {
 }
 
 export function describeReason(reason: AccessReason): string {
+  const text = describeSource(reason);
+  return reason.inactive === "membershipEnded" ? `${text}, inactive: membership ended` : text;
+}
+
+function describeSource(reason: AccessReason): string {
   switch (reason.type) {
     case "spaceRole": {
       const via = reason.via;

@@ -87,6 +87,9 @@ export class GuestShareService {
     if (!(await this.allowed(actor, itemId))) {
       throw new SpaceError("guestInvitesDisabled", "Your organization does not let members invite guests");
     }
+    if (input.includeDescendants) {
+      await this.#pageAccess.requireReach(this.#database, actor, itemId, input.role, true);
+    }
     return this.#invitations.create(
       actor,
       organizationId,
@@ -140,7 +143,8 @@ export class GuestShareService {
             { type: "item", id: share.item_id },
             { executor: tx, fresh: true },
           )
-        ).allowed;
+        ).allowed &&
+        (!share.include_descendants || (await this.#reaches(tx, sharer, share.item_id, share.role)));
       if (allowed && sharer) {
         await this.#pageAccess.changeWithin(tx, sharer, share.item_id, [
           {
@@ -155,6 +159,11 @@ export class GuestShareService {
       }
       await this.#hold(tx, accountId, share.space_id, share.item_id);
     }
+  }
+
+  async #reaches(tx: Transaction, sharer: Principal, itemId: string, role: ShareRole): Promise<boolean> {
+    const reach = await this.#pageAccess.reach(tx, sharer, itemId, role, true);
+    return reach.page && reach.uncoveredBelow === 0;
   }
 
   async #hold(tx: Transaction, accountId: string, spaceId: string, itemId: string): Promise<void> {

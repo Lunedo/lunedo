@@ -152,6 +152,8 @@ export class PageAccessController {
       "invalidHolder",
       "alreadyShared",
       "shareNotFound",
+      "shareBeyondOwnAccess",
+      "ownShare",
       "restrictionWithoutViewers",
       "restrictionWithoutEditors",
     ],
@@ -193,6 +195,8 @@ export class PageAccessController {
       "invalidHolder",
       "alreadyShared",
       "shareNotFound",
+      "shareBeyondOwnAccess",
+      "ownShare",
       "restrictionWithoutViewers",
       "restrictionWithoutEditors",
     ],
@@ -276,7 +280,7 @@ export class PageAccessController {
         expiresAt: "2026-10-15T09:30:00.000Z",
       },
     },
-    errors: ["guestInvitesDisabled", "invalidScope", "invalidResponsible"],
+    errors: ["guestInvitesDisabled", "invalidScope", "invalidResponsible", "shareBeyondOwnAccess"],
   })
   async invite(
     @Param("pageId") pageId: string,
@@ -308,7 +312,7 @@ export class PageAccessController {
       schema: giveEffectSchema,
       example: { ...exampleEffect, impact: examplePageImpact },
     },
-    errors: ["invalidHolder", "invalidRole"],
+    errors: ["invalidHolder", "invalidRole", "shareBeyondOwnAccess", "ownShare"],
   })
   async givePagePreview(
     @Param("pageId") pageId: string,

@@ -37,8 +37,8 @@ export function UpcomingMeetings() {
                 className="flex min-h-hit items-center gap-3 rounded-sm px-2 py-1 hover:bg-hover focus-visible:focus-ring"
               >
                 <CalendarClock aria-hidden className="size-icon shrink-0 text-text-muted" />
-                <span className="min-w-0 flex-1 truncate" title={meeting.seriesTitle}>
-                  {meeting.seriesTitle}
+                <span className="min-w-0 flex-1 truncate" title={meeting.seriesTitle ?? meeting.title}>
+                  {meeting.seriesTitle ?? meeting.title}
                 </span>
                 <span className="shrink-0 text-sm text-text-muted">
                   {meeting.startsAt ? format.dateTime(meeting.startsAt) : t("meetings.notScheduled")}

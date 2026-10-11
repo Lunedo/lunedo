@@ -519,4 +519,31 @@ describe("For you", () => {
     expect(await screen.findByText("Jour fixe IT")).toBeTruthy();
     expect(screen.queryByText("Welcome to Pagehall")).toBeNull();
   });
+
+  it("names an upcoming meeting by its own title when the series stays hidden", async () => {
+    const empty = { recent: [], starred: { items: [], spaces: [] }, tasks: [], mentions: [], posts: [] };
+    mockApi(
+      routes("reader", {
+        "GET /api/v1/home": () => ({ body: empty }),
+        "GET /api/v1/meetings/upcoming": () => ({
+          body: [
+            {
+              id: VPN,
+              title: "Jour fixe · 18 Mar 2030",
+              startsAt: "2030-03-18T08:30:00.000Z",
+              durationMinutes: 45,
+              seriesId: null,
+              seriesTitle: null,
+              spaceId: SPACE_ID,
+              spaceKey: "ITOPS",
+              oneOnOne: false,
+            },
+          ],
+        }),
+        "GET /api/v1/one-on-ones": () => ({ body: [] }),
+      }),
+    );
+    await renderAt("/home");
+    expect(await screen.findByText("Jour fixe · 18 Mar 2030")).toBeTruthy();
+  });
 });

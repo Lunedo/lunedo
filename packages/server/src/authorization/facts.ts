@@ -278,6 +278,7 @@ export interface SpaceFacts {
   } | null;
   membership: MembershipKind | null;
   sources: SpaceRoleSource[];
+  inactiveSources: SpaceRoleSource[];
   role: SpaceRole | null;
 }
 
@@ -306,7 +307,14 @@ export async function spaceFacts(
             personalOf: row.personal_of,
           }
         : null;
-      const empty: SpaceFacts = { account, space, membership: null, sources: [], role: null };
+      const empty: SpaceFacts = {
+        account,
+        space,
+        membership: null,
+        sources: [],
+        inactiveSources: [],
+        role: null,
+      };
       if (!account || !space || account.state !== "active") return empty;
 
       let membership: MembershipKind | null = null;
@@ -318,6 +326,7 @@ export async function spaceFacts(
         membership = memberships.rows[0]?.kind ?? null;
       }
       const member = membership === "member";
+      const inOrganization = space.organizationId === null || membership !== null;
       const internal = account.type === "standard";
       const permissions = await executor.execute<{
         id: string;
@@ -337,7 +346,7 @@ export async function spaceFacts(
               and (gm.expires_at is null or gm.expires_at > now())))
           or (sp.principal_kind = 'organizationMembers' and ${member})
           or (sp.principal_kind = 'instanceUsers' and ${internal}))`);
-      const sources: SpaceRoleSource[] = permissions.rows.map((permission) => ({
+      const all: SpaceRoleSource[] = permissions.rows.map((permission) => ({
         role: permission.role,
         permissionId: permission.id,
         via:
@@ -349,6 +358,9 @@ export async function spaceFacts(
                 ? { type: "organizationMembers" }
                 : { type: "instanceUsers" },
       }));
+      const inert = (source: SpaceRoleSource) => source.via.type === "account" && !inOrganization;
+      const sources = all.filter((source) => !inert(source));
+      const inactiveSources = all.filter(inert);
       if (space.visibility === "organization" && member) {
         sources.push({
           role: "reader",
@@ -363,7 +375,13 @@ export async function spaceFacts(
           permissionId: null,
         });
       }
-      return { ...empty, membership, sources, role: highestSpaceRole(sources.map((source) => source.role)) };
+      return {
+        ...empty,
+        membership,
+        sources,
+        inactiveSources,
+        role: highestSpaceRole(sources.map((source) => source.role)),
+      };
     },
     options.fresh ?? false,
   );

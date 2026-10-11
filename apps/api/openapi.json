@@ -1041,7 +1041,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `selfExtension`: Nobody can extend their own permissions.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `selfExtension`: Nobody can extend their own permissions. `shareBeyondOwnAccess`: A share cannot reach further than your own access.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1070,6 +1070,14 @@
                       "title": "Nobody can extend their own permissions",
                       "status": 403,
                       "code": "selfExtension"
+                    }
+                  },
+                  "shareBeyondOwnAccess": {
+                    "value": {
+                      "type": "urn:pagehall:problem:shareBeyondOwnAccess",
+                      "title": "A share cannot reach further than your own access",
+                      "status": 403,
+                      "code": "shareBeyondOwnAccess"
                     }
                   }
                 }
@@ -22179,7 +22187,7 @@
       "post": {
         "operationId": "groups.addMember",
         "summary": "Add a group member",
-        "description": "Adds a member of the organization to the group, optionally until a date.\n\nRequires the permission `group.manage` on the group in `groupId`.",
+        "description": "Adds a member of the organization to the group, optionally until a date. Group managers and organization administrators may add themselves; the audit log records that as a self-addition.\n\nRequires the permission `group.manage` on the group in `groupId`.",
         "tags": [
           "Groups"
         ],
@@ -31310,7 +31318,7 @@
       "put": {
         "operationId": "imports.mapGroup",
         "summary": "Map a group of an import",
-        "description": "Maps a Confluence group to an existing group of the organization, or creates a local group with its name (this needs the permission to create groups). The group takes its place on page restrictions at once; restrictions only narrow access, so its members still need a role in the space. Its space role applies when the import is accepted. Nobody is notified.\n\nRequires the permission `import.resolve` on the import in `importId`.",
+        "description": "Maps a Confluence group to an existing group of the organization, or creates a local group with its name (this needs the permission to create groups). The group takes its place on page restrictions at once; restrictions only narrow access, so its members still need a role in the space. Its space role applies when the import is accepted. Nobody is notified. When the caller belongs to or manages the chosen group, or creates it, the audit log records this as a self-addition with the import named.\n\nRequires the permission `import.resolve` on the import in `importId`.",
         "tags": [
           "Imports"
         ],
@@ -110997,13 +111005,23 @@
                       "description": "ID of the meeting page."
                     },
                     "seriesId": {
-                      "type": "string",
-                      "format": "uuid",
-                      "description": "The series."
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The series, or null when the caller cannot read it."
                     },
                     "seriesTitle": {
-                      "type": "string",
-                      "description": "Name of the series."
+                      "description": "Name of the series, or null when the caller cannot read it.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "title": {
                       "type": "string",
@@ -111054,8 +111072,11 @@
                       "description": "Duration in minutes."
                     },
                     "timeZone": {
-                      "type": "string",
-                      "description": "Time zone of the series."
+                      "description": "Time zone of the series, or null when the caller cannot read the series.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "closedAt": {
                       "anyOf": [
@@ -111109,11 +111130,14 @@
                           "type": "null"
                         }
                       ],
-                      "description": "The meeting created when this one was closed or skipped."
+                      "description": "The meeting created when this one was closed or skipped, or null when the caller cannot read the series."
                     },
                     "rhythm": {
-                      "type": "boolean",
-                      "description": "Whether the series has a fixed rhythm; without one, closing asks for the next date."
+                      "description": "Whether the series has a fixed rhythm; without one, closing asks for the next date. Null when the caller cannot read the series.",
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
                     },
                     "attendees": {
                       "type": "array",
@@ -111149,8 +111173,11 @@
                             "description": "Attendance, or null when not recorded. New values can be added in later versions; handle unknown values."
                           },
                           "member": {
-                            "type": "boolean",
-                            "description": "Whether the person is a member of the series."
+                            "description": "Whether the person is a member of the series, or null when the caller cannot read it.",
+                            "type": [
+                              "boolean",
+                              "null"
+                            ]
                           },
                           "canRead": {
                             "type": "boolean",
@@ -113748,13 +113775,23 @@
                         "description": "Duration in minutes."
                       },
                       "seriesId": {
-                        "type": "string",
-                        "format": "uuid",
-                        "description": "The series."
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The series, or null when the caller cannot read it."
                       },
                       "seriesTitle": {
-                        "type": "string",
-                        "description": "Name of the series."
+                        "description": "Name of the series, or null when the caller cannot read it.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       },
                       "spaceId": {
                         "type": "string",
@@ -128601,7 +128638,7 @@
       "get": {
         "operationId": "accessRequests.person",
         "summary": "What can a person do?",
-        "description": "Lists all access of a person in the organization with the reason for each entry: role in a space, group, share or link. Shared pages the caller cannot read are only counted per space; confidential spaces the caller does not belong to are only counted.\n\nRequires the permission `organization.access.view` on the organization in `organizationId`.",
+        "description": "Lists all access of a person in the organization with the reason for each entry: role in a space, group, share or link. Entries that are stored but have no effect because the person's membership ended are marked inactive. Shared pages the caller cannot read are only counted per space; confidential spaces the caller does not belong to are only counted.\n\nRequires the permission `organization.access.view` on the organization in `organizationId`.",
         "tags": [
           "Access"
         ],
@@ -128819,15 +128856,36 @@
                                 "scope": {
                                   "description": "Scope of the share link.",
                                   "type": "string"
+                                },
+                                "inactive": {
+                                  "type": "string",
+                                  "description": "Set when the entry is stored but grants nothing: `membershipEnded` means the person is no longer a member of the organization the space belongs to. It applies again if they become a member again. New values can be added in later versions; handle unknown values.",
+                                  "x-extensible-enum": [
+                                    "membershipEnded"
+                                  ]
                                 }
                               },
                               "required": [
                                 "type"
                               ],
                               "additionalProperties": false,
-                              "description": "Why a person has access."
+                              "description": "Why a person has access, or an entry that has no effect."
                             },
                             "description": "Why."
+                          },
+                          "inactive": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "x-extensible-enum": [
+                                  "membershipEnded"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Set when the entry grants nothing; `role` is then the role it would grant. New values can be added in later versions; handle unknown values."
                           }
                         },
                         "required": [
@@ -128839,7 +128897,8 @@
                           "itemTitle",
                           "role",
                           "count",
-                          "reasons"
+                          "reasons",
+                          "inactive"
                         ],
                         "additionalProperties": false,
                         "description": "An access of the person."
@@ -128887,7 +128946,8 @@
                             "name": "IT Operations"
                           }
                         }
-                      ]
+                      ],
+                      "inactive": null
                     }
                   ],
                   "confidentialSpaceCount": 0
@@ -139454,7 +139514,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `ownShare`: Nobody changes access they hold themselves. `shareBeyondOwnAccess`: A share cannot reach further than your own access.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -139475,6 +139535,22 @@
                       "title": "Not allowed",
                       "status": 403,
                       "code": "forbidden"
+                    }
+                  },
+                  "ownShare": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ownShare",
+                      "title": "Nobody changes access they hold themselves",
+                      "status": 403,
+                      "code": "ownShare"
+                    }
+                  },
+                  "shareBeyondOwnAccess": {
+                    "value": {
+                      "type": "urn:pagehall:problem:shareBeyondOwnAccess",
+                      "title": "A share cannot reach further than your own access",
+                      "status": 403,
+                      "code": "shareBeyondOwnAccess"
                     }
                   }
                 }
@@ -139913,13 +139989,20 @@
                           "scope": {
                             "description": "Scope of the share link.",
                             "type": "string"
+                          },
+                          "inactive": {
+                            "type": "string",
+                            "description": "Set when the entry is stored but grants nothing: `membershipEnded` means the person is no longer a member of the organization the space belongs to. It applies again if they become a member again. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "membershipEnded"
+                            ]
                           }
                         },
                         "required": [
                           "type"
                         ],
                         "additionalProperties": false,
-                        "description": "Why a person has access."
+                        "description": "Why a person has access, or an entry that has no effect."
                       },
                       "description": "Why: roles, shares and links."
                     },
@@ -140338,7 +140421,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `guestInvitesDisabled`: Members cannot invite guests in this organization.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `guestInvitesDisabled`: Members cannot invite guests in this organization. `shareBeyondOwnAccess`: A share cannot reach further than your own access.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -140367,6 +140450,14 @@
                       "title": "Members cannot invite guests in this organization",
                       "status": 403,
                       "code": "guestInvitesDisabled"
+                    }
+                  },
+                  "shareBeyondOwnAccess": {
+                    "value": {
+                      "type": "urn:pagehall:problem:shareBeyondOwnAccess",
+                      "title": "A share cannot reach further than your own access",
+                      "status": 403,
+                      "code": "shareBeyondOwnAccess"
                     }
                   }
                 }
@@ -140568,13 +140659,20 @@
                           "scope": {
                             "description": "Scope of the share link.",
                             "type": "string"
+                          },
+                          "inactive": {
+                            "type": "string",
+                            "description": "Set when the entry is stored but grants nothing: `membershipEnded` means the person is no longer a member of the organization the space belongs to. It applies again if they become a member again. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "membershipEnded"
+                            ]
                           }
                         },
                         "required": [
                           "type"
                         ],
                         "additionalProperties": false,
-                        "description": "Why a person has access."
+                        "description": "Why a person has access, or an entry that has no effect."
                       },
                       "description": "Why: roles, shares and links."
                     },
@@ -141350,7 +141448,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `ownShare`: Nobody changes access they hold themselves. `shareBeyondOwnAccess`: A share cannot reach further than your own access.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -141371,6 +141469,22 @@
                       "title": "Not allowed",
                       "status": 403,
                       "code": "forbidden"
+                    }
+                  },
+                  "ownShare": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ownShare",
+                      "title": "Nobody changes access they hold themselves",
+                      "status": 403,
+                      "code": "ownShare"
+                    }
+                  },
+                  "shareBeyondOwnAccess": {
+                    "value": {
+                      "type": "urn:pagehall:problem:shareBeyondOwnAccess",
+                      "title": "A share cannot reach further than your own access",
+                      "status": 403,
+                      "code": "shareBeyondOwnAccess"
                     }
                   }
                 }
@@ -146706,7 +146820,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `ownShare`: Nobody changes access they hold themselves. `shareBeyondOwnAccess`: A share cannot reach further than your own access.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -146727,6 +146841,22 @@
                       "title": "Not allowed",
                       "status": 403,
                       "code": "forbidden"
+                    }
+                  },
+                  "ownShare": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ownShare",
+                      "title": "Nobody changes access they hold themselves",
+                      "status": 403,
+                      "code": "ownShare"
+                    }
+                  },
+                  "shareBeyondOwnAccess": {
+                    "value": {
+                      "type": "urn:pagehall:problem:shareBeyondOwnAccess",
+                      "title": "A share cannot reach further than your own access",
+                      "status": 403,
+                      "code": "shareBeyondOwnAccess"
                     }
                   }
                 }
@@ -159812,13 +159942,20 @@
                           "scope": {
                             "description": "Scope of the share link.",
                             "type": "string"
+                          },
+                          "inactive": {
+                            "type": "string",
+                            "description": "Set when the entry is stored but grants nothing: `membershipEnded` means the person is no longer a member of the organization the space belongs to. It applies again if they become a member again. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "membershipEnded"
+                            ]
                           }
                         },
                         "required": [
                           "type"
                         ],
                         "additionalProperties": false,
-                        "description": "Why a person has access."
+                        "description": "Why a person has access, or an entry that has no effect."
                       },
                       "description": "Why: roles, shares and links."
                     },
@@ -177440,6 +177577,12 @@
           },
           "missing": {
             "description": "Number of parts still missing, for `uploadIncomplete`.",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "uncoveredPages": {
+            "description": "Number of pages below that your own role does not cover, for `shareBeyondOwnAccess`.",
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991

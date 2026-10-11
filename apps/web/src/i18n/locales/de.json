@@ -1364,7 +1364,10 @@
     "reimportSpaceFixed": "Ein erneuter Import geht in den Bereich des früheren Imports; seine Bereichseinstellungen lassen sich nicht ändern.",
     "changeNotComparable": "Vor dem Anwenden lassen sich nur Konflikte vergleichen. Wähle einen Konflikt.",
     "comparisonUnavailable": "Dieser Konflikt wurde angewendet oder durch einen neueren Export ersetzt. Vergleiche die Versionen im Verlauf der Seite.",
-    "comparisonWithheld": "In Confluence dürfen weniger Personen diesen Inhalt lesen. Übernimm zuerst die Einschränkungen bei den Berechtigungsabweichungen."
+    "comparisonWithheld": "In Confluence dürfen weniger Personen diesen Inhalt lesen. Übernimm zuerst die Einschränkungen bei den Berechtigungsabweichungen.",
+    "shareBeyondOwnAccess": "Deine eigene Rolle im Space gibt dir diesen Zugriff auf die Seite nicht. Wähle eine niedrigere Rolle oder frag einen Space-Admin.",
+    "shareBeyondOwnAccessBelow": "Deine eigene Rolle im Space deckt {count, plural, one {# Seite} other {# Seiten}} darunter nicht ab. Gib nur diese Seite frei, wähle eine niedrigere Rolle oder frag einen Space-Admin.",
+    "ownShare": "Du kannst keinen Zugriff ändern, den du selbst oder über eine deiner Gruppen hast. Bitte jemand anderen, der die Seite freigeben kann."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -2544,7 +2547,9 @@
       "withPagesBelow": "und die Seiten darunter",
       "restrictedPages": "{count, plural, one {# freigegebene eingeschränkte Seite, die du nicht lesen kannst} other {# freigegebene eingeschränkte Seiten, die du nicht lesen kannst}}",
       "why": "Warum?",
-      "confidentialSpaces": "{count, plural, one {Mitglied in # vertraulichen Space} other {Mitglied in # vertraulichen Spaces}}"
+      "confidentialSpaces": "{count, plural, one {Mitglied in # vertraulichen Space} other {Mitglied in # vertraulichen Spaces}}",
+      "inactive": "Ohne Wirkung",
+      "inactiveHint": "Die Mitgliedschaft in der Organisation ist beendet. Der Eintrag gilt wieder, wenn die Person erneut Mitglied wird."
     }
   },
   "members": {
@@ -3138,7 +3143,8 @@
         "memberAdded": "Gruppenmitglied hinzugefügt",
         "memberRemoved": "Gruppenmitglied entfernt",
         "managerAdded": "Gruppenverwalter hinzugefügt",
-        "managerRemoved": "Gruppenverwalter entfernt"
+        "managerRemoved": "Gruppenverwalter entfernt",
+        "selfAdded": "Selbst zur Gruppe hinzugefügt"
       },
       "invitation": {
         "created": "Einladung gesendet",
@@ -5391,7 +5397,8 @@
       "inTrash": "Die Seite liegt im Papierkorb.",
       "accountInactive": "Das Konto ist nicht aktiv.",
       "noAccess": "Keine Rolle im Space, keine Freigabe und kein Link gibt Zugriff.",
-      "summaryNoneSpace": "{name} hat keinen Zugriff auf diesen Space."
+      "summaryNoneSpace": "{name} hat keinen Zugriff auf diesen Space.",
+      "inactive": "{reason}. Ohne Wirkung: Die Mitgliedschaft in der Organisation ist beendet."
     },
     "links": {
       "loadFailed": "die Freigabelinks",

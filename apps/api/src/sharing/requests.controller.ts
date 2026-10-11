@@ -239,7 +239,14 @@ export class AccessRequestsController {
       schema: accessRequestSchema,
       example: exampleAccessRequest,
     },
-    errors: ["requestNotFound", "requestClosed", "invalidRole", "lastSpaceAdmin", "selfExtension"],
+    errors: [
+      "requestNotFound",
+      "requestClosed",
+      "invalidRole",
+      "lastSpaceAdmin",
+      "selfExtension",
+      "shareBeyondOwnAccess",
+    ],
   })
   async decide(
     @Param("requestId") requestId: string,
@@ -254,7 +261,7 @@ export class AccessRequestsController {
   @ApiRoute({
     summary: "What can a person do?",
     description:
-      "Lists all access of a person in the organization with the reason for each entry: role in a space, group, share or link. Shared pages the caller cannot read are only counted per space; confidential spaces the caller does not belong to are only counted.",
+      "Lists all access of a person in the organization with the reason for each entry: role in a space, group, share or link. Entries that are stored but have no effect because the person's membership ended are marked inactive. Shared pages the caller cannot read are only counted per space; confidential spaces the caller does not belong to are only counted.",
     tags: [ACCESS],
     params: personParams,
     response: {
@@ -275,6 +282,7 @@ export class AccessRequestsController {
             role: "reader",
             count: 1,
             reasons: exampleExplanation.reasons,
+            inactive: null,
           },
         ],
         confidentialSpaceCount: 0,

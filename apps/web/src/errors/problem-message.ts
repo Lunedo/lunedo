@@ -3,6 +3,8 @@ import { ApiError } from "../api/request.js";
 import { translateKey } from "../i18n/translate.js";
 
 const KNOWN = new Set([
+  "shareBeyondOwnAccess",
+  "ownShare",
   "spaceNotImported",
   "importedBeforeReimports",
   "importNotAccepted",
@@ -227,6 +229,9 @@ export function problemMessage(t: TFunction, error: unknown): string {
   }
   if (error.code === "fileTooLarge" && problem.maxBytes) {
     return t("problems.fileTooLargeLimit", { size: megabytes(problem.maxBytes) });
+  }
+  if (error.code === "shareBeyondOwnAccess" && problem.uncoveredPages) {
+    return t("problems.shareBeyondOwnAccessBelow", { count: problem.uncoveredPages });
   }
   if (error.code === "expiryTooLate" && problem.maxDays) {
     return t("problems.linkExpiryTooLate", { days: problem.maxDays });

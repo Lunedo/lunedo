@@ -556,6 +556,12 @@ export function createAccountServices(options: {
   memberships.onDeactivated((tx, accountId) => pageAccess.markOrphanedRestrictions(tx, accountId));
   const confidentialSpaces = new ConfidentialSpaceService({ database, audit, notifications });
   memberships.onDeactivated((tx, accountId) => confidentialSpaces.afterDeactivation(tx, accountId));
+  memberships.onMembershipEnded((tx, organizationId, accountId) =>
+    pageAccess.afterMembershipEnded(tx, organizationId, accountId),
+  );
+  memberships.onMembershipEnded((tx, organizationId, accountId) =>
+    confidentialSpaces.afterMembershipEnded(tx, organizationId, accountId),
+  );
   const meetings = new MeetingService({
     database,
     authorization,

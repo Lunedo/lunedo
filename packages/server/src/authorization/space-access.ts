@@ -43,6 +43,12 @@ function activeMembership(organization: SQL, account: SQL): SQL {
       and (m.expires_at is null or m.expires_at > now()))`;
 }
 
+export function organizationMembership(organization: SQL, account: SQL): SQL {
+  return sql`(${organization} is null or exists (select 1 from memberships om
+    where om.organization_id = ${organization} and om.account_id = ${account}
+      and (om.expires_at is null or om.expires_at > now())))`;
+}
+
 function groupMembership(group: SQL, account: SQL): SQL {
   return sql`exists (select 1 from group_members gm
     where gm.group_id = ${group} and gm.account_id = ${account}
@@ -65,7 +71,8 @@ export function spaceRoleConditionFor(account: SQL, space: SQL, minimum: SpaceRo
   return sql`(exists (select 1 from accounts aa where aa.id = ${account} and aa.state = 'active') and (
     exists (select 1 from space_permissions sp
       where sp.space_id = ${space}.id and sp.role = any(${sql.param(roles)}::space_role[]) and (
-        (sp.principal_kind = 'account' and sp.principal_id = ${account})
+        (sp.principal_kind = 'account' and sp.principal_id = ${account}
+          and ${organizationMembership(sql`${space}.organization_id`, account)})
         or (sp.principal_kind = 'group' and ${groupMembership(sql`sp.principal_id`, account)})
         or (sp.principal_kind = 'organizationMembers' and ${member})
         or (sp.principal_kind = 'instanceUsers' and ${internal})))
@@ -91,7 +98,7 @@ function grantsTable(grants: SpaceGrantRow[]): SQL {
     as g(principal_kind text, principal_id uuid, role text))`;
 }
 
-function rankOf(state: SpaceAccessState, member: SQL): SQL {
+function rankOf(state: SpaceAccessState, member: SQL, inOrganization: SQL): SQL {
   const { grants, visibility } = state;
   const visibilityRank =
     visibility === "organization"
@@ -101,7 +108,7 @@ function rankOf(state: SpaceAccessState, member: SQL): SQL {
         : sql`0`;
   return sql`greatest(coalesce((select max(array_position(${sql.param([...spaceRoles])}::text[], g.role))
     from ${grantsTable(grants)} g
-    where (g.principal_kind = 'account' and g.principal_id = c.id)
+    where (g.principal_kind = 'account' and g.principal_id = c.id and ${inOrganization})
       or (g.principal_kind = 'group' and ${groupMembership(sql`g.principal_id`, sql`c.id`)})
       or (g.principal_kind = 'organizationMembers' and ${member})
       or (g.principal_kind = 'instanceUsers' and c.type = 'standard')), 0), ${visibilityRank})`;
@@ -151,6 +158,8 @@ export async function accessImpact(
 ): Promise<AccessImpact> {
   const memberOf = (organizationId: string | null) =>
     organizationId === null ? sql`false` : activeMembership(sql`${organizationId}::uuid`, sql`a.id`);
+  const inOrganization = (organizationId: string | null) =>
+    organizationMembership(sql`${organizationId}::uuid`, sql`a.id`);
   const result = await executor.execute<{
     id: string;
     name: string;
@@ -165,12 +174,13 @@ export async function accessImpact(
   }>(sql`
     with cand as (
       select a.id, a.name, a.type, ${memberOf(before.organizationId)} as member_before,
-        ${memberOf(after.organizationId)} as member_after, ${listable(sql`a.id`)} as listable
+        ${memberOf(after.organizationId)} as member_after, ${inOrganization(before.organizationId)} as in_before,
+        ${inOrganization(after.organizationId)} as in_after, ${listable(sql`a.id`)} as listable
       from accounts a
       where a.state = 'active' and a.id in (${candidates(before, after)})
     ), ranks as (
-      select c.id, c.name, c.listable, ${rankOf(before, sql`c.member_before`)} as before_rank,
-        ${rankOf(after, sql`c.member_after`)} as after_rank
+      select c.id, c.name, c.listable, ${rankOf(before, sql`c.member_before`, sql`c.in_before`)} as before_rank,
+        ${rankOf(after, sql`c.member_after`, sql`c.in_after`)} as after_rank
       from cand c
     ), changed as (select * from ranks where before_rank <> after_rank),
     counted as (
@@ -205,7 +215,8 @@ export async function accessImpact(
 export function activeAdministratorCondition(grants: SQL, organization: SQL): SQL {
   return sql`exists (select 1 from ${grants} g where g.role = 'admin' and (
     (g.principal_kind = 'account' and exists (
-      select 1 from accounts a where a.id = g.principal_id and a.state = 'active'))
+      select 1 from accounts a where a.id = g.principal_id and a.state = 'active'
+        and ${organizationMembership(organization, sql`a.id`)}))
     or (g.principal_kind = 'group' and exists (
       select 1 from group_members gm join accounts a on a.id = gm.account_id
       where gm.group_id = g.principal_id and a.state = 'active'
@@ -237,8 +248,9 @@ export async function accountRoleUnder(
       ? sql`false`
       : activeMembership(sql`${state.organizationId}::uuid`, sql`a.id`);
   const result = await executor.execute<{ rank: number }>(sql`
-    select ${rankOf(state, sql`c.is_member`)} as rank
-    from (select a.id, a.type, ${member} as is_member from accounts a
+    select ${rankOf(state, sql`c.is_member`, sql`c.in_organization`)} as rank
+    from (select a.id, a.type, ${member} as is_member,
+      ${organizationMembership(sql`${state.organizationId}::uuid`, sql`a.id`)} as in_organization from accounts a
       where a.id = ${accountId} and a.state = 'active') c`);
   const rank = Number(result.rows[0]?.rank ?? 0);
   return rank > 0 ? (spaceRoles[rank - 1] ?? null) : null;

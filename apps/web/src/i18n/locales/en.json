@@ -1364,7 +1364,10 @@
     "reimportSpaceFixed": "A re-import goes into the space of the earlier import; its space settings cannot change.",
     "changeNotComparable": "Only conflicts can be compared before they are applied. Choose a conflict.",
     "comparisonUnavailable": "This conflict was applied or replaced by a newer export. Compare the versions in the history of the page.",
-    "comparisonWithheld": "Fewer people may read this content in Confluence. Apply the restrictions from the permission differences first."
+    "comparisonWithheld": "Fewer people may read this content in Confluence. Apply the restrictions from the permission differences first.",
+    "shareBeyondOwnAccess": "Your own role in the space does not give you this access to the page. Choose a lower role or ask a space admin.",
+    "shareBeyondOwnAccessBelow": "Your own role in the space does not cover {count, plural, one {# page} other {# pages}} below. Share only this page, choose a lower role, or ask a space admin.",
+    "ownShare": "You cannot change access that you hold yourself or through one of your groups. Ask someone else who can share the page."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -2544,7 +2547,9 @@
       "withPagesBelow": "and the pages below",
       "restrictedPages": "{count, plural, one {# shared restricted page you cannot read} other {# shared restricted pages you cannot read}}",
       "why": "Why?",
-      "confidentialSpaces": "{count, plural, one {Member of # confidential space} other {Member of # confidential spaces}}"
+      "confidentialSpaces": "{count, plural, one {Member of # confidential space} other {Member of # confidential spaces}}",
+      "inactive": "No effect",
+      "inactiveHint": "Their membership in the organization ended. The entry applies again if they become a member again."
     }
   },
   "members": {
@@ -3138,7 +3143,8 @@
         "memberAdded": "Group member added",
         "memberRemoved": "Group member removed",
         "managerAdded": "Group manager added",
-        "managerRemoved": "Group manager removed"
+        "managerRemoved": "Group manager removed",
+        "selfAdded": "Added themselves to the group"
       },
       "invitation": {
         "created": "Invitation sent",
@@ -5391,7 +5397,8 @@
       "inTrash": "The page is in the trash.",
       "accountInactive": "Their account is not active.",
       "noAccess": "No role in the space, share or link gives them access.",
-      "summaryNoneSpace": "{name} has no access to this space."
+      "summaryNoneSpace": "{name} has no access to this space.",
+      "inactive": "{reason}. No effect: their membership in the organization ended."
     },
     "links": {
       "loadFailed": "the share links",

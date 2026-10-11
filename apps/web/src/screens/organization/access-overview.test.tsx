@@ -24,6 +24,7 @@ const ORGANIZATION = {
 const LUKAS = "01929b1e-0000-7000-8000-00000000a002";
 const SPACE = "01929b1e-0000-7000-8000-0000000000a1";
 const PAGE = "01929b1e-0000-7000-8000-0000000000b2";
+const ARCHIVE = "01929b1e-0000-7000-8000-0000000000a3";
 
 beforeEach(() => {
   vi.stubGlobal("matchMedia", () => ({
@@ -113,6 +114,21 @@ beforeEach(() => {
             role: null,
             count: 3,
             reasons: [],
+            inactive: null,
+          },
+          {
+            kind: "space",
+            spaceId: ARCHIVE,
+            spaceName: "Archive",
+            spaceKey: "ARCH",
+            itemId: null,
+            itemTitle: null,
+            role: "editor",
+            count: 1,
+            reasons: [
+              { type: "spaceRole", role: "editor", via: { type: "account" }, inactive: "membershipEnded" },
+            ],
+            inactive: "membershipEnded",
           },
         ],
       },
@@ -134,11 +150,24 @@ describe("the access overview of an organization", () => {
     await userEvent.click(screen.getByRole("combobox", { name: "Person" }));
     await userEvent.click(await screen.findByRole("option", { name: /Lukas Hofer/ }));
     const section = await screen.findByRole("region", { name: "What can Lukas Hofer do?" });
-    expect(within(section).getByText("whole space")).toBeTruthy();
+    expect(within(section).getAllByText("whole space")).toHaveLength(2);
     expect(within(section).getByRole("link", { name: "VPN access" })).toBeTruthy();
     expect(within(section).getByText("3 shared restricted pages you cannot read")).toBeTruthy();
     await userEvent.click(within(section).getAllByRole("button", { name: "Why?" })[0] as HTMLElement);
     expect(within(section).getByText("Can read in the space through the group Support")).toBeTruthy();
+    const inactive = within(section).getByText("Archive").closest("li") as HTMLElement;
+    expect(within(inactive).getByText("No effect")).toBeTruthy();
+    expect(
+      within(inactive).getByText(
+        "Their membership in the organization ended. The entry applies again if they become a member again.",
+      ),
+    ).toBeTruthy();
+    await userEvent.click(within(inactive).getByRole("button", { name: "Why?" }));
+    expect(
+      within(inactive).getByText(
+        /given to them directly\. No effect: their membership in the organization ended\./,
+      ),
+    ).toBeTruthy();
     expect(within(section).getByRole("link", { name: "Export as CSV" }).getAttribute("href")).toBe(
       `/api/v1/organizations/${ORGANIZATION.id}/access-overview?accountId=${LUKAS}`,
     );

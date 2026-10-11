@@ -107,6 +107,8 @@ export class MembershipService {
   readonly #audit: AuditLog;
   readonly #authorization: AuthorizationService;
   readonly #deactivationListeners: ((tx: Transaction, accountId: string) => Promise<void>)[] = [];
+  readonly #endListeners: ((tx: Transaction, organizationId: string, accountId: string) => Promise<void>)[] =
+    [];
 
   constructor(options: { database: Database; audit: AuditLog; authorization: AuthorizationService }) {
     this.#database = options.database;
@@ -116,6 +118,16 @@ export class MembershipService {
 
   onDeactivated(listener: (tx: Transaction, accountId: string) => Promise<void>): void {
     this.#deactivationListeners.push(listener);
+  }
+
+  onMembershipEnded(
+    listener: (tx: Transaction, organizationId: string, accountId: string) => Promise<void>,
+  ): void {
+    this.#endListeners.push(listener);
+  }
+
+  async #ended(tx: Transaction, organizationId: string, accountId: string): Promise<void> {
+    for (const listener of this.#endListeners) await listener(tx, organizationId, accountId);
   }
 
   async list(organizationId: string, page: PageRequest = FIRST_PAGE): Promise<Page<Member>> {
@@ -414,6 +426,7 @@ export class MembershipService {
         scope: scopeOf(organizationId),
       });
       await this.#audit.recordMany(tx, events);
+      await this.#ended(tx, organizationId, accountId);
       return true;
     };
     return options.tx ? run(options.tx) : this.#database.transaction(run);
@@ -454,6 +467,7 @@ export class MembershipService {
         scope: scopeOf(membership.organizationId),
       });
       events.push(...(await this.#detach(tx, actor, membership.organizationId, accountId, "anonymized")));
+      await this.#ended(tx, membership.organizationId, accountId);
     }
     const instanceRoles = await tx
       .delete(roleAssignments)
@@ -505,6 +519,7 @@ export class MembershipService {
         scope: scopeOf(organizationId),
       });
       await this.#audit.recordMany(tx, events);
+      await this.#ended(tx, organizationId, accountId);
       return true;
     });
   }

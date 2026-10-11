@@ -342,8 +342,12 @@ export const accessReasonSchema = z
     inherited: z.boolean().optional().describe("Whether the share comes from a page above."),
     linkId: uuid("The share link.").optional(),
     scope: z.string().optional().describe("Scope of the share link."),
+    inactive: extensibleEnum(
+      ["membershipEnded"],
+      "Set when the entry is stored but grants nothing: `membershipEnded` means the person is no longer a member of the organization the space belongs to. It applies again if they become a member again.",
+    ).optional(),
   })
-  .describe("Why a person has access.");
+  .describe("Why a person has access, or an entry that has no effect.");
 
 export const accessExplanationSchema = z
   .object({
@@ -419,6 +423,10 @@ export const personAccessSchema = z
                 "Number of pages for `restrictedPages`; otherwise 1, or 2 for a share with the pages below.",
               ),
             reasons: z.array(accessReasonSchema).describe("Why."),
+            inactive: extensibleEnum(
+              ["membershipEnded"],
+              "Set when the entry grants nothing; `role` is then the role it would grant.",
+            ).nullable(),
           })
           .describe("An access of the person."),
       )
